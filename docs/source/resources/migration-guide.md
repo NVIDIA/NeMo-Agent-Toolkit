@@ -42,12 +42,16 @@ To migrate:
 
 #### Import Path Changes
 
-Evaluation modules are now served from `nat.plugins.eval`.
-
-Update imports:
+For users migrating existing integrations, the primary import change is:
 - `nat.eval.*` -> `nat.plugins.eval.*`
 - `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
 - `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
+
+For shared evaluation data models, prefer canonical core paths:
+- `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
+- `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
+
+Internal module reorganization inside `nat.plugins.eval` is implementation detail and may change between releases.
 
 #### `nat.eval` Deprecation Shim
 
@@ -56,7 +60,7 @@ Core provides a temporary compatibility shim for `nat.eval` imports.
 What to expect:
 - Importing from `nat.eval` emits a `UserWarning` that the path is deprecated.
 - The shim requires `nvidia-nat-eval` to be installed.
-- Update imports to `nat.plugins.eval.*` now, because the shim will be removed in a future major release.
+- Update imports to externally supported `nat.plugins.eval.*` and `nat.data_models.*` paths now, because the shim will be removed in a future major release.
 
 ### v1.4.0
 
