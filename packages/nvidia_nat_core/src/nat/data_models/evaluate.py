@@ -17,9 +17,19 @@ Compatibility re-exports for YAML-backed evaluation config models.
 This file can be dropped in NAT 1.6.0.
 """
 
+import warnings
+
 from nat.data_models.evaluate_config import EvalConfig  # noqa: F401
 from nat.data_models.evaluate_config import EvalCustomScriptConfig  # noqa: F401
 from nat.data_models.evaluate_config import EvalGeneralConfig  # noqa: F401
 from nat.data_models.evaluate_config import EvalOutputConfig  # noqa: F401
 from nat.data_models.evaluate_config import JobEvictionPolicy  # noqa: F401
 from nat.data_models.evaluate_config import JobManagementConfig  # noqa: F401
+
+warnings.warn(
+    "Importing from 'nat.data_models.evaluate' is deprecated. "
+    "Use 'nat.data_models.evaluate_config' for eval config models and "
+    "'nat.data_models.evaluate_runtime' for runtime models.",
+    UserWarning,
+    stacklevel=2,
+)

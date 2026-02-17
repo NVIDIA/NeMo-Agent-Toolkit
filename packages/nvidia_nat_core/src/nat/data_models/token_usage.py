@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Compatibility re-export for token usage model from core."""
+from pydantic import BaseModel
+from pydantic import Field
 
-import warnings
 
-from nat.data_models.token_usage import TokenUsageBaseModel  # noqa: F401  # pyright: ignore[reportMissingImports]
+class TokenUsageBaseModel(BaseModel):
+    """Shared token usage counters emitted by LLM/tool events."""
 
-warnings.warn(
-    "Importing TokenUsageBaseModel from 'nat.plugins.eval.profiler.callbacks.token_usage_base_model' is deprecated. "
-    "Use 'nat.data_models.token_usage.TokenUsageBaseModel' instead.",
-    UserWarning,
-    stacklevel=2,
-)
+    prompt_tokens: int = Field(default=0, description="Number of tokens in the prompt.")
+    completion_tokens: int = Field(default=0, description="Number of tokens in the completion.")
+    cached_tokens: int = Field(default=0, description="Number of tokens read from cache.")
+    reasoning_tokens: int = Field(default=0, description="Number of tokens used for reasoning.")
+    total_tokens: int = Field(default=0, description="Number of tokens total.")

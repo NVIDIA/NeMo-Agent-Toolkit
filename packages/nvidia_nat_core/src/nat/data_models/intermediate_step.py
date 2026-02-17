@@ -27,17 +27,7 @@ from pydantic import model_validator
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.invocation_node import InvocationNode
-
-try:
-    from nat.plugins.eval.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
-except ImportError:
-
-    class TokenUsageBaseModel(BaseModel):
-        prompt_tokens: int = Field(default=0, description="Number of tokens in the prompt.")
-        completion_tokens: int = Field(default=0, description="Number of tokens in the completion.")
-        cached_tokens: int = Field(default=0, description="Number of tokens read from cache.")
-        reasoning_tokens: int = Field(default=0, description="Number of tokens used for reasoning.")
-        total_tokens: int = Field(default=0, description="Number of tokens total.")
+from nat.data_models.token_usage import TokenUsageBaseModel
 
 
 class IntermediateStepCategory(StrEnum):

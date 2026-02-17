@@ -50,6 +50,7 @@ For users migrating existing integrations, the primary import change is:
 For evaluation data models, prefer canonical core paths:
 - `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
 - `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
+- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.eval.profiler.callbacks.token_usage_base_model`)
 
 Internal module reorganization inside `nat.plugins.eval` is implementation detail and may change between releases.
 
