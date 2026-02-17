@@ -17,7 +17,7 @@ from collections.abc import Callable
 
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.evaluator_config_base import EvaluatorBaseConfig
 
 
 class EvaluatorInfo:

@@ -110,6 +110,34 @@ class EvaluationRunConfig(BaseModel):
     )
 
 
+class InferenceMetricsModel(BaseModel):
+    """Confidence intervals and percentiles for a sampled profiler metric."""
+
+    n: int = Field(default=0, description="Number of samples")
+    mean: float = Field(default=0, description="Mean of the samples")
+    ninetieth_interval: tuple[float, float] = Field(default=(0, 0), description="90% confidence interval")
+    ninety_fifth_interval: tuple[float, float] = Field(default=(0, 0), description="95% confidence interval")
+    ninety_ninth_interval: tuple[float, float] = Field(default=(0, 0), description="99% confidence interval")
+    p90: float = Field(default=0, description="90th percentile of the samples")
+    p95: float = Field(default=0, description="95th percentile of the samples")
+    p99: float = Field(default=0, description="99th percentile of the samples")
+
+
+class WorkflowRuntimeMetrics(BaseModel):
+    """p90/p95/p99 workflow runtimes across evaluation examples."""
+
+    p90: float
+    p95: float
+    p99: float
+
+
+class ProfilerResults(BaseModel):
+    """High-level profiler output attached to an evaluation run."""
+
+    workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
+    llm_latency_ci: InferenceMetricsModel | None = None
+
+
 class EvaluationRunOutput(BaseModel):
     """Output of a single evaluation run."""
 
@@ -137,7 +165,7 @@ class EvaluationRunOutput(BaseModel):
         default=None,
         description="LLM usage statistics collected during evaluation.",
     )
-    profiler_results: typing.Any = Field(
+    profiler_results: ProfilerResults = Field(
         ...,
         description="Profiling results from the evaluation run.",
     )

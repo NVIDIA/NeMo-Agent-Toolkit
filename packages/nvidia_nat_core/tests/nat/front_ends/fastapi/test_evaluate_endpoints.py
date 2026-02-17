@@ -65,7 +65,7 @@ async def patch_evaluation_run(register_test_workflow):
             return self
 
         async def run_and_evaluate(self, *args, **kwargs):
-            from nat.plugins.eval.profiler.data_models import ProfilerResults
+            from nat.data_models.evaluate_runtime import ProfilerResults
             result = EvaluationRunOutput(workflow_output_file="/fake/output/path.json",
                                          evaluator_output_files=[],
                                          workflow_interrupted=False,

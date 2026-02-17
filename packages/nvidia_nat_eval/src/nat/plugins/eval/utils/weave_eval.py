@@ -18,10 +18,10 @@ import logging
 from typing import TYPE_CHECKING
 from typing import Any
 
+from nat.data_models.evaluate_runtime import ProfilerResults
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
-from nat.plugins.eval.profiler.data_models import ProfilerResults
 from nat.plugins.eval.runtime.usage_stats import UsageStats
 from nat.plugins.eval.runtime.usage_stats import UsageStatsItem
 

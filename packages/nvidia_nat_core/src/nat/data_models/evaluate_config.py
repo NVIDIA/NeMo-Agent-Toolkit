@@ -26,7 +26,7 @@ from pydantic import model_validator
 from nat.data_models.common import TypedBaseModel
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.dataset_handler import EvalS3Config
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.evaluator_config_base import EvaluatorBaseConfig
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.profiler import ProfilerConfig
 

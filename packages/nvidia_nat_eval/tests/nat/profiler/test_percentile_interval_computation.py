@@ -20,7 +20,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nat.plugins.eval.profiler.inference_metrics_model import InferenceMetricsModel
+from nat.data_models.evaluate_runtime import InferenceMetricsModel
 from nat.plugins.eval.profiler.profile_runner import ProfilerRunner
 
 # ---------------------------------------------------------------------------

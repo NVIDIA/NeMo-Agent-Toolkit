@@ -12,7 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compatibility re-exports for YAML-backed evaluation config models."""
+"""
+Compatibility re-exports for YAML-backed evaluation config models.
+This file can be dropped in NAT 1.6.0.
+"""
 
 from nat.data_models.evaluate_config import EvalConfig  # noqa: F401
 from nat.data_models.evaluate_config import EvalCustomScriptConfig  # noqa: F401

@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from pydantic import BaseModel
+"""Compatibility re-export for profiler run output model."""
 
-from nat.plugins.eval.profiler.inference_metrics_model import InferenceMetricsModel
-from nat.plugins.eval.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
-
-
-class ProfilerResults(BaseModel):
-    workflow_runtime_metrics: WorkflowRuntimeMetrics | None = None
-    llm_latency_ci: InferenceMetricsModel | None = None
+from nat.data_models.evaluate_runtime import ProfilerResults  # noqa: F401  # pyright: ignore[reportMissingImports]

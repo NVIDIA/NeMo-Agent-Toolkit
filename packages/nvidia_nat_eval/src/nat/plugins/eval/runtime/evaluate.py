@@ -33,11 +33,11 @@ from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.evaluate_config import JobEvictionPolicy
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
-from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
+from nat.data_models.evaluate_runtime import ProfilerResults
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
-from nat.plugins.eval.profiler.data_models import ProfilerResults
+from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.runtime.usage_stats import UsageStats
 from nat.plugins.eval.runtime.usage_stats import UsageStatsItem

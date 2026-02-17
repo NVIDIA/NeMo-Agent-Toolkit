@@ -15,8 +15,8 @@
 
 import numpy as np
 
+from nat.data_models.evaluate_runtime import WorkflowRuntimeMetrics
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.plugins.eval.profiler.inference_optimization.data_models import WorkflowRuntimeMetrics
 from nat.plugins.eval.profiler.utils import create_standardized_dataframe
 
 

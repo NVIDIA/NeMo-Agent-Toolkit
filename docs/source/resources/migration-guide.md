@@ -47,7 +47,7 @@ For users migrating existing integrations, the primary import change is:
 - `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
 - `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
 
-For shared evaluation data models, prefer canonical core paths:
+For evaluation data models, prefer canonical core paths:
 - `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
 - `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
 

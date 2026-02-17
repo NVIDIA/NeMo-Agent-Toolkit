@@ -37,16 +37,16 @@ from nat.data_models.evaluate_config import EvalOutputConfig
 from nat.data_models.evaluate_config import JobEvictionPolicy
 from nat.data_models.evaluate_config import JobManagementConfig
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import ProfilerResults
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutput
+from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
-from nat.plugins.eval.profiler.data_models import ProfilerResults
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.runtime.session import SessionManager
 

@@ -31,7 +31,7 @@ from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.component_ref import LLMRef
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.evaluator_config_base import EvaluatorBaseConfig
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput

@@ -20,6 +20,8 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import RootModel
 
+from nat.data_models.evaluate_runtime import WorkflowRuntimeMetrics  # noqa: F401
+
 # -----------------------------------------------------------
 # Prompt Caching Data Models
 # -----------------------------------------------------------
@@ -80,20 +82,6 @@ class LLMUniquenessMetricsByLLM(RootModel[dict[str, LLMUniquenessMetrics]]):
     def to_dict(self) -> dict[str, Any]:
         # Return the raw dictionary for convenience
         return self.root
-
-
-# ----------------------------------------------------------------
-# Workflow Runtime Models
-# ----------------------------------------------------------------
-
-
-class WorkflowRuntimeMetrics(BaseModel):
-    """
-    Stores p90, p95, and p99 for workflow runtimes across all examples.
-    """
-    p90: float
-    p95: float
-    p99: float
 
 
 # ----------------------------------------------------------------------
