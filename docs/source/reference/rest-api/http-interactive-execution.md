@@ -101,8 +101,10 @@ flowchart TD
 
 ### Starting an Execution (Polling Mode)
 
-When `enable_interactive_extensions` is `true`, POST requests to chat endpoints return a
-`202 Accepted` response if the workflow requires interaction or OAuth before it can complete.
+POST requests to versioned endpoints such as `/v1/chat` return a `202 Accepted` response if the
+workflow requires interaction or OAuth before it can complete. Interactive support is enabled by
+default on these endpoints; the `enable_interactive_extensions` flag only gates OpenAI-compatible
+endpoints (see [Configuration](#configuration)).
 
 **Request:**
 
