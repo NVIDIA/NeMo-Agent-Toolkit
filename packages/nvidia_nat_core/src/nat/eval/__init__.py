@@ -58,9 +58,6 @@ def _populate_aliases() -> None:
     for module_info in pkgutil.walk_packages(new_path, prefix=f"{_NEW_PREFIX}."):
         new_name = module_info.name
         old_name = new_name.replace(_NEW_PREFIX, _OLD_PREFIX, 1)
-        # Keep `nat.eval.runtime_event_subscriber` mapped to core.
-        if old_name == "nat.eval.runtime_event_subscriber":
-            continue
         _alias_module(old_name, new_name)
 
 
