@@ -189,6 +189,27 @@ class IntermediateStepManager:
 
         self._context_state.event_stream.get().on_next(intermediate_step)
 
+    def push_intermediate_steps(self, steps: list[IntermediateStep]) -> None:
+        """
+        Inject a sequence of intermediate steps into the event stream without updating
+        the step manager's internal stack. Used to replay steps from a remote workflow
+        (for example, from a /generate/full response) into the current workflow's
+        observability stream so the full tree is visible.
+
+        When replaying steps from a remote workflow, ensure the remote was invoked
+        with the appropriate workflow-parent-id and workflow-parent-name (HTTP
+        headers or session.run(parent_id=..., parent_name=...)) so the root step
+        in the replayed list has the correct parent in the trace tree.
+
+        Parameters
+        ----------
+        steps : list[IntermediateStep]
+            Steps to inject (for example, parsed from a remote workflow response).
+        """
+        stream = self._context_state.event_stream.get()
+        for step in steps:
+            stream.on_next(step)
+
     def subscribe(self,
                   on_next: OnNext[IntermediateStep],
                   on_error: OnError = None,
