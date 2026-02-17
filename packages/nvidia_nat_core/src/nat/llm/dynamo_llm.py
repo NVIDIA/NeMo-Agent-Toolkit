@@ -471,6 +471,9 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         self._prediction_lookup = prediction_lookup
         self._use_raw_values = use_raw_values
         self._disable_headers = disable_headers
+        # Per-prefix call counter so call_index advances across requests
+        # for the same prefix_id (keyed by prefix_id string).
+        self._call_counts: dict[str, int] = {}
 
     async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
         # Get prefix ID from context (supports depth-awareness and overrides)
@@ -491,17 +494,13 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         # Check for prediction override
         if self._prediction_lookup is not None:
             try:
-                from nat.llm.prediction_context import get_call_tracker
-
                 ctx = Context.get()
                 path = ctx.function_path
 
-                # Get call index for current parent function
-                call_index = 1
-                active_fn = ctx.active_function
-                if active_fn and active_fn.function_id != "root":
-                    tracker = get_call_tracker()
-                    call_index = tracker.counts.get(active_fn.function_id, 1)
+                # Increment per-prefix call counter to advance through trie predictions.
+                # This is self-contained — no dependency on intermediate_step_manager.
+                self._call_counts[prefix_id] = self._call_counts.get(prefix_id, 0) + 1
+                call_index = self._call_counts[prefix_id]
 
                 # Look up prediction
                 prediction = self._prediction_lookup.find(path, call_index)
