@@ -88,10 +88,6 @@ flowchart TD
     OAuth -->|OAuth redirect resolves token| Running
     OAuth -->|Timeout| Failed
 
-    Interaction ~~~ OAuth
-    Completed ~~~ Failed
-    Failed ~~~ Completed
-
     style Completed fill:#2e7d32,color:#fff,stroke:#1b5e20
     style Failed fill:#c62828,color:#fff,stroke:#b71c1c
     style Running fill:#006699,color:#fff,stroke:#003366

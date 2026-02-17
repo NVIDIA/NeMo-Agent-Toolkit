@@ -187,29 +187,30 @@ class HTTPAuthenticationFlowHandler(FlowHandlerBase):
             challenge=flow_state.challenge,
         )
 
-        # Register the flow so the redirect_uri endpoint can complete it
         assert self._add_flow_cb is not None
         assert self._remove_flow_cb is not None
+
+        # Register the flow so the redirect_uri endpoint can complete it
         await self._add_flow_cb(state, flow_state)
 
-        # Publish to execution store
-        await ctx.store.set_oauth_required(
-            execution_id=ctx.execution_id,
-            auth_url=authorization_url,
-            oauth_state=state,
-        )
-
-        # If streaming, push an SSE event
-        if ctx.stream_queue is not None:
-            event = StreamOAuthEvent(
+        try:
+            # Publish to execution store
+            await ctx.store.set_oauth_required(
                 execution_id=ctx.execution_id,
                 auth_url=authorization_url,
                 oauth_state=state,
             )
-            await ctx.stream_queue.put(event)
 
-        # Block until the redirect_uri endpoint resolves the token
-        try:
+            # If streaming, push an SSE event
+            if ctx.stream_queue is not None:
+                event = StreamOAuthEvent(
+                    execution_id=ctx.execution_id,
+                    auth_url=authorization_url,
+                    oauth_state=state,
+                )
+                await ctx.stream_queue.put(event)
+
+            # Block until the redirect_uri endpoint resolves the token
             token = await asyncio.wait_for(flow_state.future, timeout=self._auth_timeout_seconds)
         except TimeoutError as exc:
             raise RuntimeError(f"Authentication flow timed out after {self._auth_timeout_seconds} seconds.") from exc
