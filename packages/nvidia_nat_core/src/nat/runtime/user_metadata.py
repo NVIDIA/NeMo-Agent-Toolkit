@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
+
 from starlette.datastructures import Headers
 from starlette.datastructures import QueryParams
 
@@ -128,6 +130,11 @@ class RequestAttributes:
             dict[str, str] | None
         """
         return self._request.cookies
+
+    @property
+    def payload(self) -> dict[str, typing.Any] | None:
+        """Request payload parsed as a dictionary."""
+        return self._request.payload
 
     def to_dict(self) -> dict[str, object]:
         """

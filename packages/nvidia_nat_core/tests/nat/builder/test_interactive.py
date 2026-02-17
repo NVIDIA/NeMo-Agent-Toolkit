@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import pytest
+from pydantic import ValidationError
 
 from nat.builder.context import ContextState
 from nat.builder.user_interaction_manager import UserInteractionManager
@@ -117,3 +118,36 @@ async def test_prompt_user_input_text():
     finally:
         # Always reset the token so as not to affect other tests.
         state.user_input_callback.reset(token)
+
+
+# ------------------------------------------------------------------------------
+# Tests for HITL timeout and error (HumanPromptBase)
+# ------------------------------------------------------------------------------
+
+
+def test_human_prompt_text_timeout_and_error_defaults():
+    """HumanPromptText without timeout/error uses HumanPromptBase defaults."""
+    prompt = HumanPromptText(text="Prompt", required=True)
+    assert prompt.timeout is None
+    assert prompt.error == "This prompt is no longer available."
+
+
+def test_human_prompt_text_with_timeout_and_error():
+    """HumanPromptText accepts timeout and error."""
+    prompt = HumanPromptText(
+        text="Confirm?",
+        required=True,
+        placeholder="yes/no",
+        timeout=60,
+        error="Approval window has expired.",
+    )
+    assert prompt.timeout == 60
+    assert prompt.error == "Approval window has expired."
+
+
+def test_human_prompt_base_timeout_validation_gt_zero():
+    """HumanPromptBase timeout must be > 0 when set."""
+    with pytest.raises(ValidationError):
+        HumanPromptText(text="x", required=True, timeout=0)
+    with pytest.raises(ValidationError):
+        HumanPromptText(text="x", required=True, timeout=-1)

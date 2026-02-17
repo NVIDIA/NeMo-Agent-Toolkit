@@ -21,6 +21,10 @@ on:
 jobs:
   stale:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      issues: write
+      pull-requests: write
     steps:
       - uses: actions/stale@v10
         with:
@@ -34,3 +38,4 @@ jobs:
           days-before-pr-close: 14
           exempt-issue-labels: 'Needs Triage'
           exempt-pr-labels: 'Under Review'
+          operations-per-run: 100

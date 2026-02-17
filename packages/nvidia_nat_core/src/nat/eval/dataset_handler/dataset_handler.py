@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from nat.data_models.dataset_handler import EvalDatasetConfig
+from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.dataset_handler import EvalDatasetCustomConfig
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
 from nat.data_models.intermediate_step import IntermediateStep
@@ -38,7 +38,7 @@ class DatasetHandler:
     """
 
     def __init__(self,
-                 dataset_config: EvalDatasetConfig,
+                 dataset_config: EvalDatasetBaseConfig,
                  reps: int,
                  concurrency: int,
                  num_passes: int = 1,

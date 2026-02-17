@@ -760,7 +760,7 @@ class TestDynamoTransport:
 
         # Verify latency-sensitivity header was injected with default MEDIUM
         prefix = f"{LLMHeaderPrefix.DYNAMO}"
-        assert modified_request.headers[f"{prefix}-latency-sensitivity"] == "MEDIUM"
+        assert modified_request.headers[f"{prefix}-latency-sensitivity"] == "2"
 
         # Cleanup
         DynamoPrefixContext.clear()
@@ -814,7 +814,7 @@ class TestDynamoTransport:
         assert "nvext" in body
         assert "agent_hints" in body["nvext"]
         agent_hints = body["nvext"]["agent_hints"]
-        assert agent_hints["latency_sensitivity"] == "MEDIUM"
+        assert agent_hints["latency_sensitivity"] == 2.0
 
         # Cleanup
         DynamoPrefixContext.clear()

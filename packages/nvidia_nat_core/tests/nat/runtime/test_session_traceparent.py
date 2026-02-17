@@ -111,7 +111,6 @@ TRACE_ID_CASES: list[tuple[list[tuple[bytes, bytes]], int | None]] = [
     "headers,expected_trace_id",
     TRACE_ID_CASES,
 )
-@pytest.mark.asyncio
 async def test_session_trace_id_from_headers_parameterized(headers: list[tuple[bytes, bytes]],
                                                            expected_trace_id: int | None):
     scope = {
@@ -132,7 +131,7 @@ async def test_session_trace_id_from_headers_parameterized(headers: list[tuple[b
         with patch("nat.cli.type_registry.GlobalTypeRegistry") as mock_registry:
             mock_registry.get.return_value.get_function.return_value = _create_mock_function_registration()
             sm = SessionManager(config=_create_mock_config(), shared_builder=_MockWorkflowBuilder(), max_concurrency=0)
-            sm.set_metadata_from_http_request(request)
+            await sm.set_metadata_from_http_request(request)
             assert ctx_state.workflow_trace_id.get() == expected_trace_id
     finally:
         ctx_state.workflow_trace_id.reset(token)
@@ -160,7 +159,6 @@ METADATA_CASES: list[tuple[list[tuple[bytes, bytes]], str | None, str | None, st
     "headers,expected_conv,expected_msg,expected_run",
     METADATA_CASES,
 )
-@pytest.mark.asyncio
 async def test_session_metadata_headers_parameterized(headers: list[tuple[bytes, bytes]],
                                                       expected_conv: str | None,
                                                       expected_msg: str | None,
@@ -186,7 +184,7 @@ async def test_session_metadata_headers_parameterized(headers: list[tuple[bytes,
         with patch("nat.cli.type_registry.GlobalTypeRegistry") as mock_registry:
             mock_registry.get.return_value.get_function.return_value = _create_mock_function_registration()
             sm = SessionManager(config=_create_mock_config(), shared_builder=_MockWorkflowBuilder(), max_concurrency=0)
-            sm.set_metadata_from_http_request(request)
+            await sm.set_metadata_from_http_request(request)
             assert ctx_state.conversation_id.get() == expected_conv
             assert ctx_state.user_message_id.get() == expected_msg
             assert ctx_state.workflow_run_id.get() == expected_run
