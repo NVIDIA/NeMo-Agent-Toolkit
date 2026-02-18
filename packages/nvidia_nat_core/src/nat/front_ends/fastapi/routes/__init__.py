@@ -12,16 +12,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-app:
-  host: "localhost"
-  ws: "websocket"
-  port: 8000
-  config_filepath: 'config.yml'
-  input: "Can you provide me with the most read content about LangSmith?"
-
-endpoint:
-  generate: "/v1/workflow"
-  chat: "/v1/chat"
-  generate_stream: "/v1/workflow/stream"
-  chat_stream: "/v1/chat/stream"
+"""FastAPI route registration helpers organized by endpoint area."""
