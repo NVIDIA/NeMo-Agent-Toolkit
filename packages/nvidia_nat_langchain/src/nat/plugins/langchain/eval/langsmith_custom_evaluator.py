@@ -73,8 +73,7 @@ def _detect_convention(evaluator: Any) -> str:
         evaluator: The evaluator callable or instance.
 
     Returns:
-        One of ``'run_evaluator_class'``, ``'run_example_function'``,
-        or ``'openevals_function'``.
+        One of ``'run_evaluator_class'``, ``'run_example_function'``, or ``'openevals_function'``.
     """
     # Check for RunEvaluator class instances (lazy import to avoid
     # pulling in langsmith at module load time)

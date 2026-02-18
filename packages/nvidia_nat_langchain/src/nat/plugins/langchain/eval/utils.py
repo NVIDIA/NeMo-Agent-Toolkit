@@ -37,8 +37,7 @@ def _import_from_dotted_path(dotted_path: str, *, label: str = "object") -> Any:
 
     Args:
         dotted_path: Full Python dotted path (e.g., ``'my_pkg.module.MyClass'``).
-        label: Human-readable label used in error messages (e.g.,
-            ``'evaluator'``, ``'output_schema'``).
+        label: Human-readable label for error messages (e.g., ``'evaluator'``, ``'output_schema'``).
 
     Returns:
         The imported attribute.
@@ -81,19 +80,14 @@ def eval_input_item_to_openevals_kwargs(
 
     Args:
         item: NAT evaluation input item.
-        extra_fields: Optional mapping of evaluator kwarg names to dataset
-            field names.  Keys are the kwarg names passed to the evaluator;
-            values are looked up in ``item.full_dataset_entry``.
+        extra_fields: Mapping of kwarg names to dataset field names, looked up in ``item.full_dataset_entry``.
 
     Returns:
-        Dictionary with at least 'inputs', 'outputs', and
-        'reference_outputs' keys, plus any extra fields.
+        Dictionary with at least ``inputs``, ``outputs``, and ``reference_outputs`` keys, plus any extra fields.
 
     Raises:
-        ValueError: If an extra_fields key conflicts with a standard
-            parameter (``inputs``, ``outputs``, ``reference_outputs``).
-        KeyError: If a requested extra field is not present in the
-            dataset entry.
+        ValueError: If an extra_fields key conflicts with ``inputs``, ``outputs``, or ``reference_outputs``.
+        KeyError: If a requested extra field is not present in the dataset entry.
     """
     kwargs: dict[str, Any] = {
         "inputs": item.input_obj,
@@ -285,9 +279,7 @@ def langsmith_result_to_eval_output_item(
     Args:
         item_id: The id from the corresponding EvalInputItem.
         result: The evaluation result.
-        score_field: When set, the result is treated as a raw dict from a
-            custom ``output_schema`` evaluator and the score is extracted
-            using dot-notation (e.g., ``'analysis.score'``).
+        score_field: Dot-notation path to the score in custom ``output_schema`` results (e.g., ``'analysis.score'``).
 
     Returns:
         NAT EvalOutputItem with score and reasoning.

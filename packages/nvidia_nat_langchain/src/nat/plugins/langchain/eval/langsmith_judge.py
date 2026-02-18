@@ -45,8 +45,7 @@ def _resolve_prompt(prompt_value: str) -> str:
     treated as a literal prompt template string (e.g., a custom f-string).
 
     Args:
-        prompt_value: Either a short prompt name (e.g., ``'correctness'``,
-            ``'hallucination'``) or a literal prompt template string.
+        prompt_value: A short prompt name (e.g., ``'correctness'``) or a literal prompt template string.
 
     Returns:
         The resolved prompt string.
@@ -164,8 +163,7 @@ def _build_create_kwargs(
 
     Args:
         config: The judge evaluator configuration.
-        resolved_prompt: The prompt string (already resolved from a short
-            name or left as-is for custom templates).
+        resolved_prompt: The prompt string, already resolved from a short name or left as-is for custom templates.
         judge_llm: The LLM instance to use as the judge.
 
     Returns:

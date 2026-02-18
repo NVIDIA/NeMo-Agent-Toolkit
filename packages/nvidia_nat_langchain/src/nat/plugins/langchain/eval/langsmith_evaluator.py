@@ -60,8 +60,7 @@ def _resolve_evaluator(name: str) -> Callable[..., Any]:
     ensures *name* is valid, so this is a direct lookup.
 
     Args:
-        name: Short evaluator name (e.g., ``'exact_match'``,
-            ``'levenshtein_distance'``).
+        name: Short evaluator name (e.g., ``'exact_match'``, ``'levenshtein_distance'``).
 
     Returns:
         The resolved evaluator callable.
