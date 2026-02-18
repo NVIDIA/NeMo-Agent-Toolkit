@@ -12,16 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Compatibility shim for profiler callback base class."""
 
-import warnings
+from abc import ABC
 
-from nat.data_models.profiler_callback import BaseProfilerCallback  # noqa: F401
 
-warnings.warn(
-    "Importing BaseProfilerCallback from "
-    "'nat.plugins.eval.profiler.callbacks.base_callback_class' is deprecated and this compatibility "
-    "layer will be removed in a future release. Use 'nat.data_models.profiler_callback' instead.",
-    UserWarning,
-    stacklevel=2,
-)
+class BaseProfilerCallback(ABC):
+    """Base interface for profiler callback handlers across integrations."""

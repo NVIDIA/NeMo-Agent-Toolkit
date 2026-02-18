@@ -31,8 +31,8 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
+from nat.data_models.profiler_callback import BaseProfilerCallback
 from nat.data_models.token_usage import TokenUsageBaseModel
-from nat.plugins.eval.profiler.callbacks.base_callback_class import BaseProfilerCallback
 
 logger = logging.getLogger(__name__)
 
