@@ -21,23 +21,17 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
 from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
-    analyze_calls_and_build_result,
-)
+    analyze_calls_and_build_result, )
 from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
-    build_call_tree_for_example,
-)
+    build_call_tree_for_example, )
 from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
-    build_call_tree_per_example,
-)
+    build_call_tree_per_example, )
 from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
-    compute_time_based_concurrency,
-)
+    compute_time_based_concurrency, )
 from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
-    find_midpoint_concurrency,
-)
+    find_midpoint_concurrency, )
 from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
-    multi_example_call_profiling,
-)
+    multi_example_call_profiling, )
 from nat.plugins.eval.profiler.inference_optimization.data_models import CallNode
 from nat.plugins.eval.profiler.inference_optimization.data_models import ConcurrencyDistribution
 from nat.plugins.eval.profiler.inference_optimization.data_models import NestedCallProfilingResult

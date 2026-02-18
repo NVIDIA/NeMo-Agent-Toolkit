@@ -22,8 +22,7 @@ from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEv
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import (
-    profile_workflow_bottlenecks,
-)
+    profile_workflow_bottlenecks, )
 from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 ##########################################################
