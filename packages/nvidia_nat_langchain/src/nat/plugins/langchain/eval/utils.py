@@ -90,6 +90,8 @@ def eval_input_item_to_openevals_kwargs(
         'reference_outputs' keys, plus any extra fields.
 
     Raises:
+        ValueError: If an extra_fields key conflicts with a standard
+            parameter (``inputs``, ``outputs``, ``reference_outputs``).
         KeyError: If a requested extra field is not present in the
             dataset entry.
     """
@@ -189,13 +191,12 @@ def _handle_custom_schema_result(
     try:
         score = _extract_field(result, score_field)
     except (KeyError, TypeError) as exc:
+        error_msg = f"Failed to extract score_field '{score_field}': {exc}"
         return EvalOutputItem(
             id=item_id,
             score=0.0,
-            reasoning={
-                "error": f"Failed to extract score_field '{score_field}': {exc}",
-                "raw": str(result),
-            },
+            reasoning={"raw": str(result)},
+            error=error_msg,
         )
     return EvalOutputItem(
         id=item_id,
@@ -213,7 +214,8 @@ def _handle_list_result(item_id: Any, result: list) -> EvalOutputItem:
         return EvalOutputItem(
             id=item_id,
             score=0.0,
-            reasoning={"error": "Empty list of results returned"},
+            reasoning={},
+            error="Empty list of results returned",
         )
 
     scores: list[float] = []
@@ -273,7 +275,7 @@ def langsmith_result_to_eval_output_item(
 
     Dispatches to specialised handlers based on the result type:
 
-    - Custom ``output_schema`` dict (no ``"key"`` field) with *score_field*
+    - Custom ``output_schema`` dict (when *score_field* is set)
     - Bare list (e.g., ``create_json_match_evaluator``)
     - ``EvaluationResults`` batch (dict with ``"results"`` key)
     - ``EvaluationResult`` object (from RunEvaluator classes)
@@ -307,7 +309,8 @@ def langsmith_result_to_eval_output_item(
             return EvalOutputItem(
                 id=item_id,
                 score=0.0,
-                reasoning={"error": "Empty EvaluationResults returned"},
+                reasoning={},
+                error="Empty EvaluationResults returned",
             )
 
     # EvaluationResult object
@@ -319,11 +322,10 @@ def langsmith_result_to_eval_output_item(
         return _handle_dict_result(item_id, result)
 
     # Fallback for unexpected result types
+    error_msg = f"Unexpected result type: {type(result).__name__}"
     return EvalOutputItem(
         id=item_id,
         score=0.0,
-        reasoning={
-            "error": f"Unexpected result type: {type(result).__name__}",
-            "raw": str(result),
-        },
+        reasoning={"raw": str(result)},
+        error=error_msg,
     )

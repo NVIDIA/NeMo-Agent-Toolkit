@@ -28,8 +28,8 @@ from nat.plugins.langchain.eval.utils import eval_input_item_to_run_and_example
 from nat.plugins.langchain.eval.utils import langsmith_result_to_eval_output_item
 
 
-@pytest.fixture
-def sample_item():
+@pytest.fixture(name="sample_item")
+def fixture_sample_item():
     return EvalInputItem(
         id="test_1",
         input_obj="What is AI?",
@@ -212,7 +212,7 @@ def test_unexpected_result_type():
     output = langsmith_result_to_eval_output_item("item_4", 42)
 
     assert output.score == 0.0
-    assert "Unexpected result type" in output.reasoning["error"]
+    assert "Unexpected result type" in output.error
 
 
 def test_evaluation_result_object():
@@ -239,7 +239,7 @@ class TestListResultHandling:
     def test_empty_list_returns_zero(self):
         output = langsmith_result_to_eval_output_item("id_1", [])
         assert output.score == 0.0
-        assert "Empty list" in output.reasoning["error"]
+        assert "Empty list" in output.error
 
     def test_single_item_list(self):
         result = [{"key": "k1", "score": 0.8, "comment": "OK"}]
@@ -307,7 +307,7 @@ class TestCustomSchemaResultParsing:
         result = {"justification": "Some text"}
         output = langsmith_result_to_eval_output_item("id_3", result, score_field="nonexistent")
         assert output.score == 0.0
-        assert "Failed to extract score_field" in output.reasoning["error"]
+        assert "Failed to extract score_field" in output.error
 
     def test_score_field_takes_precedence_over_standard_key(self):
         """When score_field is set, custom schema handling is always used."""
@@ -319,7 +319,7 @@ class TestCustomSchemaResultParsing:
     async def test_adapter_uses_score_field(self):
         """Adapter passes score_field through to result converter."""
 
-        def custom_schema_evaluator(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        def custom_schema_evaluator(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"is_correct": True, "explanation": "Matches reference"}
 
         evaluator = LangSmithEvaluatorAdapter(

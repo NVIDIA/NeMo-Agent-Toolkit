@@ -103,7 +103,7 @@ class TestLangSmithJudgeRegistration:
         """Builtin prompt name creates a working evaluator."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 0.9, "comment": "Looks good"}
 
         config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
@@ -138,7 +138,7 @@ class TestLangSmithJudgeRegistration:
         custom_prompt = "Rate professionalism: {inputs} {outputs}"
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "professionalism", "score": 0.85, "comment": "Professional tone"}
 
         config = LangSmithJudgeConfig(
@@ -169,7 +169,7 @@ class TestLangSmithJudgeRegistration:
         """Choices are passed through to create_async_llm_as_judge."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 0.5}
 
         config = LangSmithJudgeConfig(
@@ -197,7 +197,7 @@ class TestLangSmithJudgeRegistration:
         mock_llm = MagicMock(name="mock_judge_llm")
         patched_llm = MagicMock(name="patched_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -232,7 +232,7 @@ class TestLangSmithJudgeRegistration:
         """When do_auto_retry is explicitly False, patch_with_retry is NOT called."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm", do_auto_retry=False)
@@ -294,7 +294,7 @@ class TestLangSmithJudgeNewTypedFields:
         """system field is forwarded to create_async_llm_as_judge."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 0.9, "comment": "OK"}
 
         config = LangSmithJudgeConfig(
@@ -313,7 +313,7 @@ class TestLangSmithJudgeNewTypedFields:
         mock_llm = MagicMock(name="mock_judge_llm")
         examples = [{"inputs": "Q", "outputs": "A", "score": True, "reasoning": "OK"}]
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -331,7 +331,7 @@ class TestLangSmithJudgeNewTypedFields:
         """system is NOT in create_async_llm_as_judge kwargs when None."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
@@ -367,7 +367,7 @@ class TestJudgeKwargs:
         """Overlap between judge_kwargs and typed fields raises ValueError at registration."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -387,7 +387,7 @@ class TestJudgeKwargs:
         """Overlap with system field raises when both typed field and judge_kwargs set it."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -408,7 +408,7 @@ class TestJudgeKwargs:
         """system in judge_kwargs is fine when the typed field is None (no overlap)."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -426,7 +426,7 @@ class TestJudgeKwargs:
         """judge_kwargs are merged into create_async_llm_as_judge call."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -484,7 +484,7 @@ class TestOutputSchema:
             score: float
             reasoning: str
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -510,7 +510,7 @@ class TestOutputSchema:
         mock_llm = MagicMock(name="mock_judge_llm")
         invalid_schema = type("NotASchema", (), {})
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -556,7 +556,7 @@ class TestLangSmithJudgeExtraFields:
         mock_llm = MagicMock(name="mock_judge_llm")
         received = {}
 
-        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):  # noqa: ARG001
             received.update(kwargs)
             return {"key": "score", "score": True, "comment": "No hallucination"}
 

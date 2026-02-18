@@ -252,7 +252,7 @@ class TestLangSmithEvaluatorAdapter:
     async def test_custom_openevals_dict_with_metadata(self, eval_input_matching):
         """Custom function returning a dict with extra keys is handled."""
 
-        def custom_scorer(*, inputs=None, outputs=None, reference_outputs=None):
+        def custom_scorer(*, inputs=None, outputs=None, reference_outputs=None):  # noqa: ARG001
             return {
                 "key": "custom_key",
                 "score": 0.75,
