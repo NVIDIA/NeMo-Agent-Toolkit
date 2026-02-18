@@ -18,9 +18,9 @@ import contextvars
 from collections.abc import Callable
 from enum import StrEnum
 from typing import Any
-from typing import override
 
 from langsmith.run_helpers import tracing_context
+from typing_extensions import override
 
 from nat.eval.evaluator.base_evaluator import BaseEvaluator
 from nat.eval.evaluator.evaluator_model import EvalInputItem
