@@ -81,7 +81,7 @@ memmachine-server
 
 The server will start on `http://localhost:8080` by default (or the port you configured with the configuration wizard).
 
-For more details, see the [MemMachine Configuration Wizard Documentation](https://docs.memmachine.ai/open_source/configuration-wizard).
+For more details, see the [MemMachine Documentation](https://docs.memmachine.ai/).
 
 ## Usage in NeMo Agent toolkit
 
