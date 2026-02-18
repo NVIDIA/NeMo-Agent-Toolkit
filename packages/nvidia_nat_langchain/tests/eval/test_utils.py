@@ -309,12 +309,12 @@ class TestCustomSchemaResultParsing:
         assert output.score == 0.0
         assert "Failed to extract score_field" in output.reasoning["error"]
 
-    def test_score_field_not_used_for_standard_results(self):
-        """score_field is ignored when result has standard 'key' field."""
+    def test_score_field_takes_precedence_over_standard_key(self):
+        """When score_field is set, custom schema handling is always used."""
         result = {"key": "accuracy", "score": 0.95, "comment": "Good"}
-        output = langsmith_result_to_eval_output_item("id_4", result, score_field="nonexistent")
+        output = langsmith_result_to_eval_output_item("id_4", result, score_field="score")
         assert output.score == 0.95
-        assert output.reasoning["key"] == "accuracy"
+        assert output.reasoning["raw_output"] == result
 
     async def test_adapter_uses_score_field(self):
         """Adapter passes score_field through to result converter."""

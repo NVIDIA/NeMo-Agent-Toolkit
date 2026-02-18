@@ -291,7 +291,7 @@ def langsmith_result_to_eval_output_item(
         NAT EvalOutputItem with score and reasoning.
     """
     # Custom output_schema path
-    if score_field is not None and isinstance(result, dict) and "key" not in result:
+    if score_field is not None and isinstance(result, dict):
         return _handle_custom_schema_result(item_id, result, score_field)
 
     # Bare list

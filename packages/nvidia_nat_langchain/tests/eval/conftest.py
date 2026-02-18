@@ -54,8 +54,8 @@ async def register_evaluator_ctx(register_fn, config, builder=None):
         return info
 
 
-@pytest.fixture
-def eval_input_matching():
+@pytest.fixture(name="eval_input_matching")
+def fixture_eval_input_matching():
     """EvalInput where output matches expected output (for exact_match = True)."""
     return EvalInput(eval_input_items=[
         EvalInputItem(
@@ -74,8 +74,8 @@ def eval_input_matching():
     ])
 
 
-@pytest.fixture
-def eval_input_non_matching():
+@pytest.fixture(name="eval_input_non_matching")
+def fixture_eval_input_non_matching():
     """EvalInput where output does NOT match expected output."""
     return EvalInput(eval_input_items=[
         EvalInputItem(
@@ -94,8 +94,8 @@ def eval_input_non_matching():
     ])
 
 
-@pytest.fixture
-def eval_input_multi_item():
+@pytest.fixture(name="eval_input_multi_item")
+def fixture_eval_input_multi_item():
     """EvalInput with multiple items (mix of matching and non-matching)."""
     return EvalInput(eval_input_items=[
         EvalInputItem(
@@ -128,8 +128,8 @@ def eval_input_multi_item():
     ])
 
 
-@pytest.fixture
-def item_with_context():
+@pytest.fixture(name="item_with_context")
+def fixture_item_with_context():
     """EvalInputItem whose full_dataset_entry has a 'retrieved_context' field."""
     return EvalInputItem(
         id="ctx_1",
@@ -147,7 +147,7 @@ def item_with_context():
     )
 
 
-@pytest.fixture
-def eval_input_with_context(item_with_context):
+@pytest.fixture(name="eval_input_with_context")
+def fixture_eval_input_with_context(item_with_context):
     """EvalInput wrapping a single item with context fields."""
     return EvalInput(eval_input_items=[item_with_context])
