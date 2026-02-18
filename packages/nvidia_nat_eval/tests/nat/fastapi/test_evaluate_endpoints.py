@@ -44,8 +44,10 @@ def set_nat_config_file_fixture(simple_config_file: str, restore_environ):
 
 
 @pytest.fixture(name="test_config")
-def test_config_fixture(dask_scheduler_address: str, set_nat_dask_scheduler_env_var: str,
-                        set_nat_job_store_db_url_env_var: str, setup_db) -> Config:
+def test_config_fixture(dask_scheduler_address: str,
+                        set_nat_dask_scheduler_env_var: str,
+                        set_nat_job_store_db_url_env_var: str,
+                        setup_db) -> Config:
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(
         scheduler_address=dask_scheduler_address,
