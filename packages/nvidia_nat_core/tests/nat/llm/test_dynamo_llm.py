@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from nat.llm.dynamo_llm import CachePinType
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import DynamoPrefixContext
 from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
@@ -44,6 +45,7 @@ class TestDynamoModelConfig:
         assert config.prefix_use_raw_values is True
         assert config.disable_headers is True
         assert config.request_timeout == 600.0
+        assert config.cache_pin_type == CachePinType.EPHEMERAL
 
     def test_custom_prefix_values(self):
         """Test custom prefix parameter values."""
@@ -149,6 +151,21 @@ class TestDynamoModelConfig:
         assert config.temperature == 0.7
         assert config.top_p == 0.9
 
+    def test_cache_pin_type_none_disables(self):
+        """Test that cache_pin_type can be set to None to disable cache control."""
+        config = DynamoModelConfig(model_name="test-model", cache_pin_type=None)
+        assert config.cache_pin_type is None
+
+    def test_cache_pin_type_accepts_enum(self):
+        """Test that cache_pin_type accepts CachePinType enum values."""
+        config = DynamoModelConfig(model_name="test-model", cache_pin_type=CachePinType.EPHEMERAL)
+        assert config.cache_pin_type == CachePinType.EPHEMERAL
+
+    def test_cache_pin_type_accepts_string(self):
+        """Test that cache_pin_type accepts string values matching enum."""
+        config = DynamoModelConfig(model_name="test-model", cache_pin_type="ephemeral")
+        assert config.cache_pin_type == CachePinType.EPHEMERAL
+
     def test_get_dynamo_field_names(self):
         """Test that get_dynamo_field_names returns the correct field set."""
         field_names = DynamoModelConfig.get_dynamo_field_names()
@@ -162,6 +179,7 @@ class TestDynamoModelConfig:
             "request_timeout",
             "prediction_trie_path",
             "disable_headers",
+            "cache_pin_type",
         })
 
         assert field_names == expected
@@ -323,9 +341,25 @@ class TestCreateHttpxClient:
         assert client._transport._iat == 50
         assert client._transport._use_raw_values is True
         assert client._transport._disable_headers is True
+        assert client._transport._cache_pin_type == CachePinType.EPHEMERAL
 
         # Verify timeout
         assert client.timeout.read == 120.0
+
+    def test_creates_client_with_cache_pin_type_none(self):
+        """Test that create_httpx_client_with_dynamo_hooks passes cache_pin_type=None through."""
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        client = create_httpx_client_with_dynamo_hooks(
+            prefix_template="test-{uuid}",
+            total_requests=10,
+            osl=512,
+            iat=250,
+            cache_pin_type=None,
+        )
+
+        assert isinstance(client._transport, _DynamoTransport)
+        assert client._transport._cache_pin_type is None
 
 
 # ---------------------------------------------------------------------------
@@ -817,6 +851,192 @@ class TestDynamoTransport:
         assert agent_hints["latency_sensitivity"] == 2.0
 
         # Cleanup
+        DynamoPrefixContext.clear()
+
+    async def test_transport_injects_cache_control_by_default(self):
+        """Test that _DynamoTransport injects nvext.cache_control with ephemeral type and computed TTL."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # total_requests=10, iat=250 -> TTL = 10 * 250 = 2500ms
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+        )
+
+        DynamoPrefixContext.set("cache-control-test")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test", "messages": []})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        assert "nvext" in body
+        assert "cache_control" in body["nvext"]
+        cache_control = body["nvext"]["cache_control"]
+        assert cache_control["type"] == "ephemeral"
+        assert cache_control["ttl"] == "3s"  # 10 * 250 = 2500ms -> ceil = 3s
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_cache_control_ttl_formatted_as_minutes(self):
+        """Test that TTL is formatted as '<N>m' when evenly divisible by 60 seconds."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # total_requests=20, iat=3000 -> TTL = 60000ms = 60s = 1m
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=20,
+            osl=512,
+            iat=3000,
+            prediction_lookup=None,
+        )
+
+        DynamoPrefixContext.set("ttl-minutes-test")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        assert body["nvext"]["cache_control"]["ttl"] == "1m"  # 20 * 3000 = 60000ms = 1m
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_cache_control_ttl_formatted_as_seconds(self):
+        """Test that TTL is formatted as '<N>s' when not evenly divisible by 60."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # total_requests=20, iat=500 -> TTL = 10000ms = 10s
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=20,
+            osl=512,
+            iat=500,
+            prediction_lookup=None,
+        )
+
+        DynamoPrefixContext.set("ttl-seconds-test")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        assert body["nvext"]["cache_control"]["ttl"] == "10s"  # 20 * 500 = 10000ms = 10s
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_no_cache_control_when_disabled(self):
+        """Test that cache_control is NOT injected when cache_pin_type is None."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_pin_type=None,
+        )
+
+        DynamoPrefixContext.set("no-cache-control")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test", "messages": []})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        # agent_hints should still be present
+        assert "agent_hints" in body["nvext"]
+        # cache_control should NOT be present
+        assert "cache_control" not in body["nvext"]
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_cache_control_uses_prediction_override(self):
+        """Test that cache_control TTL uses prediction-overridden total_requests and iat."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
+
+        # Prediction: remaining_calls.mean=25, interarrival_ms.mean=50
+        # Expected TTL = 25 * 50 = 1250ms (not 10 * 250 = 2500 from static config)
+        mock_prediction = LLMCallPrediction(
+            remaining_calls=PredictionMetrics(mean=25.0, p50=25.0, p90=30.0),
+            output_tokens=PredictionMetrics(mean=2000.0, p50=2000.0, p90=2500.0),
+            interarrival_ms=PredictionMetrics(mean=50.0, p50=50.0, p90=70.0),
+        )
+
+        mock_lookup = MagicMock()
+        mock_lookup.find = MagicMock(return_value=mock_prediction)
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=mock_lookup,
+        )
+
+        DynamoPrefixContext.set("prediction-cache-test")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        cache_control = body["nvext"]["cache_control"]
+        assert cache_control["type"] == "ephemeral"
+        assert cache_control["ttl"] == "2s"  # 25 * 50 = 1250ms -> ceil = 2s
+
         DynamoPrefixContext.clear()
 
 
