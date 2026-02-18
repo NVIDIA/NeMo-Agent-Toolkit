@@ -23,6 +23,10 @@ from fastapi.testclient import TestClient
 from nat.builder.function import FunctionGroup
 from nat.data_models.config import Config
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.plugins.mcp.client.client_config import MCPClientConfig
+from nat.plugins.mcp.client.client_config import MCPServerConfig
+from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
+from nat.plugins.mcp.client.fastapi_routes import add_mcp_client_tool_list_route
 
 
 class _ToolStub:
@@ -121,9 +125,6 @@ async def test_mcp_client_tool_list_success_with_alias(app_worker):
     app, worker = app_worker
 
     # Build MCP client config with alias override
-    from nat.plugins.mcp.client.client_config import MCPClientConfig
-    from nat.plugins.mcp.client.client_config import MCPServerConfig
-    from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
 
     server_cfg = MCPServerConfig(transport="streamable-http", url="http://localhost:9901/mcp")
     cfg = MCPClientConfig(
@@ -140,7 +141,7 @@ async def test_mcp_client_tool_list_success_with_alias(app_worker):
     configured_group = _ConfiguredGroupStub(cfg, group_instance)
     builder = _BuilderStub({group_name: configured_group})
 
-    await worker.add_mcp_client_tool_list_route(app, builder)  # register endpoint
+    await add_mcp_client_tool_list_route(app, builder, worker._session_managers)
 
     with TestClient(app) as client_http:
         resp = client_http.get("/mcp/client/tool/list")
@@ -167,9 +168,6 @@ async def test_mcp_client_tool_list_success_with_alias(app_worker):
 async def test_mcp_client_tool_list_unhealthy_marks_unavailable(app_worker):
     app, worker = app_worker
 
-    from nat.plugins.mcp.client.client_config import MCPClientConfig
-    from nat.plugins.mcp.client.client_config import MCPServerConfig
-
     server_cfg = MCPServerConfig(transport="streamable-http", url="http://localhost:9901/mcp")
     cfg = MCPClientConfig(server=server_cfg)
 
@@ -186,7 +184,7 @@ async def test_mcp_client_tool_list_unhealthy_marks_unavailable(app_worker):
     configured_group = _ConfiguredGroupStub(cfg, group_instance)
     builder = _BuilderStub({group_name: configured_group})
 
-    await worker.add_mcp_client_tool_list_route(app, builder)
+    await add_mcp_client_tool_list_route(app, builder, worker._session_managers)
 
     with TestClient(app) as client_http:
         resp = client_http.get("/mcp/client/tool/list")
@@ -204,10 +202,6 @@ async def test_mcp_client_tool_list_unhealthy_marks_unavailable(app_worker):
 async def test_mcp_client_tool_list_per_user_success(app_worker):
     app, worker = app_worker
 
-    from nat.plugins.mcp.client.client_config import MCPClientConfig
-    from nat.plugins.mcp.client.client_config import MCPServerConfig
-    from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
-
     server_cfg = MCPServerConfig(transport="streamable-http", url="http://localhost:9901/mcp")
     cfg = MCPClientConfig(
         server=server_cfg,
@@ -224,7 +218,7 @@ async def test_mcp_client_tool_list_per_user_success(app_worker):
     worker._session_managers.append(per_user_manager)
 
     builder = _BuilderStub({})
-    await worker.add_mcp_client_tool_list_route(app, builder)
+    await add_mcp_client_tool_list_route(app, builder, worker._session_managers)
 
     with TestClient(app) as client_http:
         resp = client_http.get("/mcp/client/tool/list/per_user?user_id=alice")
@@ -243,7 +237,7 @@ async def test_mcp_client_tool_list_per_user_success(app_worker):
 async def test_mcp_client_tool_list_per_user_missing_config(app_worker):
     app, worker = app_worker
     builder = _BuilderStub({})
-    await worker.add_mcp_client_tool_list_route(app, builder)
+    await add_mcp_client_tool_list_route(app, builder, worker._session_managers)
 
     with TestClient(app) as client_http:
         resp = client_http.get("/mcp/client/tool/list/per_user?user_id=alice")

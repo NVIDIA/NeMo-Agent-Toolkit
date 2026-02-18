@@ -33,6 +33,7 @@ async def fixture_auto_set_env_vars(setup_db,
 
 @pytest.fixture(autouse=True)
 def patch_job_store_get_dask_client(dask_client: "DaskClient"):
-    with patch("nat.front_ends.fastapi.job_store.JobStore.dask_client", new_callable=PropertyMock) as mock_dask_client:
+    with patch("nat.front_ends.fastapi.async_jobs.job_store.JobStore.dask_client",
+               new_callable=PropertyMock) as mock_dask_client:
         mock_dask_client.return_value = dask_client
         yield

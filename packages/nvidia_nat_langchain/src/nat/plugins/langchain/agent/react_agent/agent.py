@@ -31,9 +31,7 @@ from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import MessagesPlaceholder
 from langchain_core.runnables import Runnable
-from langchain_core.runnables.config import RunnableConfig
 from langchain_core.tools import BaseTool
-from langgraph.runtime import DEFAULT_RUNTIME
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -177,14 +175,9 @@ class ReActAgentGraph(DualNodeAgent):
                     question = content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
                     chat_history = self._get_chat_history(state.messages)
-                    output_message = await self._stream_llm(
-                        self.agent,
-                        {
-                            "question": question, "chat_history": chat_history
-                        },
-                        RunnableConfig(callbacks=self.callbacks,
-                                       configurable={"__pregel_runtime": DEFAULT_RUNTIME})  # type: ignore
-                    )
+                    output_message = await self._stream_llm(self.agent, {
+                        "question": question, "chat_history": chat_history
+                    })  # type: ignore
 
                     if self.detailed_logs:
                         logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message.content)
@@ -205,13 +198,9 @@ class ReActAgentGraph(DualNodeAgent):
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
 
                     output_message = await self._stream_llm(
-                        self.agent,
-                        {
+                        self.agent, {
                             "question": question, "agent_scratchpad": agent_scratchpad, "chat_history": chat_history
-                        },
-                        RunnableConfig(callbacks=self.callbacks,
-                                       configurable={"__pregel_runtime": DEFAULT_RUNTIME})  # type: ignore
-                    )
+                        })  # type: ignore
 
                     if self.detailed_logs:
                         logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message.content)
@@ -373,12 +362,7 @@ class ReActAgentGraph(DualNodeAgent):
                 tool_input = tool_input_str
 
         # Call tool once with the determined input (either parsed dict or raw string)
-        tool_response = await self._call_tool(
-            requested_tool,
-            tool_input,
-            RunnableConfig(callbacks=self.callbacks,
-                           configurable={"__pregel_runtime": DEFAULT_RUNTIME}),  # type: ignore
-            max_retries=self.tool_call_max_retries)
+        tool_response = await self._call_tool(requested_tool, tool_input, max_retries=self.tool_call_max_retries)
 
         if self.detailed_logs:
             self._log_tool_response(requested_tool.name, tool_input, str(tool_response.content))

@@ -21,9 +21,9 @@ import tempfile
 import typing
 
 from nat.builder.front_end import FrontEndBase
-from nat.front_ends.fastapi.async_job import _setup_worker
-from nat.front_ends.fastapi.async_job import periodic_cleanup
-from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
+from nat.front_ends.fastapi.async_jobs.async_job import periodic_cleanup
+from nat.front_ends.fastapi.async_jobs.async_job import setup_worker
+from nat.front_ends.fastapi.async_jobs.dask_client_mixin import DaskClientMixin
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorkerBase
 from nat.front_ends.fastapi.main import get_app
@@ -129,7 +129,7 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
                     self._scheduler_address = self._cluster.scheduler.address
 
                     if not self._use_dask_threads and sys.platform != "win32":
-                        self.dask_client.run(_setup_worker)
+                        self.dask_client.run(setup_worker)
 
                     logger.info("Created local Dask cluster with scheduler at %s using %s workers",
                                 self._scheduler_address,
@@ -141,8 +141,8 @@ class FastApiFrontEndPlugin(DaskClientMixin, FrontEndBase[FastApiFrontEndConfig]
             if self._scheduler_address is not None:
                 # If we are here then either the user provided a scheduler address, or we created a LocalCluster
 
-                from nat.front_ends.fastapi.job_store import Base
-                from nat.front_ends.fastapi.job_store import get_db_engine
+                from nat.front_ends.fastapi.async_jobs.job_store import Base
+                from nat.front_ends.fastapi.async_jobs.job_store import get_db_engine
 
                 db_engine = get_db_engine(self.front_end_config.db_url, use_async=True)
                 async with db_engine.begin() as conn:
