@@ -691,8 +691,7 @@ def create_httpx_client_with_dynamo_hooks(
         prediction_lookup: Optional PredictionTrieLookup for dynamic hint injection
         use_raw_values: When True send raw integers; when False convert to LOW/MEDIUM/HIGH
         disable_headers: If True, do not inject hints as HTTP headers (still injects nvext.agent_hints)
-        cache_pin_type: Cache pinning strategy. When set, injects nvext.cache_control with TTL.
-            Set to None to disable.
+        cache_pin_type: Cache pinning strategy. When set, injects nvext.cache_control with TTL. Set to None to disable.
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.

@@ -25,6 +25,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.dynamo_llm import CachePinType
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
@@ -244,6 +245,7 @@ class TestDynamoLangChain:
                 prediction_lookup=None,
                 use_raw_values=True,
                 disable_headers=True,
+                cache_pin_type=CachePinType.EPHEMERAL,
             )
 
             # Verify ChatOpenAI was called with the custom httpx client
