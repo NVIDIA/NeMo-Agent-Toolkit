@@ -290,7 +290,7 @@ class TestLangSmithJudgeNewTypedFields:
         assert len(config.few_shot_examples) == 2
         assert config.few_shot_examples[0]["score"] is True
 
-    async def test_system_passed_to_create_async_llm_as_judge(self, eval_input_matching):
+    async def test_system_passed_to_create_async_llm_as_judge(self):
         """system field is forwarded to create_async_llm_as_judge."""
         mock_llm = MagicMock(name="mock_judge_llm")
 

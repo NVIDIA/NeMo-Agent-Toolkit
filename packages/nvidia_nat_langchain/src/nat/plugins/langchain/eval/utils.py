@@ -24,6 +24,8 @@ from langsmith.evaluation.evaluator import EvaluationResult
 from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
+_MISSING = object()
+
 
 def _import_from_dotted_path(dotted_path: str, *, label: str = "object") -> Any:
     """Import an attribute from a Python dotted path.
@@ -58,8 +60,8 @@ def _import_from_dotted_path(dotted_path: str, *, label: str = "object") -> Any:
         raise ImportError(f"Could not import module '{module_path}' for {label} '{dotted_path}'. "
                           f"Make sure the package is installed and the path is correct.") from e
 
-    obj = getattr(module, attr_name, None)
-    if obj is None:
+    obj = getattr(module, attr_name, _MISSING)
+    if obj is _MISSING:
         raise AttributeError(f"Module '{module_path}' has no attribute '{attr_name}'. "
                              f"Available attributes: {[a for a in dir(module) if not a.startswith('_')]}")
 
