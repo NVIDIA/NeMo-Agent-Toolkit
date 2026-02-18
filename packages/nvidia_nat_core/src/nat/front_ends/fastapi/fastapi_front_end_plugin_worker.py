@@ -56,7 +56,9 @@ from .utils import get_config_file_path
 logger = logging.getLogger(__name__)
 
 try:
-    from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder as _WorkflowEvalBuilder  # pyright: ignore[reportMissingImports]
+    from nat.plugins.eval.runtime.builder import (
+        WorkflowEvalBuilder as _WorkflowEvalBuilder,  # pyright: ignore[reportMissingImports]
+    )
 except ImportError:
     _WorkflowEvalBuilder = None
 

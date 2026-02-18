@@ -45,6 +45,7 @@ except ImportError:
     JobStatus = cast(Any, None)
     JobStore = cast(Any, None)
 
+
 @lru_cache(maxsize=1)
 def _load_evaluation_run_cls():
     """Lazily load optional eval runner class."""
