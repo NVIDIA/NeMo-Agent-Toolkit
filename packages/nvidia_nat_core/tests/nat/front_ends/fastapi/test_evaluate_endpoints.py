@@ -26,10 +26,6 @@ from fastapi.testclient import TestClient
 
 from _utils.dask_utils import wait_job
 from nat.data_models.config import Config
-from nat.data_models.evaluate_runtime import EvaluationRunOutput
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.front_ends.fastapi.routes.evaluate import add_evaluate_item_route
@@ -67,7 +63,9 @@ async def patch_evaluation_run(register_test_workflow):
             return self
 
         async def run_and_evaluate(self, *args, **kwargs):
+            from nat.data_models.evaluate_runtime import EvaluationRunOutput
             from nat.data_models.evaluate_runtime import ProfilerResults
+            from nat.data_models.evaluator import EvalInput
             result = EvaluationRunOutput(workflow_output_file="/fake/output/path.json",
                                          evaluator_output_files=[],
                                          workflow_interrupted=False,
@@ -78,7 +76,7 @@ async def patch_evaluation_run(register_test_workflow):
 
             return result
 
-    with patch("nat.front_ends.fastapi.routes.evaluate.EvaluationRun", new=MockEvaluationRun):
+    with patch("nat.front_ends.fastapi.routes.evaluate._load_evaluation_run_cls", return_value=MockEvaluationRun):
         yield
 
 
@@ -277,6 +275,9 @@ async def evaluate_item_client_fixture() -> TestClient:
     from unittest.mock import AsyncMock
 
     from nat.builder.evaluator import EvaluatorInfo
+    from nat.eval.evaluator.evaluator_model import EvalInput
+    from nat.eval.evaluator.evaluator_model import EvalOutput
+    from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(

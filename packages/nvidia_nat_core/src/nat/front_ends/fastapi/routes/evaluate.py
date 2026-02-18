@@ -16,6 +16,7 @@
 
 import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from typing import cast
@@ -24,10 +25,9 @@ from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi import Request
 
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
-from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
+from nat.data_models.evaluator import EvalInput
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
@@ -45,9 +45,23 @@ except ImportError:
     JobStatus = cast(Any, None)
     JobStore = cast(Any, None)
 
+@lru_cache(maxsize=1)
+def _load_evaluation_run_cls():
+    """Lazily load optional eval runner class."""
+    try:
+        from nat.plugins.eval.runtime.evaluate import EvaluationRun
+    except ImportError:
+        return None
+    return EvaluationRun
+
 
 async def add_evaluate_route(worker: Any, app: FastAPI, session_manager: SessionManager):
     """Add the evaluate endpoint to the FastAPI app."""
+    evaluation_run_cls = _load_evaluation_run_cls()
+    if evaluation_run_cls is None:
+        logger.warning("Evaluation package is not installed, evaluation endpoints will not be added.")
+        return
+
     evaluate_response_model = cast(Any, EvaluateResponse)
     evaluate_status_response_model = cast(Any, EvaluateStatusResponse)
     response_500 = {
@@ -74,7 +88,7 @@ async def add_evaluate_route(worker: Any, app: FastAPI, session_manager: Session
         try:
             eval_config = EvaluationRunConfig(config_file=Path(eval_config_file), dataset=None, reps=reps)
             await job_store.update_status(job_id, JobStatus.RUNNING)
-            eval_runner = EvaluationRun(eval_config)
+            eval_runner = evaluation_run_cls(eval_config)
 
             async with load_workflow(workflow_config_file_path) as local_session_manager:
                 output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=local_session_manager,
