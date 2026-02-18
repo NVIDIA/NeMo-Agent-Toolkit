@@ -29,10 +29,10 @@ logger = logging.getLogger(__name__)
 class MemMachineMemoryClientConfig(MemoryBaseConfig, RetryMixin, name="memmachine_memory"):
     """
     Configuration for MemMachine memory client.
-    
+
     Based on the MemMachine Python SDK as documented at:
     https://github.com/MemMachine/MemMachine/blob/main/docs/examples/python.mdx
-    
+
     Note: This integration is for local/self-hosted MemMachine instances.
     LLM API keys (e.g., OpenAI) are configured in the MemMachine cfg.yml file,
     not in this client configuration.
@@ -46,29 +46,24 @@ class MemMachineMemoryClientConfig(MemoryBaseConfig, RetryMixin, name="memmachin
 
 @register_memory(config_type=MemMachineMemoryClientConfig)
 async def memmachine_memory_client(
-    config: MemMachineMemoryClientConfig,
-    _builder: Builder,  # Required by @register_memory contract
+        config: MemMachineMemoryClientConfig,
+        _builder: Builder,  # Required by @register_memory contract
 ) -> AsyncGenerator[MemoryEditor, None]:
-    from .memmachine_editor import MemMachineEditor
     # Import and initialize the MemMachine Python SDK
     from memmachine import MemMachineClient
+
+    from .memmachine_editor import MemMachineEditor
 
     # Initialize MemMachineClient with base_url
     # This follows the documented SDK pattern for local instances:
     # client = MemMachineClient(base_url="http://localhost:8095")
     # Note: api_key is not needed for local/self-hosted MemMachine instances
     try:
-        client = MemMachineClient(
-            base_url=config.base_url,
-            timeout=config.timeout,
-            max_retries=config.max_retries
-        )
+        client = MemMachineClient(base_url=config.base_url, timeout=config.timeout, max_retries=config.max_retries)
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to initialize MemMachineClient with base_url '{config.base_url}'. "
-            f"Error: {e}. "
-            "Please ensure the MemMachine server is running and the base_url is correct."
-        ) from e
+        raise RuntimeError(f"Failed to initialize MemMachineClient with base_url '{config.base_url}'. "
+                           f"Error: {e}. "
+                           "Please ensure the MemMachine server is running and the base_url is correct.") from e
 
     # If default org_id and project_id are provided, create/get the project
     # Otherwise, the editor will create projects as needed
@@ -76,11 +71,9 @@ async def memmachine_memory_client(
     if config.org_id and config.project_id:
         try:
             # Use get_or_create_project to handle existing projects gracefully
-            project = client.get_or_create_project(
-                org_id=config.org_id,
-                project_id=config.project_id,
-                description=f"NeMo Agent toolkit project: {config.project_id}"
-            )
+            project = client.get_or_create_project(org_id=config.org_id,
+                                                   project_id=config.project_id,
+                                                   description=f"NeMo Agent toolkit project: {config.project_id}")
             memmachine_instance = project
         except Exception:
             # If project creation fails, fall back to using the client directly
@@ -95,11 +88,9 @@ async def memmachine_memory_client(
     memory_editor = MemMachineEditor(memmachine_instance=memmachine_instance)
 
     # Apply retry wrapper (config always inherits from RetryMixin)
-    memory_editor = patch_with_retry(
-        memory_editor,
-        retries=config.num_retries,
-        retry_codes=config.retry_on_status_codes,
-        retry_on_messages=config.retry_on_errors
-    )
+    memory_editor = patch_with_retry(memory_editor,
+                                     retries=config.num_retries,
+                                     retry_codes=config.retry_on_status_codes,
+                                     retry_on_messages=config.retry_on_errors)
 
     yield memory_editor
