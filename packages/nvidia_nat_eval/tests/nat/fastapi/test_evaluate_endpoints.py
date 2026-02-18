@@ -28,8 +28,8 @@ from _utils.dask_utils import wait_job
 from nat.data_models.config import Config
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
-from nat.front_ends.fastapi.routes.evaluate import add_evaluate_item_route
-from nat.front_ends.fastapi.routes.evaluate import add_evaluate_route
+from nat.plugins.eval.fastapi.routes import _add_evaluate_item_route as add_evaluate_item_route
+from nat.plugins.eval.fastapi.routes import _add_evaluate_route as add_evaluate_route
 
 if typing.TYPE_CHECKING:
     from dask.distributed import Client as DaskClient
