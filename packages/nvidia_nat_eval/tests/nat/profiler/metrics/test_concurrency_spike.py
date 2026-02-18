@@ -21,8 +21,9 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.profiler.inference_optimization.experimental.concurrency_spike_analysis import (
-    concurrency_spike_analysis, )
+from nat.plugins.eval.profiler.inference_optimization.experimental.concurrency_spike_analysis import (  # noqa: I001
+    concurrency_spike_analysis,
+)
 from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 ###############################################################################
