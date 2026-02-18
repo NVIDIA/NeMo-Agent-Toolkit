@@ -106,11 +106,6 @@ pii-defense = [
   "presidio-analyzer",
   "presidio-anonymizer"
 ]
-profiling = [
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
-]
 test = [
   "nvidia-nat-test == {version}",
 ]
