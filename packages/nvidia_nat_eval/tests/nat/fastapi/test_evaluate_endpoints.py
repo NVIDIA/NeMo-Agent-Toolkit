@@ -16,6 +16,7 @@
 import os
 import shutil
 import typing
+from contextlib import asynccontextmanager
 from pathlib import Path
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -43,7 +44,8 @@ def set_nat_config_file_fixture(simple_config_file: str, restore_environ):
 
 
 @pytest.fixture(name="test_config")
-def test_config_fixture(dask_scheduler_address: str, set_nat_dask_scheduler_env_var: str) -> Config:
+def test_config_fixture(dask_scheduler_address: str, set_nat_dask_scheduler_env_var: str,
+                        set_nat_job_store_db_url_env_var: str, setup_db) -> Config:
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(
         scheduler_address=dask_scheduler_address,
@@ -83,7 +85,13 @@ async def patch_evaluation_run(register_test_workflow):
 
             return result
 
-    with patch("nat.plugins.eval.runtime.evaluate.EvaluationRun", MockEvaluationRun):
+    @asynccontextmanager
+    async def mock_load_workflow(*args, **kwargs):  # noqa: ANN002, ANN003
+        """Unit-test stub for workflow loader to avoid real workflow execution."""
+        yield MagicMock()
+
+    with patch("nat.plugins.eval.fastapi.routes.EvaluationRun", MockEvaluationRun), \
+         patch("nat.plugins.eval.fastapi.routes.load_workflow", mock_load_workflow):
         yield
 
 
