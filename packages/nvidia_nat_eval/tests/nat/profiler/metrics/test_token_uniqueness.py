@@ -22,12 +22,9 @@ from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEv
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 
-# yapf: disable
-from nat.plugins.eval.profiler.inference_optimization.token_uniqueness import (
-    compute_inter_query_token_uniqueness_by_llm,
-)
 
-# yapf: enable
+from nat.plugins.eval.profiler.inference_optimization.token_uniqueness \
+    import compute_inter_query_token_uniqueness_by_llm
 from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
