@@ -158,8 +158,8 @@ async def test_optimize_prompts_happy_path_with_recombine(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.parameter_optimization.prompt_optimizer.EvaluationRun",
-               _EvalRun), \
+    with patch("nat.parameter_optimization.prompt_optimizer.load_evaluation_run",
+               return_value=_EvalRun), \
          patch("nat.parameter_optimization.prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
@@ -213,8 +213,8 @@ async def test_optimize_prompts_happy_path_without_recombine(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.parameter_optimization.prompt_optimizer.EvaluationRun",
-               _EvalRun), \
+    with patch("nat.parameter_optimization.prompt_optimizer.load_evaluation_run",
+               return_value=_EvalRun), \
          patch("nat.parameter_optimization.prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
@@ -276,7 +276,7 @@ async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.parameter_optimization.prompt_optimizer.EvaluationRun", _EvalRun), \
+    with patch("nat.parameter_optimization.prompt_optimizer.load_evaluation_run", return_value=_EvalRun), \
          patch("nat.parameter_optimization.prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 

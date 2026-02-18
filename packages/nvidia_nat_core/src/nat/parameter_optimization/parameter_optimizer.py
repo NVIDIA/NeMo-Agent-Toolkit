@@ -32,15 +32,7 @@ from nat.parameter_optimization.parameter_selection import pick_trial
 from nat.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
-
-EvaluationRun = None
-
-
-def _require_eval_runtime():
-    # Module-level symbols remain as optional test overrides.
-    evaluation_run = EvaluationRun
-    loaded_run = load_evaluation_run()
-    return evaluation_run if evaluation_run is not None else loaded_run, EvaluationRunConfig
+"""Optional eval runtime class."""
 
 
 @experimental(feature_name="Optimizer")
@@ -52,7 +44,7 @@ def optimize_parameters(
     opt_run_config: OptimizerRunConfig,
 ) -> Config:
     """Tune all *non-prompt* hyper-parameters and persist the best config."""
-    EvaluationRun, EvaluationRunConfig = _require_eval_runtime()
+    EvaluationRun = load_evaluation_run()
     space = {k: v for k, v in full_space.items() if not v.is_prompt}
 
     # Ensure output_path is not None

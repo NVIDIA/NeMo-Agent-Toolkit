@@ -39,15 +39,6 @@ from nat.parameter_optimization.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 
-EvaluationRun = None
-
-
-def _require_eval_runtime():
-    # Module-level symbols remain as optional test overrides.
-    evaluation_run = EvaluationRun
-    loaded_run = load_evaluation_run()
-    return evaluation_run if evaluation_run is not None else loaded_run, EvaluationRunConfig
-
 
 class PromptOptimizerInputSchema(BaseModel):
     original_prompt: str
@@ -63,7 +54,7 @@ async def optimize_prompts(
     optimizer_config: OptimizerConfig,
     opt_run_config: OptimizerRunConfig,
 ) -> None:
-    EvaluationRun, EvaluationRunConfig = _require_eval_runtime()
+    EvaluationRun = load_evaluation_run()
 
     # ------------- helpers ------------- #
     @dataclass

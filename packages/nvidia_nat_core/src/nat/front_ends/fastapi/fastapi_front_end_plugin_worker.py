@@ -42,8 +42,6 @@ from .fastapi_front_end_config import FastApiFrontEndConfig
 from .message_handler import WebSocketMessageHandler
 from .routes.auth import add_authorization_route
 from .routes.chat import add_chat_routes
-from .routes.evaluate import add_evaluate_item_route
-from .routes.evaluate import add_evaluate_route
 from .routes.execution import add_execution_routes
 from .routes.generate import add_generate_routes
 from .routes.health import add_health_route
@@ -54,13 +52,6 @@ from .step_adaptor import StepAdaptor
 from .utils import get_config_file_path
 
 logger = logging.getLogger(__name__)
-
-try:
-    from nat.plugins.eval.runtime.builder import (
-        WorkflowEvalBuilder as _WorkflowEvalBuilder,  # pyright: ignore[reportMissingImports]
-    )
-except ImportError:
-    _WorkflowEvalBuilder = None
 
 
 class FastApiFrontEndPluginWorkerBase(ABC):
@@ -241,8 +232,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def initialize_evaluators(self, config: Config):
         """Initialize and store evaluators from config for single-item evaluation."""
-        workflow_eval_builder_cls = _WorkflowEvalBuilder
-        if workflow_eval_builder_cls is None:
+        try:
+            from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder
+        except ImportError:
             logger.info("Evaluation package not installed, skipping evaluator initialization")
             return
 
@@ -253,7 +245,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         try:
             # Build evaluators using WorkflowEvalBuilder (same pattern as nat eval)
             # Start with registry=None and let populate_builder set everything up
-            eval_builder = workflow_eval_builder_cls(
+            eval_builder = WorkflowEvalBuilder(
                 general_config=config.general,
                 eval_general_config=config.eval.general,
                 registry=None,
@@ -345,9 +337,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         await self.add_default_route(app, session_manager)
 
-        # Eventually move evaluate routes to separate plugin
-        await add_evaluate_route(self, app, session_manager=session_manager)
-        await add_evaluate_item_route(self, app, session_manager=session_manager)
+        try:
+            from nat.plugins.eval.fastapi.routes import add_evaluate_routes
+            await add_evaluate_routes(self, app, session_manager=session_manager)
+        except ImportError:
+            logger.warning("nvidia-nat-eval is not installed; skipping evaluate routes.")
 
         try:
             from nat.plugins.mcp.client.fastapi_routes import add_mcp_client_tool_list_route

@@ -486,8 +486,8 @@ async def test_metadata_from_http_request_populates_all_request_attributes(clien
 
     original = SessionManager.set_metadata_from_http_request
 
-    async def capture_metadata(self, request) -> None:
-        await original(self, request)
+    async def capture_metadata(self, request):
+        result = await original(self, request)
         meta = Context.get().metadata
         captured.append({
             "method": meta.method,
@@ -502,6 +502,7 @@ async def test_metadata_from_http_request_populates_all_request_attributes(clien
             "cookies": meta.cookies,
             "payload": meta.payload,
         })
+        return result
 
     with patch(
             "nat.runtime.session.SessionManager.set_metadata_from_http_request",

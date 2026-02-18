@@ -197,8 +197,8 @@ def test_optimize_parameters_happy_path(tmp_path: Path):
          patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization") as viz_mock, \
          patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                side_effect=fake_create_study) as study_mock, \
-         patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-               _DummyEvalRun) as eval_run_mock:
+         patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+               return_value=_DummyEvalRun) as eval_run_mock:
 
         tuned = optimize_parameters(base_cfg=base_cfg,
                                     full_space=full_space,
@@ -298,8 +298,8 @@ class TestSamplerSelection:
 
         with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -351,8 +351,8 @@ class TestSamplerSelection:
 
         with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -409,8 +409,8 @@ class TestSamplerSelection:
 
         with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -467,8 +467,8 @@ class TestSamplerSelection:
                    side_effect=capture_grid_sampler), \
              patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -521,8 +521,8 @@ class TestSamplerSelection:
                    side_effect=capture_grid_sampler), \
              patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -566,8 +566,8 @@ class TestSamplerSelection:
 
         with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -619,8 +619,8 @@ class TestSamplerSelection:
 
         with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -675,8 +675,8 @@ class TestSamplerSelection:
 
         with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -724,8 +724,8 @@ class TestSamplerSelection:
 
         with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -784,8 +784,8 @@ class TestGridSearchIntegration:
                    side_effect=capture_grid_sampler), \
              patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -843,8 +843,8 @@ class TestGridSearchIntegration:
                    side_effect=capture_grid_sampler), \
              patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -901,8 +901,8 @@ class TestGridSearchIntegration:
                    side_effect=capture_grid_sampler), \
              patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize"])), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -955,8 +955,8 @@ class TestGridSearchIntegration:
                    side_effect=capture_grid_sampler), \
              patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["minimize"])), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -1013,8 +1013,8 @@ class TestGridSearchIntegration:
                    side_effect=capture_grid_sampler), \
              patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -1072,8 +1072,8 @@ class TestGridSearchIntegration:
                    side_effect=capture_grid_sampler), \
              patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize"])), \
-             patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
              patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
              patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
@@ -1105,7 +1105,7 @@ class TestGridSearchIntegration:
         run_cfg = _make_run_config(base_cfg)
 
         with pytest.raises(ValueError, match="requires 'step' to be specified"):
-            with patch("nat.parameter_optimization.parameter_optimizer.EvaluationRun"), \
+            with patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run"), \
                  patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                        return_value=base_cfg), \
                  patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):

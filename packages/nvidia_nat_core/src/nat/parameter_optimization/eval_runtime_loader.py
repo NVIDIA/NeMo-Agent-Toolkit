@@ -17,14 +17,12 @@ from functools import lru_cache
 
 
 @lru_cache(maxsize=1)
-def load_evaluation_run():
+def load_evaluation_run() -> type:
     """Lazily load eval runtime class required by `nat optimize`."""
     try:
-        from nat.plugins.eval.runtime.evaluate import (
-            EvaluationRun as ImportedEvaluationRun,  # pyright: ignore[reportMissingImports]
-        )
+        from nat.plugins.eval.runtime.evaluate import EvaluationRun
+        return EvaluationRun
     except ImportError as exc:
         raise RuntimeError(
             "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
             "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`).") from exc
-    return ImportedEvaluationRun

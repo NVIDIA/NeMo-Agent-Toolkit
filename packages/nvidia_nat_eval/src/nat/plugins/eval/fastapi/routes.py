@@ -16,7 +16,6 @@
 
 import logging
 import os
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from typing import cast
@@ -25,56 +24,37 @@ from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi import Request
 
-from nat.data_models.evaluate_runtime import EvaluationRunConfig
-from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluator import EvalInput
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
+from nat.front_ends.fastapi.routes.common_utils import RESPONSE_500
+from nat.plugins.eval.runtime.evaluate import EvaluationRun
+from nat.plugins.eval.runtime.evaluate import EvaluationRunConfig
+from nat.plugins.eval.runtime.evaluate import EvaluationRunOutput
 from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
-try:
-    from nat.front_ends.fastapi.async_jobs.job_store import JobStatus
-    from nat.front_ends.fastapi.async_jobs.job_store import JobStore
-except ImportError:
-    JobStatus = cast(Any, None)
-    JobStore = cast(Any, None)
 
-
-@lru_cache(maxsize=1)
-def _load_evaluation_run_cls():
-    """Lazily load optional eval runner class."""
-    try:
-        from nat.plugins.eval.runtime.evaluate import EvaluationRun
-    except ImportError:
-        return None
-    return EvaluationRun
-
-
-async def add_evaluate_route(worker: Any, app: FastAPI, session_manager: SessionManager):
+async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: SessionManager):
     """Add the evaluate endpoint to the FastAPI app."""
-    evaluation_run_cls = _load_evaluation_run_cls()
-    if evaluation_run_cls is None:
-        logger.warning("Evaluation package is not installed, evaluation endpoints will not be added.")
+
+    if not worker.front_end_config.evaluate.path:
+        return
+
+    if not worker._dask_available:
+        logger.warning("Dask is not available, evaluation endpoints will not be added.")
         return
 
     evaluate_response_model = cast(Any, EvaluateResponse)
     evaluate_status_response_model = cast(Any, EvaluateStatusResponse)
-    response_500 = {
-        "description": "Internal Server Error",
-        "content": {
-            "application/json": {
-                "example": {
-                    "detail": "Internal server error occurred"
-                }
-            }
-        },
-    }
+
+    from nat.front_ends.fastapi.async_jobs.job_store import JobStatus
+    from nat.front_ends.fastapi.async_jobs.job_store import JobStore
 
     async def run_evaluation(
         scheduler_address: str,
@@ -85,11 +65,12 @@ async def add_evaluate_route(worker: Any, app: FastAPI, session_manager: Session
         reps: int,
     ):
         """Background task to run the evaluation."""
+
         job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
         try:
             eval_config = EvaluationRunConfig(config_file=Path(eval_config_file), dataset=None, reps=reps)
             await job_store.update_status(job_id, JobStatus.RUNNING)
-            eval_runner = evaluation_run_cls(eval_config)
+            eval_runner = EvaluationRun(eval_config)
 
             async with load_workflow(workflow_config_file_path) as local_session_manager:
                 output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=local_session_manager,
@@ -175,54 +156,53 @@ async def add_evaluate_route(worker: Any, app: FastAPI, session_manager: Session
             logger.info("Found %d jobs", len(jobs))
             return [translate_job_to_response(job) for job in jobs]
 
-    if worker.front_end_config.evaluate.path:
-        if worker._dask_available:
-            app.add_api_route(
-                path=f"{worker.front_end_config.evaluate.path}/job/last",
-                endpoint=get_last_job_status,
-                methods=["GET"],
-                response_model=cast(Any, EvaluateStatusResponse),
-                description="Get the status of the last created evaluation job",
-                responses={
-                    404: {
-                        "description": "No jobs found"
-                    }, 500: response_500
-                },
-            )
-            app.add_api_route(
-                path=f"{worker.front_end_config.evaluate.path}/job/{{job_id}}",
-                endpoint=get_job_status,
-                methods=["GET"],
-                response_model=cast(Any, EvaluateStatusResponse),
-                description="Get the status of an evaluation job",
-                responses={
-                    404: {
-                        "description": "Job not found"
-                    }, 500: response_500
-                },
-            )
-            app.add_api_route(
-                path=f"{worker.front_end_config.evaluate.path}/jobs",
-                endpoint=get_jobs,
-                methods=["GET"],
-                response_model=cast(Any, list[EvaluateStatusResponse]),
-                description="Get all jobs, optionally filtered by status",
-                responses={500: response_500},
-            )
-            app.add_api_route(
-                path=worker.front_end_config.evaluate.path,
-                endpoint=start_evaluation,
-                methods=[worker.front_end_config.evaluate.method],
-                response_model=cast(Any, EvaluateResponse),
-                description=worker.front_end_config.evaluate.description,
-                responses={500: response_500},
-            )
-        else:
-            logger.warning("Dask is not available, evaluation endpoints will not be added.")
+    app.add_api_route(
+        path=f"{worker.front_end_config.evaluate.path}/job/last",
+        endpoint=get_last_job_status,
+        methods=["GET"],
+        response_model=cast(Any, EvaluateStatusResponse),
+        description="Get the status of the last created evaluation job",
+        responses={
+            404: {
+                "description": "No jobs found"
+            }, 500: RESPONSE_500
+        },
+    )
+    app.add_api_route(
+        path=f"{worker.front_end_config.evaluate.path}/job/{{job_id}}",
+        endpoint=get_job_status,
+        methods=["GET"],
+        response_model=cast(Any, EvaluateStatusResponse),
+        description="Get the status of an evaluation job",
+        responses={
+            404: {
+                "description": "Job not found"
+            }, 500: RESPONSE_500
+        },
+    )
+    app.add_api_route(
+        path=f"{worker.front_end_config.evaluate.path}/jobs",
+        endpoint=get_jobs,
+        methods=["GET"],
+        response_model=cast(Any, list[EvaluateStatusResponse]),
+        description="Get all jobs, optionally filtered by status",
+        responses={500: RESPONSE_500},
+    )
+    app.add_api_route(
+        path=worker.front_end_config.evaluate.path,
+        endpoint=start_evaluation,
+        methods=[worker.front_end_config.evaluate.method],
+        response_model=cast(Any, EvaluateResponse),
+        description=worker.front_end_config.evaluate.description,
+        responses={500: RESPONSE_500},
+    )
 
 
-async def add_evaluate_item_route(worker: Any, app: FastAPI, session_manager: SessionManager):
+async def _add_evaluate_item_route(worker: Any, app: FastAPI, session_manager: SessionManager):
     """Add the single-item evaluation endpoint to the FastAPI app."""
+
+    if not worker.front_end_config.evaluate_item.path:
+        return
 
     async def evaluate_single_item(request: EvaluateItemRequest, http_request: Request) -> EvaluateItemResponse:
         async with session_manager.session(http_connection=http_request):
@@ -244,32 +224,28 @@ async def add_evaluate_item_route(worker: Any, app: FastAPI, session_manager: Se
                 logger.exception("Error evaluating item with %s", request.evaluator_name)
                 return EvaluateItemResponse(success=False, result=None, error=f"Evaluation failed: {e}")
 
-    if worker.front_end_config.evaluate_item.path:
-        app.add_api_route(path=worker.front_end_config.evaluate_item.path,
-                          endpoint=evaluate_single_item,
-                          methods=[worker.front_end_config.evaluate_item.method],
-                          response_model=EvaluateItemResponse,
-                          description=worker.front_end_config.evaluate_item.description,
-                          responses={
-                              404: {
-                                  "description": "Evaluator not found",
-                                  "content": {
-                                      "application/json": {
-                                          "example": {
-                                              "detail": "Evaluator 'unknown' not found"
-                                          }
+    app.add_api_route(path=worker.front_end_config.evaluate_item.path,
+                      endpoint=evaluate_single_item,
+                      methods=[worker.front_end_config.evaluate_item.method],
+                      response_model=EvaluateItemResponse,
+                      description=worker.front_end_config.evaluate_item.description,
+                      responses={
+                          404: {
+                              "description": "Evaluator not found",
+                              "content": {
+                                  "application/json": {
+                                      "example": {
+                                          "detail": "Evaluator 'unknown' not found"
                                       }
-                                  },
+                                  }
                               },
-                              500: {
-                                  "description": "Internal Server Error",
-                                  "content": {
-                                      "application/json": {
-                                          "example": {
-                                              "detail": "Internal server error occurred"
-                                          }
-                                      }
-                                  },
-                              },
-                          })
-        logger.info("Added evaluate_item route at %s", worker.front_end_config.evaluate_item.path)
+                          },
+                          500: RESPONSE_500,
+                      })
+    logger.info("Added evaluate_item route at %s", worker.front_end_config.evaluate_item.path)
+
+
+async def add_evaluate_routes(worker: Any, app: FastAPI, session_manager: SessionManager):
+    """Add the evaluate and evaluate_item routes to the FastAPI app."""
+    await _add_evaluate_route(worker, app, session_manager)
+    await _add_evaluate_item_route(worker, app, session_manager)
