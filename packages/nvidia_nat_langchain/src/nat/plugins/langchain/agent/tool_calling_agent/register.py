@@ -53,6 +53,7 @@ class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
+    from langchain_core.messages import AIMessageChunk
     from langchain_core.messages import trim_messages
     from langchain_core.messages.base import BaseMessage
     from langgraph.graph.state import CompiledStateGraph
@@ -135,8 +136,6 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         Yields:
             str: Individual content chunks from the agent's response
         """
-        from langchain_core.messages import AIMessageChunk
-
         try:
             message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
 
@@ -163,9 +162,4 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             logger.error("%s Tool Calling Agent streaming failed with exception: %s", AGENT_LOG_PREFIX, ex)
             raise
 
-    try:
-        yield FunctionInfo.create(single_fn=_response_fn, stream_fn=_stream_fn, description=config.description)
-    except GeneratorExit:
-        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX)
-    finally:
-        logger.debug("%s Cleaning up tool_calling_agent workflow.", AGENT_LOG_PREFIX)
+    yield FunctionInfo.create(single_fn=_response_fn, stream_fn=_stream_fn, description=config.description)

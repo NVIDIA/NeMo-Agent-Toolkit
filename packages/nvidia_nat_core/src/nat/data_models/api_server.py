@@ -419,7 +419,8 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                     id_: str | None = None,
                     created: datetime.datetime | None = None,
                     model: str | None = None,
-                    object_: str | None = None) -> "ChatResponseChunk":
+                    object_: str | None = None,
+                    finish_reason: str | None = None) -> "ChatResponseChunk":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -430,13 +431,15 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if object_ is None:
             object_ = "chat.completion.chunk"
 
+        final_finish_reason = finish_reason if finish_reason in FINISH_REASONS else None
+
         return ChatResponseChunk(id=id_,
                                  choices=[
                                      ChatResponseChunkChoice(index=0,
                                                              delta=ChoiceDelta(
                                                                  content=data,
                                                                  role=UserMessageContentRoleType.ASSISTANT),
-                                                             finish_reason=None)
+                                                             finish_reason=final_finish_reason)
                                  ],
                                  created=created,
                                  model=model,
