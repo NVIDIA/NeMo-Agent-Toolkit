@@ -94,19 +94,6 @@ class TestRegistryEvaluatorRegistration:
         output_mismatch = await info.evaluate_fn(eval_input_non_matching)
         assert output_mismatch.eval_output_items[0].score is False
 
-    async def test_exact_match_async(self, eval_input_matching, eval_input_non_matching):
-        """exact_match_async registered and evaluated by short name."""
-        config = LangSmithEvaluatorConfig(evaluator="exact_match_async")
-        builder = make_mock_builder()
-
-        info = await _register(config, builder)
-
-        output_match = await info.evaluate_fn(eval_input_matching)
-        assert output_match.eval_output_items[0].score is True
-
-        output_mismatch = await info.evaluate_fn(eval_input_non_matching)
-        assert output_mismatch.eval_output_items[0].score is False
-
     async def test_multi_item(self, eval_input_multi_item):
         """Evaluator processes multiple items correctly through registration."""
         config = LangSmithEvaluatorConfig(evaluator="exact_match")

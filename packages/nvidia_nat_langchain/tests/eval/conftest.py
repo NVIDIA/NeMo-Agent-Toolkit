@@ -23,7 +23,7 @@ from nat.eval.evaluator.evaluator_model import EvalInputItem
 
 
 def make_mock_builder(mock_llm=None):
-    """Create a mock EvalBuilder with configurable get_llm.
+    """Create a mock EvalBuilder with a configurable get_llm.
 
     Args:
         mock_llm: Optional mock LLM to return from ``get_llm``.

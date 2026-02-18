@@ -17,6 +17,7 @@ import logging
 from collections.abc import Callable
 from typing import Any
 
+from pydantic import BaseModel
 from pydantic import Field
 from pydantic import model_validator
 
@@ -37,22 +38,26 @@ def _get_registry() -> dict[str, Callable[..., Any]]:
 
     Keeps openevals out of the module-level import chain while providing
     a single source of truth for known evaluator names and their callables.
+
+    Async variants are used to align with NAT's async-first design.
+    The adapter (:class:`LangSmithEvaluatorAdapter`) awaits async
+    callables directly via ``_invoke_maybe_sync``, avoiding unnecessary
+    thread-pool dispatch.
     """
-    from openevals import exact_match
     from openevals import exact_match_async
-    from openevals.string import levenshtein_distance
     from openevals.string import levenshtein_distance_async
 
     return {
-        "exact_match": exact_match,
-        "exact_match_async": exact_match_async,
-        "levenshtein_distance": levenshtein_distance,
-        "levenshtein_distance_async": levenshtein_distance_async,
+        "exact_match": exact_match_async,
+        "levenshtein_distance": levenshtein_distance_async,
     }
 
 
 def _resolve_evaluator(name: str) -> Callable[..., Any]:
     """Resolve a short evaluator name to its openevals callable.
+
+    The model validator on :class:`LangSmithEvaluatorConfig` already
+    ensures *name* is valid, so this is a direct lookup.
 
     Args:
         name: Short evaluator name (e.g., ``'exact_match'``,
@@ -60,20 +65,22 @@ def _resolve_evaluator(name: str) -> Callable[..., Any]:
 
     Returns:
         The resolved evaluator callable.
-
-    Raises:
-        ValueError: If *name* is not a known evaluator.
     """
-    registry = _get_registry()
-
-    if name not in registry:
-        raise ValueError(f"Unknown evaluator '{name}'. "
-                         f"Available evaluators: {sorted(registry.keys())}")
-
-    return registry[name]
+    return _get_registry()[name]
 
 
-class LangSmithEvaluatorConfig(EvaluatorBaseConfig, name="langsmith"):
+class LangSmithExtraFieldsMixin(BaseModel):
+    """Mixin for extra fields on the LangSmith evaluator config."""
+    extra_fields: dict[str, str] | None = Field(
+        default=None,
+        description="Optional mapping of evaluator kwarg names to dataset field names.  "
+        "Keys are the kwarg names passed to the evaluator; values are looked up "
+        "in the dataset entry.  Example: ``{context: retrieved_context}`` passes "
+        "the dataset's 'retrieved_context' field as the 'context' kwarg.",
+    )
+
+
+class LangSmithEvaluatorConfig(EvaluatorBaseConfig, LangSmithExtraFieldsMixin, name="langsmith"):
     """Built-in openevals evaluator selected by short name.
 
     Resolves evaluator names (e.g., ``'exact_match'``,
@@ -84,13 +91,6 @@ class LangSmithEvaluatorConfig(EvaluatorBaseConfig, name="langsmith"):
 
     evaluator: str = Field(description="Short name of an openevals evaluator "
                            "(e.g., 'exact_match', 'levenshtein_distance').", )
-    extra_fields: dict[str, str] | None = Field(
-        default=None,
-        description="Optional mapping of evaluator kwarg names to dataset field names.  "
-        "Keys are the kwarg names passed to the evaluator; values are looked up "
-        "in the dataset entry.  Example: ``{context: retrieved_context}`` passes "
-        "the dataset's 'retrieved_context' field as the 'context' kwarg.",
-    )
 
     @model_validator(mode="after")
     def _validate_evaluator_name(self) -> "LangSmithEvaluatorConfig":

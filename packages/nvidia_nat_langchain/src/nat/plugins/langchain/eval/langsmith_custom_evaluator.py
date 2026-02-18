@@ -24,6 +24,7 @@ from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvaluatorBaseConfig
 
+from .langsmith_evaluator import LangSmithExtraFieldsMixin
 from .utils import _import_from_dotted_path
 
 logger = logging.getLogger(__name__)
@@ -79,8 +80,10 @@ def _detect_convention(evaluator: Any) -> str:
     # pulling in langsmith at module load time)
     from langsmith.evaluation.evaluator import RunEvaluator
 
+    from .langsmith_evaluator_adapter import _EvaluatorConvention
+
     if isinstance(evaluator, RunEvaluator):
-        return "run_evaluator_class"
+        return _EvaluatorConvention.RUN_EVALUATOR_CLASS
 
     # Inspect the callable's signature to determine convention
     if callable(evaluator):
@@ -92,17 +95,17 @@ def _detect_convention(evaluator: Any) -> str:
             ]
         except (ValueError, TypeError):
             # If we can't inspect signature, default to openevals convention
-            return "openevals_function"
+            return _EvaluatorConvention.OPENEVALS_FUNCTION
 
         # Check for openevals-style: (inputs, outputs, reference_outputs)
         openevals_params = {"inputs", "outputs", "reference_outputs"}
         if openevals_params.intersection(param_names):
-            return "openevals_function"
+            return _EvaluatorConvention.OPENEVALS_FUNCTION
 
         # Check for LangSmith-style: (run, example)
         langsmith_params = {"run", "example"}
         if langsmith_params.intersection(param_names):
-            return "run_example_function"
+            return _EvaluatorConvention.RUN_EXAMPLE_FUNCTION
 
         # If the function has inspectable params but none match either convention,
         # default to openevals (more common in modern usage) and warn.
@@ -111,14 +114,14 @@ def _detect_convention(evaluator: Any) -> str:
             "defaulting to openevals (inputs, outputs, reference_outputs) convention.",
             param_names,
         )
-        return "openevals_function"
+        return _EvaluatorConvention.OPENEVALS_FUNCTION
 
     raise ValueError(f"Cannot determine evaluator convention for {type(evaluator).__name__}. "
                      f"Expected a callable, RunEvaluator subclass, or function with "
                      f"(inputs, outputs, reference_outputs) or (run, example) signature.")
 
 
-class LangSmithCustomEvaluatorConfig(EvaluatorBaseConfig, name="langsmith_custom"):
+class LangSmithCustomEvaluatorConfig(EvaluatorBaseConfig, LangSmithExtraFieldsMixin, name="langsmith_custom"):
     """Import any LangSmith-compatible evaluator by Python dotted path.
 
     Supports RunEvaluator subclasses, ``(run, example)`` functions,
@@ -131,13 +134,6 @@ class LangSmithCustomEvaluatorConfig(EvaluatorBaseConfig, name="langsmith_custom
 
     evaluator: str = Field(description="Python dotted path to a LangSmith evaluator callable "
                            "(e.g., 'my_package.evaluators.my_fn').", )
-    extra_fields: dict[str, str] | None = Field(
-        default=None,
-        description="Optional mapping of evaluator kwarg names to dataset field names.  "
-        "Keys are the kwarg names passed to the evaluator; values are looked up "
-        "in the dataset entry.  Example: ``{context: retrieved_context}`` passes "
-        "the dataset's 'retrieved_context' field as the 'context' kwarg.",
-    )
 
 
 @register_evaluator(config_type=LangSmithCustomEvaluatorConfig)

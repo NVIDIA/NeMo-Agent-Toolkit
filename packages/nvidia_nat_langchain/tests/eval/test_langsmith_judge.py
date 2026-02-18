@@ -96,26 +96,26 @@ class TestLangSmithJudgeRegistration:
 
     These tests exercise register_langsmith_judge end-to-end
     without requiring a real LLM by mocking builder.get_llm and
-    create_llm_as_judge.
+    create_async_llm_as_judge.
     """
 
     async def test_builtin_prompt(self, eval_input_matching):
         """Builtin prompt name creates a working evaluator."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 0.9, "comment": "Looks good"}
 
         config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
         builder = make_mock_builder(mock_llm)
 
         with patch(
-                "openevals.llm.create_llm_as_judge",
+                "openevals.llm.create_async_llm_as_judge",
                 return_value=fake_judge,
         ) as mock_create:
             info = await _register(config, builder)
 
-            # Verify create_llm_as_judge was called with the resolved prompt
+            # Verify create_async_llm_as_judge was called with the resolved prompt
             mock_create.assert_called_once()
             call_kwargs = mock_create.call_args[1]
             assert call_kwargs["judge"] is mock_llm
@@ -134,11 +134,11 @@ class TestLangSmithJudgeRegistration:
         assert output.eval_output_items[0].reasoning["comment"] == "Looks good"
 
     async def test_custom_prompt(self, eval_input_matching):
-        """Custom prompt template is passed through to create_llm_as_judge."""
+        """Custom prompt template is passed through to create_async_llm_as_judge."""
         custom_prompt = "Rate professionalism: {inputs} {outputs}"
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "professionalism", "score": 0.85, "comment": "Professional tone"}
 
         config = LangSmithJudgeConfig(
@@ -150,7 +150,7 @@ class TestLangSmithJudgeRegistration:
         builder = make_mock_builder(mock_llm)
 
         with patch(
-                "openevals.llm.create_llm_as_judge",
+                "openevals.llm.create_async_llm_as_judge",
                 return_value=fake_judge,
         ) as mock_create:
             info = await _register(config, builder)
@@ -166,10 +166,10 @@ class TestLangSmithJudgeRegistration:
         assert output.eval_output_items[0].score == 0.85
 
     async def test_with_choices(self, eval_input_matching):
-        """Choices are passed through to create_llm_as_judge."""
+        """Choices are passed through to create_async_llm_as_judge."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 0.5}
 
         config = LangSmithJudgeConfig(
@@ -180,7 +180,7 @@ class TestLangSmithJudgeRegistration:
         builder = make_mock_builder(mock_llm)
 
         with patch(
-                "openevals.llm.create_llm_as_judge",
+                "openevals.llm.create_async_llm_as_judge",
                 return_value=fake_judge,
         ) as mock_create:
             info = await _register(config, builder)
@@ -197,7 +197,7 @@ class TestLangSmithJudgeRegistration:
         mock_llm = MagicMock(name="mock_judge_llm")
         patched_llm = MagicMock(name="patched_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -214,7 +214,7 @@ class TestLangSmithJudgeRegistration:
                     return_value=patched_llm,
                 ) as mock_retry,
                 patch(
-                    "openevals.llm.create_llm_as_judge",
+                    "openevals.llm.create_async_llm_as_judge",
                     return_value=fake_judge,
                 ) as mock_create,
         ):
@@ -225,14 +225,14 @@ class TestLangSmithJudgeRegistration:
             assert mock_retry.call_args[0][0] is mock_llm
             assert mock_retry.call_args[1]["retries"] == 5
 
-            # Verify create_llm_as_judge received the patched LLM
+            # Verify create_async_llm_as_judge received the patched LLM
             assert mock_create.call_args[1]["judge"] is patched_llm
 
     async def test_retry_not_applied_when_disabled(self):
         """When do_auto_retry is explicitly False, patch_with_retry is NOT called."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm", do_auto_retry=False)
@@ -241,7 +241,7 @@ class TestLangSmithJudgeRegistration:
         with (
                 patch("nat.utils.exception_handlers.automatic_retries.patch_with_retry") as mock_retry,
                 patch(
-                    "openevals.llm.create_llm_as_judge",
+                    "openevals.llm.create_async_llm_as_judge",
                     return_value=fake_judge,
                 ),
         ):
@@ -290,11 +290,11 @@ class TestLangSmithJudgeNewTypedFields:
         assert len(config.few_shot_examples) == 2
         assert config.few_shot_examples[0]["score"] is True
 
-    async def test_system_passed_to_create_llm_as_judge(self, eval_input_matching):
-        """system field is forwarded to create_llm_as_judge."""
+    async def test_system_passed_to_create_async_llm_as_judge(self, eval_input_matching):
+        """system field is forwarded to create_async_llm_as_judge."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 0.9, "comment": "OK"}
 
         config = LangSmithJudgeConfig(
@@ -304,16 +304,16 @@ class TestLangSmithJudgeNewTypedFields:
         )
         builder = make_mock_builder(mock_llm)
 
-        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+        with patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge) as mock_create:
             await _register(config, builder)
             assert mock_create.call_args[1]["system"] == "Be strict."
 
-    async def test_few_shot_passed_to_create_llm_as_judge(self):
-        """few_shot_examples field is forwarded to create_llm_as_judge."""
+    async def test_few_shot_passed_to_create_async_llm_as_judge(self):
+        """few_shot_examples field is forwarded to create_async_llm_as_judge."""
         mock_llm = MagicMock(name="mock_judge_llm")
         examples = [{"inputs": "Q", "outputs": "A", "score": True, "reasoning": "OK"}]
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -323,21 +323,21 @@ class TestLangSmithJudgeNewTypedFields:
         )
         builder = make_mock_builder(mock_llm)
 
-        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+        with patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge) as mock_create:
             await _register(config, builder)
             assert mock_create.call_args[1]["few_shot_examples"] == examples
 
     async def test_system_not_passed_when_none(self):
-        """system is NOT in create_llm_as_judge kwargs when None."""
+        """system is NOT in create_async_llm_as_judge kwargs when None."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(prompt="correctness", llm_name="eval_llm")
         builder = make_mock_builder(mock_llm)
 
-        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+        with patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge) as mock_create:
             await _register(config, builder)
             assert "system" not in mock_create.call_args[1]
             assert "few_shot_examples" not in mock_create.call_args[1]
@@ -367,7 +367,7 @@ class TestJudgeKwargs:
         """Overlap between judge_kwargs and typed fields raises ValueError at registration."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -379,7 +379,7 @@ class TestJudgeKwargs:
 
         with (
                 pytest.raises(ValueError, match="overlap with typed config fields"),
-                patch("openevals.llm.create_llm_as_judge", return_value=fake_judge),
+                patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge),
         ):
             await _register(config, builder)
 
@@ -387,7 +387,7 @@ class TestJudgeKwargs:
         """Overlap with system field raises when both typed field and judge_kwargs set it."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -400,7 +400,7 @@ class TestJudgeKwargs:
 
         with (
                 pytest.raises(ValueError, match="overlap with typed config fields"),
-                patch("openevals.llm.create_llm_as_judge", return_value=fake_judge),
+                patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge),
         ):
             await _register(config, builder)
 
@@ -408,7 +408,7 @@ class TestJudgeKwargs:
         """system in judge_kwargs is fine when the typed field is None (no overlap)."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -418,15 +418,15 @@ class TestJudgeKwargs:
         )
         builder = make_mock_builder(mock_llm)
 
-        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+        with patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge) as mock_create:
             await _register(config, builder)
             assert mock_create.call_args[1]["system"] == "via kwargs"
 
-    async def test_judge_kwargs_forwarded_to_create_llm_as_judge(self):
-        """judge_kwargs are merged into create_llm_as_judge call."""
+    async def test_judge_kwargs_forwarded_to_create_async_llm_as_judge(self):
+        """judge_kwargs are merged into create_async_llm_as_judge call."""
         mock_llm = MagicMock(name="mock_judge_llm")
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -436,7 +436,7 @@ class TestJudgeKwargs:
         )
         builder = make_mock_builder(mock_llm)
 
-        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create:
+        with patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge) as mock_create:
             await _register(config, builder)
             assert mock_create.call_args[1]["some_future_param"] == "hello"
 
@@ -475,11 +475,11 @@ class TestOutputSchema:
         assert config.score_field == "analysis.score"
 
     async def test_output_schema_imported_and_passed(self):
-        """output_schema dotted path is imported and passed to create_llm_as_judge."""
+        """output_schema dotted path is imported and passed to create_async_llm_as_judge."""
         mock_llm = MagicMock(name="mock_judge_llm")
         fake_schema_class = type("FakeResult", (), {})
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
 
         config = LangSmithJudgeConfig(
@@ -490,7 +490,7 @@ class TestOutputSchema:
         builder = make_mock_builder(mock_llm)
 
         with (
-                patch("openevals.llm.create_llm_as_judge", return_value=fake_judge) as mock_create,
+                patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge) as mock_create,
                 patch(
                     "nat.plugins.langchain.eval.utils._import_from_dotted_path",
                     return_value=fake_schema_class,
@@ -526,7 +526,7 @@ class TestLangSmithJudgeExtraFields:
         mock_llm = MagicMock(name="mock_judge_llm")
         received = {}
 
-        def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             received.update(kwargs)
             return {"key": "score", "score": True, "comment": "No hallucination"}
 
@@ -537,7 +537,7 @@ class TestLangSmithJudgeExtraFields:
         )
         builder = make_mock_builder(mock_llm)
 
-        with patch("openevals.llm.create_llm_as_judge", return_value=fake_judge):
+        with patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge):
             info = await _register(config, builder)
 
         output = await info.evaluate_fn(eval_input_with_context)

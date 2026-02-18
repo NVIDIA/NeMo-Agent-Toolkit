@@ -27,6 +27,8 @@ from nat.data_models.component_ref import LLMRef
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 
+from .langsmith_evaluator import LangSmithExtraFieldsMixin
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,21 +66,27 @@ def _resolve_prompt(prompt_value: str) -> str:
     return prompt_value
 
 
-class LangSmithJudgeConfig(EvaluatorBaseConfig, RetryMixin, name="langsmith_judge"):
+class LangSmithJudgeConfig(EvaluatorBaseConfig, RetryMixin, LangSmithExtraFieldsMixin, name="langsmith_judge"):
     """LLM-as-judge evaluator powered by openevals.
 
     Uses a prebuilt or custom prompt with a judge LLM to score workflow
     outputs. Prebuilt prompt names (e.g., ``'correctness'``, ``'hallucination'``)
     are resolved from openevals automatically.
 
-    Common ``create_llm_as_judge`` parameters are exposed as typed fields
+    Common ``create_async_llm_as_judge`` parameters are exposed as typed fields
     for discoverability and validation.  Any additional / future parameters
     can be forwarded via the ``judge_kwargs`` pass-through dict.
+
+    **Important:** The judge LLM must support structured output (JSON schema
+    mode via ``with_structured_output``).  Models that do not support
+    structured output will produce parsing errors and zero scores.  Verify
+    that your chosen model supports this capability before use.
     """
 
     prompt: str = Field(description="Prebuilt openevals prompt name (e.g., 'correctness', 'hallucination') "
                         "or a custom f-string prompt template.", )
-    llm_name: LLMRef = Field(description="Name of the judge LLM from the workflow's llms: section.", )
+    llm_name: LLMRef = Field(description="Name of the judge LLM from the workflow's llms: section. "
+                             "The model must support structured output (JSON schema mode).", )
     feedback_key: str = Field(
         default="score",
         description="Name under which the evaluation score is recorded. "
@@ -125,17 +133,10 @@ class LangSmithJudgeConfig(EvaluatorBaseConfig, RetryMixin, name="langsmith_judg
         description="Dot-notation path to the score field in custom output_schema "
         "results (e.g., 'analysis.score'). Only used when output_schema is set.",
     )
-    extra_fields: dict[str, str] | None = Field(
-        default=None,
-        description="Optional mapping of evaluator kwarg names to dataset field names.  "
-        "Keys are the kwarg names passed to the evaluator; values are looked up "
-        "in the dataset entry.  Example: ``{context: retrieved_context}`` passes "
-        "the dataset's 'retrieved_context' field as the 'context' kwarg.",
-    )
     judge_kwargs: dict[str, Any] | None = Field(
         default=None,
         description="Additional keyword arguments forwarded directly to "
-        "openevals ``create_llm_as_judge``. Use this for parameters not "
+        "openevals ``create_async_llm_as_judge``. Use this for parameters not "
         "exposed as typed fields. Keys must not overlap with typed fields.",
     )
 
@@ -153,7 +154,7 @@ def _build_create_kwargs(
     resolved_prompt: str,
     judge_llm: Any,
 ) -> dict[str, Any]:
-    """Assemble keyword arguments for ``openevals.create_llm_as_judge``.
+    """Assemble keyword arguments for ``openevals.create_async_llm_as_judge``.
 
     Typed config fields are added first, then optional fields are merged
     only when set.  Finally, ``judge_kwargs`` is merged with overlap
@@ -166,7 +167,7 @@ def _build_create_kwargs(
         judge_llm: The LLM instance to use as the judge.
 
     Returns:
-        Dictionary of keyword arguments ready for ``create_llm_as_judge``.
+        Dictionary of keyword arguments ready for ``create_async_llm_as_judge``.
 
     Raises:
         ValueError: If ``judge_kwargs`` keys overlap with typed fields.
@@ -212,7 +213,7 @@ async def register_langsmith_judge(config: LangSmithJudgeConfig, builder: EvalBu
     """Register an LLM-as-judge evaluator with NAT."""
 
     # Lazy imports -- keeps openevals and langsmith out of the module-level import chain.
-    from openevals.llm import create_llm_as_judge
+    from openevals.llm import create_async_llm_as_judge
 
     from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
@@ -230,7 +231,7 @@ async def register_langsmith_judge(config: LangSmithJudgeConfig, builder: EvalBu
 
     resolved_prompt = _resolve_prompt(config.prompt)
     create_kwargs = _build_create_kwargs(config, resolved_prompt, judge_llm)
-    evaluator_fn = create_llm_as_judge(**create_kwargs)
+    evaluator_fn = create_async_llm_as_judge(**create_kwargs)
 
     logger.info(
         "Created LLM-as-judge evaluator (prompt: %s, llm: %s)",
