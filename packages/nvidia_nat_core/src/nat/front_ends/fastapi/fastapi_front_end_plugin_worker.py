@@ -58,7 +58,7 @@ from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
-from nat.front_ends.fastapi.async_job import run_generation
+from nat.front_ends.fastapi.async_jobs.async_job import run_generation
 from nat.front_ends.fastapi.auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import FlowState
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
@@ -80,6 +80,8 @@ from nat.object_store.models import ObjectStoreItem
 from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
 from nat.utils.log_utils import setup_logging
+
+from .execution_store import ExecutionStore
 
 logger = logging.getLogger(__name__)
 
@@ -142,17 +144,17 @@ class FastApiFrontEndPluginWorkerBase(ABC):
         setup_logging(self._log_level)
 
         if self._scheduler_address is not None:
-            if not _DASK_AVAILABLE:
-                raise RuntimeError("Dask is not available, please install it to use the FastAPI front end with Dask.")
-
-            if self._db_url is None:
-                raise RuntimeError(
-                    "NAT_JOB_STORE_DB_URL must be set when using Dask (configure a persistent JobStore database).")
-
             try:
+                from nat.front_ends.fastapi.async_jobs.job_store import JobStore
+                if self._db_url is None:
+                    raise RuntimeError(
+                        "NAT_JOB_STORE_DB_URL must be set when using Dask (configure a persistent JobStore database).")
                 self._job_store = JobStore(scheduler_address=self._scheduler_address, db_url=self._db_url)
                 self._dask_available = True
                 logger.debug("Connected to Dask scheduler at %s", self._scheduler_address)
+            except ImportError as e:
+                raise RuntimeError(
+                    "Dask is not available, please install it to use the FastAPI front end with Dask.") from e
             except Exception as e:
                 raise RuntimeError(f"Failed to connect to Dask scheduler at {self._scheduler_address}: {e}") from e
         else:
@@ -277,6 +279,15 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         self._evaluators: dict[str, EvaluatorInfo] = {}
         self._eval_builder: WorkflowEvalBuilderBase | None = None
 
+        # HTTP interactive execution store
+        self._execution_store = ExecutionStore()
+
+        # Re-create the HTTP flow handler with OAuth flow callbacks for interactive mode
+        self._http_flow_handler = HTTPAuthenticationFlowHandler(
+            add_flow_cb=self._add_flow,
+            remove_flow_cb=self._remove_flow,
+        )
+
     def get_conversation_handler(self, conversation_id: str) -> "WebSocketMessageHandler | None":
         """Get a conversation handler for reconnection support."""
         return self._conversation_handlers.get(conversation_id)
@@ -320,12 +331,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
             # Now evaluators should be populated by populate_builder
             for name in config.eval.evaluators.keys():
                 self._evaluators[name] = self._eval_builder.get_evaluator(name)
-                logger.info(f"Initialized evaluator: {name}")
+                logger.info("Initialized evaluator: %s", name)
 
-            logger.info(f"Successfully initialized {len(self._evaluators)} evaluators")
+            logger.info("Successfully initialized %d evaluators", len(self._evaluators))
 
         except Exception as e:
-            logger.error(f"Failed to initialize evaluators: {e}")
+            logger.error("Failed to initialize evaluators: %s", e)
             # Don't fail startup, just log the error
             self._evaluators = {}
 
@@ -401,13 +412,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         await self.add_health_route(app)
 
         for ep in self.front_end_config.endpoints:
-
             await self.add_route(app,
                                  endpoint=ep,
                                  session_manager=await self._create_session_manager(builder, ep.function_name))
 
     async def add_default_route(self, app: FastAPI, session_manager: SessionManager):
-
         await self.add_route(app, self.front_end_config.workflow, session_manager)
 
     async def add_evaluate_route(self, app: FastAPI, session_manager: SessionManager):

@@ -311,9 +311,12 @@ observability_trace_message = {
 }
 
 
-@pytest.fixture(name="config")
-def server_config(
-    restore_environ, file_path: str = __file__.replace("test_unified_api_server.py", "server_config.yml")) -> BaseModel:
+@pytest.fixture(name="config",
+                params=["server_config.yml", "legacy_server_config.yml"],
+                ids=["modern_endpoints", "legacy_endpoints"])
+def server_config(restore_environ, request: pytest.FixtureRequest) -> BaseModel:
+    config_file = request.param
+    file_path = __file__.replace("test_unified_api_server.py", config_file)
     data = None
     with open(file_path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
@@ -345,15 +348,19 @@ async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
 
 async def test_generate_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
     """When the workflow raises, non-streaming generate returns 422 with Error JSON body."""
-    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.generate_single_response") as mock_gen:
-        mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+    with patch("nat.front_ends.fastapi.routes.common_utils.generate_single_response") as mock_common_single, patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_single_response") as mock_interactive_single:
+        for mock_gen in (mock_common_single, mock_interactive_single):
+            mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
         input_message = {"message": "hello"}
         response = await client.post(f"{config.endpoint.generate}", json=input_message)
     assert response.status_code == 422
     body = response.json()
     assert body["code"] == "workflow_error"
     assert "No human prompt callback" in body["message"]
-    assert body["details"] == "NotImplementedError"
+    # NotImplementedError is returned for legacy endpoints
+    # ExecutionFailed is returned for modern endpoints
+    assert body["details"] in {"NotImplementedError", "ExecutionFailed"}
 
 
 @pytest.mark.integration
@@ -372,7 +379,8 @@ async def test_generate_stream_endpoint_yields_error_when_workflow_raises(client
             yield
         raise NotImplementedError("No human prompt callback was registered.")
 
-    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen):
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen), patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_streaming_response", new=raising_gen):
         input_message = {"message": "hello"}
         response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
     assert response.status_code == 200
@@ -393,15 +401,17 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
 
 async def test_chat_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
     """When the workflow raises, non-streaming chat returns 422 with Error JSON body."""
-    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.generate_single_response") as mock_gen:
-        mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+    with patch("nat.front_ends.fastapi.routes.common_utils.generate_single_response") as mock_common_single, patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_single_response") as mock_interactive_single:
+        for mock_gen in (mock_common_single, mock_interactive_single):
+            mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
         input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
         response = await client.post(f"{config.endpoint.chat}", json=input_message)
     assert response.status_code == 422
     body = response.json()
     assert body["code"] == "workflow_error"
     assert "No human prompt callback" in body["message"]
-    assert body["details"] == "NotImplementedError"
+    assert body["details"] in {"NotImplementedError", "ExecutionFailed"}
 
 
 async def test_chat_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
@@ -412,7 +422,8 @@ async def test_chat_stream_endpoint_yields_error_when_workflow_raises(client: ht
             yield
         raise NotImplementedError("No human prompt callback was registered.")
 
-    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen):
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen), patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_streaming_response", new=raising_gen):
         input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
         response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
     assert response.status_code == 200
@@ -1013,6 +1024,7 @@ async def test_hitl_callback_timeout_raises_when_no_response():
 async def test_restore_execution_state_sends_prompt_with_remaining_timeout():
     """On reconnect, re-sent prompt has timeout set to max(0, original_timeout - elapsed)."""
     mock_socket = AsyncMock()
+    mock_socket.query_params = {"conversation_id": "conv1"}
     mock_session_manager = MagicMock()
     mock_step_adaptor = MagicMock()
     mock_worker = MagicMock()

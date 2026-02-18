@@ -85,6 +85,10 @@ class ContextState(metaclass=Singleton):
         self._latency_sensitivity_stack: ContextVar[list[int] | None] = ContextVar("latency_sensitivity_stack",
                                                                                    default=None)
 
+        # Cross-workflow observability: parent step id/name for the root of this workflow run
+        self.workflow_parent_id: ContextVar[str | None] = ContextVar("workflow_parent_id", default=None)
+        self.workflow_parent_name: ContextVar[str | None] = ContextVar("workflow_parent_name", default=None)
+
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
                                              | None] = ContextVar(

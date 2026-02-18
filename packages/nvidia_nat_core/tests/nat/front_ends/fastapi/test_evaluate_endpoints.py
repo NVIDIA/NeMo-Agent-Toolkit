@@ -32,6 +32,8 @@ from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.front_ends.fastapi.routes.evaluate import add_evaluate_item_route
+from nat.front_ends.fastapi.routes.evaluate import add_evaluate_route
 
 if typing.TYPE_CHECKING:
     from dask.distributed import Client as DaskClient
@@ -76,9 +78,8 @@ async def patch_evaluation_run(register_test_workflow):
 
             return result
 
-    with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker._EvaluationRun", new=MockEvaluationRun):
-        with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker._EVAL_AVAILABLE", new=True):
-            yield
+    with patch("nat.front_ends.fastapi.routes.evaluate.EvaluationRun", new=MockEvaluationRun):
+        yield
 
 
 @pytest_asyncio.fixture(name="test_client")
@@ -93,7 +94,7 @@ async def test_client_fixture(test_config: Config) -> TestClient:
         mock_session = MagicMock()
         MockSessionManager.return_value = mock_session
 
-        await worker.add_evaluate_route(app, session_manager=mock_session)
+        await add_evaluate_route(worker, app, session_manager=mock_session)
 
         yield TestClient(app)
 
@@ -299,7 +300,7 @@ async def evaluate_item_client_fixture() -> TestClient:
     with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
         mock_session = MagicMock()
         MockSessionManager.return_value = mock_session
-        await worker.add_evaluate_item_route(app, session_manager=mock_session)
+        await add_evaluate_item_route(worker, app, session_manager=mock_session)
 
     return TestClient(app)
 
@@ -372,7 +373,7 @@ async def evaluate_item_client_with_error_fixture() -> TestClient:
     with patch("nat.front_ends.fastapi.fastapi_front_end_plugin_worker.SessionManager") as MockSessionManager:
         mock_session = MagicMock()
         MockSessionManager.return_value = mock_session
-        await worker.add_evaluate_item_route(app, session_manager=mock_session)
+        await add_evaluate_item_route(worker, app, session_manager=mock_session)
 
     return TestClient(app)
 
