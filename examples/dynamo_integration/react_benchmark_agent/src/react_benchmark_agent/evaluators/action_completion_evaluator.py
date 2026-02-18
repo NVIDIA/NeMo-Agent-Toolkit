@@ -32,7 +32,7 @@ from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
-from nat.data_models.evaluator_config_base import EvaluatorBaseConfig
+from nat.data_models.evaluator import EvaluatorBaseConfig
 
 logger = logging.getLogger(__name__)
 

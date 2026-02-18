@@ -19,7 +19,7 @@ from pydantic import Field
 from nat.data_models.common import TypedBaseModel
 from nat.data_models.common import TypedBaseModelT
 from nat.data_models.embedder import EmbedderBaseConfig
-from nat.data_models.evaluator_config_base import EvaluatorBaseConfig
+from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.memory import MemoryBaseConfig

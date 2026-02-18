@@ -21,10 +21,23 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import SerializeAsAny
 
-from .evaluator_config_base import EvaluatorBaseConfig  # noqa: F401
-from .evaluator_config_base import EvaluatorBaseConfigT  # noqa: F401
-from .evaluator_config_base import EvaluatorLLMConfig  # noqa: F401
+from .common import BaseModelRegistryTag
+from .common import TypedBaseModel
 from .intermediate_step import IntermediateStep
+from .retry_mixin import RetryMixin
+
+
+class EvaluatorBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    pass
+
+
+class EvaluatorLLMConfig(EvaluatorBaseConfig, RetryMixin):
+    """Base config for evaluators that use an LLM as a judge."""
+
+    llm_name: str = Field(description="LLM to use as a judge.")
+
+
+EvaluatorBaseConfigT = typing.TypeVar("EvaluatorBaseConfigT", bound=EvaluatorBaseConfig)
 
 
 class EvalInputItem(BaseModel):
