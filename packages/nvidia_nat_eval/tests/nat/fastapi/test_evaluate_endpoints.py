@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import shutil
 import typing
 from pathlib import Path
@@ -33,6 +34,12 @@ from nat.plugins.eval.fastapi.routes import _add_evaluate_route as add_evaluate_
 
 if typing.TYPE_CHECKING:
     from dask.distributed import Client as DaskClient
+
+
+@pytest.fixture(name="set_nat_config_file", autouse=True)
+def set_nat_config_file_fixture(simple_config_file: str, restore_environ):
+    """Ensure worker initialization always has a valid NAT config path."""
+    os.environ["NAT_CONFIG_FILE"] = simple_config_file
 
 
 @pytest.fixture(name="test_config")
