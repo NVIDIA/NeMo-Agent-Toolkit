@@ -98,10 +98,13 @@ class ToolCallAgentGraph(DualNodeAgent):
             logger.debug("%s Starting the Tool Calling Agent Node", AGENT_LOG_PREFIX)
             if len(state.messages) == 0:
                 raise RuntimeError('No input received in state: "messages"')
-            response = await self.agent.ainvoke(
-                {"messages": state.messages},
-                config=self._runnable_config,
-            )
+            # Use astream so LangGraph's stream_mode="messages" can observe individual LLM tokens.
+            # Config is inherited from LangGraph's context, preserving streaming callbacks.
+            response = None
+            async for chunk in self.agent.astream({"messages": state.messages}):
+                response = chunk if response is None else response + chunk
+            if response is None:
+                raise RuntimeError('No response received from agent')
             if self.detailed_logs:
                 agent_input = "\n".join(str(message.content) for message in state.messages)
                 logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, response)

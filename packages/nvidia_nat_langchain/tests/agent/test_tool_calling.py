@@ -305,3 +305,24 @@ async def test_graph_with_return_direct(mock_tool_graph_with_return_direct):
     last_message = response.messages[-1]
     assert isinstance(last_message, ToolMessage)
     assert last_message.name == 'Tool A'
+
+
+async def test_graph_astream_yields_message_chunks(mock_tool_graph):
+    """Test that graph.astream with stream_mode='messages' yields message chunks from the agent node.
+
+    This validates the streaming path used by _stream_fn in register.py. With a real LLM the chunks
+    will be AIMessageChunk; the mock LLM produces AIMessage which LangGraph may wrap differently,
+    so we accept any BaseMessage subclass from the agent node.
+    """
+    from langchain_core.messages import BaseMessage
+
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='please, mock tool call!')])
+    agent_messages = []
+    async for msg, metadata in mock_tool_graph.astream(
+            mock_state, config={'recursion_limit': 5}, stream_mode="messages"):
+        if isinstance(msg, BaseMessage) and metadata.get("langgraph_node") == "agent":
+            agent_messages.append(msg)
+
+    assert len(agent_messages) > 0, "Expected at least one message from the agent node via stream_mode='messages'"
+    combined_content = "".join(m.content for m in agent_messages if m.content)
+    assert len(combined_content) > 0, "Expected non-empty content from streamed agent messages"
