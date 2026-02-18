@@ -275,9 +275,9 @@ async def evaluate_item_client_fixture() -> TestClient:
     from unittest.mock import AsyncMock
 
     from nat.builder.evaluator import EvaluatorInfo
-    from nat.eval.evaluator.evaluator_model import EvalInput
-    from nat.eval.evaluator.evaluator_model import EvalOutput
-    from nat.eval.evaluator.evaluator_model import EvalOutputItem
+    from nat.data_models.evaluator import EvalInput
+    from nat.data_models.evaluator import EvalOutput
+    from nat.data_models.evaluator import EvalOutputItem
 
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
