@@ -44,7 +44,7 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.sql import expression as sa_expr
 
-from nat.front_ends.fastapi.dask_client_mixin import DaskClientMixin
+from nat.front_ends.fastapi.async_jobs.dask_client_mixin import DaskClientMixin
 
 if typing.TYPE_CHECKING:
     from sqlalchemy.engine import Engine
@@ -455,7 +455,7 @@ class JobStore(DaskClientMixin):
 
         stmt = select(JobInfo).where(JobInfo.status == status)
         async with self.session() as session:
-            return (await session.scalars(stmt)).all()
+            return list((await session.scalars(stmt)).all())
 
     def get_expires_at(self, job: JobInfo) -> datetime | None:
         """
