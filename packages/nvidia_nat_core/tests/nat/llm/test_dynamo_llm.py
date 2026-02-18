@@ -46,6 +46,7 @@ class TestDynamoModelConfig:
         assert config.disable_headers is True
         assert config.request_timeout == 600.0
         assert config.cache_pin_type == CachePinType.EPHEMERAL
+        assert config.max_sensitivity == 1000
 
     def test_custom_prefix_values(self):
         """Test custom prefix parameter values."""
@@ -180,6 +181,7 @@ class TestDynamoModelConfig:
             "prediction_trie_path",
             "disable_headers",
             "cache_pin_type",
+            "max_sensitivity",
         })
 
         assert field_names == expected
@@ -500,6 +502,8 @@ class TestDynamoTransport:
         assert agent_hints["total_requests"] == 10
         assert agent_hints["osl"] == 512
         assert agent_hints["iat"] == 750
+        # Default latency_sensitivity=2, max_sensitivity=1000 -> priority=998
+        assert agent_hints["priority"] == 998
 
         # Cleanup
         DynamoPrefixContext.clear()
@@ -755,6 +759,7 @@ class TestDynamoTransport:
         assert agent_hints["total_requests"] == 10
         assert agent_hints["osl"] == 512
         assert agent_hints["iat"] == 250
+        assert agent_hints["priority"] == 998  # 1000 - 2
 
         DynamoPrefixContext.clear()
 
@@ -849,6 +854,8 @@ class TestDynamoTransport:
         assert "agent_hints" in body["nvext"]
         agent_hints = body["nvext"]["agent_hints"]
         assert agent_hints["latency_sensitivity"] == 2.0
+        # priority = max_sensitivity(1000) - latency_sensitivity(2) = 998
+        assert agent_hints["priority"] == 998
 
         # Cleanup
         DynamoPrefixContext.clear()
@@ -1036,6 +1043,44 @@ class TestDynamoTransport:
         cache_control = body["nvext"]["cache_control"]
         assert cache_control["type"] == "ephemeral"
         assert cache_control["ttl"] == "2s"  # 25 * 50 = 1250ms -> ceil = 2s
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_clamps_priority_when_exceeding_max(self):
+        """Test that priority is clamped to 0 when latency_sensitivity exceeds max_sensitivity."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # max_sensitivity=5, default latency_sensitivity=2 -> priority would be 5-2=3
+        # But we want to test when latency_sensitivity > max_sensitivity.
+        # Default latency_sensitivity from Context fallback is 2, max_sensitivity=1 -> 1-2=-1 -> clamped to 0
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            max_sensitivity=1,
+        )
+
+        DynamoPrefixContext.set("clamp-test")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test", "messages": []})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+        agent_hints = body["nvext"]["agent_hints"]
+
+        # Priority should be clamped to 0, not negative
+        assert agent_hints["priority"] == 0
 
         DynamoPrefixContext.clear()
 

@@ -403,6 +403,14 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         "Set to null/None to disable cache control hints.",
     )
 
+    max_sensitivity: int = Field(
+        default=1000,
+        ge=1,
+        description="Maximum latency sensitivity value used to compute request priority. "
+        "Priority is the integer complement: priority = max_sensitivity - latency_sensitivity. "
+        "Lower priority values indicate higher priority requests.",
+    )
+
     # =========================================================================
     # VALIDATORS (backward compatibility: categorical strings -> integers)
     # =========================================================================
@@ -460,6 +468,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             "prediction_trie_path",
             "disable_headers",
             "cache_pin_type",
+            "max_sensitivity",
         })
 
 
@@ -490,6 +499,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         use_raw_values: bool = True,
         disable_headers: bool = True,
         cache_pin_type: CachePinType | None = CachePinType.EPHEMERAL,
+        max_sensitivity: int = 1000,
     ):
         self._transport = transport
         self._total_requests = total_requests
@@ -499,6 +509,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         self._use_raw_values = use_raw_values
         self._disable_headers = disable_headers
         self._cache_pin_type = cache_pin_type
+        self._max_sensitivity = max_sensitivity
         # Per-prefix call counter so call_index advances across requests
         # for the same prefix_id (keyed by prefix_id string).
         self._call_counts: dict[str, int] = {}
@@ -584,12 +595,24 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                 body = json.loads(content.decode("utf-8", errors="replace"))
                 if isinstance(body, dict):
                     # Build agent_hints dict (int or str depending on raw mode)
+                    # Priority is the integer complement of latency_sensitivity:
+                    # lower priority value = higher priority request.
+                    priority = self._max_sensitivity - latency_sensitivity
+                    if priority < 0:
+                        logger.warning(
+                            "latency_sensitivity (%s) exceeds max_sensitivity (%s); "
+                            "clamping priority to 0",
+                            latency_sensitivity,
+                            self._max_sensitivity,
+                        )
+                        priority = 0
                     agent_hints = {
                         "prefix_id": prefix_id,
                         "total_requests": total_requests,
                         "osl": osl_value,
                         "iat": iat_value,
                         "latency_sensitivity": float(latency_sensitivity),
+                        "priority": priority,
                     }
 
                     # Add/merge nvext.agent_hints
@@ -671,6 +694,7 @@ def create_httpx_client_with_dynamo_hooks(
     use_raw_values: bool = True,
     disable_headers: bool = True,
     cache_pin_type: CachePinType | None = CachePinType.EPHEMERAL,
+    max_sensitivity: int = 1000,
 ) -> "httpx.AsyncClient":
     """
     Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
@@ -692,6 +716,7 @@ def create_httpx_client_with_dynamo_hooks(
         use_raw_values: When True send raw integers; when False convert to LOW/MEDIUM/HIGH
         disable_headers: If True, do not inject hints as HTTP headers (still injects nvext.agent_hints)
         cache_pin_type: Cache pinning strategy. When set, injects nvext.cache_control with TTL. Set to None to disable.
+        max_sensitivity: Maximum latency sensitivity for computing priority
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.
@@ -713,6 +738,7 @@ def create_httpx_client_with_dynamo_hooks(
         use_raw_values=use_raw_values,
         disable_headers=disable_headers,
         cache_pin_type=cache_pin_type,
+        max_sensitivity=max_sensitivity,
     )
 
     return httpx.AsyncClient(
