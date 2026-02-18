@@ -476,8 +476,13 @@ class TestOutputSchema:
 
     async def test_output_schema_imported_and_passed(self):
         """output_schema dotted path is imported and passed to create_async_llm_as_judge."""
+        from typing import TypedDict
+
         mock_llm = MagicMock(name="mock_judge_llm")
-        fake_schema_class = type("FakeResult", (), {})
+
+        class FakeResult(TypedDict):
+            score: float
+            reasoning: str
 
         async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
             return {"key": "score", "score": 1.0}
@@ -493,12 +498,37 @@ class TestOutputSchema:
                 patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge) as mock_create,
                 patch(
                     "nat.plugins.langchain.eval.utils._import_from_dotted_path",
-                    return_value=fake_schema_class,
+                    return_value=FakeResult,
                 ) as mock_import,
         ):
             await _register(config, builder)
             mock_import.assert_called_once_with("my_pkg.schemas.FakeResult", label="output_schema")
-            assert mock_create.call_args[1]["output_schema"] is fake_schema_class
+            assert mock_create.call_args[1]["output_schema"] is FakeResult
+
+    async def test_output_schema_rejects_non_typeddict_non_basemodel(self):
+        """output_schema that is not a TypedDict or BaseModel raises TypeError."""
+        mock_llm = MagicMock(name="mock_judge_llm")
+        invalid_schema = type("NotASchema", (), {})
+
+        async def fake_judge(*, inputs=None, outputs=None, reference_outputs=None, **kwargs):
+            return {"key": "score", "score": 1.0}
+
+        config = LangSmithJudgeConfig(
+            prompt="correctness",
+            llm_name="eval_llm",
+            output_schema="my_pkg.schemas.NotASchema",
+        )
+        builder = make_mock_builder(mock_llm)
+
+        with (
+                pytest.raises(TypeError, match="must be a TypedDict or Pydantic BaseModel class"),
+                patch("openevals.llm.create_async_llm_as_judge", return_value=fake_judge),
+                patch(
+                    "nat.plugins.langchain.eval.utils._import_from_dotted_path",
+                    return_value=invalid_schema,
+                ),
+        ):
+            await _register(config, builder)
 
 
 # --------------------------------------------------------------------------- #

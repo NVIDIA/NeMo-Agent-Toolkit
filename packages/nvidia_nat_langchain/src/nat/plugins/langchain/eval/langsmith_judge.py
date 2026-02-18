@@ -16,8 +16,10 @@
 import logging
 from typing import Any
 
+from pydantic import BaseModel
 from pydantic import Field
 from pydantic import model_validator
+from typing_extensions import is_typeddict
 
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
@@ -190,10 +192,16 @@ def _build_create_kwargs(
         create_kwargs["few_shot_examples"] = config.few_shot_examples
 
     if config.output_schema is not None:
-        create_kwargs["output_schema"] = _import_from_dotted_path(
+        schema = _import_from_dotted_path(
             config.output_schema,
             label="output_schema",
         )
+
+        if not (is_typeddict(schema) or (isinstance(schema, type) and issubclass(schema, BaseModel))):
+            raise TypeError(f"output_schema must be a TypedDict or Pydantic BaseModel class, "
+                            f"got {type(schema).__name__} from '{config.output_schema}'.")
+
+        create_kwargs["output_schema"] = schema
 
     # Merge pass-through judge_kwargs, checking for overlap with the
     # typed fields that were already added to create_kwargs above.
