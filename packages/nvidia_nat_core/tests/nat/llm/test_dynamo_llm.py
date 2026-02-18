@@ -108,6 +108,9 @@ class TestDynamoModelConfig:
         with pytest.raises(ValueError):
             DynamoModelConfig(model_name="test-model", prefix_osl="INVALID")
 
+        with pytest.raises(ValueError):
+            DynamoModelConfig(model_name="test-model", prefix_iat="INVALID")
+
     def test_backward_compat_categorical_strings(self):
         """Test that categorical string values (LOW/MEDIUM/HIGH) are coerced to integers."""
         config = DynamoModelConfig(model_name="test-model", prefix_osl="LOW", prefix_iat="LOW")
@@ -1046,10 +1049,8 @@ class TestDynamoTransport:
 
         DynamoPrefixContext.clear()
 
-    async def test_transport_clamps_priority_when_exceeding_max(self):
-        """Test that priority is clamped to 0 when latency_sensitivity exceeds max_sensitivity."""
-        import json
-
+    async def test_transport_raises_when_latency_exceeds_max(self):
+        """Test that ValueError is raised when latency_sensitivity exceeds max_sensitivity."""
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
@@ -1058,9 +1059,7 @@ class TestDynamoTransport:
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        # max_sensitivity=5, default latency_sensitivity=2 -> priority would be 5-2=3
-        # But we want to test when latency_sensitivity > max_sensitivity.
-        # Default latency_sensitivity from Context fallback is 2, max_sensitivity=1 -> 1-2=-1 -> clamped to 0
+        # Default latency_sensitivity fallback is 2, max_sensitivity=1 -> 2 > 1 -> ValueError
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
@@ -1070,17 +1069,18 @@ class TestDynamoTransport:
             max_sensitivity=1,
         )
 
-        DynamoPrefixContext.set("clamp-test")
+        DynamoPrefixContext.set("overflow-test")
 
-        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test", "messages": []})
-        await transport.handle_async_request(request)
+        request = httpx.Request(
+            "POST",
+            "https://api.example.com/chat",
+            json={
+                "model": "test", "messages": []
+            },
+        )
 
-        modified_request = mock_transport.handle_async_request.call_args[0][0]
-        body = json.loads(modified_request.content.decode("utf-8"))
-        agent_hints = body["nvext"]["agent_hints"]
-
-        # Priority should be clamped to 0, not negative
-        assert agent_hints["priority"] == 0
+        with pytest.raises(ValueError, match="latency_sensitivity.*exceeds.*max_sensitivity"):
+            await transport.handle_async_request(request)
 
         DynamoPrefixContext.clear()
 

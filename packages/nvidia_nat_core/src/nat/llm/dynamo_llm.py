@@ -114,6 +114,10 @@ _OSL_CATEGORY_TO_INT: dict[str, int] = {"LOW": 128, "MEDIUM": 512, "HIGH": 2048}
 # HIGH: 750ms (midpoint of 500-1000ms range)
 _IAT_CATEGORY_TO_INT: dict[str, int] = {"LOW": 50, "MEDIUM": 250, "HIGH": 750}
 
+# Fallback when Context is unavailable (e.g. outside a workflow run).
+# Mid-range default on the [0, max_sensitivity] scale.
+_DEFAULT_LATENCY_SENSITIVITY: int = 2
+
 
 class CachePinType(StrEnum):
     """Cache pinning strategy for KV cache entries.
@@ -430,11 +434,17 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
     @field_validator("prefix_iat", mode="before")
     @classmethod
-    def _coerce_prefix_iat(cls, v: object) -> object:
+    def _coerce_prefix_iat(cls, v: object) -> int:
         """Convert categorical IAT strings (LOW/MEDIUM/HIGH) to representative millisecond values."""
-        if isinstance(v, str) and v.upper() in _IAT_CATEGORY_TO_INT:
-            return _IAT_CATEGORY_TO_INT[v.upper()]
-        return v
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str):
+            upper = v.upper()
+            if upper in _IAT_CATEGORY_TO_INT:
+                return _IAT_CATEGORY_TO_INT[upper]
+            raise ValueError(f"Invalid IAT value '{v}'. Must be an integer >= 1 "
+                             f"or one of: {', '.join(_IAT_CATEGORY_TO_INT.keys())}")
+        raise TypeError(f"prefix_iat must be int or str, got {type(v)}")
 
     # =========================================================================
     # UTILITY METHODS
@@ -519,12 +529,14 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         # Get prefix ID from context (supports depth-awareness and overrides)
         prefix_id = DynamoPrefixContext.get()
 
-        # Get latency sensitivity from context (defaults to 2)
+        # Get latency sensitivity from context.
+        # Context.latency_sensitivity is typed as int; coerce
+        # defensively in case a subclass or mock returns a float.
         try:
             ctx = Context.get()
-            latency_sensitivity = ctx.latency_sensitivity
+            latency_sensitivity = int(ctx.latency_sensitivity)
         except Exception:
-            latency_sensitivity = 2
+            latency_sensitivity = _DEFAULT_LATENCY_SENSITIVITY
 
         # Initialize with static config values (always integers)
         total_requests = self._total_requests
@@ -594,18 +606,13 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
             try:
                 body = json.loads(content.decode("utf-8", errors="replace"))
                 if isinstance(body, dict):
-                    # Build agent_hints dict (int or str depending on raw mode)
                     # Priority is the integer complement of latency_sensitivity:
                     # lower priority value = higher priority request.
+                    if latency_sensitivity > self._max_sensitivity:
+                        raise ValueError(f"latency_sensitivity ({latency_sensitivity}) exceeds "
+                                         f"max_sensitivity ({self._max_sensitivity}). "
+                                         f"Increase max_sensitivity or lower latency_sensitivity.")
                     priority = self._max_sensitivity - latency_sensitivity
-                    if priority < 0:
-                        logger.warning(
-                            "latency_sensitivity (%s) exceeds max_sensitivity (%s); "
-                            "clamping priority to 0",
-                            latency_sensitivity,
-                            self._max_sensitivity,
-                        )
-                        priority = 0
                     agent_hints = {
                         "prefix_id": prefix_id,
                         "total_requests": total_requests,
