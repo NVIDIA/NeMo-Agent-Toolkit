@@ -246,6 +246,7 @@ class TestDynamoLangChain:
                 use_raw_values=True,
                 disable_headers=True,
                 cache_pin_type=CachePinType.EPHEMERAL,
+                max_sensitivity=1000,
             )
 
             # Verify ChatOpenAI was called with the custom httpx client

@@ -46,6 +46,7 @@ class TestDynamoModelConfig:
         assert config.disable_headers is True
         assert config.request_timeout == 600.0
         assert config.cache_pin_type == CachePinType.EPHEMERAL
+        assert config.max_sensitivity == 1000
 
     def test_custom_prefix_values(self):
         """Test custom prefix parameter values."""
@@ -106,6 +107,9 @@ class TestDynamoModelConfig:
 
         with pytest.raises(ValueError):
             DynamoModelConfig(model_name="test-model", prefix_osl="INVALID")
+
+        with pytest.raises(ValueError):
+            DynamoModelConfig(model_name="test-model", prefix_iat="INVALID")
 
     def test_backward_compat_categorical_strings(self):
         """Test that categorical string values (LOW/MEDIUM/HIGH) are coerced to integers."""
@@ -180,6 +184,7 @@ class TestDynamoModelConfig:
             "prediction_trie_path",
             "disable_headers",
             "cache_pin_type",
+            "max_sensitivity",
         })
 
         assert field_names == expected
@@ -500,6 +505,8 @@ class TestDynamoTransport:
         assert agent_hints["total_requests"] == 10
         assert agent_hints["osl"] == 512
         assert agent_hints["iat"] == 750
+        # Default latency_sensitivity=2, max_sensitivity=1000 -> priority=998
+        assert agent_hints["priority"] == 998
 
         # Cleanup
         DynamoPrefixContext.clear()
@@ -755,6 +762,7 @@ class TestDynamoTransport:
         assert agent_hints["total_requests"] == 10
         assert agent_hints["osl"] == 512
         assert agent_hints["iat"] == 250
+        assert agent_hints["priority"] == 998  # 1000 - 2
 
         DynamoPrefixContext.clear()
 
@@ -849,6 +857,8 @@ class TestDynamoTransport:
         assert "agent_hints" in body["nvext"]
         agent_hints = body["nvext"]["agent_hints"]
         assert agent_hints["latency_sensitivity"] == 2.0
+        # priority = max_sensitivity(1000) - latency_sensitivity(2) = 998
+        assert agent_hints["priority"] == 998
 
         # Cleanup
         DynamoPrefixContext.clear()
@@ -1036,6 +1046,41 @@ class TestDynamoTransport:
         cache_control = body["nvext"]["cache_control"]
         assert cache_control["type"] == "ephemeral"
         assert cache_control["ttl"] == "2s"  # 25 * 50 = 1250ms -> ceil = 2s
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_raises_when_latency_exceeds_max(self):
+        """Test that ValueError is raised when latency_sensitivity exceeds max_sensitivity."""
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        # Default latency_sensitivity fallback is 2, max_sensitivity=1 -> 2 > 1 -> ValueError
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            max_sensitivity=1,
+        )
+
+        DynamoPrefixContext.set("overflow-test")
+
+        request = httpx.Request(
+            "POST",
+            "https://api.example.com/chat",
+            json={
+                "model": "test", "messages": []
+            },
+        )
+
+        with pytest.raises(ValueError, match="latency_sensitivity.*exceeds.*max_sensitivity"):
+            await transport.handle_async_request(request)
 
         DynamoPrefixContext.clear()
 

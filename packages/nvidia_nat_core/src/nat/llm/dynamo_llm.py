@@ -114,6 +114,10 @@ _OSL_CATEGORY_TO_INT: dict[str, int] = {"LOW": 128, "MEDIUM": 512, "HIGH": 2048}
 # HIGH: 750ms (midpoint of 500-1000ms range)
 _IAT_CATEGORY_TO_INT: dict[str, int] = {"LOW": 50, "MEDIUM": 250, "HIGH": 750}
 
+# Fallback when Context is unavailable (e.g. outside a workflow run).
+# Mid-range default on the [0, max_sensitivity] scale.
+_DEFAULT_LATENCY_SENSITIVITY: int = 2
+
 
 class CachePinType(StrEnum):
     """Cache pinning strategy for KV cache entries.
@@ -403,6 +407,14 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         "Set to null/None to disable cache control hints.",
     )
 
+    max_sensitivity: int = Field(
+        default=1000,
+        ge=1,
+        description="Maximum latency sensitivity value used to compute request priority. "
+        "Priority is the integer complement: priority = max_sensitivity - latency_sensitivity. "
+        "Lower priority values indicate higher priority requests.",
+    )
+
     # =========================================================================
     # VALIDATORS (backward compatibility: categorical strings -> integers)
     # =========================================================================
@@ -422,11 +434,17 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
     @field_validator("prefix_iat", mode="before")
     @classmethod
-    def _coerce_prefix_iat(cls, v: object) -> object:
+    def _coerce_prefix_iat(cls, v: object) -> int:
         """Convert categorical IAT strings (LOW/MEDIUM/HIGH) to representative millisecond values."""
-        if isinstance(v, str) and v.upper() in _IAT_CATEGORY_TO_INT:
-            return _IAT_CATEGORY_TO_INT[v.upper()]
-        return v
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str):
+            upper = v.upper()
+            if upper in _IAT_CATEGORY_TO_INT:
+                return _IAT_CATEGORY_TO_INT[upper]
+            raise ValueError(f"Invalid IAT value '{v}'. Must be an integer >= 1 "
+                             f"or one of: {', '.join(_IAT_CATEGORY_TO_INT.keys())}")
+        raise TypeError(f"prefix_iat must be int or str, got {type(v)}")
 
     # =========================================================================
     # UTILITY METHODS
@@ -460,6 +478,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             "prediction_trie_path",
             "disable_headers",
             "cache_pin_type",
+            "max_sensitivity",
         })
 
 
@@ -490,6 +509,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         use_raw_values: bool = True,
         disable_headers: bool = True,
         cache_pin_type: CachePinType | None = CachePinType.EPHEMERAL,
+        max_sensitivity: int = 1000,
     ):
         self._transport = transport
         self._total_requests = total_requests
@@ -499,6 +519,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         self._use_raw_values = use_raw_values
         self._disable_headers = disable_headers
         self._cache_pin_type = cache_pin_type
+        self._max_sensitivity = max_sensitivity
         # Per-prefix call counter so call_index advances across requests
         # for the same prefix_id (keyed by prefix_id string).
         self._call_counts: dict[str, int] = {}
@@ -508,12 +529,14 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         # Get prefix ID from context (supports depth-awareness and overrides)
         prefix_id = DynamoPrefixContext.get()
 
-        # Get latency sensitivity from context (defaults to 2)
+        # Get latency sensitivity from context.
+        # Context.latency_sensitivity is typed as int; coerce
+        # defensively in case a subclass or mock returns a float.
         try:
             ctx = Context.get()
-            latency_sensitivity = ctx.latency_sensitivity
+            latency_sensitivity = int(ctx.latency_sensitivity)
         except Exception:
-            latency_sensitivity = 2
+            latency_sensitivity = _DEFAULT_LATENCY_SENSITIVITY
 
         # Initialize with static config values (always integers)
         total_requests = self._total_requests
@@ -583,13 +606,20 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
             try:
                 body = json.loads(content.decode("utf-8", errors="replace"))
                 if isinstance(body, dict):
-                    # Build agent_hints dict (int or str depending on raw mode)
+                    # Priority is the integer complement of latency_sensitivity:
+                    # lower priority value = higher priority request.
+                    if latency_sensitivity > self._max_sensitivity:
+                        raise ValueError(f"latency_sensitivity ({latency_sensitivity}) exceeds "
+                                         f"max_sensitivity ({self._max_sensitivity}). "
+                                         f"Increase max_sensitivity or lower latency_sensitivity.")
+                    priority = self._max_sensitivity - latency_sensitivity
                     agent_hints = {
                         "prefix_id": prefix_id,
                         "total_requests": total_requests,
                         "osl": osl_value,
                         "iat": iat_value,
                         "latency_sensitivity": float(latency_sensitivity),
+                        "priority": priority,
                     }
 
                     # Add/merge nvext.agent_hints
@@ -671,6 +701,7 @@ def create_httpx_client_with_dynamo_hooks(
     use_raw_values: bool = True,
     disable_headers: bool = True,
     cache_pin_type: CachePinType | None = CachePinType.EPHEMERAL,
+    max_sensitivity: int = 1000,
 ) -> "httpx.AsyncClient":
     """
     Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
@@ -692,6 +723,7 @@ def create_httpx_client_with_dynamo_hooks(
         use_raw_values: When True send raw integers; when False convert to LOW/MEDIUM/HIGH
         disable_headers: If True, do not inject hints as HTTP headers (still injects nvext.agent_hints)
         cache_pin_type: Cache pinning strategy. When set, injects nvext.cache_control with TTL. Set to None to disable.
+        max_sensitivity: Maximum latency sensitivity for computing priority
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.
@@ -713,6 +745,7 @@ def create_httpx_client_with_dynamo_hooks(
         use_raw_values=use_raw_values,
         disable_headers=disable_headers,
         cache_pin_type=cache_pin_type,
+        max_sensitivity=max_sensitivity,
     )
 
     return httpx.AsyncClient(
