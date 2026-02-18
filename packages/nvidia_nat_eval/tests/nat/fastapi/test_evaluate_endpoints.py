@@ -277,7 +277,7 @@ def test_config_file_outside_curdir(dask_client: "DaskClient",
 
 
 @pytest_asyncio.fixture(name="evaluate_item_client")
-async def evaluate_item_client_fixture() -> TestClient:
+async def evaluate_item_client_fixture(restore_environ) -> TestClient:
     """Test client with evaluate_item endpoint configured."""
     from unittest.mock import AsyncMock
 
@@ -289,6 +289,10 @@ async def evaluate_item_client_fixture() -> TestClient:
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
         path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+
+    # Ensure this fixture runs in non-Dask mode regardless of ambient test env.
+    os.environ.pop("NAT_DASK_SCHEDULER_ADDRESS", None)
+    os.environ.pop("NAT_JOB_STORE_DB_URL", None)
 
     worker = FastApiFrontEndPluginWorker(config)
     app = FastAPI()
@@ -359,7 +363,7 @@ def test_evaluate_item_not_found(evaluate_item_client: TestClient):
 
 
 @pytest_asyncio.fixture(name="evaluate_item_client_with_error")
-async def evaluate_item_client_with_error_fixture() -> TestClient:
+async def evaluate_item_client_with_error_fixture(restore_environ) -> TestClient:
     """Test client where evaluator throws an error."""
     from unittest.mock import AsyncMock
 
@@ -368,6 +372,10 @@ async def evaluate_item_client_with_error_fixture() -> TestClient:
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(
         path="/evaluate/item", method="POST", description="Test evaluate item endpoint"))
+
+    # Ensure this fixture runs in non-Dask mode regardless of ambient test env.
+    os.environ.pop("NAT_DASK_SCHEDULER_ADDRESS", None)
+    os.environ.pop("NAT_JOB_STORE_DB_URL", None)
 
     worker = FastApiFrontEndPluginWorker(config)
     app = FastAPI()
