@@ -36,12 +36,12 @@ from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.parameter_optimization.eval_runtime_loader import load_evaluation_run
-from nat.parameter_optimization.oracle_feedback import build_oracle_feedback
-from nat.parameter_optimization.oracle_feedback import check_adaptive_triggers
-from nat.parameter_optimization.oracle_feedback import extract_worst_reasoning
-from nat.parameter_optimization.oracle_feedback import should_inject_feedback
-from nat.parameter_optimization.update_helpers import apply_suggestions
+from nat.optimizer.eval_runtime_loader import load_evaluation_run
+from nat.optimizer.oracle_feedback import build_oracle_feedback
+from nat.optimizer.oracle_feedback import check_adaptive_triggers
+from nat.optimizer.oracle_feedback import extract_worst_reasoning
+from nat.optimizer.oracle_feedback import should_inject_feedback
+from nat.optimizer.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 

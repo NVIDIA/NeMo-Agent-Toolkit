@@ -18,6 +18,10 @@ limitations under the License.
 
 This document provides a comprehensive overview of how to use the NeMo Agent Toolkit Optimizer to tune your NeMo Agent Toolkit [workflows](../build-workflows/about-building-workflows.md).
 
+## Prerequisites
+
+The optimizer is included when you install `nvidia-nat`. If you installed only `nvidia-nat-core`, install the optimizer to use `nat optimize`: run `pip install nvidia-nat-optimizer` or `pip install nvidia-nat`. See the [Install Guide](../get-started/installation.md) for details.
+
 ## Introduction
 
 ### What is Parameter Optimization?

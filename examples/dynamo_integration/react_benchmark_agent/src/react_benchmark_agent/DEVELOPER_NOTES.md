@@ -347,7 +347,7 @@ This configuration enables the optimizer to tune Dynamo router parameters for la
 | `OptimizableField`, `SearchSpace` | `nat/data_models/optimizable.py` | Hyper-parameter metadata and Optuna integration |
 | `evaluators.avg_llm_latency._type: avg_llm_latency` | `nat/eval/runtime_evaluator/register.py` | `AverageLLMLatencyConfig` evaluator |
 | `optimizer.eval_metrics` | `nat/data_models/optimizer.py` | `OptimizerConfig.eval_metrics` field |
-| Optimizer runtime | `nat/profiler/parameter_optimization/parameter_optimizer.py` | `optimize_parameters()` function |
+| Optimizer runtime | `nat/optimizer/parameter_optimizer.py` | `optimize_parameters()` function |
 
 #### Optimizable Parameters
 

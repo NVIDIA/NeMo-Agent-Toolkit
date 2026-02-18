@@ -19,13 +19,13 @@ Tests cover feedback extraction, formatting, injection logic, adaptive triggers,
 and type conversions for various reasoning formats.
 """
 
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
-from nat.parameter_optimization.oracle_feedback import _reasoning_to_string
-from nat.parameter_optimization.oracle_feedback import build_oracle_feedback
-from nat.parameter_optimization.oracle_feedback import check_adaptive_triggers
-from nat.parameter_optimization.oracle_feedback import extract_worst_reasoning
-from nat.parameter_optimization.oracle_feedback import should_inject_feedback
+from nat.eval.evaluator.evaluator_model import EvalOutput
+from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.optimizer.oracle_feedback import _reasoning_to_string
+from nat.optimizer.oracle_feedback import build_oracle_feedback
+from nat.optimizer.oracle_feedback import check_adaptive_triggers
+from nat.optimizer.oracle_feedback import extract_worst_reasoning
+from nat.optimizer.oracle_feedback import should_inject_feedback
 
 
 class TestBuildOracleFeedback:

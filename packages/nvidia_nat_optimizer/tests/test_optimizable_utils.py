@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
-from nat.parameter_optimization.optimizable_utils import walk_optimizables
+from nat.optimizer.optimizable_utils import walk_optimizables
 
 
 class InnerModel(BaseModel):
@@ -75,7 +75,7 @@ def test_walk_optimizables_warns_when_no_allowlist(caplog: pytest.LogCaptureFixt
         a: int = OptimizableField(0, space=SearchSpace(low=0, high=5))
 
     model = SimpleModel()
-    with caplog.at_level(logging.WARNING, logger="nat.parameter_optimization.optimizable_utils"):
+    with caplog.at_level(logging.WARNING, logger="nat.optimizer.optimizable_utils"):
         spaces = walk_optimizables(model)
 
     # Warning was emitted
