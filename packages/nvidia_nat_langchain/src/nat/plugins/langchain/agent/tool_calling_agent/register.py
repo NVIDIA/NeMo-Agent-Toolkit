@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
 
 from pydantic import Field
 
@@ -121,9 +122,50 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             logger.error("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             raise
 
+    async def _stream_fn(chat_request_or_message: ChatRequestOrMessage) -> AsyncGenerator[str]:
+        """
+        Streaming workflow entry function for the Tool Calling Agent.
+
+        Uses graph.astream with stream_mode="messages" to yield token-level content chunks from the LLM,
+        enabling real-time SSE streaming over the OpenAI-compatible /v1/chat/completions endpoint.
+
+        Args:
+            chat_request_or_message (ChatRequestOrMessage): The input message to process
+
+        Yields:
+            str: Individual content chunks from the agent's response
+        """
+        from langchain_core.messages import AIMessageChunk
+
+        try:
+            message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
+
+            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in message.messages],
+                                                        max_tokens=config.max_history,
+                                                        strategy="last",
+                                                        token_counter=len,
+                                                        start_on="human",
+                                                        include_system=True)
+            state = ToolCallAgentGraphState(messages=messages)
+
+            # stream the Tool Calling Agent Graph token-by-token using LangGraph message streaming
+            async for msg, metadata in graph.astream(
+                    state,
+                    config={'recursion_limit': (config.max_iterations + 1) * 2},
+                    stream_mode="messages"):
+                if not isinstance(msg, AIMessageChunk):
+                    continue
+                # only yield content tokens from the agent node, skip tool call metadata
+                if metadata.get("langgraph_node") == "agent":
+                    if msg.content and not msg.tool_call_chunks:
+                        yield msg.content
+        except Exception as ex:
+            logger.error("%s Tool Calling Agent streaming failed with exception: %s", AGENT_LOG_PREFIX, ex)
+            raise
+
     try:
-        yield FunctionInfo.from_fn(_response_fn, description=config.description)
+        yield FunctionInfo.create(single_fn=_response_fn, stream_fn=_stream_fn, description=config.description)
     except GeneratorExit:
         logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX)
     finally:
-        logger.debug("%s Cleaning up react_agent workflow.", AGENT_LOG_PREFIX)
+        logger.debug("%s Cleaning up tool_calling_agent workflow.", AGENT_LOG_PREFIX)

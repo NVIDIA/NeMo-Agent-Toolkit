@@ -37,6 +37,8 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                                              result_type: type | None = None,
                                              output_type: type | None = None) -> AsyncGenerator[str]:
 
+    from nat.data_models.api_server import ChatResponseChunk
+
     try:
         async for item in generate_streaming_response(payload,
                                                       session=session,
@@ -50,6 +52,11 @@ async def generate_streaming_response_as_str(payload: typing.Any,
             else:
                 raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                                  str(type(item)))
+
+        # Emit OpenAI-compatible stream termination: a final chunk with finish_reason="stop" and [DONE] sentinel
+        if output_type is ChatResponseChunk:
+            yield ChatResponseChunk.create_streaming_chunk("", finish_reason="stop").get_stream_data()
+            yield "data: [DONE]\n\n"
     except Exception as e:
         yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()
 

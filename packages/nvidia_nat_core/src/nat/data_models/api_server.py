@@ -436,7 +436,7 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                                                              delta=ChoiceDelta(
                                                                  content=data,
                                                                  role=UserMessageContentRoleType.ASSISTANT),
-                                                             finish_reason="stop")
+                                                             finish_reason=None)
                                  ],
                                  created=created,
                                  model=model,
