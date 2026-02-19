@@ -18,6 +18,18 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
+## Release 1.4.1
+### Summary
+This is a patch release with a critical bug fix for Python 3.11 users and documentation updates for `nat serve` CLI flags.
+
+### 🐛 Bug Fixes
+* fix(serve): ensure a single event loop for python 3.11 by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1558
+
+### 📚 Documentation
+* Document new `nat serve` CLI flags by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1562
+
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/CHANGELOG.md) for the complete list of changes.
+
 ## Release 1.4.0
 ### Summary
 This release introduces initial support for several frameworks and integrations including A2A, AWS Strands, Amazon Bedrock AgentCore, Microsoft AutoGen, and NVIDIA Dynamo. In addition to new framework and integrations, an automatic agent wrapper for LangGraph Agents enables users to bring their own agent. Per-user functions enable deferred instantiation which provides per-user stateful functions, per-user resources, and other useful features. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.

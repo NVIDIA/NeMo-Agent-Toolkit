@@ -23,7 +23,7 @@ from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.profiler.parameter_optimization.parameter_optimizer import optimize_parameters
+from nat.parameter_optimization.parameter_optimizer import optimize_parameters
 
 
 class _FakeTrial:
@@ -190,15 +190,15 @@ def test_optimize_parameters_happy_path(tmp_path: Path):
                 ("Latency", SimpleNamespace(average_score=0.5)),
             ])
 
-    with patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+    with patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions) as apply_mock, \
-         patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+         patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                return_value=SimpleNamespace(params=best_params)) as pick_mock, \
-         patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization") as viz_mock, \
-         patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+         patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization") as viz_mock, \
+         patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                side_effect=fake_create_study) as study_mock, \
-         patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-               _DummyEvalRun) as eval_run_mock:
+         patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+               return_value=_DummyEvalRun) as eval_run_mock:
 
         tuned = optimize_parameters(base_cfg=base_cfg,
                                     full_space=full_space,
@@ -296,15 +296,15 @@ class TestSamplerSelection:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -349,15 +349,15 @@ class TestSamplerSelection:
                     ("Accuracy", SimpleNamespace(average_score=0.8)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -407,15 +407,15 @@ class TestSamplerSelection:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -463,17 +463,17 @@ class TestSamplerSelection:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
                    side_effect=capture_grid_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+             patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -517,17 +517,17 @@ class TestSamplerSelection:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
                    side_effect=capture_grid_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+             patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -564,15 +564,15 @@ class TestSamplerSelection:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -617,15 +617,15 @@ class TestSamplerSelection:
                     ("Accuracy", SimpleNamespace(average_score=0.8)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -673,15 +673,15 @@ class TestSamplerSelection:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -722,15 +722,15 @@ class TestSamplerSelection:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    side_effect=capture_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -780,17 +780,17 @@ class TestGridSearchIntegration:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
                    side_effect=capture_grid_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+             patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -839,17 +839,17 @@ class TestGridSearchIntegration:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
                    side_effect=capture_grid_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+             patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -897,17 +897,17 @@ class TestGridSearchIntegration:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
                    side_effect=capture_grid_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+             patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize"])), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -951,17 +951,17 @@ class TestGridSearchIntegration:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
                    side_effect=capture_grid_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+             patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["minimize"])), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -1009,17 +1009,17 @@ class TestGridSearchIntegration:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
                    side_effect=capture_grid_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+             patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize", "minimize"])), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -1068,17 +1068,17 @@ class TestGridSearchIntegration:
                     ("Latency", SimpleNamespace(average_score=0.5)),
                 ])
 
-        with patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
+        with patch("nat.parameter_optimization.parameter_optimizer.optuna.samplers.GridSampler",
                    side_effect=capture_grid_sampler), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.optuna.create_study",
+             patch("nat.parameter_optimization.parameter_optimizer.optuna.create_study",
                    return_value=_FakeStudy(["maximize"])), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun",
-                   _DummyEvalRun), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+             patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
+                   return_value=_DummyEvalRun), \
+             patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                    return_value=base_cfg), \
-             patch("nat.profiler.parameter_optimization.parameter_optimizer.pick_trial",
+             patch("nat.parameter_optimization.parameter_optimizer.pick_trial",
                    return_value=SimpleNamespace(params={})), \
-             patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+             patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
             optimize_parameters(base_cfg=base_cfg,
                                 full_space=full_space,
@@ -1105,10 +1105,10 @@ class TestGridSearchIntegration:
         run_cfg = _make_run_config(base_cfg)
 
         with pytest.raises(ValueError, match="requires 'step' to be specified"):
-            with patch("nat.profiler.parameter_optimization.parameter_optimizer.EvaluationRun"), \
-                 patch("nat.profiler.parameter_optimization.parameter_optimizer.apply_suggestions",
+            with patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run"), \
+                 patch("nat.parameter_optimization.parameter_optimizer.apply_suggestions",
                        return_value=base_cfg), \
-                 patch("nat.profiler.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
+                 patch("nat.parameter_optimization.pareto_visualizer.create_pareto_visualization"):
 
                 optimize_parameters(base_cfg=base_cfg,
                                     full_space=full_space,

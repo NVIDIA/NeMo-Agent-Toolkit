@@ -24,45 +24,17 @@ parsable report.
 """
 
 import argparse
-import json
+import itertools
 import tomllib
+import typing
 import urllib.request
+from collections.abc import Iterator
+from operator import itemgetter
 
-
-def pypi_license(name: str, version: str | None = None) -> str:
-    """Resolve a package license from PyPI metadata.
-
-    Args:
-        name: Distribution name on PyPI.
-        version: Optional version pin used to query version-specific metadata.
-
-    Returns:
-        A best-effort license string from the available metadata fields.
-    """
-    # Use version-specific metadata when available to avoid mismatches.
-    try:
-        url = f"https://pypi.org/pypi/{name}/json" if version is None else f"https://pypi.org/pypi/{name}/{version}/json"
-        with urllib.request.urlopen(url) as r:
-            data = json.load(r)
-    except Exception:
-        return "(License not found)"
-
-    info = data.get("info", {})
-    candidates = []
-    lic = (info.get("license_expression") or "").strip()
-    if lic:
-        candidates.append(lic)
-    classifiers = info.get("classifiers") or []
-    lic_cls = [c for c in classifiers if c.startswith("License ::")]
-    if lic_cls:
-        candidates.append("; ".join(lic_cls))
-    lic = (info.get("license") or "").strip()
-    if lic:
-        candidates.append(lic)
-
-    if candidates:
-        return min(candidates, key=len)
-    return "(License not found)"
+from package_utils import Package
+from package_utils import UvLock
+from package_utils import package_variant_key
+from package_utils import pypi_license
 
 
 def main(base_branch: str) -> None:
@@ -73,73 +45,117 @@ def main(base_branch: str) -> None:
     """
     # Read the current lockfile from the workspace.
     with open("uv.lock", "rb") as f:
-        head = tomllib.load(f)
+        head: UvLock = typing.cast(UvLock, tomllib.load(f))
 
     # Fetch the reference lockfile from GitHub for comparison.
     try:
         with urllib.request.urlopen(
                 f"https://raw.githubusercontent.com/NVIDIA/NeMo-Agent-Toolkit/{base_branch}/uv.lock") as f:
-            base = tomllib.load(f)
+            base: UvLock = typing.cast(UvLock, tomllib.load(f))
     except Exception:
         print(f"Failed to fetch base lockfile from GitHub: {base_branch}")
         return
 
-    # Index package metadata by name for easy diffing.
-    head_packages = {pkg["name"]: pkg for pkg in head["package"]}
-    base_packages = {pkg["name"]: pkg for pkg in base["package"]}
+    # packages to filter out from the diff
+    FILTERED_PACKAGE_PREFIXES = ["nvidia-nat"]
 
-    added = head_packages.keys() - base_packages.keys()
-    removed = base_packages.keys() - head_packages.keys()
-    intersection = head_packages.keys() & base_packages.keys()
+    # Index package metadata by name and variant for easy diffing.
+    head_by_name: Iterator[tuple[str, Iterator[Package]]] = itertools.groupby(head["package"], key=itemgetter("name"))
+    base_by_name: Iterator[tuple[str, Iterator[Package]]] = itertools.groupby(base["package"], key=itemgetter("name"))
 
-    # Track third-party dependency changes only (skip internal `nvidia-nat*`).
-    added_packages = {pkg: head_packages[pkg] for pkg in added}
-    removed_packages = {pkg: base_packages[pkg] for pkg in removed}
-    changed_packages = {pkg: head_packages[pkg] for pkg in intersection if not pkg.startswith("nvidia-nat")}
+    # grouped entries based on add/removed/changed
+    added_entries: list[Package] = []
+    removed_entries: list[Package] = []
+    changed_entries: list[tuple[Package, Package]] = []
 
-    if added_packages:
+    # iterators over the grouped entries
+    heads: Iterator[tuple[str, Iterator[Package]]] = iter(head_by_name)
+    bases: Iterator[tuple[str, Iterator[Package]]] = iter(base_by_name)
+
+    # cursors over the grouped entries
+    current_head: tuple[str, Iterator[Package]] | None = next(heads, None)
+    current_base: tuple[str, Iterator[Package]] | None = next(bases, None)
+
+    # single-pass iteration over the grouped entries
+    while current_head is not None or current_base is not None:
+
+        if current_head is not None and (current_base is None or current_head[0] < current_base[0]):
+            # head package is before base package; add it to the added entries
+            name, group = current_head
+            if not any(str(name).startswith(prefix) for prefix in FILTERED_PACKAGE_PREFIXES):
+                added_entries.extend(group)
+            current_head = next(heads, None)
+            continue
+
+        if current_base is not None and (current_head is None or current_base[0] < current_head[0]):
+            # base package is before head package; add it to the removed entries
+            name, group = current_base
+            if not any(str(name).startswith(prefix) for prefix in FILTERED_PACKAGE_PREFIXES):
+                removed_entries.extend(group)
+            current_base = next(bases, None)
+            continue
+
+        # same name in both; add it to the changed entries
+        assert current_head is not None and current_base is not None
+        name, head_group = current_head
+        _, base_group = current_base
+        head_pkgs: list[Package] = list(head_group)
+        base_pkgs: list[Package] = list(base_group)
+        current_head = next(heads, None)
+        current_base = next(bases, None)
+
+        if any(str(name).startswith(prefix) for prefix in FILTERED_PACKAGE_PREFIXES):
+            continue
+
+        head_variants: dict[tuple[str, str], Package] = {package_variant_key(pkg): pkg for pkg in head_pkgs}
+        base_variants: dict[tuple[str, str], Package] = {package_variant_key(pkg): pkg for pkg in base_pkgs}
+
+        added: set[tuple[str, str]] = set(head_variants.keys()) - set(base_variants.keys())
+        removed: set[tuple[str, str]] = set(base_variants.keys()) - set(head_variants.keys())
+
+        if added and removed and len(added) == len(removed):
+            for b, h in zip(removed, added, strict=True):
+                changed_entries.append((base_variants[b], head_variants[h]))
+        else:
+            added_entries.extend(head_variants[k] for k in added)
+            removed_entries.extend(base_variants[k] for k in removed)
+
+    if added_entries:
         print("Added packages:")
-        for pkg in sorted(added_packages.keys()):
-            try:
-                version = head_packages[pkg]["version"]
-                license = pypi_license(pkg, version)
-                print(f"- {pkg} {version} {license}")
-            except KeyError:
-                # "Source" entries lack pinned versions (VCS or local path).
-                print(f"- {pkg} (source)")
-
-    if removed_packages:
-        print("Removed packages:")
-        for pkg in sorted(removed_packages.keys()):
-            try:
-                version = base_packages[pkg]["version"]
-                print(f"- {pkg} {version}")
-            except KeyError:
-                print(f"- {pkg} (source)")
-
-    printed_header = False
-    for pkg in sorted(changed_packages.keys()):
-        try:
-            head_version = head_packages[pkg]["version"]
-            base_version = base_packages[pkg]["version"]
-            if head_version == base_version:
-                # Only report version or license changes.
-                continue
-            head_license = pypi_license(pkg, head_version)
-            base_license = pypi_license(pkg, base_version)
-            if not printed_header:
-                print("Changed packages:")
-                printed_header = True
-            if head_license != base_license:
-                print(f"- {pkg} {base_version} -> {head_version} ({base_license} -> {head_license})")
+        for pkg in added_entries:
+            name = pkg["name"]
+            if (version := pkg.get("version")):
+                print(f"- {name} {version} {pypi_license(name, version)}")
             else:
-                print(f"- {pkg} {base_version} -> {head_version}")
-        except KeyError:
-            pass
+                print(f"- {name} (source)")
+
+    if removed_entries:
+        print("Removed packages:")
+        for pkg in removed_entries:
+            print(f"- {pkg['name']} {pkg.get('version', '(source)')}")
+
+    if changed_entries:
+        print("Changed packages:")
+        for base_pkg, head_pkg in changed_entries:
+            try:
+                pkg_name = head_pkg["name"]
+                base_version = base_pkg.get("version", None)
+                head_version = head_pkg.get("version", None)
+                if (head_license := pypi_license(pkg_name, head_version)) \
+                    != (base_license := pypi_license(pkg_name, base_version)):
+                    print(f"- {pkg_name} {base_version} -> {head_version} ({base_license} -> {head_license})")
+                else:
+                    print(f"- {pkg_name} {base_version} -> {head_version}")
+            except KeyError:
+                pass
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Report third-party dependency license changes between lockfiles.")
-    parser.add_argument("--base-branch", type=str, default="develop")
+    parser.add_argument("base_branch",
+                        type=str,
+                        nargs='?',
+                        default="develop",
+                        help="The base branch to compare against. Defaults to 'develop'.")
     args = parser.parse_args()
     main(args.base_branch)

@@ -82,6 +82,12 @@ class ContextState(metaclass=Singleton):
         self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
         self._active_span_id_stack: ContextVar[list[str] | None] = ContextVar("active_span_id_stack", default=None)
         self._function_path_stack: ContextVar[list[str] | None] = ContextVar("function_path_stack", default=None)
+        self._latency_sensitivity_stack: ContextVar[list[int] | None] = ContextVar("latency_sensitivity_stack",
+                                                                                   default=None)
+
+        # Cross-workflow observability: parent step id/name for the root of this workflow run
+        self.workflow_parent_id: ContextVar[str | None] = ContextVar("workflow_parent_id", default=None)
+        self.workflow_parent_name: ContextVar[str | None] = ContextVar("workflow_parent_name", default=None)
 
         # Default is a lambda no-op which returns NoneType
         self.user_input_callback: ContextVar[Callable[[InteractionPrompt], Awaitable[HumanResponse | None]]
@@ -121,6 +127,12 @@ class ContextState(metaclass=Singleton):
         if self._function_path_stack.get() is None:
             self._function_path_stack.set([])
         return typing.cast(ContextVar[list[str]], self._function_path_stack)
+
+    @property
+    def latency_sensitivity_stack(self) -> ContextVar[list[int]]:
+        if self._latency_sensitivity_stack.get() is None:
+            self._latency_sensitivity_stack.set([2])
+        return typing.cast(ContextVar[list[int]], self._latency_sensitivity_stack)
 
     @staticmethod
     def get() -> "ContextState":
@@ -362,6 +374,84 @@ class Context:
             bool: True if in evaluation mode, False otherwise.
         """
         return self._context_state.runtime_type.get() == RuntimeTypeEnum.EVALUATE
+
+    @property
+    def latency_sensitivity(self) -> int:
+        """
+        Returns the current latency sensitivity level.
+
+        When multiple sensitivity levels are pushed onto the stack,
+        returns the maximum value (higher integers mean higher sensitivity).
+
+        Returns:
+            int: The current effective latency sensitivity.
+        """
+        stack = self._context_state.latency_sensitivity_stack.get()
+        return max(stack)
+
+    @contextmanager
+    def push_latency_sensitivity(self, sensitivity: int):
+        """
+        Push a latency sensitivity level onto the stack.
+
+        The effective sensitivity is the maximum value across all
+        pushed levels. When the context exits, the pushed level is removed.
+
+        Args:
+            sensitivity: The latency sensitivity level to push (integer).
+
+        Yields:
+            None
+
+        Example:
+            >>> ctx = Context.get()
+            >>> with ctx.push_latency_sensitivity(3):
+            ...     # Inside this block, sensitivity is at least 3
+            ...     pass
+        """
+        stack = self._context_state.latency_sensitivity_stack.get()
+        new_stack = stack + [sensitivity]
+        token = self._context_state.latency_sensitivity_stack.set(new_stack)
+        try:
+            yield
+        finally:
+            self._context_state.latency_sensitivity_stack.reset(token)
+
+    @staticmethod
+    @contextmanager
+    def scope(**kwargs):
+        """
+        Create a new context scope with specified context variables.
+
+        This is primarily used for testing to create isolated context scopes.
+
+        Args:
+            **kwargs: Context variables to set (e.g., workflow_run_id="test")
+
+        Yields:
+            None
+
+        Example:
+            >>> with Context.scope(workflow_run_id="test123"):
+            ...     ctx = Context.get()
+            ...     print(ctx.workflow_run_id)  # "test123"
+        """
+        state = ContextState.get()
+        tokens = []
+
+        # Set each provided context variable
+        for key, value in kwargs.items():
+            if hasattr(state, key):
+                context_var = getattr(state, key)
+                token = context_var.set(value)
+                tokens.append((context_var, token))
+
+        try:
+            yield
+        finally:
+            # Reset all context variables
+            for context_var, token in reversed(tokens):
+                context_var.reset(token)
 
     @staticmethod
     def get() -> "Context":

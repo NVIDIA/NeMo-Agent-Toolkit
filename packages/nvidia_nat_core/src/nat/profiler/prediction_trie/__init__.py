@@ -13,12 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.profiler.prediction_trie.data_models import PredictionMetrics
-from nat.profiler.prediction_trie.data_models import PredictionTrieNode
-from nat.profiler.prediction_trie.serialization import load_prediction_trie
-from nat.profiler.prediction_trie.serialization import save_prediction_trie
-from nat.profiler.prediction_trie.trie_builder import PredictionTrieBuilder
+from .data_models import LLMCallPrediction
+from .data_models import PredictionMetrics
+from .data_models import PredictionTrieNode
+from .serialization import load_prediction_trie
+from .serialization import save_prediction_trie
+from .trie_builder import PredictionTrieBuilder
 
 # Note: PredictionTrieLookup is intentionally not re-exported here to avoid
 # Sphinx cross-reference warnings. Import from trie_lookup submodule directly:

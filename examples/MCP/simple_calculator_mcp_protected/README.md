@@ -167,7 +167,12 @@ You can register the client manually or use the dynamic client registration (DCR
    - Choose **Optional**
    - Click **Add**
 
-7. **Get client credentials:**
+7. **Set Consent required**:
+   - Go to **Settings** tab
+   - Toggle **Consent required** to `On` (scroll down to the bottom of the page to see the setting)
+   - Click **Save**
+
+8. **Get client credentials:**
    - Go to **Credentials** tab
    - Copy the **Client secret**
    - Note the **Client ID**: `nat-mcp-client`

@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import APITypeEnum
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
@@ -106,12 +108,17 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_type"},
+            exclude={"type", "model_name", "thinking", "api_type", "api_key", "base_url"},
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
         ),
     }
+
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+        config_obj["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_obj["base_url"] = base_url
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
         client = OpenAIResponses(**config_obj, id=llm_config.model_name)

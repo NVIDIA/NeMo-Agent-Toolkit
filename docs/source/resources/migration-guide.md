@@ -27,6 +27,43 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.5.0
+
+#### Evaluation Package Split
+
+Evaluation and profiling implementations moved out of core into the `nvidia-nat-eval` package.
+
+To migrate:
+- Install evaluation support when needed:
+  - `pip install "nvidia-nat[eval]"`
+  - `pip install nvidia-nat-eval`
+- Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
+- Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
+
+#### Import Path Changes
+
+For users migrating existing integrations, the primary import change is:
+- `nat.eval.*` -> `nat.plugins.eval.*`
+- `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
+- `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
+- `nat.eval.runtime_event_subscriber.pull_intermediate` -> `nat.builder.runtime_event_subscriber.pull_intermediate`
+
+For evaluation data models, prefer canonical core paths:
+- `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
+- `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
+- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.eval.profiler.callbacks.token_usage_base_model`)
+
+Internal module reorganization inside `nat.plugins.eval` is implementation detail and may change between releases.
+
+#### `nat.eval` Deprecation Shim
+
+Core provides a temporary compatibility shim for `nat.eval` imports.
+
+What to expect:
+- Importing from `nat.eval` emits a `UserWarning` that the path is deprecated.
+- The shim requires `nvidia-nat-eval` to be installed.
+- Update imports to externally supported `nat.plugins.eval.*` and `nat.data_models.*` paths now, because the shim will be removed in a future major release.
+
 ### v1.4.0
 
 #### Weave Trace Identifier Namespace

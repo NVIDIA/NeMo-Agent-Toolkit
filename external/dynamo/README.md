@@ -45,7 +45,7 @@ This guide covers setting up, running, and configuring the NVIDIA Dynamo backend
 
 ## Overview
 
-Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. The scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../packages/nvidia_nat_core/src/nat/llm/dynamo_llm.py) support for NeMo Agent Toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NeMo Agent Toolkit runtimes at scale. The following **Table** defines each script: 
+Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. The scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../packages/nvidia_nat_core/src/nat/llm/dynamo_llm.py) support for NeMo Agent Toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NeMo Agent Toolkit runtimes at scale. The following **Table** defines each script:
 
 | Mode | Script | Description | Best For |
 |------|--------|-------------|----------|
@@ -181,7 +181,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 ### Platform Requirements
 
 > [!WARNING]
-> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/archive/0.7.0/reference/support-matrix.html) for full details.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/getting-started/support-matrix) for full details.
 >
 > **Supported Platforms:**
 > - Ubuntu 22.04 / 24.04 (x86_64)

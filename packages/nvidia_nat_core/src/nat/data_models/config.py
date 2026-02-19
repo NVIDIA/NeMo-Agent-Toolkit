@@ -27,7 +27,7 @@ from pydantic import ValidationInfo
 from pydantic import ValidatorFunctionWrapHandler
 from pydantic import field_validator
 
-from nat.data_models.evaluate import EvalConfig
+from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import TrainerConfig
