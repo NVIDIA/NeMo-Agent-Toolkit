@@ -217,6 +217,11 @@ class MCPBaseClient(ABC):
         self._tools = None
 
     @property
+    def is_connected(self) -> bool:
+        """Whether the client has an active, initialized connection."""
+        return self._exit_stack is not None and self._connection_established
+
+    @property
     def server_name(self):
         """
         Provide server name for logging
