@@ -594,6 +594,11 @@ wheels = [
 anthropic = [
     { name = "anthropic" },
 ]
+openai = [
+    { name = "aiofiles" },
+    { name = "openai" },
+    { name = "tiktoken" },
+]
 
 [[package]]
 name = "av"
@@ -6695,7 +6700,7 @@ source = { editable = "packages/nvidia_nat_autogen" }
 dependencies = [
     { name = "autogen-agentchat" },
     { name = "autogen-core" },
-    { name = "autogen-ext", extra = ["anthropic"] },
+    { name = "autogen-ext", extra = ["anthropic", "openai"] },
     { name = "nvidia-nat-core" },
 ]
 
@@ -6703,7 +6708,7 @@ dependencies = [
 requires-dist = [
     { name = "autogen-agentchat", specifier = "~=0.7" },
     { name = "autogen-core", specifier = "~=0.7" },
-    { name = "autogen-ext", extras = ["anthropic"], specifier = "~=0.7" },
+    { name = "autogen-ext", extras = ["anthropic", "openai"], specifier = "~=0.7" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
 ]
@@ -7169,7 +7174,7 @@ name = "nvidia-nat-strands"
 source = { editable = "packages/nvidia_nat_strands" }
 dependencies = [
     { name = "nvidia-nat-core", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "strands-agents", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
+    { name = "strands-agents", extra = ["openai"], marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
     { name = "strands-agents-tools", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
 ]
 
@@ -7177,7 +7182,7 @@ dependencies = [
 requires-dist = [
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
-    { name = "strands-agents", specifier = "~=1.17" },
+    { name = "strands-agents", extras = ["openai"], specifier = "~=1.17" },
     { name = "strands-agents-tools", specifier = "~=0.2" },
 ]
 provides-extras = ["test"]
@@ -7253,6 +7258,7 @@ requires-dist = [
     { name = "blis", specifier = "~=1.3" },
     { name = "fickling", specifier = ">=0.1.7,<1.0.0" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "presidio-analyzer", specifier = "~=2.2" },
     { name = "presidio-anonymizer", specifier = "~=2.2" },
@@ -11154,6 +11160,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9a/64/3e4178c512147e7566583544923bb42d84d15f31c22904d79dc94bdaf1d0/strands_agents-1.24.0.tar.gz", hash = "sha256:a3755fcc0befdd99c1b5a5d8a8c98590490f0bb7ab65092dcf9397f7551331de", size = 673930, upload-time = "2026-01-29T01:28:21.264Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4a/f0/81e96a356cf937ae697e28514b9e850d390802341df4ae6498ab737de744/strands_agents-1.24.0-py3-none-any.whl", hash = "sha256:035e0b8aa404bfaada4459a841aeed66f2a165fbb66f4d448dd6eceb4c14be44", size = 337217, upload-time = "2026-01-29T01:28:18.142Z" },
+]
+
+[package.optional-dependencies]
+openai = [
+    { name = "openai", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
 ]
 
 [[package]]
