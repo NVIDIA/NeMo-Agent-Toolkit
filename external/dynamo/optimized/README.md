@@ -24,24 +24,24 @@ This directory contains the optimized implementation of the Thompson Sampling ro
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Client Request (with nvext.annotations)                                │
-│       ↓                                                                  │
+│       ↓                                                                 │
 │  Default Dynamo Frontend (port 8000)                                    │
 │       ↓ tokenization + nvext parsing                                    │
 │       ↓ discovers backends via ETCD ModelWatcher                        │
 │       ↓ finds Processor's model card!                                   │
-│                                                                          │
+│                                                                         │
 │  Custom Processor (dynamo.backend.generate-{instance_id})               │
 │       ↓ extracts: prefix_id, total_requests, osl, iat                   │
-│       ↓ queries Thompson Sampling router                                 │
-│                                                                          │
+│       ↓ queries Thompson Sampling router                                │
+│                                                                         │
 │  Custom Router (dynamo.router.find_worker)                              │
 │       ↓ KV overlap + workload-aware selection                           │
-│       ↓ returns worker_id                                                │
-│                                                                          │
+│       ↓ returns worker_id                                               │
+│                                                                         │
 │  Processor forwards to dynamo.worker.generate (with worker_id)          │
-│       ↓                                                                  │
+│       ↓                                                                 │
 │  SGLang Worker (actual inference)                                       │
-│       ↓                                                                  │
+│       ↓                                                                 │
 │  Response + Feedback to Router                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -81,8 +81,7 @@ The processor uses `register_llm()` to advertise itself in ETCD:
 @dynamo_worker(static=False)  # Dynamic mode for ETCD discovery
 async def worker(runtime: DistributedRuntime):
     component = runtime.namespace("dynamo").component("backend")
-    await component.create_service()
-    
+    # NOTE: create_service() was removed in Dynamo 0.8.x - endpoint creation handles registration
     endpoint = component.endpoint("generate")
     
     # Register model card so frontend can discover us

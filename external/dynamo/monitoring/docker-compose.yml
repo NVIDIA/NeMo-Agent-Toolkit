@@ -2,14 +2,23 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Prometheus + Grafana monitoring stack for Dynamo
-# 
+#
 # Usage:
 #   cd monitoring
 #   docker compose up -d
 #
 # Access:
 #   Prometheus: http://localhost:9090
-#   Grafana: http://localhost:3000 (admin/admin)
+#   Grafana:    http://localhost:3000 (default: admin/admin)
+#
+# Security:
+#   Both services bind to localhost only (not accessible from other machines).
+#   Grafana requires login by default (admin/admin). To enable anonymous access
+#   for local development convenience, create a .env file or export:
+#
+#     GF_AUTH_ANONYMOUS_ENABLED=true
+#     GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+#     GF_AUTH_DISABLE_LOGIN_FORM=true
 
 services:
   prometheus:
@@ -23,7 +32,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.listen-address=:9090'
+      - '--web.listen-address=127.0.0.1:9090'
       - '--storage.tsdb.retention.time=7d'
     restart: unless-stopped
 
@@ -33,13 +42,13 @@ services:
     network_mode: host
     environment:
       - GF_SERVER_HTTP_PORT=3000
-      # Disable authentication for local development
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
-      # Keep these for if you re-enable login later
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SERVER_HTTP_ADDR=127.0.0.1
+      # Authentication: secure by default, overridable via environment or .env
+      - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-false}
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
+      - GF_AUTH_DISABLE_LOGIN_FORM=${GF_AUTH_DISABLE_LOGIN_FORM:-false}
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
