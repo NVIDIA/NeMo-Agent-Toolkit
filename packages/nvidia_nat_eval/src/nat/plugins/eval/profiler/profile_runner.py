@@ -279,8 +279,8 @@ class ProfilerRunner:
             # ------------------------------------------------------------
             # Build and save prediction trie
             # ------------------------------------------------------------
-            from nat.plugins.eval.profiler.prediction_trie import PredictionTrieBuilder
-            from nat.plugins.eval.profiler.prediction_trie import save_prediction_trie
+            from nat.profiler.prediction_trie import PredictionTrieBuilder
+            from nat.profiler.prediction_trie import save_prediction_trie
 
             logger.info("Building prediction trie from traces...")
             trie_builder = PredictionTrieBuilder()

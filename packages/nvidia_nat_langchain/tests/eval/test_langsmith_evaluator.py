@@ -21,8 +21,8 @@ from langsmith.schemas import Run
 from pydantic import ValidationError
 
 from nat.builder.evaluator import EvaluatorInfo
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalOutputItem
 from nat.plugins.langchain.eval.langsmith_evaluator import LangSmithEvaluatorConfig
 from nat.plugins.langchain.eval.langsmith_evaluator import register_langsmith_evaluator
 from nat.plugins.langchain.eval.langsmith_evaluator_adapter import LangSmithEvaluatorAdapter
