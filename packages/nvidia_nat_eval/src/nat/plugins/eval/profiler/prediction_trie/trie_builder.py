@@ -27,6 +27,16 @@ from nat.plugins.eval.profiler.prediction_trie.metrics_accumulator import Metric
 
 
 @dataclass
+class SensitivityConfig:
+    """Configuration for auto-sensitivity scoring."""
+
+    scale: int = 5
+    w_critical: float = 0.5
+    w_fanout: float = 0.3
+    w_position: float = 0.2
+
+
+@dataclass
 class LLMCallContext:
     """Context for a single LLM call extracted from a trace."""
 
@@ -37,6 +47,7 @@ class LLMCallContext:
     output_tokens: int
     call_duration_s: float = 0.0
     workflow_duration_s: float = 0.0
+    sensitivity_score: float = 0.0
 
 
 @dataclass
@@ -50,18 +61,24 @@ class _NodeAccumulators:
     all_remaining_calls: MetricsAccumulator = field(default_factory=MetricsAccumulator)
     all_interarrival_ms: MetricsAccumulator = field(default_factory=MetricsAccumulator)
     all_output_tokens: MetricsAccumulator = field(default_factory=MetricsAccumulator)
+    # Sensitivity accumulators
+    sensitivity: dict[int, MetricsAccumulator] = field(default_factory=lambda: defaultdict(MetricsAccumulator))
+    all_sensitivity: MetricsAccumulator = field(default_factory=MetricsAccumulator)
 
 
 class PredictionTrieBuilder:
     """Builds a prediction trie from profiler execution traces."""
 
-    def __init__(self) -> None:
+    def __init__(self, sensitivity_config: SensitivityConfig | None = None) -> None:
         # Map from path tuple to accumulators
         self._node_accumulators: dict[tuple[str, ...], _NodeAccumulators] = defaultdict(_NodeAccumulators)
+        self._sensitivity_config = sensitivity_config
 
     def add_trace(self, steps: list[IntermediateStep]) -> None:
         """Process a single execution trace and update accumulators."""
         contexts = self._extract_llm_contexts(steps)
+        if self._sensitivity_config is not None:
+            self._compute_sensitivity_scores(contexts)
         for ctx in contexts:
             self._update_accumulators(ctx)
 
@@ -129,6 +146,41 @@ class PredictionTrieBuilder:
 
         return contexts
 
+    def _compute_sensitivity_scores(self, contexts: list[LLMCallContext]) -> None:
+        """Compute composite sensitivity scores for each call in the trace."""
+        if not contexts:
+            return
+
+        total_calls = len(contexts)
+        max_remaining = max(c.remaining_calls for c in contexts)
+        cfg = self._sensitivity_config
+
+        for i, ctx in enumerate(contexts):
+            # Signal 1: Critical path weight
+            if ctx.workflow_duration_s > 0:
+                critical_path_weight = min(ctx.call_duration_s / ctx.workflow_duration_s, 1.0)
+            else:
+                critical_path_weight = 1.0
+
+            # Signal 2: Fan-out score
+            if max_remaining > 0:
+                fanout_score = ctx.remaining_calls / max_remaining
+            else:
+                fanout_score = 0.0
+
+            # Signal 3: Position score (U-shaped)
+            if total_calls > 1:
+                normalized_pos = i / (total_calls - 1)
+                position_score = max(1.0 - normalized_pos, normalized_pos)
+            else:
+                position_score = 1.0
+
+            ctx.sensitivity_score = (
+                cfg.w_critical * critical_path_weight
+                + cfg.w_fanout * fanout_score
+                + cfg.w_position * position_score
+            )
+
     def _build_path(self, step: IntermediateStep) -> list[str]:
         """Build the function path from ancestry."""
         path: list[str] = []
@@ -168,6 +220,11 @@ class PredictionTrieBuilder:
         if ctx.time_to_next_ms is not None:
             accs.all_interarrival_ms.add_sample(ctx.time_to_next_ms)
 
+        # Sensitivity accumulators
+        if self._sensitivity_config is not None:
+            accs.sensitivity[ctx.call_index].add_sample(ctx.sensitivity_score)
+            accs.all_sensitivity.add_sample(ctx.sensitivity_score)
+
     def build(self) -> PredictionTrieNode:
         """Build the final prediction trie from accumulated data."""
         root = PredictionTrieNode(name="root")
@@ -201,6 +258,7 @@ class PredictionTrieBuilder:
                 remaining_calls=accs.remaining_calls[idx].compute_metrics(),
                 interarrival_ms=accs.interarrival_ms[idx].compute_metrics(),
                 output_tokens=accs.output_tokens[idx].compute_metrics(),
+                latency_sensitivity=self._score_to_sensitivity(accs.sensitivity.get(idx)),
             )
             node.predictions_by_call_index[idx] = prediction
 
@@ -210,4 +268,13 @@ class PredictionTrieBuilder:
                 remaining_calls=accs.all_remaining_calls.compute_metrics(),
                 interarrival_ms=accs.all_interarrival_ms.compute_metrics(),
                 output_tokens=accs.all_output_tokens.compute_metrics(),
+                latency_sensitivity=self._score_to_sensitivity(accs.all_sensitivity),
             )
+
+    def _score_to_sensitivity(self, acc: MetricsAccumulator | None) -> int | None:
+        """Convert accumulated sensitivity scores to a clamped integer."""
+        if acc is None or not acc.has_samples() or self._sensitivity_config is None:
+            return None
+        scale = self._sensitivity_config.scale
+        mean_score = acc.compute_metrics().mean
+        return max(1, min(scale, round(mean_score * scale)))
