@@ -5651,6 +5651,7 @@ dependencies = [
     { name = "ipython" },
     { name = "nat-alert-triage-agent" },
     { name = "nat-simple-calculator" },
+    { name = "nbclient" },
     { name = "nvidia-nat", extra = ["langchain", "llama-index", "mcp", "profiling", "test"] },
     { name = "python-dotenv", extra = ["cli"] },
 ]
@@ -5661,6 +5662,7 @@ requires-dist = [
     { name = "ipython", specifier = "~=8.31" },
     { name = "nat-alert-triage-agent", editable = "examples/advanced_agents/alert_triage_agent" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
+    { name = "nbclient", specifier = "~=0.10" },
     { name = "nvidia-nat", extras = ["langchain", "llama-index", "mcp", "profiling", "test"], editable = "." },
     { name = "python-dotenv", extras = ["cli"], specifier = "~=1.1.1" },
 ]
@@ -7028,12 +7030,14 @@ provides-extras = ["test"]
 name = "nvidia-nat-nemo-customizer"
 source = { editable = "packages/nvidia_nat_nemo_customizer" }
 dependencies = [
+    { name = "huggingface-hub" },
     { name = "nemo-microservices" },
     { name = "nvidia-nat-core" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "huggingface-hub", specifier = "~=0.36" },
     { name = "nemo-microservices", specifier = "~=1.4" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },

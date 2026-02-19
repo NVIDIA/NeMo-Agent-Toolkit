@@ -19,7 +19,7 @@ import pytest
 from pydantic import ValidationError
 
 from nat.builder.evaluator import EvaluatorInfo
-from nat.eval.evaluator.evaluator_model import EvalInput
+from nat.data_models.evaluator import EvalInput
 from nat.plugins.langchain.eval.langsmith_custom_evaluator import LangSmithCustomEvaluatorConfig
 from nat.plugins.langchain.eval.langsmith_custom_evaluator import register_langsmith_custom_evaluator
 

@@ -333,10 +333,15 @@ class DecomposedType:
             True if the current type is a subtype of the specified class or tuple of classes, False otherwise
         """
 
-        if (isinstance(class_or_tuple, tuple)):
-            return any(issubclass(self.root, DecomposedType(cls).root) for cls in class_or_tuple)
+        base_root = self.get_base_type().root
 
-        return issubclass(self.root, DecomposedType(class_or_tuple).root)
+        if not inspect.isclass(base_root):
+            return False
+
+        if (isinstance(class_or_tuple, tuple)):
+            return any(issubclass(base_root, DecomposedType(cls).root) for cls in class_or_tuple)
+
+        return issubclass(base_root, DecomposedType(class_or_tuple).root)
 
     def is_instance(self, instance: typing.Any) -> bool:
         """

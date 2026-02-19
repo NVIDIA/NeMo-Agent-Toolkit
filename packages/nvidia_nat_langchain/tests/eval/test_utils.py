@@ -18,9 +18,9 @@ import pytest
 from langsmith.schemas import Example
 from langsmith.schemas import Run
 
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 from nat.plugins.langchain.eval.langsmith_evaluator_adapter import LangSmithEvaluatorAdapter
 from nat.plugins.langchain.eval.utils import _extract_field
 from nat.plugins.langchain.eval.utils import eval_input_item_to_openevals_kwargs
