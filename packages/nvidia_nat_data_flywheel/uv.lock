@@ -1346,6 +1346,7 @@ requires-dist = [
     { name = "nest-asyncio2", specifier = "==1.7.1" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", specifier = "~=2.3" },
+    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
     { name = "optuna", specifier = "~=4.4.0" },

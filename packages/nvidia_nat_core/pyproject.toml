@@ -107,10 +107,12 @@ pii-defense = [
   "presidio-anonymizer"
 ]
 test = [
+  "nvidia-nat-eval[profiling] == {version}",
   "nvidia-nat-test == {version}",
 ]
 
 [tool.uv.sources]
+nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']

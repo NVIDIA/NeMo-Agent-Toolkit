@@ -24,6 +24,13 @@ import pandas as pd
 import pytest
 from pydantic import BaseModel
 
+langchain_exceptions = pytest.importorskip("langchain_core.exceptions")
+if not hasattr(langchain_exceptions, "ContextOverflowError"):
+    pytest.skip(
+        "Skipping rag_evaluator tests: installed langchain_core lacks ContextOverflowError required by langchain_openai.",
+        allow_module_level=True,
+    )
+
 from nat.data_models.evaluator import EvalOutput
 from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
 

@@ -68,6 +68,7 @@ profiling = [
   "scikit-learn~=1.6",
 ]
 test = [
+  "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",
 ]
 
