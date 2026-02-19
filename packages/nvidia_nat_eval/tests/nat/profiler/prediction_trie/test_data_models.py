@@ -51,6 +51,28 @@ def test_llm_call_prediction_defaults():
     assert prediction.output_tokens.sample_count == 0
 
 
+def test_llm_call_prediction_latency_sensitivity_default():
+    prediction = LLMCallPrediction()
+    assert prediction.latency_sensitivity is None
+
+
+def test_llm_call_prediction_latency_sensitivity_set():
+    prediction = LLMCallPrediction(latency_sensitivity=3)
+    assert prediction.latency_sensitivity == 3
+
+
+def test_llm_call_prediction_latency_sensitivity_in_model_dump():
+    prediction = LLMCallPrediction(latency_sensitivity=4)
+    dumped = prediction.model_dump()
+    assert dumped["latency_sensitivity"] == 4
+
+
+def test_llm_call_prediction_latency_sensitivity_none_in_model_dump():
+    prediction = LLMCallPrediction()
+    dumped = prediction.model_dump()
+    assert dumped["latency_sensitivity"] is None
+
+
 def test_prediction_trie_node_creation():
     node = PredictionTrieNode(name="root")
     assert node.name == "root"
