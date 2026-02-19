@@ -21,7 +21,7 @@ from nat.data_models.optimizer import OptimizerRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.optimizer.optimizable_utils import walk_optimizables
 from nat.optimizer.parameter_optimizer import optimize_parameters
-from nat.optimizer.prompt_optimizer import optimize_prompts
+from nat.optimizer.ga_prompt_optimizer import optimize_prompts
 from nat.runtime.loader import load_config
 
 logger = logging.getLogger(__name__)

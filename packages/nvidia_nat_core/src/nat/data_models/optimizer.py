@@ -15,9 +15,9 @@
 
 from enum import StrEnum
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 
 
@@ -52,7 +52,11 @@ class NumericOptimizationConfig(BaseModel):
 class PromptGAOptimizationConfig(BaseModel):
     """
     Configuration for prompt optimization using a Genetic Algorithm.
+    Oracle feedback and other implementation-specific options are not part of this
+    shared contract; they may be passed as extra fields and stored in model_extra.
     """
+    model_config = ConfigDict(extra="allow")
+
     enabled: bool = Field(default=False, description="Enable GA-based prompt optimization")
 
     # Prompt optimization function hooks
@@ -112,49 +116,13 @@ class PromptGAOptimizationConfig(BaseModel):
         ge=0.0,
     )
 
-    # Oracle feedback configuration
-    oracle_feedback_mode: Literal["never", "always", "failing_only", "adaptive"] = Field(
-        description="When to inject failure reasoning into mutations: "
-        "'never' (default), 'always', 'failing_only' (below threshold), 'adaptive' (on plateau).",
-        default="never",
-    )
-    oracle_feedback_worst_n: int = Field(
-        description="Number of worst-scoring items to extract reasoning from.",
-        default=5,
-        ge=1,
-    )
-    oracle_feedback_max_chars: int = Field(
-        description="Maximum characters for oracle feedback in mutation prompt.",
-        default=4000,
-        ge=1,
-    )
-    oracle_feedback_fitness_threshold: float = Field(
-        description="For 'failing_only' mode: normalized fitness threshold below which feedback is injected.",
-        default=0.3,
-        ge=0.0,
-        le=1.0,
-    )
-    oracle_feedback_stagnation_generations: int = Field(
-        description="For 'adaptive' mode: generations without improvement before enabling feedback.",
-        default=3,
-        ge=1,
-    )
-    oracle_feedback_fitness_variance_threshold: float = Field(
-        description="For 'adaptive' mode: fitness variance threshold for collapse detection.",
-        default=0.01,
-        ge=0.0,
-    )
-    oracle_feedback_diversity_threshold: float = Field(
-        description="For 'adaptive' mode: prompt duplication ratio threshold (0-1).",
-        default=0.5,
-        ge=0.0,
-        le=1.0,
-    )
 
-
-class OptimizerConfig(BaseModel):
+class BaseOptimizerConfig(BaseModel):
     """
-    Parameters used by the workflow optimizer.
+    Shared optimizer parameters: only fields that any optimizer strategy
+    (or any future GA implementation) could reuse. Strategy-specific config
+    lives on subtypes (e.g. GAOptimizerConfig adds .prompt; parameter optimizer
+    uses .numeric on OptimizerConfig).
     """
     output_path: Path | None = Field(
         default=None,
@@ -182,7 +150,14 @@ class OptimizerConfig(BaseModel):
         default="harmonic",
     )
 
-    # Nested configs
+
+class OptimizerConfig(BaseOptimizerConfig):
+    """
+    Full optimizer config used in the app Config and for parsing YAML.
+    Extends the shared base with strategy-specific nests: .numeric for
+    parameter/Optuna optimization, .prompt for GA prompt optimization.
+    Runners use subtypes (e.g. GAOptimizerConfig) to declare the shape they need.
+    """
     numeric: NumericOptimizationConfig = NumericOptimizationConfig()
     prompt: PromptGAOptimizationConfig = PromptGAOptimizationConfig()
 
