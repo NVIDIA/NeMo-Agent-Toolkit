@@ -14,17 +14,7 @@
 # limitations under the License.
 
 # flake8: noqa
-# isort:skip_file
 
-# Import any providers which need to be automatically registered here
-
-from . import embedder
-from . import langgraph_workflow
-from . import llm
-from . import tool_wrapper
-from . import retriever
-from .tools import register as tools_register
-from .agent import register as agent_register
-from .control_flow import register as control_flow_register
-from .dataset_loader import register as dataset_loader_register
-from .eval import register as eval_register
+from .langsmith_custom_evaluator import register_langsmith_custom_evaluator
+from .langsmith_evaluator import register_langsmith_evaluator
+from .langsmith_judge import register_langsmith_judge
