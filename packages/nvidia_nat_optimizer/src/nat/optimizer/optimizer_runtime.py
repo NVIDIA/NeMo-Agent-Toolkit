@@ -17,11 +17,11 @@ import logging
 
 from pydantic import BaseModel
 
+from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
+from nat.optimizer import register  # noqa: F401 - trigger optimizer registration
 from nat.optimizer.optimizable_utils import walk_optimizables
-from nat.optimizer.parameter_optimizer import optimize_parameters
-from nat.optimizer.ga_prompt_optimizer import optimize_prompts
 from nat.runtime.loader import load_config
 
 logger = logging.getLogger(__name__)
@@ -47,21 +47,28 @@ async def optimize_config(opt_run_config: OptimizerRunConfig):
     # ---------------- 3. numeric / enum tuning ----------- #
     tuned_cfg = base_cfg
     if base_cfg.optimizer.numeric.enabled:
-        tuned_cfg = optimize_parameters(
-            base_cfg=base_cfg,
-            full_space=full_space,
-            optimizer_config=base_cfg.optimizer,
-            opt_run_config=opt_run_config,
-        )
+        registry = GlobalTypeRegistry.get()
+        numeric_info = registry.get_optimizer(type(base_cfg.optimizer.numeric))
+        async with numeric_info.build_fn(base_cfg.optimizer.numeric) as runner:
+            result = await runner.run(
+                base_cfg=base_cfg,
+                full_space=full_space,
+                optimizer_config=base_cfg.optimizer,
+                opt_run_config=opt_run_config,
+            )
+            tuned_cfg = result
 
     # ---------------- 4. prompt optimization ------------- #
     if base_cfg.optimizer.prompt.enabled:
-        await optimize_prompts(
-            base_cfg=tuned_cfg,
-            full_space=full_space,
-            optimizer_config=base_cfg.optimizer,
-            opt_run_config=opt_run_config,
-        )
+        registry = GlobalTypeRegistry.get()
+        prompt_info = registry.get_optimizer(type(base_cfg.optimizer.prompt))
+        async with prompt_info.build_fn(base_cfg.optimizer.prompt) as runner:
+            await runner.run(
+                base_cfg=tuned_cfg,
+                full_space=full_space,
+                optimizer_config=base_cfg.optimizer,
+                opt_run_config=opt_run_config,
+            )
 
     logger.info("All optimization phases complete.")
     return tuned_cfg

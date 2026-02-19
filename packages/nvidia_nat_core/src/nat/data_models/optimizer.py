@@ -13,12 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+
+from .common import BaseModelRegistryTag
+from .common import TypedBaseModel
+
+
+class OptimizerStrategyBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """Base for optimizer strategy configs (numeric, prompt) registered in the optimizer registry."""
+
+    enabled: bool = Field(default=False, description="Enable this optimizer strategy.")
 
 
 class OptimizerMetric(BaseModel):
@@ -35,10 +45,11 @@ class SamplerType(StrEnum):
     GRID = "grid"
 
 
-class NumericOptimizationConfig(BaseModel):
+class NumericOptimizationConfig(OptimizerStrategyBaseConfig, name="numeric"):
     """
     Configuration for numeric/enum optimization (Optuna).
     """
+
     enabled: bool = Field(default=True, description="Enable numeric optimization")
     n_trials: int = Field(description="Number of trials for numeric optimization.", default=20)
     sampler: SamplerType | None = Field(
@@ -49,12 +60,13 @@ class NumericOptimizationConfig(BaseModel):
     )
 
 
-class PromptGAOptimizationConfig(BaseModel):
+class PromptGAOptimizationConfig(OptimizerStrategyBaseConfig, name="ga"):
     """
     Configuration for prompt optimization using a Genetic Algorithm.
     Oracle feedback and other implementation-specific options are not part of this
     shared contract; they may be passed as extra fields and stored in model_extra.
     """
+
     model_config = ConfigDict(extra="allow")
 
     enabled: bool = Field(default=False, description="Enable GA-based prompt optimization")
@@ -160,6 +172,9 @@ class OptimizerConfig(BaseOptimizerConfig):
     """
     numeric: NumericOptimizationConfig = NumericOptimizationConfig()
     prompt: PromptGAOptimizationConfig = PromptGAOptimizationConfig()
+
+
+OptimizerStrategyBaseConfigT = typing.TypeVar("OptimizerStrategyBaseConfigT", bound=OptimizerStrategyBaseConfig)
 
 
 class OptimizerRunConfig(BaseModel):
