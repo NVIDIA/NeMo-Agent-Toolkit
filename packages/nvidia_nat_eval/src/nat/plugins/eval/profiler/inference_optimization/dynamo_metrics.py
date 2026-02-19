@@ -641,7 +641,7 @@ class DynamoMetricsCollector:
 
     Usage::
 
-        from nat.profiler.inference_optimization.dynamo_metrics import DynamoMetricsCollector
+        from nat.plugins.eval.profiler.inference_optimization.dynamo_metrics import DynamoMetricsCollector
         from nat.data_models.profiler import DynamoMetricsConfig
 
         config = DynamoMetricsConfig(enable=True, prometheus_url="http://localhost:9090")
@@ -1051,7 +1051,7 @@ async def collect_core_metrics(
 
     Usage::
 
-        from nat.profiler.inference_optimization.dynamo_metrics import collect_core_metrics
+        from nat.plugins.eval.profiler.inference_optimization.dynamo_metrics import collect_core_metrics
 
         # Quick collection for optimization
         core = await collect_core_metrics()
