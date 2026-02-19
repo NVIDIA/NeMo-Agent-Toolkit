@@ -36,7 +36,7 @@ For users installing from package distributions:
 pip install "nvidia-nat[async_endpoints,eval]"
 ```
 
-The `/evaluate` and `/evaluate/item` routes are registered by the core FastAPI front end and enabled only when `nvidia-nat-eval` is installed.
+The `/evaluate` and `/evaluate/item` routes are registered by the core FastAPI front end and enabled only when `nvidia-nat-eval` and asynchronous endpoint support are installed.
 
 ## Evaluation Endpoint Overview
 ```mermaid
