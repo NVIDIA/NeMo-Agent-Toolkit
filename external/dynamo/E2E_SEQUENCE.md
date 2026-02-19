@@ -790,7 +790,7 @@ frequency_thresholds: [2, 6, 15]  // Cold→Warm, Warm→Hot, Hot→VeryHot
 ---
 
 *Generated from codebase analysis of:*
-- `NeMo-Agent-Toolkit/src/nat/llm/dynamo_llm.py`
+- `NeMo-Agent-Toolkit/packages/nvidia_nat_core/src/nat/llm/dynamo_llm.py`
 - `NeMo-Agent-Toolkit/external/dynamo/optimized/processor.py`
 - `NeMo-Agent-Toolkit/external/dynamo/optimized/router.py`
 - `NeMo-Agent-Toolkit/external/dynamo/start_dynamo_optimized_thompson_hints_vllm.sh`

@@ -233,7 +233,7 @@ class ProfilerRunner:
         # ------------------------------------------------------------
         dynamo_metrics_results = None
         if self.profile_config.dynamo_metrics.enable:
-            from nat.profiler.inference_optimization.dynamo_metrics import collect_dynamo_metrics
+            from nat.plugins.eval.profiler.inference_optimization.dynamo_metrics import collect_dynamo_metrics
             try:
                 # Calculate workflow time window from intermediate steps
                 workflow_start, workflow_end = self._get_workflow_time_window(all_steps)
