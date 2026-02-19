@@ -1,10 +1,27 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # End-to-End Sequence Diagram: NeMo Agent Toolkit → Dynamo Integration
 
 This document captures the information flow from NeMo Agent Toolkit chat requests through `dynamo_llm.py` to the custom components launched by `start_dynamo_optimized_thompson_hints_vllm.sh`.
 
 ## Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           NeMo Agent Toolkit                                 │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
@@ -254,7 +271,7 @@ sequenceDiagram
 ```
 
 **HTTP Headers (legacy support):**
-```
+```http
 x-prefix-id: react-benchmark-abc123
 x-prefix-total-requests: 10
 x-prefix-osl: MEDIUM

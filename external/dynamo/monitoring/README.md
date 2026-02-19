@@ -1,6 +1,6 @@
 # Dynamo Monitoring Stack
 
-This directory contains a Prometheus + Grafana monitoring setup for the Dynamo LLM inference stack with Thompson Sampling router. Metrics are collected at **2-second resolution** directly from ai-dynamo's Prometheus API for per-request granularity.
+This directory contains a Prometheus + Grafana monitoring setup for the Dynamo LLM inference stack with Thompson Sampling router. Metrics are collected at **2-second resolution** directly from the ai-dynamo Prometheus API for per-request granularity.
 
 ## Supported Backends
 
@@ -349,8 +349,8 @@ sglang:cache_hit_rate
 sglang:cache_hit_rate * 100
 ```
 
-> **Why use SGLang's native metric?** SGLang computes cache hit rate internally but doesn't include
-> `cached_tokens` in its API responses. The processor's `thompson_kve_*` counters will show 0
+> **Why use the native SGLang metric?** SGLang computes cache hit rate internally but does not include
+> `cached_tokens` in its API responses. The `thompson_kve_*` counters from the processor will show 0
 > unless the underlying engine provides `usage.prompt_tokens_details.cached_tokens`.
 
 > **Note on Full KVES**: To implement the full KVES equation with CPU/disk hit weights, use
@@ -358,7 +358,7 @@ sglang:cache_hit_rate * 100
 
 ## KV Cache Metrics Status
 
-This section documents the working status of all KV cache related metrics across the Dynamo stack.
+This section documents the working status of all KV cache-related metrics across the Dynamo stack.
 
 **Backend Selection**: The Grafana dashboard uses a `${backend}` template variable. Select `sglang` or `vllm` from the dropdown to switch all backend-specific queries.
 
@@ -389,9 +389,9 @@ This section documents the working status of all KV cache related metrics across
 
 | Prefix | Full Metric Name | Status | Reason |
 |--------|------------------|--------|--------|
-| `dynamo_component_kvstats_` | `dynamo_component_kvstats_gpu_cache_usage_percent` | ✗ **NOT WORKING** | Dynamo's internal metric not populated by SGLang backend. Use `sglang:token_usage * 100` instead. |
-| `dynamo_component_kvstats_` | `dynamo_component_kvstats_gpu_prefix_cache_hit_rate` | ✗ **NOT WORKING** | Dynamo's internal metric not populated. Use `sglang:cache_hit_rate` instead. |
-| `dynamo_component_kvstats_` | `dynamo_component_kvstats_active_blocks` | ✗ **NOT WORKING** | Dynamo's internal metric not populated by SGLang backend. |
+| `dynamo_component_kvstats_` | `dynamo_component_kvstats_gpu_cache_usage_percent` | ✗ **NOT WORKING** | Internal Dynamo metric not populated by the SGLang backend. Use `sglang:token_usage * 100` instead. |
+| `dynamo_component_kvstats_` | `dynamo_component_kvstats_gpu_prefix_cache_hit_rate` | ✗ **NOT WORKING** | Internal Dynamo metric not populated. Use `sglang:cache_hit_rate` instead. |
+| `dynamo_component_kvstats_` | `dynamo_component_kvstats_active_blocks` | ✗ **NOT WORKING** | Internal Dynamo metric not populated by the SGLang backend. |
 | `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_cached_tokens_total` | ✗ **NOT WORKING** | SGLang API doesn't return `cached_tokens` in response. |
 | `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_prompt_tokens_total` | ✗ **NOT WORKING** | Counter stays at 0 due to API limitation. |
 | `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_*_blocks_total` | ✗ **NOT WORKING** | Block-level KVE metrics not populated. |

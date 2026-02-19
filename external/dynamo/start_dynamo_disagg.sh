@@ -37,8 +37,7 @@ PREFILL_GPUS="${DYNAMO_PREFILL_GPUS:-0,1}"
 DECODE_GPUS="${DYNAMO_DECODE_GPUS:-2,3}"
 TP_SIZE="${DYNAMO_TP_SIZE:-2}"
 HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
-MODEL="/workspace/models/Llama-3.3-70B-Instruct"
-SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
+SERVED_MODEL_NAME=""  # set after validation
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
@@ -83,7 +82,9 @@ if [ -d "${DYNAMO_MODEL_DIR}" ]; then
         exit 1
     fi
 fi
-LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
+LOCAL_MODEL_DIR="$(eval echo "${DYNAMO_MODEL_DIR}")"
+MODEL="/workspace/models/$(basename "$LOCAL_MODEL_DIR")"
+SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-$(basename "$LOCAL_MODEL_DIR")}"
 
 echo "========================================================="
 echo "Dynamo SGLang FULL STACK (DISAGGREGATED MODE)"

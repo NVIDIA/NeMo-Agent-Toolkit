@@ -33,7 +33,6 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:8000']
     metrics_path: /metrics
-    scrape_interval: 2s
 
   # Dynamo Worker metrics (KV cache, internal stats)
   # Works for both SGLang and vLLM backends - same ports, different metric prefixes
@@ -51,24 +50,20 @@ scrape_configs:
           - 'localhost:18087'
           - 'localhost:18088'
     metrics_path: /metrics
-    scrape_interval: 2s
 
   # Thompson Sampling Router metrics
   - job_name: 'dynamo-router'
     static_configs:
       - targets: ['localhost:18090']
     metrics_path: /metrics
-    scrape_interval: 2s
 
   # Thompson Sampling Processor metrics (KVE)
   - job_name: 'dynamo-processor'
     static_configs:
       - targets: ['localhost:18091']
     metrics_path: /metrics
-    scrape_interval: 2s
 
   # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-
