@@ -49,6 +49,16 @@
 
 set -euo pipefail
 
+# Load environment variables from .env file if present
+# Supports: DYNAMO_FROM_SOURCE, DYNAMO_IMAGE, and all DYNAMO_* overrides
+SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${SCRIPT_DIR_EARLY}/.env" ]; then
+    set -a
+    # Strip inline comments before sourcing (bash doesn't handle them natively)
+    source <(grep -v '^\s*#' "${SCRIPT_DIR_EARLY}/.env" | sed 's/[[:space:]]*#.*$//')
+    set +a
+fi
+
 # Configuration Variables (can be overridden via environment variables)
 # See env.example for documentation on each variable
 CONTAINER_NAME="dynamo-sglang"
@@ -62,9 +72,54 @@ HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
 WORKER_METRICS_PORT="${DYNAMO_WORKER_METRICS_PORT:-18081}"
 ROUTER_METRICS_PORT="${DYNAMO_ROUTER_METRICS_PORT:-18090}"
 PROCESSOR_METRICS_PORT="${DYNAMO_PROCESSOR_METRICS_PORT:-18091}"
-MODEL="/workspace/models/Llama-3.3-70B-Instruct"
-SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
-IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
+SERVED_MODEL_NAME=""  # set after validation
+
+# ============================================================================
+# Image Configuration Logic
+# ============================================================================
+# Two modes (controlled via .env or environment variables):
+#
+# 1. Source-built image (DYNAMO_FROM_SOURCE=true):
+#      - Uses DYNAMO_IMAGE (e.g. "dynamo-sglang-source:main") built from the
+#        dynamo main branch at DYNAMO_SOURCE_DIR.
+#      - Build the image first:
+#          cd $DYNAMO_SOURCE_DIR
+#          python container/render.py --framework=sglang --target=runtime --output-short-filename
+#          docker build -t dynamo-sglang-source:main -f container/rendered.Dockerfile .
+#
+# 2. Standard NGC image (default):
+#      - Uses nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1
+# ============================================================================
+
+if [ "${DYNAMO_FROM_SOURCE:-false}" = "true" ]; then
+    # Source-built image mode: use DYNAMO_IMAGE from .env
+    if [ -z "${DYNAMO_IMAGE:-}" ]; then
+        echo "ERROR: DYNAMO_FROM_SOURCE=true but DYNAMO_IMAGE is not set."
+        echo "  Set DYNAMO_IMAGE in .env (e.g. DYNAMO_IMAGE=dynamo-sglang-source:main)"
+        exit 1
+    fi
+    IMAGE="${DYNAMO_IMAGE}"
+
+    # Verify the image exists; offer build instructions if not
+    if ! docker image inspect "${IMAGE}" > /dev/null 2>&1; then
+        echo "✗ ERROR: Source image '${IMAGE}' not found."
+        echo ""
+        echo "Build it from the dynamo main branch:"
+        if [ -n "${DYNAMO_SOURCE_DIR:-}" ]; then
+            echo "  cd ${DYNAMO_SOURCE_DIR}"
+        else
+            echo "  cd /path/to/dynamo   # set DYNAMO_SOURCE_DIR in .env to customise"
+        fi
+        echo "  python container/render.py --framework=sglang --target=runtime --output-short-filename"
+        echo "  docker build -t ${IMAGE} -f container/rendered.Dockerfile ."
+        exit 1
+    fi
+    echo "✓ Using source-built image: ${IMAGE}"
+else
+    # Default: standard NGC image
+    IMAGE="${DYNAMO_IMAGE:-nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1}"
+fi
+
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 
@@ -80,6 +135,28 @@ CONTAINER_GPU_INDICES=$(seq -s, 0 $((NUM_GPUS - 1)))
 
 # Calculate number of workers based on available GPUs and TP size
 NUM_WORKERS=$((NUM_GPUS / TP_SIZE))
+
+# Validate GPU/TP sizing
+if [ "$TP_SIZE" -le 0 ] 2>/dev/null; then
+    echo "ERROR: TP_SIZE must be a positive integer (got: '$TP_SIZE')" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
+if [ "$NUM_GPUS" -lt "$TP_SIZE" ]; then
+    echo "ERROR: Not enough GPUs for the requested TP size (NUM_GPUS=$NUM_GPUS < TP_SIZE=$TP_SIZE)" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
+if [ $((NUM_GPUS % TP_SIZE)) -ne 0 ]; then
+    echo "ERROR: NUM_GPUS ($NUM_GPUS) is not divisible by TP_SIZE ($TP_SIZE)" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE  NUM_WORKERS would be $NUM_WORKERS" >&2
+    exit 1
+fi
+if [ "$NUM_WORKERS" -le 0 ]; then
+    echo "ERROR: NUM_WORKERS is 0 — no workers can be started with this GPU/TP configuration" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
 
 # Local paths - DYNAMO_MODEL_DIR must be set or script will error
 if [ -z "${DYNAMO_MODEL_DIR:-}" ]; then
@@ -112,7 +189,9 @@ if [ -d "${DYNAMO_MODEL_DIR}" ]; then
         exit 1
     fi
 fi
-LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
+LOCAL_MODEL_DIR="$(eval echo "${DYNAMO_MODEL_DIR}")"
+MODEL="/workspace/models/$(basename "$LOCAL_MODEL_DIR")"
+SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-$(basename "$LOCAL_MODEL_DIR")}"
 
 # Repository directory - auto-detect from script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -121,6 +200,12 @@ CUSTOM_DYNAMO_DIR="${SCRIPT_DIR}/optimized"
 echo "========================================================="
 echo "Dynamo SGLang with OPTIMIZED Thompson Sampling Router"
 echo "========================================================="
+if [ "${DYNAMO_FROM_SOURCE:-false}" = "true" ]; then
+    echo "Configuration: Source-Built Image Mode (DYNAMO_FROM_SOURCE=true)"
+    echo "  Image: $IMAGE (built from dynamo main branch)"
+else
+    echo "Configuration: Standard Mode (image: $IMAGE)"
+fi
 echo "Model: Llama-3.3-70B-Instruct"
 echo "Container: $CONTAINER_NAME"
 echo "HTTP Port: $HTTP_PORT (default Dynamo frontend)"
@@ -292,7 +377,9 @@ if [ -z "${HF_TOKEN:-}" ]; then
     else
         echo "✗ Local model NOT found and no HF_TOKEN to download it"
         echo ""
-        read -p "Please enter your HuggingFace token (or press Enter to skip): " HF_TOKEN
+        printf "Please enter your HuggingFace token (or press Enter to skip): "
+        read -s -r HF_TOKEN
+        echo ""
         if [ -z "$HF_TOKEN" ]; then
             echo "WARNING: Proceeding without HF_TOKEN."
             HF_TOKEN="dummy"

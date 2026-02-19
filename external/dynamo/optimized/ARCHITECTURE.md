@@ -1,3 +1,20 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
 # Optimized Thompson Sampling Router Architecture
 
 ## Overview
@@ -10,9 +27,9 @@ This architecture uses the **default Dynamo frontend** with custom **Processor**
 
 1. **Processor registers as `dynamo.backend.generate`** - The frontend discovers our processor as the "backend"
 2. **SGLang Worker registers as `dynamo.worker.generate`** - Our processor forwards to actual workers after routing
-3. **Frontend's built-in router becomes irrelevant** - The frontend routes to `dynamo.backend.generate` which is our processor
+3. **The built-in frontend router becomes irrelevant** - The frontend routes to `dynamo.backend.generate` which is our processor
 
-```
+```text
 Frontend (built-in router: round-robin)
     → routes to dynamo.backend.generate
     → OUR PROCESSOR (intercepts!)
@@ -20,7 +37,7 @@ Frontend (built-in router: round-robin)
         → forwards to dynamo.worker.generate (actual SGLang workers)
 ```
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                                CLIENT                                            │
 │                                                                                  │
@@ -219,7 +236,7 @@ export DYNAMO_TP_SIZE=8
 | Hint Passing | HTTP headers (`x-prefix-*`) | `nvext.annotations` in request body |
 | Tokenization | Custom (in frontend) | Handled by Dynamo preprocessor |
 | Metrics | CSV files | Prometheus (`/metrics` endpoint) |
-| Model Mapping | Custom `FRONTEND_MODEL_MAPPING` | Dynamo's `--model-name`/`--model-path` |
+| Model Mapping | Custom `FRONTEND_MODEL_MAPPING` | Dynamo `--model-name`/`--model-path` |
 | **Processor Registration** | `dynamo.processor.process` | **`dynamo.backend.generate`** (intercepts frontend) |
 | **Worker Registration** | `dynamo.backend.generate` | **`dynamo.worker.generate`** (processor forwards to) |
 
@@ -230,7 +247,7 @@ The default Dynamo frontend has a built-in router (`DYN_ROUTER_MODE=round-robin|
 1. **Processor claims `backend.generate`** - Frontend thinks it's talking to the backend
 2. **Processor queries custom router** - Thompson Sampling selects best worker
 3. **Processor forwards to `worker.generate`** - Actual SGLang workers
-4. **Frontend's built-in router is irrelevant** - We've intercepted the request pipeline
+4. **The built-in frontend router is irrelevant** - We've intercepted the request pipeline
 
 ## NVExt Annotations
 
@@ -294,7 +311,7 @@ bash start_dynamo_optimized_thompson_hints.sh
 All components expose metrics on port 8081 by default (`DYN_SYSTEM_PORT`):
 
 ### Router Metrics
-```
+```text
 thompson_router_decisions_total{worker_id="0"} 1234
 thompson_router_kv_overlap{worker_id="0"} 0.75
 thompson_router_feedback_latency_seconds_bucket{le="0.1"} 100
@@ -304,7 +321,7 @@ thompson_router_timeout_penalties_total 2
 ```
 
 ### Processor Metrics
-```
+```text
 thompson_processor_requests_total 5000
 thompson_processor_request_latency_seconds_bucket{le="1.0"} 4500
 thompson_processor_tokens_in_total 128000
@@ -365,10 +382,10 @@ export DYNAMO_TP_SIZE=2
 
 > **Important**: `DYNAMO_WORKER_COMPONENT` must be set for the router and processor to find
 > the backend workers. Without this variable, startup will fail with an error.
-
+>
 > **Note on `DYN_ROUTER_MODE`**: The startup script passes `--router-mode round-robin` to the
-> default frontend, but this is **irrelevant** in our architecture. The frontend's built-in
-> router routes to `dynamo.backend.generate`, which is our Processor (not a real backend).
+> default frontend, but this is **irrelevant** in our architecture. The built-in router of the
+> frontend routes to `dynamo.backend.generate`, which is our Processor (not a real backend).
 > Our Processor intercepts the request and uses our custom Thompson Sampling router instead.
 
 ## Sample Client Request

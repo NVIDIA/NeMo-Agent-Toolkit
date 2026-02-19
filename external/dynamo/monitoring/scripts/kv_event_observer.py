@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """
 KV Cache Event Observer for Dynamo vLLM Workers
 
@@ -43,6 +57,7 @@ import threading
 import time
 import urllib.request
 from collections import defaultdict
+from collections import deque
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import UTC
@@ -127,11 +142,78 @@ class KVCacheStats:
         }
 
 
+@dataclass
+class EfficiencySample:
+    """A single efficiency measurement sample."""
+    timestamp: float
+    hit_tokens: int
+    query_tokens: int
+
+
+class SlidingWindowEfficiency:
+    """Computes KV cache efficiency over a sliding time window.
+
+    Efficiency (work done fraction) measures what fraction of prompt tokens
+    were served from the KV cache rather than being recomputed:
+
+        efficiency = cached_tokens / total_queried_tokens * 100
+
+    Only samples within the configured time window are considered. This
+    provides a responsive metric that reflects recent cache behavior rather
+    than a lifetime average that never recovers from early cold-cache misses.
+
+    Interpretation:
+      - 0%:   No cache reuse. All tokens required fresh computation.
+      - 100%: Perfect reuse. All tokens served from cache.
+    """
+
+    def __init__(self, window_seconds: float = 30.0):
+        self.window_seconds = window_seconds
+        self._samples: deque[EfficiencySample] = deque()
+
+    def add_sample(self, hit_tokens: int, query_tokens: int, timestamp: float | None = None):
+        """Add a measurement sample to the window."""
+        ts = timestamp if timestamp is not None else time.time()
+        self._samples.append(EfficiencySample(ts, hit_tokens, query_tokens))
+        self._evict_old(ts)
+
+    def _evict_old(self, now: float):
+        """Remove samples that have fallen outside the window."""
+        cutoff = now - self.window_seconds
+        while self._samples and self._samples[0].timestamp < cutoff:
+            self._samples.popleft()
+
+    def get_efficiency(self) -> float:
+        """Get current efficiency as a percentage (0-100).
+
+        Returns 0.0 when the window is empty (no traffic).
+        """
+        self._evict_old(time.time())
+        total_hits = sum(s.hit_tokens for s in self._samples)
+        total_queries = sum(s.query_tokens for s in self._samples)
+        if total_queries == 0:
+            return 0.0
+        return (total_hits / total_queries) * 100.0
+
+    @property
+    def sample_count(self) -> int:
+        """Number of samples currently in the window."""
+        self._evict_old(time.time())
+        return len(self._samples)
+
+    def reset(self):
+        """Clear all samples."""
+        self._samples.clear()
+
+
 class KVEventObserver:
     """Observes KV cache events from a vLLM worker via ZMQ.
-    
-    Also optionally polls Prometheus metrics to detect cache hits,
-    which don't generate ZMQ events.
+
+    Also optionally polls Prometheus metrics to detect cache hits
+    (which don't generate ZMQ events) and computes KV cache efficiency
+    over a sliding window using the same histogram metrics as the
+    Grafana dashboard recording rule (rate over request_prompt_tokens_sum
+    and request_prefill_kv_computed_tokens_sum).
     """
 
     def __init__(
@@ -141,6 +223,7 @@ class KVEventObserver:
         verbose: bool = False,
         output_file: str | None = None,
         metrics_port: int | None = None,
+        window_seconds: float = 30.0,
     ):
         self.host = host
         self.port = port
@@ -151,25 +234,48 @@ class KVEventObserver:
         self.running = False
         self._output_handle = None
 
-        # Metrics polling state
+        # Sliding window efficiency tracker (mirrors the recording rule approach)
+        self.efficiency = SlidingWindowEfficiency(window_seconds)
+
+        # Counter-based metrics polling state (prefix_cache_hits/queries)
         self._last_hits = 0.0
         self._last_queries = 0.0
+
+        # Histogram-based metrics polling state (matches vllm:cache_hit_rate rule)
+        self._last_prompt_sum = 0.0
+        self._last_computed_sum = 0.0
+
         self._metrics_thread = None
 
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.SUB)
 
     def _parse_metric(self, metrics_text: str, metric_name: str) -> float:
-        """Extract a metric value from Prometheus text format."""
-        pattern = rf'^{re.escape(metric_name)}\{{[^}}]*\}}\s+([0-9.e+-]+)'
+        """Extract and sum all instances of a metric from Prometheus text format.
+
+        Handles metrics with or without labels and sums across all label
+        combinations (e.g. multiple model_name or instance labels).
+        """
+        pattern = rf'^{re.escape(metric_name)}(?:\{{[^}}]*\}})?\s+([0-9.e+-]+)'
+        total = 0.0
         for line in metrics_text.split('\n'):
             match = re.match(pattern, line)
             if match:
-                return float(match.group(1))
-        return 0.0
+                total += float(match.group(1))
+        return total
 
     def _poll_metrics(self):
-        """Background thread to poll Prometheus metrics for cache hits."""
+        """Background thread to poll Prometheus metrics.
+
+        Tracks two complementary views:
+        1. Counter-based: vllm:prefix_cache_hits_total / queries_total
+           (legacy, per-scheduler-step granularity)
+        2. Histogram-based: request_prompt_tokens_sum / request_prefill_kv_computed_tokens_sum
+           (matches the vllm:cache_hit_rate recording rule used by the Grafana dashboard)
+
+        The histogram approach feeds the SlidingWindowEfficiency tracker so
+        the observer's efficiency % matches what the dashboard shows.
+        """
         metrics_url = f"http://{self.host}:{self.metrics_port}/metrics"
 
         while self.running:
@@ -177,15 +283,14 @@ class KVEventObserver:
                 with urllib.request.urlopen(metrics_url, timeout=2) as resp:
                     metrics_text = resp.read().decode('utf-8')
 
+                # --- Counter-based cache hits (legacy) ---
                 hits = self._parse_metric(metrics_text, 'vllm:prefix_cache_hits_total')
                 queries = self._parse_metric(metrics_text, 'vllm:prefix_cache_queries_total')
 
-                # Calculate deltas
                 hit_delta = hits - self._last_hits
                 query_delta = queries - self._last_queries
 
                 if hit_delta > 0:
-                    # Cache hit detected!
                     self.stats.record_cache_hit(int(hit_delta), int(query_delta))
                     if self.verbose:
                         hit_rate = (hit_delta / query_delta * 100) if query_delta > 0 else 0
@@ -193,11 +298,41 @@ class KVEventObserver:
                             f"✅ [CACHE HIT] tokens={int(hit_delta):4d} queried={int(query_delta):4d} hit_rate={hit_rate:.0f}%"
                         )
                 elif query_delta > 0:
-                    # Queries happened but no hits (cache miss)
                     self.stats.record_cache_hit(0, int(query_delta))
 
                 self._last_hits = hits
                 self._last_queries = queries
+
+                # --- Histogram-based efficiency (matches recording rule) ---
+                # Same formula as vllm:cache_hit_rate:
+                #   cached = prompt_tokens - kv_computed_tokens
+                #   efficiency = cached / prompt_tokens
+                prompt_sum = self._parse_metric(
+                    metrics_text, 'vllm:request_prompt_tokens_sum'
+                )
+                computed_sum = self._parse_metric(
+                    metrics_text, 'vllm:request_prefill_kv_computed_tokens_sum'
+                )
+
+                prompt_delta = prompt_sum - self._last_prompt_sum
+                computed_delta = computed_sum - self._last_computed_sum
+
+                if prompt_delta > 0:
+                    cached_delta = prompt_delta - computed_delta
+                    self.efficiency.add_sample(
+                        int(max(0, cached_delta)), int(prompt_delta)
+                    )
+                    if self.verbose:
+                        eff = self.efficiency.get_efficiency()
+                        print(
+                            f"📊 [EFFICIENCY] {eff:.1f}% "
+                            f"(cached={cached_delta:.0f} prompt={prompt_delta:.0f} "
+                            f"window={self.efficiency.window_seconds}s "
+                            f"samples={self.efficiency.sample_count})"
+                        )
+
+                self._last_prompt_sum = prompt_sum
+                self._last_computed_sum = computed_sum
 
             except Exception as e:
                 if self.verbose:
@@ -221,6 +356,7 @@ class KVEventObserver:
 
         if self.metrics_port:
             print(f"[KV Observer] Polling metrics at http://{self.host}:{self.metrics_port}/metrics")
+            print(f"[KV Observer] Efficiency window: {self.efficiency.window_seconds}s")
             # Initialize baseline metrics
             try:
                 metrics_url = f"http://{self.host}:{self.metrics_port}/metrics"
@@ -228,7 +364,18 @@ class KVEventObserver:
                     metrics_text = resp.read().decode('utf-8')
                 self._last_hits = self._parse_metric(metrics_text, 'vllm:prefix_cache_hits_total')
                 self._last_queries = self._parse_metric(metrics_text, 'vllm:prefix_cache_queries_total')
-                print(f"[KV Observer] ✓ Baseline: hits={self._last_hits:.0f} queries={self._last_queries:.0f}")
+                self._last_prompt_sum = self._parse_metric(
+                    metrics_text, 'vllm:request_prompt_tokens_sum'
+                )
+                self._last_computed_sum = self._parse_metric(
+                    metrics_text, 'vllm:request_prefill_kv_computed_tokens_sum'
+                )
+                print(
+                    f"[KV Observer] ✓ Baseline: hits={self._last_hits:.0f} "
+                    f"queries={self._last_queries:.0f} "
+                    f"prompt_sum={self._last_prompt_sum:.0f} "
+                    f"computed_sum={self._last_computed_sum:.0f}"
+                )
             except Exception as e:
                 print(f"[KV Observer] ⚠ Could not get baseline metrics: {e}")
 
@@ -427,11 +574,12 @@ class KVEventObserver:
 
                         if batches_received % 20 == 0 and not self.verbose:
                             summary = self.stats.summary()
+                            eff = self.efficiency.get_efficiency()
                             print(f"[{batches_received:5d} batches] "
                                   f"Stored: {summary['stored_blocks']:4d} | "
                                   f"Removed: {summary['evicted_blocks']:4d} | "
                                   f"Net: {summary['net_blocks']:4d} | "
-                                  f"Hashes: {summary['unique_hashes_current']} | "
+                                  f"Efficiency: {eff:.1f}% | "
                                   f"Seq: {summary['last_seq']}")
                 except zmq.Again:
                     # Timeout, continue loop
@@ -450,6 +598,9 @@ class KVEventObserver:
         print("[KV Observer] Final Statistics:")
         for key, value in self.stats.summary().items():
             print(f"  {key}: {value}")
+        eff = self.efficiency.get_efficiency()
+        n = self.efficiency.sample_count
+        print(f"  window_efficiency: {eff:.1f}% ({n} samples in {self.efficiency.window_seconds}s window)")
 
         if self._output_handle:
             self._output_handle.close()
@@ -457,6 +608,318 @@ class KVEventObserver:
         self.socket.close()
         self.context.term()
         print("[KV Observer] Stopped")
+
+
+def run_self_test():
+    """Validate the SlidingWindowEfficiency calculation with known scenarios.
+
+    Test 1 – Zero reuse:   all tokens recomputed → efficiency must be 0%.
+    Test 2 – Perfect reuse: all tokens cached    → efficiency must be 100%.
+
+    These are deterministic unit-style tests that exercise the same sliding-
+    window logic that the observer uses when polling live histogram metrics.
+    They do NOT require a running vLLM worker.
+    """
+    print("=" * 60)
+    print("KV Event Observer – Sliding Window Efficiency Self-Test")
+    print("=" * 60)
+
+    passed = 0
+    failed = 0
+
+    # ------------------------------------------------------------------
+    # Test 1: No KV cache reuse (efficiency = 0%)
+    # Every sample: hit_tokens=0, query_tokens>0  →  0 / total = 0%
+    # ------------------------------------------------------------------
+    print("\n--- Test 1: No KV Cache Reuse (expect 0% efficiency) ---")
+    eff = SlidingWindowEfficiency(window_seconds=10.0)
+    now = time.time()
+    for i in range(10):
+        # All tokens were recomputed, zero served from cache
+        eff.add_sample(hit_tokens=0, query_tokens=100, timestamp=now + i)
+    result = eff.get_efficiency()
+    if abs(result) < 0.01:
+        print(f"  ✅ PASS: efficiency = {result:.1f}% (expected 0%)")
+        passed += 1
+    else:
+        print(f"  ❌ FAIL: efficiency = {result:.1f}% (expected 0%)")
+        failed += 1
+
+    # ------------------------------------------------------------------
+    # Test 2: Perfect KV cache reuse (efficiency = 100%)
+    # Every sample: hit_tokens == query_tokens  →  total / total = 100%
+    # ------------------------------------------------------------------
+    print("\n--- Test 2: Perfect KV Cache Reuse (expect 100% efficiency) ---")
+    eff = SlidingWindowEfficiency(window_seconds=10.0)
+    now = time.time()
+    for i in range(10):
+        # All tokens served from cache
+        eff.add_sample(hit_tokens=100, query_tokens=100, timestamp=now + i)
+    result = eff.get_efficiency()
+    if abs(result - 100.0) < 0.01:
+        print(f"  ✅ PASS: efficiency = {result:.1f}% (expected 100%)")
+        passed += 1
+    else:
+        print(f"  ❌ FAIL: efficiency = {result:.1f}% (expected 100%)")
+        failed += 1
+
+    # ------------------------------------------------------------------
+    # Test 3: 50% reuse
+    # ------------------------------------------------------------------
+    print("\n--- Test 3: 50% Reuse (expect 50% efficiency) ---")
+    eff = SlidingWindowEfficiency(window_seconds=10.0)
+    now = time.time()
+    for i in range(10):
+        eff.add_sample(hit_tokens=50, query_tokens=100, timestamp=now + i)
+    result = eff.get_efficiency()
+    if abs(result - 50.0) < 0.01:
+        print(f"  ✅ PASS: efficiency = {result:.1f}% (expected 50%)")
+        passed += 1
+    else:
+        print(f"  ❌ FAIL: efficiency = {result:.1f}% (expected 50%)")
+        failed += 1
+
+    # ------------------------------------------------------------------
+    # Test 4: Window eviction – old zero-reuse samples expire, only
+    # recent perfect-reuse samples remain → efficiency should be 100%.
+    # This proves the sliding window correctly drops stale data.
+    # ------------------------------------------------------------------
+    print("\n--- Test 4: Window Eviction (old 0% samples expire → 100%) ---")
+    eff = SlidingWindowEfficiency(window_seconds=5.0)
+    base = time.time()
+    # Old samples (before window): zero reuse — should be evicted
+    for i in range(5):
+        eff.add_sample(hit_tokens=0, query_tokens=100, timestamp=base - 10 + i)
+    # Recent samples (inside window): perfect reuse
+    for i in range(5):
+        eff.add_sample(hit_tokens=100, query_tokens=100, timestamp=base + i)
+    result = eff.get_efficiency()
+    if abs(result - 100.0) < 0.01:
+        print(f"  ✅ PASS: efficiency = {result:.1f}% (old zero-reuse samples evicted)")
+        passed += 1
+    else:
+        print(f"  ❌ FAIL: efficiency = {result:.1f}% (expected 100% after eviction)")
+        failed += 1
+
+    # ------------------------------------------------------------------
+    # Test 5: Empty window → 0%
+    # ------------------------------------------------------------------
+    print("\n--- Test 5: Empty Window (expect 0% efficiency) ---")
+    eff = SlidingWindowEfficiency(window_seconds=10.0)
+    result = eff.get_efficiency()
+    if abs(result) < 0.01:
+        print(f"  ✅ PASS: efficiency = {result:.1f}% (no samples)")
+        passed += 1
+    else:
+        print(f"  ❌ FAIL: efficiency = {result:.1f}% (expected 0%)")
+        failed += 1
+
+    # ------------------------------------------------------------------
+    # Test 6: Weighted mix – requests of different sizes.
+    # 300 tokens all cached + 100 tokens none cached → 300/400 = 75%
+    # ------------------------------------------------------------------
+    print("\n--- Test 6: Weighted Mix (expect 75% efficiency) ---")
+    eff = SlidingWindowEfficiency(window_seconds=10.0)
+    now = time.time()
+    eff.add_sample(hit_tokens=300, query_tokens=300, timestamp=now)
+    eff.add_sample(hit_tokens=0, query_tokens=100, timestamp=now + 1)
+    result = eff.get_efficiency()
+    if abs(result - 75.0) < 0.01:
+        print(f"  ✅ PASS: efficiency = {result:.1f}% (300/400 weighted)")
+        passed += 1
+    else:
+        print(f"  ❌ FAIL: efficiency = {result:.1f}% (expected 75%)")
+        failed += 1
+
+    # ------------------------------------------------------------------
+    print("\n" + "=" * 60)
+    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
+    print("=" * 60)
+
+    return failed == 0
+
+
+def run_live_test(api_url: str, metrics_url: str, model: str, num_unique: int = 5, num_repeat: int = 10):
+    """End-to-end integration test against a running vLLM worker.
+
+    Sends controlled request patterns and verifies the histogram-based
+    efficiency from the actual Prometheus metrics:
+
+      Test 1: Unique random prompts  → efficiency should be ~0%
+      Test 2: Identical repeated prompt → efficiency should be ~100%
+
+    This reads the same vllm:request_prompt_tokens_sum and
+    vllm:request_prefill_kv_computed_tokens_sum histograms that the
+    recording rule uses, so a PASS here means the Grafana dashboard
+    will show the correct values.
+
+    Requirements:
+      - A running vLLM worker with prefix caching enabled
+      - The worker's Prometheus metrics endpoint reachable at metrics_url
+      - An API endpoint (OpenAI-compatible) reachable at api_url
+
+    NOTE: Run this when the worker is idle (no other traffic), otherwise
+    concurrent requests will pollute the deltas.
+    """
+    import random
+    import string
+    import uuid
+
+    def _parse_metric_sum(text: str, name: str) -> float:
+        pattern = rf'^{re.escape(name)}(?:\{{[^}}]*\}})?\s+([0-9.e+-]+)'
+        total = 0.0
+        for line in text.split('\n'):
+            match = re.match(pattern, line)
+            if match:
+                total += float(match.group(1))
+        return total
+
+    def poll_histograms() -> tuple[float, float]:
+        """Return (prompt_tokens_sum, kv_computed_tokens_sum) from the worker."""
+        url = metrics_url.rstrip('/') + '/metrics'
+        with urllib.request.urlopen(url, timeout=5) as resp:
+            text = resp.read().decode()
+        p = _parse_metric_sum(text, 'vllm:request_prompt_tokens_sum')
+        c = _parse_metric_sum(text, 'vllm:request_prefill_kv_computed_tokens_sum')
+        return p, c
+
+    def send_completion(prompt: str, max_tokens: int = 1):
+        """Send one completion request (max_tokens=1 so we only measure prefill)."""
+        url = api_url.rstrip('/') + '/v1/completions'
+        payload = json.dumps({
+            "model": model,
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+            "temperature": 0.0,
+        }).encode()
+        req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read().decode())
+
+    def random_prompt(num_words: int = 80) -> str:
+        """Generate a random prompt that shares no prefix with any other."""
+        uid = uuid.uuid4().hex
+        words = [''.join(random.choices(string.ascii_lowercase, k=random.randint(4, 8)))
+                 for _ in range(num_words)]
+        return f"[{uid}] " + " ".join(words)
+
+    # A long deterministic prompt for the perfect-reuse test.
+    # ~200 tokens → ~12 cache blocks at block_size=16.
+    reuse_prompt = (
+        "The following is a detailed technical explanation about how KV cache "
+        "works in transformer-based large language models. The key-value cache "
+        "stores previously computed attention keys and values to avoid redundant "
+        "computation during autoregressive generation. When a new token is generated, "
+        "the model only needs to compute the key and value for the new token, "
+        "while reusing the cached keys and values from all previous tokens. "
+        "This significantly reduces the computational cost of generation, "
+        "especially for long sequences. The KV cache typically grows linearly "
+        "with the sequence length and the number of attention layers. "
+        "Prefix caching extends this concept by sharing KV cache entries across "
+        "multiple requests that share a common prompt prefix, which is extremely "
+        "beneficial for workloads with repeated system prompts or similar queries."
+    )
+
+    print("=" * 60)
+    print("KV Cache Efficiency – Live Integration Test")
+    print("=" * 60)
+    print(f"  API:     {api_url}")
+    print(f"  Metrics: {metrics_url}")
+    print(f"  Model:   {model}")
+    print()
+    print("  ⚠  Run this while the worker is IDLE (no other traffic).")
+
+    passed = 0
+    failed = 0
+
+    # ==================================================================
+    # Test 1: No reuse – every prompt is unique
+    # ==================================================================
+    print("\n--- Test 1: No KV Cache Reuse (unique prompts → ~0%) ---")
+    try:
+        p_before, c_before = poll_histograms()
+        print(f"  Baseline: prompt_sum={p_before:.0f}  computed_sum={c_before:.0f}")
+
+        print(f"  Sending {num_unique} unique random prompts...")
+        for i in range(num_unique):
+            send_completion(random_prompt())
+            print(f"    [{i + 1}/{num_unique}] ✓")
+
+        time.sleep(2)  # let metrics flush
+        p_after, c_after = poll_histograms()
+
+        p_delta = p_after - p_before
+        c_delta = c_after - c_before
+        cached = p_delta - c_delta
+        efficiency = (cached / p_delta * 100) if p_delta > 0 else 0.0
+
+        print(f"\n  Results:")
+        print(f"    prompt_tokens  Δ {p_delta:.0f}")
+        print(f"    computed_tokens Δ {c_delta:.0f}")
+        print(f"    cached_tokens  Δ {cached:.0f}")
+        print(f"    efficiency:      {efficiency:.1f}%")
+
+        if efficiency < 15.0:
+            print(f"\n  ✅ PASS (efficiency {efficiency:.1f}% < 15%)")
+            passed += 1
+        else:
+            print(f"\n  ❌ FAIL (efficiency {efficiency:.1f}% >= 15%)")
+            failed += 1
+
+    except Exception as e:
+        print(f"\n  ❌ ERROR: {e}")
+        failed += 1
+
+    # ==================================================================
+    # Test 2: Perfect reuse – identical prompt after priming
+    # ==================================================================
+    print("\n--- Test 2: Perfect KV Cache Reuse (repeated prompt → ~100%) ---")
+    try:
+        # Prime: send once so blocks are in cache
+        print("  Priming cache with initial request...")
+        send_completion(reuse_prompt)
+        time.sleep(2)
+
+        # Baseline AFTER the prime so it doesn't count as a miss
+        p_before, c_before = poll_histograms()
+        print(f"  Baseline (post-prime): prompt_sum={p_before:.0f}  computed_sum={c_before:.0f}")
+
+        print(f"  Sending {num_repeat} identical prompts...")
+        for i in range(num_repeat):
+            send_completion(reuse_prompt)
+            print(f"    [{i + 1}/{num_repeat}] ✓")
+
+        time.sleep(2)
+        p_after, c_after = poll_histograms()
+
+        p_delta = p_after - p_before
+        c_delta = c_after - c_before
+        cached = p_delta - c_delta
+        efficiency = (cached / p_delta * 100) if p_delta > 0 else 0.0
+
+        print(f"\n  Results:")
+        print(f"    prompt_tokens  Δ {p_delta:.0f}")
+        print(f"    computed_tokens Δ {c_delta:.0f}")
+        print(f"    cached_tokens  Δ {cached:.0f}")
+        print(f"    efficiency:      {efficiency:.1f}%")
+        print(f"    (may be <100% due to block-size alignment)")
+
+        if efficiency > 80.0:
+            print(f"\n  ✅ PASS (efficiency {efficiency:.1f}% > 80%)")
+            passed += 1
+        else:
+            print(f"\n  ❌ FAIL (efficiency {efficiency:.1f}% <= 80%)")
+            failed += 1
+
+    except Exception as e:
+        print(f"\n  ❌ ERROR: {e}")
+        failed += 1
+
+    # ==================================================================
+    print("\n" + "=" * 60)
+    print(f"Results: {passed} passed, {failed} failed out of {passed + failed}")
+    print("=" * 60)
+    return failed == 0
 
 
 def main():
@@ -467,8 +930,11 @@ Examples:
   # Monitor worker 0 (ZMQ events only):
   python kv_event_observer.py -p 20080 -v
   
-  # Monitor with cache hit detection (polls Prometheus metrics):
+  # Monitor with cache hit detection and efficiency tracking:
   python kv_event_observer.py -p 20080 -v -m 18081
+  
+  # Custom efficiency window (default 30s):
+  python kv_event_observer.py -p 20080 -v -m 18081 --window 10
   
   # Monitor worker 1:
   python kv_event_observer.py -p 20081 -v -m 18082
@@ -478,11 +944,18 @@ Examples:
   
   # Run for 60 seconds:
   python kv_event_observer.py -p 20080 -d 60
+  
+  # Run self-test (no worker needed):
+  python kv_event_observer.py --test
+  
+  # Run live integration test against a running worker:
+  python kv_event_observer.py --test-live -m 18081 --model my-model
 
 Event types:
-  📦 STORED   - Block committed to prefix cache (ZMQ)
-  🗑️ REMOVED  - Block evicted from cache (ZMQ)
-  ✅ CACHE HIT - Tokens served from cache (metrics polling)
+  📦 STORED     - Block committed to prefix cache (ZMQ)
+  🗑️ REMOVED    - Block evicted from cache (ZMQ)
+  ✅ CACHE HIT  - Tokens served from cache (counter metrics)
+  📊 EFFICIENCY - Sliding window KV cache efficiency (histogram metrics)
 """)
     parser.add_argument("--host", "-H", default="localhost", help="Worker host (default: localhost)")
     parser.add_argument("--port", "-p", type=int, default=20080, help="KV event ZMQ port (default: 20080)")
@@ -493,8 +966,42 @@ Event types:
     parser.add_argument("--verbose", "-v", action="store_true", help="Print each event")
     parser.add_argument("--output", "-o", help="Output file (JSONL format)")
     parser.add_argument("--duration", "-d", type=float, help="Run duration in seconds")
+    parser.add_argument("--window",
+                        "-w",
+                        type=float,
+                        default=30.0,
+                        help="Sliding window size in seconds for efficiency calculation (default: 30)")
+    parser.add_argument("--test",
+                        action="store_true",
+                        help="Run self-test to verify efficiency calculation (no worker needed)")
+    parser.add_argument("--test-live",
+                        action="store_true",
+                        help="Run live integration test against a running worker (requires --metrics-port and --model)")
+    parser.add_argument("--api-url",
+                        default="http://localhost:8000",
+                        help="API URL for live test requests (default: http://localhost:8000)")
+    parser.add_argument("--model",
+                        default=None,
+                        help="Model name for live test requests (e.g., deepseek-ai/DeepSeek-R1-Distill-Llama-8B)")
 
     args = parser.parse_args()
+
+    # Self-test mode: validate the sliding window logic and exit
+    if args.test:
+        success = run_self_test()
+        sys.exit(0 if success else 1)
+
+    # Live integration test: send real requests, check real metrics
+    if args.test_live:
+        if not args.metrics_port:
+            print("ERROR: --metrics-port (-m) is required for --test-live")
+            sys.exit(1)
+        if not args.model:
+            print("ERROR: --model is required for --test-live")
+            sys.exit(1)
+        metrics_url = f"http://{args.host}:{args.metrics_port}"
+        success = run_live_test(args.api_url, metrics_url, args.model)
+        sys.exit(0 if success else 1)
 
     observer = KVEventObserver(
         host=args.host,
@@ -502,6 +1009,7 @@ Event types:
         verbose=args.verbose,
         output_file=args.output,
         metrics_port=args.metrics_port,
+        window_seconds=args.window,
     )
 
     signal.signal(signal.SIGINT, lambda s, f: setattr(observer, 'running', False))

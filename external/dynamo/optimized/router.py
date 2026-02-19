@@ -1333,7 +1333,7 @@ See PARAMETERS.md for full parameter documentation.
     return parser.parse_args()
 
 
-@dynamo_worker(static=False)
+@dynamo_worker()
 async def worker(runtime: DistributedRuntime):
     # Parse CLI and load config
     args = parse_args()
@@ -1341,7 +1341,6 @@ async def worker(runtime: DistributedRuntime):
     config = apply_cli_overrides(config, args)
 
     component = runtime.namespace("dynamo").component("router")
-    await component.create_service()
     logger.info("Initializing Optimized Thompson Sampling Router (Prometheus metrics)")
 
     # Extract config values with nested access

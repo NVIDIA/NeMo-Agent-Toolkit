@@ -103,7 +103,7 @@ llms:
   eval_llm:
     _type: dynamo
     model_name: llama-3.3-70b
-    base_url: http://localhost:8099/v1
+    base_url: http://localhost:8000/v1
     api_key: dummy
     # _type: nim
     # model_name: meta/llama-3.3-70b-instruct

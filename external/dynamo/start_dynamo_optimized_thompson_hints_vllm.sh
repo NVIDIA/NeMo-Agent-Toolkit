@@ -49,6 +49,16 @@
 
 set -euo pipefail
 
+# Load environment variables from .env file if present
+# Supports: DYNAMO_FROM_SOURCE, DYNAMO_IMAGE, and all DYNAMO_* overrides
+SCRIPT_DIR_EARLY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${SCRIPT_DIR_EARLY}/.env" ]; then
+    set -a
+    # Strip inline comments before sourcing (bash doesn't handle them natively)
+    source <(grep -v '^\s*#' "${SCRIPT_DIR_EARLY}/.env" | sed 's/[[:space:]]*#.*$//')
+    set +a
+fi
+
 # Configuration Variables (can be overridden via environment variables)
 # See env.example for documentation on each variable
 CONTAINER_NAME="dynamo-vllm"
@@ -62,38 +72,69 @@ HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
 WORKER_METRICS_PORT="${DYNAMO_WORKER_METRICS_PORT:-18081}"
 ROUTER_METRICS_PORT="${DYNAMO_ROUTER_METRICS_PORT:-18090}"
 PROCESSOR_METRICS_PORT="${DYNAMO_PROCESSOR_METRICS_PORT:-18091}"
-MODEL="/workspace/models/Llama-3.3-70B-Instruct"
-SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
+# SERVED_MODEL_NAME and MODEL are derived below after DYNAMO_MODEL_DIR is validated
+SERVED_MODEL_NAME=""  # set after validation
 
 # ============================================================================
-# MultiLRU Configuration Logic
+# Image and MultiLRU Configuration Logic
 # ============================================================================
-# Default behavior (standard vLLM 0.7.1 image):
-#   - Uses router.py and processor.py (with @dynamo_worker(static=False))
-#   - Uses standard vLLM scheduler (no MultiLRU)
-#   - Works with nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.7.1
+# Three modes (controlled via .env or environment variables):
 #
-# To enable MultiLRU (requires custom-built image):
-#   export DYNAMO_USE_MULTILRU=true
-#   export DYNAMO_VLLM_IMAGE=dynamo-multi-lru:latest
-#   bash start_dynamo_optimized_thompson_hints_vllm.sh
+# 1. Source-built image (DYNAMO_FROM_SOURCE=true):
+#      - Uses DYNAMO_IMAGE (e.g. "dynamo-vllm-source:main") built from the
+#        dynamo main branch at DYNAMO_SOURCE_DIR.
+#      - Forces use of multilru scripts (processor_multilru.py / router_multilru.py).
+#      - Build the image first:
+#          cd $DYNAMO_SOURCE_DIR
+#          python container/render.py --framework=vllm --target=runtime --output-short-filename
+#          docker build -t dynamo-vllm-source:main -f container/rendered.Dockerfile .
+#
+# 2. Custom MultiLRU image, NGC-based (DYNAMO_USE_MULTILRU=true):
+#      - Uses DYNAMO_VLLM_IMAGE (default: "dynamo-multi-lru:latest").
+#      - Uses multilru scripts.
+#
+# 3. Standard NGC image (default):
+#      - Uses nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.9.0
+#      - Uses standard router.py / processor.py scripts.
 # ============================================================================
 
-# Enforce safe defaults: only use multilru if EXPLICITLY enabled
-if [ "${DYNAMO_USE_MULTILRU:-}" != "true" ]; then
-    # Not explicitly set to true - use standard configuration
-    DYNAMO_USE_MULTILRU="false"
-    # If image wasn't explicitly set to custom multilru image, use standard
-    if [ "${DYNAMO_VLLM_IMAGE:-}" != "dynamo-multi-lru:latest" ]; then
-        IMAGE="nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.7.1"
-    else
-        IMAGE="${DYNAMO_VLLM_IMAGE}"
+if [ "${DYNAMO_FROM_SOURCE:-false}" = "true" ]; then
+    # Source-built image mode: use DYNAMO_IMAGE from .env
+    if [ -z "${DYNAMO_IMAGE:-}" ]; then
+        echo "ERROR: DYNAMO_FROM_SOURCE=true but DYNAMO_IMAGE is not set."
+        echo "  Set DYNAMO_IMAGE in .env (e.g. DYNAMO_IMAGE=dynamo-vllm-source:main)"
+        exit 1
     fi
-else
-    # Explicitly enabled - use multilru configuration
+    IMAGE="${DYNAMO_IMAGE}"
     DYNAMO_USE_MULTILRU="true"
-    # Default to custom image if not specified
+
+    # Verify the image exists; offer build instructions if not
+    if ! docker image inspect "${IMAGE}" > /dev/null 2>&1; then
+        echo "✗ ERROR: Source image '${IMAGE}' not found."
+        echo ""
+        echo "Build it from the dynamo main branch:"
+        if [ -n "${DYNAMO_SOURCE_DIR:-}" ]; then
+            echo "  cd ${DYNAMO_SOURCE_DIR}"
+        else
+            echo "  cd /path/to/dynamo   # set DYNAMO_SOURCE_DIR in .env to customise"
+        fi
+        echo "  python container/render.py --framework=vllm --target=runtime --output-short-filename"
+        echo "  docker build -t ${IMAGE} -f container/rendered.Dockerfile ."
+        exit 1
+    fi
+    echo "✓ Using source-built image: ${IMAGE}"
+elif [ "${DYNAMO_USE_MULTILRU:-}" = "true" ]; then
+    # Explicitly enabled MultiLRU with NGC-based custom image
+    DYNAMO_USE_MULTILRU="true"
     IMAGE="${DYNAMO_VLLM_IMAGE:-dynamo-multi-lru:latest}"
+else
+    # Default: standard NGC image, no MultiLRU
+    DYNAMO_USE_MULTILRU="false"
+    if [ "${DYNAMO_VLLM_IMAGE:-}" != "dynamo-multi-lru:latest" ] && [ -n "${DYNAMO_VLLM_IMAGE:-}" ]; then
+        IMAGE="${DYNAMO_VLLM_IMAGE}"
+    else
+        IMAGE="nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.9.0"
+    fi
 fi
 
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
@@ -119,6 +160,28 @@ CONTAINER_GPU_INDICES=$(seq -s, 0 $((NUM_GPUS - 1)))
 
 # Calculate number of workers based on available GPUs and TP size
 NUM_WORKERS=$((NUM_GPUS / TP_SIZE))
+
+# Validate GPU/TP sizing
+if [ "$TP_SIZE" -le 0 ] 2>/dev/null; then
+    echo "ERROR: TP_SIZE must be a positive integer (got: '$TP_SIZE')" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
+if [ "$NUM_GPUS" -lt "$TP_SIZE" ]; then
+    echo "ERROR: Not enough GPUs for the requested TP size (NUM_GPUS=$NUM_GPUS < TP_SIZE=$TP_SIZE)" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
+if [ $((NUM_GPUS % TP_SIZE)) -ne 0 ]; then
+    echo "ERROR: NUM_GPUS ($NUM_GPUS) is not divisible by TP_SIZE ($TP_SIZE)" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE  NUM_WORKERS would be $NUM_WORKERS" >&2
+    exit 1
+fi
+if [ "$NUM_WORKERS" -le 0 ]; then
+    echo "ERROR: NUM_WORKERS is 0 — no workers can be started with this GPU/TP configuration" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
 
 # vLLM-specific: Enable KVBM event publishing for radix tree observability
 # Each worker needs a unique KV event port - configured via DYN_VLLM_KV_EVENT_PORT
@@ -158,7 +221,11 @@ if [ -d "${DYNAMO_MODEL_DIR}" ]; then
         exit 1
     fi
 fi
-LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
+# Resolve LOCAL_MODEL_DIR to an absolute path (expands ~ and relative paths)
+LOCAL_MODEL_DIR="$(eval echo "${DYNAMO_MODEL_DIR}")"
+# Container-internal model path: always a clean /workspace/models/<name>
+MODEL="/workspace/models/$(basename "$LOCAL_MODEL_DIR")"
+SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-$(basename "$LOCAL_MODEL_DIR")}"
 
 # Repository directory - auto-detect from script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -167,7 +234,11 @@ CUSTOM_DYNAMO_DIR="${SCRIPT_DIR}/optimized"
 echo "========================================================="
 echo "Dynamo vLLM with OPTIMIZED Thompson Sampling Router"
 echo "========================================================="
-if [ "$DYNAMO_USE_MULTILRU" = "true" ]; then
+if [ "${DYNAMO_FROM_SOURCE:-false}" = "true" ]; then
+    echo "Configuration: Source-Built Image Mode (DYNAMO_FROM_SOURCE=true)"
+    echo "  Image: $IMAGE (built from dynamo main branch)"
+    echo "  Scripts: multilru (processor_multilru.py / router_multilru.py)"
+elif [ "$DYNAMO_USE_MULTILRU" = "true" ]; then
     echo "Configuration: MultiLRU Mode (custom image: $IMAGE)"
 else
     echo "Configuration: Standard Mode (image: $IMAGE)"
@@ -363,7 +434,9 @@ if [ -z "${HF_TOKEN:-}" ]; then
     else
         echo "✗ Local model NOT found and no HF_TOKEN to download it"
         echo ""
-        read -p "Please enter your HuggingFace token (or press Enter to skip): " HF_TOKEN
+        printf "Please enter your HuggingFace token (or press Enter to skip): "
+        read -s -r HF_TOKEN
+        echo ""
         if [ -z "$HF_TOKEN" ]; then
             echo "WARNING: Proceeding without HF_TOKEN."
             HF_TOKEN="dummy"
