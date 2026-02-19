@@ -1049,6 +1049,145 @@ class TestDynamoTransport:
 
         DynamoPrefixContext.clear()
 
+    async def test_transport_uses_auto_latency_sensitivity(self):
+        """When prediction has latency_sensitivity and no manual decorator, use it."""
+        import httpx
+        import json
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+
+        mock_prediction = LLMCallPrediction(
+            remaining_calls=PredictionMetrics(mean=5.0, p50=5.0, p90=7.0),
+            output_tokens=PredictionMetrics(mean=200.0, p50=200.0, p90=300.0),
+            interarrival_ms=PredictionMetrics(mean=100.0, p50=100.0, p90=150.0),
+            latency_sensitivity=4,
+        )
+
+        mock_lookup = MagicMock()
+        mock_lookup.find = MagicMock(return_value=mock_prediction)
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10, osl=512, iat=250,
+            prediction_lookup=mock_lookup,
+            max_sensitivity=1000,
+        )
+
+        DynamoPrefixContext.set("auto-sensitivity-test")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+        agent_hints = body["nvext"]["agent_hints"]
+
+        # Auto sensitivity=4 should be used (no manual decorator active)
+        assert agent_hints["latency_sensitivity"] == 4.0
+        assert agent_hints["priority"] == 1000 - 4
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_manual_sensitivity_overrides_auto(self):
+        """When @latency_sensitive decorator is active, ignore prediction's auto sensitivity."""
+        import httpx
+        import json
+
+        from nat.builder.context import Context
+        from nat.llm.dynamo_llm import _DynamoTransport
+        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+
+        mock_prediction = LLMCallPrediction(
+            remaining_calls=PredictionMetrics(mean=5.0, p50=5.0, p90=7.0),
+            output_tokens=PredictionMetrics(mean=200.0, p50=200.0, p90=300.0),
+            interarrival_ms=PredictionMetrics(mean=100.0, p50=100.0, p90=150.0),
+            latency_sensitivity=4,
+        )
+
+        mock_lookup = MagicMock()
+        mock_lookup.find = MagicMock(return_value=mock_prediction)
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10, osl=512, iat=250,
+            prediction_lookup=mock_lookup,
+            max_sensitivity=1000,
+        )
+
+        DynamoPrefixContext.set("manual-override-test")
+
+        # Simulate @latency_sensitive(7) being active
+        ctx = Context.get()
+        with ctx.push_latency_sensitivity(7):
+            request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+            await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+        agent_hints = body["nvext"]["agent_hints"]
+
+        # Manual sensitivity=7 should win over auto sensitivity=4
+        assert agent_hints["latency_sensitivity"] == 7.0
+        assert agent_hints["priority"] == 1000 - 7
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_no_auto_sensitivity_when_prediction_is_none(self):
+        """When prediction has no latency_sensitivity, use context default."""
+        import httpx
+        import json
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+
+        mock_prediction = LLMCallPrediction(
+            remaining_calls=PredictionMetrics(mean=5.0, p50=5.0, p90=7.0),
+            output_tokens=PredictionMetrics(mean=200.0, p50=200.0, p90=300.0),
+            interarrival_ms=PredictionMetrics(mean=100.0, p50=100.0, p90=150.0),
+            # latency_sensitivity=None (default)
+        )
+
+        mock_lookup = MagicMock()
+        mock_lookup.find = MagicMock(return_value=mock_prediction)
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10, osl=512, iat=250,
+            prediction_lookup=mock_lookup,
+            max_sensitivity=1000,
+        )
+
+        DynamoPrefixContext.set("no-auto-test")
+
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+        agent_hints = body["nvext"]["agent_hints"]
+
+        # Should use context default (2)
+        assert agent_hints["latency_sensitivity"] == 2.0
+        assert agent_hints["priority"] == 1000 - 2
+
+        DynamoPrefixContext.clear()
+
     async def test_transport_raises_when_latency_exceeds_max(self):
         """Test that ValueError is raised when latency_sensitivity exceeds max_sensitivity."""
         import httpx
