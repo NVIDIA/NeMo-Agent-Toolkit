@@ -33,8 +33,8 @@ from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.span import MimeTypes
 from nat.data_models.span import Span
 from nat.data_models.span import SpanAttributes
+from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.observability.exporter.span_exporter import SpanExporter
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
 
 
 def create_test_intermediate_step(parent_id="root",

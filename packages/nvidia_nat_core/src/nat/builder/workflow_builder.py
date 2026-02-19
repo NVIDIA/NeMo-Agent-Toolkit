@@ -19,6 +19,7 @@ import inspect
 import logging
 import typing
 import warnings
+from abc import ABC
 from collections.abc import Sequence
 from contextlib import AbstractAsyncContextManager
 from contextlib import AsyncExitStack
@@ -27,6 +28,7 @@ from typing import cast
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
+from nat.builder.builder import EvalBuilder
 from nat.builder.builder import UserManagerHolder
 from nat.builder.child_builder import ChildBuilder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
@@ -88,9 +90,19 @@ from nat.middleware.function_middleware import FunctionMiddleware
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
-from nat.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
-from nat.profiler.utils import detect_llm_frameworks_in_build_fn
 from nat.utils.type_utils import override
+
+try:
+    from nat.plugins.eval.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
+    from nat.plugins.eval.profiler.utils import detect_llm_frameworks_in_build_fn
+except ImportError:
+
+    def detect_llm_frameworks_in_build_fn(registration) -> list[LLMFrameworkEnum]:
+        return []
+
+    def chain_wrapped_build_fn(original_build_fn, workflow_llms, function_frameworks):  # noqa: ARG001
+        return original_build_fn
+
 
 logger = logging.getLogger(__name__)
 
@@ -1453,6 +1465,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
                 # Instantiate a function
                 elif component_instance.component_group == ComponentGroup.FUNCTIONS:
                     config_obj = cast(FunctionBaseConfig, component_instance.config)
+                    if skip_workflow and component_instance.is_root:
+                        # Skip root workflow registration/build when requested.
+                        continue
                     registration = self._registry.get_function(type(config_obj))
                     if registration.is_per_user:
                         # Skip per-user functions as they will be built lazily by PerUserWorkflowBuilder
@@ -1604,3 +1619,7 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         async with cls(general_config=config.general) as builder:
             await builder.populate_builder(config)
             yield builder
+
+
+class WorkflowEvalBuilderBase(WorkflowBuilder, EvalBuilder, ABC):
+    """Core typed base for eval-capable workflow builders."""

@@ -594,6 +594,11 @@ wheels = [
 anthropic = [
     { name = "anthropic" },
 ]
+openai = [
+    { name = "aiofiles" },
+    { name = "openai" },
+    { name = "tiktoken" },
+]
 
 [[package]]
 name = "av"
@@ -5402,14 +5407,14 @@ source = { editable = "examples/agents" }
 dependencies = [
     { name = "nat-multi-frameworks" },
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-multi-frameworks", editable = "examples/frameworks/multi_frameworks" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
 ]
 
 [[package]]
@@ -5434,7 +5439,7 @@ dependencies = [
     { name = "flask" },
     { name = "langchain-core" },
     { name = "langgraph" },
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
     { name = "pandas" },
 ]
 
@@ -5444,7 +5449,7 @@ requires-dist = [
     { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-core" },
     { name = "langgraph", specifier = ">=0.0.10" },
-    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
 
@@ -5452,11 +5457,11 @@ requires-dist = [
 name = "nat-autogen-demo"
 source = { editable = "examples/frameworks/nat_autogen_demo" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["autogen", "mcp", "test"] },
+    { name = "nvidia-nat", extra = ["autogen", "eval", "mcp", "test"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["autogen", "mcp", "test"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["autogen", "eval", "mcp", "test"], editable = "." }]
 
 [[package]]
 name = "nat-automated-description-generation"
@@ -5509,13 +5514,13 @@ name = "nat-dpo-tic-tac-toe"
 source = { editable = "examples/finetuning/dpo_tic_tac_toe" }
 dependencies = [
     { name = "numpy" },
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "numpy" },
-    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
 ]
 
 [[package]]
@@ -5524,7 +5529,7 @@ source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "networkx" },
-    { name = "nvidia-nat", extra = ["langchain", "phoenix", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "phoenix", "test"] },
     { name = "openinference-instrumentation-langchain" },
 ]
 
@@ -5532,7 +5537,7 @@ dependencies = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = "~=4.13" },
     { name = "networkx", specifier = "~=3.4" },
-    { name = "nvidia-nat", extras = ["langchain", "phoenix", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "phoenix", "test"], editable = "." },
     { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
 ]
 
@@ -5731,11 +5736,11 @@ requires-dist = [
 name = "nat-react-benchmark-agent"
 source = { editable = "examples/dynamo_integration/react_benchmark_agent" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "test"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." }]
 
 [[package]]
 name = "nat-redis-example"
@@ -5751,22 +5756,22 @@ requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "phoenix", "redis
 name = "nat-retail-agent"
 source = { editable = "examples/safety_and_security/retail_agent" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "test"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." }]
 
 [[package]]
 name = "nat-rl-with-openpipe-art"
 source = { editable = "examples/finetuning/rl_with_openpipe_art" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
     { name = "nvidia-nat", extra = ["openpipe-art"], marker = "extra == 'extra-10-nvidia-nat-openpipe-art' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "openpipe-art", "test"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "openpipe-art", "test"], editable = "." }]
 
 [[package]]
 name = "nat-router-agent"
@@ -5865,13 +5870,13 @@ name = "nat-simple-calculator-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
 dependencies = [
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
 ]
 
 [[package]]
@@ -6007,37 +6012,37 @@ name = "nat-simple-web-query-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_web_query_eval" }
 dependencies = [
     { name = "nat-simple-web-query" },
-    { name = "nvidia-nat", extra = ["langchain", "profiling", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiling", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-web-query", editable = "examples/getting_started/simple_web_query" },
-    { name = "nvidia-nat", extras = ["langchain", "profiling", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "profiling", "test"], editable = "." },
 ]
 
 [[package]]
 name = "nat-strands-demo"
 source = { editable = "examples/frameworks/strands_demo" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["langchain", "profiling", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiling", "test"] },
     { name = "nvidia-nat", extra = ["strands"], marker = "extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai')" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["langchain", "profiling", "strands", "test"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "profiling", "strands", "test"], editable = "." }]
 
 [[package]]
 name = "nat-swe-bench"
 source = { editable = "examples/evaluation_and_profiling/swe_bench" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
     { name = "swebench" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "nvidia-nat", extras = ["langchain", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
     { name = "swebench", specifier = "==3.0.3" },
 ]
 
@@ -6317,6 +6322,9 @@ crewai = [
 data-flywheel = [
     { name = "nvidia-nat-data-flywheel" },
 ]
+eval = [
+    { name = "nvidia-nat-eval" },
+]
 examples = [
     { name = "nat-adk-demo" },
     { name = "nat-agents-examples" },
@@ -6390,9 +6398,10 @@ most = [
     { name = "nvidia-nat-adk" },
     { name = "nvidia-nat-agno" },
     { name = "nvidia-nat-autogen" },
-    { name = "nvidia-nat-core", extra = ["async-endpoints", "gunicorn", "pii-defense", "profiling"], marker = "extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-nat-core", extra = ["async-endpoints", "gunicorn", "pii-defense"], marker = "extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "nvidia-nat-crewai" },
     { name = "nvidia-nat-data-flywheel" },
+    { name = "nvidia-nat-eval", extra = ["profiling"], marker = "extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
     { name = "nvidia-nat-fastmcp" },
     { name = "nvidia-nat-langchain" },
     { name = "nvidia-nat-llama-index" },
@@ -6430,7 +6439,7 @@ pii-defense = [
     { name = "nvidia-nat-core", extra = ["pii-defense"] },
 ]
 profiling = [
-    { name = "nvidia-nat-core", extra = ["profiling"] },
+    { name = "nvidia-nat-eval", extra = ["profiling"] },
 ]
 ragaai = [
     { name = "nvidia-nat-ragaai" },
@@ -6549,14 +6558,16 @@ requires-dist = [
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", marker = "extra == 'core'", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'async-endpoints'", editable = "packages/nvidia_nat_core" },
-    { name = "nvidia-nat-core", extras = ["async-endpoints", "gunicorn", "pii-defense", "profiling"], marker = "extra == 'most'", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints", "gunicorn", "pii-defense"], marker = "extra == 'most'", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["gunicorn"], marker = "extra == 'gunicorn'", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["pii-defense"], marker = "extra == 'pii-defense'", editable = "packages/nvidia_nat_core" },
-    { name = "nvidia-nat-core", extras = ["profiling"], marker = "extra == 'profiling'", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-crewai", marker = "extra == 'crewai'", editable = "packages/nvidia_nat_crewai" },
     { name = "nvidia-nat-crewai", marker = "extra == 'most'", editable = "packages/nvidia_nat_crewai" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'most'", editable = "packages/nvidia_nat_data_flywheel" },
+    { name = "nvidia-nat-eval", marker = "extra == 'eval'", editable = "packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'most'", editable = "packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'profiling'", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'fastmcp'", editable = "packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'most'", editable = "packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
@@ -6595,7 +6606,7 @@ requires-dist = [
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "examples/documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "adk", "agno", "autogen", "core", "crewai", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
+provides-extras = ["a2a", "adk", "agno", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -6689,7 +6700,7 @@ source = { editable = "packages/nvidia_nat_autogen" }
 dependencies = [
     { name = "autogen-agentchat" },
     { name = "autogen-core" },
-    { name = "autogen-ext", extra = ["anthropic"] },
+    { name = "autogen-ext", extra = ["anthropic", "openai"] },
     { name = "nvidia-nat-core" },
 ]
 
@@ -6697,7 +6708,7 @@ dependencies = [
 requires-dist = [
     { name = "autogen-agentchat", specifier = "~=0.7" },
     { name = "autogen-core", specifier = "~=0.7" },
-    { name = "autogen-ext", extras = ["anthropic"], specifier = "~=0.7" },
+    { name = "autogen-ext", extras = ["anthropic", "openai"], specifier = "~=0.7" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
 ]
@@ -6711,7 +6722,6 @@ dependencies = [
     { name = "authlib" },
     { name = "click" },
     { name = "colorama" },
-    { name = "datasets" },
     { name = "expandvars" },
     { name = "fastapi" },
     { name = "flask" },
@@ -6722,7 +6732,6 @@ dependencies = [
     { name = "networkx" },
     { name = "numpy" },
     { name = "openinference-semantic-conventions" },
-    { name = "openpyxl" },
     { name = "optuna" },
     { name = "pandas" },
     { name = "pip" },
@@ -6736,7 +6745,6 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "pyyaml" },
-    { name = "ragas" },
     { name = "rich" },
     { name = "tabulate" },
     { name = "urllib3" },
@@ -6758,11 +6766,6 @@ pii-defense = [
     { name = "presidio-analyzer" },
     { name = "presidio-anonymizer" },
 ]
-profiling = [
-    { name = "matplotlib" },
-    { name = "prefixspan" },
-    { name = "scikit-learn" },
-]
 
 [package.metadata]
 requires-dist = [
@@ -6772,7 +6775,6 @@ requires-dist = [
     { name = "click", specifier = "~=8.1" },
     { name = "colorama", specifier = "~=0.4.6" },
     { name = "dask", marker = "extra == 'async-endpoints'", specifier = "~=2026.1" },
-    { name = "datasets", specifier = "~=4.4" },
     { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "~=2026.1" },
     { name = "expandvars", specifier = "~=1.0" },
     { name = "fastapi", specifier = "~=0.119.0" },
@@ -6781,13 +6783,12 @@ requires-dist = [
     { name = "httpx", specifier = "~=0.27" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
-    { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
     { name = "nest-asyncio2", specifier = "==1.7.1" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", specifier = "~=2.3" },
+    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "openinference-semantic-conventions", specifier = "~=0.1.14" },
-    { name = "openpyxl", specifier = "~=3.1" },
     { name = "optuna", specifier = "~=4.4.0" },
     { name = "pandas", specifier = "~=2.2" },
     { name = "pip", specifier = ">=24.3.1" },
@@ -6795,7 +6796,6 @@ requires-dist = [
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
     { name = "plotly", specifier = "~=6.0" },
-    { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
     { name = "presidio-analyzer", marker = "extra == 'pii-defense'" },
     { name = "presidio-anonymizer", marker = "extra == 'pii-defense'" },
     { name = "pydantic", specifier = "~=2.11" },
@@ -6804,16 +6804,14 @@ requires-dist = [
     { name = "python-dotenv", specifier = "~=1.1.1" },
     { name = "python-multipart", specifier = ">=0.0.21" },
     { name = "pyyaml", specifier = "~=6.0" },
-    { name = "ragas", specifier = "~=0.2.14" },
     { name = "rich", specifier = "~=14.0" },
-    { name = "scikit-learn", marker = "extra == 'profiling'", specifier = "~=1.6" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async-endpoints'", specifier = "~=2.0" },
     { name = "tabulate", specifier = "~=0.9" },
     { name = "urllib3", specifier = "~=2.6.3" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },
 ]
-provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "profiling", "test"]
+provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
 
 [[package]]
 name = "nvidia-nat-crewai"
@@ -6848,6 +6846,37 @@ requires-dist = [
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
 ]
 provides-extras = ["test"]
+
+[[package]]
+name = "nvidia-nat-eval"
+source = { editable = "packages/nvidia_nat_eval" }
+dependencies = [
+    { name = "datasets" },
+    { name = "nvidia-nat-core" },
+    { name = "openpyxl" },
+    { name = "ragas" },
+]
+
+[package.optional-dependencies]
+profiling = [
+    { name = "matplotlib" },
+    { name = "prefixspan" },
+    { name = "scikit-learn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "datasets", specifier = "~=4.4" },
+    { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
+    { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
+    { name = "openpyxl", specifier = "~=3.1" },
+    { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
+    { name = "ragas", specifier = "~=0.2.14" },
+    { name = "scikit-learn", marker = "extra == 'profiling'", specifier = "~=1.6" },
+]
+provides-extras = ["profiling", "test"]
 
 [[package]]
 name = "nvidia-nat-fastmcp"
@@ -6902,6 +6931,7 @@ requires-dist = [
     { name = "langchain-tavily", specifier = ">=0.2.16,<1.0.0" },
     { name = "langgraph", specifier = ">=1.0.5,<2.0.0" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "openevals", specifier = ">=0.1.3,<1.0.0" },
 ]
@@ -6957,6 +6987,7 @@ requires-dist = [
     { name = "aiorwlock", specifier = "~=1.5" },
     { name = "mcp", specifier = "~=1.25" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
 ]
 provides-extras = ["test"]
@@ -7145,7 +7176,7 @@ name = "nvidia-nat-strands"
 source = { editable = "packages/nvidia_nat_strands" }
 dependencies = [
     { name = "nvidia-nat-core", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
-    { name = "strands-agents", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
+    { name = "strands-agents", extra = ["openai"], marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
     { name = "strands-agents-tools", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
 ]
 
@@ -7153,7 +7184,7 @@ dependencies = [
 requires-dist = [
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
-    { name = "strands-agents", specifier = "~=1.17" },
+    { name = "strands-agents", extras = ["openai"], specifier = "~=1.17" },
     { name = "strands-agents-tools", specifier = "~=0.2" },
 ]
 provides-extras = ["test"]
@@ -7229,6 +7260,7 @@ requires-dist = [
     { name = "blis", specifier = "~=1.3" },
     { name = "fickling", specifier = ">=0.1.7,<1.0.0" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "presidio-analyzer", specifier = "~=2.2" },
     { name = "presidio-anonymizer", specifier = "~=2.2" },
@@ -11145,6 +11177,11 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9a/64/3e4178c512147e7566583544923bb42d84d15f31c22904d79dc94bdaf1d0/strands_agents-1.24.0.tar.gz", hash = "sha256:a3755fcc0befdd99c1b5a5d8a8c98590490f0bb7ab65092dcf9397f7551331de", size = 673930, upload-time = "2026-01-29T01:28:21.264Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4a/f0/81e96a356cf937ae697e28514b9e850d390802341df4ae6498ab737de744/strands_agents-1.24.0-py3-none-any.whl", hash = "sha256:035e0b8aa404bfaada4459a841aeed66f2a165fbb66f4d448dd6eceb4c14be44", size = 337217, upload-time = "2026-01-29T01:28:18.142Z" },
+]
+
+[package.optional-dependencies]
+openai = [
+    { name = "openai", marker = "extra == 'extra-10-nvidia-nat-most' or extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art')" },
 ]
 
 [[package]]

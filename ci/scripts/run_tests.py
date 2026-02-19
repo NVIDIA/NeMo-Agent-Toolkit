@@ -64,6 +64,36 @@ def discover_projects(max_depth: int = MAX_PROJECT_DEPTH) -> list[Path]:
     return projects
 
 
+def resolve_project(project: str) -> Path:
+    candidate = Path(project)
+    if candidate.is_absolute():
+        resolved = candidate
+    else:
+        direct = (REPO / candidate).resolve()
+        if (direct / "pyproject.toml").exists():
+            return direct
+
+        normalized = project.replace("-", "_")
+        package_path = (REPO / "packages" / normalized).resolve()
+        if (package_path / "pyproject.toml").exists():
+            return package_path
+
+        if not normalized.startswith("nvidia_nat_"):
+            package_path = (REPO / "packages" / f"nvidia_nat_{normalized}").resolve()
+            if (package_path / "pyproject.toml").exists():
+                return package_path
+
+        example_path = (REPO / "examples" / normalized).resolve()
+        if (example_path / "pyproject.toml").exists():
+            return example_path
+
+        resolved = direct
+
+    if not (resolved / "pyproject.toml").exists():
+        raise ValueError(f"Could not resolve a project with pyproject.toml from: {project}")
+    return resolved
+
+
 def make_env() -> dict[str, str]:
     env = os.environ.copy()
 
@@ -155,11 +185,27 @@ def run_one(
     return 0
 
 
-def main(junit_xml: str | None, cov_xml: str | None, run_slow: bool, run_integration: bool, jobs: int) -> int:
+def main(junit_xml: str | None,
+         cov_xml: str | None,
+         run_slow: bool,
+         run_integration: bool,
+         jobs: int,
+         project: str | None) -> int:
     projects = discover_projects()
     if not projects:
         print("No projects found under packages/ or examples/")
         return 2
+    if project:
+        try:
+            selected_project = resolve_project(project).resolve()
+        except ValueError as exc:
+            print(exc)
+            return 2
+
+        projects = [p for p in projects if p.resolve() == selected_project]
+        if not projects:
+            print(f"Resolved project is not in discovered packages/examples set: {selected_project}")
+            return 2
 
     for d in (ART, JUNIT_DIR, COV_DIR, VENV_DIR):
         d.mkdir(parents=True, exist_ok=True)
@@ -213,10 +259,18 @@ if __name__ == "__main__":
     parser.add_argument("--run_slow", action="store_true", default=False)
     parser.add_argument("--run_integration", action="store_true", default=False)
     parser.add_argument("--jobs", type=int, default=1)
+    parser.add_argument(
+        "--project",
+        action="store",
+        default=None,
+        help=("Run only one project path or name (e.g. packages/nvidia_nat_a2a, "
+              "examples/agents, nvidia_nat_a2a, nvidia-nat-a2a, a2a, agents)."),
+    )
     args = parser.parse_args()
     raise SystemExit(
         main(junit_xml=args.junit_xml,
              cov_xml=args.cov_xml,
              run_slow=args.run_slow,
              run_integration=args.run_integration,
-             jobs=args.jobs))
+             jobs=args.jobs,
+             project=args.project))

@@ -34,12 +34,12 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.llm.dynamo_llm import DynamoPrefixContext
 from nat.llm.dynamo_llm import LLMHeaderPrefix
 from nat.llm.dynamo_llm import _DynamoTransport
-from nat.profiler.prediction_trie import load_prediction_trie
-from nat.profiler.prediction_trie import save_prediction_trie
-from nat.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.profiler.prediction_trie.data_models import PredictionMetrics
-from nat.profiler.prediction_trie.data_models import PredictionTrieNode
-from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
+from nat.plugins.eval.profiler.prediction_trie import load_prediction_trie
+from nat.plugins.eval.profiler.prediction_trie import save_prediction_trie
+from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.plugins.eval.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 
 def create_test_trie() -> PredictionTrieNode:
