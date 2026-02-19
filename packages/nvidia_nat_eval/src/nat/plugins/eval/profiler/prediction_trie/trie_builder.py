@@ -35,6 +35,8 @@ class LLMCallContext:
     remaining_calls: int
     time_to_next_ms: float | None
     output_tokens: int
+    call_duration_s: float = 0.0
+    workflow_duration_s: float = 0.0
 
 
 @dataclass
@@ -67,6 +69,12 @@ class PredictionTrieBuilder:
         """Extract LLM call contexts from a trace."""
         # Sort steps by timestamp
         sorted_steps = sorted(steps, key=lambda s: s.event_timestamp)
+
+        # Workflow duration from first to last event
+        workflow_duration_s = (
+            sorted_steps[-1].event_timestamp - sorted_steps[0].event_timestamp
+            if len(sorted_steps) >= 2 else 0.0
+        )
 
         # Find all LLM_END events
         llm_ends = [s for s in sorted_steps if s.event_type == IntermediateStepType.LLM_END]
@@ -104,6 +112,10 @@ class PredictionTrieBuilder:
             if end_step.usage_info and end_step.usage_info.token_usage:
                 output_tokens = end_step.usage_info.token_usage.completion_tokens or 0
 
+            # Call duration from span timestamps
+            span_start = end_step.span_event_timestamp
+            call_duration_s = (end_step.event_timestamp - span_start) if span_start is not None else 0.0
+
             contexts.append(
                 LLMCallContext(
                     path=path,
@@ -111,6 +123,8 @@ class PredictionTrieBuilder:
                     remaining_calls=remaining,
                     time_to_next_ms=time_to_next_ms,
                     output_tokens=output_tokens,
+                    call_duration_s=call_duration_s,
+                    workflow_duration_s=workflow_duration_s,
                 ))
 
         return contexts

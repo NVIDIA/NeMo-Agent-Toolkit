@@ -138,3 +138,24 @@ def test_trie_builder_computes_interarrival_time(simple_trace):
     workflow_node = trie.children["my_workflow"]
     # First call: next LLM starts at 1002.0, this call ends at 1001.0 -> 1000ms
     assert workflow_node.predictions_by_call_index[1].interarrival_ms.mean == 1000.0
+
+
+def test_extract_contexts_include_call_duration(simple_trace):
+    """LLMCallContext should include call_duration_s computed from span timestamps."""
+    builder = PredictionTrieBuilder()
+    contexts = builder._extract_llm_contexts(simple_trace)
+
+    # First call: LLM_START=1000.0, LLM_END=1001.0 -> duration=1.0s
+    assert contexts[0].call_duration_s == pytest.approx(1.0)
+    # Second call: LLM_START=1002.0, LLM_END=1003.0 -> duration=1.0s
+    assert contexts[1].call_duration_s == pytest.approx(1.0)
+
+
+def test_extract_contexts_include_workflow_duration(simple_trace):
+    """LLMCallContext should include workflow_duration_s (first to last event)."""
+    builder = PredictionTrieBuilder()
+    contexts = builder._extract_llm_contexts(simple_trace)
+
+    # Workflow: first event=1000.0, last event=1003.0 -> 3.0s
+    assert contexts[0].workflow_duration_s == pytest.approx(3.0)
+    assert contexts[1].workflow_duration_s == pytest.approx(3.0)
