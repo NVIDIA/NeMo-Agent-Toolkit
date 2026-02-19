@@ -27,18 +27,18 @@ from pydantic import BaseModel
 langchain_exceptions = pytest.importorskip("langchain_core.exceptions")
 if not hasattr(langchain_exceptions, "ContextOverflowError"):
     pytest.skip(
-        "Skipping rag_evaluator tests: installed langchain_core lacks ContextOverflowError required by langchain_openai.",
+        ("Skipping rag_evaluator tests: installed langchain_core lacks "
+         "ContextOverflowError required by langchain_openai."),
         allow_module_level=True,
     )
-
-from nat.data_models.evaluator import EvalOutput
-from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
 
 if typing.TYPE_CHECKING:
     # We are lazily importing ragas to avoid import-time side effects such as applying the nest_asyncio patch, which is
     # not compatible with Python 3.12+, we want to ensure that we are able to apply the nest_asyncio2 patch instead.
     from ragas.llms import LangchainLLMWrapper
     from ragas.metrics import Metric
+
+    from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
 
 
 class ExampleModel(BaseModel):
@@ -67,7 +67,8 @@ def ragas_metrics() -> "Sequence[Metric]":
 
 
 @pytest.fixture
-def rag_evaluator(ragas_judge_llm, ragas_metrics) -> RAGEvaluator:
+def rag_evaluator(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
+    from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
     return RAGEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
 
 
@@ -77,8 +78,9 @@ def metric_name() -> str:
 
 
 @pytest.fixture
-def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> RAGEvaluator:
+def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
     """RAGEvaluator configured to extract a specific field (`content`) from BaseModel or dict input objects."""
+    from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
     return RAGEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, input_obj_field="content")
 
 
@@ -105,6 +107,8 @@ def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_ad
 
 def test_ragas_to_eval_output(rag_evaluator, rag_eval_input, rag_user_inputs, metric_name):
     """Test ragas ouput mapping to NAT's EvalOuput"""
+    from nat.data_models.evaluator import EvalOutput
+
     mock_results_dataset = MagicMock()
 
     # Mock scores
@@ -157,6 +161,7 @@ def test_ragas_to_eval_output_unexpected_entries(rag_evaluator,
                                                  expected_avg_score,
                                                  expected_item_count):
     """Test ragas_to_eval_output with empty, fewer, and more dataset entries"""
+    from nat.data_models.evaluator import EvalOutput
 
     # Mock ragas results
     mock_results_dataset = MagicMock()
@@ -276,6 +281,8 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_l
     eval_input_to_ragas and ragas_to_eval_output are run as-is (not mocked) to validate
     their handling of the input and failed-output
     """
+
+    from nat.data_models.evaluator import EvalOutput
 
     error_message = "Mocked exception in ragas.evaluate"
 
