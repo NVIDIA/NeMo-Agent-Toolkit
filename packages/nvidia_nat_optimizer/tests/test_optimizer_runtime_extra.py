@@ -16,30 +16,25 @@
 import pytest
 from pydantic import BaseModel
 
+from nat.data_models.optimizer import NumericOptimizationConfig
+from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.data_models.optimizer import PromptGAOptimizationConfig
 from nat.optimizer.optimizer_runtime import optimize_config
 
 
-class _DummyInner(BaseModel):
-    enabled: bool = False
-
-
-class _DummyPrompt(BaseModel):
-    enabled: bool = False
-
-
-class _DummyOptimizer(BaseModel):
-    numeric: _DummyInner = _DummyInner()
-    prompt: _DummyPrompt = _DummyPrompt()
-
-
 class _DummyConfig(BaseModel):
-    optimizer: _DummyOptimizer = _DummyOptimizer()
+    """Minimal config for tests that need walk_optimizables to return empty."""
+
+    optimizer: OptimizerConfig = OptimizerConfig()
 
 
 @pytest.mark.asyncio
 async def test_optimize_config_returns_input_when_no_space(monkeypatch):
     cfg = _DummyConfig()
+    # Ensure no optimizer phases are enabled
+    cfg.optimizer.numeric.enabled = False
+    cfg.optimizer.prompt.enabled = False
 
     # Force walk_optimizables to empty mapping
     from nat.optimizer import optimizer_runtime as rt
@@ -59,6 +54,8 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     cfg.optimizer.numeric.enabled = True
     cfg.optimizer.prompt.enabled = True
 
+    from contextlib import asynccontextmanager
+
     from nat.optimizer import optimizer_runtime as rt
 
     # Provide a small non-empty space
@@ -66,17 +63,54 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
 
     calls = {"numeric": 0, "prompt": 0}
 
-    def _fake_optimize_parameters(**kwargs):  # noqa: ANN001, ARG001
-        del kwargs
-        calls["numeric"] += 1
-        return cfg, {}, 0
+    class _FakeNumericRunner:
+        async def run(self, **kwargs):  # noqa: ANN001, ARG002
+            calls["numeric"] += 1
+            return cfg
 
-    async def _fake_optimize_prompts(**kwargs):  # noqa: ANN001, ARG001
-        del kwargs
-        calls["prompt"] += 1
+    class _FakePromptRunner:
+        async def run(self, **kwargs):  # noqa: ANN001, ARG002
+            calls["prompt"] += 1
 
-    monkeypatch.setattr(rt, "optimize_parameters", _fake_optimize_parameters, raising=True)
-    monkeypatch.setattr(rt, "optimize_prompts", _fake_optimize_prompts, raising=True)
+    def _fake_build_numeric(_config):
+        @asynccontextmanager
+        async def _cm():
+            yield _FakeNumericRunner()
+
+        return _cm()
+
+    def _fake_build_prompt(_config):
+        @asynccontextmanager
+        async def _cm():
+            yield _FakePromptRunner()
+
+        return _cm()
+
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.cli.type_registry import RegisteredOptimizerInfo
+    from nat.data_models.discovery_metadata import DiscoveryMetadata
+
+    registry = GlobalTypeRegistry.get()
+    numeric_info = RegisteredOptimizerInfo(
+        full_type="test/numeric",
+        config_type=NumericOptimizationConfig,
+        build_fn=lambda c: _fake_build_numeric(c),
+        discovery_metadata=DiscoveryMetadata(),
+    )
+    prompt_info = RegisteredOptimizerInfo(
+        full_type="test/ga",
+        config_type=PromptGAOptimizationConfig,
+        build_fn=lambda c: _fake_build_prompt(c),
+        discovery_metadata=DiscoveryMetadata(),
+    )
+    monkeypatch.setattr(
+        registry,
+        "_registered_optimizer_infos",
+        {
+            NumericOptimizationConfig: numeric_info,
+            PromptGAOptimizationConfig: prompt_info,
+        },
+    )
 
     run = OptimizerRunConfig(config_file=cfg, dataset=None, result_json_path="$", endpoint=None)
     out = await optimize_config(run)

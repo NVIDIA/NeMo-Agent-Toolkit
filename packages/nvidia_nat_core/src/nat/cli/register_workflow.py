@@ -48,6 +48,8 @@ from nat.cli.type_registry import MiddlewareBuildCallableT
 from nat.cli.type_registry import MiddlewareRegisteredCallableT
 from nat.cli.type_registry import ObjectStoreBuildCallableT
 from nat.cli.type_registry import ObjectStoreRegisteredCallableT
+from nat.cli.type_registry import OptimizerBuildCallableT
+from nat.cli.type_registry import OptimizerRegisteredCallableT
 from nat.cli.type_registry import RegisteredLoggingMethod
 from nat.cli.type_registry import RegisteredTelemetryExporter
 from nat.cli.type_registry import RegisteredToolWrapper
@@ -85,6 +87,7 @@ from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.memory import MemoryBaseConfigT
 from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
+from nat.data_models.optimizer import OptimizerStrategyBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
@@ -519,6 +522,30 @@ def register_evaluator(config_type: type[EvaluatorBaseConfigT]):
         return context_manager_fn
 
     return register_evaluator_inner
+
+
+def register_optimizer(config_type: type[OptimizerStrategyBaseConfigT]):
+
+    def register_optimizer_inner(
+        fn: OptimizerBuildCallableT[OptimizerStrategyBaseConfigT],
+    ) -> OptimizerRegisteredCallableT[OptimizerStrategyBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredOptimizerInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.OPTIMIZER)
+
+        GlobalTypeRegistry.get().register_optimizer(
+            RegisteredOptimizerInfo(full_type=config_type.full_type,
+                                    config_type=config_type,
+                                    build_fn=context_manager_fn,
+                                    discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_optimizer_inner
 
 
 def register_dataset_loader(config_type: type[EvalDatasetBaseConfigT]):
