@@ -75,7 +75,7 @@ class TestNvidiaRAGLib:
                                           config: NvidiaRAGLibConfig,
                                           mock_builder: MagicMock,
                                           mock_rag_client: MagicMock) -> None:
-        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+        with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client):
             async with nvidia_rag_lib(config, mock_builder) as group:
                 functions = await group.get_all_functions()
                 search_fn = next((f for name, f in functions.items() if name.endswith("search")), None)
@@ -98,7 +98,7 @@ class TestNvidiaRAGLib:
 
         mock_rag_client.generate = AsyncMock(return_value=mock_stream())
 
-        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+        with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client):
             async with nvidia_rag_lib(config, mock_builder) as group:
                 functions = await group.get_all_functions()
                 generate_fn = next((f for name, f in functions.items() if name.endswith("generate")), None)
@@ -119,7 +119,7 @@ class TestNvidiaRAGLib:
 
         mock_rag_client.generate = AsyncMock(return_value=mock_empty_stream())
 
-        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+        with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client):
             async with nvidia_rag_lib(config, mock_builder) as group:
                 functions = await group.get_all_functions()
                 generate_fn = next((f for name, f in functions.items() if name.endswith("generate")), None)
@@ -132,7 +132,7 @@ class TestNvidiaRAGLib:
                                             config: NvidiaRAGLibConfig,
                                             mock_builder: MagicMock,
                                             mock_rag_client: MagicMock) -> None:
-        with patch("nvidia_rag.NvidiaRAG", return_value=mock_rag_client):
+        with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client):
             async with nvidia_rag_lib(config, mock_builder) as group:
                 functions = await group.get_all_functions()
                 function_names = list(functions.keys())

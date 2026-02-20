@@ -111,7 +111,7 @@ class TestNvidiaRAGMethods:
 
     def test_import_and_instantiate_nvidia_rag(self) -> None:
         """Verify nvidia_rag can be imported and instantiated."""
-        from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.main import NvidiaRAG
 
         rag = NvidiaRAG()
         assert rag is not None
@@ -119,21 +119,21 @@ class TestNvidiaRAGMethods:
 
     def test_generate_method_exists(self) -> None:
         """NvidiaRAG should have a generate method."""
-        from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.main import NvidiaRAG
 
         assert hasattr(NvidiaRAG, "generate")
         assert callable(NvidiaRAG.generate)
 
     def test_search_method_exists(self) -> None:
         """NvidiaRAG should have a search method."""
-        from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.main import NvidiaRAG
 
         assert hasattr(NvidiaRAG, "search")
         assert callable(NvidiaRAG.search)
 
     def test_health_method_exists(self) -> None:
         """NvidiaRAG should have a health method."""
-        from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.main import NvidiaRAG
 
         assert hasattr(NvidiaRAG, "health")
         assert callable(NvidiaRAG.health)
@@ -204,7 +204,7 @@ class TestNvidiaRAGIntegration:
         retriever_ref: str,
     ) -> None:
         """Test NvidiaRAG search() with different component configs."""
-        from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.main import NvidiaRAG
         from nvidia_rag.utils.configuration import NvidiaRAGConfig
 
         collection_name = create_collection(embedder_ref)
@@ -243,7 +243,7 @@ class TestNvidiaRAGIntegration:
         retriever_ref: str,
     ) -> None:
         """Test NvidiaRAG generate() with different component configs."""
-        from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.main import NvidiaRAG
         from nvidia_rag.utils.configuration import NvidiaRAGConfig
 
         llm_config = LLM_CONFIGS[llm_ref]
@@ -280,7 +280,7 @@ class TestNvidiaRAGIntegration:
         retriever_ref: str,
     ) -> None:
         """Test NvidiaRAG health() with different component configs."""
-        from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.main import NvidiaRAG
         from nvidia_rag.utils.configuration import NvidiaRAGConfig
 
         llm_config = LLM_CONFIGS[llm_ref]

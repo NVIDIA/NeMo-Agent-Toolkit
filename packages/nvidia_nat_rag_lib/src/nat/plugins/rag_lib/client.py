@@ -58,7 +58,7 @@ async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncG
     from nat.retriever.milvus.register import MilvusRetrieverConfig
     from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
     try:
-        from nvidia_rag import NvidiaRAG
+        from nvidia_rag.rag_server.main import NvidiaRAG
         from nvidia_rag.rag_server.response_generator import ChainResponse
         from nvidia_rag.rag_server.response_generator import Citations
         from nvidia_rag.utils.configuration import FilterExpressionGeneratorConfig
