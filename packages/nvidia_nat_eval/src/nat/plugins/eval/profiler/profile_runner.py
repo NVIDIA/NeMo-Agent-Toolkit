@@ -345,9 +345,17 @@ class ProfilerRunner:
             # ------------------------------------------------------------
             from nat.profiler.prediction_trie import PredictionTrieBuilder
             from nat.profiler.prediction_trie import save_prediction_trie
+            from nat.profiler.prediction_trie.trie_builder import SensitivityConfig
 
             logger.info("Building prediction trie from traces...")
-            trie_builder = PredictionTrieBuilder()
+            trie_config = self.profile_config.prediction_trie
+            sensitivity_config = SensitivityConfig(
+                sensitivity_scale=trie_config.sensitivity_scale,
+                w_critical=trie_config.w_critical,
+                w_fanout=trie_config.w_fanout,
+                w_position=trie_config.w_position,
+            ) if trie_config.auto_sensitivity else None
+            trie_builder = PredictionTrieBuilder(sensitivity_config=sensitivity_config)
             for trace in all_steps:
                 trie_builder.add_trace(trace)
 

@@ -571,14 +571,25 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                     osl_raw = int(prediction.output_tokens.p90)
                     iat_raw = int(prediction.interarrival_ms.mean)
 
+                    # Auto-assign latency sensitivity from profiler data
+                    # Only if prediction has it AND no manual @latency_sensitive decorator is active
+                    if prediction.latency_sensitivity is not None:
+                        try:
+                            ctx = Context.get()
+                            if not ctx.has_manual_latency_sensitivity:
+                                latency_sensitivity = prediction.latency_sensitivity
+                        except Exception:
+                            pass
+
                     logger.debug(
                         "Overriding hints from prediction: path=%s, call_index=%d, "
-                        "total_requests=%d, osl_raw=%d, iat_raw=%d",
+                        "total_requests=%d, osl_raw=%d, iat_raw=%d, latency_sensitivity=%s",
                         path,
                         call_index,
                         total_requests,
                         osl_raw,
                         iat_raw,
+                        latency_sensitivity,
                     )
                 else:
                     logger.debug(

@@ -44,6 +44,11 @@ class PrefixSpanConfig(BaseModel):
 class PredictionTrieConfig(BaseModel):
     enable: bool = False
     output_filename: str = "prediction_trie.json"
+    auto_sensitivity: bool = True
+    sensitivity_scale: int = 5
+    w_critical: float = 0.5
+    w_fanout: float = 0.3
+    w_position: float = 0.2
 
 
 class DynamoMetricsConfig(BaseModel):
