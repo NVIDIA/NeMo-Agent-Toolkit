@@ -147,7 +147,7 @@ async def _create_managed_app(config: Config) -> AsyncGenerator["FastAPI"]:
 
 
 @pytest.fixture(name="app")
-async def app_fixture() -> "FastAPI":
+async def app_fixture() -> AsyncGenerator["FastAPI"]:
     """Fixture to create a FastApiFrontEndPluginWorker with shared workflow."""
     config = create_shared_workflow_config()
     async for app in _create_managed_app(config):
@@ -155,7 +155,7 @@ async def app_fixture() -> "FastAPI":
 
 
 @pytest.fixture(name="per_user_app")
-async def per_user_app_fixture() -> "FastAPI":
+async def per_user_app_fixture() -> AsyncGenerator["FastAPI"]:
     """Fixture to create a FastApiFrontEndPluginWorker with per-user workflow."""
     config = create_per_user_workflow_config()
     async for app in _create_managed_app(config):
