@@ -18,6 +18,7 @@ from typing import Any
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import jwt
 import pytest
 from pydantic import BaseModel
 
@@ -174,6 +175,22 @@ def _make_group(server_cfg=None, client_cfg=None):
     return MCPFunctionGroup(config=client_cfg)
 
 
+@patch("nat.builder.context.Context")
+def test_resolve_user_id_from_auth_header(mock_context_cls):
+    """When auth_token_header is configured, user ID is resolved from JWT claims."""
+    token: str = jwt.encode({"name": "Alice", "sub": "alice-123"}, "a" * 32, algorithm="HS256")
+    ctx = MagicMock()
+    ctx.metadata.headers = {"Authorization": f"Bearer {token}"}
+    mock_context_cls.get.return_value = ctx
+
+    server_cfg = MCPServerConfig(transport="streamable-http", url="http://localhost:9901/mcp")
+    client_cfg = MCPClientConfig(server=server_cfg, auth_token_header="Authorization")
+    group = MCPFunctionGroup(config=client_cfg)
+    group._client_config = client_cfg
+
+    assert group._resolve_user_id_from_auth_header() == "Alice"
+
+
 class TestSessionToolDefaultUserPath:
     """Tests for mcp_session_tool_function when routed through the default-user (base-client) path."""
 
@@ -233,6 +250,7 @@ class TestSessionToolSessionPath:
         group._default_user_id = "default-user"
         group._client_config = MagicMock()
         group._client_config.session_aware_tools = False
+        group._client_config.auth_token_header = None
         return group
 
     async def test_returns_unavailable_when_session_client_is_none(self, session_group):

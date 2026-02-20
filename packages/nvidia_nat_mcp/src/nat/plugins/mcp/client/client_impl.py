@@ -253,6 +253,32 @@ class MCPFunctionGroup(FunctionGroup):
         except Exception:
             return None
 
+    def _resolve_user_id_from_auth_header(self) -> str | None:
+        """Extract a JWT from the configured HTTP header and resolve the user ID from its claims."""
+        if not self._client_config or not self._client_config.auth_token_header:
+            return None
+
+        from nat.builder.context import Context as _Ctx
+        from nat.runtime.connection_auth import resolve_user_id
+
+        headers = getattr(_Ctx.get().metadata, "headers", None)
+        if headers is None:
+            return None
+
+        user_auth_header: str | None = headers.get(self._client_config.auth_token_header)
+        if not user_auth_header:
+            return None
+
+        user_id: str | None = resolve_user_id(user_auth_header, {})
+        if not user_id:
+            logger.warning("Could not resolve user ID from header '%s'", self._client_config.auth_token_header)
+            return None
+
+        logger.debug("Resolved user_id '%s' from header '%s'",
+                     truncate_session_id(user_id),
+                     self._client_config.auth_token_header)
+        return user_id
+
     async def cleanup_sessions(self, max_age: timedelta | None = None) -> int:
         """
         Manually trigger cleanup of inactive sessions.
@@ -516,7 +542,10 @@ def mcp_session_tool_function(tool, function_group: MCPFunctionGroup):
         """Response function for the session-aware tool."""
         try:
             # Route to the appropriate session client
-            session_id = function_group._get_session_id_from_context()
+            if (function_group._client_config and function_group._client_config.auth_token_header):
+                session_id = function_group._resolve_user_id_from_auth_header()
+            else:
+                session_id = function_group._get_session_id_from_context()
 
             # If no session is available and default-user fallback is disabled, deny the call
             if function_group._shared_auth_provider and session_id is None:

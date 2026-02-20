@@ -142,6 +142,8 @@ class MCPClientConfig(MCPClientBaseConfig, name="mcp_client"):
     """
     session_aware_tools: bool = Field(default=True,
                                       description="Session-aware tools are created if True. Defaults to True.")
+    auth_token_header: str | None = Field(
+        default=None, description="HTTP header name containing a token used for user identification.")
     max_sessions: int = Field(default=100,
                               ge=1,
                               description="Maximum number of concurrent session clients. Defaults to 100.")
