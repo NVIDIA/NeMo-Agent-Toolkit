@@ -16,7 +16,7 @@ limitations under the License.
 <!-- path-check-skip-file -->
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
+> ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 # Agent Leaderboard v2 - Evaluation Guide
 
@@ -25,6 +25,9 @@ limitations under the License.
 This guide walks through the complete process of running decision-only evaluations using the `react_benchmark_agent`: downloading data, configuring evaluations, running experiments, and analyzing results.
 
 Currently this agent supports evaluation exclusively for the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2). However, we plan to extend the set of evaluation tool sets and benchmarks and will update this document accordingly.
+
+> [!IMPORTANT]
+> **Prerequisite**: Before running these examples, complete the [Dynamo Backend Setup Guide](../../../external/dynamo/README.md) to set up and verify your Dynamo inference server is running and responding to `curl` requests.
 
 ## Table of Contents
 
@@ -46,12 +49,23 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 ### Software Requirements
 
 > [!WARNING]
-> This example requires a CUDA-compatible device with NVIDIA drivers installed. It cannot be run on systems without NVIDIA GPU hardware. You do not need to install ai-dynamo packages separately; the provided Docker images include them.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/getting-started/support-matrix) for full details.
+>
+> **Supported Platforms:**
+> - Ubuntu 22.04 / 24.04 (x86_64)
+> - Ubuntu 24.04 (ARM64)
+> - CentOS Stream 9 (x86_64, experimental)
+>
+> **Not Supported:**
+> - ❌ macOS (Intel or Apple Silicon)
+> - ❌ Windows
+>
+> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent Toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
 
 1. **Python 3.11, 3.12, or 3.13** installed
-2. **NeMo Agent toolkit** repository cloned
+2. **NeMo Agent Toolkit** repository cloned
 3. **Docker** with NVIDIA Container Toolkit
-4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled matching your driver version. Verify with:
+4. **NVIDIA Driver** with CUDA 12.0+ support, `nvidia-fabricmanager` enabled, and matching your driver version. Verify with:
 
     ```bash
     docker run --rm --gpus all nvidia/cuda:12.4.0-runtime-ubuntu22.04 \
@@ -60,7 +74,8 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 
     The output should show `True`. If it shows `False` with error 802, ensure `nvidia-fabricmanager` is installed, running, and matches your driver version.
 
-5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model
+5. **Hugging Face account** with access to Llama-3.3-70B-Instruct model (requires approval from Meta)
+6. **Model weights downloaded** - Follow the model download instructions in the [Dynamo Setup Guide](../../../external/dynamo/README.md#download-model-weights-can-skip-if-already-done)
 
 ### Hardware Requirements (Dynamo Backend)
 
@@ -120,13 +135,14 @@ source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
 If not already configured from running [../README.md](../README.md), copy `.env.example` to a new `.env`, update the environment variable values, and source it in the current terminal
 
+<!-- path-check-skip-begin -->
 ```bash
-# <!-- path-check-skip-next-line -->
 cd ../ # NeMo-Agent-Toolkit/examples/dynamo_integration
 cp .env.example .env
 vi .env # update the environment variables then source
 [ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 ```
+<!-- path-check-skip-end -->
 
 > **Note:** Dynamo-specific environment variables (`DYNAMO_BACKEND`, `DYNAMO_MODEL`, `DYNAMO_PORT`) are used by the test scripts in `external/dynamo/` and are not required for running evaluations. See [Dynamo Setup Guide](../../../external/dynamo/README.md) for those options.
 
@@ -271,7 +287,7 @@ llms:
     temperature: 0.0
     max_tokens: 8192
     stop: ["Observation:", "\nThought:"]  # CRITICAL: Prevents observation hallucination
-    
+
     # Optional: Customize prefix headers (sent by default with "nat-dynamo-{uuid}")
     # prefix_template: "react-benchmark-{uuid}"  # Custom template
     prefix_total_requests: 10
@@ -332,13 +348,13 @@ workflow:
 eval:
   general:
     max_concurrency: 36  # Range: 1-64
-    
+
     output:
       dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/
       cleanup: false
       job_management:
         append_job_id_to_output_dir: true
-    
+
     dataset:
       _type: json
       file_path: ./examples/dynamo_integration/data/agent_leaderboard_v2_banking.json
@@ -386,7 +402,7 @@ cd /path/to/NeMo-Agent-Toolkit
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_minimal_test.yml
 ```
 
-**Runtime**: <1 minute  
+**Runtime**: <1 minute
 **Expected TSQ**: 0.3 - 0.6
 
 ### Run Full Evaluation (100 scenarios)
@@ -395,7 +411,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
 ```
 
-**Runtime**: ~30-60 minutes (depends on concurrency)  
+**Runtime**: ~30-60 minutes (depends on concurrency)
 **Expected TSQ**: 0.4 - 0.7
 
 ### Expected Output
@@ -468,13 +484,13 @@ workflow:
   verbose: true
   feedback_template: |
     PREVIOUS ATTEMPT FEEDBACK:
-    
+
     Your previous tool selection was evaluated and found to be insufficient.
-    
+
     EVALUATION: {reasoning}
     MISSING STEPS: {missing_steps}
     SUGGESTIONS: {suggestions}
-    
+
     Please try again, addressing the issues identified above.
 ```
 
@@ -790,7 +806,7 @@ workflow:
 
 **Cause**: Tools aren't being executed or tool stubs aren't configured for decision-only mode.
 
-**Fix**: 
+**Fix**:
 1. Check logs for "Tool stub executed" - if missing, tools aren't running
 2. Ensure your `function` and `function_groups` `config` files have `decision_only: true` and a `canned_response_template`:
 
@@ -910,7 +926,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 
 ```bash
 # Optimize Dynamo prefix header parameters for the Predictive KV-Aware Thompson Sampling router
-# 
+#
 # Parameters optimized:
 #   - prefix_total_requests: Expected requests per prefix (search space: 1-20, step 5)
 #   - prefix_osl: Output Sequence Length hint (LOW | MEDIUM | HIGH)

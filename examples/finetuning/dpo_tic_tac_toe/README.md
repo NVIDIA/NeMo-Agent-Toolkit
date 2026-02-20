@@ -21,7 +21,7 @@ limitations under the License.
 
 **Complexity:** 🛑 Advanced
 
-This example demonstrates how to use the NeMo Agent toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
+This example demonstrates how to use the NeMo Agent Toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
 
 ## Table of Contents
 
@@ -51,6 +51,9 @@ Direct Preference Optimization (DPO) is a technique for aligning language models
 The model learns to prefer responses similar to the chosen examples while avoiding patterns in rejected examples.
 
 ## Prerequisites
+
+> [!IMPORTANT]
+> This example assumes you are already familiar with the NVIDIA NeMo Microservices platform and have it set up and running. If you're new to NeMo Microservices, please refer to the [NeMo Microservices Setup Guide](https://docs.nvidia.com/nemo/microservices/latest/get-started/setup/index.html) first.
 
 ### 1. Python Environment
 
@@ -684,7 +687,7 @@ trainer_adapters:
 
 **Cause**: Serialization issue with intermediate steps.
 
-**Solution**: Ensure you're using the latest NeMo Agent toolkit version with `SerializeAsAny` fix in `IntermediateStepPayload`.
+**Solution**: Ensure you're using the latest NeMo Agent Toolkit version with `SerializeAsAny` fix in `IntermediateStepPayload`.
 
 ### Debug Logging
 
@@ -707,6 +710,6 @@ logging.getLogger("nat.plugins.customizer").setLevel(logging.DEBUG)
 
 ## See Also
 
-- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NeMo Agent toolkit finetuning architecture
+- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NeMo Agent Toolkit finetuning architecture
 - [Test Time Compute](../../../docs/source/improve-workflows/test-time-compute.md) - TTC pipeline reference
 - [RL with OpenPipe ART](../rl_with_openpipe_art/) - Alternative RL-based finetuning example

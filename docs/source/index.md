@@ -15,11 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](./_static/banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](./_static/banner.png "NeMo Agent Toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Overview
 
-NVIDIA NeMo Agent toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise [agents](./components/agents/index.md) to data sources and [tools](./build-workflows/functions-and-function-groups/functions.md#agents-and-tools) across any framework.
+NVIDIA NeMo Agent Toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise [agents](./components/agents/index.md) to data sources and [tools](./build-workflows/functions-and-function-groups/functions.md#agents-and-tools) across any framework.
 
 ## Install
 
@@ -51,7 +51,7 @@ For detailed installation instructions, including optional dependencies, please 
 
 ## Key Features
 
-- [**Framework Agnostic:**](./components/integrations/frameworks.md) NeMo Agent toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), [Google ADK](https://github.com/google/adk-python), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent toolkit complements any existing agentic framework or [memory](./build-workflows/memory.md) tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
+- [**Framework Agnostic:**](./components/integrations/frameworks.md) NeMo Agent Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), [Google ADK](https://github.com/google/adk-python), as well as customer enterprise frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent Toolkit complements any existing agentic framework or [memory](./build-workflows/memory.md) tool you're using and isn't tied to any specific agentic framework, long-term memory, or data source.
 
 - [**Reusability:**](./components/sharing-components.md) Every agent, tool, and agentic [workflow](./build-workflows/about-building-workflows.md) in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
 
@@ -63,17 +63,17 @@ For detailed installation instructions, including optional dependencies, please 
 
 - [**Evaluation System:**](./improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
-- [**User Interface:**](./run-workflows/launching-ui.md) Use the NeMo Agent toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- [**User Interface:**](./run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
 
-- [**Full MCP Support:**](./build-workflows/mcp-client.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent toolkit as an [MCP client](./build-workflows/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent toolkit as an [MCP server](./run-workflows/mcp-server.md) to publish tools via MCP.
+- [**Full MCP Support:**](./build-workflows/mcp-client.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./build-workflows/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also publish tools with the [MCP server](./run-workflows/mcp-server.md) runtime or an MCP server using the [FastMCP server runtime](./run-workflows/fastmcp-server.md).
 
-- [**A2A Protocol Support:**](./components/integrations/a2a.md) Compatible with [Agent-to-Agent (A2A) Protocol](https://a2aproject.org/). You can use NeMo Agent toolkit as an [A2A client](./build-workflows/a2a-client.md) to connect to and delegate tasks to remote A2A agents. You can also use NeMo Agent toolkit as an [A2A server](./run-workflows/a2a-server.md) to publish workflows as discoverable A2A agents.
+- [**A2A Protocol Support:**](./components/integrations/a2a.md) Compatible with [Agent-to-Agent (A2A) Protocol](https://a2a-protocol.org). You can use NeMo Agent Toolkit as an [A2A client](./build-workflows/a2a-client.md) to connect to and delegate tasks to remote A2A agents. You can also use NeMo Agent Toolkit as an [A2A server](./run-workflows/a2a-server.md) to publish workflows as discoverable A2A agents.
 
 ## Hello World Example
 
 Before getting started, it's possible to run this simple workflow and many other examples in Google Colab with no setup. Click here to open the introduction notebook: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/).
 
-1. Install NeMo Agent toolkit along with the LangChain integration plugin:
+1. Install NeMo Agent Toolkit along with the LangChain integration plugin:
 
    ::::{tab-set}
    :sync-group: install-tool
@@ -198,6 +198,7 @@ Existing Agents <./run-workflows/existing-agents/index.md>
 ./run-workflows/observe/observe.md
 API Server and User Interface <./run-workflows/launching-ui.md>
 MCP Server <./run-workflows/mcp-server.md>
+FastMCP Server <./run-workflows/fastmcp-server.md>
 A2A Server <./run-workflows/a2a-server.md>
 ```
 

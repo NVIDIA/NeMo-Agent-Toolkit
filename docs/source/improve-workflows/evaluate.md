@@ -15,25 +15,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Evaluating NVIDIA NeMo Agent Toolkit Workflows
+# Agent Evaluation in NVIDIA NeMo Agent Toolkit
 
 Evaluation is the process of executing [workflows](../build-workflows/about-building-workflows.md) ([agents](../components/agents/index.md), [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools), or pipelines) on curated test data and measuring their quality using quantitative metrics such as accuracy, reliability, and latency. Each of these metrics in turn is produced by an evaluator.
 
-NeMo Agent toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
+NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the [`profiling`](./profiler.md) sub-package to use the `nat eval` command.
+In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`.
 
-If you are installing from source, you can install the sub-package by running the following command from the root directory of the NeMo Agent toolkit repository:
+If you are installing from source, install the evaluation extra from the NeMo Agent Toolkit repository root:
 ```bash
-uv pip install -e '.[profiling]'
+uv pip install -e '.[eval]'
 ```
 
-If you are installing from a package, you can install the sub-package by running the following command:
+If you are installing from a package, install either the `eval` extra or the standalone package:
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval]"
 ```
+
+```bash
+uv pip install nvidia-nat-eval
+```
+
+If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install profiling dependencies as well:
+
+```bash
+uv pip install -e '.[eval,profiling]'
+```
+
+For package installs, use:
+
+```bash
+uv pip install "nvidia-nat[eval,profiling]"
+```
+
 
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `nat eval` command. The `nat eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
@@ -81,7 +98,7 @@ eval:
       llm_name: nim_rag_eval_llm
 ```
 
-The dataset section specifies the dataset to use for running the workflow. The dataset can be of type `json`, `jsonl`, `csv`, `xls`, or `parquet`. The dataset file path is specified using the `file_path` key.
+The dataset section specifies the dataset to use for running the workflow. The built-in dataset types are `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`. The dataset file path is specified using the `file_path` key. Additional dataset formats can be added via the [plugin system](../extend/custom-components/custom-dataset-loader.md).
 
 ## Evaluation outputs (what you will get)
 Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into four groups: workflow outputs, configuration outputs, evaluator outputs, and profiler observability outputs.
@@ -172,7 +189,7 @@ nat info components -t evaluator
 
 ### Ragas Evaluator
 [Ragas](https://docs.ragas.io/) is an open-source evaluation framework that enables end-to-end
-evaluation of LLM workflows. NeMo Agent toolkit provides an evaluation interface to interact with Ragas.
+evaluation of LLM workflows. NeMo Agent Toolkit provides an evaluation interface to interact with Ragas.
 
 `examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml`:
 ```yaml
@@ -412,7 +429,7 @@ Note: Plotting metrics for individual dataset entries is only available across t
 ## Evaluating Remote Workflows
 You can evaluate remote workflows by using the `nat eval` command with the `--endpoint` flag. In this mode the workflow is run on the remote server specified in the `--endpoint` configuration and evaluation is done on the local server.
 
-Launch NeMo Agent toolkit on the remote server with the configuration file:
+Launch NeMo Agent Toolkit on the remote server with the configuration file:
 ```bash
 nat serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
 ```
@@ -423,11 +440,14 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/c
 ```
 
 ## Evaluation Endpoint
-You can also evaluate workflows using the NeMo Agent toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `nat eval` command. The evaluation endpoint is available at `/evaluate` on the NeMo Agent toolkit server. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](../reference/rest-api/evaluate-api.md) documentation.
+You can also evaluate workflows using the NeMo Agent Toolkit evaluation endpoint. The evaluation endpoint is a REST API that allows you to evaluate workflows using the same configuration file as the `nat eval` command. The evaluation endpoint is available at `/evaluate` on the NeMo Agent Toolkit server. For more information, refer to the [NeMo Agent Toolkit Evaluation Endpoint](../reference/rest-api/evaluate-api.md) documentation.
 
 
 ## Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.
+
+## Adding Custom Dataset Loaders
+You can add support for additional dataset formats by creating a custom dataset loader plugin. See the [Custom Dataset Loader](../extend/custom-components/custom-dataset-loader.md) documentation for more information.
 
 ## Overriding Evaluation Configuration
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:
@@ -439,7 +459,7 @@ nat eval --config_file examples/evaluation_and_profiling/simple_web_query_eval/c
 
 ## Evaluation Details
 
-NeMo Agent toolkit provides a set of evaluators to run and evaluate the workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
+NeMo Agent Toolkit provides a set of evaluators to run and evaluate the workflows. In addition to the built-in evaluators, the toolkit provides a plugin system to add custom evaluators.
 
 Example:
 ```bash
@@ -447,9 +467,9 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/c
 ```
 
 ### Using Datasets
-Run and evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
+Run and evaluate the workflow on a specified dataset. The built-in dataset file types are `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`. You can also add support for additional dataset formats via the [dataset loader plugin system](../extend/custom-components/custom-dataset-loader.md).
 
-Download and use datasets provided by NeMo Agent toolkit examples by running the following.
+Download and use datasets provided by NeMo Agent Toolkit examples by running the following.
 
 ```bash
 git lfs fetch
@@ -578,8 +598,8 @@ The example dataset `simple_calculator_nested.json` is a nested JSON file with q
 def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
 ```
 
-{py:class}`~nat.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
-{py:class}`~nat.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
+{py:class}`~nat.data_models.evaluator.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
+{py:class}`~nat.data_models.evaluator.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
 The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
 - `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
 - `input_obj`: This is the question.
@@ -638,14 +658,14 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/
 
 
 ### NeMo Agent Toolkit Built-in Evaluators
-NeMo Agent toolkit provides the following built-in evaluator:
+NeMo Agent Toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate workflows using the public Ragas API.
 - `trajectory` - An evaluator to run and evaluate the LangChain/LangGraph agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 
 #### Ragas Evaluator
 [Ragas](https://docs.ragas.io/) is an open-source evaluation framework that enables end-to-end
-evaluation of LLM workflows. NeMo Agent toolkit provides an evaluation interface to interact with Ragas.
+evaluation of LLM workflows. NeMo Agent Toolkit provides an evaluation interface to interact with Ragas.
 
 Ragas provides a set of evaluation metrics to configure in the `config.yml` file
 by adding an evaluator section with type`ragas`.
@@ -777,7 +797,7 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/
 ```
 
 ### Adding Custom Evaluators
-You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.
+You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.
 
 
 ### Running multiple repetitions
@@ -1017,4 +1037,4 @@ Configuration notes:
 - `eviction_policy` controls how "oldest" is determined—either by creation time (TIME_CREATED) or last modification time (TIME_MODIFIED). Default is TIME_CREATED.
 
 ### Profiling and Performance Monitoring of NeMo Agent Toolkit Workflows
-You can profile workflows using the NeMo Agent toolkit evaluation system. For more information, see the [Profiler](./profiler.md) documentation.
+You can profile workflows using the NeMo Agent Toolkit evaluation system. For more information, see the [Profiler](./profiler.md) documentation.

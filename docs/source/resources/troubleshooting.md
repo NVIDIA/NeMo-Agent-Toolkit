@@ -36,7 +36,7 @@ limitations under the License.
     # Remove the current environment since we are going to recreate it
     deactivate; rm -rf .venv
     # Reinstall the environment
-    uv sync --all-groups --all-extras
+    uv sync --all-groups --extra most
     ```
     <!-- path-check-skip-end -->
 
@@ -48,4 +48,4 @@ limitations under the License.
 
 ## Dependency Issues
 
-- **Requested type not found**: Verify that all required dependencies are listed in your `pyproject.toml` file and installed. If in doubt run `uv sync --all-groups --all-extras` from the root of the repository.
+- **Requested type not found**: Verify that all required dependencies are listed in your `pyproject.toml` file and installed. If in doubt run `uv sync --all-groups --extra most` from the root of the repository.

@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates how to extend NVIDIA NeMo Agent toolkit applications with custom API routes and HTTP request metadata access. Build sophisticated APIs that capture rich request context for authentication, routing, and specialized business logic.
+This example demonstrates how to extend NVIDIA NeMo Agent Toolkit applications with custom API routes and HTTP request metadata access. Build sophisticated APIs that capture rich request context for authentication, routing, and specialized business logic.
 
 ## Table of Contents
 
@@ -76,7 +76,7 @@ general:
 ```
 
 ### Complete Metadata Access Example
-Get the instance of the `nat.builder.context.Context` object using the `nat.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `src/nat/tool/server_tools.py`.
+Get the instance of the `nat.builder.context.Context` object using the `nat.builder.context.Context.get()` method. This will give you access to the metadata method which holds the request attributes defined by the user on request. A complete example of the function can be found in `packages/nvidia_nat_core/src/nat/tool/server_tools.py`.
 
 > [!NOTE]
 >
@@ -136,11 +136,11 @@ async def current_request_attributes(config: RequestAttributesTool, builder: Bui
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/front_ends/simple_calculator_custom_routes

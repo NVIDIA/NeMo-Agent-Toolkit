@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how to implement **observability and tracing capabilities** using the NVIDIA NeMo Agent toolkit. You'll learn to monitor, trace, and analyze your AI agent's behavior in real-time using the Simple Calculator workflow.
+This example demonstrates how to implement **observability and tracing capabilities** using the NVIDIA NeMo Agent Toolkit. You'll learn to monitor, trace, and analyze your AI agent's behavior in real-time using the Simple Calculator workflow.
 
 ## Key Features
 
@@ -41,7 +41,7 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 Before starting this example, you need:
 
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Langfuse, LangSmith, Weave, or Patronus)
 
@@ -240,7 +240,7 @@ Transmit traces to RagaAI Catalyst.
 
 1. Get your Catalyst credentials and create a project:
 
-    1. Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
+    1. Login to [RagaAI Catalyst](https://docs.raga.ai/ragaai-catalyst) and navigate to the settings page.
 
     2. Click on the "Authenticate" tab, then click on "Generate New Key". Take note of the Access Key and Secret Key as you will need them to run the workflow.
     3. Click on "Projects" in the left sidebar, then click on the "Create Project" button. Name your project `simple-calculator` and click "Create". Alternately another project name can be used, just ensure to update the project name in `examples/observability/simple_calculator_observability/configs/config-catalyst.yml` to match.
@@ -253,7 +253,7 @@ Transmit traces to RagaAI Catalyst.
     export CATALYST_SECRET_KEY=<your_secret_key>
     ```
 
-    Optionally set a custom endpoint (default is `https://catalyst.raga.ai/api`):
+    Optionally set a custom endpoint (default is documented in [RagaAI Catalyst](https://docs.raga.ai/ragaai-catalyst)):
 
     ```bash
     export CATALYST_ENDPOINT=<your_endpoint>

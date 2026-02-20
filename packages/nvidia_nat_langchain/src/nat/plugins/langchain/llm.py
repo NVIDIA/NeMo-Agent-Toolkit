@@ -15,7 +15,9 @@
 # pylint: disable=unused-argument
 
 import logging
+import os
 from collections.abc import Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
@@ -26,6 +28,7 @@ if TYPE_CHECKING:
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import APITypeEnum
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
@@ -191,6 +194,17 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     http_async_client: httpx.AsyncClient = create_metadata_injection_client()
 
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+        config_dict["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_dict["base_url"] = base_url
+
     try:
         if llm_config.api_type == APITypeEnum.RESPONSES:
             client = ChatOpenAI(
@@ -198,22 +212,12 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
                 stream_usage=True,
                 use_responses_api=True,  # type: ignore[call-arg]
                 use_previous_response_id=True,  # type: ignore[call-arg]
-                **llm_config.model_dump(
-                    exclude={"type", "thinking", "api_type"},
-                    by_alias=True,
-                    exclude_none=True,
-                    exclude_unset=True,
-                ))
+                **config_dict)
         else:
             client = ChatOpenAI(
                 http_async_client=http_async_client,  # type: ignore[call-arg]
                 stream_usage=True,
-                **llm_config.model_dump(
-                    exclude={"type", "thinking", "api_type"},
-                    by_alias=True,
-                    exclude_none=True,
-                    exclude_unset=True,
-                ))
+                **config_dict)
         if "http_async_client" in client.model_kwargs:
             del client.model_kwargs["http_async_client"]
 
@@ -232,6 +236,9 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     """
     from langchain_openai import ChatOpenAI
 
+    from nat.profiler.prediction_trie import load_prediction_trie
+    from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
+
     # Build config dict excluding Dynamo-specific and NAT-specific fields
     config_dict = llm_config.model_dump(
         exclude={"type", "thinking", "api_type", *DynamoModelConfig.get_dynamo_field_names()},
@@ -243,6 +250,19 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     # Initialize http_async_client to None for proper cleanup
     http_async_client = None
 
+    # Load prediction trie if configured
+    prediction_lookup: PredictionTrieLookup | None = None
+    if llm_config.prediction_trie_path:
+        try:
+            trie_path = Path(llm_config.prediction_trie_path)
+            trie = load_prediction_trie(trie_path)
+            prediction_lookup = PredictionTrieLookup(trie)
+            logger.info("Loaded prediction trie from %s", llm_config.prediction_trie_path)
+        except FileNotFoundError:
+            logger.warning("Prediction trie file not found: %s", llm_config.prediction_trie_path)
+        except Exception as e:
+            logger.warning("Failed to load prediction trie: %s", e)
+
     try:
         # If prefix_template is set, create a custom httpx client with Dynamo hooks
         if llm_config.prefix_template is not None:
@@ -252,14 +272,20 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
                 osl=llm_config.prefix_osl,
                 iat=llm_config.prefix_iat,
                 timeout=llm_config.request_timeout,
+                prediction_lookup=prediction_lookup,
+                use_raw_values=llm_config.prefix_use_raw_values,
+                disable_headers=llm_config.disable_headers,
+                cache_pin_type=llm_config.cache_pin_type,
+                max_sensitivity=llm_config.max_sensitivity,
             )
             config_dict["http_async_client"] = http_async_client
             logger.info(
-                "Dynamo prefix headers enabled: template=%s, total_requests=%d, osl=%s, iat=%s",
+                "Dynamo prefix headers enabled: template=%s, total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
                 llm_config.prefix_template,
                 llm_config.prefix_total_requests,
                 llm_config.prefix_osl,
                 llm_config.prefix_iat,
+                "loaded" if prediction_lookup else "disabled",
             )
 
         # Create the ChatOpenAI client

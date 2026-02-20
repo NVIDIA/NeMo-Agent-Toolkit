@@ -16,20 +16,20 @@ limitations under the License.
 -->
 
 # Model Context Protocol (MCP) Authentication for the NVIDIA NeMo Agent Toolkit
-MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent toolkit provides a set of built-in [authentication providers](../api-authentication.md) for accessing servers that require authentication.
+MCP provides authorization capabilities at the transport level, enabling MCP clients to make requests to restricted MCP servers on behalf of resource owners. The NVIDIA NeMo Agent Toolkit provides a set of built-in [authentication providers](../api-authentication.md) for accessing servers that require authentication.
 
 This document covers **interactive OAuth2 authentication** (`mcp_oauth2`) for user-facing workflows. For automated, headless scenarios such as CI/CD pipelines or backend services, see [Service Account Authentication](./mcp-service-account-auth.md).
 
-The `mcp_oauth2` provider is the default authentication provider in the NeMo Agent toolkit for MCP servers that require user authorization. It conforms to the [MCP OAuth2](https://modelcontextprotocol.io/specification/draft/basic/authorization) specification.
+The `mcp_oauth2` provider is the default authentication provider in the NeMo Agent Toolkit for MCP servers that require user authorization. It conforms to the [MCP OAuth2](https://modelcontextprotocol.io/specification/draft/basic/authorization) specification.
 
 ## Supported Capabilities
-NeMo Agent toolkit MCP authentication provides the capabilities required to access protected MCP servers:
+NeMo Agent Toolkit MCP authentication provides the capabilities required to access protected MCP servers:
 - Dynamic endpoint discovery using the procedures defined in [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728), [RFC 8414](https://www.rfc-editor.org/rfc/rfc8414), and [OpenID Connect](https://openid.net/specs/openid-connect-core-1_0.html)
 - Client registration using the procedures defined in [RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)
 - Authentication using the procedures defined in the [OAuth2 specification](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13)
 
 ## Configuring an Auth Provider
-`mcp_oauth2` is a built-in authentication provider in the NeMo Agent toolkit that implements the MCP OAuth2 specification. It is used to authenticate with MCP servers that require authentication.
+`mcp_oauth2` is a built-in authentication provider in the NeMo Agent Toolkit that implements the MCP OAuth2 specification. It is used to authenticate with MCP servers that require authentication.
 Sample configuration:
 ```yaml
 authentication:
@@ -182,7 +182,7 @@ At this point, a consent window is displayed again. The `UI` user must authorize
 
 ### Running the Workflow on a Remote Server
 
-When running the NeMo Agent toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
+When running the NeMo Agent Toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
 
 #### Why This Is Required
 
@@ -262,25 +262,31 @@ export CORPORATE_MCP_JIRA_URL="https://your-jira-mcp-url"
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
 ```
 
-3. Test requests with different users:
+3. Test with session cookie (user identified by `?session={user_id}`):
 
-User Alice:
-```bash
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=user-alice" \
-  -d '{"messages": [{"role": "user", "content": "What is status of AIQ-2342?"}]}'
-```
+   User Alice:
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Alice --input "What is the status of AIQ-1935?"
+   ```
 
-User Bob (has a separate MCP client instance):
-```bash
-curl -X POST http://localhost:8000/generate \
-  -H "Content-Type: application/json" \
-  -H "Cookie: nat-session=user-bob" \
-  -d '{"messages": [{"role": "user", "content": "What is status of AIQ-2507?"}]}'
-```
+   User Hatter (has a separate MCP client instance):
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Hatter --input "What is the status of AIQ-1935?"
+   ```
 
-Each user identified by their `nat-session` cookie gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
+4. (Alternative to 3) Test with JWT (user identified by `Authorization: Bearer <JWT>`; no session query parameter):
+
+   User Alice:
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Alice --input "What is the status of AIQ-1935?"
+   ```
+
+   User Hatter:
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Hatter --input "What is the status of AIQ-1935?"
+   ```
+
+Each user gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
 
 ## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:

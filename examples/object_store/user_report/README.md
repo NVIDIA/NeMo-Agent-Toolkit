@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-And example tool in the NeMo Agent toolkit that makes use of an Object Store to retrieve data.
+And example tool in the NeMo Agent Toolkit that makes use of an Object Store to retrieve data.
 
 ## Table of Contents
 
@@ -43,7 +43,7 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 
 ## Key Features
 
-- **Function Group Implementation**: Demonstrates the new function groups feature in NeMo Agent toolkit for sharing configurations and resources across multiple functions.
+- **Function Group Implementation**: Demonstrates the new function groups feature in NeMo Agent Toolkit for sharing configurations and resources across multiple functions.
 - **Shared Configuration**: All user report functions share the same object store reference and configuration settings.
 - **Resource Sharing**: Functions within the group share the same object store client connection, reducing resource overhead.
 - **Object Store Integration:** Demonstrates comprehensive integration with object storage systems including AWS S3 and MinIO for storing and retrieving user report data.
@@ -54,7 +54,7 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 
 ## Function Groups Overview
 
-This example demonstrates using function groups in NeMo Agent toolkit. Function groups allow you to:
+This example demonstrates using function groups in NeMo Agent Toolkit. Function groups allow you to:
 
 - **Share configurations** across multiple related functions
 - **Share resources** such as database connections or API clients
@@ -105,11 +105,11 @@ workflow:
 ```
 
 ## Installation and Setup
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit repository, run the following commands:
+From the root directory of the NeMo Agent Toolkit repository, run the following commands:
 
 ```bash
 uv pip install -e examples/object_store/user_report
@@ -232,7 +232,7 @@ If any of the loading scripts were run and the files are in the object store, ex
 
 ## Run the Workflow
 
-For each of the following examples, a command is provided to run the workflow with the specified input. Run the following command from the root of the NeMo Agent toolkit repo to execute the workflow.
+For each of the following examples, a command is provided to run the workflow with the specified input. Run the following command from the root of the NeMo Agent Toolkit repo to execute the workflow.
 
 You have three options for running the workflow:
 1. Using the S3-compatible object store (`config_s3.yml`)

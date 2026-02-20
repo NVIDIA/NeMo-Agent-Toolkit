@@ -77,24 +77,6 @@ async def test_litellm_adk_with_full_config(mock_litellm_class, litellm_config, 
 
 @patch('google.adk.models.lite_llm.LiteLlm')
 @pytest.mark.asyncio
-async def test_litellm_adk_with_minimal_config(mock_litellm_class, minimal_litellm_config, mock_builder):
-    """Test litellm_adk function with minimal configuration."""
-    mock_llm_instance = MagicMock()
-    mock_litellm_class.return_value = mock_llm_instance
-
-    # Use async context manager (not async for)
-    async with openai_adk(minimal_litellm_config, mock_builder) as llm:
-        result_llm = llm
-
-    # Verify LiteLlm was instantiated with default values for missing fields
-    mock_litellm_class.assert_called_once_with('gpt-4')
-
-    # Verify the returned LLM instance
-    assert result_llm == mock_llm_instance
-
-
-@patch('google.adk.models.lite_llm.LiteLlm')
-@pytest.mark.asyncio
 async def test_litellm_adk_config_exclusion(mock_litellm_class, mock_builder):
     """Test that 'type' field is excluded from config when creating LiteLlm."""
     config_with_type = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.5)
@@ -199,8 +181,9 @@ class TestDynamoAdk:
             base_url="http://localhost:8000/v1",
             prefix_template="session-{uuid}",
             prefix_total_requests=15,
-            prefix_osl="HIGH",
-            prefix_iat="LOW",
+            prefix_osl=2048,
+            prefix_iat=50,
+            disable_headers=False,
         )
 
     @patch('google.adk.models.lite_llm.LiteLlm')
@@ -238,8 +221,8 @@ class TestDynamoAdk:
             assert "x-prefix-id" in headers
             assert headers["x-prefix-id"].startswith("session-")
             assert headers["x-prefix-total-requests"] == "15"
-            assert headers["x-prefix-osl"] == "HIGH"
-            assert headers["x-prefix-iat"] == "LOW"
+            assert headers["x-prefix-osl"] == "2048"
+            assert headers["x-prefix-iat"] == "50"
 
             assert client is mock_llm_instance
 
@@ -268,6 +251,8 @@ class TestDynamoAdk:
         assert "prefix_total_requests" not in kwargs
         assert "prefix_osl" not in kwargs
         assert "prefix_iat" not in kwargs
+        assert "prefix_use_raw_values" not in kwargs
+        assert "disable_headers" not in kwargs
         assert "request_timeout" not in kwargs
 
     @patch('google.adk.models.lite_llm.LiteLlm')
@@ -280,6 +265,7 @@ class TestDynamoAdk:
         config = DynamoModelConfig(
             model_name="test-model",
             prefix_template="session-{uuid}",
+            disable_headers=False,
         )
 
         prefix_ids = set()

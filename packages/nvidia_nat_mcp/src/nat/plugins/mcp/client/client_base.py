@@ -32,7 +32,7 @@ from mcp import ClientSession
 from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters
 from mcp.client.stdio import stdio_client
-from mcp.client.streamable_http import streamablehttp_client
+from mcp.client.streamable_http import streamable_http_client
 from mcp.types import TextContent
 from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
@@ -215,6 +215,11 @@ class MCPBaseClient(ABC):
 
         self._connection_established = False
         self._tools = None
+
+    @property
+    def is_connected(self) -> bool:
+        """Whether the client has an active, initialized connection."""
+        return self._exit_stack is not None and self._connection_established
 
     @property
     def server_name(self):
@@ -530,12 +535,21 @@ class MCPStreamableHTTPClient(MCPBaseClient):
     Args:
       url (str): The url of the MCP server
       auth_provider (AuthProviderBase | None): Optional authentication provider for Bearer token injection
+      user_id (str | None): Optional user ID for session isolation
+      custom_headers (dict[str, str] | None): Optional custom HTTP headers to include in requests
+      tool_call_timeout (timedelta): Timeout for tool calls
+      auth_flow_timeout (timedelta): Extended timeout for interactive authentication
+      reconnect_enabled (bool): Whether to automatically reconnect on connection failures
+      reconnect_max_attempts (int): Maximum number of reconnection attempts
+      reconnect_initial_backoff (float): Initial backoff delay in seconds
+      reconnect_max_backoff (float): Maximum backoff delay in seconds
     """
 
     def __init__(self,
                  url: str,
                  auth_provider: AuthProviderBase | None = None,
                  user_id: str | None = None,
+                 custom_headers: dict[str, str] | None = None,
                  tool_call_timeout: timedelta = timedelta(seconds=60),
                  auth_flow_timeout: timedelta = timedelta(seconds=300),
                  reconnect_enabled: bool = True,
@@ -552,10 +566,33 @@ class MCPStreamableHTTPClient(MCPBaseClient):
                          reconnect_initial_backoff=reconnect_initial_backoff,
                          reconnect_max_backoff=reconnect_max_backoff)
         self._url = url
+        self._custom_headers = custom_headers or {}
+        # Callback to retrieve MCP session ID from the transport layer
+        self._get_mcp_session_id: Callable[[], str | None] | None = None
 
     @property
     def url(self) -> str:
         return self._url
+
+    @property
+    def custom_headers(self) -> dict[str, str]:
+        """Returns the custom headers configured for this client."""
+        return self._custom_headers
+
+    @property
+    def mcp_session_id(self) -> str | None:
+        """
+        Returns the MCP transport-level session ID if available.
+
+        This is the session ID assigned by the MCP server (from the mcp-session-id header),
+        which can be used for correlating backend sessions with MCP server sessions.
+
+        Returns:
+            The MCP session ID string, or None if not connected or not available.
+        """
+        if self._get_mcp_session_id is not None:
+            return self._get_mcp_session_id()
+        return None
 
     @property
     def server_name(self):
@@ -567,11 +604,23 @@ class MCPStreamableHTTPClient(MCPBaseClient):
         """
         Establish a session with an MCP server via streamable-http within an async context
         """
-        # Use httpx.Auth for authentication
-        async with streamablehttp_client(url=self._url, auth=self._httpx_auth) as (read, write, _):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                yield session
+        # Create httpx client with custom headers and auth
+        # streamable_http_client expects a pre-configured httpx.AsyncClient for headers/auth
+        http_client = httpx.AsyncClient(headers=self._custom_headers if self._custom_headers else None,
+                                        auth=self._httpx_auth)
+
+        try:
+            async with http_client:
+                async with streamable_http_client(url=self._url,
+                                                  http_client=http_client) as (read, write, get_session_id):
+                    # Store the session ID callback for later retrieval
+                    self._get_mcp_session_id = get_session_id
+                    async with ClientSession(read, write) as session:
+                        await session.initialize()
+                        yield session
+        finally:
+            # Clear the session ID callback when disconnected
+            self._get_mcp_session_id = None
 
 
 class MCPToolClient:

@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with NVIDIA Data Flywheel
 
-This guide provides a step-by-step process to enable observability in a NVIDIA NeMo Agent toolkit workflow that exports runtime traces to an Elasticsearch instance that is part of the [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel). The Data Flywheel Blueprint can then leverage the traces to fine-tune and evaluate smaller models which can be deployed to replace the original model to reduce latency.
+This guide provides a step-by-step process to enable observability in a NVIDIA NeMo Agent Toolkit workflow that exports runtime traces to an Elasticsearch instance that is part of the [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel). The Data Flywheel Blueprint can then leverage the traces to fine-tune and evaluate smaller models which can be deployed to replace the original model to reduce latency.
 
 The Data Flywheel integration supports LangChain/LangGraph-based workflows with `nim` and `openai` [LLM](../../build-workflows/llms/index.md) providers and can be enabled with just a few lines of configuration.
 
@@ -88,7 +88,7 @@ nat run --config_file config-data-flywheel.yml --input "Your workflow input here
 
 ## Step 5: Monitor Trace Export
 
-As your workflow runs, traces will be automatically exported to Elasticsearch in batches. You can monitor the export process through the NeMo Agent toolkit logs, which will show information about successful exports and any errors.
+As your workflow runs, traces will be automatically exported to Elasticsearch in batches. You can monitor the export process through the NeMo Agent Toolkit logs, which will show information about successful exports and any errors.
 
 ## Step 6: Access Data in Data Flywheel
 
@@ -107,14 +107,14 @@ The Data Flywheel integration uses workload identifiers to organize traces for t
 
 #### Default Scoping Behavior
 
-By default, each trace receives a Data Flywheel `workload_id` that maps to the parent NeMo Agent toolkit registered function. The combination of `client_id` and `workload_id` is used by Data Flywheel to select data as the basis for training jobs.
+By default, each trace receives a Data Flywheel `workload_id` that maps to the parent NeMo Agent Toolkit registered function. The combination of `client_id` and `workload_id` is used by Data Flywheel to select data as the basis for training jobs.
 
 #### Custom Scoping with `@track_unregistered_function`
 
 For fine-grained optimization, you can create custom workload scopes using the `@track_unregistered_function` decorator. This is useful when a single registered function contains multiple LLM invocations that would benefit from separate model optimizations.
 
 ```python
-from nat.profiler.decorators.function_tracking import track_unregistered_function
+from nat.plugins.eval.profiler.decorators.function_tracking import track_unregistered_function
 
 @track_unregistered_function(name="document_summarizer", metadata={"task_type": "summarization"})
 def summarize_document(document: str) -> str:
@@ -137,4 +137,4 @@ For more information about NVIDIA Data Flywheel:
 - [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel)
 - [NVIDIA Data Flywheel Blueprint Brev.dev Launchable](https://brev.nvidia.com/launchable/deploy/now?launchableID=env-2wggjBvDlVp4pLQD8ytZySh5m8W)
 - [NVIDIA Data Flywheel GitHub Repository](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
-- [NeMo Agent toolkit Observability Guide](./observe.md)
+- [NeMo Agent Toolkit Observability Guide](./observe.md)

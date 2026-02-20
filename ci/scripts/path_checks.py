@@ -215,6 +215,10 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r".*(configs|data|src).*",
     ),
     (
+        r"^examples/notebooks/mcp_setup_and_integration.ipynb",
+        r"^\./calculator.yml",
+    ),
+    (
         r"^examples/frameworks/haystack_deep_research_agent/README.md",
         r"^examples/frameworks/haystack_deep_research_agent/data/bedrock-ug.pdf",
     ),

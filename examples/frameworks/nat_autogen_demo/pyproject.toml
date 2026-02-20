@@ -16,22 +16,27 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools >= 64", "setuptools-scm>=8"]
+requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 [tool.setuptools_scm]
 git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
+[tool.setuptools.packages.find]
+where = ["src"]
+
 [project]
 name = "nat_autogen_demo"
-dynamic = ["version"]
-dependencies = [
-  "nvidia-nat[autogen,mcp]~=1.5",
-]
+dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "AutoGen Workflow Example"
 keywords = ["ai", "rag", "agents", "autogen", "multi-agent"]
 classifiers = ["Programming Language :: Python"]
+
+[tool.setuptools_dynamic_dependencies]
+dependencies = [
+  "nvidia-nat[autogen,eval,mcp,test] == {version}",
+]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }

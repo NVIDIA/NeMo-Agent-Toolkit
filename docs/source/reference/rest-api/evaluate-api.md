@@ -17,10 +17,26 @@ limitations under the License.
 
 # Evaluate API Endpoints
 :::{note}
-It is recommended that the [Evaluating NeMo Agent toolkit Workflows](../../improve-workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
+It is recommended that the [Evaluating NeMo Agent Toolkit Workflows](../../improve-workflows/evaluate.md) guide be read before proceeding with this detailed documentation.
 :::
 
-The evaluation endpoint can be used to start evaluation jobs on a remote NeMo Agent toolkit server. This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e '.[async_endpoints]'` from the root directory of the NeMo Agent toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install "nvidia-nat[async_endpoints]"`.
+The evaluation endpoint can be used to start evaluation jobs on a remote NeMo Agent Toolkit server.
+
+Availability requirements:
+- `async_endpoints` support (for Dask-backed async job endpoints)
+- `nvidia-nat-eval` support (provides evaluation runtime)
+
+For users installing from source:
+```bash
+uv pip install -e '.[async_endpoints,eval]'
+```
+
+For users installing from package distributions:
+```bash
+pip install "nvidia-nat[async_endpoints,eval]"
+```
+
+The `/evaluate` and `/evaluate/item` routes are registered by the core FastAPI front end and enabled only when `nvidia-nat-eval` and asynchronous endpoint support are installed.
 
 ## Evaluation Endpoint Overview
 ```mermaid
@@ -37,7 +53,7 @@ Sample Usage:
 nat serve --config_file=examples/getting_started/simple_web_query/configs/config.yml
 ```
 
-Refer to the [API Server Endpoints](./api-server-endpoints.md) guide for details on the NeMo Agent toolkit server.
+Refer to the [API Server Endpoints](./api-server-endpoints.md) guide for details on the NeMo Agent Toolkit server.
 
 ## Evaluate Request and Response
 The /evaluate endpoint allows you to start an evaluation job. The request is stored for background processing, and the server returns a job ID for tracking the job status.

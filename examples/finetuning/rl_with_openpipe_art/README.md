@@ -61,7 +61,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 3. **OpenPipe ART** installed in a **separate virtual environment**:
 
-   OpenPipe ART has specific dependency requirements that may conflict with NeMo Agent toolkit. We recommend installing it in an isolated environment:
+   OpenPipe ART has specific dependency requirements that may conflict with NeMo Agent Toolkit. We recommend installing it in an isolated environment:
 
    ```bash
    # Create a separate virtual environment for ART
@@ -198,9 +198,11 @@ curl http://localhost:8000/v1/models
 
 ### 1.2 Run Pre-Training Evaluation
 
-In a **separate terminal** with your NeMo Agent toolkit environment activated:
+In a **separate terminal** with your NeMo Agent Toolkit environment activated:
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 # Run the pre-training evaluation
 nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_pre_train.yml --reps 3
 ```
@@ -227,7 +229,7 @@ source art-env/bin/activate
 export HF_TOKEN=<your_huggingface_token>
 
 # Start the ART server
-uv run art --host 0.0.0.0 --port 7623
+art --host 0.0.0.0 --port 7623
 ```
 
 > **Note**: The ART server listens on port `7623` for training commands and starts vLLM internally on port `8000` for inference.
@@ -315,9 +317,11 @@ finetuning:
 
 ### 3.2 Start Training
 
-In your **NeMo Agent toolkit environment**:
+In your **NeMo Agent Toolkit environment**:
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 nat finetune --config_file examples/finetuning/rl_with_openpipe_art/configs/config.yml
 ```
 
@@ -571,10 +575,15 @@ The ART server continues serving the finetuned model weights. Do not restart it,
 ### 6.2 Run Post-Training Evaluation
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_post_train.yml --reps 3
 ```
 
 Compare the post-training win percentage against the pre-training baseline. You should see a notable improvement.
+
+> [!NOTE]
+> Due to the stochastic nature of reinforcement learning, you may notice a decrease in performance in some training attempts. Please try running the training again or follow the troubleshooting guide below.
 
 ---
 
@@ -759,7 +768,7 @@ curl http://localhost:7623/health
 
 ## Further Reading
 
-- [NeMo Agent toolkit Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
-- [NeMo Agent toolkit Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
+- [NeMo Agent Toolkit Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
+- [NeMo Agent Toolkit Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
 - [OpenPipe ART Integration](../../../docs/source/improve-workflows/finetuning/rl_with_openpipe.md)
 - [OpenPipe ART Documentation](https://art.openpipe.ai/)

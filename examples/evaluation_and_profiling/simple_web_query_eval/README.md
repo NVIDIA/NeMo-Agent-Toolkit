@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple LangSmith-Documentation Agent workflow.
+This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent Toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple LangSmith-Documentation Agent workflow.
 
 ## Table of Contents
 
@@ -38,7 +38,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 - **Web Query Agent Evaluation:** Demonstrates comprehensive evaluation of the `simple_web_query` agent that retrieves and processes LangSmith documentation using `webpage_query` tools and `react_agent` reasoning.
 - **Multi-Model Performance Testing:** Shows systematic comparison across different LLM providers including OpenAI models, NVIDIA Nemotron models, Llama 3.1, and Llama 3.3 to identify optimal configurations for documentation retrieval tasks.
-- **Evaluation Framework Integration:** Uses the NeMo Agent toolkit `nat eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
+- **Evaluation Framework Integration:** Uses the NeMo Agent Toolkit `nat eval` command with various evaluation configurations to measure response quality, accuracy scores, and documentation retrieval effectiveness.
 - **Question-by-Question Analysis:** Provides detailed breakdown of individual agent responses with comprehensive metrics for identifying failure patterns in LangSmith documentation queries.
 - **Dataset Management Workflow:** Demonstrates working with evaluation datasets for consistent testing and performance tracking over time, including evaluation-only modes and result upload capabilities.
 

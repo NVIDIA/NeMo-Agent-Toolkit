@@ -17,7 +17,7 @@ limitations under the License.
 
 # Launch the NVIDIA NeMo Agent Toolkit API Server and User Interface
 
-NVIDIA NeMo Agent toolkit provides a user interface for interacting with your running [workflow](../build-workflows/about-building-workflows.md). This guide walks you through starting the API server and launching the web-based user interface to interact with your workflows.
+NVIDIA NeMo Agent Toolkit provides a user interface for interacting with your running [workflow](../build-workflows/about-building-workflows.md). This guide walks you through starting the API server and launching the web-based user interface to interact with your workflows.
 
 ## User Interface Features
 
@@ -32,17 +32,17 @@ NVIDIA NeMo Agent toolkit provides a user interface for interacting with your ru
 
 ## Walk-through
 
-This walk-through guides you through the steps to set up and configure the NeMo Agent toolkit user interface.
+This walk-through guides you through the steps to set up and configure the NeMo Agent Toolkit user interface.
 
 ### Prerequisites
 
 Before starting, ensure you have:
 
-- NeMo Agent toolkit installed and configured
+- NeMo Agent Toolkit installed and configured
 - Set up the simple calculator workflow by following the instructions in `examples/getting_started/simple_calculator/README.md`
 - Node.js v18+ installed (required for the web interface)
 
-The NeMo Agent toolkit UI is located in a Git submodule at `external/nat-ui`. Ensure you have checked out all of the Git submodules by running the following:
+The NeMo Agent Toolkit UI is located in a Git submodule at `external/nat-ui`. Ensure you have checked out all of the Git submodules by running the following:
 
 ```bash
 git submodule update --init --recursive
@@ -50,7 +50,7 @@ git submodule update --init --recursive
 
 ### Start the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
+You can start the NeMo Agent Toolkit server using the `nat serve` command with the appropriate configuration file.
 
 ```bash
 nat serve --config_file=examples/getting_started/simple_calculator/configs/config.yml
@@ -89,7 +89,7 @@ The response depends on the current time of day that the command is run.
 
 ### Launch the NeMo Agent Toolkit User Interface
 
-After the NeMo Agent toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
+After the NeMo Agent Toolkit server starts, launch the web user interface. Launching the UI requires that Node.js v18+ is installed. Instructions for downloading and installing Node.js can be found in the official [Node.js documentation](https://nodejs.org/en/download).
 
 For comprehensive information about the NeMo Agent Toolkit UI, including setup instructions, configuration options, and UI components documentation, see:
 
@@ -106,7 +106,7 @@ npm run dev
 
 After the web development server starts, open a web browser and navigate to [`http://localhost:3000/`](http://localhost:3000/).
 
-![NeMo Agent toolkit Web User Interface](../_static/ui_home_page.png)
+![NeMo Agent Toolkit Web User Interface](../_static/ui_home_page.png)
 
 :::{important}
 Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP.
@@ -122,7 +122,7 @@ To enable WebSocket mode:
 
 Configure the settings by selecting the *Settings* icon located on the bottom left corner of the home page.
 
-![NeMo Agent toolkit Web UI Settings](../_static/ui_settings_example.png)
+![NeMo Agent Toolkit Web UI Settings](../_static/ui_settings_example.png)
 
 #### Settings Options
 

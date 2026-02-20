@@ -17,15 +17,57 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit API Server Endpoints
 
-There are currently five workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent toolkit server is running: `generate non-streaming`, `generate async`, `generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
+There are currently five workflow transactions that can be initiated using HTTP or WebSocket when the NeMo Agent Toolkit server is running: `generate non-streaming`, `generate async`, `generate streaming`, `chat non-streaming`, and `chat streaming`. The following are types of interfaces you can use to interact with your running workflows.
   - **Generate Interface:** Uses the transaction schema defined by your workflow. The interface documentation is accessible
     using Swagger while the server is running [`http://localhost:8000/docs`](http://localhost:8000/docs).
   - **Chat Interface:** [OpenAI API Documentation](https://platform.openai.com/docs/guides/text?api-mode=chat) provides
-    details on chat formats compatible with the NeMo Agent toolkit server.
+    details on chat formats compatible with the NeMo Agent Toolkit server.
+
+## Default Endpoint Paths
+
+The default endpoint paths use a versioned URL scheme. Legacy paths are also registered for
+backward compatibility unless explicitly disabled.
+
+| Endpoint | Default Path | Legacy Path |
+|----------|-------------|-------------|
+| Generate (non-streaming) | `/v1/workflow` | `/generate` |
+| Generate (streaming) | `/v1/workflow/stream` | `/generate/stream` |
+| Generate (full) | `/v1/workflow/full` | `/generate/full` |
+| Generate (async) | `/v1/workflow/async` | `/generate/async` |
+| Chat (non-streaming) | `/v1/chat` | `/chat` |
+| Chat (streaming) | `/v1/chat/stream` | `/chat/stream` |
+| OpenAI v1 Completions | `/v1/chat/completions` | (none) |
+
+### Configuring Legacy Routes
+
+By default, both the versioned and legacy paths are active. You can control this behavior
+through the front-end configuration:
+
+```yaml
+general:
+  front_end:
+    _type: fastapi
+    workflow:
+      path: /v1/workflow
+      openai_api_path: /v1/chat
+      openai_api_v1_path: /v1/chat/completions
+      legacy_path: /generate                  # Optional legacy generate path
+      legacy_openai_api_path: /chat           # Optional legacy chat path
+    disable_legacy_routes: false              # Set to true to disable legacy paths
+```
+
+Setting `disable_legacy_routes` to `true` removes the legacy paths entirely. Set `legacy_path`
+or `legacy_openai_api_path` to `null` on individual endpoints to disable specific legacy routes
+while keeping others.
+
+### HTTP Interactive Extensions
+
+Interactive workflows (Human-in-the-Loop and OAuth) can be used over plain HTTP without
+WebSockets. For details, see [HTTP Interactive Execution](./http-interactive-execution.md).
 
 
 ## Start the NeMo Agent Toolkit Server
-This section describes how to start the NeMo Agent toolkit server.
+This section describes how to start the NeMo Agent Toolkit server.
 ### Set Up API Keys
 If you have not already done so, follow the [Obtaining API Keys](../../get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 ```bash
@@ -39,13 +81,13 @@ nat serve --config_file examples/getting_started/simple_calculator/configs/confi
 ```
 
 ## Generate Non-Streaming Transaction
-- **Route:** `/generate`
+- **Route:** `/v1/workflow` (legacy: `/generate`)
 - **Description:** A non-streaming transaction that waits until all workflow data is available before sending the
 result back to the client. The transaction schema is defined by the workflow.
 - HTTP Request Example:
   ```bash
   curl --request POST \
-    --url http://localhost:8000/generate \
+    --url http://localhost:8000/v1/workflow \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -61,24 +103,24 @@ result back to the client. The transaction schema is defined by the workflow.
 ## Asynchronous Generate
 The asynchronous generate endpoint allows clients to submit a workflow to run in the background and return a response immediately with a unique identifier for the workflow. This can be used to query the status and results of the workflow at a later time. This is useful for long-running workflows, which would otherwise cause the client to time out.
 
-This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e '.[async_endpoints]'` from the root directory of the NeMo Agent toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install "nvidia-nat[async_endpoints]"`.
+This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e '.[async_endpoints]'` from the root directory of the NeMo Agent Toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install "nvidia-nat[async_endpoints]"`.
 
 Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/). By default, a local Dask cluster is created at start time, however you can also configure the server to connect to an existing Dask scheduler by setting the `scheduler_address` configuration parameter. The Dask scheduler is used to manage the execution of asynchronous jobs, and can be configured to run on a single machine or across a cluster of machines. Job history and metadata is stored in a SQL database using [SQLAlchemy](https://www.sqlalchemy.org/). By default, a temporary SQLite database is created at start time, however you can also configure the server to use a persistent database by setting the `db_url` configuration parameter. Refer to the [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) for the format of the `db_url` parameter. Any database supported by [SQLAlchemy's Asynchronous I/O extension](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) can be used. Refer to [SQLAlchemy's Dialects](https://docs.sqlalchemy.org/en/20/dialects/index.html) for a complete list (many but not all of these support Asynchronous I/O).
 
-### Asynchronous Specific CLI flags
+### Asynchronous Specific CLI Flags
 The following CLI flags are available to configure the asynchronous generate endpoint when using `nat serve`:
-* --scheduler_address: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
-* --db_url: The [SQLAlchemy database](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) URL to use for storing job history and metadata. If not set, a temporary SQLite database will be created.
-* --max_concurrent_jobs: The maximum number of asynchronous jobs to run concurrently. Default is 10. This is only used when `scheduler_address` is not set.
-* --dask_workers: The type of Dask workers to use. Options are `threads` for Threaded Dask workers or `processes` for Process based Dask workers. Default is `processes`. This is only used when `scheduler_address` is not set.
-* --dask_log_level: The logging level for Dask. Default is `WARNING`.
-
-:::{note}
-When processes are used Dask workers, standard output and standard error from the workflow will not be visible in the server logs, however threaded Dask workers will allow workflow output to be visible in the server logs. When multiple concurrent jobs are running using threaded Dask workers, workflow output from different jobs may be interleaved in the server logs.
-:::
+* `--dask_log_level`: The logging level for Dask. Default is `WARNING`.
+* `--dask_threads_per_worker`: The number of threads to use per Dask worker. Default is `1`. When set to `0` the value uses the Dask default. This is only used when `scheduler_address` is not set.
+* `--dask_workers`: The type of Dask workers to use. Options are `threads` for Threaded Dask workers or `processes` for Process based Dask workers. Default is `processes`. This is only used when `scheduler_address` is not set.
+* `--dask_worker_memory_limit`: The memory limit for each Dask worker. Can be 'auto', a memory string like '4GB', or a float representing a fraction of the system memory. The default value is '0', which means there is no memory limit. Refer to https://docs.dask.org/en/stable/deploying-python.html#reference for details.
+* `--db_url`: The [SQLAlchemy database](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) URL to use for storing job history and metadata. If not set, a temporary SQLite database will be created.
+* `--max_concurrent_jobs`: Maximum number of Dask workers to create for running async jobs. The name of this parameter is misleading as the actual number of concurrent async jobs is: `max_running_async_jobs * dask_threads_per_worker`. Default is 10. This is only used when `scheduler_address` is not set.
+* `--scheduler_address`: The address of an existing Dask scheduler to connect to. If not set, a local Dask cluster will be created.
 
 
-- **Route:** `/generate/async`
+### Endpoint Details
+
+- **Route:** `/v1/workflow/async` (legacy: `/generate/async`)
 - **Description:** A non-streaming transaction that submits a workflow to run in the background.
 - **Optional Fields:**
   - `job_id`: A unique identifier for the job. If not provided, a UUID will be generated. It can be any string value. However, it is the caller's responsibility to ensure uniqueness. If `job_id` already exists, the server will return the latest status for that job.
@@ -89,7 +131,7 @@ When processes are used Dask workers, standard output and standard error from th
 - HTTP Request Example:
   ```bash
   curl --request POST \
-    --url http://localhost:8000/generate/async \
+    --url http://localhost:8000/v1/workflow/async \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -108,7 +150,7 @@ When processes are used Dask workers, standard output and standard error from th
 - HTTP Request Example:
   ```bash
   curl --request POST \
-    --url http://localhost:8000/generate/async \
+    --url http://localhost:8000/v1/workflow/async \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day",
@@ -132,13 +174,13 @@ When processes are used Dask workers, standard output and standard error from th
   ```
 
 ## Generate Streaming Transaction
-  - **Route:** `/generate/stream`
+  - **Route:** `/v1/workflow/stream` (legacy: `/generate/stream`)
   - **Description:** A streaming transaction that allows data to be sent in chunks as it becomes available from the
     workflow, rather than waiting for the complete response to be available.
 - HTTP Request Example:
   ```bash
   curl --request POST \
-    --url http://localhost:8000/generate/stream \
+    --url http://localhost:8000/v1/workflow/stream \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -191,14 +233,14 @@ When processes are used Dask workers, standard output and standard error from th
   "data": { "value": "No, 4 + 4 (which is 8) is not greater than the current hour of the day (which is 15)." }
   ```
 ## Generate Streaming Full Transaction
-  - **Route:** `/generate/full`
-  - **Description:** Same as `/generate/stream` but provides raw `IntermediateStep` objects
+  - **Route:** `/v1/workflow/full` (legacy: `/generate/full`)
+  - **Description:** Same as `/v1/workflow/stream` but provides raw `IntermediateStep` objects
     without any step adaptor translations. Use the `filter_steps` query parameter to filter
     steps by type (comma-separated list) or set to 'none' to suppress all intermediate steps.
   - **HTTP Request Example:**
     ```bash
     curl --request POST \
-    --url http://localhost:8000/generate/full \
+    --url http://localhost:8000/v1/workflow/full \
     --header 'Content-Type: application/json' \
     --data '{
       "input_message": "Is 4 + 4 greater than the current hour of the day"
@@ -218,25 +260,25 @@ When processes are used Dask workers, standard output and standard error from th
   Suppress all intermediate steps (only get final output):
   ```bash
   curl --request POST \
-    --url 'http://localhost:8000/generate/full?filter_steps=none' \
+    --url 'http://localhost:8000/v1/workflow/full?filter_steps=none' \
     --header 'Content-Type: application/json' \
     --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
   ```
   Get only specific step types:
   ```bash
   curl --request POST \
-    --url 'http://localhost:8000/generate/full?filter_steps=LLM_END,TOOL_END' \
+    --url 'http://localhost:8000/v1/workflow/full?filter_steps=LLM_END,TOOL_END' \
     --header 'Content-Type: application/json' \
     --data '{"input_message": "Is 4 + 4 greater than the current hour of the day"}'
   ```
 
 ## Chat Non-Streaming Transaction
-  - **Route:** `/chat`
+  - **Route:** `/v1/chat` (legacy: `/chat`)
   - **Description:** An OpenAI compatible non-streaming chat transaction.
   - **HTTP Request Example:**
     ```bash
     curl --request POST \
-    --url http://localhost:8000/chat \
+    --url http://localhost:8000/v1/chat \
     --header 'Content-Type: application/json' \
     --data '{
       "messages": [
@@ -272,12 +314,12 @@ When processes are used Dask workers, standard output and standard error from th
   }
   ```
 ## Chat Streaming Transaction
-  - **Route:** `/chat/stream`
+  - **Route:** `/v1/chat/stream` (legacy: `/chat/stream`)
   - **Description:** An OpenAI compatible streaming chat transaction.
   - **HTTP Request Example:**
     ```bash
     curl --request POST \
-    --url http://localhost:8000/chat/stream \
+    --url http://localhost:8000/v1/chat/stream \
     --header 'Content-Type: application/json' \
     --data '{
       "messages": [
@@ -383,9 +425,14 @@ general:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `openai_api_v1_path` | string | `null` | Path for the OpenAI v1 compatible endpoint |
-| `openai_api_path` | string | `/chat` | Path for legacy OpenAI endpoints |
+| `path` | string | `/v1/workflow` | Path for the generate endpoint |
+| `openai_api_path` | string | `/v1/chat` | Path for the OpenAI chat endpoint |
+| `openai_api_v1_path` | string | `/v1/chat/completions` | Path for the OpenAI v1 compatible endpoint |
+| `legacy_path` | string or null | `/generate` | Legacy path for the generate endpoint. Set to `null` to disable |
+| `legacy_openai_api_path` | string or null | `/chat` | Legacy path for the chat endpoint. Set to `null` to disable |
 | `method` | string | `POST` | HTTP method for the endpoint |
+| `disable_legacy_routes` | boolean | `false` | Disable all legacy routes globally |
+| `enable_interactive_extensions` | boolean | `false` | Enable [HTTP interactive execution](./http-interactive-execution.md) on chat endpoints |
 
 ### Endpoint Behavior
 
@@ -520,17 +567,27 @@ console.log(text);
 
 ### Migration Guide
 
-#### From Legacy Mode
+#### From Legacy Paths to Versioned Paths
 
-If you're currently using legacy mode with separate endpoints:
+The default endpoint paths have been updated to use a versioned URL scheme. Legacy paths
+(`/generate`, `/chat`) continue to work by default. To migrate:
+
+1. **Update client URLs**: Replace `/generate` with `/v1/workflow` and `/chat` with `/v1/chat`
+2. **Update streaming URLs**: Replace `/generate/stream` with `/v1/workflow/stream` and `/chat/stream` with `/v1/chat/stream`
+3. **Test thoroughly**: Verify all endpoints work with the new paths
+4. **Disable legacy routes** (optional): Set `disable_legacy_routes: true` in your configuration once all clients have been migrated
+
+#### From Legacy Chat Mode to OpenAI v1 Compatible Mode
+
+If you are currently using legacy mode with separate endpoints:
 
 1. **Update Configuration**: Set `openai_api_v1_path: /v1/chat/completions`
-2. **Update Client Code**: Use single endpoint with `stream` parameter
+2. **Update Client Code**: Use the single endpoint with a `stream` parameter
 3. **Test Thoroughly**: Verify both streaming and non-streaming functionality
 
 #### From OpenAI API
 
-If you're migrating from OpenAI's API:
+If you are migrating from the OpenAI API:
 
 1. **Update Base URL**: Point to your NeMo Agent Toolkit server
 2. **Update Model Names**: Use your configured model identifiers
@@ -558,7 +615,7 @@ If you're migrating from OpenAI's API:
 
 ## Per-User Workflow Monitoring Endpoint
 
-The NeMo Agent toolkit provides a built-in monitoring endpoint for per-user workflows that exposes real-time resource usage metrics. This is useful for debugging, capacity planning, and operational monitoring of multi-user deployments.
+The NeMo Agent Toolkit provides a built-in monitoring endpoint for per-user workflows that exposes real-time resource usage metrics. This is useful for debugging, capacity planning, and operational monitoring of multi-user deployments.
 
 ### Configuration
 
@@ -594,7 +651,7 @@ The response includes the following metrics for each user:
 | Field | Description |
 |-------|-------------|
 | `total_active_users` | Count of users with active per-user sessions (builders still in memory), regardless of in-flight requests |
-| `user_id` | The user identifier (from `nat-session` cookie) |
+| `user_id` | The user identifier (from `nat-session` cookie or JWT in Authorization header; see [User Identification](../../extend/custom-components/custom-functions/per-user-functions.md#user-identification)) |
 | `session.created_at` | When the per-user workflow was first created |
 | `session.last_activity` | Timestamp of the most recent request |
 | `session.ref_count` | Number of active concurrent requests for this user |
@@ -704,11 +761,13 @@ For more information about per-user workflows, refer to:
 - [Writing Per-User Functions](../../extend/custom-components/custom-functions/per-user-functions.md)
 
 ## Evaluation Endpoint
-You can also evaluate workflows via the NeMo Agent toolkit `evaluate` endpoint. For more information, refer to the [NeMo Agent toolkit Evaluation Endpoint](./evaluate-api.md) documentation.
+You can also evaluate workflows via the NeMo Agent Toolkit `evaluate` endpoint. The endpoint is registered by the core FastAPI worker and enabled only when `nvidia-nat-eval` is installed (plus `async_endpoints` support for async job handling). For more information, refer to the [NeMo Agent Toolkit Evaluation Endpoint](./evaluate-api.md) documentation.
 
 ## Choosing between Streaming and Non-Streaming
 Use streaming if you need real-time updates or live communication where users expect immediate feedback. Use non-streaming if your workflow responds with simple updates and less feedback is needed.
 
 ## NeMo Agent Toolkit API Server Interaction Guide
 A custom user interface can communicate with the API server using both HTTP requests and WebSocket connections.
-For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](./websockets.md) documentation.
+
+- For details on proper WebSocket messaging integration, refer to the [WebSocket Messaging Interface](./websockets.md) documentation.
+- For HTTP-based interactive workflows (Human-in-the-Loop and OAuth without WebSockets), refer to the [HTTP Interactive Execution](./http-interactive-execution.md) documentation.

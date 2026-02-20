@@ -121,31 +121,33 @@ reviews:
           contain a README.md or file README.ipynb.
         - If an example contains Python code, it should be placed in a subdirectory named `src/` and should
           contain a `pyproject.toml` file. Optionally, it might also contain scripts in a `scripts/` directory.
+        - If an example contains a `pyproject.toml` file, it should be added to the `examples` list in the root `pyproject.toml` file.
+        - If an example contains a tests directory, it should contain a `pyproject.toml` file.
         - If an example contains YAML files, they should be placed in a subdirectory named `configs/`.
         - If an example contains sample data files, they should be placed in a subdirectory named `data/`, and should
           be checked into git-lfs.
 
-    - path: "src/aiq/**/*"
-      instructions: >-
-        This directory maintains backward compatibility with the previous version of the toolkit. It should almost
-        never be modified.
-
-    - path: "src/nat/**/*"
+    - path: "packages/nvidia_nat_core/src/nat/**/*"
       instructions: >-
         This directory contains the core functionality of the toolkit. Changes should prioritize backward compatibility.
 
     - path: "packages/**/*"
       instructions: >-
-        - This directory contains optional plugin packages for the toolkit, each should contain a `pyproject.toml` file.
-        - The `pyproject.toml` file should declare a dependency on `nvidia-nat` or another package with a name starting
-          with `nvidia-nat-`. This dependency should be declared using `~=<version>`, and the version should be a two
-          digit version (ex: `~=1.0`).
+        - This directory contains packages for the toolkit, each should contain a `pyproject.toml` file.
         - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
           `tests/` directory at the same level as the `pyproject.toml` file.
+    - path: "packages/*/pyproject.toml"
+      instructions: >-
+        - The `pyproject.toml` file should never declare a dependency on the `nvidia-nat` meta package.
         - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
-          be added as a dependency to the nvidia-nat-all package in `packages/nvidia_nat_all/pyproject.toml`
+          probably be added as a dependency to the most extra in the root `pyproject.toml` file.
+        - `nvidia-nat-core` should likely be listed as a dependency.
+        - `nvidia-nat-test` should likely be listed as an optional dependency in the `test` extra
+        - A single dependency should be listed on each line and should always have a version specifier.
+        - All dependencies should be listed under the `[tool.setuptools_dynamic_dependencies]` section
+        - Any dependency that is an NVIDIA NeMo Agent Toolkit package should be declared with a version constraint of `== {version}` 
 
-    - path: "tests/**/*.py"
+    - path: "**/tests/**/*.py"
       instructions: >-
         - Ensure that tests are comprehensive, cover edge cases, and validate the functionality of the code.
         - Test functions should be named using the `test_` prefix, using snake_case.
@@ -166,13 +168,11 @@ reviews:
         - Any removed examples should be removed from the README.md file.
         - Example entries should be categorized by the directory they are located in.
 
-    - path: "pyproject.toml"
+    - path: "**/pyproject.toml"
       instructions: >-
         # pyproject.toml example section review instructions
         - Ensure that for any examples that are added or removed, the examples list in the pyproject.toml file is updated accordingly.
           This is only necessary if the example added contains a pyproject.toml file (e.g. it is installable as a package)
-        - Any added examples should be added to the `examples` list in the pyproject.toml file.
-        - Any removed examples should be removed from the `examples` list in the pyproject.toml file.
         - All added examples must have a `nat_` prefix within the `uv.sources` name. The path to the example does NOT need to have this prefix. If the example does not have a `nat_` prefix, it should be added.
 
   auto_apply_labels: true

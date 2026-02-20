@@ -17,12 +17,12 @@ limitations under the License.
 
 # Workflow Configuration
 
-NeMo Agent toolkit [workflows](./about-building-workflows.md) are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities ([functions](./functions-and-function-groups/functions.md), [LLMs](./llms/index.md), [embedders](./embedders.md), etc.) to use in the workflow, along with general configuration settings.
+NeMo Agent Toolkit [workflows](./about-building-workflows.md) are defined by a [YAML configuration file](#workflow-configuration-file), which specifies which entities ([functions](./functions-and-function-groups/functions.md), [LLMs](./llms/index.md), [embedders](./embedders.md), etc.) to use in the workflow, along with general configuration settings.
 
-The configuration attributes of each entity in NeMo Agent toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
+The configuration attributes of each entity in NeMo Agent Toolkit is defined by a [Configuration Object](#configuration-object). This object defines both the type and optionally the default value of each attribute. Any attribute without a default value is required to be specified in the configuration file.
 
 ## Configuration Object
-Each NeMo Agent toolkit [function](./functions-and-function-groups/functions.md) requires a configuration object that inherits from {py:class}`~nat.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent toolkit configuration objects are subclasses of the [`pydantic.BaseModel`](https://docs.pydantic.dev/2.11/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.11/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
+Each NeMo Agent Toolkit [function](./functions-and-function-groups/functions.md) requires a configuration object that inherits from {py:class}`~nat.data_models.function.FunctionBaseConfig`. The `FunctionBaseConfig` class and ultimately all NeMo Agent Toolkit configuration objects are subclasses of the [`pydantic.BaseModel`](https://docs.pydantic.dev/2.11/api/base_model/#pydantic.BaseModel) class from the [Pydantic Library](https://docs.pydantic.dev/2.11/), which provides a way to define and validate configuration objects. Each configuration object defines the parameters used to create runtime instances of functions (or other component type), each with different functionality based on configuration settings. It is possible to define nested functions that access other component runtime instances by name. These could be other `functions`, `llms`, `embedders`, `retrievers`, or `memory`. To facilitate nested runtime instance discovery, each component must be initialized in order based on the dependency tree. Enabling this feature requires configuration object parameters that refer to other component instances by name use a `ComponentRef` `dtype` that matches referred component type. The supported `ComponentRef` types are enumerated below:
 
 - `FunctionRef`: Refers to a registered [function](./functions-and-function-groups/functions.md) by its instance name in the `functions` section configuration object.
 - `LLMRef`: Refers to a registered [LLM](./llms/index.md) by its instance name in the `llms` section of the configuration object.
@@ -92,23 +92,23 @@ See the [Embedders](./embedders.md) documentation for more information.
 
 This section ties the previous sections together by defining the tools and LLM models to use. The `tool_names` section lists the tool names from the `functions` section, while the `llm_name` section specifies the LLM model to use.
 
-The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. While the choice of workflow type is commonly an [agent](../components/agents/index.md), this can be any registered NeMo Agent toolkit function.
+The `_type` value refers to the workflow type, in our example we are using a `react_agent` workflow. While the choice of workflow type is commonly an [agent](../components/agents/index.md), this can be any registered NeMo Agent Toolkit function.
 
 :::{note}
-In NeMo Agent toolkit, an agent is a special type of function.
+In NeMo Agent Toolkit, an agent is a special type of function.
 :::
 
-The parameters for the `react_agent` workflow are specified by the {py:class}`~nat.agent.react_agent.register.ReActAgentWorkflowConfig` class.
+The parameters for the `react_agent` workflow are specified by the {py:class}`~nat.plugins.langchain.agent.react_agent.register.ReActAgentWorkflowConfig` class.
 
 ### `general`
-This section contains general configuration settings for NeMo Agent toolkit which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
+This section contains general configuration settings for NeMo Agent Toolkit which are not specific to any workflow. The parameters for this section are specified by the {py:class}`~nat.data_models.config.GeneralConfig` class.
 
 :::{note}
 ⚠️ **Deprecated**: The `use_uvloop` parameter is deprecated and will be removed in a future release. Previously, the `use_uvloop` parameter meant to specify whether to use the [`uvloop`](https://github.com/MagicStack/uvloop) event loop, but now the use of `uv_loop` will be automatically determined based on the system platform the user is using.
 :::
 
 ### `eval`
-This section contains the evaluation settings for the workflow. Refer to [Evaluating NeMo Agent toolkit Workflows](../improve-workflows/evaluate.md) for more information.
+This section contains the evaluation settings for the workflow. Refer to [Evaluating NeMo Agent Toolkit Workflows](../improve-workflows/evaluate.md) for more information.
 
 ### `memory`
 
@@ -122,7 +122,7 @@ Refer to the [Retrievers](./retrievers.md) documentation for more information.
 
 ### Environment Variable Interpolation
 
-NeMo Agent toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
+NeMo Agent Toolkit supports environment variable interpolation in YAML configuration files using the format `${VAR:-default_value}`. This allows you to:
 
 1. Reference environment variables in your configuration
 2. Provide default values if the environment variable is not set
@@ -148,7 +148,7 @@ The environment variable interpolation process follow the rules enumerated below
 
 ### Configuration Inheritance
 
-NeMo Agent toolkit supports configuration inheritance to reduce duplication across similar configuration files. Use the `base` key to reference a base configuration and selectively override specific values. For example, given a base configuration:
+NeMo Agent Toolkit supports configuration inheritance to reduce duplication across similar configuration files. Use the `base` key to reference a base configuration and selectively override specific values. For example, given a base configuration:
 
 ```yaml
 # base-config.yml
@@ -176,3 +176,39 @@ When you run a workflow using `config-variant.yml`, the configurations are combi
 - **Error detection**: The system detects circular dependencies and missing base files
 
 See `examples/config_inheritance` for a complete example demonstrating different inheritance patterns and use cases.
+
+### Loading Content from Files
+
+NeMo Agent Toolkit supports loading string content from external files using the `file://` prefix. Any string field in the configuration can reference a file. This is useful for:
+
+- Managing long prompts or descriptions separately from configuration files
+- Version controlling content independently
+- Sharing content across multiple configurations
+- Using text editors with syntax highlighting for prompt development
+
+To load content from a file, use the `file://` prefix followed by the file path:
+
+```yaml
+workflow:
+  _type: react_agent
+  llm_name: nim_llm
+  tool_names: [calculator]
+  system_prompt: file://../prompts/system_prompt.txt
+
+functions:
+  my_tool:
+    _type: my_tool
+    description: file://descriptions/my_tool.md
+```
+
+The file loading follows these rules:
+
+- **Value format**: The value must start with `file://`
+- **Path resolution**: Relative paths are resolved from the configuration file's directory. Absolute paths are also supported
+- **Allowed extensions**: For security, only these file extensions are permitted: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
+
+:::{note}
+The file content is loaded as plain text. Jinja2 template rendering is not performed during loading—the content is inserted exactly as written in the file.
+:::
+
+See `examples/prompt_from_file` for a complete working example.

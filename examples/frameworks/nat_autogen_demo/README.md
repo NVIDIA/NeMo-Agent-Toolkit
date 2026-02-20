@@ -47,7 +47,7 @@ A quick example using the AutoGen framework from Microsoft, showcasing a multi-a
 
 ## Key Features
 
-- **AutoGen Framework Integration:** Demonstrates the NVIDIA NeMo Agent toolkit support for Microsoft's AutoGen framework alongside other frameworks like LangChain/LangGraph and Semantic Kernel.
+- **AutoGen Framework Integration:** Demonstrates the NVIDIA NeMo Agent Toolkit support for Microsoft's AutoGen framework alongside other frameworks like LangChain/LangGraph and Semantic Kernel.
 - **Multi-Agent Collaboration:** Shows two specialized agents working together - a TrafficAgent for data retrieval and a FinalResponseAgent for response formatting.
 - **Time-Aware Traffic Status:** Provides realistic traffic information that varies based on time of day (morning rush, evening rush, off-peak hours).
 - **Unified Tool Integration:** Uses the unified abstraction provided by the toolkit to integrate both local tools (traffic status) and MCP tools (time service) without framework-specific code. MCP servers are hosted using the native MCP server included in the toolkit and integrated with AutoGen as a function.
@@ -58,16 +58,16 @@ A quick example using the AutoGen framework from Microsoft, showcasing a multi-a
 Before running this example, ensure you have:
 
 - Python 3.11 or higher
-- NeMo Agent toolkit installed (see [Install Guide](../../../docs/source/get-started/installation.md))
+- NeMo Agent Toolkit installed (see [Install Guide](../../../docs/source/get-started/installation.md))
 - NVIDIA API key for NIM access
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit repository, run the following commands:
+From the root directory of the NeMo Agent Toolkit repository, run the following commands:
 
 ```bash
 # Install the demo workflow and its dependencies (this also installs the core toolkit and required plugins)
@@ -97,7 +97,7 @@ export NVIDIA_API_KEY="YOUR-NVIDIA-API-KEY-HERE"
 
 ### Set up the MCP Server
 
-This example uses the MCP client abstraction provided by NeMo Agent toolkit to connect to an MCP server. The MCP connection is configured in the workflow YAML file, and the toolkit automatically wraps the MCP tools for use with AutoGen agents. This approach provides a consistent interface across all supported frameworks.
+This example uses the MCP client abstraction provided by NeMo Agent Toolkit to connect to an MCP server. The MCP connection is configured in the workflow YAML file, and the toolkit automatically wraps the MCP tools for use with AutoGen agents. This approach provides a consistent interface across all supported frameworks.
 
 In a separate terminal, or in the background, run the MCP server with this command:
 
@@ -183,7 +183,7 @@ Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI
 
 ## Evaluate the Workflow
 
-NeMo Agent toolkit provides a comprehensive evaluation framework to assess your workflow's performance against a test dataset.
+NeMo Agent Toolkit provides a comprehensive evaluation framework to assess your workflow's performance against a test dataset.
 
 ### Evaluation Dataset
 
@@ -272,7 +272,7 @@ The agents communicate through AutoGen's RoundRobinGroupChat system, which manag
 
 ### Tool Integration
 
-This example demonstrates the unified approach to tool integration provided by NeMo Agent toolkit:
+This example demonstrates the unified approach to tool integration provided by NeMo Agent Toolkit:
 
 - **Local tools** (like `traffic_status_tool`) are defined as functions in the toolkit and provide time-aware traffic data for Los Angeles highways
 - **MCP tools** (like `current_datetime`) are configured in YAML using the `mcp_client` function group provided by the toolkit

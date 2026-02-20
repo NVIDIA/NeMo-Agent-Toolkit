@@ -24,7 +24,7 @@ FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 ARG PYTHON_VERSION
 ARG NAT_VERSION
 
-COPY --from=ghcr.io/astral-sh/uv:0.9.15 /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -53,7 +53,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_SIMPLE_CALCULATOR=${NAT_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
+    uv pip install -e '.[opentelemetry,phoenix,weave]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install --link-mode=copy ./examples/getting_started/simple_calculator
 
 # Environment variables for the venv

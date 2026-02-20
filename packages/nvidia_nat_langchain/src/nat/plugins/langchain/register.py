@@ -23,4 +23,8 @@ from . import langgraph_workflow
 from . import llm
 from . import tool_wrapper
 from . import retriever
-from .tools import register
+from .tools import register as tools_register
+from .agent import register as agent_register
+from .control_flow import register as control_flow_register
+from .dataset_loader import register as dataset_loader_register
+from .eval import register as eval_register

@@ -23,7 +23,7 @@ source ${GITHUB_SCRIPT_DIR}/common.sh
 rapids-logger "Installing non-pip deps"
 get_lfs_files
 
-create_env group:dev
+create_env
 
 rapids-logger "Building documentation"
 pushd ${PROJECT_ROOT}/docs

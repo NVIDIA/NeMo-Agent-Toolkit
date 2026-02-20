@@ -17,15 +17,134 @@
 
 # Migration Guide
 
-NeMo Agent toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
+NeMo Agent Toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
 
 Additionally, all new contributions should rely on the most recent version of the toolkit and not rely on any deprecated functionality.
 
-## Migrating to a new version of NeMo Agent toolkit
+## Migrating to a new version of NeMo Agent Toolkit
 
 It is strongly encouraged to migrate any existing code to the latest conventions and remove any deprecated functionality.
 
 ## Version Specific Changes
+
+### v1.5.0
+
+#### Evaluation Package Split
+
+Evaluation and profiling implementations moved out of core into the `nvidia-nat-eval` package.
+
+To migrate:
+- Install evaluation support when needed:
+  - `pip install "nvidia-nat[eval]"`
+  - `pip install nvidia-nat-eval`
+- Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
+- Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
+
+#### Import Path Changes
+
+For users migrating existing integrations, the primary import change is:
+- `nat.eval.*` -> `nat.plugins.eval.*`
+- `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
+- `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
+- `nat.eval.runtime_event_subscriber.pull_intermediate` -> `nat.builder.runtime_event_subscriber.pull_intermediate`
+
+For evaluation data models, prefer canonical core paths:
+- `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
+- `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
+- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.eval.profiler.callbacks.token_usage_base_model`)
+
+Internal module reorganization inside `nat.plugins.eval` is implementation detail and may change between releases.
+
+#### `nat.eval` Deprecation Shim
+
+Core provides a temporary compatibility shim for `nat.eval` imports.
+
+What to expect:
+- Importing from `nat.eval` emits a `UserWarning` that the path is deprecated.
+- The shim requires `nvidia-nat-eval` to be installed.
+- Update imports to externally supported `nat.plugins.eval.*` and `nat.data_models.*` paths now, because the shim will be removed in a future major release.
+
+### v1.4.0
+
+#### Weave Trace Identifier Namespace
+
+Weave trace identifiers now use the `nat` namespace.
+
+If you depend on Weave trace names, update your dashboards and alert filters:
+- Replace any old namespace prefixes (`aiq`) with `nat`.
+- Re-run any saved queries that filter on trace or span names.
+
+#### Calculator Function Group Migration
+
+The calculator tools moved to a single function group with new names and input schemas.
+
+Update your configurations and tool calls:
+- Use the `calculator` function group with names such as `calculator__add` and `calculator__compare`.
+- Pass numeric arrays for arithmetic inputs instead of parsing strings.
+
+#### Sensitive Configuration Fields Use Secret Types
+
+Sensitive configuration fields now use Pydantic `SecretStr` types for redaction and serialization.
+
+If you read or set secret fields in code:
+- Use `.get_secret_value()` when you need the raw value.
+- Update any tests that compare secrets to expect `SecretStr` behavior.
+
+#### Zep Cloud v3 Migration
+
+The Zep Cloud integration now targets the v3 API and thread-based memory.
+
+To migrate existing Zep configurations:
+- Upgrade your dependency to `zep-cloud~=3.0`.
+- Update any session-based references to thread-based APIs and ensure `conversation_id` is set for per-thread storage.
+
+#### LLM and Embedder Model Dump Changes
+
+All LLM and embedder providers now use `exclude_unset=True` for `model_dump`.
+
+If you rely on implicit defaults being forwarded:
+- Set explicit values in your configuration for fields you need to send.
+- Update any custom providers that serialize configuration files to use the same behavior.
+
+#### Per-User Function Instantiation
+
+Functions and function groups can now be registered as per-user components.
+
+If you enabled per-user workflows:
+- Register per-user functions with `@register_per_user_function()` and ensure schemas are explicit.
+- Verify your `nat serve` usage sets a `nat-session` cookie so per-user workflows can resolve a user ID.
+
+#### Removal of `default_user_id` in General config
+
+The `default_user_id` field was removed to prevent unsafe per-user workflow sharing.
+
+To migrate existing configurations:
+- Remove `default_user_id` from the `general` configuration section.
+- For `nat run` and `nat eval`, set the new `user_id` fields in `ConsoleFrontEndConfig` and `EvaluationRunConfig`.
+
+#### Function Group Separator Change
+
+Function group names now use `__` instead of `.`.
+
+To migrate:
+- Update function names from `group.function` to `group__function` in configuration files and tool calls.
+- Watch for deprecation warnings if you still use the legacy separator.
+
+#### MCP Frontend Refactor
+
+MCP server and frontend code moved into the `nvidia-nat-mcp` package.
+
+Update your MCP usage:
+- Import `MCPFrontEndPluginWorker` from `nat.plugins.mcp.server.front_end_plugin_worker`.
+- Recommended: migrate any `mcp_tool_wrapper` usage to `mcp_client`.
+
+#### `nvidia-nat-all` Packaging Changes
+
+The `nvidia-nat-all` meta-package removed conflicting optional dependencies.
+
+If you rely on extras:
+- Reinstall `nvidia-nat-all` and review the updated optional dependency list.
+- Install additional frameworks explicitly when needed to avoid conflicts.
 
 ### v1.3.0
 

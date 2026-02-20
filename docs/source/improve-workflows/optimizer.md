@@ -14,15 +14,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 -->
-# NVIDIA NeMo Agent Toolkit Optimizer Guide
+# NVIDIA NeMo Agent Toolkit Optimizer
 
-This document provides a comprehensive overview of how to use the NeMo Agent toolkit Optimizer to tune your NeMo Agent toolkit [workflows](../build-workflows/about-building-workflows.md).
+This document provides a comprehensive overview of how to use the NeMo Agent Toolkit Optimizer to tune your NeMo Agent Toolkit [workflows](../build-workflows/about-building-workflows.md).
 
 ## Introduction
 
 ### What is Parameter Optimization?
 
-Parameter optimization is the process of automatically finding the best combination of settings (parameters) for your NeMo Agent toolkit workflows. Think of it like tuning a musical instrument – you adjust different knobs and strings until you achieve the perfect sound. Similarly, AI workflows have various "knobs" you can adjust:
+Parameter optimization is the process of automatically finding the best combination of settings (parameters) for your NeMo Agent Toolkit workflows. Think of it like tuning a musical instrument – you adjust different knobs and strings until you achieve the perfect sound. Similarly, AI workflows have various "knobs" you can adjust:
 
 - **Hyperparameters**: Numerical settings that control model behavior (such as `temperature`, `top_p`, `max_tokens`)
 - **Prompts**: The instructions and context you provide to language models
@@ -38,7 +38,7 @@ Manual parameter tuning has several challenges:
 3. **Lack of reproducibility**: Manual tuning is hard to document and reproduce
 4. **Complex interactions**: Parameters often interact in non-obvious ways
 
-The NeMo Agent toolkit Optimizer solves these problems by:
+The NeMo Agent Toolkit Optimizer solves these problems by:
 
 - **Automating the search process**: Tests hundreds of parameter combinations automatically
 - **Using intelligent algorithms**: Employs proven optimization techniques (Optuna for numerical parameters, genetic algorithms for prompts)
@@ -66,7 +66,7 @@ This guide will walk you through:
 
 ## How it Works
 
-The NeMo Agent toolkit Optimizer uses a combination of techniques to find the best parameters for your workflow:
+The NeMo Agent Toolkit Optimizer uses a combination of techniques to find the best parameters for your workflow:
 
 - Numerical Values
   - [Optuna](https://optuna.org/) is used to optimize numerical values.
@@ -87,7 +87,7 @@ The optimization process follows the steps outlined in the diagram above:
 
 4.  **Parameter Suggestion**: In each numeric trial, Optuna's sampler suggests a new set of hyperparameters from the `SearchSpace` you defined with `OptimizableField`. For prompt optimization, a population of prompts is evolved each generation using LLM-powered mutation and optional recombination guided by the `prompt_purpose`. No trajectory feedback is used.
 
-5.  **Workflow Execution**: The NeMo Agent toolkit workflow is executed using the suggested parameters for that trial. This is repeated `reps_per_param_set` times to ensure the results are statistically stable.
+5.  **Workflow Execution**: The NeMo Agent Toolkit workflow is executed using the suggested parameters for that trial. This is repeated `reps_per_param_set` times to ensure the results are statistically stable.
 
 6.  **[Evaluation](./evaluate.md)**: The output of each workflow run is passed to the evaluators defined in the `eval_metrics` configuration. Each evaluator calculates a score for a specific objective (such as correctness, latency, or creativity).
 
@@ -122,6 +122,40 @@ There are three main types of search spaces:
 1. **Continuous Numerical**: A range of numbers (e.g., temperature from 0.1 to 0.9)
 2. **Discrete/Categorical**: A list of specific choices (e.g., model names)
 3. **Prompt**: Special search space for optimizing text prompts using AI-powered mutations
+
+### Loading Prompts from Files
+
+Instead of embedding prompts directly in YAML, you can load them from external files using the `file://` prefix:
+
+```yaml
+workflow:
+  _type: react_agent
+  # Load from relative path (resolved from config file directory)
+  system_prompt: file://prompts/agent_system.j2
+
+  # Absolute paths also work
+  user_prompt: file:///opt/prompts/user.txt
+
+functions:
+  my_analyzer:
+    _type: email_phishing_analyzer
+    # Prompts in nested configs work too
+    prompt: file://prompts/phishing_analysis.txt
+```
+
+**Rules:**
+
+- Only fields whose key ends with `prompt` (case-insensitive) are eligible
+- The value must start with `file://`
+- Relative paths are resolved from the configuration file's directory
+- Allowed extensions: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
+
+**Benefits for Optimization:**
+
+- Keep prompts in version-controlled files
+- Edit prompts without modifying YAML structure
+- Share base prompts across optimization configuration files
+- The optimizer will still mutate the loaded prompt content during GA optimization
 
 ### How They Work Together
 
@@ -341,8 +375,8 @@ This is the main configuration object for the optimizer.
 -   `prompt.ga_tournament_size: int`: Tournament size when `ga_selection_method` is `tournament`. Defaults to `3`.
 -   `prompt.ga_parallel_evaluations: int`: Maximum number of concurrent evaluations. Controls async concurrency. Defaults to `8`.
 -   `prompt.ga_diversity_lambda: float`: Diversity penalty strength to discourage duplicate prompt sets. `0.0` disables it. Defaults to `0.0`.
--   `prompt.prompt_population_init_function: str | null`: Function name used to mutate base prompts to seed the initial population and perform mutations. The NeMo Agent Toolkit includes a built-in `prompt_init` Function located in the {py:mod}`~nat.agent.prompt_optimizer.register` file you can use in your configurations. 
--   `prompt.prompt_recombination_function: str | null`: Optional function name used to recombine two parent prompts into a child prompt. The NeMo Agent Toolkit includes a built-in `prompt_recombiner` Function located in the {py:mod}`~nat.agent.prompt_optimizer.register` file you can use in your configurations. 
+-   `prompt.prompt_population_init_function: str | null`: Function name used to mutate base prompts to seed the initial population and perform mutations. The NeMo Agent Toolkit includes a built-in `prompt_init` Function located in the {py:mod}`~nat.plugins.langchain.agent.prompt_optimizer.register` file you can use in your configurations.
+-   `prompt.prompt_recombination_function: str | null`: Optional function name used to recombine two parent prompts into a child prompt. The NeMo Agent Toolkit includes a built-in `prompt_recombiner` Function located in the {py:mod}`~nat.plugins.langchain.agent.prompt_optimizer.register` file you can use in your configurations.
 -   `reps_per_param_set: int`: The number of times to run the workflow for each set of parameters to get a more stable evaluation. This is important for noisy evaluations where the result might vary even with the same parameters. Defaults to `3`.
 -   `target: float | None`: If set, the optimization will stop when the combined score for a trial reaches this value. This is useful if you have a specific performance target and want to save time. The score is normalized between 0 and 1. Defaults to `None`.
 -   `multi_objective_combination_mode: str`: How to combine multiple objective scores into a single scalar. Supported: `harmonic`, `sum`, `chebyshev`. Defaults to `harmonic`.
@@ -630,11 +664,11 @@ This matrix visualization shows:
 **Example decision process**:
 - If latency is critical: Choose a Pareto optimal point with the lowest latency that still meets your accuracy requirements
 - If accuracy is paramount: Select the highest accuracy configuration and accept the latency trade-off
-- For balanced performance: Pick a point in the middle of the Pareto front 
+- For balanced performance: Pick a point in the middle of the Pareto front
 
 ## A Complete Example of Optimization
 
-For a complete example of using the optimizer, see the `email_phishing_analyzer` example in the `evaluation_and_profiling` section of the examples in the NeMo Agent toolkit repository.
+For a complete example of using the optimizer, see the `email_phishing_analyzer` example in the `evaluation_and_profiling` section of the examples in the NeMo Agent Toolkit repository.
 
 ## Best Practices and Tuning Guide
 

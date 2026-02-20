@@ -41,7 +41,7 @@ class A2ACapabilitiesConfig(BaseModel):
 class A2AFrontEndConfig(FrontEndBaseConfig, name="a2a"):
     """A2A front end configuration.
 
-    A front end that exposes NeMo Agent toolkit workflows as A2A-compliant remote agents.
+    A front end that exposes NeMo Agent Toolkit workflows as A2A-compliant remote agents.
     """
 
     # Server settings

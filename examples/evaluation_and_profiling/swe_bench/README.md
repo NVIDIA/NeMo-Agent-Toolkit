@@ -36,7 +36,7 @@ This example provides a skeleton workflow which can be used to implement predict
 
 ## Key Features
 
-- **SWE-bench Dataset Integration:** Demonstrates how to use NeMo Agent toolkit with Software Engineering benchmark datasets including SWE-bench_Lite and SWE-bench_Verified for systematic code problem solving evaluation.
+- **SWE-bench Dataset Integration:** Demonstrates how to use NeMo Agent Toolkit with Software Engineering benchmark datasets including SWE-bench_Lite and SWE-bench_Verified for systematic code problem solving evaluation.
 - **Docker-based Evaluation Environment:** Shows containerized evaluation setup ensuring consistent and isolated environments for running code modifications and testing solutions against benchmark problems.
 - **Multi-Dataset Support:** Supports multiple SWE-bench dataset formats including JSON and Parquet files from HuggingFace datasets, with both local and remote dataset loading capabilities.
 - **Configurable Problem Filtering:** Provides filtering mechanisms to limit dataset entries for focused evaluation and testing, enabling iterative development and debugging of solutions.
@@ -74,7 +74,7 @@ Run the example via the `nat eval` CLI command:
 nat eval --config_file examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 ```
 
-The configuration file specified above contains configurations for the NeMo Agent toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
+The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
 
 
 ## Datasets
@@ -100,7 +100,7 @@ eval:
       file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/dev-00000-of-00001.parquet
 ```
 
-The input to the workflow is a [Pydantic](https://docs.pydantic.dev) model, `SWEBenchInput`. Refer to `src/nat/data_models/swe_bench_model.py` for the model definition.
+The input to the workflow is a [Pydantic](https://docs.pydantic.dev) model, `SWEBenchInput`. Refer to `packages/nvidia_nat_core/src/nat/data_models/swe_bench_model.py` for the model definition.
 
 ### Filtering dataset entries
 You can limit the number of `swe_bench` instances in the dataset that are solved and evaluated through a filter in the configuration file. For example:
@@ -156,7 +156,7 @@ in the input instance.
 
 That information is only used for evaluation. Using it can taint the predictor and lead to overfitting.
 
-These predictors are provided in this NeMo Agent toolkit example:
+These predictors are provided in this NeMo Agent Toolkit example:
 - `gold` - Uses the patch from the `SWEBenchInput` instance, bypassing problem-solving logic. See [predict_gold_stub.py](src/nat_swe_bench/predictors/predict_gold/predict_gold_stub.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml`.
 - `skeleton` - Skeleton code for creating a problem-solving workflow. This code can be copied to create a net-new predictor. See [predict_skeleton.py](src/nat_swe_bench/predictors/predict_skeleton/predict_skeleton.py) and configuration file `examples/evaluation_and_profiling/swe_bench/configs/config_skeleton.yml`.
 
@@ -164,7 +164,7 @@ These predictors are provided in this NeMo Agent toolkit example:
 To add a new predictor:
 - Create a new directory in the predictors directory, copy over the contents of [predictors/predict_skeleton](src/nat_swe_bench/predictors/predict_skeleton/). Rename the files and fill in the logic to solve the problem.
 - Register the new predictor class with an unique name using the `@register_predictor` decorator.
-- Import the new predictor class in [predictors/register.py](src/nat_swe_bench/predictors/register.py) to make it discoverable by the NeMo Agent toolkit `swe_bench` harness.
+- Import the new predictor class in [predictors/register.py](src/nat_swe_bench/predictors/register.py) to make it discoverable by the NeMo Agent Toolkit `swe_bench` harness.
 
 ## Evaluation
 The `model_patch` returned by the `swe_bench` workflow is run through the `swe_bench` evaluation harness. This harness -
@@ -186,10 +186,9 @@ nat eval --config_file examples/evaluation_and_profiling/swe_bench/configs/confi
 ```
 Expected output:
 ```console
-2025-07-31 19:39:37,616 - nat.eval.evaluate - INFO - Starting evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
+2025-07-31 19:39:37,616 - nat.plugins.eval.runtime.evaluate - INFO - Starting evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 2025-07-31 19:39:38,764 - nat.runtime.loader - WARNING - Loading module 'nat_profiler_agent.register' from entry point 'nat_profiler_agent' took a long time (1084.733009 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:39,160 - nat.runtime.loader - WARNING - Loading module 'nat_multi_frameworks.register' from entry point 'nat_multi_frameworks' took a long time (226.987600 ms). Ensure all imports are inside your registered functions.
-2025-07-31 19:39:40,652 - nat.runtime.loader - WARNING - Loading module 'nat.agent.register' from entry point 'nat_agents' took a long time (1482.537985 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:41,135 - nat.runtime.loader - WARNING - Loading module 'nat.experimental.inference_time_scaling.register' from entry point 'nat_inference_time_scaling' took a long time (266.962051 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:41,430 - nat.runtime.loader - WARNING - Loading module 'nat.tool.register' from entry point 'nat_tools' took a long time (192.843914 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:41,515 - nat.data_models.discovery_metadata - WARNING - Package metadata not found for simple_auth
@@ -204,9 +203,9 @@ Running workflow:   0%|                                                         
 
 <snipped for brevity>
 
-2025-07-31 19:39:46,347 - nat.eval.swe_bench_evaluator.evaluate - INFO - Workflow input written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_input.json
-2025-07-31 19:39:46,352 - nat.eval.swe_bench_evaluator.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_output.json
-2025-07-31 19:39:46,364 - nat.eval.swe_bench_evaluator.evaluate - INFO - Starting swe_bench run nat_1
+2025-07-31 19:39:46,347 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - Workflow input written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_input.json
+2025-07-31 19:39:46,352 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_output.json
+2025-07-31 19:39:46,364 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - Starting swe_bench run nat_1
 Running 2 unevaluated instances...
 Base image sweb.base.py.arm64:latest already exists, skipping build.
 Base images built successfully.
@@ -227,9 +226,9 @@ Instances with errors: 0
 Unstopped containers: 0
 Unremoved images: 0
 Report written to nv_predictor.nat_1.json
-2025-07-31 19:40:44,591 - nat.eval.swe_bench_evaluator.evaluate - INFO - Completed swe_bench run nat_1
-2025-07-31 19:40:44,592 - nat.eval.swe_bench_evaluator.evaluate - INFO - SWE_bench report and logs written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_reports directory
-2025-07-31 19:40:44,596 - nat.eval.evaluate - INFO - Profiler is not enabled. Skipping profiling.
-2025-07-31 19:40:44,600 - nat.eval.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/workflow_output.json
-2025-07-31 19:40:44,602 - nat.eval.evaluate - INFO - Evaluation results written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_output.json
+2025-07-31 19:40:44,591 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - Completed swe_bench run nat_1
+2025-07-31 19:40:44,592 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - SWE_bench report and logs written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_reports directory
+2025-07-31 19:40:44,596 - nat.plugins.eval.runtime.evaluate - INFO - Profiler is not enabled. Skipping profiling.
+2025-07-31 19:40:44,600 - nat.plugins.eval.runtime.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/workflow_output.json
+2025-07-31 19:40:44,602 - nat.plugins.eval.runtime.evaluate - INFO - Evaluation results written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_output.json
 ```

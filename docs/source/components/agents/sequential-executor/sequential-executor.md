@@ -18,7 +18,7 @@ limitations under the License.
 # Configure With the Sequential Executor
 A sequential executor is a deterministic [workflow](../../../build-workflows/about-building-workflows.md) orchestrator that executes functions in a predefined linear order. This section explores ways you can configure using the sequential executor.
 
-The sequential executor is part of the core NeMo Agent toolkit and does not require additional plugin installations.
+The sequential executor is part of the core NeMo Agent Toolkit and does not require additional plugin installations.
 
 ## Configuration
 
@@ -99,7 +99,7 @@ workflow:
 
 ### Exceptions
 
-* **{py:class}`~nat.control_flow.sequential_executor.SequentialExecutorExit`**: Raised by a tool to exit the chain early and return a custom message as the workflow output. Unlike `return_error_on_exception` which handles unexpected errors, this exception is for intentional early termination.
+* **{py:class}`~nat.plugins.langchain.control_flow.sequential_executor.SequentialExecutorExit`**: Raised by a tool to exit the chain early and return a custom message as the workflow output. Unlike `return_error_on_exception` which handles unexpected errors, this exception is for intentional early termination.
 
 ## The Sequential Executor Workflow
 

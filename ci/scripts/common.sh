@@ -107,7 +107,7 @@ function get_num_proc() {
 }
 
 function set_versions() {
-   # Update internal dependencies to the current git tag
+   # Set the version for the wheels based on GIT_TAG / SCM
 
    if [[ "${CI_CRON_NIGHTLY}" == "1" || "${IS_TAGGED}" == "1" ]]; then
       # For tagged releases and nightly builds, use the git tag as the version as-is
@@ -126,8 +126,6 @@ function set_versions() {
 
    export SETUPTOOLS_SCM_PRETEND_VERSION="${NAT_VERSION}"
    export USE_FULL_VERSION="1"
-
-   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${NAT_VERSION}"
 }
 
 function build_wheel() {
@@ -140,40 +138,18 @@ function build_package_wheel()
     local pkg=$1
     pkg_dir_name="${pkg#packages/}"
     pkg_dir_name="${pkg#./packages/}"
-
-    # Remove compat/
-    pkg_dir_name="${pkg_dir_name/compat\/}"
-    build_wheel "${pkg}" "${pkg_dir_name}/${GIT_TAG}"
+    build_wheel "${pkg}" "${pkg_dir_name}"
 }
 
 function create_env() {
-
-    extras=()
-    for arg in "$@"; do
-        if [[ "${arg}" == "extra:all" ]]; then
-            extras+=("--all-extras")
-        elif [[ "${arg}" == "group:all" ]]; then
-            extras+=("--all-groups")
-        elif [[ "${arg}" == extra:* ]]; then
-            extras+=("--extra" "${arg#extra:}")
-        elif [[ "${arg}" == group:* ]]; then
-            extras+=("--group" "${arg#group:}")
-        else
-            # Error out if we don't know what to do with the argument
-            rapids-logger "Unknown argument to create_env: ${arg}. Must start with 'extra:' or 'group:'"
-            exit 1
-        fi
-    done
 
     rapids-logger "Creating uv env"
     VENV_DIR="${WORKSPACE_TMP}/.venv"
     uv venv --python=${PYTHON_VERSION} --seed ${VENV_DIR}
     source ${VENV_DIR}/bin/activate
 
-    rapids-logger "Creating Environment with extras: ${@}"
-
     set +e
-    UV_SYNC_STDERROUT=$(uv sync --active "${extras[@]}" 2>&1)
+    UV_SYNC_STDERROUT=$(uv sync --active --only-dev 2>&1)
     UV_RESULT=$?
     set -e
 
@@ -264,4 +240,3 @@ pushd "${PROJECT_ROOT}" &> /dev/null
 
 NAT_EXAMPLES=($(find ./examples/ -maxdepth 4 -name "pyproject.toml" | sort | xargs dirname))
 NAT_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
-NAT_COMPAT_PACKAGES=($(find ./packages/compat -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
