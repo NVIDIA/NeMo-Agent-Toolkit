@@ -19,9 +19,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
-from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.profiler.prediction_trie.data_models import PredictionMetrics
+from nat.profiler.prediction_trie.data_models import PredictionTrieNode
 
 CURRENT_VERSION = "1.0"
 

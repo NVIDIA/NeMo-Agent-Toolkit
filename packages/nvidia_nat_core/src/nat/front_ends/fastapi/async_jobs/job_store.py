@@ -28,9 +28,6 @@ from datetime import timedelta
 from enum import StrEnum
 from uuid import uuid4
 
-from dask.distributed import Future
-from dask.distributed import Variable
-from dask.distributed import fire_and_forget
 from pydantic import BaseModel
 from sqlalchemy import DateTime
 from sqlalchemy import String
@@ -285,6 +282,9 @@ class JobStore(DaskClientMixin):
         job_kwargs: dict[str, typing.Any]
             The keyword arguments to pass to the job function. These must be serializable by Dask
         """
+        from dask.distributed import Variable
+        from dask.distributed import fire_and_forget
+
         job_id = await self._create_job(job_id=job_id, config_file=config_file, expiry_seconds=expiry_seconds)
 
         # We are intentionally not using job_id as the key, since Dask will clear the associated metadata once
@@ -492,6 +492,9 @@ class JobStore(DaskClientMixin):
         Updated_at is used instead of created_at to determine the most recent job. This is because jobs may not be
         processed in the order they are created.
         """
+        from dask.distributed import Future
+        from dask.distributed import Variable
+
         logger.info("Starting cleanup of expired jobs")
         now = datetime.now(UTC)
 

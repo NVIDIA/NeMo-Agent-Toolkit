@@ -19,10 +19,10 @@ from pathlib import Path
 import pytest
 
 from nat.llm.dynamo_llm import DynamoModelConfig
-from nat.plugins.eval.profiler.prediction_trie import PredictionTrieNode
-from nat.plugins.eval.profiler.prediction_trie import save_prediction_trie
-from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+from nat.profiler.prediction_trie import PredictionTrieNode
+from nat.profiler.prediction_trie import save_prediction_trie
+from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.profiler.prediction_trie.data_models import PredictionMetrics
 
 
 @pytest.fixture(name="trie_file")

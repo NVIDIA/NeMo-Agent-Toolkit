@@ -608,8 +608,8 @@ class TestDynamoTransport:
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
-        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
 
         # Create mock prediction lookup
         mock_prediction = LLMCallPrediction(
@@ -673,8 +673,8 @@ class TestDynamoTransport:
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
-        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
 
         mock_prediction = LLMCallPrediction(
             remaining_calls=PredictionMetrics(mean=25.0, p50=25.0, p90=30.0),
@@ -1009,8 +1009,8 @@ class TestDynamoTransport:
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
-        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
 
         # Prediction: remaining_calls.mean=25, interarrival_ms.mean=50
         # Expected TTL = 25 * 50 = 1250ms (not 10 * 250 = 2500 from static config)
@@ -1056,8 +1056,8 @@ class TestDynamoTransport:
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
-        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
 
         mock_prediction = LLMCallPrediction(
             remaining_calls=PredictionMetrics(mean=5.0, p50=5.0, p90=7.0),
@@ -1105,8 +1105,8 @@ class TestDynamoTransport:
 
         from nat.builder.context import Context
         from nat.llm.dynamo_llm import _DynamoTransport
-        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
 
         mock_prediction = LLMCallPrediction(
             remaining_calls=PredictionMetrics(mean=5.0, p50=5.0, p90=7.0),
@@ -1156,8 +1156,8 @@ class TestDynamoTransport:
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
-        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
+        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.profiler.prediction_trie.data_models import PredictionMetrics
 
         mock_prediction = LLMCallPrediction(
             remaining_calls=PredictionMetrics(mean=5.0, p50=5.0, p90=7.0),

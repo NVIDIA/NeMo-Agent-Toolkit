@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
-from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.profiler.prediction_trie.data_models import PredictionMetrics
+from nat.profiler.prediction_trie.data_models import PredictionTrieNode
 
 
 def test_prediction_metrics_creation():

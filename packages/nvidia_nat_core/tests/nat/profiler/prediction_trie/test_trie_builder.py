@@ -21,8 +21,8 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.token_usage import TokenUsageBaseModel
-from nat.plugins.eval.profiler.prediction_trie.trie_builder import PredictionTrieBuilder
-from nat.plugins.eval.profiler.prediction_trie.trie_builder import SensitivityConfig
+from nat.profiler.prediction_trie.trie_builder import PredictionTrieBuilder
+from nat.profiler.prediction_trie.trie_builder import SensitivityConfig
 
 
 @pytest.fixture(name="simple_trace")

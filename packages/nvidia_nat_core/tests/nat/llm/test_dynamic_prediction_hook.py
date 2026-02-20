@@ -26,10 +26,10 @@ from nat.llm.dynamo_llm import DynamoPrefixContext
 from nat.llm.dynamo_llm import LLMHeaderPrefix
 from nat.llm.dynamo_llm import _DynamoTransport
 from nat.llm.prediction_context import get_call_tracker
-from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
-from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
-from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionTrieNode
-from nat.plugins.eval.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
+from nat.profiler.prediction_trie.data_models import LLMCallPrediction
+from nat.profiler.prediction_trie.data_models import PredictionMetrics
+from nat.profiler.prediction_trie.data_models import PredictionTrieNode
+from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 
 @pytest.fixture(name="sample_trie_lookup")
