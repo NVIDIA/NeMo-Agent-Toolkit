@@ -23,6 +23,7 @@ Tests the following:
 """
 
 import typing
+from collections.abc import AsyncGenerator
 
 import pytest
 from asgi_lifespan import LifespanManager
@@ -135,28 +136,30 @@ def create_per_user_workflow_config() -> Config:
     return Config(general=GeneralConfig(front_end=front_end), workflow=PerUserCounterWorkflowConfig(initial_value=0))
 
 
+async def _create_managed_app(config: Config) -> AsyncGenerator["FastAPI"]:
+    """Helper to create a FastApiFrontEndPluginWorker and app with proper lifespan management."""
+    worker = FastApiFrontEndPluginWorker(config)
+    app = worker.build_app()
+
+    async with LifespanManager(app):
+        yield app
+        await worker.cleanup_session_managers()
+
+
 @pytest.fixture(name="app")
 async def app_fixture() -> "FastAPI":
     """Fixture to create a FastApiFrontEndPluginWorker with shared workflow."""
     config = create_shared_workflow_config()
-    worker = FastApiFrontEndPluginWorker(config)
-
-    app = worker.build_app()
-    async with LifespanManager(app):
+    async for app in _create_managed_app(config):
         yield app
-        await worker.cleanup_session_managers()
 
 
 @pytest.fixture(name="per_user_app")
 async def per_user_app_fixture() -> "FastAPI":
     """Fixture to create a FastApiFrontEndPluginWorker with per-user workflow."""
     config = create_per_user_workflow_config()
-    worker = FastApiFrontEndPluginWorker(config)
-
-    app = worker.build_app()
-    async with LifespanManager(app):
+    async for app in _create_managed_app(config):
         yield app
-        await worker.cleanup_session_managers()
 
 
 # ============= Tests =============
