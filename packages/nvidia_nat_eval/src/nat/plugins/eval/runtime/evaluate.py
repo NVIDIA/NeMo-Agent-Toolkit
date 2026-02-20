@@ -285,18 +285,7 @@ class EvaluationRun:
         else:
             eval_input_items = self.eval_input.eval_input_items
         pbar = tqdm(total=len(eval_input_items), desc="Running workflow")
-
-        # Pre-start the exporter manager for the entire eval pass so per-item
-        # Runner.start() calls are reentrant no-ops.  This keeps the exporter
-        # alive across all items, preventing trace loss from per-item
-        # start/stop cycling.
-        # NOTE: Access _exporter_manager directly — the .exporter_manager
-        # property calls .get() which creates a new copy each time, defeating
-        # the reentrant ref counting.
-        exporter_mgr = session_manager.workflow._exporter_manager
-        async with exporter_mgr.start():
-            await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
-
+        await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
         pbar.close()
 
     async def run_workflow_remote(self):
@@ -723,6 +712,11 @@ class EvaluationRun:
                     evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
                     await self.run_evaluators(evaluators)
 
+                    # Wait for all trace export tasks to complete (local workflows only)
+                    if session_manager and not self.config.endpoint:
+                        await self.wait_for_all_export_tasks_local(session_manager,
+                                                                   timeout=self.config.export_timeout)
+
                     if self.callback_manager and self.evaluation_results:
                         try:
                             from nat.eval.eval_callbacks import EvalResult
@@ -756,13 +750,6 @@ class EvaluationRun:
                                         runtime=usage_item.runtime if usage_item else None,
                                         root_span_id=self._item_span_ids.get(str(input_item.id)),
                                     ))
-
-                            # Wait for all trace export tasks to complete BEFORE firing
-                            # on_eval_complete so that OTEL traces are flushed to backends
-                            # (e.g. LangSmith) before eager linking tries update_run().
-                            if session_manager and not self.config.endpoint:
-                                await self.wait_for_all_export_tasks_local(session_manager,
-                                                                           timeout=self.config.export_timeout)
 
                             self.callback_manager.on_eval_complete(EvalResult(metric_scores=scores, items=cb_items))
                         except Exception:
