@@ -87,6 +87,12 @@ middleware:
       - EMAIL_ADDRESS
       - PERSON
 
+  # Input Guard: Classify user prompts as safe/unsafe before the agent processes them
+  input_guard:
+    _type: input_guard
+    llm_name: nim_llm
+    action: redirection
+
   workflow_output_verifier:
     _type: output_verifier
     llm_name: nim_llm
@@ -104,6 +110,7 @@ workflow:
   max_tool_calls: 64
   parse_agent_response_max_retries: 3
   middleware:
+    - input_guard
     - pii_defense_workflow
     - workflow_output_verifier
   additional_instructions: |
