@@ -252,36 +252,25 @@ class TestSessionManagerCleanup:
 class TestSharedWorkflowEndpoint:
     """Tests for HTTP endpoints with shared workflow."""
 
-    async def test_post_endpoint_shared_workflow(self):
+    async def test_post_endpoint_shared_workflow(self, app: "FastAPI"):
         """Test POST endpoint with shared workflow."""
-        config = create_shared_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/generate", json={"message": "hello"})
 
-        # Use LifespanManager to properly trigger lifespan events (route registration)
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response = await client.post("/generate", json={"message": "hello"})
+            assert response.status_code == 200
+            data = response.json()
+            assert data["response"] == "echo: hello"
 
-                assert response.status_code == 200
-                data = response.json()
-                assert data["response"] == "echo: hello"
-
-    async def test_multiple_requests_shared_workflow(self):
+    async def test_multiple_requests_shared_workflow(self, app: "FastAPI"):
         """Test multiple requests share the same workflow."""
-        config = create_shared_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response1 = await client.post("/generate", json={"message": "first"})
+            response2 = await client.post("/generate", json={"message": "second"})
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response1 = await client.post("/generate", json={"message": "first"})
-                response2 = await client.post("/generate", json={"message": "second"})
-
-                assert response1.status_code == 200
-                assert response2.status_code == 200
-                assert response1.json()["response"] == "echo: first"
-                assert response2.json()["response"] == "echo: second"
+            assert response1.status_code == 200
+            assert response2.status_code == 200
+            assert response1.json()["response"] == "echo: first"
+            assert response2.json()["response"] == "echo: second"
 
 
 class TestPerUserWorkflowEndpoint:
