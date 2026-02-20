@@ -22,6 +22,8 @@ Tests the following:
 4. Cleanup of session managers
 """
 
+import typing
+
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport
@@ -39,6 +41,9 @@ from nat.data_models.config import GeneralConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+
+if typing.TYPE_CHECKING:
+    from fastapi import FastAPI
 
 
 # ============= Test Schemas =============
@@ -258,71 +263,70 @@ class TestSharedWorkflowEndpoint:
 class TestPerUserWorkflowEndpoint:
     """Tests for HTTP endpoints with per-user workflow."""
 
-    async def test_post_endpoint_per_user_workflow(self):
+    @pytest.fixture(name="app")
+    async def app_fixture(self) -> "FastAPI":
+        """Fixture to create a FastApiFrontEndPluginWorker with per-user workflow."""
+        config = create_per_user_workflow_config()
+        worker = FastApiFrontEndPluginWorker(config)
+
+        app = worker.build_app()
+        async with LifespanManager(app):
+            yield app
+            await worker.cleanup_session_managers()
+
+    async def test_post_endpoint_per_user_workflow(self, app: "FastAPI"):
         """Test POST endpoint with per-user workflow."""
-        config = create_per_user_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                # Set session cookie on client
-                client.cookies.set("nat-session", "user123")
-                response = await client.post("/counter", json={"action": "get"})
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            # Set session cookie on client
+            client.cookies.set("nat-session", "user123")
+            response = await client.post("/counter", json={"action": "get"})
 
-                assert response.status_code == 200
-                data = response.json()
-                assert data["count"] == 0
+            assert response.status_code == 200
+            data = response.json()
+            assert data["count"] == 0
 
-    async def test_per_user_isolation(self):
+    async def test_per_user_isolation(self, app: "FastAPI"):
         """Test that different users have isolated state."""
-        config = create_per_user_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
 
-        async with LifespanManager(app):
-            # Use separate clients for different users to properly isolate cookies
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as alice_client:
-                alice_client.cookies.set("nat-session", "alice")
+        # Use separate clients for different users to properly isolate cookies
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as alice_client:
+            alice_client.cookies.set("nat-session", "alice")
 
-                async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as bob_client:
-                    bob_client.cookies.set("nat-session", "bob")
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as bob_client:
+                bob_client.cookies.set("nat-session", "bob")
 
-                    # User 1 increments counter twice
-                    await alice_client.post("/counter", json={"action": "increment"})
-                    response1 = await alice_client.post("/counter", json={"action": "increment"})
-                    assert response1.json()["count"] == 2
+                # User 1 increments counter twice
+                await alice_client.post("/counter", json={"action": "increment"})
+                response1 = await alice_client.post("/counter", json={"action": "increment"})
+                assert response1.json()["count"] == 2
 
-                    # User 2 should have fresh counter at 0
-                    response2 = await bob_client.post("/counter", json={"action": "get"})
-                    assert response2.json()["count"] == 0
+                # User 2 should have fresh counter at 0
+                response2 = await bob_client.post("/counter", json={"action": "get"})
+                assert response2.json()["count"] == 0
 
-                    # User 2 increments once
-                    response3 = await bob_client.post("/counter", json={"action": "increment"})
-                    assert response3.json()["count"] == 1
+                # User 2 increments once
+                response3 = await bob_client.post("/counter", json={"action": "increment"})
+                assert response3.json()["count"] == 1
 
-                    # User 1 counter should still be at 2
-                    response4 = await alice_client.post("/counter", json={"action": "get"})
-                    assert response4.json()["count"] == 2
+                # User 1 counter should still be at 2
+                response4 = await alice_client.post("/counter", json={"action": "get"})
+                assert response4.json()["count"] == 2
 
-    async def test_per_user_state_persists_across_requests(self):
+    async def test_per_user_state_persists_across_requests(self, app: "FastAPI"):
         """Test that per-user state persists across multiple requests."""
-        config = create_per_user_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                client.cookies.set("nat-session", "persistent_user")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            client.cookies.set("nat-session", "persistent_user")
 
-                # Increment 5 times
-                for i in range(5):
-                    response = await client.post("/counter", json={"action": "increment"})
-                    assert response.json()["count"] == i + 1
+            # Increment 5 times
+            for i in range(5):
+                response = await client.post("/counter", json={"action": "increment"})
+                assert response.json()["count"] == i + 1
 
-                # Final get should show 5
-                response = await client.post("/counter", json={"action": "get"})
-                assert response.json()["count"] == 5
+            # Final get should show 5
+            response = await client.post("/counter", json={"action": "get"})
+            assert response.json()["count"] == 5
 
 
 class TestSessionManagerSchemas:
