@@ -26,15 +26,21 @@ This document captures the information flow from NeMo Agent Toolkit chat request
 │                           NeMo Agent Toolkit                                 │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
 │  │ DynamoModelConfig (dynamo_llm.py)                                    │    │
-│  │   prefix_template: "react-benchmark-{uuid}"                          │    │
+│  │   prefix_template: "nat-dynamo-{uuid}"                               │    │
 │  │   prefix_total_requests: 10                                          │    │
-│  │   prefix_osl: MEDIUM                                                 │    │
-│  │   prefix_iat: MEDIUM                                                 │    │
+│  │   prefix_osl: 512 (raw int, default)                                 │    │
+│  │   prefix_iat: 250 (raw int, default)                                 │    │
+│  │   prefix_use_raw_values: true                                        │    │
+│  │   disable_headers: true (headers off by default)                     │    │
+│  │   cache_pin_type: ephemeral                                          │    │
+│  │   max_sensitivity: 1000                                              │    │
 │  │   # reuse_budget: (computed by processor: total_requests - count)    │    │
 │  │                                                                       │    │
 │  │ _DynamoTransport injects:                                            │    │
-│  │   → HTTP Headers: x-prefix-id, x-prefix-total-requests, ...          │    │
+│  │   → HTTP Headers: x-prefix-* (disabled by default)                   │    │
 │  │   → nvext.annotations in request body                                │    │
+│  │   → nvext.agent_hints in request body                                │    │
+│  │   → nvext.cache_control in request body                              │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -118,23 +124,29 @@ sequenceDiagram
         Note right of Client: User initiates chat request
         Client->>DynamoLLM: chat.completions.create()<br/>with DynamoPrefixContext
         
-        DynamoLLM->>DynamoLLM: Generate prefix_id from template<br/>"react-benchmark-{uuid}"
+        DynamoLLM->>DynamoLLM: Get prefix_id from DynamoPrefixContext<br/>"{workflow_run_id}-d{depth}"
         
-        DynamoLLM->>Transport: Build request with config:<br/>prefix_total_requests=10<br/>prefix_osl=MEDIUM<br/>prefix_iat=MEDIUM
+        DynamoLLM->>Transport: Build request with config:<br/>prefix_total_requests=10<br/>prefix_osl=512<br/>prefix_iat=250<br/>latency_sensitivity from Context
     end
     
     rect rgb(40, 50, 45)
         Note right of Transport: Transport Layer Injection
-        Transport->>Transport: Inject HTTP Headers:<br/>x-prefix-id: react-benchmark-abc123<br/>x-prefix-total-requests: 10<br/>x-prefix-osl: MEDIUM<br/>x-prefix-iat: MEDIUM
+        Transport->>Transport: Read latency_sensitivity from Context<br/>Compute priority = max_sensitivity - latency_sensitivity
         
-        Transport->>Transport: Inject nvext.annotations:<br/>["prefix_id:react-benchmark-abc123",<br/>"total_requests:10",<br/>"osl:MEDIUM", "iat:MEDIUM"]
+        Transport->>Transport: Inject nvext.agent_hints:<br/>{latency_sensitivity: float, osl: 512, priority: int}
         
-        Transport->>Frontend: POST /v1/chat/completions<br/>(HTTP + nvext.annotations)
+        Transport->>Transport: Inject nvext.annotations:<br/>["prefix_id:{workflow_run_id}-d0",<br/>"total_requests:10",<br/>"osl:512", "iat:250"]
+        
+        Transport->>Transport: Inject nvext.cache_control:<br/>{type: "ephemeral", ttl: "3s"}<br/>(TTL = total_requests × iat_raw)
+        
+        Note right of Transport: HTTP headers disabled by default<br/>(disable_headers: true)
+        
+        Transport->>Frontend: POST /v1/chat/completions<br/>(nvext.annotations + agent_hints + cache_control)
     end
     
     rect rgb(50, 40, 40)
         Note right of Frontend: Frontend Processing
-        Frontend->>Frontend: Parse nvext.annotations<br/>from request body
+        Frontend->>Frontend: Parse nvext (annotations,<br/>agent_hints, cache_control) from request body
         
         Frontend->>Frontend: Tokenize messages<br/>→ token_ids: [128000, 9906, ...]
         
@@ -148,7 +160,7 @@ sequenceDiagram
     
     rect rgb(55, 45, 45)
         Note right of Processor: Processor - Hint Extraction
-        Processor->>Processor: Extract from annotations:<br/>prefix_id = "react-benchmark-abc123"<br/>total_requests = 10<br/>osl = "MEDIUM"<br/>iat = "MEDIUM"
+        Processor->>Processor: Extract from annotations:<br/>prefix_id = "{workflow_run_id}-d0"<br/>total_requests = 10<br/>osl = 512<br/>iat = 250
         
         Processor->>Processor: Update _prefix_state:<br/>reuse_budget = total - processed
         
@@ -252,7 +264,7 @@ sequenceDiagram
 
 ### 1. NeMo Agent Toolkit → Frontend
 
-**HTTP Request with nvext.annotations:**
+**HTTP Request with nvext (annotations, agent_hints, cache_control):**
 ```json
 {
   "model": "llama-3.3-70b",
@@ -261,21 +273,34 @@ sequenceDiagram
   "stream": true,
   "nvext": {
     "annotations": [
-      "prefix_id:react-benchmark-abc123",
+      "prefix_id:a1b2c3d4e5f6-d0",
       "total_requests:10",
-      "osl:MEDIUM",
-      "iat:MEDIUM"
-    ]
+      "osl:512",
+      "iat:250"
+    ],
+    "agent_hints": {
+      "latency_sensitivity": 2.0,
+      "osl": 512,
+      "priority": 998
+    },
+    "cache_control": {
+      "type": "ephemeral",
+      "ttl": "3s"
+    }
   }
 }
 ```
 
-**HTTP Headers (legacy support):**
+> **Note:** `priority` is computed as `max_sensitivity - latency_sensitivity` (default max is 1000).
+> `cache_control.ttl` is computed as `total_requests × iat_raw` (in ms), formatted as `"<N>s"` or `"<N>m"`.
+
+**HTTP Headers (disabled by default, enable with `disable_headers: false`):**
 ```http
-x-prefix-id: react-benchmark-abc123
+x-prefix-id: a1b2c3d4e5f6-d0
 x-prefix-total-requests: 10
-x-prefix-osl: MEDIUM
-x-prefix-iat: MEDIUM
+x-prefix-osl: 512
+x-prefix-iat: 250
+x-prefix-latency-sensitivity: 2
 ```
 
 ### 2. Frontend → Processor (PreprocessedRequest)
@@ -284,10 +309,10 @@ x-prefix-iat: MEDIUM
 {
   "token_ids": [128000, 9906, 0, ...],
   "annotations": [
-    "prefix_id:react-benchmark-abc123",
+    "prefix_id:a1b2c3d4e5f6-d0",
     "total_requests:10",
-    "osl:MEDIUM",
-    "iat:MEDIUM"
+    "osl:512",
+    "iat:250"
   ],
   "sampling_options": {
     "temperature": 0.7,
@@ -304,10 +329,10 @@ x-prefix-iat: MEDIUM
 ```json
 {
   "tokens": [128000, 9906, 0, ...],
-  "prefix_id": "react-benchmark-abc123",
+  "prefix_id": "a1b2c3d4e5f6-d0",
   "reuse_budget": 9,
-  "expected_osl": "MEDIUM",
-  "interarrival": "MEDIUM"
+  "expected_osl": 512,
+  "interarrival": 250
 }
 ```
 
@@ -337,56 +362,6 @@ x-prefix-iat: MEDIUM
 ## KvIndexer: Router ↔ Worker KV State Binding
 
 The router accesses KV cache overlap data via Python bindings to the Rust `KvIndexer`. This is how the router determines which worker has the best prefix cache match.
-
-### KvIndexer Python Binding Interface
-
-```python
-# From kvbm_next_source/lib/bindings/python/src/dynamo/_core.pyi
-
-class OverlapScores:
-    """Collection of prefix matching scores for workers."""
-    
-    @property
-    def scores(self) -> Dict[int, int]:
-        """Map of worker_id → number of matching blocks."""
-        ...
-    
-    @property
-    def frequencies(self) -> List[int]:
-        """Access frequencies for matched blocks (0 entries omitted)."""
-        ...
-
-class KvIndexer:
-    """Tracks KV events emitted by workers (add_block, remove_block)."""
-    
-    def __init__(self, component: Component, block_size: int) -> None:
-        """Create KvIndexer attached to a Dynamo component."""
-    
-    def find_matches(self, sequence: List[int]) -> OverlapScores:
-        """Find prefix matches for block hash sequence."""
-        ...
-    
-    def find_matches_for_request(self, token_ids: List[int], lora_id: int) -> OverlapScores:
-        """Return overlap scores for workers given token sequence."""
-        ...
-    
-    def block_size(self) -> int:
-        """Return configured block size."""
-        ...
-```
-
-### Router KvIndexer Usage
-
-```python
-# From router.py - initialization
-self.indexer = KvIndexer(engine, self.block_size)
-
-# From router.py - find_matches_for_request call
-scores: OverlapScores = await self.indexer.find_matches_for_request(req.tokens, 0)
-
-# scores.scores is Dict[int, float] with worker_id → overlap ratio
-overlap = float(scores.scores.get(wid, 0.0))
-```
 
 ### KV State Update Flow
 
@@ -512,100 +487,6 @@ sequenceDiagram
     RS->>ML: Update block states based on output
 ```
 
-### DynamoScheduler Key Implementation Details
-
-```python
-# From kvbm_next_source/lib/bindings/kvbm/python/kvbm/v2/vllm/schedulers/dynamo.py
-
-class DynamoScheduler(SchedulerInterface):
-    """Scheduler with inverted shadow observer pattern."""
-    
-    def __init__(self, vllm_config, kv_cache_config, ...):
-        # Create vLLM scheduler (shadow mode)
-        self._scheduler = Scheduler(vllm_config, kv_cache_config, ...)
-        
-        # Initialize Rust scheduler (primary) if available
-        if _RUST_SCHEDULER_AVAILABLE:
-            rust_config = RustSchedulerConfig(
-                max_num_batched_tokens=...,
-                max_num_seqs=...,
-                block_size=block_size,
-                enable_prefix_caching=True,  # Required for MultiLRU
-                total_blocks=total_blocks,
-            )
-            self._rust_scheduler = RustScheduler(rust_config)
-    
-    def schedule(self) -> SchedulerOutput:
-        # 1. Get vLLM schedule first (for finished_req_ids)
-        vllm_output = self._scheduler.schedule()
-        
-        # 2. Sync finished requests to Rust BEFORE it schedules
-        if vllm_output.finished_req_ids:
-            self._rust_scheduler.finish_requests(
-                list(vllm_output.finished_req_ids),
-                RustRequestStatus.finished_stopped(),
-            )
-        
-        # 3. Get Rust scheduler decision (PRIMARY)
-        rust_output_dict = self._rust_scheduler.schedule()
-        rust_output = self._rust_output_to_scheduler_output(rust_output_dict)
-        
-        # 4. Use vLLM's finished_req_ids (vLLM tracks completion)
-        rust_output.finished_req_ids = vllm_output.finished_req_ids
-        
-        # 5. Compare and warn on divergence
-        self._compare_outputs(rust_output, vllm_output)
-        
-        return rust_output
-```
-
-### MultiLruBackend Rust Implementation
-
-```rust
-// From kvbm_next_source/lib/kvbm/src/v2/logical/pools/inactive/backends/multi_lru_backend.rs
-
-pub struct MultiLruBackend<T: BlockMetadata> {
-    priority_pools: [LruCache<SequenceHash, Block<T, Registered>>; 4],
-    frequency_tracker: Arc<dyn FrequencyTracker<u128>>,
-    frequency_thresholds: [u8; 3],  // [cold→warm, warm→hot, hot→very_hot]
-}
-
-impl<T: BlockMetadata> MultiLruBackend<T> {
-    /// Calculate priority level based on access frequency
-    fn calculate_priority_level(&self, seq_hash: SequenceHash) -> usize {
-        let frequency = self.frequency_tracker.count(seq_hash.as_u128());
-        let [t1, t2, t3] = self.frequency_thresholds;
-        
-        if frequency < t1 as u32 { 0 }       // Cold: 0 to (t1 - 1)
-        else if frequency < t2 as u32 { 1 }  // Warm: t1 to (t2 - 1)
-        else if frequency < t3 as u32 { 2 }  // Hot: t2 to (t3 - 1)
-        else { 3 }                            // VeryHot: t3+
-    }
-}
-
-impl<T: BlockMetadata> InactivePoolBackend<T> for MultiLruBackend<T> {
-    /// Evict blocks starting from coldest pool
-    fn allocate(&mut self, count: usize) -> Vec<Block<T, Registered>> {
-        let mut allocated = Vec::with_capacity(count);
-        for _ in 0..count {
-            for pool in &mut self.priority_pools {  // Cold first
-                if let Some((_, block)) = pool.pop_lru() {
-                    allocated.push(block);
-                    break;
-                }
-            }
-        }
-        allocated
-    }
-    
-    /// Insert block into appropriate pool based on frequency
-    fn insert(&mut self, block: Block<T, Registered>) {
-        let level = self.calculate_priority_level(block.sequence_hash());
-        self.priority_pools[level].put(block.sequence_hash(), block);
-    }
-}
-```
-
 ## Component Registration (ETCD)
 
 ```mermaid
@@ -699,7 +580,7 @@ flowchart TB
 
 | Bridge | From | To | Data | Current State | Optimization Opportunity |
 |--------|------|-----|------|---------------|-------------------------|
-| **A** | `dynamo_llm.py` | Frontend | nvext.annotations | ✅ Working | Add backend selector annotation |
+| **A** | `dynamo_llm.py` | Frontend | nvext.annotations + agent_hints + cache_control | ✅ Working | Add backend selector annotation |
 | **B** | Frontend | Processor | PreprocessedRequest.annotations | ✅ Working | Passthrough preserved |
 | **C** | Processor | Router | RouterRequest | ✅ Working | Add `use_frequency_backend` hint |
 | **D** | Router | KvIndexer | Token hashes | ✅ Working | Integrate with MultiLRU frequency data |
@@ -723,17 +604,6 @@ flowchart TB
 
 ### Router Metrics (`thompson_router_*`)
 
-```python
-# From router.py - uses prometheus_client directly
-from prometheus_client import REGISTRY, Counter, Gauge, Histogram
-
-metrics["decisions_total"] = Counter(
-    "thompson_router_decisions_total", ..., registry=REGISTRY)
-metrics["kv_overlap"] = Gauge(
-    "thompson_router_kv_overlap", ..., registry=REGISTRY)
-# ... etc
-```
-
 - `thompson_router_decisions_total{worker_id}` - Routing decisions
 - `thompson_router_kv_overlap{worker_id}` - Overlap scores
 - `thompson_router_feedback_latency_seconds{worker_id}` - Feedback latency
@@ -752,40 +622,30 @@ metrics["kv_overlap"] = Gauge(
 
 ## Configuration Reference
 
-### DynamoModelConfig (dynamo_llm.py)
-```python
-prefix_template: str = "nat-dynamo-{uuid}"  # Template with {uuid} placeholder
-prefix_total_requests: int = 10              # Expected requests per conversation
-prefix_osl: Literal["LOW", "MEDIUM", "HIGH"] = "MEDIUM"  # Output length hint
-prefix_iat: Literal["LOW", "MEDIUM", "HIGH"] = "MEDIUM"  # Inter-arrival hint
-# NOTE: reuse_budget is computed by processor from total_requests - processed_count
-# Future enhancement: allow explicit reuse_budget override via annotation
-```
+### DynamoModelConfig
 
-### Router Config (config.yaml)
-```yaml
-affinity:
-  base: 0.30           # Primary stickiness
-  reuse_weight: 0.15   # Reuse budget bonus
-  iat_weight: 0.20     # IAT multiplier
-exploration:
-  base_ts_weight: 0.10 # Beta-TS exploration
-  temperature:
-    base: 1.0          # Softmax temperature
-lints:
-  lambda: 1.0          # LinTS regularization
-  v: 0.25              # Sampling variance
-  forget_rate: 0.995   # Forgetting factor
-```
+See `DynamoModelConfig` in [`packages/nvidia_nat_core/src/nat/llm/dynamo_llm.py`](../../packages/nvidia_nat_core/src/nat/llm/dynamo_llm.py).
 
-### MultiLRU Config (kvbm.v2)
-```rust
-frequency_thresholds: [2, 6, 15]  // Cold→Warm, Warm→Hot, Hot→VeryHot
-// Pool 0 (Cold):     frequency 0-1
-// Pool 1 (Warm):     frequency 2-5
-// Pool 2 (Hot):      frequency 6-14
-// Pool 3 (VeryHot):  frequency 15+
-```
+Key fields and defaults:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `prefix_template` | `str \| None` | `"nat-dynamo-{uuid}"` | Template for prefix ID; `None` to disable hint injection |
+| `prefix_total_requests` | `int` | `10` | Expected requests per conversation (optimizable, 1–50) |
+| `prefix_osl` | `int` | `512` | Expected output tokens (optimizable, 64–4096). Accepts `"LOW"`/`"MEDIUM"`/`"HIGH"` for backward compatibility (mapped to 128/512/2048) |
+| `prefix_iat` | `int` | `250` | Inter-arrival time in ms (optimizable, 10–1000). Accepts `"LOW"`/`"MEDIUM"`/`"HIGH"` for backward compatibility (mapped to 50/250/750) |
+| `prefix_use_raw_values` | `bool` | `true` | Send raw integers; when `false`, converts to LOW/MEDIUM/HIGH categories |
+| `request_timeout` | `float` | `600.0` | HTTP request timeout in seconds |
+| `disable_headers` | `bool` | `true` | Skip `x-prefix-*` HTTP headers (hints sent through nvext only) |
+| `cache_pin_type` | `CachePinType \| None` | `"ephemeral"` | KV cache pinning strategy; TTL = `total_requests × iat` (ms). `None` to disable |
+| `max_sensitivity` | `int` | `1000` | Maximum latency sensitivity; priority = `max_sensitivity - latency_sensitivity` |
+| `prediction_trie_path` | `str \| None` | `None` | Path to `prediction_trie.json` for dynamic hint overrides |
+
+> **Note:** `reuse_budget` is not a config field — it is computed by the processor as `total_requests - processed_count`.
+
+### Router Config
+
+See [`external/dynamo/optimized/config.yaml`](optimized/config.yaml).
 
 ---
 
@@ -794,6 +654,4 @@ frequency_thresholds: [2, 6, 15]  // Cold→Warm, Warm→Hot, Hot→VeryHot
 - `NeMo-Agent-Toolkit/external/dynamo/optimized/processor.py`
 - `NeMo-Agent-Toolkit/external/dynamo/optimized/router.py`
 - `NeMo-Agent-Toolkit/external/dynamo/start_dynamo_optimized_thompson_hints_vllm.sh`
-- `kvbm_next_source/lib/kvbm/src/v2/logical/pools/inactive/backends/multi_lru_backend.rs`
-- `kvbm_next_source/components/src/dynamo/frontend/main.py`
 
