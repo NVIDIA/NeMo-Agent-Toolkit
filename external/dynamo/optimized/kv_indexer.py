@@ -137,14 +137,10 @@ class KvIndexer:
 
         if _HAS_DYNAMO_KV:
             self._radix_tree = _RadixTree()
-            logger.info(
-                "KvIndexer initialised with RadixTree (block_size=%d)", block_size
-            )
+            logger.info("KvIndexer initialised with RadixTree (block_size=%d)", block_size)
         else:
-            logger.warning(
-                "KvIndexer running in fallback mode (no RadixTree); "
-                "overlap scores will always be 0"
-            )
+            logger.warning("KvIndexer running in fallback mode (no RadixTree); "
+                           "overlap scores will always be 0")
 
     # ------------------------------------------------------------------
     # Worker registration
@@ -163,15 +159,11 @@ class KvIndexer:
         if not _HAS_DYNAMO_KV:
             return
         if worker_id in self._listeners:
-            logger.debug(
-                "Worker %s already registered in KvIndexer; skipping", worker_id
-            )
+            logger.debug("Worker %s already registered in KvIndexer; skipping", worker_id)
             return
         listener = _ZmqKvEventListener(zmq_endpoint, "", self.block_size)
         self._listeners[worker_id] = listener
-        logger.info(
-            "KvIndexer: registered worker %s at %s", worker_id, zmq_endpoint
-        )
+        logger.info("KvIndexer: registered worker %s at %s", worker_id, zmq_endpoint)
 
     def discover_workers(self, kv_event_base_port: int | None = None) -> None:
         """Auto-discover workers from the engine client and register listeners.
@@ -192,10 +184,8 @@ class KvIndexer:
         try:
             instance_ids = [int(wid) for wid in self._engine.endpoint("generate").client_sync().instance_ids()]
         except Exception:
-            logger.warning(
-                "KvIndexer.discover_workers: could not list instances from engine client; "
-                "call add_worker() manually instead"
-            )
+            logger.warning("KvIndexer.discover_workers: could not list instances from engine client; "
+                           "call add_worker() manually instead")
             return
 
         for idx, wid in enumerate(sorted(instance_ids)):
@@ -239,16 +229,12 @@ class KvIndexer:
             try:
                 events = await listener.get_events()
             except Exception:
-                logger.exception(
-                    "KvIndexer: failed to get events from worker %s", worker_id
-                )
+                logger.exception("KvIndexer: failed to get events from worker %s", worker_id)
                 continue
 
             for event_json in events:
                 try:
-                    self._radix_tree.apply_event(
-                        worker_id, event_json.encode("utf-8")
-                    )
+                    self._radix_tree.apply_event(worker_id, event_json.encode("utf-8"))
                     total += 1
                 except Exception:
                     logger.exception(
@@ -261,9 +247,7 @@ class KvIndexer:
     # Overlap query (called by the router)
     # ------------------------------------------------------------------
 
-    async def find_matches_for_request(
-        self, tokens: list[int], min_overlap: int
-    ) -> OverlapScores:
+    async def find_matches_for_request(self, tokens: list[int], min_overlap: int) -> OverlapScores:
         """Compute per-worker overlap scores for a token sequence.
 
         Returns an ``OverlapScores`` object whose ``.scores`` dict maps
@@ -278,9 +262,7 @@ class KvIndexer:
             await self._drain_events()
 
         # Hash token sequence into block-level hashes
-        block_hashes = _compute_block_hash_for_seq(
-            tokens, self.block_size
-        )
+        block_hashes = _compute_block_hash_for_seq(tokens, self.block_size)
         if not block_hashes:
             return OverlapScores({})
 
@@ -315,4 +297,3 @@ class KvIndexer:
             self._poll_task.cancel()
             self._poll_task = None
             logger.info("KvIndexer: background drain stopped")
-

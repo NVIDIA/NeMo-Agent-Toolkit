@@ -53,13 +53,13 @@ import yaml
 from dynamo.runtime import DistributedRuntime
 from dynamo.runtime import dynamo_worker
 from dynamo.runtime.logging import configure_dynamo_logging
-from pydantic import BaseModel
 
 # KV cache overlap scoring — uses RadixTree + ZmqKvEventListener from dynamo.llm.
 # Backend-agnostic: works identically with SGLang and vLLM workers.
 # Falls back gracefully to empty scores if dynamo.llm primitives are unavailable.
-from kv_indexer import KvIndexer, OverlapScores
-
+from kv_indexer import KvIndexer
+from kv_indexer import OverlapScores
+from pydantic import BaseModel
 
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
@@ -647,7 +647,8 @@ class WorkloadAwareRouter:
             self.indexer.start_background_drain(interval=0.25)
             logger.info(
                 "KvIndexer: %d workers registered, background drain started (base_port=%d)",
-                len(discovered_ids), kv_event_base_port,
+                len(discovered_ids),
+                kv_event_base_port,
             )
         else:
             logger.info(
@@ -741,12 +742,12 @@ class WorkloadAwareRouter:
     # Using startswith() avoids substring collisions (e.g. pending_prealloc_token_usage).
     _METRIC_PREFIXES: dict[str, list[str]] = {
         "gpu_cache_usage": [
-            "sglang:token_usage{",            # SGLang: KV cache fraction (0-1)
-            "vllm:kv_cache_usage_perc{",      # vLLM: same semantic, different name
+            "sglang:token_usage{",  # SGLang: KV cache fraction (0-1)
+            "vllm:kv_cache_usage_perc{",  # vLLM: same semantic, different name
         ],
         "queue_depth": [
-            "sglang:num_queue_reqs{",         # SGLang: scheduler queue depth
-            "vllm:num_requests_waiting{",     # vLLM: same semantic
+            "sglang:num_queue_reqs{",  # SGLang: scheduler queue depth
+            "vllm:num_requests_waiting{",  # vLLM: same semantic
         ],
     }
 
@@ -777,9 +778,7 @@ class WorkloadAwareRouter:
                     gpu = 0.0
                     queue = 0.0
                     try:
-                        resp = urllib.request.urlopen(
-                            f"http://127.0.0.1:{port}/metrics", timeout=1.0
-                        )
+                        resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/metrics", timeout=1.0)
                         body = resp.read().decode("utf-8", errors="replace")
                         for line in body.splitlines():
                             if line.startswith("#"):
@@ -799,8 +798,7 @@ class WorkloadAwareRouter:
 
         t = threading.Thread(target=_scrape_loop, daemon=True, name="metrics-scraper")
         t.start()
-        logger.info("Started background metrics scraper (interval=%.1fs, workers=%d)",
-                     interval, len(worker_ids))
+        logger.info("Started background metrics scraper (interval=%.1fs, workers=%d)", interval, len(worker_ids))
 
     def _build_internal_metrics(self, worker_ids: list[int]) -> dict[str, Any]:
         """Build a metrics dict from cached scrapes + instant pending counts.

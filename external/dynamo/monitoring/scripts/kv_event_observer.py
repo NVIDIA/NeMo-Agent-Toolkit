@@ -307,29 +307,21 @@ class KVEventObserver:
                 # Same formula as vllm:cache_hit_rate:
                 #   cached = prompt_tokens - kv_computed_tokens
                 #   efficiency = cached / prompt_tokens
-                prompt_sum = self._parse_metric(
-                    metrics_text, 'vllm:request_prompt_tokens_sum'
-                )
-                computed_sum = self._parse_metric(
-                    metrics_text, 'vllm:request_prefill_kv_computed_tokens_sum'
-                )
+                prompt_sum = self._parse_metric(metrics_text, 'vllm:request_prompt_tokens_sum')
+                computed_sum = self._parse_metric(metrics_text, 'vllm:request_prefill_kv_computed_tokens_sum')
 
                 prompt_delta = prompt_sum - self._last_prompt_sum
                 computed_delta = computed_sum - self._last_computed_sum
 
                 if prompt_delta > 0:
                     cached_delta = prompt_delta - computed_delta
-                    self.efficiency.add_sample(
-                        int(max(0, cached_delta)), int(prompt_delta)
-                    )
+                    self.efficiency.add_sample(int(max(0, cached_delta)), int(prompt_delta))
                     if self.verbose:
                         eff = self.efficiency.get_efficiency()
-                        print(
-                            f"📊 [EFFICIENCY] {eff:.1f}% "
-                            f"(cached={cached_delta:.0f} prompt={prompt_delta:.0f} "
-                            f"window={self.efficiency.window_seconds}s "
-                            f"samples={self.efficiency.sample_count})"
-                        )
+                        print(f"📊 [EFFICIENCY] {eff:.1f}% "
+                              f"(cached={cached_delta:.0f} prompt={prompt_delta:.0f} "
+                              f"window={self.efficiency.window_seconds}s "
+                              f"samples={self.efficiency.sample_count})")
 
                 self._last_prompt_sum = prompt_sum
                 self._last_computed_sum = computed_sum
@@ -364,18 +356,13 @@ class KVEventObserver:
                     metrics_text = resp.read().decode('utf-8')
                 self._last_hits = self._parse_metric(metrics_text, 'vllm:prefix_cache_hits_total')
                 self._last_queries = self._parse_metric(metrics_text, 'vllm:prefix_cache_queries_total')
-                self._last_prompt_sum = self._parse_metric(
-                    metrics_text, 'vllm:request_prompt_tokens_sum'
-                )
-                self._last_computed_sum = self._parse_metric(
-                    metrics_text, 'vllm:request_prefill_kv_computed_tokens_sum'
-                )
-                print(
-                    f"[KV Observer] ✓ Baseline: hits={self._last_hits:.0f} "
-                    f"queries={self._last_queries:.0f} "
-                    f"prompt_sum={self._last_prompt_sum:.0f} "
-                    f"computed_sum={self._last_computed_sum:.0f}"
-                )
+                self._last_prompt_sum = self._parse_metric(metrics_text, 'vllm:request_prompt_tokens_sum')
+                self._last_computed_sum = self._parse_metric(metrics_text,
+                                                             'vllm:request_prefill_kv_computed_tokens_sum')
+                print(f"[KV Observer] ✓ Baseline: hits={self._last_hits:.0f} "
+                      f"queries={self._last_queries:.0f} "
+                      f"prompt_sum={self._last_prompt_sum:.0f} "
+                      f"computed_sum={self._last_computed_sum:.0f}")
             except Exception as e:
                 print(f"[KV Observer] ⚠ Could not get baseline metrics: {e}")
 
@@ -799,26 +786,23 @@ def run_live_test(api_url: str, metrics_url: str, model: str, num_unique: int = 
     def random_prompt(num_words: int = 80) -> str:
         """Generate a random prompt that shares no prefix with any other."""
         uid = uuid.uuid4().hex
-        words = [''.join(random.choices(string.ascii_lowercase, k=random.randint(4, 8)))
-                 for _ in range(num_words)]
+        words = [''.join(random.choices(string.ascii_lowercase, k=random.randint(4, 8))) for _ in range(num_words)]
         return f"[{uid}] " + " ".join(words)
 
     # A long deterministic prompt for the perfect-reuse test.
     # ~200 tokens → ~12 cache blocks at block_size=16.
-    reuse_prompt = (
-        "The following is a detailed technical explanation about how KV cache "
-        "works in transformer-based large language models. The key-value cache "
-        "stores previously computed attention keys and values to avoid redundant "
-        "computation during autoregressive generation. When a new token is generated, "
-        "the model only needs to compute the key and value for the new token, "
-        "while reusing the cached keys and values from all previous tokens. "
-        "This significantly reduces the computational cost of generation, "
-        "especially for long sequences. The KV cache typically grows linearly "
-        "with the sequence length and the number of attention layers. "
-        "Prefix caching extends this concept by sharing KV cache entries across "
-        "multiple requests that share a common prompt prefix, which is extremely "
-        "beneficial for workloads with repeated system prompts or similar queries."
-    )
+    reuse_prompt = ("The following is a detailed technical explanation about how KV cache "
+                    "works in transformer-based large language models. The key-value cache "
+                    "stores previously computed attention keys and values to avoid redundant "
+                    "computation during autoregressive generation. When a new token is generated, "
+                    "the model only needs to compute the key and value for the new token, "
+                    "while reusing the cached keys and values from all previous tokens. "
+                    "This significantly reduces the computational cost of generation, "
+                    "especially for long sequences. The KV cache typically grows linearly "
+                    "with the sequence length and the number of attention layers. "
+                    "Prefix caching extends this concept by sharing KV cache entries across "
+                    "multiple requests that share a common prompt prefix, which is extremely "
+                    "beneficial for workloads with repeated system prompts or similar queries.")
 
     print("=" * 60)
     print("KV Cache Efficiency – Live Integration Test")
@@ -853,7 +837,7 @@ def run_live_test(api_url: str, metrics_url: str, model: str, num_unique: int = 
         cached = p_delta - c_delta
         efficiency = (cached / p_delta * 100) if p_delta > 0 else 0.0
 
-        print(f"\n  Results:")
+        print("\n  Results:")
         print(f"    prompt_tokens  Δ {p_delta:.0f}")
         print(f"    computed_tokens Δ {c_delta:.0f}")
         print(f"    cached_tokens  Δ {cached:.0f}")
@@ -897,12 +881,12 @@ def run_live_test(api_url: str, metrics_url: str, model: str, num_unique: int = 
         cached = p_delta - c_delta
         efficiency = (cached / p_delta * 100) if p_delta > 0 else 0.0
 
-        print(f"\n  Results:")
+        print("\n  Results:")
         print(f"    prompt_tokens  Δ {p_delta:.0f}")
         print(f"    computed_tokens Δ {c_delta:.0f}")
         print(f"    cached_tokens  Δ {cached:.0f}")
         print(f"    efficiency:      {efficiency:.1f}%")
-        print(f"    (may be <100% due to block-size alignment)")
+        print("    (may be <100% due to block-size alignment)")
 
         if efficiency > 80.0:
             print(f"\n  ✅ PASS (efficiency {efficiency:.1f}% > 80%)")

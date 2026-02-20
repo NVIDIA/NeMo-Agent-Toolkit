@@ -50,16 +50,16 @@ This directory contains the optimized implementation of the Thompson Sampling ro
 
 | Component | File | Endpoint | Purpose |
 |-----------|------|----------|---------|
-| Processor | `processor.py` | `dynamo.backend.generate` + ETCD model card | Intercepts frontend requests, extracts hints, coordinates routing |
+| Processor | `processor.py` | `dynamo.backend.generate` + etcd model card | Intercepts frontend requests, extracts hints, coordinates routing |
 | Router | `router.py` | `dynamo.router.find_worker` | Thompson Sampling + KV overlap worker selection |
-| Config | `config.yaml` | - | Router configuration parameters |
+| config | `config.yaml` | - | Router configuration parameters |
 
 ## Dynamic Discovery Pattern (Forward-Compatible)
 
-Instead of using the deprecated `--static-endpoint` flag on the frontend, this processor uses **dynamic discovery** via ETCD:
+Instead of using the deprecated `--static-endpoint` flag on the frontend, this processor uses **dynamic discovery** via etcd:
 
 1. **Processor** registers as `dynamo.backend.generate` (dynamic mode with instance ID)
-2. **Processor** calls `register_llm()` to advertise a model card in ETCD
+2. **Processor** calls `register_llm()` to advertise a model card in etcd
 3. **Frontend's ModelWatcher** discovers the processor's model card
 4. **Frontend** routes requests to the discovered processor endpoint
 5. **SGLang Worker** registers as `dynamo.worker.generate` (also dynamic)
@@ -75,7 +75,7 @@ The `--static-endpoint` flag is **deprecated** and will be removed in future Dyn
 
 ## Processor Registration
 
-The processor uses `register_llm()` to advertise itself in ETCD:
+The processor uses `register_llm()` to advertise itself in etcd:
 
 ```python
 @dynamo_worker(static=False)  # Dynamic mode for ETCD discovery
@@ -193,7 +193,7 @@ INFO processor.generate: Routing decision: worker=7587892168930944779 decision=b
 
 | Log Message | Meaning |
 |-------------|---------|
-| `Registering model card: model_name=...` | Processor registering with ETCD |
+| `Registering model card: model_name=...` | Processor registering with etcd |
 | `Model card registered successfully` | Frontend can now discover the processor |
 | `Router clients initialized successfully` | Connected to Thompson Sampling router |
 | `Processor initialized successfully` | Ready to process requests |
@@ -248,7 +248,7 @@ docker logs dynamo-sglang-optimized 2>&1 | grep "Processing request"
 **Solution:**
 1. Ensure processor's `--model-name` matches frontend's `--model-name` exactly
 2. Processor must register BEFORE frontend starts
-3. Check that processor's model card is in ETCD
+3. Check that processor's model card is in etcd
 
 #### 4. Router Not Found
 

@@ -2,17 +2,18 @@
 # "cuDF" or "cuML", we want to ensure that they are capitalized the same way they're written by the product owners.
 # Regular expressions are parsed according to the Go syntax: https://golang.org/pkg/regexp/syntax/
 
+[Aa]gent_hints
 [Aa]gentic
 [Aa]gno
 AIQ
 [Aa]llowlist
 [Aa]nonymize(d?)
+[Aa]nthropic('s)?
 API(s?)
 Arize
 ART
 arXiv
 [Aa]sync
-[Aa]nthropic('s)?
 Authlib
 [Aa]utoencoder
 [Bb]ackdoor(s?)
@@ -20,7 +21,9 @@ Authlib
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
+[Bb]ool
 [Bb]rev
+cache_control
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
@@ -59,21 +62,26 @@ DB(s?)
 [Dd]evcontainer(s?)
 [Dd]ocstring(s?)
 Dynatrace
+[Dd]ecode_cost
+EMA(s?)
 [Ee]mbedder(s?)
 [Ee]ngineerable
+[Ee]num(s?)
 etcd
 [Ee]val
 [Ee]xfiltration
 [Ee]xplainability
 Faiss
-[Ff]inetunable
 [Ff]inetune(d?)
 [Ff]inetune(r|rs|ing)
+[Ff]inetunable
 [Ff]inetuning
+[Ff]rontend('s)?
 Gantt
 [Gg]eneratable
 GitHub
 glog
+[Gg]pu_penalty
 GPU(s?)
 Grafana
 [Gg]ranularities
@@ -82,7 +90,8 @@ Grafana
 [Hh]ashable
 [Hh]ardcode(s|d)?
 [Hh]yperparameter(s?)
-impactful
+iat(_factor)?
+[Ii]mpactful
 [Ii]nferencing
 [Ii]nterquartile
 isort
@@ -91,6 +100,7 @@ Jira
 jsonlines
 [Kk]aggle
 [Kk]eycloak
+kv(_load)?
 LangChain
 Langfuse
 LangGraph
@@ -101,7 +111,7 @@ LlamaIndex
 [Ll]earnable
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
-LLM(s?)
+[Ll]LM(s?)
 # https://github.com/logpai/loghub/
 Loghub
 [Ll]ogprob(s?)
@@ -121,6 +131,7 @@ Nemotron
 nginx
 NIC
 NIM(s?)
+(NVExt|nvext)
 npm
 NumPy
 NVIDIA
@@ -129,27 +140,37 @@ Ollama
 onboarding
 OpenPipe
 [Oo]ptimizable
+osl
+[Oo]utstanding_work
 Optuna
 OTel
 [Oo]verfitting
 pandas
 [Pp]arallelization
+params
 Pareto
 [Pp]arsable
+[Pp]assthrough
 Patronus
 PCIe
 PDF(s?)
 [Pp]luggable
 [Pp]ostprocess
 [Pp]ostprocessing
+prefix_id
+[Pp]reallocation
 [Pp]reprocess
+[Pp]reprocessor
 [Pp]retrained
+[Pp]refill
 [Pp]rofiler
 Pydantic
 PyPI
 pytest
 Qwen
+[Qq]ueue_penalty
 [Rr]edis
+[Rr]ebalancing
 [Rr]eimplement(ing)?
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
@@ -157,11 +178,14 @@ Qwen
 [Rr]eputational
 [Rr]etarget(ed?)
 [Rr]eusability
+reuse_budget
 [Rr]ollout(s?)
 [Rr]untime(s?)
 [Ss]andboxing
 [Ss]anitiz(e|ed|ation|ing)
 [Ss]erializable
+(SGLang|sglang)
+[Ss]oftmax
 spaCy
 SQLAlchemy
 SSE
@@ -177,7 +201,7 @@ SSE
 Tavily
 [Tt]eardown
 [Tt]imestamp(s?)
-[Tt]okenization
+[Tt]okeniz(e|es|ed|ation|ing)
 [Tt]okenizer(s?)
 [Tt]rie(s?)
 triages
@@ -193,8 +217,10 @@ URIs
 uv
 Vanna
 VectorDB
+vllm
 [Ww]alkthrough
 [Ww]eb[Ss]ocket
+worker_id
 XGBoost
 Zep
 zsh
