@@ -19,6 +19,7 @@ from contextlib import asynccontextmanager
 
 from nat.builder.context import ContextState
 from nat.observability.exporter.base_exporter import BaseExporter
+from nat.utils.reactive.subject import Subject
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,7 @@ class ExporterManager:
         """Initialize the ExporterManager."""
         self._tasks: dict[str, asyncio.Task] = {}
         self._running: bool = False
+        self._ref_count: int = 0
         self._exporter_registry: dict[str, BaseExporter] = {}
         self._is_registry_shared: bool = False
         self._lock: asyncio.Lock = asyncio.Lock()
@@ -54,6 +56,10 @@ class ExporterManager:
         self._shutdown_timeout: int = shutdown_timeout
         # Track isolated exporters for proper cleanup
         self._active_isolated_exporters: dict[str, BaseExporter] = {}
+        # Shared event stream for reentrant (eval) mode — allows all items'
+        # events to reach the same exporter subscriptions despite ContextVar
+        # isolation between async tasks.
+        self._shared_event_stream: Subject | None = None
 
     @classmethod
     def _create_with_shared_registry(cls, shutdown_timeout: int,
@@ -62,12 +68,14 @@ class ExporterManager:
         instance = cls.__new__(cls)
         instance._tasks = {}
         instance._running = False
+        instance._ref_count = 0
         instance._exporter_registry = shared_registry
         instance._is_registry_shared = True
         instance._lock = asyncio.Lock()
         instance._shutdown_event = asyncio.Event()
         instance._shutdown_timeout = shutdown_timeout
         instance._active_isolated_exporters = {}
+        instance._shared_event_stream = None
         return instance
 
     def _ensure_registry_owned(self):
@@ -202,59 +210,111 @@ class ExporterManager:
         """
         Start all registered exporters concurrently.
 
-        This method acquires a lock to ensure only one start/stop cycle is active at a time. It starts all
-        currently registered exporters in their own asyncio tasks. Exporters added after this call will not be
-        started until the next lifecycle.
+        This method is reentrant: if exporters are already running, subsequent
+        callers share the existing exporter lifecycle.  The exporters are only
+        stopped when the **last** caller exits the context manager.  This
+        prevents per-item start/stop cycling during evaluation loops where each
+        workflow invocation creates its own Runner.
+
+        **Event stream bridging:** In eval mode the eval loop pre-starts
+        this manager (first caller) and each Runner is a reentrant caller.
+        Because each Runner creates a fresh ``Subject`` in its own async
+        context (via ``ContextVar``), the exporters — which subscribed to a
+        *different* Subject in the first caller's context — would never see
+        the items' events.
+
+        To fix this, the first caller creates a **shared Subject** and sets
+        it in the current context so exporter tasks inherit and subscribe to
+        it.  Reentrant callers set up a **forwarding subscription** from
+        their per-item Subject to the shared Subject.  When each item calls
+        ``on_complete()`` on its own Subject, only that Subject is disposed;
+        the shared Subject stays open until the last caller exits.
 
         Args:
             context_state: Optional context state for creating isolated exporters
 
         Yields:
             ExporterManager: The manager instance for use within the context.
-
-        Raises:
-            RuntimeError: If the manager is already running.
         """
+        forwarding_subscription = None
+
         async with self._lock:
-            if self._running:
-                raise RuntimeError("Exporter manager is already running")
-            self._shutdown_event.clear()
-            self._running = True
+            self._ref_count += 1
+            if not self._running:
+                # First caller — actually start the exporters
+                self._shutdown_event.clear()
+                self._running = True
 
-            # Create isolated exporters if context_state provided, otherwise use originals
-            if context_state:
-                exporters_to_start = self.create_isolated_exporters(context_state)
-                # Store isolated exporters for cleanup
-                self._active_isolated_exporters = exporters_to_start
-                logger.debug("Created %d isolated exporters", len(exporters_to_start))
-            else:
-                exporters_to_start = self._exporter_registry
-                # Clear isolated exporters since we're using originals
-                self._active_isolated_exporters = {}
+                # Create a shared event stream and inject it into the current
+                # context so exporter tasks (created below via create_task)
+                # inherit it and subscribe to the same Subject.
+                self._shared_event_stream = Subject()
+                ContextState.get().event_stream.set(self._shared_event_stream)
 
-            # Start all exporters concurrently
-            exporters = []
-            tasks = []
-            for name, exporter in exporters_to_start.items():
-                task = asyncio.create_task(self._run_exporter(name, exporter))
-                exporters.append(exporter)
-                self._tasks[name] = task
-                tasks.append(task)
+                # Create isolated exporters if context_state provided, otherwise use originals
+                if context_state:
+                    exporters_to_start = self.create_isolated_exporters(context_state)
+                    self._active_isolated_exporters = exporters_to_start
+                    logger.debug("Created %d isolated exporters", len(exporters_to_start))
+                else:
+                    exporters_to_start = self._exporter_registry
+                    self._active_isolated_exporters = {}
 
-            # Wait for all exporters to be ready
-            await asyncio.gather(*[exporter.wait_ready() for exporter in exporters])
+                # Start all exporters concurrently
+                exporters = []
+                tasks = []
+                for name, exporter in exporters_to_start.items():
+                    task = asyncio.create_task(self._run_exporter(name, exporter))
+                    exporters.append(exporter)
+                    self._tasks[name] = task
+                    tasks.append(task)
+
+                # Wait for all exporters to be ready
+                await asyncio.gather(*[exporter.wait_ready() for exporter in exporters])
+            # Reentrant caller (e.g. per-item Runner in eval mode).
+            # The caller's async context has its own Subject (set by
+            # Runner.__aenter__).  Forward events from that Subject to
+            # the shared one so exporters see them.
+            elif self._shared_event_stream is not None:
+                item_subject = ContextState.get().event_stream.get()
+                if (item_subject is not None and item_subject is not self._shared_event_stream):
+                    forwarding_subscription = item_subject.subscribe(
+                        on_next=self._shared_event_stream.on_next,
+                        on_error=lambda err: logger.warning("Item event stream error: %s", err),
+                        on_complete=lambda: None,  # Don't propagate per-item completion
+                    )
 
         try:
             yield self
         finally:
-            # Clean up isolated exporters BEFORE stopping tasks
-            try:
-                await self._cleanup_isolated_exporters()
-            except Exception as e:
-                logger.exception("Error during isolated exporter cleanup: %s", e)
+            # Tear down forwarding subscription for this caller
+            if forwarding_subscription is not None:
+                try:
+                    forwarding_subscription.unsubscribe()
+                except Exception:
+                    pass
 
-            # Then stop the manager tasks
-            await self.stop()
+            async with self._lock:
+                self._ref_count -= 1
+                should_stop = self._ref_count == 0
+
+            if should_stop:
+                # Complete the shared event stream before stopping exporters
+                # so they can process the on_complete signal.
+                if self._shared_event_stream is not None:
+                    try:
+                        self._shared_event_stream.on_complete()
+                    except Exception:
+                        pass
+                    self._shared_event_stream = None
+
+                # Last caller — actually shut down the exporters
+                try:
+                    await self._cleanup_isolated_exporters()
+                except Exception as e:
+                    logger.exception("Error during isolated exporter cleanup: %s", e)
+
+                await self.stop()
 
     async def _run_exporter(self, name: str, exporter: BaseExporter):
         """
@@ -325,11 +385,16 @@ class ExporterManager:
 
     def get(self) -> "ExporterManager":
         """
-        Create a copy of this ExporterManager with the same configuration using copy-on-write.
+        Get an ExporterManager for a new workflow run.
 
-        This is the most efficient approach - shares the registry until modifications are needed.
+        If this manager is already running (pre-started by the eval loop),
+        returns ``self`` so the caller shares the existing lifecycle via
+        reentrant ref counting.  Otherwise creates a copy with shared
+        registry (copy-on-write) for per-request isolation in serve mode.
 
         Returns:
-            ExporterManager: A new ExporterManager instance with shared exporters (copy-on-write).
+            ExporterManager: This instance if running, otherwise a new copy.
         """
+        if self._running:
+            return self
         return self._create_with_shared_registry(self._shutdown_timeout, self._exporter_registry)

@@ -13,13 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
 import random
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from typing import Any
+
+if TYPE_CHECKING:
+    from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
 
 from pydantic import BaseModel
 
@@ -53,6 +59,9 @@ async def optimize_prompts(
     full_space: dict[str, SearchSpace],
     optimizer_config: OptimizerConfig,
     opt_run_config: OptimizerRunConfig,
+    callback_manager: OptimizerCallbackManager | None = None,
+    trial_number_offset: int = 0,
+    frozen_params: dict[str, Any] | None = None,
 ) -> None:
     EvaluationRun = load_evaluation_run()
 
@@ -63,6 +72,8 @@ async def optimize_prompts(
         metrics: dict[str, float] | None = None  # evaluator_name -> average score
         scalar_fitness: float | None = None
         worst_items_reasoning: list[str] | None = None  # reasoning from worst items for oracle feedback
+        trial_number: int | None = None  # assigned before eval for per-trial OTEL routing
+        eval_output: Any | None = None  # stores last EvaluationRunOutput for callback
 
     def _normalize_generation(
         individuals: Sequence[Individual],
@@ -134,6 +145,7 @@ async def optimize_prompts(
         k: (v.prompt, v.prompt_purpose)
         for k, v in full_space.items() if v.is_prompt
     }
+    prompt_format_map: dict[str, str | None] = {k: v.prompt_format for k, v in full_space.items() if v.is_prompt}
 
     if not prompt_space:
         logger.info("No prompts to optimize – skipping.")
@@ -258,21 +270,46 @@ async def optimize_prompts(
         sem = asyncio.Semaphore(max_eval_concurrency)
 
         async def _evaluate(ind: Individual) -> Individual:
+            # The semaphore gates the entire evaluation lifecycle: config
+            # mutation, OTEL project routing, workflow execution, and scoring.
+            # Previously only apply_suggestions was gated, which meant all
+            # individuals in a generation ran run_and_evaluate() concurrently
+            # even with ga_parallel_evaluations=1 — flooding the telemetry
+            # backend with N * items traces in a single burst. This affects
+            # all OTEL exporters (LangSmith, Langfuse, Phoenix, Galileo,
+            # Patronus, DBNL, etc.) since any backend with batch ingestion
+            # needs time to process traces before they become queryable.
+            # Gating the full evaluation ensures only ga_parallel_evaluations
+            # trials send OTEL traces at a time, giving the telemetry backend
+            # time to ingest each trial's traces before the next one starts.
             async with sem:
                 cfg_trial = apply_suggestions(base_cfg, ind.prompts)
-            eval_cfg = EvaluationRunConfig(
-                config_file=cfg_trial,
-                dataset=opt_run_config.dataset,
-                result_json_path=opt_run_config.result_json_path,
-                endpoint=opt_run_config.endpoint,
-                endpoint_timeout=opt_run_config.endpoint_timeout,
-                override=opt_run_config.override,
-            )
-            # Run reps sequentially under the same semaphore to avoid overload
-            all_results: list[list[tuple[str, Any]]] = []
-            for _ in range(reps):
-                res = (await EvaluationRun(config=eval_cfg).run_and_evaluate()).evaluation_results
-                all_results.append(res)
+
+                # Route OTEL traces to per-trial experiment project
+                if callback_manager and ind.trial_number is not None:
+                    trial_project = callback_manager.get_trial_project_name(ind.trial_number)
+                    if trial_project:
+                        from nat.eval.eval_callbacks import get_tracing_configs
+                        tracing = get_tracing_configs(cfg_trial)
+                        for exporter_config in tracing.values():
+                            if hasattr(exporter_config, 'project'):
+                                exporter_config.project = trial_project
+
+                eval_cfg = EvaluationRunConfig(
+                    config_file=cfg_trial,
+                    dataset=opt_run_config.dataset,
+                    result_json_path=opt_run_config.result_json_path,
+                    endpoint=opt_run_config.endpoint,
+                    endpoint_timeout=opt_run_config.endpoint_timeout,
+                    override=opt_run_config.override,
+                )
+                all_results: list[list[tuple[str, Any]]] = []
+                all_eval_outputs: list[Any] = []
+                for _ in range(reps):
+                    eval_output = await EvaluationRun(config=eval_cfg).run_and_evaluate()
+                    all_results.append(eval_output.evaluation_results)
+                    all_eval_outputs.append(eval_output)
+                ind.eval_output = (all_eval_outputs[-1] if all_eval_outputs else None)
 
             metrics: dict[str, float] = {}
             for metric_name in eval_metrics:
@@ -307,6 +344,7 @@ async def optimize_prompts(
                 for ind, ev in zip(unevaluated, evaluated):
                     ind.metrics = ev.metrics
                     ind.worst_items_reasoning = ev.worst_items_reasoning
+                    ind.eval_output = ev.eval_output
             # Scalarize
             norm_per_ind = _normalize_generation(pop, eval_metrics, directions)
             penalties = _apply_diversity_penalty(pop, diversity_lambda)
@@ -344,6 +382,10 @@ async def optimize_prompts(
 
         for gen in range(1, generations + 1):
             logger.info("[GA] Generation %d/%d: evaluating population of %d", gen, generations, len(population))
+            # Assign trial numbers before evaluation so _evaluate() can route OTEL per-trial
+            for idx, ind in enumerate(population):
+                if ind.trial_number is None:
+                    ind.trial_number = trial_number_offset + (gen - 1) * pop_size + idx
             population = await _evaluate_population(population)
 
             # Log and save checkpoint
@@ -384,6 +426,61 @@ async def optimize_prompts(
                     row.update({f"metric::{m}": ind.metrics[m] for m in eval_metrics})
                 history_rows.append(row)
 
+            if callback_manager is not None:
+                from nat.eval.eval_callbacks import EvalResult
+                from nat.eval.eval_callbacks import EvalResultItem
+                from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+                for idx, ind in enumerate(population):
+                    # Build EvalResult from stored eval output
+                    eval_result = None
+                    if ind.eval_output is not None:
+                        try:
+                            last_out = ind.eval_output
+                            cb_items = []
+                            for input_item in last_out.eval_input.eval_input_items:
+                                per_item_scores = {}
+                                per_item_reasoning = {}
+                                for eval_name, eval_out in last_out.evaluation_results:
+                                    for output_item in eval_out.eval_output_items:
+                                        if str(output_item.id) == str(input_item.id):
+                                            score_val = output_item.score
+                                            if isinstance(score_val, (int, float)):
+                                                per_item_scores[eval_name] = float(score_val)
+                                            per_item_reasoning[eval_name] = output_item.reasoning
+                                            break
+                                usage_item = (last_out.usage_stats.usage_stats_items.get(input_item.id)
+                                              if last_out.usage_stats else None)
+                                cb_items.append(
+                                    EvalResultItem(
+                                        item_id=input_item.id,
+                                        input_obj=input_item.input_obj,
+                                        expected_output=input_item.expected_output_obj,
+                                        actual_output=input_item.output_obj,
+                                        scores=per_item_scores,
+                                        reasoning=per_item_reasoning,
+                                        total_tokens=usage_item.total_tokens if usage_item else None,
+                                        llm_latency=usage_item.llm_latency if usage_item else None,
+                                        runtime=usage_item.runtime if usage_item else None,
+                                    ))
+                            eval_result = EvalResult(metric_scores=ind.metrics or {}, items=cb_items)
+                        except Exception:
+                            logger.warning("Failed to build EvalResult for prompt optimizer callback", exc_info=True)
+
+                    callback_manager.on_trial_end(
+                        TrialResult(
+                            trial_number=ind.trial_number,
+                            parameters=frozen_params or {},
+                            metric_scores=ind.metrics or {},
+                            is_best=(ind is best),
+                            prompts=dict(ind.prompts),
+                            prompt_formats={
+                                k: v
+                                for k, v in prompt_format_map.items() if v
+                            },
+                            eval_result=eval_result,
+                        ))
+                    ind.eval_output = None  # free memory
+
             # Next generation via elitism + reproduction
             next_population: list[Individual] = []
             if elitism > 0:
@@ -421,6 +518,24 @@ async def optimize_prompts(
         # Final evaluation to ensure metrics present
         population = await _evaluate_population(population)
         best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
+
+        if callback_manager is not None:
+            from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+            callback_manager.on_study_end(
+                best_trial=TrialResult(
+                    trial_number=best.trial_number or 0,
+                    parameters=frozen_params or {},
+                    metric_scores=best.metrics or {},
+                    is_best=True,
+                    prompts=dict(best.prompts),
+                    prompt_formats={
+                        k: v
+                        for k, v in prompt_format_map.items() if v
+                    },
+                ),
+                total_trials=trial_number_offset + generations * pop_size,
+            )
+
         best_prompts = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
 
         # Save final

@@ -26,6 +26,7 @@ from nat.builder.context import ContextState
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter_manager import ExporterManager
+from nat.utils.reactive.subject import Subject
 
 
 def get_exporter_counts():
@@ -455,14 +456,26 @@ class TestExporterManagerLifecycle:
 
         assert exporter_manager._running is False
 
-    async def test_start_already_running_raises_error(self, exporter_manager, mock_exporter):
-        """Test that starting when already running raises RuntimeError."""
+    async def test_start_reentrant_shares_lifecycle(self, exporter_manager, mock_exporter):
+        """Test that start() is reentrant — second caller shares the lifecycle."""
         exporter_manager.add_exporter("test", mock_exporter)
 
         async with exporter_manager.start():
-            with pytest.raises(RuntimeError, match="already running"):
-                async with exporter_manager.start():
-                    pass
+            assert exporter_manager._running is True
+            assert exporter_manager._ref_count == 1
+
+            # Second start should succeed (reentrant) — not raise
+            async with exporter_manager.start():
+                assert exporter_manager._ref_count == 2
+                assert exporter_manager._running is True
+
+            # Inner context exited but outer still holds — still running
+            assert exporter_manager._ref_count == 1
+            assert exporter_manager._running is True
+
+        # Both contexts exited — now stopped
+        assert exporter_manager._ref_count == 0
+        assert exporter_manager._running is False
 
     async def test_stop_not_running_does_nothing(self, exporter_manager):
         """Test that stopping when not running does nothing."""
@@ -553,23 +566,30 @@ class TestExporterManagerFactoryMethods:
 class TestConcurrencyAndThreadSafety:
     """Test concurrency and thread safety aspects."""
 
-    async def test_concurrent_start_operations(self, exporter_manager, mock_exporter):
-        """Test that concurrent start operations are properly locked."""
+    async def test_concurrent_start_operations_are_reentrant(self, exporter_manager, mock_exporter):
+        """Test that concurrent start operations share the lifecycle (reentrant)."""
         exporter_manager.add_exporter("test", mock_exporter)
 
-        # Try to start concurrently - second should fail
-        async def start_operation():
+        results = []
+
+        async def start_operation(label: str):
             async with exporter_manager.start():
-                await asyncio.sleep(0.1)  # Hold the context briefly
+                results.append(f"{label}_started")
+                await asyncio.sleep(0.1)
+                results.append(f"{label}_done")
 
-        task1 = asyncio.create_task(start_operation())
-        await asyncio.sleep(0.05)  # Let first task start
+        task1 = asyncio.create_task(start_operation("first"))
+        await asyncio.sleep(0.05)
 
-        with pytest.raises(RuntimeError, match="already running"):
-            async with exporter_manager.start():
-                pass
+        # Second concurrent start should succeed (reentrant)
+        task2 = asyncio.create_task(start_operation("second"))
 
-        await task1  # Clean up
+        await asyncio.gather(task1, task2)
+
+        assert "first_started" in results
+        assert "second_started" in results
+        assert exporter_manager._running is False
+        assert exporter_manager._ref_count == 0
 
     async def test_concurrent_registry_modifications(self):
         """Test concurrent modifications to shared registries."""
@@ -1088,3 +1108,207 @@ class TestWaitForTasksExplicitly:
 
         # This should complete without hanging despite the slow task
         await exporter.wait_for_tasks(timeout=0.1)
+
+
+class TestSharedEventStreamForwarding:
+    """Test event stream bridging between eval-loop and per-item Runner contexts.
+
+    In eval mode the ExporterManager is pre-started once (first caller) and each
+    Runner enters as a reentrant caller with its own Subject in its async
+    context.  These tests verify that events pushed to per-item Subjects are
+    forwarded to the shared Subject that exporters subscribe to.
+    """
+
+    async def test_first_caller_creates_shared_event_stream(self):
+        """First caller to start() should create and store a shared Subject."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        assert manager._shared_event_stream is None
+
+        async with manager.start():
+            assert manager._shared_event_stream is not None
+            assert isinstance(manager._shared_event_stream, Subject)
+
+        # After exit, shared stream should be cleaned up
+        assert manager._shared_event_stream is None
+
+    async def test_shared_subject_set_in_context(self):
+        """First caller should inject the shared Subject into the current context."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        async with manager.start():
+            ctx = ContextState.get()
+            subject_in_context = ctx.event_stream.get()
+            assert subject_in_context is manager._shared_event_stream
+
+    async def test_reentrant_caller_forwards_events_to_shared_subject(self):
+        """Events pushed to a reentrant caller's per-item Subject should be
+        forwarded to the shared Subject."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        received_events = []
+
+        async with manager.start():
+            # Subscribe to the shared Subject to capture forwarded events
+            manager._shared_event_stream.subscribe(on_next=lambda e: received_events.append(e), )
+
+            # Simulate what Runner.__aenter__ does: create a fresh Subject
+            # in the item's context
+            item_subject = Subject()
+            ContextState.get().event_stream.set(item_subject)
+
+            # Reentrant start — should set up forwarding
+            async with manager.start():
+                # Push events to the item's Subject (as the workflow would)
+                item_subject.on_next("event_1")
+                item_subject.on_next("event_2")
+
+        assert received_events == ["event_1", "event_2"]
+
+    async def test_item_on_complete_does_not_close_shared_subject(self):
+        """Calling on_complete on a per-item Subject should NOT close the
+        shared Subject.  Other items must still be able to push events."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        received_events = []
+
+        async with manager.start():
+            manager._shared_event_stream.subscribe(on_next=lambda e: received_events.append(e), )
+
+            # Item 1: create Subject, forward, push, complete
+            item1_subject = Subject()
+            ContextState.get().event_stream.set(item1_subject)
+            async with manager.start():
+                item1_subject.on_next("item1_event")
+                item1_subject.on_complete()  # Should NOT close shared Subject
+
+            # Item 2: create Subject, forward, push — should still work
+            item2_subject = Subject()
+            ContextState.get().event_stream.set(item2_subject)
+            async with manager.start():
+                item2_subject.on_next("item2_event")
+
+        assert "item1_event" in received_events
+        assert "item2_event" in received_events
+
+    async def test_concurrent_items_all_forward_to_shared_subject(self):
+        """Multiple concurrent items should all forward events to the same
+        shared Subject, simulating the eval loop's asyncio.gather."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        received_events = []
+        num_items = 10
+
+        async with manager.start():
+            manager._shared_event_stream.subscribe(on_next=lambda e: received_events.append(e), )
+
+            async def run_item(item_id: int):
+                # Each item creates its own Subject (like Runner.__aenter__)
+                item_subject = Subject()
+                ContextState.get().event_stream.set(item_subject)
+
+                async with manager.start():
+                    item_subject.on_next(f"event_from_item_{item_id}")
+                    item_subject.on_complete()
+
+            # Run all items concurrently, like asyncio.gather in eval loop
+            await asyncio.gather(*[run_item(i) for i in range(num_items)])
+
+        assert len(received_events) == num_items
+        for i in range(num_items):
+            assert f"event_from_item_{i}" in received_events
+
+    async def test_serve_mode_no_shared_stream_interference(self):
+        """In serve mode (no pre-start), each request gets its own
+        ExporterManager copy.  The shared event stream should work
+        correctly for single-caller usage."""
+        base_manager = ExporterManager(shutdown_timeout=1)
+        base_manager.add_exporter("test", MockExporter())
+
+        # Serve mode: get() creates a copy because not running
+        serve_manager = base_manager.get()
+        assert serve_manager is not base_manager
+
+        received_events = []
+
+        async with serve_manager.start():
+            # In serve mode, the first (and only) caller sets the shared Subject
+            assert serve_manager._shared_event_stream is not None
+            serve_manager._shared_event_stream.subscribe(on_next=lambda e: received_events.append(e), )
+
+            # Push events directly to the shared Subject (what the workflow does
+            # after start() overwrites the context's Subject)
+            ctx_subject = ContextState.get().event_stream.get()
+            ctx_subject.on_next("serve_event")
+
+        assert received_events == ["serve_event"]
+
+    async def test_shared_subject_completed_on_last_caller_exit(self):
+        """When the last caller exits, the shared Subject should be completed."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        completed = []
+
+        async with manager.start():
+            manager._shared_event_stream.subscribe(
+                on_next=lambda e: None,
+                on_complete=lambda: completed.append(True),
+            )
+
+            # Reentrant caller
+            async with manager.start():
+                pass  # Inner caller exits
+
+            # Shared Subject should NOT be completed yet (outer still holds)
+            assert len(completed) == 0
+
+        # Now the last caller exited — shared Subject should be completed
+        assert len(completed) == 1
+
+    async def test_forwarding_subscription_cleaned_up_on_exit(self):
+        """The forwarding subscription should be unsubscribed when the
+        reentrant caller exits, preventing stale subscriptions."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        received_events = []
+
+        async with manager.start():
+            manager._shared_event_stream.subscribe(on_next=lambda e: received_events.append(e), )
+
+            item_subject = Subject()
+            ContextState.get().event_stream.set(item_subject)
+
+            async with manager.start():
+                item_subject.on_next("before_exit")
+
+            # After the reentrant caller exits, forwarding should stop
+            item_subject.on_next("after_exit")
+
+        assert "before_exit" in received_events
+        assert "after_exit" not in received_events
+
+    async def test_get_returns_self_when_running(self):
+        """get() should return self when the manager is already running,
+        ensuring the Runner shares the pre-started ExporterManager."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        async with manager.start():
+            result = manager.get()
+            assert result is manager
+
+    async def test_get_creates_copy_when_not_running(self):
+        """get() should create a copy when not running (serve mode)."""
+        manager = ExporterManager(shutdown_timeout=1)
+        manager.add_exporter("test", MockExporter())
+
+        result = manager.get()
+        assert result is not manager
+        assert result._shared_event_stream is None

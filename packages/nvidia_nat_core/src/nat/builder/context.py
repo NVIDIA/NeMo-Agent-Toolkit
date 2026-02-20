@@ -81,6 +81,7 @@ class ContextState(metaclass=Singleton):
         self._event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=None)
         self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
         self._active_span_id_stack: ContextVar[list[str] | None] = ContextVar("active_span_id_stack", default=None)
+        self._root_span_id: ContextVar[int | None] = ContextVar("root_span_id", default=None)
         self._function_path_stack: ContextVar[list[str] | None] = ContextVar("function_path_stack", default=None)
         self._latency_sensitivity_stack: ContextVar[list[int] | None] = ContextVar("latency_sensitivity_stack",
                                                                                    default=None)

@@ -28,6 +28,7 @@ import yaml
 from pydantic import BaseModel
 from tqdm import tqdm
 
+from nat.builder.context import ContextState
 from nat.data_models.config import Config
 from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.evaluate_config import JobEvictionPolicy
@@ -58,7 +59,7 @@ class EvaluationRun:
         Future versions may introduce breaking changes without notice.
     """
 
-    def __init__(self, config: EvaluationRunConfig):
+    def __init__(self, config: EvaluationRunConfig, callback_manager=None):
         """
         Initialize an EvaluationRun with configuration.
         """
@@ -66,6 +67,7 @@ class EvaluationRun:
 
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
+        self.callback_manager = callback_manager
         self.eval_config: EvalConfig | None = None
         self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
@@ -107,6 +109,9 @@ class EvaluationRun:
         self.config_original_file: Path | None = None
         self.config_effective_file: Path | None = None
         self.config_metadata_file: Path | None = None
+
+        # Pre-generated OTEL root span_ids for eager trace linking (item_id -> span_id)
+        self._item_span_ids: dict[str, int] = {}
 
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
@@ -180,74 +185,92 @@ class EvaluationRun:
             if stop_event.is_set():
                 return "", []
 
+            # Only pre-generate root span_ids when callbacks need them
+            # (e.g. LangSmith eager linking). This avoids touching core
+            # observability code paths for non-LangSmith eval runs.
+            pre_span_id = None
+            if self.callback_manager and self.callback_manager.needs_root_span_ids:
+                from nat.data_models.span import _generate_nonzero_span_id
+                pre_span_id = _generate_nonzero_span_id()
+                self._item_span_ids[str(item.id)] = pre_span_id
+
             user_id = self.config.user_id
             if self.eval_config.general.per_input_user_id:
                 user_id += f"-{uuid4()}"
 
-            async with session_manager.session(user_id=user_id) as session:
-                async with session.run(item.input_obj) as runner:
-                    if not session.workflow.has_single_output:
-                        # raise an error if the workflow has multiple outputs
-                        raise NotImplementedError("Multiple outputs are not supported")
+            # Set the pre-generated span_id in the ContextVar BEFORE entering
+            # the session/runner context. asyncio.create_task() copies ContextVars,
+            # so the Runner's task will inherit this value.
+            ctx_state = ContextState.get()
+            root_span_token = ctx_state._root_span_id.set(pre_span_id) if pre_span_id is not None else None
+            try:
+                async with session_manager.session(user_id=user_id) as session:
+                    async with session.run(item.input_obj) as runner:
+                        if not session.workflow.has_single_output:
+                            # raise an error if the workflow has multiple outputs
+                            raise NotImplementedError("Multiple outputs are not supported")
 
-                    runner_task = None
-                    intermediate_task = None
+                        runner_task = None
+                        intermediate_task = None
 
-                    async def cancel_pending_tasks():
-                        pending = []
-                        for awaitable in (runner_task, intermediate_task):
-                            if awaitable is not None:
-                                if not awaitable.done():
-                                    awaitable.cancel()
-                                pending.append(awaitable)
-                        if pending:
-                            await asyncio.gather(*pending, return_exceptions=True)
+                        async def cancel_pending_tasks():
+                            pending = []
+                            for awaitable in (runner_task, intermediate_task):
+                                if awaitable is not None:
+                                    if not awaitable.done():
+                                        awaitable.cancel()
+                                    pending.append(awaitable)
+                            if pending:
+                                await asyncio.gather(*pending, return_exceptions=True)
 
-                    try:
-                        # Start usage stats and intermediate steps collection in parallel
-                        intermediate_task = asyncio.ensure_future(pull_intermediate())
-                        runner_task = asyncio.create_task(runner.result())
-                        base_output = await runner_task
-                        intermediate_steps = await intermediate_task
-                    except NotImplementedError as e:
-                        logger.error("Failed to run the workflow: %s", e)
-                        await cancel_pending_tasks()
-                        # raise original error
-                        raise
-                    except Exception as e:
-                        logger.exception("Failed to run the workflow: %s", e)
-                        # stop processing if a workflow error occurs
-                        self.workflow_interrupted = True
-                        await cancel_pending_tasks()
-                        stop_event.set()
-                        return
+                        try:
+                            # Start usage stats and intermediate steps collection in parallel
+                            intermediate_task = asyncio.ensure_future(pull_intermediate())
+                            runner_task = asyncio.create_task(runner.result())
+                            base_output = await runner_task
+                            intermediate_steps = await intermediate_task
+                        except NotImplementedError as e:
+                            logger.error("Failed to run the workflow: %s", e)
+                            await cancel_pending_tasks()
+                            # raise original error
+                            raise
+                        except Exception as e:
+                            logger.exception("Failed to run the workflow: %s", e)
+                            # stop processing if a workflow error occurs
+                            self.workflow_interrupted = True
+                            await cancel_pending_tasks()
+                            stop_event.set()
+                            return
 
-                    try:
-                        base_output = runner.convert(base_output, to_type=str)
-                    except ValueError:
-                        pass
+                        try:
+                            base_output = runner.convert(base_output, to_type=str)
+                        except ValueError:
+                            pass
 
-                    # if base_output is a pydantic model dump it to json
-                    if isinstance(base_output, BaseModel):
-                        output = base_output.model_dump_json(indent=2)
-                    else:
-                        m = jsonpath_expr.find(base_output)
-                        if (not m):
-                            raise RuntimeError(
-                                f"Failed to extract output using jsonpath: {self.config.result_json_path}")
-                        if (len(m) > 1):
-                            logger.warning(
-                                "Multiple matches found for jsonpath at row '%s'. Matches: %s. Using the first",
-                                base_output,
-                                m)
-                        output = m[0].value
+                        # if base_output is a pydantic model dump it to json
+                        if isinstance(base_output, BaseModel):
+                            output = base_output.model_dump_json(indent=2)
+                        else:
+                            m = jsonpath_expr.find(base_output)
+                            if (not m):
+                                raise RuntimeError(
+                                    f"Failed to extract output using jsonpath: {self.config.result_json_path}")
+                            if (len(m) > 1):
+                                logger.warning(
+                                    "Multiple matches found for jsonpath at row '%s'. Matches: %s. Using the first",
+                                    base_output,
+                                    m)
+                            output = m[0].value
 
-                    item.output_obj = output
-                    item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
-                    usage_stats_item = self._compute_usage_stats(item)
+                        item.output_obj = output
+                        item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
+                        usage_stats_item = self._compute_usage_stats(item)
 
-                    self.weave_eval.log_prediction(item, output)
-                    await self.weave_eval.log_usage_stats(item, usage_stats_item)
+                        self.weave_eval.log_prediction(item, output)
+                        await self.weave_eval.log_usage_stats(item, usage_stats_item)
+            finally:
+                if root_span_token is not None:
+                    ctx_state._root_span_id.reset(root_span_token)
 
         async def wrapped_run(item: EvalInputItem) -> None:
             await run_one(item)
@@ -262,7 +285,18 @@ class EvaluationRun:
         else:
             eval_input_items = self.eval_input.eval_input_items
         pbar = tqdm(total=len(eval_input_items), desc="Running workflow")
-        await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
+
+        # Pre-start the exporter manager for the entire eval pass so per-item
+        # Runner.start() calls are reentrant no-ops.  This keeps the exporter
+        # alive across all items, preventing trace loss from per-item
+        # start/stop cycling.
+        # NOTE: Access _exporter_manager directly — the .exporter_manager
+        # property calls .get() which creates a new copy each time, defeating
+        # the reentrant ref counting.
+        exporter_mgr = session_manager.workflow._exporter_manager
+        async with exporter_mgr.start():
+            await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
+
         pbar.close()
 
     async def run_workflow_remote(self):
@@ -626,6 +660,14 @@ class EvaluationRun:
                                          adjust_dataset_size=self.config.adjust_dataset_size,
                                          custom_pre_eval_process_function=custom_pre_eval_process_function)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
+        if self.callback_manager and self.eval_input.eval_input_items:
+            try:
+                file_path = getattr(dataset_config, 'file_path', 'nat-eval-dataset')
+                dataset_name = Path(file_path).stem if file_path else 'nat-eval-dataset'
+                self.callback_manager.on_dataset_loaded(dataset_name=dataset_name,
+                                                        items=self.eval_input.eval_input_items)
+            except Exception:
+                logger.warning("Failed to fire on_dataset_loaded callback", exc_info=True)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
             return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
@@ -681,9 +723,50 @@ class EvaluationRun:
                     evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
                     await self.run_evaluators(evaluators)
 
-                    # Wait for all trace export tasks to complete (local workflows only)
-                    if session_manager and not self.config.endpoint:
-                        await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
+                    if self.callback_manager and self.evaluation_results:
+                        try:
+                            from nat.eval.eval_callbacks import EvalResult
+                            from nat.eval.eval_callbacks import EvalResultItem
+                            scores = {name: output.average_score for name, output in self.evaluation_results}
+
+                            cb_items = []
+                            for input_item in self.eval_input.eval_input_items:
+                                per_item_scores = {}
+                                per_item_reasoning = {}
+                                for eval_name, eval_output in self.evaluation_results:
+                                    for output_item in eval_output.eval_output_items:
+                                        if str(output_item.id) == str(input_item.id):
+                                            score_val = output_item.score
+                                            if isinstance(score_val, (int, float)):
+                                                per_item_scores[eval_name] = float(score_val)
+                                            per_item_reasoning[eval_name] = output_item.reasoning
+                                            break
+                                # Get usage stats for this item if available
+                                usage_item = self.usage_stats.usage_stats_items.get(input_item.id)
+                                cb_items.append(
+                                    EvalResultItem(
+                                        item_id=input_item.id,
+                                        input_obj=input_item.input_obj,
+                                        expected_output=input_item.expected_output_obj,
+                                        actual_output=input_item.output_obj,
+                                        scores=per_item_scores,
+                                        reasoning=per_item_reasoning,
+                                        total_tokens=usage_item.total_tokens if usage_item else None,
+                                        llm_latency=usage_item.llm_latency if usage_item else None,
+                                        runtime=usage_item.runtime if usage_item else None,
+                                        root_span_id=self._item_span_ids.get(str(input_item.id)),
+                                    ))
+
+                            # Wait for all trace export tasks to complete BEFORE firing
+                            # on_eval_complete so that OTEL traces are flushed to backends
+                            # (e.g. LangSmith) before eager linking tries update_run().
+                            if session_manager and not self.config.endpoint:
+                                await self.wait_for_all_export_tasks_local(session_manager,
+                                                                           timeout=self.config.export_timeout)
+
+                            self.callback_manager.on_eval_complete(EvalResult(metric_scores=scores, items=cb_items))
+                        except Exception:
+                            logger.warning("Failed to fire on_eval_complete callback", exc_info=True)
                 finally:
                     if local_session_manager is not None:
                         await local_session_manager.shutdown()
