@@ -102,8 +102,3 @@ class EvalCallbackManager:
                 except Exception:
                     logger.debug("get_eval_project_name failed for %s", type(cb).__name__, exc_info=True)
         return None
-
-
-def get_tracing_configs(config: Any) -> dict[str, Any]:
-    """Extract tracing configs from a loaded NAT config object."""
-    return getattr(getattr(getattr(config, 'general', None), 'telemetry', None), 'tracing', None) or {}

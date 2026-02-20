@@ -104,7 +104,7 @@ def optimize_parameters(
         if callback_manager:
             trial_project = callback_manager.get_trial_project_name(trial.number)
             if trial_project:
-                from nat.eval.eval_callbacks import get_tracing_configs
+                from nat.observability.utils.tracing_utils import get_tracing_configs
                 tracing = get_tracing_configs(cfg_trial)
                 for exporter_config in tracing.values():
                     if hasattr(exporter_config, 'project'):

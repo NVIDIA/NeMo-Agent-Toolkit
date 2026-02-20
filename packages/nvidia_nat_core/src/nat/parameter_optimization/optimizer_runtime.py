@@ -33,7 +33,7 @@ def _build_optimizer_callback_manager(base_cfg):
         from pathlib import Path
 
         from nat.cli.type_registry import GlobalTypeRegistry
-        from nat.eval.eval_callbacks import get_tracing_configs
+        from nat.observability.utils.tracing_utils import get_tracing_configs
         from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
 
         tracing = get_tracing_configs(base_cfg)

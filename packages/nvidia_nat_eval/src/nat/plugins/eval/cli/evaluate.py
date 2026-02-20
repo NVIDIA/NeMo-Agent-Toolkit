@@ -161,7 +161,7 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
     try:
         from nat.cli.type_registry import GlobalTypeRegistry
         from nat.eval.eval_callbacks import EvalCallbackManager
-        from nat.eval.eval_callbacks import get_tracing_configs
+        from nat.observability.utils.tracing_utils import get_tracing_configs
         from nat.runtime.loader import load_config as _load_cfg
 
         loaded = _load_cfg(config.config_file) if isinstance(config.config_file, Path) else config.config_file

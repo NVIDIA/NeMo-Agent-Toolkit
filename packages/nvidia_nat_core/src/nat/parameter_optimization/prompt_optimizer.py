@@ -289,7 +289,7 @@ async def optimize_prompts(
                 if callback_manager and ind.trial_number is not None:
                     trial_project = callback_manager.get_trial_project_name(ind.trial_number)
                     if trial_project:
-                        from nat.eval.eval_callbacks import get_tracing_configs
+                        from nat.observability.utils.tracing_utils import get_tracing_configs
                         tracing = get_tracing_configs(cfg_trial)
                         for exporter_config in tracing.values():
                             if hasattr(exporter_config, 'project'):
