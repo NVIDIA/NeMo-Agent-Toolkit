@@ -88,10 +88,8 @@ class PredictionTrieBuilder:
         sorted_steps = sorted(steps, key=lambda s: s.event_timestamp)
 
         # Workflow duration from first to last event
-        workflow_duration_s = (
-            sorted_steps[-1].event_timestamp - sorted_steps[0].event_timestamp
-            if len(sorted_steps) >= 2 else 0.0
-        )
+        workflow_duration_s = (sorted_steps[-1].event_timestamp -
+                               sorted_steps[0].event_timestamp if len(sorted_steps) >= 2 else 0.0)
 
         # Find all LLM_END events
         llm_ends = [s for s in sorted_steps if s.event_type == IntermediateStepType.LLM_END]
@@ -175,11 +173,8 @@ class PredictionTrieBuilder:
             else:
                 position_score = 1.0
 
-            ctx.sensitivity_score = (
-                cfg.w_critical * critical_path_weight
-                + cfg.w_fanout * fanout_score
-                + cfg.w_position * position_score
-            )
+            ctx.sensitivity_score = (cfg.w_critical * critical_path_weight + cfg.w_fanout * fanout_score +
+                                     cfg.w_position * position_score)
 
     def _build_path(self, step: IntermediateStep) -> list[str]:
         """Build the function path from ancestry."""

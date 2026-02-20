@@ -209,20 +209,30 @@ def test_sensitivity_respects_scale():
         IntermediateStep(
             parent_id="root",
             function_ancestry=InvocationNode(
-                function_id="wf-1", function_name="wf", parent_id=None, parent_name=None,
+                function_id="wf-1",
+                function_name="wf",
+                parent_id=None,
+                parent_name=None,
             ),
             payload=IntermediateStepPayload(
-                event_type=IntermediateStepType.LLM_START, event_timestamp=0.0, UUID="a",
+                event_type=IntermediateStepType.LLM_START,
+                event_timestamp=0.0,
+                UUID="a",
             ),
         ),
         IntermediateStep(
             parent_id="root",
             function_ancestry=InvocationNode(
-                function_id="wf-1", function_name="wf", parent_id=None, parent_name=None,
+                function_id="wf-1",
+                function_name="wf",
+                parent_id=None,
+                parent_name=None,
             ),
             payload=IntermediateStepPayload(
-                event_type=IntermediateStepType.LLM_END, event_timestamp=10.0,
-                span_event_timestamp=0.0, UUID="a",
+                event_type=IntermediateStepType.LLM_END,
+                event_timestamp=10.0,
+                span_event_timestamp=0.0,
+                UUID="a",
                 usage_info=UsageInfo(token_usage=TokenUsageBaseModel(completion_tokens=50)),
             ),
         ),

@@ -1051,8 +1051,9 @@ class TestDynamoTransport:
 
     async def test_transport_uses_auto_latency_sensitivity(self):
         """When prediction has latency_sensitivity and no manual decorator, use it."""
-        import httpx
         import json
+
+        import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
         from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
@@ -1074,7 +1075,9 @@ class TestDynamoTransport:
 
         transport = _DynamoTransport(
             transport=mock_transport,
-            total_requests=10, osl=512, iat=250,
+            total_requests=10,
+            osl=512,
+            iat=250,
             prediction_lookup=mock_lookup,
             max_sensitivity=1000,
         )
@@ -1096,8 +1099,9 @@ class TestDynamoTransport:
 
     async def test_transport_manual_sensitivity_overrides_auto(self):
         """When @latency_sensitive decorator is active, ignore prediction's auto sensitivity."""
-        import httpx
         import json
+
+        import httpx
 
         from nat.builder.context import Context
         from nat.llm.dynamo_llm import _DynamoTransport
@@ -1120,7 +1124,9 @@ class TestDynamoTransport:
 
         transport = _DynamoTransport(
             transport=mock_transport,
-            total_requests=10, osl=512, iat=250,
+            total_requests=10,
+            osl=512,
+            iat=250,
             prediction_lookup=mock_lookup,
             max_sensitivity=1000,
         )
@@ -1145,8 +1151,9 @@ class TestDynamoTransport:
 
     async def test_transport_no_auto_sensitivity_when_prediction_is_none(self):
         """When prediction has no latency_sensitivity, use context default."""
-        import httpx
         import json
+
+        import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
         from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
@@ -1155,8 +1162,7 @@ class TestDynamoTransport:
         mock_prediction = LLMCallPrediction(
             remaining_calls=PredictionMetrics(mean=5.0, p50=5.0, p90=7.0),
             output_tokens=PredictionMetrics(mean=200.0, p50=200.0, p90=300.0),
-            interarrival_ms=PredictionMetrics(mean=100.0, p50=100.0, p90=150.0),
-            # latency_sensitivity=None (default)
+            interarrival_ms=PredictionMetrics(mean=100.0, p50=100.0, p90=150.0),  # latency_sensitivity=None (default)
         )
 
         mock_lookup = MagicMock()
@@ -1168,7 +1174,9 @@ class TestDynamoTransport:
 
         transport = _DynamoTransport(
             transport=mock_transport,
-            total_requests=10, osl=512, iat=250,
+            total_requests=10,
+            osl=512,
+            iat=250,
             prediction_lookup=mock_lookup,
             max_sensitivity=1000,
         )

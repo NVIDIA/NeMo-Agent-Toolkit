@@ -88,11 +88,14 @@ def test_save_and_load_trie_with_latency_sensitivity():
     )
     root = PredictionTrieNode(
         name="root",
-        children={"agent": PredictionTrieNode(
-            name="agent",
-            predictions_by_call_index={1: prediction},
-            predictions_any_index=prediction,
-        )},
+        children={
+            "agent":
+                PredictionTrieNode(
+                    name="agent",
+                    predictions_by_call_index={1: prediction},
+                    predictions_any_index=prediction,
+                )
+        },
     )
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -114,9 +117,15 @@ def test_load_trie_without_latency_sensitivity():
             "name": "root",
             "predictions_by_call_index": {
                 "1": {
-                    "remaining_calls": {"sample_count": 5, "mean": 2.0, "p50": 2.0, "p90": 3.0, "p95": 4.0},
-                    "interarrival_ms": {"sample_count": 5, "mean": 200.0, "p50": 180.0, "p90": 300.0, "p95": 350.0},
-                    "output_tokens": {"sample_count": 5, "mean": 100.0, "p50": 90.0, "p90": 150.0, "p95": 180.0},
+                    "remaining_calls": {
+                        "sample_count": 5, "mean": 2.0, "p50": 2.0, "p90": 3.0, "p95": 4.0
+                    },
+                    "interarrival_ms": {
+                        "sample_count": 5, "mean": 200.0, "p50": 180.0, "p90": 300.0, "p95": 350.0
+                    },
+                    "output_tokens": {
+                        "sample_count": 5, "mean": 100.0, "p50": 90.0, "p90": 150.0, "p95": 180.0
+                    },
                 }
             },
             "predictions_any_index": None,
