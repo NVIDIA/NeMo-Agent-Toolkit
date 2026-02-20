@@ -272,4 +272,4 @@ class PredictionTrieBuilder:
             return None
         scale = self._sensitivity_config.sensitivity_scale
         mean_score = acc.compute_metrics().mean
-        return max(1, min(scale, round(mean_score * scale)))
+        return max(1, min(scale, round(mean_score * (scale - 1)) + 1))
