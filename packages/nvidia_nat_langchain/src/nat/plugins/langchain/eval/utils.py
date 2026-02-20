@@ -21,8 +21,8 @@ from typing import Any
 
 from langsmith.evaluation.evaluator import EvaluationResult
 
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 
 _MISSING = object()
 

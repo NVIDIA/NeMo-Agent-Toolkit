@@ -152,6 +152,16 @@ eval:
       concurrency_spike_analysis:
         enable: true
         spike_threshold: 7
+      # Build a prediction trie for Dynamo routing hints
+      prediction_trie:
+        enable: true
+        # Auto-compute latency sensitivity per LLM call position
+        auto_sensitivity: true
+        sensitivity_scale: 5
+        # Weights for the three scoring signals (must sum to 1.0)
+        w_critical: 0.5
+        w_fanout: 0.3
+        w_position: 0.2
 
   evaluators:
     accuracy:
@@ -179,6 +189,7 @@ Please also note the `output_dir` parameter which specifies the directory where 
 - `prompt_caching_prefixes`: Identify common prompt prefixes. This is helpful for identifying if you have commonly repeated prompts that can be pre-populated in KV caches
 - `bottleneck_analysis`: Analyze workflow performance measures such as bottlenecks, latency, and concurrency spikes. This can be set to `simple_stack` for a simpler analysis. Nested stack will provide a more detailed analysis identifying nested bottlenecks like tool calls inside other tools calls.
 - `concurrency_spike_analysis`: Analyze concurrency spikes. This will identify if there are any spikes in the number of concurrent tool calls. At a `spike_threshold` of 7, the profiler will identify any spikes where the number of concurrent running functions is greater than or equal to 7. Those are surfaced to the user in a dedicated section of the workflow profiling report.
+- `prediction_trie`: Build a prediction trie from execution traces for `Dynamo` routing hint injection at runtime. See the [Prediction Trie](#prediction-trie-and-dynamo-routing-hints) section below for details.
 
 ### Step 3: Running the Profiler
 
@@ -194,7 +205,100 @@ This will, based on the above configuration, produce the following files in the 
 - `inference_optimization.json`: This file contains the computed workflow-specific metrics. This includes 90%, 95%, and 99% confidence intervals for latency, throughput, and workflow runtime.
 - `standardized_data_all.csv`: This file contains the standardized usage data including prompt tokens, completion tokens, LLM input, framework, and other metadata.
 - You'll also find a JSON file and text report of any advanced or experimental techniques you ran including concurrency analysis, bottleneck analysis, or PrefixSpan.
+- `prediction_trie.json`: When `prediction_trie.enable` is set to `true`, this file contains the prediction trie — a hierarchical model of your workflow's LLM call patterns. See below for details.
 
+
+## Prediction Trie and Dynamo Routing Hints
+
+The prediction trie is a hierarchical data structure built from profiling traces that captures per-LLM-call-position statistics for your workflow. When deployed with a `Dynamo` LLM backend, these statistics are injected as routing hints to optimize `KV` cache management and request scheduling.
+
+### What the Prediction Trie Captures
+
+During profiling, the `trie` builder processes all LLM call events and, for each unique position in your workflow's call graph (identified by `function path` and `call index`), accumulates:
+
+- **Remaining calls**: How many more LLM calls are expected after this one in the workflow.
+- **Interarrival time**: Expected time in milliseconds until the next LLM call.
+- **Output tokens**: Expected output token count for this call (with `p50`, `p90`, `p95` percentiles).
+- **Latency sensitivity** (when `auto_sensitivity` is enabled): An auto-computed score indicating how latency-critical this particular call is.
+
+Each metric is aggregated across all profiled traces, producing robust percentile-based predictions.
+
+### Auto Latency Sensitivity
+
+When `auto_sensitivity` is enabled (the default), the profiler automatically determines which LLM calls in your workflow are most latency-critical using three composite signals:
+
+**Critical path weight** (`w_critical`, default 0.5): What fraction of the workflow's total wall-clock time does this call consume? Calls that dominate overall latency score highest.
+
+**Downstream fan-out** (`w_fanout`, default 0.3): How many subsequent LLM calls depend on this call completing? A planning call that gates 5 downstream tool calls scores higher than a leaf call with no dependents.
+
+**User-facing position** (`w_position`, default 0.2): First and last calls in a workflow get boosted sensitivity because they directly affect perceived latency (time-to-first-activity and time-to-final-answer).
+
+These signals are normalized to [0, 1], combined with the configured weights, and mapped to an integer scale from 1 to `sensitivity_scale`. The result is stored alongside each prediction in the `trie`.
+
+#### Override behavior
+
+Auto-computed sensitivity only applies when no manual `@latency_sensitive` decorator is active. If a developer explicitly annotates a function, the manual value always takes precedence:
+
+| Scenario | Effective sensitivity |
+|----------|----------------------|
+| No decorator, no `trie` prediction | Default (2) |
+| No decorator, `trie` says 4 | Auto (4) |
+| `@latency_sensitive(5)`, `trie` says 3 | Manual (5) |
+| `@latency_sensitive(1)`, `trie` says 4 | Manual (1) |
+
+### Enabling the Prediction Trie
+
+Add the `prediction_trie` section to your profiler config:
+
+```yaml
+profiler:
+  prediction_trie:
+    enable: true
+    # Auto latency sensitivity (enabled by default)
+    auto_sensitivity: true
+    sensitivity_scale: 5       # Integer range [1, N] for sensitivity scores
+    w_critical: 0.5            # Weight for critical path signal
+    w_fanout: 0.3              # Weight for fan-out signal
+    w_position: 0.2            # Weight for position signal
+```
+
+After running `nat eval`, the profiler writes `prediction_trie.json` to your output directory.
+
+### Using the Prediction Trie at Runtime
+
+To use the `trie` for `Dynamo` routing, set the `prediction_trie_path` on your `Dynamo` LLM config:
+
+```yaml
+llms:
+  my_dynamo_llm:
+    _type: dynamo
+    model: my-model
+    base_url: http://dynamo-endpoint:8000/v1
+    prediction_trie_path: ./.tmp/eval/output/prediction_trie.json
+```
+
+At runtime, the `Dynamo` transport automatically:
+1. Looks up the current `function path` and `call index` in the `trie`.
+2. Overrides static routing hints (`output tokens`, `interarrival time`, `remaining calls`) with per-call-position predictions from profiler data.
+3. If the prediction includes an auto-computed `latency_sensitivity` and no manual `@latency_sensitive` decorator is active, uses the auto value for priority computation.
+4. Injects all hints into `nvext.agent_hints` in the request body for the `Dynamo` backend.
+
+This means you can profile once, then deploy with intelligent per-call routing — no manual annotation required.
+
+### Manual Latency Sensitivity
+
+For cases where you have domain knowledge the profiler cannot observe (e.g., a call feeds a real-time UI), you can manually annotate functions:
+
+```python
+from nat.plugins.eval.profiler.decorators.latency import latency_sensitive
+
+@latency_sensitive(5)
+async def user_facing_response():
+    """This call directly produces output the user sees."""
+    return await llm.generate(prompt)
+```
+
+Manual annotations always override auto-computed values when both are present.
 
 
 ## Walkthrough of Profiling a Workflow
