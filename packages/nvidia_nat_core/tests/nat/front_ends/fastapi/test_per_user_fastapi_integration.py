@@ -388,15 +388,11 @@ class TestPerUserMonitoringEndpoint:
     """Tests for the /monitor/users endpoint."""
 
     @pytest.fixture(name="monitored_app")
-    async def monitored_app_fixture(self) -> "FastAPI":
+    async def monitored_app_fixture(self) -> AsyncGenerator["FastAPI"]:
         """Fixture to create a FastApiFrontEndPluginWorker with per-user workflow."""
         config = create_per_user_workflow_config_with_monitoring()
-        worker = FastApiFrontEndPluginWorker(config)
-
-        app = worker.build_app()
-        async with LifespanManager(app):
+        async for app in _create_managed_app(config):
             yield app
-            await worker.cleanup_session_managers()
 
     async def test_monitor_endpoint_disabled_by_default(self, per_user_app: "FastAPI"):
         """Test that monitoring endpoint is not available when disabled."""
