@@ -91,7 +91,9 @@ Grafana
 [Hh]ashable
 [Hh]ardcode(s|d)?
 [Hh]yperparameter(s?)
-iat(_factor)?
+IAT
+iat
+iat_factor
 [Ii]mpactful
 [Ii]nferencing
 [Ii]nterquartile
@@ -101,7 +103,9 @@ Jira
 jsonlines
 [Kk]aggle
 [Kk]eycloak
-kv(_load)?
+KV
+kv
+kv_load
 LangChain
 Langfuse
 LangGraph
@@ -112,7 +116,8 @@ LlamaIndex
 [Ll]earnable
 # libcudf isn't styled in the way that cuDF is https://docs.rapids.ai/api/libcudf/stable/
 libcudf
-[Ll]LM(s?)
+LLM(s?)
+llm(s?)
 # https://github.com/logpai/loghub/
 Loghub
 [Ll]ogprob(s?)
@@ -141,6 +146,7 @@ Ollama
 onboarding
 OpenPipe
 [Oo]ptimizable
+OSL
 osl
 [Oo]utstanding_work
 Optuna
@@ -219,6 +225,7 @@ URIs
 uv
 Vanna
 VectorDB
+vLLM
 vllm
 [Ww]alkthrough
 [Ww]eb[Ss]ocket
