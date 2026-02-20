@@ -50,6 +50,7 @@ class NIMEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="nim"):
     truncate: TruncationOption = Field(default="NONE",
                                        description=("The truncation strategy if the input on the "
                                                     "server side if it's too large."))
+    dimensions: int | None = Field(default=None, description="Embedding output dimensions.")
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
