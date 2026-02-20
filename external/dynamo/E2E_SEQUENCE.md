@@ -264,7 +264,7 @@ sequenceDiagram
 
 ### 1. NeMo Agent Toolkit → Frontend
 
-**HTTP Request with nvext (annotations, agent_hints, cache_control):**
+**HTTP Request with `nvext` (`annotations`, `agent_hints`, `cache_control`):**
 ```json
 {
   "model": "llama-3.3-70b",
@@ -487,7 +487,7 @@ sequenceDiagram
     RS->>ML: Update block states based on output
 ```
 
-## Component Registration (ETCD)
+## Component Registration (etcd)
 
 ```mermaid
 flowchart LR
@@ -636,14 +636,14 @@ Key fields and defaults:
 | `prefix_iat` | `int` | `250` | Inter-arrival time in ms (optimizable, 10–1000). Accepts `"LOW"`/`"MEDIUM"`/`"HIGH"` for backward compatibility (mapped to 50/250/750) |
 | `prefix_use_raw_values` | `bool` | `true` | Send raw integers; when `false`, converts to LOW/MEDIUM/HIGH categories |
 | `request_timeout` | `float` | `600.0` | HTTP request timeout in seconds |
-| `disable_headers` | `bool` | `true` | Skip `x-prefix-*` HTTP headers (hints sent through nvext only) |
+| `disable_headers` | `bool` | `true` | Skip `x-prefix-*` HTTP headers (hints sent through `nvext` only) |
 | `cache_pin_type` | `CachePinType \| None` | `"ephemeral"` | KV cache pinning strategy; TTL = `total_requests × iat` (ms). `None` to disable |
 | `max_sensitivity` | `int` | `1000` | Maximum latency sensitivity; priority = `max_sensitivity - latency_sensitivity` |
 | `prediction_trie_path` | `str \| None` | `None` | Path to `prediction_trie.json` for dynamic hint overrides |
 
 > **Note:** `reuse_budget` is not a config field — it is computed by the processor as `total_requests - processed_count`.
 
-### Router Config
+### Router config
 
 See [`external/dynamo/optimized/config.yaml`](optimized/config.yaml).
 

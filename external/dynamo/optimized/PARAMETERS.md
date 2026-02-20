@@ -23,7 +23,7 @@ This document describes all configurable parameters for the `WorkloadAwareRouter
 
 Parameters can be set via:
 
-1. **YAML Config File** (`config.yaml`) - All 31 parameters
+1. **YAML config file** (`config.yaml`) - All 31 parameters
 2. **CLI Flags** - 5 flags for common operations:
    - `--config` - Path to YAML config file
    - `--affinity-base` - Primary stickiness control
@@ -57,7 +57,7 @@ python router.py --config config.yaml \
 
 ### Infrastructure
 
-| Parameter | Config Path | Default | Type | Description |
+| Parameter | config path | Default | Type | Description |
 |-----------|-------------|---------|------|-------------|
 | Block Size | `infrastructure.block_size` | 64 | int | KV cache block size for overlap computation |
 | Router Type | `infrastructure.router_type` | "kv" | str | Router mode: "kv" (KV-aware) or "kv_load" (load-based only) |
@@ -67,7 +67,7 @@ python router.py --config config.yaml \
 
 Controls how strongly the router prefers keeping requests on the same worker for KV cache reuse.
 
-| Parameter | Config Path | CLI Flag | Default | Type | Description |
+| Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Base | `affinity.base` | `--affinity-base` | 0.30 | float | Base bonus when staying on same worker. Higher = more sticky. |
 | Reuse Weight | `affinity.reuse_weight` | `--override` | 0.15 | float | Additional bonus per remaining request in session |
@@ -82,7 +82,7 @@ Controls how strongly the router prefers keeping requests on the same worker for
 
 Controls the explore vs exploit tradeoff in worker selection.
 
-| Parameter | Config Path | CLI Flag | Default | Type | Description |
+| Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Base TS Weight | `exploration.base_ts_weight` | `--override` | 0.10 | float | Weight for Thompson Sampling exploration term |
 | Temp Base | `exploration.temperature.base` | `--temp-base` | 1.0 | float | Base softmax temperature |
@@ -97,7 +97,7 @@ Controls the explore vs exploit tradeoff in worker selection.
 
 Penalty applied when moving a prefix session to a different worker.
 
-| Parameter | Config Path | CLI Flag | Default | Type | Description |
+| Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Base | `switching_cost.base` | `--override` | 0.20 | float | Base penalty for switching workers |
 | Reuse Penalty | `switching_cost.reuse_penalty` | `--override` | 0.08 | float | Additional penalty per remaining request in session |
@@ -111,7 +111,7 @@ Penalty applied when moving a prefix session to a different worker.
 
 Controls how much to penalize workers with high load.
 
-| Parameter | Config Path | CLI Flag | Default | Type | Description |
+| Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Queue Penalty | `load_balancing.queue_penalty_weight` | `--override` | 0.50 | float | Weight for pending request queue depth |
 | GPU Penalty | `load_balancing.gpu_penalty_weight` | `--override` | 1.00 | float | Weight for GPU KV cache memory usage |
@@ -127,7 +127,7 @@ Controls how much to penalize workers with high load.
 
 How input sequence length (ISL) contributes to job cost estimation.
 
-| Parameter | Config Path | CLI Flag | Default | Type | Description |
+| Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Token Scale | `prefill.token_scale` | `--override` | 1024.0 | float | Normalization denominator for token count |
 | Weight | `prefill.weight` | `--override` | 1.0 | float | Weight of prefill cost in total job cost |
@@ -136,7 +136,7 @@ How input sequence length (ISL) contributes to job cost estimation.
 
 Parameters controlling the Linear Thompson Sampling algorithm.
 
-| Parameter | Config Path | CLI Flag | Default | Type | Description |
+| Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Lambda | `lints.lambda` | `--override` | 1.0 | float | Ridge regression regularization strength |
 | V | `lints.v` | `--lints-v` | 0.25 | float | Exploration variance in posterior sampling |
@@ -152,7 +152,7 @@ Parameters controlling the Linear Thompson Sampling algorithm.
 
 Controls the delayed reward mechanism.
 
-| Parameter | Config Path | CLI Flag | Default | Type | Description |
+| Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Timeout Seconds | `feedback.timeout_seconds` | `--override` | 120.0 | float | Max wait time for feedback before applying timeout penalty |
 | Sweep Interval | `feedback.sweep_interval_seconds` | `--override` | 5.0 | float | How often to check for timed-out decisions |
@@ -161,7 +161,7 @@ Controls the delayed reward mechanism.
 
 ### Debug
 
-| Parameter | Config Path | CLI Flag | Default | Type | Description |
+| Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Traces Enabled | `debug.traces_enabled` | `--override` | false | bool | Enable detailed decision trace logging |
 | Trace Dir | `debug.trace_dir` | `--override` | /tmp/dynamo_router_traces | str | Directory for trace output files |

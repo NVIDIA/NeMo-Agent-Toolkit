@@ -529,7 +529,7 @@ bash start_dynamo_optimized_thompson_hints_sglang.sh
 ```
 
 The script will:
-1. Start ETCD and NATS infrastructure
+1. Start etcd and NATS infrastructure
 2. Start Prometheus and Grafana containers
 3. Wait for monitoring services to be ready
 4. Start Dynamo components (workers, router, processor, frontend)

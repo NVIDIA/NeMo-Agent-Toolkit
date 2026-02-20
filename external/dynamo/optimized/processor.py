@@ -117,8 +117,12 @@ from dynamo.llm import register_llm
 from dynamo.runtime import DistributedRuntime
 from dynamo.runtime import dynamo_worker
 from dynamo.runtime.logging import configure_dynamo_logging
+from prometheus_client import CollectorRegistry
+from prometheus_client import Counter
+from prometheus_client import Gauge
+from prometheus_client import Histogram
+from prometheus_client import generate_latest
 from pydantic import BaseModel
-from prometheus_client import CollectorRegistry, Counter, Gauge, Histogram, generate_latest
 
 configure_dynamo_logging()
 logger = logging.getLogger(__name__)
@@ -698,13 +702,11 @@ class ProcessorRequestHandler:
                     latency_seconds = time.perf_counter() - t0
                     latency_ms = latency_seconds * 1000.0
 
-                    # Send feedback to router (this is already fire-and-forget)
-                    await self._send_feedback_safely(decision_id,
-                                                     latency_ms,
-                                                     True,
-                                                     tokens_in,
-                                                     tokens_out,
-                                                     finish_reason)
+                    # Send feedback to router (fire-and-forget — don't block generator return)
+                    feedback_task = asyncio.create_task(
+                        self._send_feedback_safely(decision_id, latency_ms, True, tokens_in, tokens_out, finish_reason))
+                    self._background_tasks.add(feedback_task)
+                    feedback_task.add_done_callback(self._background_tasks.discard)
 
                     # Update core Prometheus metrics (fast atomic operations)
                     self._metrics.request_latency_seconds.observe(latency_seconds)
@@ -822,7 +824,7 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=int(os.environ.get("DYNAMO_KV_BLOCK_SIZE", "64")),
         help="KV cache block size for model card registration "
-             "(default: DYNAMO_KV_BLOCK_SIZE env var or 64)",
+        "(default: DYNAMO_KV_BLOCK_SIZE env var or 64)",
     )
     return parser.parse_args()
 
