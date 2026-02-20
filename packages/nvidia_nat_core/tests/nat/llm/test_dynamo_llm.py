@@ -1009,8 +1009,8 @@ class TestDynamoTransport:
         import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
-        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
-        from nat.profiler.prediction_trie.data_models import PredictionMetrics
+        from nat.plugins.eval.profiler.prediction_trie.data_models import LLMCallPrediction
+        from nat.plugins.eval.profiler.prediction_trie.data_models import PredictionMetrics
 
         # Prediction: remaining_calls.mean=25, interarrival_ms.mean=50
         # Expected TTL = 25 * 50 = 1250ms (not 10 * 250 = 2500 from static config)
