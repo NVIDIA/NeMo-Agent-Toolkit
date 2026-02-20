@@ -666,6 +666,53 @@ This matrix visualization shows:
 - If accuracy is paramount: Select the highest accuracy configuration and accept the latency trade-off
 - For balanced performance: Pick a point in the middle of the Pareto front
 
+## Optimization Callbacks
+
+The optimization system provides a callback interface that allows observability providers to track optimization trials as structured experiments. Callbacks enable per-trial experiment isolation, parameter tracking, and prompt version management in observability platforms.
+
+### `OptimizerCallback` Protocol
+
+Any class implementing the following methods can be registered as an optimization callback:
+
+| Lifecycle Hook | When It Fires | What a Callback Can Do |
+| -------------- | ------------- | ---------------------- |
+| `pre_create_experiment(dataset_items)` | Before any trials run, after the dataset is loaded | Create a shared dataset for the entire optimization run in the provider |
+| `get_trial_project_name(trial_number)` | Before each trial's eval run starts | Return a per-trial project name and pre-create it in the provider |
+| `on_trial_end(result)` | After each trial completes | Link traces to dataset examples, attach feedback scores, record parameter configurations, push prompt versions |
+| `on_study_end(best_trial, total_trials)` | After all trials complete | Tag the best trial's artifacts (e.g., prompt commits), record a study summary |
+
+The `on_trial_end` and `on_study_end` callbacks receive a `TrialResult` object containing:
+
+- `trial_number`: The zero-indexed trial number.
+- `parameters`: A dictionary of parameter names to values used in this trial.
+- `metric_scores`: A dictionary of metric names to scores.
+- `is_best`: Whether this trial is the best so far.
+- `prompts`: A dictionary of parameter names to prompt text (for prompt GA trials).
+- `prompt_formats`: A dictionary of parameter names to template formats (`"f-string"`, `"jinja2"`, `"mustache"`).
+- `eval_result`: The `EvalResult` object with per-item scores and traces.
+
+### Registration
+
+Callbacks are registered via the `@register_optimizer_callback(config_type=...)` decorator, keyed to a telemetry exporter configuration type. When that exporter is configured in `general.telemetry.tracing`, the callback is automatically constructed and registered with no additional user configuration needed.
+
+For example, a provider registers its callback by decorating a factory function:
+
+```python
+from nat.cli.register_workflow import register_optimizer_callback
+
+@register_optimizer_callback(config_type=MyTelemetryExporter)
+def _build_my_optimizer_callback(config, *, dataset_name=None, **kwargs):
+    return MyOptimizationCallback(project=config.project, dataset_name=dataset_name)
+```
+
+When the user configures the corresponding telemetry exporter in their workflow YAML, the callback is created and registered automatically.
+
+### Built-in Implementation
+
+LangSmith implements this callback pattern with per-trial experiment projects, feedback scores, parameter metadata, and prompt repo version tracking. See the [LangSmith integration guide](../run-workflows/observe/observe.md?provider=LangSmith#provider-integration-guides){.external} for details on what LangSmith tracks during optimization.
+
+Other observability providers can implement the same `OptimizerCallback` protocol to add their own trial tracking during optimization.
+
 ## A Complete Example of Optimization
 
 For a complete example of using the optimizer, see the `email_phishing_analyzer` example in the `evaluation_and_profiling` section of the examples in the NeMo Agent Toolkit repository.
