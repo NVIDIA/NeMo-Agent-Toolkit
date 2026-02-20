@@ -204,7 +204,7 @@ workflow:
 
 eval:
   general:
-    max_concurrency: 64
+    max_concurrency: 8
 
     output:
       dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/prediction_trie_eval/
