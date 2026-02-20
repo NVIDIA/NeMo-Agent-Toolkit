@@ -169,8 +169,6 @@ async def test_add_items_with_conversation(memmachine_editor_with_client: MemMac
 
 
 async def test_add_items_with_direct_memory(memmachine_editor_with_client: MemMachineEditor,
-                                            _mock_client: Mock,
-                                            _mock_project: Mock,
                                             mock_memory_instance: Mock,
                                             sample_direct_memory_item: MemoryItem):
     """Test adding MemoryItem for direct memory (no conversation).

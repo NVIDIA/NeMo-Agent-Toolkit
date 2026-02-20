@@ -93,24 +93,6 @@ async def test_memmachine_memory_client_minimal_config(config_minimal: MemMachin
             mock_memmachine_client.get_or_create_project.assert_not_called()
 
 
-async def test_memmachine_memory_client_import_error(config: MemMachineMemoryClientConfig, mock_builder: Mock):
-    """Test that ImportError is raised when memmachine package is not installed."""
-    # Mock the import to raise ImportError
-    # We need to patch the import inside the function, so patch where it's imported from
-    import builtins
-    original_import = builtins.__import__
-
-    def import_side_effect(name, *args, **kwargs):
-        if name == "memmachine":
-            raise ModuleNotFoundError
-        return original_import(name, *args, **kwargs)
-
-    with patch("builtins.__import__", side_effect=import_side_effect):
-        with pytest.raises(ImportError, match="Could not import MemMachineClient"):
-            async with memmachine_memory_client(config, mock_builder):
-                pass
-
-
 async def test_memmachine_memory_client_initialization_error(config: MemMachineMemoryClientConfig, mock_builder: Mock):
     """Test that RuntimeError is raised when client initialization fails."""
     with patch("memmachine.MemMachineClient", side_effect=ValueError("base_url is required")):

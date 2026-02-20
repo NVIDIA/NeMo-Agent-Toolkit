@@ -47,9 +47,9 @@ class MemMachineEditor(MemoryEditor):
 
         Args:
             memmachine_instance: Preinstantiated MemMachineClient or Project object
-            from the MemMachine Python SDK. If a MemMachineClient is provided,
-            projects will be created/retrieved as needed. If a Project is provided,
-            it will be used directly.
+                from the MemMachine Python SDK. If a MemMachineClient is provided,
+                projects will be created/retrieved as needed. If a Project is provided,
+                it will be used directly.
         """
         self._memmachine = memmachine_instance
         # Check if it's a client or project
