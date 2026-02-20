@@ -1061,7 +1061,14 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "none"
+                "value": "short"
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max"
               },
               {
                 "id": "custom.axisPlacement",
