@@ -389,6 +389,15 @@ class Context:
         stack = self._context_state.latency_sensitivity_stack.get()
         return max(stack)
 
+    @property
+    def has_manual_latency_sensitivity(self) -> bool:
+        """True if any @latency_sensitive decorator is active in the current scope.
+
+        The default stack is [2] (length 1). Any push_latency_sensitivity call
+        adds to the stack, making length > 1.
+        """
+        return len(self._context_state.latency_sensitivity_stack.get()) > 1
+
     @contextmanager
     def push_latency_sensitivity(self, sensitivity: int):
         """
