@@ -40,7 +40,7 @@ retrievers:
 
 function_groups:
   cuda_search:
-    _type: nvidia_rag_lib
+    _type: nat_rag
     include:
       - search
     llm: nim_llm

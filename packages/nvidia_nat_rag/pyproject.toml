@@ -30,10 +30,10 @@ root = "../.."
 
 
 [project]
-name = "nvidia-nat-rag-lib"
+name = "nvidia-nat-rag"
 dynamic = ["version", "dependencies", "optional-dependencies"]
 requires-python = ">=3.11,<3.14"
-description = "Subpackage for NVIDIA RAG library in NeMo Agent Toolkit"
+description = "Subpackage for NVIDIA RAG in NeMo Agent Toolkit"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "rag", "agents", "retrieval"]
 license = { text = "Apache-2.0" }
@@ -79,4 +79,4 @@ nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
-nat_rag_lib = "nat.plugins.rag_lib.register"
+nat_rag = "nat.plugins.rag.register"

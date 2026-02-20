@@ -25,13 +25,13 @@ from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.component_ref import RetrieverRef
 from nat.data_models.function import FunctionGroupBaseConfig
-from nat.plugins.rag_lib.config import RAGPipelineConfig
-from nat.plugins.rag_lib.models import RAGSearchResult
+from nat.plugins.rag.config import RAGPipelineConfig
+from nat.plugins.rag.models import RAGSearchResult
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-class NvidiaRAGLibConfig(FunctionGroupBaseConfig, name="nvidia_rag_lib"):
+class NATRAGConfig(FunctionGroupBaseConfig, name="nat_rag"):
     """Configuration for NVIDIA RAG Library.
 
     Exposes search and generate tools that share a single RAG client.
@@ -46,15 +46,15 @@ class NvidiaRAGLibConfig(FunctionGroupBaseConfig, name="nvidia_rag_lib"):
     reranker_top_k: int = Field(default=10, ge=1, description="Number of results after reranking.")
 
 
-@register_function_group(config_type=NvidiaRAGLibConfig)
-async def nvidia_rag_lib(config: NvidiaRAGLibConfig, builder: Builder) -> AsyncGenerator[FunctionGroup, None]:
+@register_function_group(config_type=NATRAGConfig)
+async def nat_rag(config: NATRAGConfig, builder: Builder) -> AsyncGenerator[FunctionGroup, None]:
     """NVIDIA RAG Library - exposes search and generate tools."""
     from pydantic import SecretStr
 
     from nat.data_models.finetuning import OpenAIMessage
     from nat.embedder.nim_embedder import NIMEmbedderModelConfig
     from nat.llm.nim_llm import NIMModelConfig
-    from nat.plugins.rag_lib.models import RAGGenerateResult
+    from nat.plugins.rag.models import RAGGenerateResult
     from nat.retriever.milvus.register import MilvusRetrieverConfig
     from nat.retriever.nemo_retriever.register import NemoRetrieverConfig
     try:

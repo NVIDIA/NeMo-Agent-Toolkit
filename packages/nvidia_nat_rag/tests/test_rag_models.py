@@ -18,8 +18,8 @@ import json
 import pytest
 from nvidia_rag.rag_server.response_generator import Citations
 
-from nat.plugins.rag_lib.models import RAGGenerateResult
-from nat.plugins.rag_lib.models import RAGSearchResult
+from nat.plugins.rag.models import RAGGenerateResult
+from nat.plugins.rag.models import RAGSearchResult
 
 
 class TestRAGSearchResult:

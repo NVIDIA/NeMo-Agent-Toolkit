@@ -45,7 +45,7 @@ This is a simple example RAG application to showcase how one can configure and u
     - [Adding Memory to the Agent](#adding-memory-to-the-agent)
   - [Adding Additional Tools](#adding-additional-tools)
   - [Using Test Time Compute](#using-test-time-compute)
-  - [Advanced RAG with NVIDIA RAG Library](#advanced-rag-with-nvidia-rag-library)
+  - [Advanced RAG with NVIDIA RAG](#advanced-rag-with-nvidia-rag)
     - [What the Library Provides](#what-the-library-provides)
     - [Prerequisites](#prerequisites-1)
     - [Bootstrap Data](#bootstrap-data-1)
@@ -59,7 +59,7 @@ This is a simple example RAG application to showcase how one can configure and u
 
 - **Milvus Vector Database Integration:** Demonstrates the `milvus_retriever` component for storing and retrieving document embeddings from CUDA and MCP documentation.
 - **ReAct Agent with RAG:** Shows how a `react_agent` can use retriever tools to answer questions by searching through indexed documentation.
-- **Advanced RAG Pipeline with NVIDIA RAG Library:** Showcases enhanced retrieval with semantic reranking, query rewriting, confidence filtering, and structured citations.
+- **Advanced RAG Pipeline with NVIDIA RAG:** Showcases enhanced retrieval with semantic reranking, query rewriting, confidence filtering, and structured citations.
 - **Long-term Memory with Mem0:** Includes integration with Mem0 platform for persistent memory, allowing the agent to remember user preferences across sessions.
 - **Multi-Collection Retrieval:** Demonstrates multiple retriever tools (`cuda_retriever_tool` and `mcp_retriever_tool`) for searching different knowledge bases.
 - **Additional Tool Integration:** Shows how to extend the RAG system with complementary tools like `tavily_internet_search` and `code_generation` for comprehensive question answering.
@@ -369,15 +369,15 @@ The final workflow result should look similar to the following:
 ['CUDA and MCP are two distinct technologies with different purposes and cannot be directly compared. CUDA is a parallel computing platform and programming model, primarily used for compute-intensive tasks such as scientific simulations, data analytics, and machine learning, whereas MCP is an open protocol designed for providing context to Large Language Models (LLMs), particularly for natural language processing and other AI-related tasks. While they serve different purposes, CUDA and MCP share a common goal of enabling developers to create powerful and efficient applications. They are complementary technologies that can be utilized together in certain applications to achieve innovative outcomes, although their differences in design and functionality set them apart. In essence, CUDA focuses on parallel computing and is developed by NVIDIA, whereas MCP is focused on context provision for LLMs, making them unique in their respective fields but potentially synergistic in specific use cases.']
 ```
 
-## Advanced RAG with NVIDIA RAG Library
+## Advanced RAG with NVIDIA RAG
 
-The NVIDIA RAG Library (`nvidia_rag_lib`) integrates the [NVIDIA RAG Blueprint](https://github.com/NVIDIA-AI-Blueprints/rag) pipeline into NeMo Agent Toolkit.
+The NVIDIA RAG package (`nvidia_nat_rag`) integrates the [NVIDIA RAG Blueprint](https://github.com/NVIDIA-AI-Blueprints/rag) pipeline into NeMo Agent Toolkit.
 
 The library handles the complexity of multi-stage retrieval, semantic reranking, and query optimization, allowing you to focus on building your application rather than implementing RAG infrastructure.
 
 ### What the Library Provides
 
-The `nvidia_rag_lib` library provides agent tools powered by the NVIDIA RAG pipeline.
+The `nvidia_nat_rag` package provides agent tools powered by the NVIDIA RAG pipeline.
 
 - **Multi-stage retrieval** with configurable candidate pools and reranking
 - **Semantic reranking** using NeMo Retriever models
@@ -390,9 +390,9 @@ All of these features are managed by the library and configured declaratively in
 
 ### Prerequisites
 
-Install the NVIDIA RAG Library:
+Install the NVIDIA RAG package:
 ```bash
-uv pip install -e packages/nvidia_nat_rag_lib
+uv pip install -e packages/nvidia_nat_rag
 ```
 
 ### Bootstrap Data
@@ -409,7 +409,7 @@ python scripts/langchain_web_ingest.py \
 
 ### Key Capabilities
 
-The `nvidia_rag_lib` library orchestrates a multi-stage retrieval pipeline with the following capabilities:
+The `nvidia_nat_rag` package orchestrates a multi-stage retrieval pipeline with the following capabilities:
 
 - **Two-stage retrieval:** Combines broad vector search (recall) with semantic reranking (precision) to surface the most relevant results
 - **Query rewriting:** LLM reformulates ambiguous or conversational queries before searching
@@ -418,12 +418,12 @@ The `nvidia_rag_lib` library orchestrates a multi-stage retrieval pipeline with 
 
 ### Integration with NeMo Agent Toolkit Components
 
-The `nvidia_rag_lib` library integrates with standard NeMo Agent toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The library references these components by name:
+The `nvidia_nat_rag` package integrates with standard NeMo Agent toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The library references these components by name:
 
 ```yaml
 function_groups:
   cuda_qa:
-    _type: nvidia_rag_lib
+    _type: nat_rag
     llm: nim_llm              # References llms.nim_llm
     embedder: nim_embedder    # References embedders.nim_embedder
     retriever: cuda_retriever # References retrievers.cuda_retriever
@@ -451,7 +451,7 @@ The library adds configuration specific to the RAG pipeline. These fields differ
 ```yaml
 function_groups:
   cuda_qa:
-    _type: nvidia_rag_lib
+    _type: nat_rag
     include:
       - search
     llm: nim_llm

@@ -21,13 +21,13 @@ import pytest
 from nvidia_rag.rag_server.response_generator import Citations
 
 from nat.builder.builder import Builder
-from nat.plugins.rag_lib.client import NvidiaRAGLibConfig
-from nat.plugins.rag_lib.client import nvidia_rag_lib
-from nat.plugins.rag_lib.models import RAGGenerateResult
-from nat.plugins.rag_lib.models import RAGSearchResult
+from nat.plugins.rag.client import NATRAGConfig
+from nat.plugins.rag.client import nat_rag
+from nat.plugins.rag.models import RAGGenerateResult
+from nat.plugins.rag.models import RAGSearchResult
 
 
-class TestNvidiaRAGLib:
+class TestNATRAG:
 
     @pytest.fixture(name="mock_builder")
     def fixture_mock_builder(self) -> MagicMock:
@@ -54,11 +54,11 @@ class TestNvidiaRAGLib:
         return builder
 
     @pytest.fixture(name="config")
-    def fixture_config(self) -> NvidiaRAGLibConfig:
+    def fixture_config(self) -> NATRAGConfig:
         from nat.data_models.component_ref import EmbedderRef
         from nat.data_models.component_ref import LLMRef
         from nat.data_models.component_ref import RetrieverRef
-        return NvidiaRAGLibConfig(
+        return NATRAGConfig(
             llm=LLMRef("nim_llm"),
             embedder=EmbedderRef("nim_embedder"),
             retriever=RetrieverRef("cuda_retriever"),
@@ -72,11 +72,11 @@ class TestNvidiaRAGLib:
         return client
 
     async def test_search_returns_results(self,
-                                          config: NvidiaRAGLibConfig,
+                                          config: NATRAGConfig,
                                           mock_builder: MagicMock,
                                           mock_rag_client: MagicMock) -> None:
         with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client):
-            async with nvidia_rag_lib(config, mock_builder) as group:
+            async with nat_rag(config, mock_builder) as group:
                 functions = await group.get_all_functions()
                 search_fn = next((f for name, f in functions.items() if name.endswith("search")), None)
                 assert search_fn is not None
@@ -87,7 +87,7 @@ class TestNvidiaRAGLib:
                 assert result.citations.total_results == 3
 
     async def test_generate_returns_answer(self,
-                                           config: NvidiaRAGLibConfig,
+                                           config: NATRAGConfig,
                                            mock_builder: MagicMock,
                                            mock_rag_client: MagicMock) -> None:
 
@@ -99,7 +99,7 @@ class TestNvidiaRAGLib:
         mock_rag_client.generate = AsyncMock(return_value=mock_stream())
 
         with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client):
-            async with nvidia_rag_lib(config, mock_builder) as group:
+            async with nat_rag(config, mock_builder) as group:
                 functions = await group.get_all_functions()
                 generate_fn = next((f for name, f in functions.items() if name.endswith("generate")), None)
                 assert generate_fn is not None
@@ -110,7 +110,7 @@ class TestNvidiaRAGLib:
                 assert result.answer == "Hello world"
 
     async def test_generate_handles_empty_stream(self,
-                                                 config: NvidiaRAGLibConfig,
+                                                 config: NATRAGConfig,
                                                  mock_builder: MagicMock,
                                                  mock_rag_client: MagicMock) -> None:
 
@@ -120,7 +120,7 @@ class TestNvidiaRAGLib:
         mock_rag_client.generate = AsyncMock(return_value=mock_empty_stream())
 
         with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client):
-            async with nvidia_rag_lib(config, mock_builder) as group:
+            async with nat_rag(config, mock_builder) as group:
                 functions = await group.get_all_functions()
                 generate_fn = next((f for name, f in functions.items() if name.endswith("generate")), None)
                 result = await generate_fn.acall_invoke(query="test")
@@ -129,11 +129,11 @@ class TestNvidiaRAGLib:
                 assert result.answer == "No response generated."
 
     async def test_group_exposes_both_tools(self,
-                                            config: NvidiaRAGLibConfig,
+                                            config: NATRAGConfig,
                                             mock_builder: MagicMock,
                                             mock_rag_client: MagicMock) -> None:
         with patch("nvidia_rag.rag_server.main.NvidiaRAG", return_value=mock_rag_client):
-            async with nvidia_rag_lib(config, mock_builder) as group:
+            async with nat_rag(config, mock_builder) as group:
                 functions = await group.get_all_functions()
                 function_names = list(functions.keys())
                 assert any(name.endswith("search") for name in function_names)
