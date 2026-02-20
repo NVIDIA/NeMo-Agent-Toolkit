@@ -117,7 +117,7 @@ if [ "${DYNAMO_FROM_SOURCE:-false}" = "true" ]; then
     echo "✓ Using source-built image: ${IMAGE}"
 else
     # Default: standard NGC image
-    IMAGE="${DYNAMO_IMAGE:-nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1}"
+    IMAGE="${DYNAMO_IMAGE:-nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.9.0}"
 fi
 
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
@@ -128,6 +128,12 @@ WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 KV_BLOCK_SIZE="${DYNAMO_KV_BLOCK_SIZE:-64}"
 # Fraction of GPU memory for KV cache (0.0-1.0). Reduce to test cache pressure/degradation.
 MEM_FRACTION_STATIC="${DYNAMO_MEM_FRACTION_STATIC:-0.9}"
+
+# SGLang KV event publishing for radix tree observability (used by router for overlap scoring)
+# Each worker needs a unique KV event port - configured via --kv-events-config JSON
+# Port allocation: Worker 0 = KV_EVENT_BASE_PORT, Worker 1 = KV_EVENT_BASE_PORT+1, etc.
+ENABLE_KV_EVENTS="${DYNAMO_ENABLE_KV_EVENTS:-true}"
+KV_EVENT_BASE_PORT="${DYNAMO_KV_EVENT_BASE_PORT:-20080}"
 
 # Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
 NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
@@ -206,7 +212,7 @@ if [ "${DYNAMO_FROM_SOURCE:-false}" = "true" ]; then
 else
     echo "Configuration: Standard Mode (image: $IMAGE)"
 fi
-echo "Model: Llama-3.3-70B-Instruct"
+echo "Model: $SERVED_MODEL_NAME (from $LOCAL_MODEL_DIR)"
 echo "Container: $CONTAINER_NAME"
 echo "HTTP Port: $HTTP_PORT (default Dynamo frontend)"
 echo "Metrics Ports:"
@@ -235,6 +241,10 @@ echo ""
 echo "KV Cache Configuration:"
 echo "  Block Size: $KV_BLOCK_SIZE tokens (--page-size / --kv-cache-block-size)"
 echo "  GPU Mem Fraction: $MEM_FRACTION_STATIC (--mem-fraction-static)"
+echo "  KV Events: $ENABLE_KV_EVENTS (radix tree overlap scoring)"
+if [ "$ENABLE_KV_EVENTS" = "true" ] && [ "$NUM_WORKERS" -gt 1 ]; then
+    echo "    Per-worker ports: $KV_EVENT_BASE_PORT - $((KV_EVENT_BASE_PORT + NUM_WORKERS - 1))"
+fi
 echo ""
 echo "========================================================="
 
@@ -430,6 +440,8 @@ docker run -d \
   -e PROCESSOR_METRICS_PORT=$PROCESSOR_METRICS_PORT \
   -e KV_BLOCK_SIZE=$KV_BLOCK_SIZE \
   -e MEM_FRACTION_STATIC=$MEM_FRACTION_STATIC \
+  -e ENABLE_KV_EVENTS=$ENABLE_KV_EVENTS \
+  -e KV_EVENT_BASE_PORT=$KV_EVENT_BASE_PORT \
   -e DYNAMO_WORKER_COMPONENT=worker \
   $IMAGE \
   bash -c "
@@ -524,6 +536,13 @@ docker run -d \
     # They start first so the router can discover them during initialization
     # DYN_SYSTEM_PORT sets the Prometheus metrics port for this component
 
+    # KV events configuration (same mechanism as vLLM: ZMQ publisher per worker)
+    if [ \"\$ENABLE_KV_EVENTS\" = \"true\" ]; then
+        echo \"KV Events: ENABLED (per-worker ports starting at \$KV_EVENT_BASE_PORT)\"
+    else
+        echo \"KV Events: DISABLED (set DYNAMO_ENABLE_KV_EVENTS=true to enable)\"
+    fi
+
     # Start multiple workers, each using TP_SIZE GPUs
     WORKER_PIDS=()
     for i in \$(seq 0 \$(($NUM_WORKERS - 1))); do
@@ -532,9 +551,19 @@ docker run -d \
         END_GPU=\$(((i + 1) * $TP_SIZE - 1))
         WORKER_GPU_LIST=\$(seq -s, \$START_GPU \$END_GPU)
         WORKER_PORT=\$((30000 + i))
+        KV_EVENT_PORT=\$(($KV_EVENT_BASE_PORT + i))
 
         echo \"Starting Worker \$i: GPUs \$WORKER_GPU_LIST, Port \$WORKER_PORT (internal model name)\"
         echo \"  KV Block Size: $KV_BLOCK_SIZE tokens, Mem Fraction: $MEM_FRACTION_STATIC\"
+        echo \"  KV Event Port: \$KV_EVENT_PORT (KV Events: $ENABLE_KV_EVENTS)\"
+
+        # Build KV events config JSON for this worker (unique endpoint per worker)
+        KV_EVENTS_OPT=\"\"
+        if [ \"\$ENABLE_KV_EVENTS\" = \"true\" ]; then
+            KV_EVENTS_JSON=\"{\\\"enable_kv_cache_events\\\":true,\\\"publisher\\\":\\\"zmq\\\",\\\"endpoint\\\":\\\"tcp://*:\$KV_EVENT_PORT\\\"}\"
+            KV_EVENTS_OPT=\"--kv-events-config \$KV_EVENTS_JSON\"
+        fi
+
         CUDA_VISIBLE_DEVICES=\$WORKER_GPU_LIST \
         DYN_SYSTEM_PORT=\$((WORKER_METRICS_PORT + i)) \
         DYN_NAMESPACE=workers \
@@ -548,7 +577,8 @@ docker run -d \
           --enable-metrics \
           --page-size $KV_BLOCK_SIZE \
           --mem-fraction-static $MEM_FRACTION_STATIC \
-          --endpoint workers.worker.generate &
+          --endpoint workers.worker.generate \
+          \$KV_EVENTS_OPT &
         WORKER_PIDS+=(\$!)
         echo \"  Worker \$i PID: \${WORKER_PIDS[\$i]}\"
     done

@@ -361,6 +361,9 @@ class ProcessorRequestHandler:
         self._prefix_state: dict[str, dict[str, int]] = {}
         self._prefix_lock = asyncio.Lock()
 
+        # Prevent fire-and-forget tasks from being garbage-collected
+        self._background_tasks: set[asyncio.Task] = set()
+
         # Metrics (initialized in initialize())
         self._metrics: ProcessorMetrics | None = None
 
@@ -405,6 +408,41 @@ class ProcessorRequestHandler:
                 return ann[len(prefix):]
         return default
 
+    @staticmethod
+    def _to_category(
+        value: str | None,
+        thresholds: tuple[float, float],
+        default: str = "MEDIUM",
+    ) -> str:
+        """Convert a value to LOW/MEDIUM/HIGH category.
+
+        Accepts either a categorical string (LOW/MEDIUM/HIGH) directly, or a
+        numeric string which is converted using the given thresholds::
+
+            value < thresholds[0]  → LOW
+            value < thresholds[1]  → MEDIUM
+            value >= thresholds[1] → HIGH
+
+        This makes the processor agnostic to whether the client sends raw
+        integers (``prefix_use_raw_values: true``) or categorical strings
+        (``prefix_use_raw_values: false``).
+        """
+        if not value:
+            return default
+        upper = value.strip().upper()
+        if upper in ("LOW", "MEDIUM", "HIGH"):
+            return upper
+        # Try numeric conversion
+        try:
+            num = float(value)
+            if num < thresholds[0]:
+                return "LOW"
+            if num < thresholds[1]:
+                return "MEDIUM"
+            return "HIGH"
+        except (ValueError, TypeError):
+            return default
+
     def _extract_hints(self, request: dict[str, Any]) -> tuple[str, int, str, str]:
         """
         Extract routing hints from PreprocessedRequest annotations.
@@ -427,17 +465,17 @@ class ProcessorRequestHandler:
         except (ValueError, TypeError):
             total_requests = 1
 
-        # Extract expected output sequence length category
+        # Extract expected output sequence length.
+        # Accepts categorical strings (LOW/MEDIUM/HIGH) or raw token counts.
+        # Raw thresholds match dynamo_llm.py: <256→LOW, <1024→MEDIUM, ≥1024→HIGH.
         osl = self._extract_annotation(annotations, "osl", "MEDIUM")
-        osl = osl.upper() if osl else "MEDIUM"
-        if osl not in ("LOW", "MEDIUM", "HIGH"):
-            osl = "MEDIUM"
+        osl = self._to_category(osl, thresholds=(256, 1024), default="MEDIUM")
 
-        # Extract interarrival time category
+        # Extract interarrival time.
+        # Accepts categorical strings (LOW/MEDIUM/HIGH) or raw millisecond values.
+        # Raw thresholds match dynamo_llm.py: <100→LOW, <500→MEDIUM, ≥500→HIGH.
         iat = self._extract_annotation(annotations, "iat", "MEDIUM")
-        iat = iat.upper() if iat else "MEDIUM"
-        if iat not in ("LOW", "MEDIUM", "HIGH"):
-            iat = "MEDIUM"
+        iat = self._to_category(iat, thresholds=(100, 500), default="MEDIUM")
 
         return prefix_id, total_requests, osl, iat
 
@@ -674,9 +712,12 @@ class ProcessorRequestHandler:
                     self._metrics.tokens_out_total.inc(tokens_out)
 
                     # Fire-and-forget KVE metric update (async, non-blocking)
-                    # This ensures KVE computation has ZERO impact on routing throughput
+                    # This ensures KVE computation has ZERO impact on routing throughput.
+                    # Tasks are stored in _background_tasks to prevent garbage collection.
                     if kve_data is not None:
-                        asyncio.create_task(self._update_kve_metrics_async(kve_data))
+                        task = asyncio.create_task(self._update_kve_metrics_async(kve_data))
+                        self._background_tasks.add(task)
+                        task.add_done_callback(self._background_tasks.discard)
 
                     return
 
