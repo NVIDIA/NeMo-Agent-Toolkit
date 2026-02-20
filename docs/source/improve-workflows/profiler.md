@@ -217,7 +217,7 @@ The prediction trie is a hierarchical data structure built from profiling traces
 During profiling, the `trie` builder processes all LLM call events and, for each unique position in your workflow's call graph (identified by `function path` and `call index`), accumulates:
 
 - **Remaining calls**: How many more LLM calls are expected after this one in the workflow.
-- **Interarrival time**: Expected time in milliseconds until the next LLM call.
+- **`Interarrival` time**: Expected time in milliseconds until the next LLM call.
 - **Output tokens**: Expected output token count for this call (with `p50`, `p90`, `p95` percentiles).
 - **Latency sensitivity** (when `auto_sensitivity` is enabled): An auto-computed score indicating how latency-critical this particular call is.
 
