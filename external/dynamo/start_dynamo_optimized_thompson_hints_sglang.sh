@@ -116,8 +116,8 @@ if [ "${DYNAMO_FROM_SOURCE:-false}" = "true" ]; then
     fi
     echo "✓ Using source-built image: ${IMAGE}"
 else
-    # Default: standard NGC image
-    IMAGE="${DYNAMO_IMAGE:-nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.9.0}"
+    # Default: standard NGC image (ignore DYNAMO_IMAGE when not building from source)
+    IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.9.0"
 fi
 
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"

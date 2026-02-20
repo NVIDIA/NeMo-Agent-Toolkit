@@ -631,6 +631,10 @@ class WorkloadAwareRouter:
 
         self.indexer = KvIndexer(engine, self.block_size)
 
+        # Start background metrics scraper (non-blocking HTTP scrapes in a daemon thread).
+        discovered_worker_ids = sorted(int(w) for w in self.engine_client.instance_ids())
+        self._start_metrics_scraper(discovered_worker_ids, interval=1.0)
+
         # Register workers' ZMQ KV event streams for overlap scoring.
         # Port allocation: KV_EVENT_BASE_PORT + worker_index (sorted by instance_id).
         kv_event_base_port = int(os.environ.get("KV_EVENT_BASE_PORT", "0"))
@@ -746,20 +750,66 @@ class WorkloadAwareRouter:
         ],
     }
 
-    def _build_internal_metrics(self, worker_ids: list[int]) -> dict[str, Any]:
-        """Build a metrics dict by scraping worker Prometheus endpoints and
-        augmenting with the router's own pending-request counts.
+    # ---- cached metrics scraper (non-blocking) ---- #
 
-        Scrapes each worker's ``/metrics`` endpoint for authoritative load
-        signals.  Backend-agnostic: recognises both SGLang and vLLM metric
-        names via ``_METRIC_PREFIXES``.  Falls back to the router's own
-        pending-decision count when a scrape fails (e.g. during warmup).
+    def _start_metrics_scraper(self, worker_ids: list[int], interval: float = 1.0) -> None:
+        """Start a background thread that periodically scrapes worker metrics.
+
+        The scrape runs in a daemon thread to avoid blocking the asyncio event
+        loop.  Results are cached in ``_scraped_metrics`` and read lock-free
+        by ``_build_internal_metrics`` on every routing decision.
         """
-        import urllib.request
+        if hasattr(self, "_scraper_running") and self._scraper_running:
+            return
 
-        worker_metrics_base = int(os.environ.get("WORKER_METRICS_PORT", "0"))
+        self._scraped_metrics: dict[int, dict[str, float]] = {}  # wid -> {gpu, queue}
+        self._scraper_running = True
+        self._scraper_worker_ids = sorted(worker_ids)
+        self._scraper_base_port = int(os.environ.get("WORKER_METRICS_PORT", "0"))
 
-        # Count in-flight (pending) decisions per worker as instant fallback.
+        def _scrape_loop() -> None:
+            import urllib.request
+            while self._scraper_running:
+                for idx, wid in enumerate(self._scraper_worker_ids):
+                    if self._scraper_base_port <= 0:
+                        break
+                    port = self._scraper_base_port + idx
+                    gpu = 0.0
+                    queue = 0.0
+                    try:
+                        resp = urllib.request.urlopen(
+                            f"http://127.0.0.1:{port}/metrics", timeout=1.0
+                        )
+                        body = resp.read().decode("utf-8", errors="replace")
+                        for line in body.splitlines():
+                            if line.startswith("#"):
+                                continue
+                            for prefix in self._METRIC_PREFIXES["gpu_cache_usage"]:
+                                if line.startswith(prefix):
+                                    gpu = float(line.rsplit(" ", 1)[-1])
+                                    break
+                            for prefix in self._METRIC_PREFIXES["queue_depth"]:
+                                if line.startswith(prefix):
+                                    queue = float(line.rsplit(" ", 1)[-1])
+                                    break
+                    except Exception:
+                        pass
+                    self._scraped_metrics[wid] = {"gpu": gpu, "queue": queue}
+                time.sleep(interval)
+
+        t = threading.Thread(target=_scrape_loop, daemon=True, name="metrics-scraper")
+        t.start()
+        logger.info("Started background metrics scraper (interval=%.1fs, workers=%d)",
+                     interval, len(worker_ids))
+
+    def _build_internal_metrics(self, worker_ids: list[int]) -> dict[str, Any]:
+        """Build a metrics dict from cached scrapes + instant pending counts.
+
+        The worker metrics are scraped in a background thread (no event loop
+        blocking).  Pending-decision counts provide an instant supplement that
+        reacts within the same function call.
+        """
+        # Count in-flight (pending) decisions per worker.
         pending_per_worker: dict[int, int] = {wid: 0 for wid in worker_ids}
         with self._pending_lock:
             for rec in self.pending.values():
@@ -767,47 +817,21 @@ class WorkloadAwareRouter:
                 if w in pending_per_worker:
                     pending_per_worker[w] += 1
 
-        # Scrape each worker's metrics endpoint.
-        # Workers are ordered by sorted instance_id; port = base + index.
         sorted_ids = sorted(worker_ids)
         endpoints = []
-        for idx, wid in enumerate(sorted_ids):
-            gpu_usage = 0.0
-            queue_depth = 0.0
+        for wid in sorted_ids:
             pending = float(pending_per_worker.get(wid, 0))
-            scraped = False
+            cached = getattr(self, "_scraped_metrics", {}).get(wid)
 
-            if worker_metrics_base > 0:
-                port = worker_metrics_base + idx
-                try:
-                    resp = urllib.request.urlopen(
-                        f"http://127.0.0.1:{port}/metrics", timeout=0.5
-                    )
-                    body = resp.read().decode("utf-8", errors="replace")
-                    for line in body.splitlines():
-                        if line.startswith("#"):
-                            continue
-                        # Match against canonical metric prefixes
-                        for prefix in self._METRIC_PREFIXES["gpu_cache_usage"]:
-                            if line.startswith(prefix):
-                                gpu_usage = float(line.rsplit(" ", 1)[-1])
-                                scraped = True
-                                break
-                        for prefix in self._METRIC_PREFIXES["queue_depth"]:
-                            if line.startswith(prefix):
-                                queue_depth = float(line.rsplit(" ", 1)[-1])
-                                scraped = True
-                                break
-                except Exception:
-                    pass  # fall back to pending count
-
-            if not scraped:
-                # Fallback: use pending count as queue proxy, heuristic for GPU
-                queue_depth = pending
+            if cached:
+                gpu_usage = cached["gpu"]
+                queue_depth = cached["queue"]
+            else:
+                # Fallback before first scrape completes
                 gpu_usage = min(1.0, pending / 20.0)
+                queue_depth = pending
 
-            # Use the max of scraped queue and pending count — pending reacts
-            # instantly while the scraped value may lag by one scrape interval.
+            # Blend: use max of scraped queue and pending count
             effective_queue = max(queue_depth, pending)
 
             endpoints.append({
