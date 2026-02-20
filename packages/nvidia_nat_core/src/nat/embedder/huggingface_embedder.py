@@ -32,30 +32,13 @@ class HuggingFaceEmbedderConfig(EmbedderBaseConfig, RetryMixin, name="huggingfac
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
     model_name: str = Field(
-        description="HuggingFace model identifier (e.g., 'BAAI/bge-large-en-v1.5', 'sentence-transformers/all-MiniLM-L6-v2')"
-    )
-    device: str = Field(
-        default="auto",
-        description="Device to use for local models ('cpu', 'cuda', 'mps', or 'auto')"
-    )
-    normalize_embeddings: bool = Field(
-        default=True,
-        description="Whether to normalize embeddings to unit length"
-    )
-    batch_size: int = Field(
-        default=32,
-        ge=1,
-        description="Batch size for embedding generation"
-    )
-    max_seq_length: int | None = Field(
-        default=None,
-        ge=1,
-        description="Maximum sequence length for input text"
-    )
-    trust_remote_code: bool = Field(
-        default=False,
-        description="Whether to trust remote code when loading models"
-    )
+        description=
+        "HuggingFace model identifier (e.g., 'BAAI/bge-large-en-v1.5', 'sentence-transformers/all-MiniLM-L6-v2')")
+    device: str = Field(default="auto", description="Device to use for local models ('cpu', 'cuda', 'mps', or 'auto')")
+    normalize_embeddings: bool = Field(default=True, description="Whether to normalize embeddings to unit length")
+    batch_size: int = Field(default=32, ge=1, description="Batch size for embedding generation")
+    max_seq_length: int | None = Field(default=None, ge=1, description="Maximum sequence length for input text")
+    trust_remote_code: bool = Field(default=False, description="Whether to trust remote code when loading models")
 
 
 @register_embedder_provider(config_type=HuggingFaceEmbedderConfig)

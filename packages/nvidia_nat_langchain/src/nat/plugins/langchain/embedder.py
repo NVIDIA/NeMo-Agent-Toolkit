@@ -86,9 +86,7 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
 
 
 @register_embedder_client(config_type=HuggingFaceEmbedderConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def huggingface_langchain(
-    embedder_config: HuggingFaceEmbedderConfig, _builder: Builder
-) -> AsyncIterator[Any]:
+async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, _builder: Builder) -> AsyncIterator[Any]:
     """LangChain client for HuggingFace local embedder using sentence-transformers."""
 
     from langchain_huggingface import HuggingFaceEmbeddings
@@ -112,20 +110,17 @@ async def huggingface_langchain(
     )
 
     if isinstance(embedder_config, RetryMixin):
-        client = patch_with_retry(
-            client,
-            retries=embedder_config.num_retries,
-            retry_codes=embedder_config.retry_on_status_codes,
-            retry_on_messages=embedder_config.retry_on_errors
-        )
+        client = patch_with_retry(client,
+                                  retries=embedder_config.num_retries,
+                                  retry_codes=embedder_config.retry_on_status_codes,
+                                  retry_on_messages=embedder_config.retry_on_errors)
 
     yield client
 
 
 @register_embedder_client(config_type=HuggingFaceInferenceEmbedderConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def huggingface_inference_langchain(
-    embedder_config: HuggingFaceInferenceEmbedderConfig, _builder: Builder
-) -> AsyncIterator[Any]:
+async def huggingface_inference_langchain(embedder_config: HuggingFaceInferenceEmbedderConfig,
+                                          _builder: Builder) -> AsyncIterator[Any]:
     """LangChain client for HuggingFace remote embedder via TEI or Inference Endpoints."""
 
     from langchain_huggingface import HuggingFaceEndpointEmbeddings
@@ -136,11 +131,9 @@ async def huggingface_inference_langchain(
     )
 
     if isinstance(embedder_config, RetryMixin):
-        client = patch_with_retry(
-            client,
-            retries=embedder_config.num_retries,
-            retry_codes=embedder_config.retry_on_status_codes,
-            retry_on_messages=embedder_config.retry_on_errors
-        )
+        client = patch_with_retry(client,
+                                  retries=embedder_config.num_retries,
+                                  retry_codes=embedder_config.retry_on_status_codes,
+                                  retry_on_messages=embedder_config.retry_on_errors)
 
     yield client

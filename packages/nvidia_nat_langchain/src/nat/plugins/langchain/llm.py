@@ -38,8 +38,8 @@ from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
-from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.huggingface_inference_llm import HuggingFaceInferenceLLMConfig
+from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
@@ -47,7 +47,6 @@ from nat.llm.utils.hooks import create_metadata_injection_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
-from nat.data_models.common import get_secret_value
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
@@ -380,9 +379,8 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
 
 
 @register_llm_client(config_type=HuggingFaceInferenceLLMConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def huggingface_inference_langchain(
-    llm_config: HuggingFaceInferenceLLMConfig, _builder: Builder
-) -> AsyncIterator[Any]:
+async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceLLMConfig,
+                                          _builder: Builder) -> AsyncIterator[Any]:
     """LangChain client for HuggingFace Inference API.
 
     Uses `langchain_huggingface.HuggingFaceEndpoint` for Serverless API,

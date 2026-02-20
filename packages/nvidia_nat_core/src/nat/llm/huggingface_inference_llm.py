@@ -28,7 +28,11 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 
 
-class HuggingFaceInferenceLLMConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, name="huggingface_inference"):
+class HuggingFaceInferenceLLMConfig(LLMBaseConfig,
+                                    RetryMixin,
+                                    OptimizableMixin,
+                                    ThinkingMixin,
+                                    name="huggingface_inference"):
     """HuggingFace Inference API LLM provider for remote model inference.
 
     Supports:
@@ -39,56 +43,34 @@ class HuggingFaceInferenceLLMConfig(LLMBaseConfig, RetryMixin, OptimizableMixin,
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    model_name: str = Field(
-        description="HuggingFace model identifier (e.g., 'meta-llama/Llama-3.2-8B-Instruct')"
-    )
+    model_name: str = Field(description="HuggingFace model identifier (e.g., 'meta-llama/Llama-3.2-8B-Instruct')")
     api_key: OptionalSecretStr = Field(
         default=None,
-        description="HuggingFace API token for authentication. Required for Serverless API and private Inference Endpoints."
-    )
+        description=
+        "HuggingFace API token for authentication. Required for Serverless API and private Inference Endpoints.")
     endpoint_url: str | None = Field(
         default=None,
-        description="Custom endpoint URL for Inference Endpoints or self-hosted TGI servers. If not provided, uses Serverless API."
-    )
-    max_new_tokens: int | None = OptimizableField(
-        default=512,
-        ge=1,
-        description="Maximum number of new tokens to generate.",
-        space=SearchSpace(high=2048, low=128, step=128)
-    )
+        description=
+        "Custom endpoint URL for Inference Endpoints or self-hosted TGI servers. If not provided, uses Serverless API.")
+    max_new_tokens: int | None = OptimizableField(default=512,
+                                                  ge=1,
+                                                  description="Maximum number of new tokens to generate.",
+                                                  space=SearchSpace(high=2048, low=128, step=128))
     temperature: float | None = OptimizableField(
         default=0.7,
         ge=0.0,
         le=2.0,
         description="Sampling temperature to control randomness in the output.",
-        space=SearchSpace(high=1.0, low=0.1, step=0.1)
-    )
-    top_p: float | None = OptimizableField(
-        default=None,
-        ge=0.0,
-        le=1.0,
-        description="Top-p (nucleus) sampling parameter.",
-        space=SearchSpace(high=1.0, low=0.5, step=0.1)
-    )
-    top_k: int | None = Field(
-        default=None,
-        ge=1,
-        description="Top-k sampling parameter."
-    )
-    repetition_penalty: float | None = Field(
-        default=None,
-        ge=0.0,
-        description="Penalty for repeating tokens."
-    )
-    seed: int | None = Field(
-        default=None,
-        description="Random seed for reproducible generation."
-    )
-    timeout: float = Field(
-        default=120.0,
-        ge=1.0,
-        description="Request timeout in seconds."
-    )
+        space=SearchSpace(high=1.0, low=0.1, step=0.1))
+    top_p: float | None = OptimizableField(default=None,
+                                           ge=0.0,
+                                           le=1.0,
+                                           description="Top-p (nucleus) sampling parameter.",
+                                           space=SearchSpace(high=1.0, low=0.5, step=0.1))
+    top_k: int | None = Field(default=None, ge=1, description="Top-k sampling parameter.")
+    repetition_penalty: float | None = Field(default=None, ge=0.0, description="Penalty for repeating tokens.")
+    seed: int | None = Field(default=None, description="Random seed for reproducible generation.")
+    timeout: float = Field(default=120.0, ge=1.0, description="Request timeout in seconds.")
 
 
 @register_llm_provider(config_type=HuggingFaceInferenceLLMConfig)

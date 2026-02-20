@@ -33,24 +33,13 @@ class HuggingFaceInferenceEmbedderConfig(EmbedderBaseConfig, RetryMixin, name="h
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 
-    endpoint_url: str = Field(
-        description="Endpoint URL for TEI server or HuggingFace Inference Endpoint"
-    )
-    api_key: OptionalSecretStr = Field(
-        default=None,
-        description="HuggingFace API token for authentication"
-    )
-    timeout: float = Field(
-        default=120.0,
-        ge=1.0,
-        description="Request timeout in seconds"
-    )
+    endpoint_url: str = Field(description="Endpoint URL for TEI server or HuggingFace Inference Endpoint")
+    api_key: OptionalSecretStr = Field(default=None, description="HuggingFace API token for authentication")
+    timeout: float = Field(default=120.0, ge=1.0, description="Request timeout in seconds")
 
 
 @register_embedder_provider(config_type=HuggingFaceInferenceEmbedderConfig)
-async def huggingface_inference_embedder_provider(
-    config: HuggingFaceInferenceEmbedderConfig, _builder: Builder
-):
+async def huggingface_inference_embedder_provider(config: HuggingFaceInferenceEmbedderConfig, _builder: Builder):
     """Register HuggingFace remote embedder as a provider."""
 
     description = f"HuggingFace Remote Embedder: {config.endpoint_url}"
