@@ -175,7 +175,7 @@ def test_sensitivity_not_computed_without_config(simple_trace):
 
 def test_sensitivity_computed_with_config(simple_trace):
     """With SensitivityConfig, latency_sensitivity should be an integer in [1, scale]."""
-    config = SensitivityConfig(scale=5, w_critical=0.5, w_fanout=0.3, w_position=0.2)
+    config = SensitivityConfig(sensitivity_scale=5, w_critical=0.5, w_fanout=0.3, w_position=0.2)
     builder = PredictionTrieBuilder(sensitivity_config=config)
     builder.add_trace(simple_trace)
     trie = builder.build()
@@ -192,7 +192,7 @@ def test_sensitivity_computed_with_config(simple_trace):
 def test_sensitivity_first_call_higher_than_last_call(simple_trace):
     """First call has higher fan-out (remaining=1 vs 0) and is first position,
     so it should get equal or higher sensitivity than the last call."""
-    config = SensitivityConfig(scale=5, w_critical=0.5, w_fanout=0.3, w_position=0.2)
+    config = SensitivityConfig(sensitivity_scale=5, w_critical=0.5, w_fanout=0.3, w_position=0.2)
     builder = PredictionTrieBuilder(sensitivity_config=config)
     builder.add_trace(simple_trace)
     trie = builder.build()
@@ -237,7 +237,7 @@ def test_sensitivity_respects_scale():
             ),
         ),
     ]
-    config = SensitivityConfig(scale=3)
+    config = SensitivityConfig(sensitivity_scale=3)
     builder = PredictionTrieBuilder(sensitivity_config=config)
     builder.add_trace(trace)
     trie = builder.build()
@@ -249,7 +249,7 @@ def test_sensitivity_respects_scale():
 
 def test_sensitivity_aggregated_across_traces(simple_trace):
     """Multiple traces should be averaged for sensitivity scoring."""
-    config = SensitivityConfig(scale=5)
+    config = SensitivityConfig(sensitivity_scale=5)
     builder = PredictionTrieBuilder(sensitivity_config=config)
     builder.add_trace(simple_trace)
     builder.add_trace(simple_trace)
@@ -263,7 +263,7 @@ def test_sensitivity_aggregated_across_traces(simple_trace):
 
 def test_sensitivity_on_aggregated_any_index(simple_trace):
     """predictions_any_index should also have latency_sensitivity."""
-    config = SensitivityConfig(scale=5)
+    config = SensitivityConfig(sensitivity_scale=5)
     builder = PredictionTrieBuilder(sensitivity_config=config)
     builder.add_trace(simple_trace)
     trie = builder.build()

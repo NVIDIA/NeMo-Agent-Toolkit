@@ -30,7 +30,7 @@ from nat.profiler.prediction_trie.metrics_accumulator import MetricsAccumulator
 class SensitivityConfig:
     """Configuration for auto-sensitivity scoring."""
 
-    scale: int = 5
+    sensitivity_scale: int = 5
     w_critical: float = 0.5
     w_fanout: float = 0.3
     w_position: float = 0.2
@@ -270,6 +270,6 @@ class PredictionTrieBuilder:
         """Convert accumulated sensitivity scores to a clamped integer."""
         if acc is None or not acc.has_samples() or self._sensitivity_config is None:
             return None
-        scale = self._sensitivity_config.scale
+        scale = self._sensitivity_config.sensitivity_scale
         mean_score = acc.compute_metrics().mean
         return max(1, min(scale, round(mean_score * scale)))
