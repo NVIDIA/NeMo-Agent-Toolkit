@@ -49,6 +49,7 @@ repos:
       - { id: uv-lock, name: "uv-lock-openpipe_art", args: [--project, packages/nvidia_nat_openpipe_art], files: "packages/nvidia_nat_openpipe_art/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-opentelemetry", args: [--project, packages/nvidia_nat_opentelemetry], files: "packages/nvidia_nat_opentelemetry/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-phoenix", args: [--project, packages/nvidia_nat_phoenix], files: "packages/nvidia_nat_phoenix/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-rag", args: [--project, packages/nvidia_nat_rag], files: "packages/nvidia_nat_rag/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-ragaai", args: [--project, packages/nvidia_nat_ragaai], files: "packages/nvidia_nat_ragaai/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-redis", args: [--project, packages/nvidia_nat_redis], files: "packages/nvidia_nat_redis/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-s3", args: [--project, packages/nvidia_nat_s3], files: "packages/nvidia_nat_s3/pyproject.toml" }
