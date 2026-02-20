@@ -145,7 +145,8 @@ WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 KV_BLOCK_SIZE="${DYNAMO_KV_BLOCK_SIZE:-16}"
 # Fraction of GPU memory for KV cache (0.0-1.0). Reduce to test cache pressure/degradation.
 # NOTE: 0.85 is safer than 0.9+ to avoid OOM during vLLM warmup with large max_num_seqs
-GPU_MEMORY_UTILIZATION="${DYNAMO_GPU_MEMORY_UTILIZATION:-0.85}"
+# Reads DYNAMO_MEM_FRACTION_STATIC first (shared with SGLang script), then DYNAMO_GPU_MEMORY_UTILIZATION
+GPU_MEMORY_UTILIZATION="${DYNAMO_MEM_FRACTION_STATIC:-${DYNAMO_GPU_MEMORY_UTILIZATION:-0.85}}"
 # Maximum concurrent sequences per worker. Lower values use less memory during warmup.
 # vLLM default is 1024, but this can cause OOM on memory-constrained setups.
 MAX_NUM_SEQS="${DYNAMO_MAX_NUM_SEQS:-256}"
@@ -243,7 +244,7 @@ elif [ "$DYNAMO_USE_MULTILRU" = "true" ]; then
 else
     echo "Configuration: Standard Mode (image: $IMAGE)"
 fi
-echo "Model: Llama-3.3-70B-Instruct"
+echo "Model: $SERVED_MODEL_NAME (from $LOCAL_MODEL_DIR)"
 echo "Container: $CONTAINER_NAME"
 echo "HTTP Port: $HTTP_PORT (default Dynamo frontend)"
 echo "Metrics Ports:"
@@ -272,7 +273,7 @@ echo "  Mode: UNIFIED (no prefill/decode disaggregation)"
 echo ""
 echo "KV Cache Configuration:"
 echo "  Block Size: $KV_BLOCK_SIZE tokens (--block-size / --kv-cache-block-size)"
-echo "  GPU Mem Utilization: $GPU_MEMORY_UTILIZATION (--gpu-memory-utilization)"
+echo "  GPU Mem Utilization: $GPU_MEMORY_UTILIZATION (--gpu-memory-utilization, from DYNAMO_MEM_FRACTION_STATIC)"
 echo "  Max Concurrent Seqs: $MAX_NUM_SEQS (--max-num-seqs, prevents OOM during warmup)"
 echo "  KV Events: $ENABLE_KV_EVENTS (KVBM event publishing)"
 if [ "$ENABLE_KV_EVENTS" = "true" ] && [ "$NUM_WORKERS" -gt 1 ]; then
@@ -955,7 +956,7 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
     echo "KV Cache Settings:"
     echo "  Block Size: $KV_BLOCK_SIZE tokens (DYNAMO_KV_BLOCK_SIZE)"
-    echo "  GPU Mem Utilization: $GPU_MEMORY_UTILIZATION (DYNAMO_GPU_MEMORY_UTILIZATION)"
+    echo "  GPU Mem Utilization: $GPU_MEMORY_UTILIZATION (DYNAMO_MEM_FRACTION_STATIC or DYNAMO_GPU_MEMORY_UTILIZATION)"
     echo "  Max Concurrent Seqs: $MAX_NUM_SEQS (DYNAMO_MAX_NUM_SEQS)"
     echo "  KV Events: $ENABLE_KV_EVENTS (DYNAMO_ENABLE_KV_EVENTS)"
     if [ "${DYNAMO_USE_MULTILRU:-false}" = "true" ]; then

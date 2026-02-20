@@ -511,7 +511,11 @@ docker run -d \
     KV_FRONTEND_FLAGS=\"\"
     if [ \"\$ENABLE_KV_AWARE_ROUTING\" = \"true\" ]; then
         echo \"KV Cache-Aware Routing enabled (block size: \$KV_BLOCK_SIZE tokens)\"
-        KV_FRONTEND_FLAGS=\"--kv-cache-block-size \$KV_BLOCK_SIZE\"
+        # --router-mode kv: switches the frontend from default routing to KV-aware routing
+        # --kv-cache-block-size: sets block size for KV overlap computation (must match worker --page-size)
+        # --no-kv-events: router predicts cache state from its own routing decisions
+        #   (workers in unified mode don't publish kv-events-config, so events are unavailable)
+        KV_FRONTEND_FLAGS=\"--router-mode kv --kv-cache-block-size \$KV_BLOCK_SIZE --no-kv-events\"
     fi
     python3 -m dynamo.frontend \
       --http-port=$HTTP_PORT \

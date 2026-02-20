@@ -26,9 +26,9 @@ infrastructure:
 # Affinity settings - controls stickiness to same worker for prefix reuse
 affinity:
   base: 0.30              # Base affinity bonus when staying on same worker (CLI: --affinity-base)
-  reuse_weight: 0.15      # Additional bonus per remaining request in session
+  reuse_weight: 0.08      # Additional bonus per remaining request in session (was 0.15 — caused runaway stickiness with reuse_after=8+)
   iat_weight: 0.20        # Bonus scaling based on inter-arrival time
-  sticky_load_floor: 0.70 # Minimum load modifier for sticky decisions
+  sticky_load_floor: 0.01 # Minimum load modifier for sticky decisions (was 0.25 — still 10x above real load_mod=0.023 at queue=28, blocking all switches)
 
 # Exploration settings - controls explore vs exploit tradeoff
 exploration:
@@ -40,13 +40,13 @@ exploration:
 
 # Switching cost - penalty for moving prefix to different worker
 switching_cost:
-  base: 0.20              # Base penalty for switching workers
-  reuse_penalty: 0.08     # Additional penalty per remaining request
-  iat_penalty: 0.05       # Additional penalty based on inter-arrival time
+  base: 0.10              # Base penalty for switching workers (was 0.20 — too costly to escape overloaded worker)
+  reuse_penalty: 0.04     # Additional penalty per remaining request (was 0.08)
+  iat_penalty: 0.03       # Additional penalty based on inter-arrival time (was 0.05)
 
 # Load balancing - how much to penalize busy workers
 load_balancing:
-  queue_penalty_weight: 0.50        # Weight for queue depth penalty
+  queue_penalty_weight: 1.50        # Weight for queue depth penalty (was 0.50 — queue depth is the strongest overload signal)
   gpu_penalty_weight: 1.00          # Weight for GPU memory usage penalty
   outstanding_work_weight: 0.45     # Weight for outstanding work penalty
   job_gpu_coupling_weight: 0.40     # Coupling between job cost and GPU load

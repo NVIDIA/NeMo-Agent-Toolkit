@@ -55,30 +55,10 @@ from dynamo.runtime import dynamo_worker
 from dynamo.runtime.logging import configure_dynamo_logging
 from pydantic import BaseModel
 
-# Try to import KV routing classes from dynamo.llm, fallback to stubs if unavailable
-try:
-    from dynamo.llm import KvIndexer
-    from dynamo.llm import OverlapScores
-except ImportError:
-    logger_init = logging.getLogger(__name__)
-    logger_init.warning("dynamo.llm KV classes not available, using fallback implementations")
-
-    class OverlapScores:
-        """Fallback: KV cache overlap scores between a request and workers."""
-
-        def __init__(self, scores: dict[int, float] | None = None):
-            self.scores = scores if scores is not None else {}
-
-    class KvIndexer:
-        """Fallback: KV cache indexer for finding overlap between requests and workers."""
-
-        def __init__(self, engine: Any, block_size: int):
-            self.engine = engine
-            self.block_size = block_size
-
-        async def find_matches_for_request(self, tokens: list[int], min_overlap: int) -> OverlapScores:
-            """Find overlap scores for each worker. Returns empty scores (round-robin fallback)."""
-            return OverlapScores({})
+# KV cache overlap scoring — uses RadixTree + ZmqKvEventListener from dynamo.llm.
+# Backend-agnostic: works identically with SGLang and vLLM workers.
+# Falls back gracefully to empty scores if dynamo.llm primitives are unavailable.
+from kv_indexer import KvIndexer, OverlapScores
 
 
 configure_dynamo_logging()
@@ -129,7 +109,7 @@ def get_builtin_defaults() -> dict[str, Any]:
             "base": 0.30,
             "reuse_weight": 0.15,
             "iat_weight": 0.20,
-            "sticky_load_floor": 0.70,
+            "sticky_load_floor": 0.01,
         },
         "exploration": {
             "base_ts_weight": 0.10,
@@ -651,6 +631,27 @@ class WorkloadAwareRouter:
 
         self.indexer = KvIndexer(engine, self.block_size)
 
+        # Register workers' ZMQ KV event streams for overlap scoring.
+        # Port allocation: KV_EVENT_BASE_PORT + worker_index (sorted by instance_id).
+        kv_event_base_port = int(os.environ.get("KV_EVENT_BASE_PORT", "0"))
+        enable_kv_events = os.environ.get("ENABLE_KV_EVENTS", "false").lower() == "true"
+        if enable_kv_events and kv_event_base_port > 0:
+            discovered_ids = sorted(int(w) for w in self.engine_client.instance_ids())
+            for idx, wid in enumerate(discovered_ids):
+                endpoint = f"tcp://127.0.0.1:{kv_event_base_port + idx}"
+                self.indexer.add_worker(wid, endpoint)
+            self.indexer.start_background_drain(interval=0.25)
+            logger.info(
+                "KvIndexer: %d workers registered, background drain started (base_port=%d)",
+                len(discovered_ids), kv_event_base_port,
+            )
+        else:
+            logger.info(
+                "KvIndexer: KV event overlap disabled (ENABLE_KV_EVENTS=%s, KV_EVENT_BASE_PORT=%s)",
+                os.environ.get("ENABLE_KV_EVENTS", "unset"),
+                os.environ.get("KV_EVENT_BASE_PORT", "unset"),
+            )
+
         self._initialize_bandits()
         self._initialize_contextual()
         logger.info("WorkloadAwareRouter initialized with %d backend worker(s)",
@@ -730,6 +731,92 @@ class WorkloadAwareRouter:
                 work_total += float(r) * (float(meta.get("decode_cost", 2.0)) +
                                           float(meta.get("prefill_cost", 0.0))) * float(meta.get("iat_factor", 1.0))
         return reuse_total, work_total
+
+    # Backend-agnostic metric line prefixes.
+    # Each canonical metric maps to the exact line prefix(es) for SGLang and vLLM.
+    # Using startswith() avoids substring collisions (e.g. pending_prealloc_token_usage).
+    _METRIC_PREFIXES: dict[str, list[str]] = {
+        "gpu_cache_usage": [
+            "sglang:token_usage{",            # SGLang: KV cache fraction (0-1)
+            "vllm:kv_cache_usage_perc{",      # vLLM: same semantic, different name
+        ],
+        "queue_depth": [
+            "sglang:num_queue_reqs{",         # SGLang: scheduler queue depth
+            "vllm:num_requests_waiting{",     # vLLM: same semantic
+        ],
+    }
+
+    def _build_internal_metrics(self, worker_ids: list[int]) -> dict[str, Any]:
+        """Build a metrics dict by scraping worker Prometheus endpoints and
+        augmenting with the router's own pending-request counts.
+
+        Scrapes each worker's ``/metrics`` endpoint for authoritative load
+        signals.  Backend-agnostic: recognises both SGLang and vLLM metric
+        names via ``_METRIC_PREFIXES``.  Falls back to the router's own
+        pending-decision count when a scrape fails (e.g. during warmup).
+        """
+        import urllib.request
+
+        worker_metrics_base = int(os.environ.get("WORKER_METRICS_PORT", "0"))
+
+        # Count in-flight (pending) decisions per worker as instant fallback.
+        pending_per_worker: dict[int, int] = {wid: 0 for wid in worker_ids}
+        with self._pending_lock:
+            for rec in self.pending.values():
+                w = int(rec.get("wid", -1))
+                if w in pending_per_worker:
+                    pending_per_worker[w] += 1
+
+        # Scrape each worker's metrics endpoint.
+        # Workers are ordered by sorted instance_id; port = base + index.
+        sorted_ids = sorted(worker_ids)
+        endpoints = []
+        for idx, wid in enumerate(sorted_ids):
+            gpu_usage = 0.0
+            queue_depth = 0.0
+            pending = float(pending_per_worker.get(wid, 0))
+            scraped = False
+
+            if worker_metrics_base > 0:
+                port = worker_metrics_base + idx
+                try:
+                    resp = urllib.request.urlopen(
+                        f"http://127.0.0.1:{port}/metrics", timeout=0.5
+                    )
+                    body = resp.read().decode("utf-8", errors="replace")
+                    for line in body.splitlines():
+                        if line.startswith("#"):
+                            continue
+                        # Match against canonical metric prefixes
+                        for prefix in self._METRIC_PREFIXES["gpu_cache_usage"]:
+                            if line.startswith(prefix):
+                                gpu_usage = float(line.rsplit(" ", 1)[-1])
+                                scraped = True
+                                break
+                        for prefix in self._METRIC_PREFIXES["queue_depth"]:
+                            if line.startswith(prefix):
+                                queue_depth = float(line.rsplit(" ", 1)[-1])
+                                scraped = True
+                                break
+                except Exception:
+                    pass  # fall back to pending count
+
+            if not scraped:
+                # Fallback: use pending count as queue proxy, heuristic for GPU
+                queue_depth = pending
+                gpu_usage = min(1.0, pending / 20.0)
+
+            # Use the max of scraped queue and pending count — pending reacts
+            # instantly while the scraped value may lag by one scrape interval.
+            effective_queue = max(queue_depth, pending)
+
+            endpoints.append({
+                "worker_id": wid,
+                "num_requests_waiting": effective_queue,
+                "gpu_cache_usage_perc": gpu_usage,
+            })
+
+        return {"endpoints": endpoints}
 
     # --------------------- bandits --------------------- #
     def _linTS_sample(self, wid: int, x: np.ndarray) -> float:
@@ -1063,7 +1150,7 @@ class WorkloadAwareRouter:
         if self._metrics.get("reuse_budget"):
             self._metrics["reuse_budget"].observe(req.reuse_budget)
 
-        metrics = None  # TODO: Replace with proper metrics query when API is available
+        metrics = self._build_internal_metrics(worker_ids)
         if self.router_type == "kv_load":
             wid, _ = self._get_underloaded(metrics)
             yield RouterResponse(worker_id=wid, prefix_hit_rate=0.0).model_dump()
