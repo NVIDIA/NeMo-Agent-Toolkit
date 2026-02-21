@@ -27,7 +27,7 @@ vLLM publishes events in msgpack format via ZMQ multipart messages:
 
 KVEventBatch structure (msgpack):
   [timestamp, events_list, dp_rank]
-  
+
 Event types (from ZMQ):
   - BlockStored: A new block was committed to prefix cache
   - BlockRemoved: A block was evicted from prefix cache
@@ -40,10 +40,10 @@ Metrics polling (for cache hits):
 Usage:
     # Inside container:
     python /workspace/monitoring/scripts/kv_event_observer.py --port 20080 --verbose
-    
+
     # With cache hit tracking (polls metrics endpoint):
     python /workspace/monitoring/scripts/kv_event_observer.py -p 20080 -v --metrics-port 18081
-    
+
     # Output to file:
     python kv_event_observer.py --port 20080 --verbose --output kv_events.jsonl
 """
@@ -294,9 +294,8 @@ class KVEventObserver:
                     self.stats.record_cache_hit(int(hit_delta), int(query_delta))
                     if self.verbose:
                         hit_rate = (hit_delta / query_delta * 100) if query_delta > 0 else 0
-                        print(
-                            f"✅ [CACHE HIT] tokens={int(hit_delta):4d} queried={int(query_delta):4d} hit_rate={hit_rate:.0f}%"
-                        )
+                        print(f"✅ [CACHE HIT] tokens={int(hit_delta):4d} "
+                              f"queried={int(query_delta):4d} hit_rate={hit_rate:.0f}%")
                 elif query_delta > 0:
                     self.stats.record_cache_hit(0, int(query_delta))
 
@@ -368,10 +367,10 @@ class KVEventObserver:
 
     def parse_multipart(self, parts: list[bytes]) -> dict | None:
         """Parse a ZMQ multipart message from vLLM.
-        
+
         Format: [topic, sequence, payload]
         Payload is msgpack-encoded KVEventBatch: [timestamp, events_list, dp_rank]
-        
+
         Note: The order is [ts, events, dp_rank], NOT [ts, dp_rank, events]!
         """
         if len(parts) < 3:
@@ -500,9 +499,8 @@ class KVEventObserver:
                 if self.verbose:
                     print(f"🧹 [CLEARED ] seq={seq:6d} All blocks cleared")
             elif self.verbose:
-                print(
-                    f"❓ [UNKNOWN ] seq={seq:6d} type={event_type} data={event[:3] if isinstance(event, (list, tuple)) else event}"
-                )
+                print(f"❓ [UNKNOWN ] seq={seq:6d} type={event_type} "
+                      f"data={event[:3] if isinstance(event, (list, tuple)) else event}")
 
         # Write to output file
         if self._output_handle:
@@ -913,25 +911,25 @@ def main():
 Examples:
   # Monitor worker 0 (ZMQ events only):
   python kv_event_observer.py -p 20080 -v
-  
+
   # Monitor with cache hit detection and efficiency tracking:
   python kv_event_observer.py -p 20080 -v -m 18081
-  
+
   # Custom efficiency window (default 30s):
   python kv_event_observer.py -p 20080 -v -m 18081 --window 10
-  
+
   # Monitor worker 1:
   python kv_event_observer.py -p 20081 -v -m 18082
-  
+
   # Save events to file:
   python kv_event_observer.py -p 20080 -o events.jsonl
-  
+
   # Run for 60 seconds:
   python kv_event_observer.py -p 20080 -d 60
-  
+
   # Run self-test (no worker needed):
   python kv_event_observer.py --test
-  
+
   # Run live integration test against a running worker:
   python kv_event_observer.py --test-live -m 18081 --model my-model
 

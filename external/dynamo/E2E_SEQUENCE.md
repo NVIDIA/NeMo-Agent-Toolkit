@@ -191,7 +191,7 @@ sequenceDiagram
         
         Router->>Router: Store pending decision:<br/>{decision_id, wid, x, start_ts, ...}
         
-        Router-->>Processor: RouterResponse:<br/>{worker_id, decision_id, overlap}
+        Router-->>Processor: RouterResponse:<br/>{worker_id, decision_id, prefix_hit_rate}
         
         Router->>Prometheus: thompson_router_decisions_total++<br/>thompson_router_kv_overlap.set()
     end
