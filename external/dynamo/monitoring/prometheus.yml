@@ -8,11 +8,14 @@
 #   - vLLM metrics use 'vllm:' prefix (e.g., vllm:cache_hit_rate)
 #   - Grafana dashboard uses ${backend} variable to switch between them
 #
-# Metrics Endpoints (using 18xxx range to avoid conflicts):
-#   - Frontend (8000): User-facing latency, throughput, tokens
-#   - Workers (18081-180xx): KV cache stats, NATS metrics, internal stats (one per worker)
-#   - Router (18090): Thompson Sampling routing metrics
-#   - Processor (18091): Thompson Sampling KVE metrics
+# Metrics Endpoints (configurable via DYNAMO_* environment variables):
+#   - Frontend (DYNAMO_HTTP_PORT, default 8000): User-facing latency, throughput, tokens
+#   - Workers (DYNAMO_WORKER_METRICS_PORT, default 18081+): KV cache stats, NATS metrics
+#   - Router (DYNAMO_ROUTER_METRICS_PORT, default 18090): Thompson Sampling routing metrics
+#   - Processor (DYNAMO_PROCESSOR_METRICS_PORT, default 18091): Thompson Sampling KVE metrics
+#
+# Ports are substituted at container startup from environment variables.
+# See docker-compose.yml for the templating mechanism.
 #
 # Note: Worker ports are sequential starting at 18081. With 2 workers: 18081, 18082.
 #       With 4 workers: 18081, 18082, 18083, 18084. With 8 workers: 18081-18088.
@@ -31,7 +34,7 @@ scrape_configs:
   # Dynamo Frontend metrics (user-facing latency, throughput)
   - job_name: 'dynamo-frontend'
     static_configs:
-      - targets: ['localhost:8000']
+      - targets: ['localhost:__FRONTEND_PORT__']
     metrics_path: /metrics
 
   # Dynamo Worker metrics (KV cache, internal stats)
@@ -41,26 +44,26 @@ scrape_configs:
   - job_name: 'dynamo-worker'
     static_configs:
       - targets:
-          - 'localhost:18081'
-          - 'localhost:18082'
-          - 'localhost:18083'
-          - 'localhost:18084'
-          - 'localhost:18085'
-          - 'localhost:18086'
-          - 'localhost:18087'
-          - 'localhost:18088'
+          - 'localhost:__WORKER_METRICS_PORT_0__'
+          - 'localhost:__WORKER_METRICS_PORT_1__'
+          - 'localhost:__WORKER_METRICS_PORT_2__'
+          - 'localhost:__WORKER_METRICS_PORT_3__'
+          - 'localhost:__WORKER_METRICS_PORT_4__'
+          - 'localhost:__WORKER_METRICS_PORT_5__'
+          - 'localhost:__WORKER_METRICS_PORT_6__'
+          - 'localhost:__WORKER_METRICS_PORT_7__'
     metrics_path: /metrics
 
   # Thompson Sampling Router metrics
   - job_name: 'dynamo-router'
     static_configs:
-      - targets: ['localhost:18090']
+      - targets: ['localhost:__ROUTER_METRICS_PORT__']
     metrics_path: /metrics
 
   # Thompson Sampling Processor metrics (KVE)
   - job_name: 'dynamo-processor'
     static_configs:
-      - targets: ['localhost:18091']
+      - targets: ['localhost:__PROCESSOR_METRICS_PORT__']
     metrics_path: /metrics
 
   # Prometheus self-monitoring

@@ -26,14 +26,37 @@ services:
     container_name: dynamo-prometheus
     network_mode: host
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml.template:ro
       - ./rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
+    environment:
+      - DYNAMO_HTTP_PORT=${DYNAMO_HTTP_PORT:-8000}
+      - DYNAMO_WORKER_METRICS_PORT=${DYNAMO_WORKER_METRICS_PORT:-18081}
+      - DYNAMO_ROUTER_METRICS_PORT=${DYNAMO_ROUTER_METRICS_PORT:-18090}
+      - DYNAMO_PROCESSOR_METRICS_PORT=${DYNAMO_PROCESSOR_METRICS_PORT:-18091}
+    entrypoint: /bin/sh
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--web.listen-address=127.0.0.1:9090'
-      - '--storage.tsdb.retention.time=7d'
+      - -c
+      - |
+        WBASE=$${DYNAMO_WORKER_METRICS_PORT}
+        sed \
+          -e "s/__FRONTEND_PORT__/$${DYNAMO_HTTP_PORT}/g" \
+          -e "s/__WORKER_METRICS_PORT_0__/$${WBASE}/g" \
+          -e "s/__WORKER_METRICS_PORT_1__/$$((WBASE+1))/g" \
+          -e "s/__WORKER_METRICS_PORT_2__/$$((WBASE+2))/g" \
+          -e "s/__WORKER_METRICS_PORT_3__/$$((WBASE+3))/g" \
+          -e "s/__WORKER_METRICS_PORT_4__/$$((WBASE+4))/g" \
+          -e "s/__WORKER_METRICS_PORT_5__/$$((WBASE+5))/g" \
+          -e "s/__WORKER_METRICS_PORT_6__/$$((WBASE+6))/g" \
+          -e "s/__WORKER_METRICS_PORT_7__/$$((WBASE+7))/g" \
+          -e "s/__ROUTER_METRICS_PORT__/$${DYNAMO_ROUTER_METRICS_PORT}/g" \
+          -e "s/__PROCESSOR_METRICS_PORT__/$${DYNAMO_PROCESSOR_METRICS_PORT}/g" \
+          /etc/prometheus/prometheus.yml.template > /tmp/prometheus.yml
+        exec /bin/prometheus \
+          --config.file=/tmp/prometheus.yml \
+          --storage.tsdb.path=/prometheus \
+          --web.listen-address=127.0.0.1:9090 \
+          --storage.tsdb.retention.time=7d
     restart: unless-stopped
 
   grafana:
