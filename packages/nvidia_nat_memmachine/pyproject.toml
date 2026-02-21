@@ -32,7 +32,7 @@ root = "../.."
 [project]
 name = "nvidia-nat-memmachine"
 dynamic = ["version", "dependencies", "optional-dependencies"]
-requires-python = ">=3.11,<3.14"
+requires-python = ">=3.12,<3.14"
 description = "Subpackage for MemMachine integration in NeMo Agent toolkit. Requires a cfg.yml configuration file with database and AI model settings."
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "agents", "memory"]
@@ -41,7 +41,6 @@ authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
 classifiers = [
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]

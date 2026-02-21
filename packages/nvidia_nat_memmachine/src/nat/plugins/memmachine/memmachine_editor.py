@@ -35,6 +35,7 @@ class MemMachineEditor(MemoryEditor):
     Supports both episodic and semantic memory through the unified SDK interface.
 
     User needs to add `MemMachine` SDK ids as metadata to the MemoryItem:
+
     - `session_id`
     - `agent_id`
     - `project_id`
