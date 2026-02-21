@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 """Optional eval runtime class."""
 
 
-def _fire_numeric_trial_end(
+def _on_numeric_trial_end(
     callback_manager: OptimizerCallbackManager | None,
     trial: Any,
     eval_metrics: list[str],
@@ -79,7 +79,7 @@ def _fire_numeric_trial_end(
         ))
 
 
-def _fire_numeric_study_end(
+def _on_numeric_study_end(
     callback_manager: OptimizerCallbackManager | None,
     best_trial_obj: Any,
     eval_metrics: list[str],
@@ -203,7 +203,7 @@ def optimize_parameters(
         trial.set_user_attr("rep_scores", all_scores)
         avg_scores = [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
 
-        _fire_numeric_trial_end(
+        _on_numeric_trial_end(
             callback_manager,
             trial,
             eval_metrics,
@@ -226,7 +226,7 @@ def optimize_parameters(
     )
     best_params = best_trial_obj.params
 
-    _fire_numeric_study_end(callback_manager, best_trial_obj, eval_metrics, optimizer_config.numeric.n_trials)
+    _on_numeric_study_end(callback_manager, best_trial_obj, eval_metrics, optimizer_config.numeric.n_trials)
 
     tuned_cfg = apply_suggestions(base_cfg, best_params)
 

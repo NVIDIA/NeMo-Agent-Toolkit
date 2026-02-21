@@ -46,7 +46,7 @@ from nat.parameter_optimization.update_helpers import apply_suggestions
 logger = logging.getLogger(__name__)
 
 
-def _fire_prompt_trial_end_callbacks(
+def _on_prompt_trial_end(
     callback_manager: OptimizerCallbackManager | None,
     population: Sequence[Any],
     eval_metrics: list[str],
@@ -89,7 +89,7 @@ def _fire_prompt_trial_end_callbacks(
         ind.eval_output = None  # free memory
 
 
-def _fire_prompt_study_end(
+def _on_prompt_study_end(
     callback_manager: OptimizerCallbackManager | None,
     best: Any,
     frozen_params: dict[str, Any] | None,
@@ -499,7 +499,7 @@ async def optimize_prompts(
                     row.update({f"metric::{m}": ind.metrics[m] for m in eval_metrics})
                 history_rows.append(row)
 
-            _fire_prompt_trial_end_callbacks(
+            _on_prompt_trial_end(
                 callback_manager,
                 population,
                 eval_metrics,
@@ -546,7 +546,7 @@ async def optimize_prompts(
         population = await _evaluate_population(population)
         best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
 
-        _fire_prompt_study_end(
+        _on_prompt_study_end(
             callback_manager,
             best,
             frozen_params,

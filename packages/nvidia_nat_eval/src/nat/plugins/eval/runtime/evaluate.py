@@ -582,7 +582,7 @@ class EvaluationRun:
         except Exception as e:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
-    def _fire_on_eval_complete(self) -> None:
+    def _on_eval_complete(self) -> None:
         """Build an EvalResult from collected data and fire the on_eval_complete callback."""
         if not (self.callback_manager and self.evaluation_results):
             return
@@ -734,7 +734,7 @@ class EvaluationRun:
                     if session_manager and not self.config.endpoint:
                         await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
 
-                    self._fire_on_eval_complete()
+                    self._on_eval_complete()
                 finally:
                     if local_session_manager is not None:
                         await local_session_manager.shutdown()
