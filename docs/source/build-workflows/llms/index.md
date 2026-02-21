@@ -97,6 +97,7 @@ The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIM
 * `api_key` - The API key to use for the model
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
+* `request_timeout` - HTTP request timeout in seconds
 
 :::{note}
 `temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
@@ -133,6 +134,7 @@ The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai
 * `top_p` - The top-p value to use for the model
 * `seed` - The seed to use for the model
 * `max_retries` - The maximum number of retries for the request
+* `request_timeout` - HTTP request timeout in seconds
 
 :::{note}
 `temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.

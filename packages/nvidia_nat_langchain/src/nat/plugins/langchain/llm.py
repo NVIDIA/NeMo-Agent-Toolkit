@@ -147,16 +147,25 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    http_async_client: httpx.AsyncClient = create_metadata_injection_client()
+    client_kwargs: dict = {}
+    if llm_config.request_timeout is not None:
+        client_kwargs["timeout"] = llm_config.request_timeout
+    http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
+
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type", "api_version", "request_timeout"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+    if llm_config.request_timeout is not None:
+        config_dict["request_timeout"] = llm_config.request_timeout
 
     try:
         client = AzureChatOpenAI(
             http_async_client=http_async_client,  # type: ignore[call-arg]
-            **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
-                                    by_alias=True,
-                                    exclude_none=True,
-                                    exclude_unset=True),
             api_version=llm_config.api_version,  # type: ignore[call-arg]
+            **config_dict,
         )
         if "http_async_client" in client.model_kwargs:
             del client.model_kwargs["http_async_client"]
@@ -192,14 +201,19 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    http_async_client: httpx.AsyncClient = create_metadata_injection_client()
+    client_kwargs: dict = {}
+    if llm_config.request_timeout is not None:
+        client_kwargs["timeout"] = llm_config.request_timeout
+    http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        exclude={"type", "thinking", "api_type", "api_key", "base_url", "request_timeout"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
     )
+    if llm_config.request_timeout is not None:
+        config_dict["request_timeout"] = llm_config.request_timeout
     if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
         config_dict["api_key"] = api_key
     if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
