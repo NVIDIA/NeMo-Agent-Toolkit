@@ -49,7 +49,7 @@ In Grafana, use the **Backend** dropdown to select `sglang` or `vllm` based on y
 If running on your local machine:
 
 1. Open your browser
-2. Navigate to: **http://localhost:3000/d/dynamo-overview/dynamo-llm-overview**
+2. Navigate to: `http://localhost:3000/d/dynamo-overview/dynamo-llm-overview`
 3. No login required (anonymous access enabled)
 4. Use the **Backend** dropdown (top left) to select `sglang` or `vllm`
 5. Use the **time filter** (top right) to adjust the time range
@@ -68,7 +68,7 @@ ssh -L 3000:localhost:3000 myuser@10.57.201.5
 ```
 
 **Step 2: Open browser**
-Navigate to: **http://localhost:3000/d/dynamo-overview/dynamo-llm-overview**
+Navigate to: `http://localhost:3000/d/dynamo-overview/dynamo-llm-overview`
 
 **Step 3: Set time filter**
 - Click the time picker in the top-right corner of Grafana
@@ -183,7 +183,7 @@ Response + Feedback to Router
 
 This isolation ensures **ALL requests** go through the Thompson Sampling router, enabling:
 - KV overlap-aware worker selection
-- Workload hint extraction (prefix_id, osl, iat)
+- Workload hint extraction (`prefix_id`, `osl`, `iat`)
 - Per-request feedback for router learning
 
 ## Metrics Endpoints
@@ -403,7 +403,7 @@ This section documents the working status of all KV cache-related metrics across
 | `sglang:` | `sglang:swa_token_usage` | N/A | Sliding Window Attention - not used by Llama architecture. |
 | `sglang:` | `sglang:mamba_usage` | N/A | Mamba architecture metric - not applicable to Llama. |
 | `sglang:` | `sglang:kv_transfer_*` | N/A | KV transfer metrics only used in disaggregated prefill/decode mode. |
-| `sglang:` | `sglang:pending_prealloc_token_usage` | N/A | Preallocation metric - typically 0 in standard operation. |
+| `sglang:` | `sglang:pending_prealloc_token_usage` | N/A | Pre-allocation metric - typically 0 in standard operation. |
 
 ### Recommended KV Cache Queries
 
@@ -452,8 +452,8 @@ vllm:cache_hit_rate * 100
 ### Backend Selector
 
 The dashboard includes a **Backend** dropdown variable at the top. Select:
-- **sglang** - For SGLang workers (metrics prefixed with `sglang:`)
-- **vllm** - For vLLM workers (metrics prefixed with `vllm:`)
+- **`sglang`** - For SGLang workers (metrics prefixed with `sglang:`)
+- **`vllm`** - For vLLM workers (metrics prefixed with `vllm:`)
 
 All backend-specific panels automatically update based on your selection.
 
@@ -646,8 +646,8 @@ ssh -L 3000:localhost:3000 -L 9090:localhost:9090 <USERNAME>@<REMOTE_HOST>
 ```
 
 Access:
-- Grafana: http://localhost:3000/d/dynamo-overview/dynamo-llm-overview
-- Prometheus: http://localhost:9090
+- Grafana: `http://localhost:3000/d/dynamo-overview/dynamo-llm-overview`
+- Prometheus: `http://localhost:9090`
 
 ### Background SSH Tunnel
 
@@ -785,7 +785,7 @@ curl http://localhost:18091/metrics
    - If you just started, wait 30-60 seconds for initial data
 
 4. **Check backend selector**:
-   - Make sure the Backend dropdown matches your deployment (sglang vs vllm)
+   - Make sure the Backend dropdown matches your deployment (`sglang` vs `vllm`)
    - Backend mismatch will result in empty panels
 
 ### SSH tunnel issues
