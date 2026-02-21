@@ -32,9 +32,8 @@
 #
 # =============================================================================
 # The cache_hit_rate rule is derived from two per-request Counter metrics
-# defined in SGLang's Prometheus metrics collector:
+# defined in SGLang's Prometheus metrics collector.py:
 #
-#   File: sglang/srt/metrics/collector.py (class TokenMetricsCollectorClient)
 #   Image: nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.9.0
 #   Path:  /sgl-workspace/sglang/python/sglang/srt/metrics/collector.py
 #
