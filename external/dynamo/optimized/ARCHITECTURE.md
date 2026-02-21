@@ -272,7 +272,7 @@ The client passes routing hints via the `nvext.annotations` field in the request
 
 | Key | Type | Description | Values |
 |-----|------|-------------|--------|
-| `prefix_id` | `string` | Unique identifier for request prefix/session | Any string |
+| `prefix_id` | `string` | Unique identifier for request prefix and session | Any string |
 | `total_requests` | `int` | Total expected requests for this prefix | Positive integer |
 | `osl` | `enum` | Output Sequence Length expectation | `LOW`, `MEDIUM`, `HIGH` |
 | `iat` | `enum` | Inter-Arrival Time (request frequency) | `LOW`, `MEDIUM`, `HIGH` |
@@ -371,7 +371,7 @@ export DYNAMO_TP_SIZE=2
 | `DYNAMO_HTTP_PORT` | `8000` | Frontend HTTP API port |
 | `DYNAMO_METRICS_PORT` | `8081` | Prometheus metrics port |
 | `DYN_HTTP_PORT` | `8000` | Dynamo frontend HTTP port (same as above) |
-| `DYN_SYSTEM_PORT` | `8081` | Dynamo system/metrics port |
+| `DYN_SYSTEM_PORT` | `8081` | Dynamo system and metrics port |
 | `DYNAMO_ROUTER_WAIT_FOR_WORKERS_TIMEOUT_S` | `600` | Worker discovery timeout |
 
 ### Backend-Specific Configuration (REQUIRED)

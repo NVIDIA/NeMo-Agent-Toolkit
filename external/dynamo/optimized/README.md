@@ -112,7 +112,11 @@ The processor now requires:
 export DYNAMO_MODEL_DIR="/path/to/Llama-3.3-70B-Instruct"
 
 # Start all components
-bash ../start_dynamo_optimized_thompson_hints.sh
+bash ../start_dynamo_optimized_thompson_hints_sglang.sh
+
+# or
+
+bash ../start_dynamo_optimized_thompson_hints_vllm.sh
 ```
 
 ### Making Requests
@@ -177,7 +181,7 @@ Registered at: dynamo.backend.generate (intercepts frontend requests)
 
 INFO processor._init_prometheus_metrics: Prometheus metrics initialized for processor
 INFO processor.initialize: Router clients created, waiting for instances...
-INFO dynamo_runtime::component::client: wait_for_instances: Found 1 instance(s) for endpoint: dynamo/router/_endpoint_/find_worker
+INFO dynamo_runtime::component::client: wait_for_instances: Found 1 instance(s) for endpoint
 INFO processor.initialize: Router clients initialized successfully
 INFO processor.initialize: Engine client created, waiting for worker instances...
 INFO processor.initialize: Processor initialized successfully (routing to dynamo.worker.generate)

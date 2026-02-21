@@ -27,7 +27,6 @@
 # The cache_hit_efficiency rule is derived from the per-request Histogram metrics
 # defined in the vLLM v1 Prometheus stat logger:
 #
-#   File: vllm/v1/metrics/loggers.py (class PrometheusStatLogger)
 #   Image: nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.9.0
 #   Path:  /opt/vllm/vllm/v1/metrics/loggers.py
 #
@@ -56,8 +55,8 @@
 # vllm:prefix_cache_queries_total) which are incremented per scheduler step
 # with batch totals. The Histogram approach is preferred because:
 #   - It is recorded per finished request (not per scheduler batch)
-#   - It preserves per-request granularity via Histogram _sum/_count
-#   - It enables P50/P95/P99 analysis of per-request cache benefit
+#   - It preserves per-request granularity via Histogram _sum and _count
+#   - It enables [P50, P95, P99] analysis of per-request cache benefit
 #
 # vLLM also has an internal CachingMetrics class (stats.py) with a 1000-request
 # sliding window, but that is only used for the text log output and is NOT
