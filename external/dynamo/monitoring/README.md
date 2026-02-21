@@ -472,37 +472,37 @@ Use the time picker (top right) to:
    - `dynamo_frontend_inflight_requests`
 2. **Requests (1m)** (stat) — Recent request throughput
    - `sum(increase(dynamo_frontend_requests_total[10s]))`
-3. **Time to First Token (TTFT)** (timeseries) — [P50, P95, P99] latency to first generated token
+3. **Time to First Token (TTFT)** (time series) — [P50, P95, P99] latency to first generated token
    - `histogram_quantile(0.5, rate(dynamo_frontend_time_to_first_token_seconds_bucket[10s]))`
    - `histogram_quantile(0.95, ...)`
    - `histogram_quantile(0.99, ...)`
-4. **Inter-Token Latency (ITL)** (timeseries) — [P50, P95, P99] latency between tokens
+4. **Inter-Token Latency (ITL)** (time series) — [P50, P95, P99] latency between tokens
    - `histogram_quantile(0.5, rate(dynamo_frontend_inter_token_latency_seconds_bucket[10s]))`
    - `histogram_quantile(0.95, ...)`
    - `histogram_quantile(0.99, ...)`
-5. **Token Throughput** (timeseries) — Per-worker and aggregate generation throughput
+5. **Token Throughput** (time series) — Per-worker and aggregate generation throughput
    - `${backend}:gen_throughput` (per worker)
    - `sum(${backend}:gen_throughput)` (aggregate)
    - `rate(dynamo_frontend_output_tokens_total{job="dynamo-frontend"}[10s])` (frontend-side)
-6. **Request Flow (Frontend → Processor → Router → Workers)** (timeseries) — End-to-end request rates through each component
+6. **Request Flow (Frontend → Processor → Router → Workers)** (time series) — End-to-end request rates through each component
    - `sum(rate(dynamo_frontend_requests_total[10s]))` (frontend)
    - `sum(rate(dynamo_component_requests_total{dynamo_namespace="dynamo",dynamo_component="backend"}[10s]))` (processor)
    - `sum(rate(dynamo_component_requests_total{...dynamo_component="router",dynamo_endpoint="find_worker"}[10s]))` (router)
    - `rate(dynamo_component_requests_total{dynamo_namespace="workers",...,dynamo_endpoint="generate"}[10s])` (per worker)
    - `sum(...)` (aggregate workers)
-7. **Worker Queue Depth** (timeseries) — Pending requests per worker
+7. **Worker Queue Depth** (time series) — Pending requests per worker
    - `${backend}:num_queue_reqs`
-8. **Worker Activity (Running Requests)** (timeseries) — Active requests per worker
+8. **Worker Activity (Running Requests)** (time series) — Active requests per worker
    - `${backend}:num_running_reqs`
-9. **KV Cache Details (Per-Worker)** (timeseries) — Detailed per-worker cache state
+9. **KV Cache Details (Per-Worker)** (time series) — Detailed per-worker cache state
    - `avg_over_time(${backend}:cache_hit_efficiency[1m]) * 100` (KVES proxy %)
    - `avg_over_time(${backend}:token_usage[1m]) * 100` (KV usage %)
    - `last_over_time(${backend}:num_used_tokens[1m])` (tokens used)
    - `last_over_time(dynamo_component_kvstats_total_blocks[1m])` (capacity in blocks)
    - `max(dynamo_frontend_model_kv_cache_block_size{job="dynamo-frontend"})` (block size)
-10. **KVES Proxy by Worker** (timeseries) — Cache hit efficiency per worker (0–1 scale)
+10. **KVES Proxy by Worker** (time series) — Cache hit efficiency per worker (0–1 scale)
     - `${backend}:cache_hit_efficiency`
-11. **KV Cache Usage & Tokens** (timeseries) — Memory utilization and token counts
+11. **KV Cache Usage & Tokens** (time series) — Memory utilization and token counts
     - `${backend}:token_usage * 100` (usage %)
     - `${backend}:num_used_tokens` (absolute tokens)
 
