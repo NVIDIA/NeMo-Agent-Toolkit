@@ -374,7 +374,7 @@ sequenceDiagram
 
     Note over Worker,Router: KV Event Publishing (via ZMQ/NATS)
     
-    Worker->>Worker: Allocate/evict KV blocks
+    Worker->>Worker: Allocate and evict KV blocks
     Worker->>NATS: Publish KvCacheEvent<br/>{event_id, stored/removed, block_hashes}
     
     Note over Indexer: Background event subscription
@@ -634,7 +634,7 @@ Key fields and defaults:
 | `prefix_total_requests` | `int` | `10` | Expected requests per conversation (optimizable, 1–50) |
 | `prefix_osl` | `int` | `512` | Expected output tokens (optimizable, 64–4096). Accepts `"LOW"`/`"MEDIUM"`/`"HIGH"` for backward compatibility (mapped to 128/512/2048) |
 | `prefix_iat` | `int` | `250` | Inter-arrival time in ms (optimizable, 10–1000). Accepts `"LOW"`/`"MEDIUM"`/`"HIGH"` for backward compatibility (mapped to 50/250/750) |
-| `prefix_use_raw_values` | `bool` | `true` | Send raw integers; when `false`, converts to LOW/MEDIUM/HIGH categories |
+| `prefix_use_raw_values` | `bool` | `true` | Send raw integers; when `false`, converts to LOW, MEDIUM, and HIGH categories |
 | `request_timeout` | `float` | `600.0` | HTTP request timeout in seconds |
 | `disable_headers` | `bool` | `true` | Skip `x-prefix-*` HTTP headers (hints sent through `nvext` only) |
 | `cache_pin_type` | `CachePinType \| None` | `"ephemeral"` | KV cache pinning strategy; TTL = `total_requests × iat` (ms). `None` to disable |
@@ -648,9 +648,3 @@ Key fields and defaults:
 See [`external/dynamo/optimized/config.yaml`](optimized/config.yaml).
 
 ---
-
-*Generated from codebase analysis of:*
-- `NeMo-Agent-Toolkit/packages/nvidia_nat_core/src/nat/llm/dynamo_llm.py`
-- `NeMo-Agent-Toolkit/external/dynamo/optimized/processor.py`
-- `NeMo-Agent-Toolkit/external/dynamo/optimized/router.py`
-- `NeMo-Agent-Toolkit/external/dynamo/start_dynamo_optimized_thompson_hints_vllm.sh`

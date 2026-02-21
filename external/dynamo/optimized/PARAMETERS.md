@@ -60,7 +60,7 @@ python router.py --config config.yaml \
 | Parameter | config path | Default | Type | Description |
 |-----------|-------------|---------|------|-------------|
 | Block Size | `infrastructure.block_size` | 64 | int | KV cache block size for overlap computation |
-| Router Type | `infrastructure.router_type` | "kv" | str | Router mode: `kv` (KV-aware) or `kv_load` (load-based only) |
+| Router Type | `infrastructure.router_type` | `kv` | str | Router mode: `kv` (KV-aware) or `kv_load` (load-based only) |
 | Min Workers | `infrastructure.min_workers` | 1 | int | Minimum workers required before routing starts |
 
 ### Affinity (Stickiness)

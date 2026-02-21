@@ -101,7 +101,7 @@ async def worker(runtime: DistributedRuntime):
 
 The processor now requires:
 - `--model-path`: Path to the model directory (for tokenizer and model card)
-- `--model-name`: Served model name (must match the moded expected by the frontend)
+- `--model-name`: Served model name (must match the model expected by the frontend)
 
 ## Usage
 

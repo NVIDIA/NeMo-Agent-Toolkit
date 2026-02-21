@@ -17,9 +17,8 @@
 # Ports are substituted at container startup from environment variables.
 # See docker-compose.yml for the templating mechanism.
 #
-# Note: Worker ports are sequential starting at 18081. With 2 workers: 18081, 18082.
-#       With 4 workers: 18081, 18082, 18083, 18084. With 8 workers: 18081-18088.
-#       Add more targets below if you run more than 8 workers.
+# Worker count is computed automatically from DYNAMO_GPU_DEVICES and DYNAMO_TP_SIZE.
+# Ports are sequential starting at DYNAMO_WORKER_METRICS_PORT (default 18081).
 
 global:
   scrape_interval: 2s
@@ -39,8 +38,8 @@ scrape_configs:
 
   # Dynamo Worker metrics (KV cache, internal stats)
   # Works for both SGLang and vLLM backends - same ports, different metric prefixes
-  # Multiple workers use sequential ports starting at 18081
-  # Add/remove targets based on your NUM_WORKERS setting
+  # Ports are sequential from DYNAMO_WORKER_METRICS_PORT (default 18081).
+  # Unused worker targets will show as "down" in Prometheus but cause no harm.
   - job_name: 'dynamo-worker'
     static_configs:
       - targets:

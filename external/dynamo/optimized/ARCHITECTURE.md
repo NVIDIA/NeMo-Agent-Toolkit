@@ -297,7 +297,7 @@ bash start_dynamo_optimized_thompson_hints.sh
 ## Component Startup Order
 
 1. **etcd** - Service discovery and metadata
-2. **NATS** - Message queue for KV events (if using kv-aware router mode)
+2. **NATS** - Message queue for KV events (if using KV-aware router mode)
 3. **Backend Worker** - SGLang GPU worker → registers at `dynamo.worker.generate`
 4. **Router** - Thompson Sampling router → registers at `dynamo.router.{find_worker,feedback}`
 5. **Processor** - Request orchestrator → **registers at `dynamo.backend.generate`** (intercepts frontend!)
