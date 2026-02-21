@@ -60,7 +60,7 @@ Instead of using the deprecated `--static-endpoint` flag on the frontend, this p
 
 1. **Processor** registers as `dynamo.backend.generate` (dynamic mode with instance ID)
 2. **Processor** calls `register_llm()` to advertise a model card in etcd
-3. **Frontend's ModelWatcher** discovers the processor's model card
+3. **Frontend ModelWatcher** discovers the processor's model card
 4. **Frontend** routes requests to the discovered processor endpoint
 5. **SGLang Worker** registers as `dynamo.worker.generate` (also dynamic)
 
@@ -101,7 +101,7 @@ async def worker(runtime: DistributedRuntime):
 
 The processor now requires:
 - `--model-path`: Path to the model directory (for tokenizer and model card)
-- `--model-name`: Served model name (must match frontend's expected model)
+- `--model-name`: Served model name (must match the moded expected by the frontend)
 
 ## Usage
 
@@ -246,7 +246,7 @@ docker logs dynamo-sglang-optimized 2>&1 | grep "Processing request"
 ```
 
 **Solution:**
-1. Ensure processor's `--model-name` matches frontend's `--model-name` exactly
+1. Ensure processor's `--model-name` matches the frontend `--model-name` parameter exactly
 2. Processor must register BEFORE frontend starts
 3. Check that processor's model card is in etcd
 

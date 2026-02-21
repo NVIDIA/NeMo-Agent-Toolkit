@@ -232,9 +232,9 @@ export DYNAMO_TP_SIZE=8
 
 | Aspect | Generalized | Optimized |
 |--------|-------------|-----------|
-| Frontend | Custom `frontend.py` with HTTP headers | Default `dynamo.frontend` with nvext |
+| Frontend | Custom `frontend.py` with HTTP headers | Default `dynamo.frontend` with `nvext` |
 | Hint Passing | HTTP headers (`x-prefix-*`) | `nvext.annotations` in request body |
-| Tokenization | Custom (in frontend) | Handled by Dynamo preprocessor |
+| Tokenization | Custom (in frontend) | Handled by Dynamo pre-processor |
 | Metrics | CSV files | Prometheus (`/metrics` endpoint) |
 | Model Mapping | Custom `FRONTEND_MODEL_MAPPING` | Dynamo `--model-name`/`--model-path` |
 | **Processor Registration** | `dynamo.processor.process` | **`dynamo.backend.generate`** (intercepts frontend) |
@@ -249,7 +249,7 @@ The default Dynamo frontend has a built-in router (`DYN_ROUTER_MODE=round-robin|
 3. **Processor forwards to `worker.generate`** - Actual SGLang workers
 4. **The built-in frontend router is irrelevant** - We've intercepted the request pipeline
 
-## NVExt Annotations
+## `nvext` Annotations
 
 The client passes routing hints via the `nvext.annotations` field in the request:
 
@@ -272,10 +272,10 @@ The client passes routing hints via the `nvext.annotations` field in the request
 
 | Key | Type | Description | Values |
 |-----|------|-------------|--------|
-| `prefix_id` | string | Unique identifier for request prefix/session | Any string |
-| `total_requests` | int | Total expected requests for this prefix | Positive integer |
-| `osl` | enum | Output Sequence Length expectation | `LOW`, `MEDIUM`, `HIGH` |
-| `iat` | enum | Inter-Arrival Time (request frequency) | `LOW`, `MEDIUM`, `HIGH` |
+| `prefix_id` | `string` | Unique identifier for request prefix/session | Any string |
+| `total_requests` | `int` | Total expected requests for this prefix | Positive integer |
+| `osl` | `enum` | Output Sequence Length expectation | `LOW`, `MEDIUM`, `HIGH` |
+| `iat` | `enum` | Inter-Arrival Time (request frequency) | `LOW`, `MEDIUM`, `HIGH` |
 
 ## Quick Start
 
@@ -297,7 +297,7 @@ bash start_dynamo_optimized_thompson_hints.sh
 ## Component Startup Order
 
 1. **etcd** - Service discovery and metadata
-2. **NATS** - Message queue for KV events (if using kv router mode)
+2. **NATS** - Message queue for KV events (if using kv-aware router mode)
 3. **Backend Worker** - SGLang GPU worker → registers at `dynamo.worker.generate`
 4. **Router** - Thompson Sampling router → registers at `dynamo.router.{find_worker,feedback}`
 5. **Processor** - Request orchestrator → **registers at `dynamo.backend.generate`** (intercepts frontend!)
@@ -411,12 +411,12 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 
 ## Request Flow (Detailed)
 
-1. **Client → Frontend**: HTTP POST with nvext annotations
-2. **Frontend (Preprocessor)**: Tokenizes messages, creates `PreprocessedRequest` with annotations
+1. **Client → Frontend**: HTTP POST with `nvext` annotations
+2. **Frontend (Pre-processor)**: Tokenize messages, creates `PreprocessedRequest` with annotations
 3. **Frontend (Built-in Router)**: Routes to `dynamo.backend.generate` (round-robin, but only one "backend" - our processor!)
 4. **Processor (as backend.generate)**: Receives request, extracts hints from annotations
 5. **Processor → Router**: Queries Thompson Sampling router for worker selection
-6. **Router**: Computes Thompson Sampling scores, returns worker_id
+6. **Router**: Computes Thompson Sampling scores, returns `worker_id`
 7. **Processor → Worker**: Sends request to `dynamo.worker.generate` via `engine_client.direct(worker_id)`
 7. **Backend → Processor**: Streams response tokens
 8. **Processor → Router**: Sends latency feedback for bandit update
@@ -425,7 +425,6 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 
 ## Files
 
-- `processor.py` - Custom processor with nvext annotation extraction
+- `processor.py` - Custom processor with `nvext` annotation extraction
 - `router.py` - Thompson Sampling router with Prometheus metrics
 - `ARCHITECTURE.md` - This document
-

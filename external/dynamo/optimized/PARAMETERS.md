@@ -60,7 +60,7 @@ python router.py --config config.yaml \
 | Parameter | config path | Default | Type | Description |
 |-----------|-------------|---------|------|-------------|
 | Block Size | `infrastructure.block_size` | 64 | int | KV cache block size for overlap computation |
-| Router Type | `infrastructure.router_type` | "kv" | str | Router mode: "kv" (KV-aware) or "kv_load" (load-based only) |
+| Router Type | `infrastructure.router_type` | "kv" | str | Router mode: `kv` (KV-aware) or `kv_load` (load-based only) |
 | Min Workers | `infrastructure.min_workers` | 1 | int | Minimum workers required before routing starts |
 
 ### Affinity (Stickiness)
@@ -85,7 +85,7 @@ Controls the explore vs exploit tradeoff in worker selection.
 | Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
 | Base TS Weight | `exploration.base_ts_weight` | `--override` | 0.10 | float | Weight for Thompson Sampling exploration term |
-| Temp Base | `exploration.temperature.base` | `--temp-base` | 1.0 | float | Base softmax temperature |
+| Temp Base | `exploration.temperature.base` | `--temp-base` | 1.0 | float | Base `softmax` temperature |
 | Temp Min | `exploration.temperature.min` | `--override` | 0.15 | float | Minimum temperature (more greedy selection) |
 | Temp Max | `exploration.temperature.max` | `--override` | 2.0 | float | Maximum temperature (more random selection) |
 
@@ -105,7 +105,7 @@ Penalty applied when moving a prefix session to a different worker.
 
 **Tuning Guide:**
 - **High switching cost (0.3-0.5):** Strongly discourage worker changes mid-session
-- **Low switching cost (0.05-0.1):** Allow flexible rebalancing
+- **Low switching cost (0.05-0.1):** Allow flexible re-balancing
 
 ### Load Balancing
 
@@ -163,8 +163,8 @@ Controls the delayed reward mechanism.
 
 | Parameter | config path | CLI Flag | Default | Type | Description |
 |-----------|-------------|----------|---------|------|-------------|
-| Traces Enabled | `debug.traces_enabled` | `--override` | false | bool | Enable detailed decision trace logging |
-| Trace Dir | `debug.trace_dir` | `--override` | /tmp/dynamo_router_traces | str | Directory for trace output files |
+| Traces Enabled | `debug.traces_enabled` | `--override` | false | boolean | Enable detailed decision trace logging |
+| Trace Dir | `debug.trace_dir` | `--override` | /tmp/dynamo_router_traces | string | Directory for trace output files |
 | Buffer Size | `debug.buffer_size` | `--override` | 2000 | int | In-memory trace buffer size |
 
 ---
@@ -176,14 +176,14 @@ The router uses a 9-dimensional feature vector as input to the LinTS learner:
 | Index | Feature | Source | Description |
 |-------|---------|--------|-------------|
 | 0 | Bias | Constant | Always 1.0 (intercept term) |
-| 1 | Inverse Load | Computed | 1/(1 + gpu_penalty + queue_penalty) |
+| 1 | Inverse Load | Computed | 1/(1 + `gpu_penalty` + `queue_penalty`) |
 | 2 | Overlap | KV Indexer | KV cache overlap score [0, 1] |
 | 3 | Affinity | State | 1 if same worker as last request, else 0 |
-| 4 | Outstanding | State | tanh(0.1 × outstanding_work) |
-| 5 | Decode Cost | OSL Hint | decode_cost / 3.0 |
-| 6 | Prefill Cost | Computed | tanh(prefill_cost) |
-| 7 | IAT Factor | IAT Hint | iat_factor / 1.5 |
-| 8 | Reuse Budget | Hint | tanh(0.25 × reuse_budget) |
+| 4 | Outstanding | State | tanh(0.1 × `outstanding_work`) |
+| 5 | Decode Cost | OSL Hint | `decode_cost` / 3.0 |
+| 6 | Prefill Cost | Computed | tanh(`prefill_cost`) |
+| 7 | IAT Factor | IAT Hint | `iat_factor` / 1.5 |
+| 8 | Reuse Budget | Hint | tanh(0.25 × `reuse_budget`) |
 
 ---
 
@@ -191,7 +191,7 @@ The router uses a 9-dimensional feature vector as input to the LinTS learner:
 
 | Category | Updated At | Examples |
 |----------|-----------|----------|
-| **Learned (runtime)** | Every request | `linA`, `linb` matrices, Beta(α,β) bandits, latency EMAs |
+| **Learned (runtime)** | Every request | `linA`, `linb` matrices, Beta(α,β) bandits, latency exponential moving averages |
 | **Fixed (startup)** | Never | All 31 config parameters above |
 
 The config parameters are **hyperparameters** that control *how* the router learns, not *what* it learns.

@@ -23,47 +23,47 @@ This document captures the information flow from NeMo Agent Toolkit chat request
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           NeMo Agent Toolkit                                 │
+│                           NeMo Agent Toolkit                                │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │ DynamoModelConfig (dynamo_llm.py)                                    │    │
-│  │   prefix_template: "nat-dynamo-{uuid}"                               │    │
-│  │   prefix_total_requests: 10                                          │    │
-│  │   prefix_osl: 512 (raw int, default)                                 │    │
-│  │   prefix_iat: 250 (raw int, default)                                 │    │
-│  │   prefix_use_raw_values: true                                        │    │
-│  │   disable_headers: true (headers off by default)                     │    │
-│  │   cache_pin_type: ephemeral                                          │    │
-│  │   max_sensitivity: 1000                                              │    │
-│  │   # reuse_budget: (computed by processor: total_requests - count)    │    │
-│  │                                                                       │    │
-│  │ _DynamoTransport injects:                                            │    │
-│  │   → HTTP Headers: x-prefix-* (disabled by default)                   │    │
-│  │   → nvext.annotations in request body                                │    │
-│  │   → nvext.agent_hints in request body                                │    │
-│  │   → nvext.cache_control in request body                              │    │
+│  │ DynamoModelConfig (dynamo_llm.py)                                   │    │
+│  │   prefix_template: "nat-dynamo-{uuid}"                              │    │
+│  │   prefix_total_requests: 10                                         │    │
+│  │   prefix_osl: 512 (raw int, default)                                │    │
+│  │   prefix_iat: 250 (raw int, default)                                │    │
+│  │   prefix_use_raw_values: true                                       │    │
+│  │   disable_headers: true (headers off by default)                    │    │
+│  │   cache_pin_type: ephemeral                                         │    │
+│  │   max_sensitivity: 1000                                             │    │
+│  │   # reuse_budget: (computed by processor: total_requests - count)   │    │
+│  │                                                                     │    │
+│  │ _DynamoTransport injects:                                           │    │
+│  │   → HTTP Headers: x-prefix-* (disabled by default)                  │    │
+│  │   → nvext.annotations in request body                               │    │
+│  │   → nvext.agent_hints in request body                               │    │
+│  │   → nvext.cache_control in request body                             │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                     Dynamo Stack (Docker Container)                          │
+│                     Dynamo Stack (Docker Container)                         │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │ Default Frontend (port 8000)                                         │    │
-│  │   → Tokenization + nvext parsing                                     │    │
-│  │   → ETCD ModelWatcher (namespace=dynamo)                             │    │
-│  │   → Discovers processor ONLY (workers hidden)                        │    │
+│  │ Default Frontend (port 8000)                                        │    │
+│  │   → Tokenization + nvext parsing                                    │    │
+│  │   → ETCD ModelWatcher (namespace=dynamo)                            │    │
+│  │   → Discovers processor ONLY (workers hidden)                       │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
-│                                    │                                         │
-│                                    ▼                                         │
+│                                    │                                        │
+│                                    ▼                                        │
 │  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │ Custom Processor (processor.py / processor_multilru.py)              │    │
-│  │   → Registered at: dynamo.backend.generate                           │    │
-│  │   → Extracts: prefix_id, total_requests, osl, iat                    │    │
-│  │   → Manages reuse_budget tracking                                    │    │
-│  │   → Queries Router, forwards to Workers                              │    │
+│  │ Custom Processor (processor.py / processor_multilru.py)             │    │
+│  │   → Registered at: dynamo.backend.generate                          │    │
+│  │   → Extracts: prefix_id, total_requests, osl, iat                   │    │
+│  │   → Manages reuse_budget tracking                                   │    │
+│  │   → Queries Router, forwards to Workers                             │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
-│                          │                  │                                │
-│                          ▼                  ▼                                │
+│                          │                  │                               │
+│                          ▼                  ▼                               │
 │  ┌────────────────────────────┐  ┌─────────────────────────────────────┐    │
 │  │ Custom Router (router.py)   │  │ vLLM Workers (dynamo.vllm)         │    │
 │  │   → Thompson Sampling       │  │   → workers.backend.generate       │    │
@@ -580,11 +580,11 @@ flowchart TB
 
 | Bridge | From | To | Data | Current State | Optimization Opportunity |
 |--------|------|-----|------|---------------|-------------------------|
-| **A** | `dynamo_llm.py` | Frontend | nvext.annotations + agent_hints + cache_control | ✅ Working | Add backend selector annotation |
-| **B** | Frontend | Processor | PreprocessedRequest.annotations | ✅ Working | Passthrough preserved |
+| **A** | `dynamo_llm.py` | Frontend | `nvext.annotations` + `agent_hints` + `cache_control` | ✅ Working | Add backend selector annotation |
+| **B** | Frontend | Processor | PreprocessedRequest.annotations | ✅ Working | Pass through preserved |
 | **C** | Processor | Router | RouterRequest | ✅ Working | Add `use_frequency_backend` hint |
 | **D** | Router | KvIndexer | Token hashes | ✅ Working | Integrate with MultiLRU frequency data |
-| **E** | Router | Workers | worker_id | ✅ Working | Send expected frequency hint |
+| **E** | Router | Workers | `worker_id` | ✅ Working | Send expected frequency hint |
 | **F** | Worker | NATS | KV events | ✅ Working | Include frequency counts |
 | **G** | NATS | Router | KV state updates | ⚠️ Partial | Real-time frequency sync |
 | **H** | MultiLRU | Prometheus | Pool distribution | ❌ Missing | Export pool occupancy metrics |
@@ -609,10 +609,10 @@ flowchart TB
 - `thompson_router_feedback_latency_seconds{worker_id}` - Feedback latency
 - `thompson_router_reward{worker_id}` - Computed rewards
 - `thompson_router_pending_decisions` - Awaiting feedback
-- `thompson_router_beta_alpha{worker_id}` / `beta_beta` - Bandit params
+- `thompson_router_beta_alpha{worker_id}` / `beta_beta` - Bandit parameters
 - `thompson_router_sticky_decisions_total` - Affinity hits
 - `thompson_router_switch_decisions_total` - Worker switches
-- `thompson_router_reuse_budget` - Distribution of reuse_budget values
+- `thompson_router_reuse_budget` - Distribution of `reuse_budget` values
 - `thompson_router_tokens_per_request` - Distribution of input token counts
 
 ### Worker Metrics (`vllm:*`)
@@ -654,4 +654,3 @@ See [`external/dynamo/optimized/config.yaml`](optimized/config.yaml).
 - `NeMo-Agent-Toolkit/external/dynamo/optimized/processor.py`
 - `NeMo-Agent-Toolkit/external/dynamo/optimized/router.py`
 - `NeMo-Agent-Toolkit/external/dynamo/start_dynamo_optimized_thompson_hints_vllm.sh`
-
