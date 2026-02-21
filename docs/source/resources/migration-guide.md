@@ -29,6 +29,24 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ### v1.5.0
 
+#### Removing Old Aliases and Transitional Packages
+
+NVIDIA NeMo Agent Toolkit 1.2 changed the name and API. Compatibility aliases and transitional packages were provided to reduce development friction. Since three releases have passed, compatibility aliases and transitional packages are now removed.
+
+- `aiqtoolkit` transitional package is removed. Use `nvidia-nat`.
+- All AIQ compatibility aliases have been removed.
+- {py:mod}`aiq` module is removed. Use {py:mod}`nat` instead.
+- The `aiq` command is removed. Use `nat` instead.
+
+#### Packaging Restructure
+
+- NeMo Agent Toolkit adds support for new libraries, frameworks, and integrations. With these added subpackages, conflicting dependencies have arisen.
+- `nvidia-nat` is now a meta-package. All code has been moved into `nvidia-nat-core`
+- All prior meta-packages have been removed.
+  - `nvidia-nat-all` (no replacement, though `nvidia-nat[most]` extra does exist)
+  - `nvidia-nat-ingestion` (no replacement; examples directly use dependencies)
+  - `nvidia-nat-profiling` (use `nvidia-nat[profiling]`)
+
 #### Evaluation Package Split
 
 Evaluation and profiling implementations moved out of core into the `nvidia-nat-eval` package.
@@ -37,6 +55,9 @@ To migrate:
 - Install evaluation support when needed:
   - `pip install "nvidia-nat[eval]"`
   - `pip install nvidia-nat-eval`
+- Install profiling support when needed:
+  - `pip install "nvidia-nat[profiling]"`
+  - `pip install "nvidia-nat-eval[profiling]"`
 - Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
 - Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
 
