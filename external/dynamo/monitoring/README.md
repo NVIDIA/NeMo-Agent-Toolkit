@@ -111,27 +111,27 @@ Client Request (with nvext.annotations)
 │  Default Dynamo Frontend (:8000)                                        │
 │    - Tokenization + nvext parsing                                       │
 │    - ETCD ModelWatcher (namespace=dynamo)                               │
-│    - Routes to processor ONLY (workers use internal model name)        │
+│    - Routes to processor ONLY (workers use internal model name)         │
 └─────────────────────────────────────────────────────────────────────────┘
       ↓ discovers processor (model: llama-3.3-70b)
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Custom Processor (:18091/metrics)                                      │
-│    - Extracts hints: prefix_id, total_requests, osl, iat               │
+│    - Extracts hints: prefix_id, total_requests, osl, iat                │
 │    - Queries Thompson Sampling router                                   │
-│    - Registered at: dynamo.backend.generate (namespace=dynamo)         │
+│    - Registered at: dynamo.backend.generate (namespace=dynamo)          │
 └─────────────────────────────────────────────────────────────────────────┘
       ↓ queries router
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Custom Router (:18090/metrics)                                         │
-│    - Thompson Sampling + KV overlap scoring                            │
+│    - Thompson Sampling + KV overlap scoring                             │
 │    - Returns optimal worker_id                                          │
-│    - Registered at: dynamo.router.{find_worker,feedback}               │
+│    - Registered at: dynamo.router.{find_worker,feedback}                │
 └─────────────────────────────────────────────────────────────────────────┘
       ↓ returns worker_id
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  vLLM/SGLang Workers (:18081, :18082, ... /metrics)                    │
-│    - Registered at: workers.worker.generate (namespace=workers)        │
-│    - Model: llama-3.3-70b-internal (hidden from frontend)              │
+│  vLLM and SGLang Workers (:18081, :18082, ... /metrics)                 │
+│    - Registered at: workers.worker.generate (namespace=workers)         │
+│    - Model: llama-3.3-70b-internal (hidden from frontend)               │
 │    - Each worker uses TP_SIZE GPUs                                      │
 └─────────────────────────────────────────────────────────────────────────┘
       ↓
@@ -141,36 +141,36 @@ Response + Feedback to Router
 ### Metrics Collection
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                              Dynamo Stack                                    │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Dynamo Stack                                   │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │  Frontend   │  │  Workers    │  │   Router    │  │  Processor  │         │
 │  │  :8000      │  │ :18081-180xx│  │   :18090    │  │   :18091    │         │
 │  │  /metrics   │  │  /metrics   │  │  /metrics   │  │  /metrics   │         │
 │  │  (latency)  │  │  (KV cache) │  │  (routing)  │  │  (KVE)      │         │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘         │
-└─────────┼────────────────┼────────────────┼────────────────┼─────────────────┘
+└─────────┼────────────────┼────────────────┼────────────────┼────────────────┘
           │                │                │                │
           ▼                ▼                ▼                ▼
-┌──────────────────────────────────────────────────────────────────────────────┐
-│                           Monitoring Stack                                   │
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           Monitoring Stack                                  │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │                          Prometheus :9090                              │ │
-│  │    Scrapes all endpoints every 2 seconds for per-request granularity: │ │
-│  │    - Frontend (:8000)        - latency, throughput, tokens            │ │
-│  │    - Workers (:18081-180xx)  - KV cache, backend stats (per-worker)   │ │
-│  │    - Router (:18090)         - Thompson Sampling routing metrics      │ │
-│  │    - Processor (:18091)      - Thompson Sampling KVE metrics          │ │
+│  │    Scrapes all endpoints every 2 seconds for per-request granularity:  │ │
+│  │    - Frontend (:8000)        - latency, throughput, tokens             │ │
+│  │    - Workers (:18081-180xx)  - KV cache, backend stats (per-worker)    │ │
+│  │    - Router (:18090)         - Thompson Sampling routing metrics       │ │
+│  │    - Processor (:18091)      - Thompson Sampling KVE metrics           │ │
 │  └────────────────────────────────┬───────────────────────────────────────┘ │
 │                                   │                                         │
 │                                   ▼                                         │
 │  ┌────────────────────────────────────────────────────────────────────────┐ │
 │  │                          Grafana :3000                                 │ │
-│  │    Dashboard: "Dynamo LLM Overview"                                   │ │
-│  │    URL: /d/dynamo-overview/dynamo-llm-overview                        │ │
-│  │    Access: Anonymous (no login required)                              │ │
+│  │    Dashboard: "Dynamo LLM Overview"                                    │ │
+│  │    URL: /d/dynamo-overview/dynamo-llm-overview                         │ │
+│  │    Access: Anonymous (no login required)                               │ │
 │  └────────────────────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Model Name Isolation Explained
@@ -318,12 +318,12 @@ Custom Thompson Sampling KV Efficiency (KVE) metrics from the processor componen
 | `dynamo_component_thompson_` | `dynamo_component_thompson_routing_decisions_total` | Counter | Routing decisions made |
 | `dynamo_component_thompson_` | `dynamo_component_thompson_active_requests` | Gauge | Currently processing requests |
 | `dynamo_component_thompson_` | `dynamo_component_thompson_router_errors_total` | Counter | Router communication errors |
-| `dynamo_component_thompson_` | `dynamo_component_thompson_engine_errors_total` | Counter | Engine/worker errors |
+| `dynamo_component_thompson_` | `dynamo_component_thompson_engine_errors_total` | Counter | Engine or worker errors |
 | `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_prompt_tokens_total` | Counter | Total prompt tokens (KVE denominator) |
 | `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_cached_tokens_total` | Counter | Cached tokens hit (KVE numerator) |
 | `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_device_blocks_total` | Counter | KV blocks from GPU memory |
-| `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_host_blocks_total` | Counter | KV blocks from CPU memory |
-| `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_disk_blocks_total` | Counter | KV blocks from disk |
+| `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_host_blocks_total` | Counter | KV blocks from CPU memory (not yet implemented) |
+| `dynamo_component_thompson_kve_` | `dynamo_component_thompson_kve_disk_blocks_total` | Counter | KV blocks from disk (not yet implemented) |
 
 **KV Cache Efficiency Score (KVES) Calculation:**
 
@@ -337,7 +337,7 @@ TotalWork = cached_prompt_blocks * block_size
 w_hit = (w_gpu_hit, w_cpu_hit, w_disk_hit)  # weights per hit source
 ```
 
-Since full KVES requires GPU/CPU/disk hit breakdowns, we use a **simplified KVES proxy** based on cache hit rate:
+Since full KVES requires GPU, CPU, and disk hit breakdowns, we use a **simplified KVES proxy** based on cache hit rate. CPU and disk hit penalties (`w_cpu_hit`, `w_disk_hit`) are not yet implemented — the corresponding `host_blocks` and `disk_blocks` counters are placeholders left for future integration with the Dynamo team once tiered KV cache eviction surfaces per-tier hit counts.
 
 **Note**: vLLM with KVBM enabled provides richer KV cache metrics than SGLang.
 
@@ -353,8 +353,10 @@ sglang:cache_hit_rate * 100
 > `cached_tokens` in its API responses. The `thompson_kve_*` counters from the processor will show 0
 > unless the underlying engine provides `usage.prompt_tokens_details.cached_tokens`.
 
-> **Note on Full KVES**: To implement the full KVES equation with CPU/disk hit weights, use
-> vLLM with KVBM enabled, which provides GPU→CPU→Disk tiered caching with proper metrics.
+> **Note on Full KVES**: CPU and disk hit penalties are **not yet implemented**. The `w_cpu_hit` and
+> `w_disk_hit` weights in the full KVES equation require per-tier hit breakdowns from the inference
+> engine, which are not currently exposed. This is left for future integration with the Dynamo team
+> once vLLM with KVBM (or equivalent) surfaces GPU→CPU→Disk tiered cache hit counts through its API.
 
 ## KV Cache Metrics Status
 
@@ -402,7 +404,7 @@ This section documents the working status of all KV cache-related metrics across
 |--------|------------------|--------|--------|
 | `sglang:` | `sglang:swa_token_usage` | N/A | Sliding Window Attention - not used by Llama architecture. |
 | `sglang:` | `sglang:mamba_usage` | N/A | Mamba architecture metric - not applicable to Llama. |
-| `sglang:` | `sglang:kv_transfer_*` | N/A | KV transfer metrics only used in disaggregated prefill/decode mode. |
+| `sglang:` | `sglang:kv_transfer_*` | N/A | KV transfer metrics only used in disaggregated prefill and decode modes. |
 | `sglang:` | `sglang:pending_prealloc_token_usage` | N/A | Pre-allocation metric - typically 0 in standard operation. |
 
 ### Recommended KV Cache Queries
@@ -466,34 +468,46 @@ Use the time picker (top right) to:
 
 ### Dashboard Panels
 
-1. **Inflight Requests** - Current load across all components
-2. **Requests/min** - Throughput
-3. **Time to First Token (P95)** - Latency to start generating
-4. **KVES Proxy (Cache Hit Rate %)** - KV Efficiency Score proxy using prefix cache hit rate
-5. **TTFT Over Time** - P50/P95/P99 latency trends
-6. **ITL Over Time** - Inter-token latency trends
-7. **Token Throughput** - Tokens generated per second
-8. **KV Cache Usage** - Memory usage % and prefix cache hit rate % over time
-9. **KV Cache Tokens & Throughput** - Absolute token count and generation throughput
-10. **KV Cache Details (Per-Worker)** - Detailed per-worker metrics including:
-    - KVES: Prefix hit rate (%) - `avg_over_time(${backend}:cache_hit_rate[1m]) * 100`
-    - KV Usage (%) - `avg_over_time(${backend}:token_usage[1m]) * 100`
-    - KV Tokens Used - `last_over_time(${backend}:num_used_tokens[1m])`
-    - KV Capacity (blocks) - `last_over_time(dynamo_component_kvstats_total_blocks[1m])`
-    - Frontend Block Size - `last_over_time(dynamo_frontend_model_kv_cache_block_size[5m])`
-11. **KVES Proxy by Worker** - Color-coded efficiency score per worker (0-1 scale)
-12. **KV Cache Memory Usage % by Worker** - Per-worker memory utilization
-
-### Thompson Sampling Panels (Included)
-
-The dashboard includes these Thompson Sampling and worker monitoring panels:
-
-- **Routing Decisions/sec** - `rate(dynamo_component_thompson_routing_decisions_total[5m])`
-- **Worker Queue Depth** - `${backend}:num_queue_reqs`
-- **Worker Activity** - `${backend}:num_running_reqs`
+1. **Inflight Requests** (stat) — Current in-flight request count
+   - `dynamo_frontend_inflight_requests`
+2. **Requests (1m)** (stat) — Recent request throughput
+   - `sum(increase(dynamo_frontend_requests_total[10s]))`
+3. **Time to First Token (TTFT)** (timeseries) — [P50, P95, P99] latency to first generated token
+   - `histogram_quantile(0.5, rate(dynamo_frontend_time_to_first_token_seconds_bucket[10s]))`
+   - `histogram_quantile(0.95, ...)`
+   - `histogram_quantile(0.99, ...)`
+4. **Inter-Token Latency (ITL)** (timeseries) — [P50, P95, P99] latency between tokens
+   - `histogram_quantile(0.5, rate(dynamo_frontend_inter_token_latency_seconds_bucket[10s]))`
+   - `histogram_quantile(0.95, ...)`
+   - `histogram_quantile(0.99, ...)`
+5. **Token Throughput** (timeseries) — Per-worker and aggregate generation throughput
+   - `${backend}:gen_throughput` (per worker)
+   - `sum(${backend}:gen_throughput)` (aggregate)
+   - `rate(dynamo_frontend_output_tokens_total{job="dynamo-frontend"}[10s])` (frontend-side)
+6. **Request Flow (Frontend → Processor → Router → Workers)** (timeseries) — End-to-end request rates through each component
+   - `sum(rate(dynamo_frontend_requests_total[10s]))` (frontend)
+   - `sum(rate(dynamo_component_requests_total{dynamo_namespace="dynamo",dynamo_component="backend"}[10s]))` (processor)
+   - `sum(rate(dynamo_component_requests_total{...dynamo_component="router",dynamo_endpoint="find_worker"}[10s]))` (router)
+   - `rate(dynamo_component_requests_total{dynamo_namespace="workers",...,dynamo_endpoint="generate"}[10s])` (per worker)
+   - `sum(...)` (aggregate workers)
+7. **Worker Queue Depth** (timeseries) — Pending requests per worker
+   - `${backend}:num_queue_reqs`
+8. **Worker Activity (Running Requests)** (timeseries) — Active requests per worker
+   - `${backend}:num_running_reqs`
+9. **KV Cache Details (Per-Worker)** (timeseries) — Detailed per-worker cache state
+   - `avg_over_time(${backend}:cache_hit_efficiency[1m]) * 100` (KVES proxy %)
+   - `avg_over_time(${backend}:token_usage[1m]) * 100` (KV usage %)
+   - `last_over_time(${backend}:num_used_tokens[1m])` (tokens used)
+   - `last_over_time(dynamo_component_kvstats_total_blocks[1m])` (capacity in blocks)
+   - `max(dynamo_frontend_model_kv_cache_block_size{job="dynamo-frontend"})` (block size)
+10. **KVES Proxy by Worker** (timeseries) — Cache hit efficiency per worker (0–1 scale)
+    - `${backend}:cache_hit_efficiency`
+11. **KV Cache Usage & Tokens** (timeseries) — Memory utilization and token counts
+    - `${backend}:token_usage * 100` (usage %)
+    - `${backend}:num_used_tokens` (absolute tokens)
 
 > **Note on KV Cache Metrics**: The dashboard uses backend-native metrics (`${backend}:token_usage`,
-> `${backend}:cache_hit_rate`, `${backend}:num_used_tokens`) which are reliably populated by both
+> `${backend}:cache_hit_efficiency`, `${backend}:num_used_tokens`) which are reliably populated by both
 > SGLang and vLLM. The Dynamo-specific `dynamo_component_kvstats_*` metrics may not be populated
 > depending on your backend configuration. See the "KV Cache Metrics Status" section above for details.
 
@@ -501,9 +515,14 @@ The dashboard includes these Thompson Sampling and worker monitoring panels:
 
 ```
 monitoring/
-├── docker-compose.yml              # Prometheus + Grafana services
-├── prometheus.yml                  # Prometheus scrape configuration
+├── docker-compose.yml              # Prometheus + Grafana services (ports templated from DYNAMO_* environment variables)
+├── prometheus.yml                  # Prometheus scrape config template (placeholders substituted at startup)
 ├── README.md                       # This file
+├── rules/
+│   ├── sglang-aliases.yml          # Recording rules mapping SGLang metrics to dashboard queries
+│   └── vllm-aliases.yml            # Recording rules mapping vLLM metrics to dashboard queries
+├── scripts/
+│   └── kv_event_observer.py        # KV cache event observer utility
 └── grafana/
     └── provisioning/
         ├── datasources/
@@ -827,17 +846,6 @@ docker rm dynamo-prometheus
 docker volume rm monitoring_prometheus_data
 cd monitoring && docker compose up -d
 ```
-
-## Alternative: File-Based Collection
-
-If you don't want to run Prometheus/Grafana, use the collection script:
-
-```bash
-cd external/dynamo
-./collect_metrics.sh ./metrics_output 30  # Collect every 30s
-```
-
-This creates timestamped `.prom` files that can be analyzed later or imported into Prometheus.
 
 ## Complete Metrics Reference
 
