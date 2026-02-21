@@ -23,7 +23,6 @@ from nat.data_models.common import get_secret_value
 from nat.data_models.retry_mixin import RetryMixin
 from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
 from nat.embedder.huggingface_embedder import HuggingFaceEmbedderConfig
-from nat.embedder.huggingface_inference_embedder import HuggingFaceInferenceEmbedderConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
@@ -87,48 +86,35 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
 
 @register_embedder_client(config_type=HuggingFaceEmbedderConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def huggingface_langchain(embedder_config: HuggingFaceEmbedderConfig, _builder: Builder) -> AsyncIterator[Any]:
-    """LangChain client for HuggingFace local embedder using sentence-transformers."""
+    """LangChain client for HuggingFace embedder - local or remote based on endpoint_url."""
 
-    from langchain_huggingface import HuggingFaceEmbeddings
+    if embedder_config.endpoint_url:
+        from langchain_huggingface import HuggingFaceEndpointEmbeddings
 
-    model_kwargs = {
-        "device": embedder_config.device,
-    }
+        client = HuggingFaceEndpointEmbeddings(
+            model=embedder_config.endpoint_url,
+            huggingfacehub_api_token=get_secret_value(embedder_config.api_key),
+        )
+    else:
+        from langchain_huggingface import HuggingFaceEmbeddings
 
-    if embedder_config.trust_remote_code:
-        model_kwargs["trust_remote_code"] = True
+        model_kwargs = {
+            "device": embedder_config.device,
+        }
 
-    encode_kwargs = {
-        "normalize_embeddings": embedder_config.normalize_embeddings,
-        "batch_size": embedder_config.batch_size,
-    }
+        if embedder_config.trust_remote_code:
+            model_kwargs["trust_remote_code"] = True
 
-    client = HuggingFaceEmbeddings(
-        model_name=embedder_config.model_name,
-        model_kwargs=model_kwargs,
-        encode_kwargs=encode_kwargs,
-    )
+        encode_kwargs = {
+            "normalize_embeddings": embedder_config.normalize_embeddings,
+            "batch_size": embedder_config.batch_size,
+        }
 
-    if isinstance(embedder_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=embedder_config.num_retries,
-                                  retry_codes=embedder_config.retry_on_status_codes,
-                                  retry_on_messages=embedder_config.retry_on_errors)
-
-    yield client
-
-
-@register_embedder_client(config_type=HuggingFaceInferenceEmbedderConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-async def huggingface_inference_langchain(embedder_config: HuggingFaceInferenceEmbedderConfig,
-                                          _builder: Builder) -> AsyncIterator[Any]:
-    """LangChain client for HuggingFace remote embedder via TEI or Inference Endpoints."""
-
-    from langchain_huggingface import HuggingFaceEndpointEmbeddings
-
-    client = HuggingFaceEndpointEmbeddings(
-        model=embedder_config.endpoint_url,
-        huggingfacehub_api_token=get_secret_value(embedder_config.api_key),
-    )
+        client = HuggingFaceEmbeddings(
+            model_name=embedder_config.model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs,
+        )
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
