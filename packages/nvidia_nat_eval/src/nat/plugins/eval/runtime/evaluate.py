@@ -586,10 +586,11 @@ class EvaluationRun:
         logger.debug("Loaded %s evaluation configuration: %s", workflow_alias, self.eval_config)
 
         # Cleanup the output directory (skip when reusing existing workflow output)
-        if self.eval_config.general.output and not self.config.skip_workflow:
-            self.cleanup_output_directory()
-        elif self.config.skip_workflow:
-            logger.info("Skipping output directory cleanup because --skip_workflow is set")
+        if self.eval_config.general.output:
+            if self.config.skip_workflow:
+                logger.info("Skipping output directory cleanup because --skip_workflow is set")
+            else:
+                self.cleanup_output_directory()
 
         # Generate a job_id if append_job_id_to_output_dir is enabled and no job_id provided
         if (self.eval_config.general.output
