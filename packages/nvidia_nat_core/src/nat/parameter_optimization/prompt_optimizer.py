@@ -46,6 +46,79 @@ from nat.parameter_optimization.update_helpers import apply_suggestions
 logger = logging.getLogger(__name__)
 
 
+def _fire_prompt_trial_end_callbacks(
+    callback_manager: OptimizerCallbackManager | None,
+    population: Sequence[Any],
+    eval_metrics: list[str],
+    frozen_params: dict[str, Any] | None,
+    prompt_format_map: dict[str, str | None],
+    best: Any,
+) -> None:
+    """Build TrialResults for each individual in a GA generation and fire on_trial_end."""
+    if callback_manager is None:
+        return
+    from nat.eval.eval_callbacks import build_eval_result
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    for ind in population:
+        eval_result = None
+        if ind.eval_output is not None:
+            try:
+                eval_result = build_eval_result(
+                    eval_input_items=ind.eval_output.eval_input.eval_input_items,
+                    evaluation_results=ind.eval_output.evaluation_results,
+                    metric_scores=ind.metrics or {},
+                    usage_stats=ind.eval_output.usage_stats,
+                )
+            except Exception:
+                logger.warning("Failed to build EvalResult for prompt optimizer callback", exc_info=True)
+
+        callback_manager.on_trial_end(
+            TrialResult(
+                trial_number=ind.trial_number,
+                parameters=frozen_params or {},
+                metric_scores=ind.metrics or {},
+                is_best=(ind is best),
+                prompts=dict(ind.prompts),
+                prompt_formats={
+                    k: v
+                    for k, v in prompt_format_map.items() if v
+                },
+                eval_result=eval_result,
+            ))
+        ind.eval_output = None  # free memory
+
+
+def _fire_prompt_study_end(
+    callback_manager: OptimizerCallbackManager | None,
+    best: Any,
+    frozen_params: dict[str, Any] | None,
+    prompt_format_map: dict[str, str | None],
+    trial_number_offset: int,
+    generations: int,
+    pop_size: int,
+) -> None:
+    """Fire on_study_end for a completed prompt GA optimisation study."""
+    if callback_manager is None:
+        return
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    callback_manager.on_study_end(
+        best_trial=TrialResult(
+            trial_number=best.trial_number or 0,
+            parameters=frozen_params or {},
+            metric_scores=best.metrics or {},
+            is_best=True,
+            prompts=dict(best.prompts),
+            prompt_formats={
+                k: v
+                for k, v in prompt_format_map.items() if v
+            },
+        ),
+        total_trials=trial_number_offset + generations * pop_size,
+    )
+
+
 class PromptOptimizerInputSchema(BaseModel):
     original_prompt: str
     objective: str
@@ -426,60 +499,14 @@ async def optimize_prompts(
                     row.update({f"metric::{m}": ind.metrics[m] for m in eval_metrics})
                 history_rows.append(row)
 
-            if callback_manager is not None:
-                from nat.eval.eval_callbacks import EvalResult
-                from nat.eval.eval_callbacks import EvalResultItem
-                from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
-                for idx, ind in enumerate(population):
-                    # Build EvalResult from stored eval output
-                    eval_result = None
-                    if ind.eval_output is not None:
-                        try:
-                            last_out = ind.eval_output
-                            cb_items = []
-                            for input_item in last_out.eval_input.eval_input_items:
-                                per_item_scores = {}
-                                per_item_reasoning = {}
-                                for eval_name, eval_out in last_out.evaluation_results:
-                                    for output_item in eval_out.eval_output_items:
-                                        if str(output_item.id) == str(input_item.id):
-                                            score_val = output_item.score
-                                            if isinstance(score_val, (int, float)):
-                                                per_item_scores[eval_name] = float(score_val)
-                                            per_item_reasoning[eval_name] = output_item.reasoning
-                                            break
-                                usage_item = (last_out.usage_stats.usage_stats_items.get(input_item.id)
-                                              if last_out.usage_stats else None)
-                                cb_items.append(
-                                    EvalResultItem(
-                                        item_id=input_item.id,
-                                        input_obj=input_item.input_obj,
-                                        expected_output=input_item.expected_output_obj,
-                                        actual_output=input_item.output_obj,
-                                        scores=per_item_scores,
-                                        reasoning=per_item_reasoning,
-                                        total_tokens=usage_item.total_tokens if usage_item else None,
-                                        llm_latency=usage_item.llm_latency if usage_item else None,
-                                        runtime=usage_item.runtime if usage_item else None,
-                                    ))
-                            eval_result = EvalResult(metric_scores=ind.metrics or {}, items=cb_items)
-                        except Exception:
-                            logger.warning("Failed to build EvalResult for prompt optimizer callback", exc_info=True)
-
-                    callback_manager.on_trial_end(
-                        TrialResult(
-                            trial_number=ind.trial_number,
-                            parameters=frozen_params or {},
-                            metric_scores=ind.metrics or {},
-                            is_best=(ind is best),
-                            prompts=dict(ind.prompts),
-                            prompt_formats={
-                                k: v
-                                for k, v in prompt_format_map.items() if v
-                            },
-                            eval_result=eval_result,
-                        ))
-                    ind.eval_output = None  # free memory
+            _fire_prompt_trial_end_callbacks(
+                callback_manager,
+                population,
+                eval_metrics,
+                frozen_params,
+                prompt_format_map,
+                best,
+            )
 
             # Next generation via elitism + reproduction
             next_population: list[Individual] = []
@@ -519,22 +546,15 @@ async def optimize_prompts(
         population = await _evaluate_population(population)
         best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
 
-        if callback_manager is not None:
-            from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
-            callback_manager.on_study_end(
-                best_trial=TrialResult(
-                    trial_number=best.trial_number or 0,
-                    parameters=frozen_params or {},
-                    metric_scores=best.metrics or {},
-                    is_best=True,
-                    prompts=dict(best.prompts),
-                    prompt_formats={
-                        k: v
-                        for k, v in prompt_format_map.items() if v
-                    },
-                ),
-                total_trials=trial_number_offset + generations * pop_size,
-            )
+        _fire_prompt_study_end(
+            callback_manager,
+            best,
+            frozen_params,
+            prompt_format_map,
+            trial_number_offset,
+            generations,
+            pop_size,
+        )
 
         best_prompts = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
 

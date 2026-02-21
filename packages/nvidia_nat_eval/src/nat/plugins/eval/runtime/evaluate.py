@@ -582,6 +582,24 @@ class EvaluationRun:
         except Exception as e:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
+    def _fire_on_eval_complete(self) -> None:
+        """Build an EvalResult from collected data and fire the on_eval_complete callback."""
+        if not (self.callback_manager and self.evaluation_results):
+            return
+        try:
+            from nat.eval.eval_callbacks import build_eval_result
+            scores = {name: output.average_score for name, output in self.evaluation_results}
+            result = build_eval_result(
+                eval_input_items=self.eval_input.eval_input_items,
+                evaluation_results=self.evaluation_results,
+                metric_scores=scores,
+                usage_stats=self.usage_stats,
+                item_span_ids=self._item_span_ids,
+            )
+            self.callback_manager.on_eval_complete(result)
+        except Exception:
+            logger.warning("Failed to fire on_eval_complete callback", exc_info=True)
+
     async def run_and_evaluate(self,
                                session_manager: SessionManager | None = None,
                                job_id: str | None = None) -> EvaluationRunOutput:
@@ -714,46 +732,9 @@ class EvaluationRun:
 
                     # Wait for all trace export tasks to complete (local workflows only)
                     if session_manager and not self.config.endpoint:
-                        await self.wait_for_all_export_tasks_local(session_manager,
-                                                                   timeout=self.config.export_timeout)
+                        await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
 
-                    if self.callback_manager and self.evaluation_results:
-                        try:
-                            from nat.eval.eval_callbacks import EvalResult
-                            from nat.eval.eval_callbacks import EvalResultItem
-                            scores = {name: output.average_score for name, output in self.evaluation_results}
-
-                            cb_items = []
-                            for input_item in self.eval_input.eval_input_items:
-                                per_item_scores = {}
-                                per_item_reasoning = {}
-                                for eval_name, eval_output in self.evaluation_results:
-                                    for output_item in eval_output.eval_output_items:
-                                        if str(output_item.id) == str(input_item.id):
-                                            score_val = output_item.score
-                                            if isinstance(score_val, (int, float)):
-                                                per_item_scores[eval_name] = float(score_val)
-                                            per_item_reasoning[eval_name] = output_item.reasoning
-                                            break
-                                # Get usage stats for this item if available
-                                usage_item = self.usage_stats.usage_stats_items.get(input_item.id)
-                                cb_items.append(
-                                    EvalResultItem(
-                                        item_id=input_item.id,
-                                        input_obj=input_item.input_obj,
-                                        expected_output=input_item.expected_output_obj,
-                                        actual_output=input_item.output_obj,
-                                        scores=per_item_scores,
-                                        reasoning=per_item_reasoning,
-                                        total_tokens=usage_item.total_tokens if usage_item else None,
-                                        llm_latency=usage_item.llm_latency if usage_item else None,
-                                        runtime=usage_item.runtime if usage_item else None,
-                                        root_span_id=self._item_span_ids.get(str(input_item.id)),
-                                    ))
-
-                            self.callback_manager.on_eval_complete(EvalResult(metric_scores=scores, items=cb_items))
-                        except Exception:
-                            logger.warning("Failed to fire on_eval_complete callback", exc_info=True)
+                    self._fire_on_eval_complete()
                 finally:
                     if local_session_manager is not None:
                         await local_session_manager.shutdown()

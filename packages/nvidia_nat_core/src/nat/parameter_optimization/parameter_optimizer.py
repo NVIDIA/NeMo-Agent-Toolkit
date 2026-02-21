@@ -42,6 +42,65 @@ logger = logging.getLogger(__name__)
 """Optional eval runtime class."""
 
 
+def _fire_numeric_trial_end(
+    callback_manager: OptimizerCallbackManager | None,
+    trial: Any,
+    eval_metrics: list[str],
+    avg_scores: list[float],
+    suggestions: dict[str, Any],
+    last_eval_output: Any,
+    all_scores: list[list[float]],
+) -> None:
+    """Build a TrialResult from one numeric-optimisation trial and fire on_trial_end."""
+    if callback_manager is None:
+        return
+    from nat.eval.eval_callbacks import build_eval_result
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    eval_result = None
+    try:
+        eval_result = build_eval_result(
+            eval_input_items=last_eval_output.eval_input.eval_input_items,
+            evaluation_results=last_eval_output.evaluation_results,
+            metric_scores=dict(zip(eval_metrics, avg_scores)),
+            usage_stats=last_eval_output.usage_stats,
+        )
+    except Exception:
+        logger.warning("Failed to build EvalResult for optimizer callback", exc_info=True)
+
+    callback_manager.on_trial_end(
+        TrialResult(
+            trial_number=trial.number,
+            parameters=dict(suggestions),
+            metric_scores=dict(zip(eval_metrics, avg_scores)),
+            is_best=False,
+            rep_scores=all_scores,
+            eval_result=eval_result,
+        ))
+
+
+def _fire_numeric_study_end(
+    callback_manager: OptimizerCallbackManager | None,
+    best_trial_obj: Any,
+    eval_metrics: list[str],
+    n_trials: int,
+) -> None:
+    """Fire on_study_end for a completed numeric optimisation study."""
+    if callback_manager is None:
+        return
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    callback_manager.on_study_end(
+        best_trial=TrialResult(
+            trial_number=best_trial_obj.number,
+            parameters=dict(best_trial_obj.params),
+            metric_scores=dict(zip(eval_metrics, best_trial_obj.values)),
+            is_best=True,
+        ),
+        total_trials=n_trials,
+    )
+
+
 @experimental(feature_name="Optimizer")
 def optimize_parameters(
     *,
@@ -144,53 +203,15 @@ def optimize_parameters(
         trial.set_user_attr("rep_scores", all_scores)
         avg_scores = [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
 
-        if callback_manager is not None:
-            from nat.eval.eval_callbacks import EvalResult
-            from nat.eval.eval_callbacks import EvalResultItem
-            from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
-
-            # Build EvalResult from the last rep's evaluation output
-            eval_result = None
-            try:
-                cb_items = []
-                for input_item in last_eval_output.eval_input.eval_input_items:
-                    per_item_scores = {}
-                    per_item_reasoning = {}
-                    for eval_name, eval_out in last_eval_output.evaluation_results:
-                        for output_item in eval_out.eval_output_items:
-                            if str(output_item.id) == str(input_item.id):
-                                score_val = output_item.score
-                                if isinstance(score_val, (int, float)):
-                                    per_item_scores[eval_name] = float(score_val)
-                                per_item_reasoning[eval_name] = output_item.reasoning
-                                break
-                    usage_item = (last_eval_output.usage_stats.usage_stats_items.get(input_item.id)
-                                  if last_eval_output.usage_stats else None)
-                    cb_items.append(
-                        EvalResultItem(
-                            item_id=input_item.id,
-                            input_obj=input_item.input_obj,
-                            expected_output=input_item.expected_output_obj,
-                            actual_output=input_item.output_obj,
-                            scores=per_item_scores,
-                            reasoning=per_item_reasoning,
-                            total_tokens=usage_item.total_tokens if usage_item else None,
-                            llm_latency=usage_item.llm_latency if usage_item else None,
-                            runtime=usage_item.runtime if usage_item else None,
-                        ))
-                eval_result = EvalResult(metric_scores=dict(zip(eval_metrics, avg_scores)), items=cb_items)
-            except Exception:
-                logger.warning("Failed to build EvalResult for optimizer callback", exc_info=True)
-
-            callback_manager.on_trial_end(
-                TrialResult(
-                    trial_number=trial.number,
-                    parameters=dict(suggestions),
-                    metric_scores=dict(zip(eval_metrics, avg_scores)),
-                    is_best=False,
-                    rep_scores=all_scores,
-                    eval_result=eval_result,
-                ))
+        _fire_numeric_trial_end(
+            callback_manager,
+            trial,
+            eval_metrics,
+            avg_scores,
+            suggestions,
+            last_eval_output,
+            all_scores,
+        )
 
         return avg_scores
 
@@ -205,17 +226,7 @@ def optimize_parameters(
     )
     best_params = best_trial_obj.params
 
-    if callback_manager is not None:
-        from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
-        callback_manager.on_study_end(
-            best_trial=TrialResult(
-                trial_number=best_trial_obj.number,
-                parameters=dict(best_trial_obj.params),
-                metric_scores=dict(zip(eval_metrics, best_trial_obj.values)),
-                is_best=True,
-            ),
-            total_trials=optimizer_config.numeric.n_trials,
-        )
+    _fire_numeric_study_end(callback_manager, best_trial_obj, eval_metrics, optimizer_config.numeric.n_trials)
 
     tuned_cfg = apply_suggestions(base_cfg, best_params)
 
