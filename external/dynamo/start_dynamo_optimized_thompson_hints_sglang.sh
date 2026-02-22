@@ -125,7 +125,7 @@ WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 
 # KV Cache Configuration
 # Block size in tokens - must match between SGLang (--page-size) and Frontend (--kv-cache-block-size)
-KV_BLOCK_SIZE="${DYNAMO_KV_BLOCK_SIZE:-64}"
+KV_BLOCK_SIZE="${DYNAMO_KV_BLOCK_SIZE:-16}"
 # Fraction of GPU memory for KV cache (0.0-1.0). Reduce to test cache pressure/degradation.
 MEM_FRACTION_STATIC="${DYNAMO_MEM_FRACTION_STATIC:-0.9}"
 

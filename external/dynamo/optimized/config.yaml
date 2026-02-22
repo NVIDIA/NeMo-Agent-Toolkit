@@ -19,7 +19,7 @@
 
 # Infrastructure settings
 infrastructure:
-  block_size: 64          # KV cache block size for overlap computation
+  block_size: 16          # KV cache block size — must match DYNAMO_KV_BLOCK_SIZE in .env (env var overrides this)
   router_type: kv         # Router type: "kv" (KV-aware) or "kv_load" (load-based)
   min_workers: 1          # Minimum workers required before routing starts
 

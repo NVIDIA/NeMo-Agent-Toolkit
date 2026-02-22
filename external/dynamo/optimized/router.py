@@ -1452,11 +1452,28 @@ async def worker(runtime: DistributedRuntime):
     component = runtime.namespace("dynamo").component("router")
     logger.info("Initializing Optimized Thompson Sampling Router (Prometheus metrics)")
 
+    # Resolve block_size: env var KV_BLOCK_SIZE (set by startup script from
+    # DYNAMO_KV_BLOCK_SIZE) takes precedence over config.yaml so there is a
+    # single source of truth shared with workers and the frontend.
+    config_block_size = get_nested(config, "infrastructure.block_size", 64)
+    env_block_size_str = os.environ.get("KV_BLOCK_SIZE")
+    if env_block_size_str is not None:
+        env_block_size = int(env_block_size_str)
+        if env_block_size != config_block_size:
+            logger.warning(
+                "KV_BLOCK_SIZE env var (%d) overrides config.yaml block_size (%d). "
+                "Update config.yaml to match DYNAMO_KV_BLOCK_SIZE in .env to silence this warning.",
+                env_block_size, config_block_size,
+            )
+        block_size = env_block_size
+    else:
+        block_size = config_block_size
+
     # Extract config values with nested access
     router = WorkloadAwareRouter(
         runtime,
         # Infrastructure
-        block_size=get_nested(config, "infrastructure.block_size", 64),
+        block_size=block_size,
         router_type=str(get_nested(config, "infrastructure.router_type", "kv")).lower(),
         min_workers=get_nested(config, "infrastructure.min_workers", 1),
         # Affinity

@@ -140,7 +140,7 @@ llms:
   # dynamic headers per LLM call based on current execution context.
   dynamo_llm:
     _type: dynamo
-    model_name: Qwen3-32B
+    model_name: Llama-3.3-70B-Instruct
     base_url: http://localhost:8000/v1
     api_key: dummy
     temperature: 0.0
@@ -167,7 +167,7 @@ llms:
   # Secondary LLM for self-evaluation (no prediction trie needed)
   eval_llm:
     _type: dynamo
-    model_name: Qwen3-32B
+    model_name: Llama-3.3-70B-Instruct
     base_url: http://localhost:8000/v1
     api_key: dummy
     temperature: 0.0
