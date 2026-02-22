@@ -145,8 +145,12 @@ llms:
     base_url: http://localhost:8099/v1
     api_key: dummy
     temperature: 0.0
-    max_tokens: 8192
-    stop: ["Observation:", "\nThought:"]
+    max_tokens: 16384
+    # Qwen3 thinking mode: the model generates <think>...</think> reasoning
+    # before producing the Thought:/Action: ReAct output.
+    # Including </think> as a stop token disables extended thinking (shorter, faster calls).
+    # Removing it enables full thinking (longer calls, higher GPU utilization).
+    stop: ["Observation:", "\nObservation"]
     # Note: Setting prefix_template enables dynamic prefix headers
     prefix_template: "react-benchmark-{uuid}"
     prefix_total_requests: 10 # 6

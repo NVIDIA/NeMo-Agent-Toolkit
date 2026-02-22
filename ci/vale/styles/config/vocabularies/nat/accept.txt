@@ -53,6 +53,7 @@ Databricks
 Datadog
 [Dd]atastore
 DB(s?)
+[Dd]eclaratively
 [Dd]enylist
 [Dd]eserialize
 [Dd]ev
