@@ -19,10 +19,12 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import _backfill_feedback_for_unlinked_items
 from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import _eager_link_run_to_item
 from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import _get_run_input_str
 from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import _link_run_to_item
 from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import _match_and_link_otel_runs
+from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import _retry_unlinked_references
 from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import _span_id_to_langsmith_run_id
 
 # ---------------------------------------------------------------------------
@@ -39,12 +41,19 @@ def _mock_run(run_id: str, input_text: str, name: str = "<workflow>") -> MagicMo
     return run
 
 
-def _mock_item(item_id: str, input_text: str, scores: dict | None = None, reasoning: dict | None = None) -> MagicMock:
+def _mock_item(
+    item_id: str,
+    input_text: str,
+    scores: dict | None = None,
+    reasoning: dict | None = None,
+    root_span_id: int | None = None,
+) -> MagicMock:
     item = MagicMock()
     item.item_id = item_id
     item.input_obj = input_text
     item.scores = scores if scores is not None else {"accuracy": 0.9}
     item.reasoning = reasoning if reasoning is not None else {"accuracy": "correct"}
+    item.root_span_id = root_span_id
     return item
 
 
@@ -368,6 +377,96 @@ class TestMatchRetryLogic:
 
 
 # ===========================================================================
+# _backfill_feedback_for_unlinked_items
+# ===========================================================================
+
+
+class TestBackfillFeedbackForUnlinkedItems:
+
+    def test_no_backfill_when_linked_slots_cover_all_candidates(self):
+        client = MagicMock()
+        run = _mock_run("r1", "q1")
+        run.reference_example_id = "ex-1"
+        client.list_runs.return_value = [run]
+
+        item = _mock_item("i1",
+                          "q1",
+                          scores={"accuracy": 1.0},
+                          reasoning={"accuracy": "ok"},
+                          root_span_id=0x0123456789abcdef)
+        count = _backfill_feedback_for_unlinked_items(client=client,
+                                                      project_name="test",
+                                                      items=[item],
+                                                      example_ids={"i1": "ex-1"})
+
+        assert count == 0
+        client.create_feedback.assert_not_called()
+
+    def test_backfills_run_feedback_for_unlinked_items(self):
+        client = MagicMock()
+        run = _mock_run("r1", "q1")
+        run.reference_example_id = None
+        client.list_runs.return_value = [run]
+
+        span_id = 0x0123456789abcdef
+        expected_run_id = "00000000-0000-0000-0123-456789abcdef"
+        item = _mock_item("i1",
+                          "q1",
+                          scores={
+                              "accuracy": 0.5, "latency": 1.2
+                          },
+                          reasoning={
+                              "accuracy": "wrong", "latency": "slow"
+                          },
+                          root_span_id=span_id)
+        count = _backfill_feedback_for_unlinked_items(client=client,
+                                                      project_name="test",
+                                                      items=[item],
+                                                      example_ids={"i1": "ex-1"})
+
+        assert count == 1
+        # Backfill only creates feedback — reference retry is handled by _retry_unlinked_references
+        client.update_run.assert_not_called()
+        assert client.create_feedback.call_count == 2
+        keys = {call.kwargs["key"] for call in client.create_feedback.call_args_list}
+        assert keys == {"accuracy", "latency"}
+        assert all(call.kwargs["run_id"] == expected_run_id for call in client.create_feedback.call_args_list)
+
+    def test_backfills_when_run_query_fails(self):
+        client = MagicMock()
+        client.list_runs.side_effect = Exception("api down")
+
+        span_id = 0xf09206746ce2ad16
+        expected_run_id = "00000000-0000-0000-f092-06746ce2ad16"
+        item = _mock_item("i1", "q1", scores={"accuracy": 0.5}, reasoning={"accuracy": "wrong"}, root_span_id=span_id)
+        count = _backfill_feedback_for_unlinked_items(client=client,
+                                                      project_name="test",
+                                                      items=[item],
+                                                      example_ids={"i1": "ex-1"})
+
+        assert count == 1
+        # Backfill only creates feedback — no update_run retry
+        client.update_run.assert_not_called()
+        client.create_feedback.assert_called_once()
+        assert client.create_feedback.call_args.kwargs["run_id"] == expected_run_id
+
+    def test_skips_items_without_root_span_id(self):
+        client = MagicMock()
+        run = _mock_run("r1", "q1")
+        run.reference_example_id = None
+        client.list_runs.return_value = [run]
+
+        item = _mock_item("i1", "q1", scores={"accuracy": 0.5}, reasoning={"accuracy": "wrong"})
+        count = _backfill_feedback_for_unlinked_items(client=client,
+                                                      project_name="test",
+                                                      items=[item],
+                                                      example_ids={"i1": "ex-1"})
+
+        assert count == 0
+        client.create_feedback.assert_not_called()
+
+
+# ===========================================================================
 # _span_id_to_langsmith_run_id
 # ===========================================================================
 
@@ -443,3 +542,176 @@ class TestEagerLinkRunToItem:
         item = _mock_item("i1", "q1", scores={"a": 0.9, "b": 0.8}, reasoning={"a": "good", "b": "fair"})
         _eager_link_run_to_item(client, "run-uuid", item, {"i1": "ex-1"})
         assert client.create_feedback.call_count == 2
+
+
+# ===========================================================================
+# _retry_unlinked_references
+# ===========================================================================
+
+
+class TestRetryUnlinkedReferences:
+
+    @patch("nat.plugins.langchain.langsmith.langsmith_evaluation_callback.time.sleep")
+    def test_retries_unlinked_items(self, _sleep):
+        """Items whose reference_example_id was silently dropped get retried."""
+        client = MagicMock()
+        run = _mock_run("r1", "q1")
+        run.reference_example_id = None
+        # After retry, the run appears linked on the second check
+        run_linked = _mock_run("r1", "q1")
+        run_linked.reference_example_id = "ex-1"
+        client.list_runs.side_effect = [[run], [run_linked]]
+
+        span_id = 0x0123456789abcdef
+        expected_run_id = "00000000-0000-0000-0123-456789abcdef"
+        item = _mock_item("i1", "q1", root_span_id=span_id)
+        retried = _retry_unlinked_references(
+            client=client,
+            project_name="test",
+            items=[item],
+            example_ids={"i1": "ex-1"},
+            max_attempts=2,
+            retry_delay=0,
+        )
+
+        assert retried == 1
+        client.update_run.assert_called_once_with(expected_run_id, reference_example_id="ex-1")
+        # No feedback is created — that's _backfill_feedback_for_unlinked_items' job
+        client.create_feedback.assert_not_called()
+
+    @patch("nat.plugins.langchain.langsmith.langsmith_evaluation_callback.time.sleep")
+    def test_skips_already_linked_items(self, _sleep):
+        """Items whose reference_example_id is set don't get retried."""
+        client = MagicMock()
+        run = _mock_run("r1", "q1")
+        run.reference_example_id = "ex-1"
+        client.list_runs.return_value = [run]
+
+        item = _mock_item("i1", "q1", root_span_id=0x0123456789abcdef)
+        retried = _retry_unlinked_references(
+            client=client,
+            project_name="test",
+            items=[item],
+            example_ids={"i1": "ex-1"},
+            max_attempts=1,
+            retry_delay=0,
+        )
+
+        assert retried == 0
+        client.update_run.assert_not_called()
+
+    @patch("nat.plugins.langchain.langsmith.langsmith_evaluation_callback.time.sleep")
+    def test_skips_items_without_span_id(self, _sleep):
+        """Items without root_span_id are skipped."""
+        client = MagicMock()
+        run = _mock_run("r1", "q1")
+        run.reference_example_id = None
+        client.list_runs.return_value = [run]
+
+        item = _mock_item("i1", "q1")  # no root_span_id
+        retried = _retry_unlinked_references(
+            client=client,
+            project_name="test",
+            items=[item],
+            example_ids={"i1": "ex-1"},
+            max_attempts=1,
+            retry_delay=0,
+        )
+
+        assert retried == 0
+        client.update_run.assert_not_called()
+
+    @patch("nat.plugins.langchain.langsmith.langsmith_evaluation_callback.time.sleep")
+    def test_handles_update_run_failure(self, _sleep):
+        """update_run failure for one item doesn't block others."""
+        client = MagicMock()
+        run1 = _mock_run("r1", "q1")
+        run1.reference_example_id = None
+        run2 = _mock_run("r2", "q2")
+        run2.reference_example_id = None
+        # After first attempt: run1 still unlinked, run2 linked
+        run2_linked = _mock_run("r2", "q2")
+        run2_linked.reference_example_id = "ex-2"
+        # After second attempt: run1 now linked too
+        run1_linked = _mock_run("r1", "q1")
+        run1_linked.reference_example_id = "ex-1"
+        client.list_runs.side_effect = [
+            [run1, run2],  # attempt 1: both unlinked
+            [run1, run2_linked],  # attempt 2: run1 still unlinked
+            [run1_linked, run2_linked],  # (not reached — only 2 attempts)
+        ]
+        # attempt 1: i1 fails, i2 succeeds; attempt 2: i1 succeeds
+        client.update_run.side_effect = [Exception("fail"), None, None]
+
+        items = [
+            _mock_item("i1", "q1", root_span_id=0x1111111111111111),
+            _mock_item("i2", "q2", root_span_id=0x2222222222222222),
+        ]
+        retried = _retry_unlinked_references(
+            client=client,
+            project_name="test",
+            items=items,
+            example_ids={
+                "i1": "ex-1", "i2": "ex-2"
+            },
+            max_attempts=2,
+            retry_delay=0,
+        )
+
+        assert retried == 2  # i2 on attempt 1, i1 on attempt 2
+        assert client.update_run.call_count == 3
+
+    @patch("nat.plugins.langchain.langsmith.langsmith_evaluation_callback.time.sleep")
+    def test_returns_zero_when_all_linked(self, _sleep):
+        """All items already linked — nothing to retry."""
+        client = MagicMock()
+        run1 = _mock_run("r1", "q1")
+        run1.reference_example_id = "ex-1"
+        run2 = _mock_run("r2", "q2")
+        run2.reference_example_id = "ex-2"
+        client.list_runs.return_value = [run1, run2]
+
+        items = [
+            _mock_item("i1", "q1", root_span_id=0x1111111111111111),
+            _mock_item("i2", "q2", root_span_id=0x2222222222222222),
+        ]
+        retried = _retry_unlinked_references(
+            client=client,
+            project_name="test",
+            items=items,
+            example_ids={
+                "i1": "ex-1", "i2": "ex-2"
+            },
+            max_attempts=3,
+            retry_delay=0,
+        )
+
+        assert retried == 0
+        client.update_run.assert_not_called()
+
+    @patch("nat.plugins.langchain.langsmith.langsmith_evaluation_callback.time.sleep")
+    def test_retries_multiple_attempts_until_linked(self, _sleep):
+        """Retries across multiple attempts until all items are linked."""
+        client = MagicMock()
+        run = _mock_run("r1", "q1")
+        run.reference_example_id = None
+        run_still_unlinked = _mock_run("r1", "q1")
+        run_still_unlinked.reference_example_id = None
+        run_linked = _mock_run("r1", "q1")
+        run_linked.reference_example_id = "ex-1"
+        # Attempt 1: unlinked → retry. Attempt 2: still unlinked → retry again. Attempt 3: linked.
+        client.list_runs.side_effect = [[run], [run_still_unlinked], [run_linked]]
+
+        item = _mock_item("i1", "q1", root_span_id=0x0123456789abcdef)
+        retried = _retry_unlinked_references(
+            client=client,
+            project_name="test",
+            items=[item],
+            example_ids={"i1": "ex-1"},
+            max_attempts=3,
+            retry_delay=0,
+        )
+
+        assert retried == 2  # retried on attempt 1 and 2, stopped at attempt 3
+        assert client.update_run.call_count == 2
+        assert _sleep.call_count == 2  # slept between attempts 1→2 and 2→3

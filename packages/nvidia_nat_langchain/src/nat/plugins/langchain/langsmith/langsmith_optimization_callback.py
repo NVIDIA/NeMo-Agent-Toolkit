@@ -21,9 +21,13 @@ import langsmith
 
 from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
 
+from .langsmith_evaluation_callback import _LS_RETRY_DELAY_S
+from .langsmith_evaluation_callback import _backfill_feedback_for_unlinked_items
 from .langsmith_evaluation_callback import _eager_link_run_to_item
+from .langsmith_evaluation_callback import _estimate_indexing_time
 from .langsmith_evaluation_callback import _humanize_dataset_name
 from .langsmith_evaluation_callback import _match_and_link_otel_runs
+from .langsmith_evaluation_callback import _retry_unlinked_references
 from .langsmith_evaluation_callback import _span_id_to_langsmith_run_id
 
 logger = logging.getLogger(__name__)
@@ -174,38 +178,19 @@ class LangSmithOptimizationCallback:
     # OTEL run linking (per-trial project)
     # ------------------------------------------------------------------ #
 
-    # Empirical LangSmith indexing constants.
-    #
-    # After the OTEL batch exporter confirms HTTP delivery (200 OK),
-    # LangSmith still needs time to index runs before they appear in
-    # list_runs() queries. The delay depends on dataset size and server
-    # load. These constants model that lag so we can scale the retry
-    # budget proportionally.
-    #
-    #   pipeline_latency  – fixed overhead for any batch to enter the
-    #                       indexing pipeline (network + queue).
-    #   throughput_rps    – observed sustained indexing rate (~10 runs/s).
-    #   safety_multiplier – headroom for server load spikes.
-    #   min_retries       – floor so tiny datasets still get a fair window.
-    #   max_retries       – cap to avoid blocking indefinitely; at 10s per
-    #                       retry this gives a 10-minute ceiling.
-    #   retry_delay       – seconds between list_runs() polls.
-    _LS_PIPELINE_LATENCY_S: float = 10.0
-    _LS_THROUGHPUT_RPS: float = 10.0
+    # Retry budget scaling for substring matching (Phase 2).
     _LS_SAFETY_MULTIPLIER: float = 3.0
     _LS_MIN_RETRIES: int = 10
     _LS_MAX_RETRIES: int = 60
-    _LS_RETRY_DELAY_S: float = 10.0
     _LS_WARN_ITEM_THRESHOLD: int = 5000
 
     @classmethod
     def _estimate_retry_budget(cls, expected_count: int) -> tuple[int, float]:
         """Estimate the retry budget for OTEL run linking based on dataset size.
 
-        LangSmith indexes runs asynchronously after HTTP delivery. Small
-        datasets (5 items) are indexed almost instantly; large datasets
-        (600+ items) can take over a minute. This method scales the retry
-        window so the linker waits long enough without blocking forever.
+        Uses the shared indexing constants from ``langsmith_evaluation_callback``
+        (pipeline latency, throughput, retry delay) with a safety multiplier
+        to scale the retry window proportionally.
 
         Formula::
 
@@ -239,12 +224,12 @@ class LangSmithOptimizationCallback:
                 cls._LS_WARN_ITEM_THRESHOLD,
             )
 
-        indexing_time = cls._LS_PIPELINE_LATENCY_S + (expected_count / cls._LS_THROUGHPUT_RPS)
+        indexing_time = _estimate_indexing_time(expected_count)
         total_budget = indexing_time * cls._LS_SAFETY_MULTIPLIER
-        retries = int(total_budget / cls._LS_RETRY_DELAY_S)
+        retries = int(total_budget / _LS_RETRY_DELAY_S)
         retries = max(cls._LS_MIN_RETRIES, min(cls._LS_MAX_RETRIES, retries))
 
-        return retries, cls._LS_RETRY_DELAY_S
+        return retries, _LS_RETRY_DELAY_S
 
     def _link_otel_runs(
         self,
@@ -283,8 +268,9 @@ class LangSmithOptimizationCallback:
         eagerly_linked = 0
         fallback_items = []
         for item in eval_result.items:
-            if getattr(item, 'root_span_id', None) is not None:
-                run_id = _span_id_to_langsmith_run_id(item.root_span_id)
+            root_span_id = getattr(item, 'root_span_id', None)
+            if isinstance(root_span_id, int):
+                run_id = _span_id_to_langsmith_run_id(root_span_id)
                 if _eager_link_run_to_item(self._client, run_id, item, self._example_ids):
                     eagerly_linked += 1
                 else:
@@ -307,11 +293,37 @@ class LangSmithOptimizationCallback:
             )
             eagerly_linked += matched
 
+        # Phase 3a: Retry reference_example_id for ALL items.
+        # update_run() can return 200 OK before the run is fully indexed,
+        # silently dropping the reference_example_id.
+        retried = _retry_unlinked_references(
+            client=self._client,
+            project_name=trial_project,
+            items=eval_result.items,
+            example_ids=self._example_ids,
+        )
+
+        # Phase 3b: Attach fallback feedback only for items that failed
+        # eager linking AND substring matching (avoid duplicate feedback).
+        fallback_item_count = _backfill_feedback_for_unlinked_items(
+            client=self._client,
+            project_name=trial_project,
+            items=fallback_items,
+            example_ids=self._example_ids,
+        )
+
         logger.info("Linked %d/%d OTEL runs for trial %d in '%s'",
                     eagerly_linked,
                     expected_count,
                     trial_number + 1,
                     trial_project)
+        if retried:
+            logger.info("Retried reference linking for %d items in trial %d '%s'",
+                        retried,
+                        trial_number + 1,
+                        trial_project)
+        if fallback_item_count:
+            logger.info("Recorded fallback feedback for %d unlinked items in '%s'", fallback_item_count, trial_project)
 
     # ------------------------------------------------------------------ #
     # Parameter formatting

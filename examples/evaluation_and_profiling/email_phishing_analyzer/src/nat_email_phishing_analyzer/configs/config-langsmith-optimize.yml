@@ -35,6 +35,9 @@ general:
       langsmith:
         _type: langsmith
         project: nat-email-phishing-optimize
+        endpoint: "${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}/otel/v1/traces"
+        api_key: ${LANGSMITH_API_KEY}
+        workspace_id: ${LANGSMITH_WORKSPACE_ID:-}
 
 functions:
   email_phishing_analyzer:

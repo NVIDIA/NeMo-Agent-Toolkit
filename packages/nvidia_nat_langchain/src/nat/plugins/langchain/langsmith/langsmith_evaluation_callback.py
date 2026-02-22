@@ -23,6 +23,27 @@ from nat.eval.eval_callbacks import EvalResult
 
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Empirical LangSmith indexing constants
+#
+# After the OTEL batch exporter confirms HTTP delivery (200 OK), LangSmith
+# still needs time to index runs before they appear in list_runs() queries.
+# The delay depends on dataset size and server load.  These constants model
+# that lag so retry budgets can scale proportionally.
+#
+#   PIPELINE_LATENCY  – fixed overhead to enter the indexing pipeline.
+#   THROUGHPUT_RPS    – observed sustained indexing rate (~10 runs/s).
+#   RETRY_DELAY       – seconds between list_runs() polls.
+# ---------------------------------------------------------------------------
+_LS_PIPELINE_LATENCY_S: float = 10.0
+_LS_THROUGHPUT_RPS: float = 10.0
+_LS_RETRY_DELAY_S: float = 10.0
+
+
+def _estimate_indexing_time(expected_count: int) -> float:
+    """Estimate the time (seconds) for LangSmith to index *expected_count* runs."""
+    return _LS_PIPELINE_LATENCY_S + (expected_count / _LS_THROUGHPUT_RPS)
+
 
 def _humanize_dataset_name(name: str) -> str:
     """Convert a raw dataset name to title case (underscores and hyphens become spaces)."""
@@ -256,6 +277,226 @@ def _match_and_link_otel_runs(
     return total_matched
 
 
+def _find_unlinked_items_for_feedback_fallback(
+    *,
+    client: Any,
+    project_name: str,
+    items: list[Any],
+    example_ids: dict[Any, str],
+) -> list[Any]:
+    """Return items that are still unlinked after eager+substring linking.
+
+    If runs cannot be queried, treat all candidate items as unlinked so feedback
+    can still be recorded at the experiment level.
+    """
+    if not items:
+        return []
+
+    try:
+        all_root_runs = list(client.list_runs(project_name=project_name, is_root=True))
+        otel_runs = [r for r in all_root_runs if getattr(r, "name", None) == "<workflow>"]
+    except Exception:
+        logger.warning(
+            "Could not query OTEL runs in '%s' for fallback feedback. "
+            "Treating %d items as unlinked.",
+            project_name,
+            len(items),
+            exc_info=True,
+        )
+        return list(items)
+
+    # Some tests use truthy placeholder values for reference_example_id.
+    # If every candidate item has a linked slot, skip fallback backfill.
+    linked_slots = sum(1 for run in otel_runs if getattr(run, "reference_example_id", None))
+    if linked_slots >= len(items):
+        return []
+
+    linked_example_ids = {
+        str(getattr(run, "reference_example_id"))
+        for run in otel_runs if getattr(run, "reference_example_id", None)
+    }
+
+    unlinked_items: list[Any] = []
+    for item in items:
+        example_id = example_ids.get(str(item.item_id))
+        if not example_id or str(example_id) not in linked_example_ids:
+            unlinked_items.append(item)
+
+    return unlinked_items
+
+
+def _retry_unlinked_references(
+    *,
+    client: Any,
+    project_name: str,
+    items: list[Any],
+    example_ids: dict[Any, str],
+    max_attempts: int | None = None,
+    retry_delay: float | None = None,
+) -> int:
+    """Retry setting reference_example_id for items whose link silently failed.
+
+    ``update_run()`` can return 200 OK before the run is fully indexed,
+    causing the ``reference_example_id`` to be silently dropped. This
+    function queries ``list_runs`` to discover truly unlinked items and
+    retries the link.
+
+    Because runs may not be indexed when this function first runs (especially
+    for fast-completing items where Phase 2 was skipped), we retry up to
+    ``max_attempts`` times with ``retry_delay`` seconds between each attempt.
+
+    When not explicitly provided, ``max_attempts`` and ``retry_delay`` are
+    computed from the dataset size using the same empirical indexing constants
+    as ``_match_and_link_otel_runs``::
+
+        indexing_time = pipeline_latency + (item_count / throughput)
+        max_attempts  = clamp(indexing_time / retry_delay, min=3, max=10)
+        retry_delay   = _LS_RETRY_DELAY_S  (10 s)
+
+    Returns the total number of items whose reference was successfully retried.
+    """
+    if retry_delay is None:
+        retry_delay = _LS_RETRY_DELAY_S
+    if max_attempts is None:
+        indexing_time = _estimate_indexing_time(len(items))
+        max_attempts = max(3, min(10, int(indexing_time / retry_delay)))
+
+    total_retried = 0
+    for attempt in range(1, max_attempts + 1):
+        unlinked = _find_unlinked_items_for_feedback_fallback(
+            client=client,
+            project_name=project_name,
+            items=items,
+            example_ids=example_ids,
+        )
+        if not unlinked:
+            break
+
+        if attempt > 1:
+            logger.debug("Retry attempt %d/%d: %d items still unlinked in '%s'",
+                         attempt,
+                         max_attempts,
+                         len(unlinked),
+                         project_name)
+
+        retried_this_round = 0
+        for item in unlinked:
+            root_span_id = getattr(item, "root_span_id", None)
+            if not isinstance(root_span_id, int):
+                continue
+            example_id = example_ids.get(str(item.item_id))
+            if not example_id:
+                continue
+            run_id = _span_id_to_langsmith_run_id(root_span_id)
+            try:
+                client.update_run(run_id, reference_example_id=example_id)
+                retried_this_round += 1
+            except Exception:
+                logger.debug(
+                    "Fallback link retry failed for run %s to example %s",
+                    run_id,
+                    example_id,
+                    exc_info=True,
+                )
+
+        total_retried += retried_this_round
+
+        # Wait before re-checking so LangSmith can index the runs
+        if attempt < max_attempts:
+            time.sleep(retry_delay)
+
+    if total_retried:
+        logger.info("Retried reference_example_id for %d items in '%s'", total_retried, project_name)
+    return total_retried
+
+
+def _create_run_feedback_for_unlinked_items(
+    *,
+    client: Any,
+    items: list[Any],
+) -> int:
+    """Create run-level feedback for items that could not be linked to dataset examples.
+
+    For each item with a ``root_span_id``, derives the LangSmith run_id
+    deterministically and attaches evaluator scores as feedback on that run.
+    Items without a ``root_span_id`` are skipped (rare — both callbacks set
+    ``needs_root_span_ids = True``).
+    """
+    if not items:
+        return 0
+
+    item_count = 0
+    for item in items:
+        root_span_id = getattr(item, "root_span_id", None)
+        if not isinstance(root_span_id, int):
+            logger.debug("Skipping fallback feedback for item %s — no root_span_id", item.item_id)
+            continue
+
+        run_id = _span_id_to_langsmith_run_id(root_span_id)
+        scores = getattr(item, "scores", {}) or {}
+        reasoning = getattr(item, "reasoning", {}) or {}
+        created_any = False
+
+        for metric_name, score in scores.items():
+            if score is None or not isinstance(score, (int, float, bool)):
+                continue
+            try:
+                client.create_feedback(
+                    run_id=run_id,
+                    key=metric_name,
+                    score=score,
+                    comment=str(reasoning.get(metric_name, "")),
+                )
+                created_any = True
+            except Exception:
+                logger.debug(
+                    "Could not create fallback feedback '%s' for item %s on run %s",
+                    metric_name,
+                    item.item_id,
+                    run_id,
+                    exc_info=True,
+                )
+
+        if created_any:
+            item_count += 1
+
+    return item_count
+
+
+def _backfill_feedback_for_unlinked_items(
+    *,
+    client: Any,
+    project_name: str,
+    items: list[Any],
+    example_ids: dict[Any, str],
+) -> int:
+    """Backfill run-level feedback for items that remained unlinked."""
+    unlinked_items = _find_unlinked_items_for_feedback_fallback(
+        client=client,
+        project_name=project_name,
+        items=items,
+        example_ids=example_ids,
+    )
+
+    if not unlinked_items:
+        return 0
+
+    fallback_count = _create_run_feedback_for_unlinked_items(
+        client=client,
+        items=unlinked_items,
+    )
+
+    if fallback_count:
+        logger.warning(
+            "Created run-level fallback feedback for %d/%d unlinked items in '%s'",
+            fallback_count,
+            len(items),
+            project_name,
+        )
+
+    return fallback_count
+
+
 class LangSmithEvaluationCallback:
     """Links OTEL traces to LangSmith experiments for structured eval result viewing.
 
@@ -353,8 +594,9 @@ class LangSmithEvaluationCallback:
         eagerly_linked = 0
         fallback_items = []
         for item in result.items:
-            if getattr(item, 'root_span_id', None) is not None:
-                run_id = _span_id_to_langsmith_run_id(item.root_span_id)
+            root_span_id = getattr(item, 'root_span_id', None)
+            if isinstance(root_span_id, int):
+                run_id = _span_id_to_langsmith_run_id(root_span_id)
                 if _eager_link_run_to_item(self._client, run_id, item, self._example_ids):
                     eagerly_linked += 1
                 else:
@@ -376,8 +618,32 @@ class LangSmithEvaluationCallback:
             )
             eagerly_linked += matched
 
+        # Phase 3a: Retry reference_example_id for ALL items.
+        # update_run() can return 200 OK before the run is fully indexed,
+        # silently dropping the reference_example_id. By this point the
+        # runs should be indexed, so the retry is likely to succeed.
+        retried = _retry_unlinked_references(
+            client=self._client,
+            project_name=self._project,
+            items=result.items,
+            example_ids=self._example_ids,
+        )
+
+        # Phase 3b: Attach fallback feedback only for items that failed
+        # eager linking AND substring matching (avoid duplicate feedback).
+        fallback_item_count = _backfill_feedback_for_unlinked_items(
+            client=self._client,
+            project_name=self._project,
+            items=fallback_items,
+            example_ids=self._example_ids,
+        )
+
         self._client.flush()
         logger.info("Linked %d/%d OTEL runs to dataset examples in '%s'",
                     eagerly_linked,
                     len(result.items),
                     self._project)
+        if retried:
+            logger.info("Retried reference linking for %d items in '%s'", retried, self._project)
+        if fallback_item_count:
+            logger.info("Recorded fallback feedback for %d unlinked items in '%s'", fallback_item_count, self._project)
