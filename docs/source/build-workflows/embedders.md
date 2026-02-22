@@ -24,7 +24,7 @@ NeMo Agent Toolkit supports the following embedder providers:
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
-| [HuggingFace](https://huggingface.co) | `huggingface` | Local sentence-transformers or remote TEI/Inference Endpoints |
+| [HuggingFace](https://huggingface.co) | `huggingface` | Local sentence-transformers or remote Inference Endpoints (TEI) |
 
 ## Embedder Configuration
 

@@ -164,6 +164,7 @@ Qwen
 [Ss]andboxing
 [Ss]anitiz(e|ed|ation|ing)
 [Ss]erializable
+[Ss]erverless
 spaCy
 SQLAlchemy
 SSE
