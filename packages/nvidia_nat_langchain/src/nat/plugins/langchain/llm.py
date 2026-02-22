@@ -153,7 +153,7 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
     http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "api_version"},
+        exclude={"type", "thinking", "api_type", "api_version", "request_timeout"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -205,7 +205,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
     http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        exclude={"type", "thinking", "api_type", "api_key", "base_url", "request_timeout"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,

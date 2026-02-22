@@ -147,7 +147,7 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
     # Extract AutoGen-compatible configuration
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_key", "base_url"},
+            exclude={"type", "model_name", "thinking", "api_key", "base_url", "request_timeout"},
             by_alias=True,
             exclude_none=True,
         ),
@@ -157,6 +157,8 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
         config_obj["api_key"] = api_key
     if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
         config_obj["base_url"] = base_url
+    if llm_config.request_timeout is not None:
+        config_obj["timeout"] = llm_config.request_timeout
 
     # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
     model_info = ModelInfo(vision=False,
@@ -204,11 +206,14 @@ async def azure_openai_autogen(llm_config: AzureOpenAIModelConfig,
         "api_version":
             llm_config.api_version,
         **llm_config.model_dump(
-            exclude={"type", "azure_deployment", "thinking", "azure_endpoint", "api_version"},
+            exclude={"type", "azure_deployment", "thinking", "azure_endpoint", "api_version", "request_timeout"},
             by_alias=True,
             exclude_none=True,
         ),
     }
+
+    if llm_config.request_timeout is not None:
+        config_obj["timeout"] = llm_config.request_timeout
 
     model_info = ModelInfo(vision=False,
                            function_calling=True,
