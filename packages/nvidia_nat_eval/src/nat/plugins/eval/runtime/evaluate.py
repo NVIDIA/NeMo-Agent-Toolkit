@@ -21,6 +21,7 @@ import warnings
 from datetime import UTC
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from uuid import uuid4
 
@@ -47,6 +48,9 @@ from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.plugins.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.runtime.session import SessionManager
 
+if TYPE_CHECKING:
+    from nat.eval.eval_callbacks import EvalCallbackManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,7 +63,7 @@ class EvaluationRun:
         Future versions may introduce breaking changes without notice.
     """
 
-    def __init__(self, config: EvaluationRunConfig, callback_manager=None):
+    def __init__(self, config: EvaluationRunConfig, callback_manager: "EvalCallbackManager | None" = None):
         """
         Initialize an EvaluationRun with configuration.
         """

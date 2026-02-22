@@ -120,8 +120,15 @@ class LangSmithOptimizationCallback:
     # Dataset management
     # ------------------------------------------------------------------ #
 
-    def _ensure_dataset(self, eval_result: Any) -> None:
-        """Create the dataset for this optimization run (once)."""
+    def _create_dataset_with_examples(
+        self,
+        items: list[tuple[str, str, str]],
+    ) -> None:
+        """Create the LangSmith dataset and populate it with examples.
+
+        Args:
+            items: List of ``(item_id, question, expected)`` tuples.
+        """
         if self._dataset_id is not None:
             return
         run_num = self._get_run_number()
@@ -130,40 +137,7 @@ class LangSmithOptimizationCallback:
         ds = self._client.create_dataset(dataset_name=dataset_name, description="NAT optimizer eval dataset")
         self._dataset_id = str(ds.id)
         self._dataset_name = dataset_name
-        for item in eval_result.items:
-            item_id = str(item.item_id)
-            example = self._client.create_example(
-                inputs={
-                    "nat_item_id": item_id, "question": str(item.input_obj)
-                },
-                outputs={"expected": str(item.expected_output)},
-                dataset_id=self._dataset_id,
-            )
-            self._example_ids[item_id] = str(example.id)
-        logger.info("Created LangSmith dataset '%s' with %d examples", dataset_name, len(eval_result.items))
-
-    def pre_create_experiment(self, dataset_items: list) -> None:
-        """Create the dataset upfront (before any trials run).
-
-        Must be called BEFORE get_trial_project_name() so the dataset exists
-        when per-trial projects are pre-created with reference_dataset_id.
-        Accepts list[EvalInputItem] from the eval framework.
-        """
-        if self._dataset_id is not None:
-            return
-        run_num = self._get_run_number()
-        base_name = self._build_base_name()
-        dataset_name = f"{base_name} (Run #{run_num})"
-        ds = self._client.create_dataset(
-            dataset_name=dataset_name,
-            description="NAT optimizer eval dataset",
-        )
-        self._dataset_id = str(ds.id)
-        self._dataset_name = dataset_name
-        for item in dataset_items:
-            item_id = str(item.id)
-            question = str(item.input_obj) if item.input_obj else ""
-            expected = str(item.expected_output_obj) if item.expected_output_obj else ""
+        for item_id, question, expected in items:
             example = self._client.create_example(
                 inputs={
                     "nat_item_id": item_id, "question": question
@@ -172,7 +146,25 @@ class LangSmithOptimizationCallback:
                 dataset_id=self._dataset_id,
             )
             self._example_ids[item_id] = str(example.id)
-        logger.info("Created LangSmith dataset '%s' with %d examples", dataset_name, len(dataset_items))
+        logger.info("Created LangSmith dataset '%s' with %d examples", dataset_name, len(items))
+
+    def _ensure_dataset(self, eval_result: Any) -> None:
+        """Create the dataset for this optimization run (once)."""
+        self._create_dataset_with_examples([(str(item.item_id), str(item.input_obj), str(item.expected_output))
+                                            for item in eval_result.items])
+
+    def pre_create_experiment(self, dataset_items: list) -> None:
+        """Create the dataset upfront (before any trials run).
+
+        Must be called BEFORE get_trial_project_name() so the dataset exists
+        when per-trial projects are pre-created with reference_dataset_id.
+        Accepts list[EvalInputItem] from the eval framework.
+        """
+        self._create_dataset_with_examples([(
+            str(item.id),
+            str(item.input_obj) if item.input_obj else "",
+            str(item.expected_output_obj) if item.expected_output_obj else "",
+        ) for item in dataset_items])
 
     # ------------------------------------------------------------------ #
     # OTEL run linking (per-trial project)

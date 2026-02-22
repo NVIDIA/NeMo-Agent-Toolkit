@@ -7189,7 +7189,6 @@ dependencies = [
     { name = "langchain-openai" },
     { name = "langchain-tavily" },
     { name = "langgraph" },
-    { name = "langsmith" },
     { name = "nvidia-nat-core" },
     { name = "openevals" },
 ]
@@ -7208,7 +7207,6 @@ requires-dist = [
     { name = "langchain-openai", specifier = ">=1.1.6,<2.0.0" },
     { name = "langchain-tavily", specifier = ">=0.2.16,<1.0.0" },
     { name = "langgraph", specifier = ">=1.0.5,<2.0.0" },
-    { name = "langsmith", specifier = ">=0.6,<1.0" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
