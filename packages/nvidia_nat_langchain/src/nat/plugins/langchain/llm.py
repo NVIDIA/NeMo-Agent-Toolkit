@@ -149,16 +149,21 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    http_async_client: httpx.AsyncClient = create_metadata_injection_client()
+    client_kwargs: dict = {}
+    if llm_config.request_timeout is not None:
+        client_kwargs["timeout"] = llm_config.request_timeout
+    http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
 
     try:
         client = AzureChatOpenAI(
             http_async_client=http_async_client,  # type: ignore[call-arg]
-            **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
-                                    by_alias=True,
-                                    exclude_none=True,
-                                    exclude_unset=True),
             api_version=llm_config.api_version,  # type: ignore[call-arg]
+            **llm_config.model_dump(
+                exclude={"type", "thinking", "api_type", "api_version"},
+                by_alias=True,
+                exclude_none=True,
+                exclude_unset=True,
+            ),
         )
         if "http_async_client" in client.model_kwargs:
             del client.model_kwargs["http_async_client"]
@@ -194,7 +199,10 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    http_async_client: httpx.AsyncClient = create_metadata_injection_client()
+    client_kwargs: dict = {}
+    if llm_config.request_timeout is not None:
+        client_kwargs["timeout"] = llm_config.request_timeout
+    http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
 
     config_dict = llm_config.model_dump(
         exclude={"type", "thinking", "api_type", "api_key", "base_url"},

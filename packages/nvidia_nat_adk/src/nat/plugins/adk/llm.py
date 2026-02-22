@@ -43,7 +43,15 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
 
     config_dict = config.model_dump(
         exclude={
-            "type", "max_retries", "thinking", "azure_endpoint", "azure_deployment", "model_name", "model", "api_type"
+            "type",
+            "max_retries",
+            "thinking",
+            "azure_endpoint",
+            "azure_deployment",
+            "model_name",
+            "model",
+            "api_type",
+            "request_timeout"
         },
         by_alias=True,
         exclude_none=True,
@@ -51,6 +59,8 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
     )
     if config.azure_endpoint:
         config_dict["api_base"] = config.azure_endpoint
+    if config.request_timeout is not None:
+        config_dict["timeout"] = config.request_timeout
 
     config_dict["api_version"] = config.api_version
 
@@ -116,7 +126,7 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
+        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type", "request_timeout"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -126,6 +136,8 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
         config_dict["api_key"] = api_key
     if (base_url := config.base_url or os.getenv("OPENAI_BASE_URL")):
         config_dict["api_base"] = base_url
+    if config.request_timeout is not None:
+        config_dict["timeout"] = config.request_timeout
 
     yield LiteLlm(config.model_name, **config_dict)
 
