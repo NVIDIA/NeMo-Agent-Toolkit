@@ -417,8 +417,10 @@ class DatasetHandler:
 
         indent = 2
         if self.is_structured_input():
-            # Extract structured data from EvalInputItems
+            # Extract structured data from EvalInputItems, preserving any additional
+            # fields from the original dataset so they survive --skip_workflow round-trips.
             data = [{
+                **(item.full_dataset_entry if isinstance(item.full_dataset_entry, dict) else {}),
                 self.id_key: item.id,
                 self.question_key: item.input_obj,
                 self.answer_key: item.expected_output_obj,

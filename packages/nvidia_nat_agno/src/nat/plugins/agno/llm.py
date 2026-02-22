@@ -108,7 +108,7 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_type", "api_key", "base_url"},
+            exclude={"type", "model_name", "thinking", "api_type", "api_key", "base_url", "request_timeout"},
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
@@ -119,6 +119,8 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
         config_obj["api_key"] = api_key
     if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
         config_obj["base_url"] = base_url
+    if llm_config.request_timeout is not None:
+        config_obj["timeout"] = llm_config.request_timeout
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
         client = OpenAIResponses(**config_obj, id=llm_config.model_name)
