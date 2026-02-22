@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
@@ -27,6 +29,7 @@ from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 ModelType = TypeVar("ModelType")
@@ -35,8 +38,6 @@ ModelType = TypeVar("ModelType")
 def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
 
     from semantic_kernel.contents.chat_history import ChatHistory
-    from semantic_kernel.contents.chat_message_content import ChatMessageContent
-    from semantic_kernel.contents.utils.author_role import AuthorRole
 
     class SemanticKernelThinkingInjector(BaseThinkingInjector):
 
@@ -61,8 +62,8 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
                 return FunctionArgumentWrapper(new_messages, *args, **kwargs)
             else:
                 new_messages = ChatHistory(
-                    [ChatMessageContent(role=AuthorRole.SYSTEM, content=self.system_prompt)] + chat_history.messages,
-                    system_message=chat_history.system_message,
+                    chat_history.messages,
+                    system_message=f"{self.system_prompt}\n\n{chat_history.system_message}",
                 )
                 return FunctionArgumentWrapper(new_messages, *args, **kwargs)
 
@@ -91,8 +92,10 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
 
     from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
+
     llm = AzureChatCompletion(
-        api_key=llm_config.api_key,
+        api_key=get_secret_value(llm_config.api_key),
         api_version=llm_config.api_version,
         endpoint=llm_config.azure_endpoint,
         deployment_name=llm_config.azure_deployment,
@@ -104,8 +107,14 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
 async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builder):
 
+    from openai import AsyncOpenAI
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
-    llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+    api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
+    base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
+
+    async with AsyncOpenAI(api_key=api_key, base_url=base_url) as async_client:
+        llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name, async_client=async_client)
+        yield _patch_llm_based_on_config(llm, llm_config)

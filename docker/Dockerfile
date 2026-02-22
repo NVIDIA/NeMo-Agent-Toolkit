@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,13 +16,15 @@
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
 ARG PYTHON_VERSION=3.13
-ARG UV_VERSION=0.8.15
 # Specified on the command line with --build-arg NAT_VERSION=$(python -m setuptools_scm)
 ARG NAT_VERSION
 
 FROM --platform=$TARGETPLATFORM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 
-COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /uvx /bin/
+ARG PYTHON_VERSION
+ARG NAT_VERSION
+
+COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -31,7 +33,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     export TZ=Etc/UTC && \
     apt-get update && \
     apt upgrade -y && \
-    apt-get install --no-install-recommends  -y ca-certificates && \
+    apt-get install --no-install-recommends  -y ca-certificates tzdata && \
     apt clean && \
     update-ca-certificates
 
@@ -47,7 +49,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     . /workspace/.venv/bin/activate && \
     test -n "${NAT_VERSION}" || { echo "NAT_VERSION build-arg is required" >&2; exit 1; } && \
-    uv pip install --prerelease=allow "nvidia-nat[all]==${NAT_VERSION}"
+    uv pip install --prerelease=allow "nvidia-nat[most]==${NAT_VERSION}"
 
 # Environment variables for the venv
 ENV PATH="/workspace/.venv/bin:$PATH"

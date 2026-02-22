@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,8 +30,8 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
-from nat.profiler.callbacks.base_callback_class import BaseProfilerCallback
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.data_models.profiler_callback import BaseProfilerCallback
+from nat.data_models.token_usage import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,7 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
     A callback manager/handler for CrewAI that intercepts calls to:
       - ToolUsage._use
       - LLM Calls
+
     to collect usage statistics (tokens, inputs, outputs, time intervals, etc.)
     and store them in NAT's usage_stats queue for subsequent analysis.
     """
@@ -153,12 +154,15 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             seconds_between_calls = int(now - self.last_call_ts)
             model_name = kwargs.get('model', "")
 
-            model_input = ""
+            model_input = []
             try:
                 for message in kwargs.get('messages', []):
-                    model_input += message.get('content', "")
+                    content = message.get('content', "")
+                    model_input.append("" if content is None else str(content))
             except Exception as e:
                 logger.exception("Error getting model input: %s", e)
+
+            model_input = "".join(model_input)
 
             # Record the start event
             input_stats = IntermediateStepPayload(
@@ -176,13 +180,16 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             # Call the original litellm.completion(...)
             output = original_func(*args, **kwargs)
 
-            model_output = ""
+            model_output = []
             try:
                 for choice in output.choices:
                     msg = choice.model_extra["message"]
-                    model_output += msg.get('content', "")
+                    content = msg.get('content', "")
+                    model_output.append("" if content is None else str(content))
             except Exception as e:
                 logger.exception("Error getting model output: %s", e)
+
+            model_output = "".join(model_output)
 
             now = time.time()
             # Record the end event

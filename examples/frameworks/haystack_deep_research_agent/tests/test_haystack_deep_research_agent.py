@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,46 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import importlib
 import os
-import urllib.error
 import urllib.request
 from pathlib import Path
 
 import pytest
 
 
-def _opensearch_reachable(url: str) -> bool:
+@pytest.fixture(name="opensearch_url", scope="session")
+def opensearch_url_fixture(fail_missing: bool) -> str:
+    url = os.getenv("NAT_CI_OPENSEARCH_URL", "http://localhost:9200")
     try:
         with urllib.request.urlopen(f"{url.rstrip('/')}/_cluster/health", timeout=1) as resp:
             return 200 <= getattr(resp, "status", 0) < 300
     except Exception:
-        return False
+        failure_reason = f"Unable to connect to open search server at {url}"
+        if fail_missing:
+            raise RuntimeError(failure_reason)
+        pytest.skip(reason=failure_reason)
 
 
-@pytest.mark.e2e
-@pytest.mark.skipif(
-    not os.environ.get("NVIDIA_API_KEY"),
-    reason="NVIDIA_API_KEY not set; skipping live e2e test for haystack_deep_research_agent.",
-)
-@pytest.mark.skipif(
-    not os.environ.get("SERPERDEV_API_KEY"),
-    reason="SERPERDEV_API_KEY not set; skipping live e2e test for haystack_deep_research_agent.",
-)
-@pytest.mark.skipif(
-    not _opensearch_reachable("http://localhost:9200"),
-    reason="OpenSearch not reachable on http://localhost:9200; skipping e2e test.",
-)
-async def test_full_workflow_e2e() -> None:
-    config_file = (Path(__file__).resolve().parents[1] / "src" / "aiq_haystack_deep_research_agent" / "configs" /
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "serperdev")
+async def test_full_workflow_e2e(opensearch_url: str) -> None:
+
+    from nat.runtime.loader import load_config
+    from nat.test.utils import run_workflow
+
+    config_file = (Path(__file__).resolve().parents[1] / "src" / "nat_haystack_deep_research_agent" / "configs" /
                    "config.yml")
 
-    loader_mod = importlib.import_module("aiq.runtime.loader")
-    load_workflow = getattr(loader_mod, "load_workflow")
+    config = load_config(config_file)
+    config.workflow.opensearch_url = opensearch_url
 
-    async with load_workflow(config_file) as workflow:
-        async with workflow.run("Give a short overview of this workflow.") as runner:
-            result = await runner.result(to_type=str)
+    result = await run_workflow(question="Give a short overview of this workflow.",
+                                expected_answer="workflow",
+                                config=config)
 
     assert isinstance(result, str)
     assert len(result) > 0
@@ -78,5 +74,6 @@ def test_config_yaml_loads_and_has_keys() -> None:
             "opensearch_url:",
             "index_on_startup:",
             "data_dir:",
+            "embedding_dim:",
     ]:
         assert key in text, f"Missing key: {key}"

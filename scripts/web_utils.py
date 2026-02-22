@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -116,7 +116,7 @@ def cache_html(input_dict: dict, base_path="."):
 
 
 def _get_short_url(url: str):
-    path = url.split("://")[-1].split("www.")[-1]
+    path = url.rsplit("://", maxsplit=1)[-1].split("www.")[-1]
     path_components = path.split("/")
     domain = path_components[0]
     short_url = "/".join(path_components[1:])

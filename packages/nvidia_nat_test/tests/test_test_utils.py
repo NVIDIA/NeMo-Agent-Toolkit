@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -37,16 +37,19 @@ def simple_web_query_src_dir_fixture(simple_web_query_dir: Path) -> Path:
     return simple_web_query_dir.joinpath("src", "nat_simple_web_query")
 
 
+@pytest.mark.xfail(reason="This test fails unless an example is installed")
 def test_locate_example_src_dir(example_config_class: type, simple_web_query_src_dir: Path):
     example_dir = utils.locate_example_src_dir(example_config_class)
     assert example_dir == simple_web_query_src_dir
 
 
+@pytest.mark.xfail(reason="This test fails unless an example is installed")
 def test_locate_example_dir(example_config_class: type, simple_web_query_dir: Path):
     example_dir = utils.locate_example_dir(example_config_class)
     assert example_dir == simple_web_query_dir
 
 
+@pytest.mark.xfail(reason="This test fails unless an example is installed")
 @pytest.mark.parametrize("config_file_name, exists", [("config.yml", True), ("nonexistent.yml", False)])
 @pytest.mark.parametrize("assert_exists", [True, False])
 def test_locate_example_config(example_config_class: type,

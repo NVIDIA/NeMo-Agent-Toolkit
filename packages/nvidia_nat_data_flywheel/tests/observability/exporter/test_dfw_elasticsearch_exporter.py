@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
-from nat.builder.context import AIQContextState
+from nat.builder.context import ContextState
 from nat.plugins.data_flywheel.observability.exporter.dfw_elasticsearch_exporter import DFWElasticsearchExporter
 from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch import ContractVersion
 
@@ -69,7 +69,7 @@ class TestDFWElasticsearchExporter:
         mock_elasticsearch_client = AsyncMock()
         mock_elasticsearch.return_value = mock_elasticsearch_client
 
-        context_state = Mock(spec=AIQContextState)
+        context_state = Mock(spec=ContextState)
         custom_headers = {"Custom-Header": "value"}
 
         exporter = DFWElasticsearchExporter(context_state=context_state,

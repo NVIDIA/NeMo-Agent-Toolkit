@@ -8,7 +8,7 @@ alwaysApply: false
 ## Referenced Documentation
 
 - **README**: [README.md](mdc:README.md) - Main project overview, features, and getting started guide
-- **Installation Guide**: [installing.md](mdc:docs/source/quick-start/installing.md) - Comprehensive installation instructions and setup guide
+- **Installation Guide**: [installation.md](mdc:docs/source/quick-start/installation.md) - Comprehensive installation instructions and setup guide
 
 ## Rules
 

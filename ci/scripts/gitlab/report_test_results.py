@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import argparse
+import logging
 import os
 import sys
 import typing
@@ -22,6 +23,11 @@ import xml.etree.ElementTree as ET
 from datetime import date
 
 from slack_sdk import WebClient
+
+MAX_TEXT_LENGTH = 3000  # Slack message text limit
+BLOCK_LIMIT = 20  # Slack block limit -- actual limit is 50, but we will use a smaller limit to be safe
+
+logger = logging.getLogger()
 
 
 class ReportMessages(typing.NamedTuple):
@@ -94,11 +100,19 @@ def text_to_block(text: str) -> dict:
 
 
 def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
+    if len(text) > MAX_TEXT_LENGTH:
+        text = text[:(MAX_TEXT_LENGTH - 3)] + "..."
+
     blocks.append(text_to_block(text))
     plain_text.append(text)
 
 
+def chunk_items(items: list[typing.Any], chunk_size: int) -> list[list[typing.Any]]:
+    return [items[index:index + chunk_size] for index in range(0, len(items), chunk_size)]
+
+
 def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> ReportMessages:
+    branch_name = os.environ.get("CI_COMMIT_BRANCH", "unknown")
     num_errors = junit_data['num_errors']
     num_failures = junit_data['num_failures']
 
@@ -107,7 +121,7 @@ def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> Rep
     plain_text = []
     blocks = []
 
-    summary_line = f"Nightly CI/CD Test Results for {date.today()}"
+    summary_line = f"Nightly CI/CD Test Results for `{branch_name}` - {date.today()}"
     plain_text.append(summary_line + "\n")
 
     num_errors_and_failures = num_errors + num_failures
@@ -156,18 +170,34 @@ def main():
     parser.add_argument('junit_file', type=str, help='JUnit XML file to parse')
     parser.add_argument('coverage_file', type=str, help='Coverage report file to parse')
 
+    logging.basicConfig(level=logging.INFO)
+
     try:
         slack_token = os.environ["SLACK_TOKEN"]
         slack_channel = os.environ["SLACK_CHANNEL"]
     except KeyError:
-        print('Error: Set environment variables SLACK_TOKEN and SLACK_CHANNEL to post to slack.')
+        logger.error('Error: Set environment variables SLACK_TOKEN and SLACK_CHANNEL to post to slack.')
         return 1
 
     args = parser.parse_args()
-    junit_data = parse_junit(args.junit_file)
-    coverage_data = parse_coverage(args.coverage_file)
 
-    report_messages = build_messages(junit_data, coverage_data)
+    return_code = 0
+    try:
+        junit_data = parse_junit(args.junit_file)
+        coverage_data = parse_coverage(args.coverage_file)
+
+        report_messages = build_messages(junit_data, coverage_data)
+    except Exception as e:
+        # Intentionally not using logger.exception to limit what we log in CI.
+        msg = f"Error: Failed to parse test results or coverage data: {e}"
+        logger.error(msg)
+        plain_text = []
+        blocks = []
+        add_text(msg, blocks, plain_text)
+
+        # Not using the failure fields here since this is not a test failure but a script failure.
+        report_messages = ReportMessages(plain_text=plain_text, blocks=blocks, failure_text=None, failure_blocks=None)
+        return_code = 1
 
     client = WebClient(token=slack_token)
     response = client.chat_postMessage(channel=slack_channel,
@@ -178,12 +208,16 @@ def main():
     if report_messages.failure_text is not None:
         # Since potentially a large number of failures could occur, we will post them in a thread to the original
         # message to avoid spamming the channel.
-        client.chat_postMessage(channel=slack_channel,
-                                text="\n".join(report_messages.failure_text),
-                                blocks=report_messages.failure_blocks,
-                                thread_ts=response["ts"])
+        blocks_chunks = chunk_items(report_messages.failure_blocks or [], BLOCK_LIMIT)
+        text_chunks = chunk_items(report_messages.failure_text or [], BLOCK_LIMIT)
 
-    return 0
+        for blocks_chunk, text_chunk in zip(blocks_chunks, text_chunks):
+            client.chat_postMessage(channel=slack_channel,
+                                    text="\n".join(text_chunk),
+                                    blocks=blocks_chunk,
+                                    thread_ts=response["ts"])
+
+    return return_code
 
 
 if __name__ == '__main__':

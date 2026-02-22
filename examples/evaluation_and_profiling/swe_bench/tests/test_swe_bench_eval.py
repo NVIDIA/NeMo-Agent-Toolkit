@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.test.utils import locate_example_config
 from nat_swe_bench.config import SweBenchWorkflowConfig
 
@@ -119,6 +119,6 @@ async def test_eval():
         if "swe_bench_output.json" in output_file_str:
             swe_bench_output_file = output_file
 
-    # Verify the rag_accuracy_output.json file
-    assert swe_bench_output_file, "The rag_accuracy_output.json file was not created"
+    # Verify the swe_bench_output.json file
+    assert swe_bench_output_file, "The swe_bench_output.json file was not created"
     validate_evaluation_output(swe_bench_output_file)

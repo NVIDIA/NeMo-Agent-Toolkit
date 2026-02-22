@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 # Using Authentication in the NeMo Agent Toolkit
+
+**Complexity:** 🟨 Intermediate
 
 This example demonstrates how to use the library's native support for authentication to allow agents to use tools that require
 authentication to use. Particularly, this example highlights how to use the `OAuth 2.0 Authorization Code Flow` to authenticate
@@ -98,29 +100,28 @@ docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-d
 docker compose -f examples/front_ends/simple_auth/docker-compose.yml --project-directory examples/front_ends/simple_auth down -v
 ```
 
-Browse to **`http://localhost:5001/`** – you should see the demo home page. Sign up with any name.
-
 ## Registering a Dummy Client (“test”)
 
-1. Open **Clients → Create New Client** in the demo UI.
+1. Click **Create Client** in the demo UI.
 2. Fill the form exactly as below and click **Submit**:
 
-| Field                      | Value                                                 |
-|----------------------------|-------------------------------------------------------|
-| Client Name                | `test`                                                |
-| Client URI                 | `https://test.com`                                    |
-| Redirect URIs              | `http://localhost:8000/auth/redirect`                 |
-| Allowed Grant Types        | `authorization_code` and `refresh_token` on new lines |
-| Allowed Response Types     | `code`                                                |
-| Allowed Scope              | `openid profile email`                                |
-| Token Endpoint Auth Method | `client_secret_post`                                  |
+   | Field                      | Value                                                 |
+   |----------------------------|-------------------------------------------------------|
+   | Client Name                | `test`                                                |
+   | Client URI                 | `https://test.com`                                    |
+   | Allowed Scope              | `openid profile email`                                |
+   | Redirect URIs              | `http://localhost:8000/auth/redirect`                 |
+   | Allowed Grant Types        | `authorization_code` and `refresh_token` on new lines |
+   | Allowed Response Types     | `code`                                                |
+   | Token Endpoint Auth Method | `client_secret_post`                                  |
+
+   Ensure all values are entered correctly as the authorization server uses this information to validate redirect URIs, client credentials, and grant types during the OAuth token exchange. Incorrect entries may cause the OAuth flow to fail. If you encounter any errors, double-check that the information entered matches the expected configuration.
 
 3. Copy the generated **Client ID** and **Client Secret** – you’ll need them in your agent’s config.
 
 ## Deploy the NeMo Agent Toolkit UI
 
-Follow the instructions at the GitHub repository to deploy the [NeMo Agent Toolkit UI](https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI)
-to deploy the UI that works with the agent in this example. Configure it according to the instructions in the README.
+Follow the instructions in the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) guide to set up and launch the NeMo Agent Toolkit UI.
 
 ## Update Your Environment Variables
 
@@ -129,6 +130,7 @@ Export your saved client ID and secret to the following environment variables:
 ```bash
 export NAT_OAUTH_CLIENT_ID=<your_client_id>
 export NAT_OAUTH_CLIENT_SECRET=<your_client_secret>
+export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
 ## Serve The Agent
@@ -144,16 +146,18 @@ handles authentication.
 
 ## Query the Agent
 
-Open the NeMo Agent Toolkit UI in your browser at `http://localhost:3000`. Ensure settings are configured correctly to point to your agent's API endpoint at `http://localhost:8000` and
-the WebSocket URL at `ws://localhost:8000/websocket`.
+Open the NeMo Agent Toolkit UI in your browser at http://localhost:3000.
 
-Close the settings window. In your chat window, ensure that `Websocket` mode is enabled by navigating to the top-right corner and selecting the `Websocket` option in the arrow pop-out.
+By default, the UI is configured to connect to your agent's API endpoint at `http://localhost:8000` and the WebSocket URL at `ws://localhost:8000/websocket`. These default values can be changed using environment variables. Refer to [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) for environment variable configuration details.
 
-Once you've successfully connected to the websocket, you can start querying the agent. Asking the agent the following query should initiate the demonstrative authentication flow and then return
-information about the authenticated user:
+> [!IMPORTANT]
+> In your chat window, ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. This is required for the OAuth 2.0 authentication flow to work properly.
+
+Once you've successfully connected to the WebSocket, you can start querying the agent. Asking the agent the following query should initiate the demonstrative authentication flow and then return information about the authenticated user:
 
 ```text
 Who am I logged in as?
 ```
 
-**Tip**: Remember to enable pop-ups in your browser to allow the OAuth 2.0 provider to open a new window for authentication.
+> [!TIP]
+> If you encounter errors, verify that WebSocket mode is enabled. HTTP requests are the default method of communication, but human-in-the-loop functionality (including OAuth authentication) is not supported through HTTP.

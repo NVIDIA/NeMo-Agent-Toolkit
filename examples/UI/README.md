@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,15 +17,18 @@ limitations under the License.
 
 # Agent Toolkit User Interface Integration
 
-This example demonstrates how to integrate and use the web-based user interface of NVIDIA NeMo Agent toolkit for interactive workflow management. Learn to set up, configure, and customize the UI for seamless agent interaction through both HTTP and WebSocket connections.
+**Complexity:** 🛑 Advanced
+
+This example demonstrates how to integrate and use the web-based user interface of NVIDIA NeMo Agent Toolkit for interactive workflow management. Learn to set up, configure, and customize the UI for seamless agent interaction through both HTTP and WebSocket connections.
 
 ## Key Features
 
-- **Web-Based Interactive Interface:** Provides a complete web UI for interacting with NeMo Agent toolkit workflows through an intuitive chat interface with conversation history and real-time responses.
+- **Web-Based Interactive Interface:** Provides a complete web UI for interacting with NeMo Agent Toolkit workflows through an intuitive chat interface with conversation history and real-time responses.
 - **Multi-Connection Support:** Demonstrates both HTTP and WebSocket connection modes for different use cases, enabling both simple request-response patterns and real-time streaming interactions.
 - **Real-Time Streaming:** Shows how to enable intermediate step streaming for enhanced user experience, allowing users to see agent reasoning and tool execution in real-time.
 - **UI Customization Options:** Supports theme customization, endpoint configuration, and display options to match different deployment environments and user preferences.
 - **Conversation Management:** Includes conversation history, session management, and context preservation across multiple interactions within the same session.
+- **Human-in-the-Loop Support:** Interactive prompts and OAuth consent handling for workflows requiring user input or authentication.
 
 ## What You'll Learn
 
@@ -33,8 +36,11 @@ This example demonstrates how to integrate and use the web-based user interface 
 - **Interactive workflow management**: Use the UI to interact with agents and view conversation history
 - **Connection management**: Configure HTTP and WebSocket connections for different use cases
 - **Real-time streaming**: Enable intermediate step streaming for enhanced user experience
-- **UI customization**: Customize themes, endpoints, and display options
+- **UI customization**: Customize themes, endpoints, and display options through environment variables
 
 ## Quick Start
 
-For complete setup and usage instructions, refer to the comprehensive guide: [Launching the UI](../../docs/source/quick-start/launching-ui.md).
+For complete setup and usage instructions, refer to the comprehensive guide: [Launching the UI](../../docs/source/run-workflows/launching-ui.md).
+
+> [!IMPORTANT]
+> Workflows requiring human input or interaction (such as human-in-the-loop workflows, OAuth authentication, or interactive prompts) must use WebSocket connections. HTTP requests are the default method of communication, but human-in-the-loop functionality is not supported through HTTP. Ensure that `WebSocket` mode is enabled in the UI by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out.

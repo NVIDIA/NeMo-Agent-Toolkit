@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,19 +16,26 @@
 ARG BASE_IMAGE_URL=nvcr.io/nvidia/base/ubuntu
 ARG BASE_IMAGE_TAG=22.04_20240212
 ARG PYTHON_VERSION=3.13
-ARG UV_VERSION=0.8.15
 # Specified on the command line with --build-arg NAT_VERSION=$(python -m setuptools_scm)
 ARG NAT_VERSION
 
 FROM ${BASE_IMAGE_URL}:${BASE_IMAGE_TAG}
 
-COPY --from=ghcr.io/astral-sh/uv:${UV_VERSION} /uv /uvx /bin/
+ARG PYTHON_VERSION
+ARG NAT_VERSION
+
+COPY --from=ghcr.io/astral-sh/uv:0.9.28 /uv /uvx /bin/
 
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Install compiler [g++, gcc] (currently only needed for thinc indirect dependency)
 RUN apt-get update && \
-    apt-get install -y g++ gcc
+    apt-get install -y g++ gcc ca-certificates && \
+    update-ca-certificates
+
+# Set SSL environment variables
+ENV REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
 
 # Set working directory
 WORKDIR /workspace
@@ -46,7 +53,7 @@ RUN --mount=type=cache,id=uv_cache,target=/root/.cache/uv,sharing=locked \
     export SETUPTOOLS_SCM_PRETEND_VERSION_FOR_NAT_SIMPLE_CALCULATOR=${NAT_VERSION} && \
     uv venv --python ${PYTHON_VERSION} /workspace/.venv && \
     uv sync --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
-    uv pip install -e '.[telemetry]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
+    uv pip install -e '.[opentelemetry,phoenix,weave]' --link-mode=copy --compile-bytecode --python ${PYTHON_VERSION} && \
     uv pip install --link-mode=copy ./examples/getting_started/simple_calculator
 
 # Environment variables for the venv

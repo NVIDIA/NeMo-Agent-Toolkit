@@ -1,0 +1,216 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# <!-- path-check-skip-file -->
+
+# =============================================================================
+# RUN WITH PREDICTION TRIE - DYNAMIC HEADER INJECTION
+# =============================================================================
+# Purpose: Use profiled prediction trie for dynamic Dynamo header injection
+#
+# Prerequisites:
+#   1. Run profiling first to build the prediction trie:
+#      nat eval --config_file configs/profile_rethinking_full_test.yml
+#
+#   2. Update prediction_trie_path below to point to the generated trie:
+#      outputs/dynamo_evals/rethinking_full_test_for_profiling/<job_id>/prediction_trie.json
+#
+# What this does:
+#   - Loads the prediction trie built from profiled execution data
+#   - For each LLM call, looks up predictions based on:
+#     * Current function path (e.g., ["react_workflow", "react_agent"])
+#     * Call index within the current function
+#   - Injects dynamic headers per request:
+#     * x-nat-remaining-llm-calls: Expected remaining calls
+#     * x-nat-interarrival-ms: Expected time until next call
+#     * x-nat-expected-output-tokens: Expected output tokens (p90)
+#
+# Benefits over static headers:
+#   - Accurate per-call predictions instead of guessing prefix_total_requests=10
+#   - Different predictions for different parts of the agent workflow
+#   - Dynamo router can make better worker assignment decisions
+#
+# Usage:
+#   nat eval --config_file configs/run_with_prediction_trie.yml
+# =============================================================================
+
+functions:
+  react_benchmark_agent:
+    _type: react_benchmark_agent
+    prefix: "Agent:"
+    decision_only: true
+    canned_response_template: "Successfully executed {tool_name}. Operation completed."
+
+  # Define the ReAct workflow
+  react_workflow:
+    _type: react_agent
+    llm_name: dynamo_llm
+    tool_names: [
+      banking_tools
+    ]
+    verbose: false  # Disable verbose for benchmarking
+    parse_agent_response_max_retries: 3
+    max_tool_calls: 25
+    max_history: 1000
+    pass_tool_call_errors_to_agent: true
+    recursion_limit: 50
+    system_prompt: |
+      You are a tool-calling agent evaluated on TOOL SELECTION capability. Your goal is to select ALL the correct tools, in the correct order, to COMPLETELY handle real-world use-cases.
+
+      IMPORTANT: This is a tool selection exercise, NOT real execution.
+      - Focus on selecting the RIGHT TOOL for each step
+      - Use placeholder or dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
+      - Tool responses are simulated - ignore them and focus on selecting the next appropriate tool
+      - What matters is YOUR INTENT and TOOL CHOICE, not the data quality
+
+      Available tools:
+
+      {tools}
+
+      Use this exact format for EACH response:
+
+      Thought: I need to analyze what the user needs and select the SINGLE NEXT tool to call.
+      Action: the ONE tool to call right now, must be one of [{tool_names}]
+      Action Input: valid JSON with required parameters (use placeholder values)
+
+      CRITICAL RULES:
+      1. Output ONLY ONE Thought, Action, and Action Input per response
+      2. STOP IMMEDIATELY after writing Action Input
+      3. DO NOT write the Observation - the system will provide it
+      4. DO NOT write multiple Thought/Action/Action Input cycles in one response
+
+      When you have called ALL necessary tools:
+      Thought: I have now completed all necessary steps
+      Final Answer: [summary of what was accomplished]
+
+function_groups:
+  banking_tools:
+    _type: banking_tools_group
+    # tools.json available after running: /examples/dynamo_integration/scripts/download_agent_leaderboard_v2.py
+    tools_json_path: ./examples/dynamo_integration/data/raw/banking/tools.json
+    decision_only: true
+    include: [
+      get_account_balance,
+      get_transaction_history,
+      transfer_funds,
+      get_loan_information,
+      get_credit_card_information,
+      get_mortgage_details,
+      get_savings_account_products,
+      schedule_appointment,
+      check_loan_application_status,
+      find_nearby_locations,
+      get_investment_products,
+      report_lost_stolen_card,
+      update_contact_information,
+      setup_automatic_bill_pay,
+      initiate_transaction_dispute,
+      get_exchange_rates,
+      calculate_loan_payment,
+      manage_account_alerts,
+      check_wire_transfer_status,
+      get_cd_products
+    ]
+
+llms:
+  # =========================================================================
+  # DYNAMO LLM WITH PREDICTION TRIE
+  # =========================================================================
+  # Uses prediction_trie_path to load profiled predictions and inject
+  # dynamic headers per LLM call based on current execution context.
+  dynamo_llm:
+    _type: dynamo
+    model_name: llama-3.3-70b
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    temperature: 0.0
+    max_tokens: 8192
+    stop: ["Observation:", "\nThought:"]
+
+    # Dynamo prefix configuration (required for prefix routing)
+    prefix_template: "react-benchmark-{uuid}"
+
+    # Static fallback values (used if trie lookup fails)
+    prefix_total_requests: 10
+    prefix_osl: MEDIUM
+    prefix_iat: MEDIUM
+
+    # =========================================================================
+    # PREDICTION TRIE - Dynamic per-call header injection
+    # =========================================================================
+    # UPDATE THIS PATH to point to your profiled prediction trie:
+    # 1. Run: nat eval --config_file configs/profile_rethinking_full_test.yml
+    # 2. Find the job output directory (includes job_id)
+    # 3. Set path to: <output_dir>/<job_id>/prediction_trie.json
+    prediction_trie_path: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/rethinking_full_test_for_profiling/REPLACE_WITH_JOB_ID/prediction_trie.json
+
+  # Secondary LLM for self-evaluation (no prediction trie needed)
+  eval_llm:
+    _type: dynamo
+    model_name: llama-3.3-70b
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    temperature: 0.0
+    max_tokens: 1024
+
+# Advanced self-evaluating wrapper with feedback
+workflow:
+  _type: self_evaluating_agent_with_feedback
+  wrapped_agent: react_workflow
+  evaluator_llm: eval_llm
+  max_retries: 3
+  min_confidence_threshold: 0.80
+  pass_feedback_to_agent: true
+  verbose: false
+
+eval:
+  general:
+    max_concurrency: 36
+
+    output:
+      dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/prediction_trie_eval/
+      cleanup: false
+      job_management:
+        append_job_id_to_output_dir: true
+
+    dataset:
+      _type: json
+      file_path: ./examples/dynamo_integration/data/agent_leaderboard_v2_banking.json
+      structure:
+        disable: true
+
+    # Lighter profiler config - we're consuming predictions, not building them
+    profiler:
+      compute_llm_metrics: true
+      csv_exclude_io_text: true
+      # No prediction_trie section - we're using the trie, not building it
+
+  # =========================================================================
+  # RUNTIME EVALUATORS - Compare against static header baseline
+  # =========================================================================
+  evaluators:
+    # Primary metric: Average LLM latency per call (seconds)
+    avg_llm_latency:
+      _type: avg_llm_latency
+      max_concurrency: 36
+
+    # Secondary metric: Average workflow runtime (seconds)
+    avg_workflow_runtime:
+      _type: avg_workflow_runtime
+      max_concurrency: 36
+
+    # Tertiary metric: Average number of LLM calls
+    avg_num_llm_calls:
+      _type: avg_num_llm_calls
+      max_concurrency: 36

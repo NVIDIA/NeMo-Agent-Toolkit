@@ -1,0 +1,17 @@
+functions:
+  current_datetime:
+    _type: current_datetime
+  {{python_safe_workflow_name}}:
+    _type: {{python_safe_workflow_name}}
+    prefix: "Hello:"
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+
+workflow:
+  _type: react_agent
+  llm_name: nim_llm
+  tool_names: [current_datetime, {{python_safe_workflow_name}}]

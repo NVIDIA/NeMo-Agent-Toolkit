@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 import logging
 
 from pydantic import Field
+from pydantic import field_validator
 
 from nat.builder.builder import Builder
 from nat.builder.context import Context
@@ -36,6 +37,11 @@ class HITLApprovalFnConfig(FunctionBaseConfig, name="hitl_approval_tool"):
 
     prompt: str = Field(..., description="The prompt to use for the HITL function")
 
+    @field_validator("prompt", mode="after")
+    @classmethod
+    def validate_prompt(cls, prompt: str) -> str:
+        return prompt.strip()
+
 
 @register_function(config_type=HITLApprovalFnConfig)
 async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder):
@@ -49,7 +55,11 @@ async def hitl_approval_function(config: HITLApprovalFnConfig, builder: Builder)
         nat_context = Context.get()
         user_input_manager = nat_context.user_interaction_manager
 
-        human_prompt_text = HumanPromptText(text=prompt, required=True, placeholder="<your response here>")
+        human_prompt_text = HumanPromptText(text=prompt,
+                                            required=True,
+                                            placeholder="<your response here>",
+                                            timeout=60,
+                                            error="Approval window has expired.")
         response: InteractionResponse = await user_input_manager.prompt_user_input(human_prompt_text)
         response_str = response.content.text.lower()  # type: ignore
         selected_option = re.search(r'\b(yes)\b', response_str)

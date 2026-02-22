@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,19 +21,54 @@ repos:
         args: ["-i", "--style", "./pyproject.toml"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.9
+    rev: v0.15.0
     hooks:
       # Run the linter.
       - id: ruff-check
         args: [ --fix ]
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.6.2
+    rev: 0.9.28
     hooks:
-      - id: uv-lock
+      - { id: uv-lock, name: "uv-lock", files: "pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-a2a", args: [--project, packages/nvidia_nat_a2a], files: "packages/nvidia_nat_a2a/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-adk", args: [--project, packages/nvidia_nat_adk], files: "packages/nvidia_nat_adk/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-agno", args: [--project, packages/nvidia_nat_agno], files: "packages/nvidia_nat_agno/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-autogen", args: [--project, packages/nvidia_nat_autogen], files: "packages/nvidia_nat_autogen/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-core", args: [--project, packages/nvidia_nat_core], files: "packages/nvidia_nat_core/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-crewai", args: [--project, packages/nvidia_nat_crewai], files: "packages/nvidia_nat_crewai/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-data_flywheel", args: [--project, packages/nvidia_nat_data_flywheel], files: "packages/nvidia_nat_data_flywheel/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-eval", args: [--project, packages/nvidia_nat_eval], files: "packages/nvidia_nat_eval/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-fastmcp", args: [--project, packages/nvidia_nat_fastmcp], files: "packages/nvidia_nat_fastmcp/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-langchain", args: [--project, packages/nvidia_nat_langchain], files: "packages/nvidia_nat_langchain/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-llama_index", args: [--project, packages/nvidia_nat_llama_index], files: "packages/nvidia_nat_llama_index/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-mcp", args: [--project, packages/nvidia_nat_mcp], files: "packages/nvidia_nat_mcp/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-mem0ai", args: [--project, packages/nvidia_nat_mem0ai], files: "packages/nvidia_nat_mem0ai/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-mysql", args: [--project, packages/nvidia_nat_mysql], files: "packages/nvidia_nat_mysql/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-nemo_customizer", args: [--project, packages/nvidia_nat_nemo_customizer], files: "packages/nvidia_nat_nemo_customizer/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-openpipe_art", args: [--project, packages/nvidia_nat_openpipe_art], files: "packages/nvidia_nat_openpipe_art/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-opentelemetry", args: [--project, packages/nvidia_nat_opentelemetry], files: "packages/nvidia_nat_opentelemetry/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-phoenix", args: [--project, packages/nvidia_nat_phoenix], files: "packages/nvidia_nat_phoenix/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-rag", args: [--project, packages/nvidia_nat_rag], files: "packages/nvidia_nat_rag/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-ragaai", args: [--project, packages/nvidia_nat_ragaai], files: "packages/nvidia_nat_ragaai/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-redis", args: [--project, packages/nvidia_nat_redis], files: "packages/nvidia_nat_redis/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-s3", args: [--project, packages/nvidia_nat_s3], files: "packages/nvidia_nat_s3/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-semantic_kernel", args: [--project, packages/nvidia_nat_semantic_kernel], files: "packages/nvidia_nat_semantic_kernel/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-strands", args: [--project, packages/nvidia_nat_strands], files: "packages/nvidia_nat_strands/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-test", args: [--project, packages/nvidia_nat_test], files: "packages/nvidia_nat_test/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-vanna", args: [--project, packages/nvidia_nat_vanna], files: "packages/nvidia_nat_vanna/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-weave", args: [--project, packages/nvidia_nat_weave], files: "packages/nvidia_nat_weave/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-zep_cloud", args: [--project, packages/nvidia_nat_zep_cloud], files: "packages/nvidia_nat_zep_cloud/pyproject.toml" }
+  - repo: local
+    hooks:
+      - id: clear-notebook-output-cells
+        name: Clear Jupyter Notebook Output Cells
+        entry: ci/scripts/clear_notebook_output_cells.sh
+        files: "\\.ipynb$"
+        language: unsupported_script
 
   - repo: https://github.com/tcort/markdown-link-check
-    rev: v3.12.2
+    rev: v3.14.2
     hooks:
       - id: markdown-link-check
         args: ["-q", "--config", "ci/markdown-link-check-config.json"]

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import logging
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from typing import Literal
 from typing import Self
@@ -27,12 +27,13 @@ from pydantic import field_validator
 from pydantic import model_validator
 
 from nat.plugins.data_flywheel.observability.schema.schema_registry import register_schema
-from nat.plugins.data_flywheel.observability.schema.sink.elasticsearch.contract_version import ContractVersion
+
+from .contract_version import ContractVersion
 
 logger = logging.getLogger(__name__)
 
 
-class FinishReason(str, Enum):
+class FinishReason(StrEnum):
     """Finish reason for chat completion responses."""
 
     STOP = "stop"
@@ -135,7 +136,7 @@ class RequestTool(BaseModel):
     function: FunctionDetails = Field(..., description="The function details.")
 
 
-class Request(BaseModel):
+class ESRequest(BaseModel):
     """Request structure used in requests."""
 
     model_config = ConfigDict(extra="allow")  # Allow extra fields
@@ -199,7 +200,7 @@ class DFWESRecord(BaseModel):
                                               description="Contract version for compatibility tracking")
 
     # Core fields (backward compatible)
-    request: Request = Field(..., description="The OpenAI ChatCompletion request.")
+    request: ESRequest = Field(..., description="The OpenAI ChatCompletion request.")
     response: Response = Field(..., description="The OpenAI ChatCompletion response.")
     client_id: str = Field(..., description="Identifier of the application or deployment that generated traffic.")
     workload_id: str = Field(..., description="Stable identifier for the logical task / route / agent node.")

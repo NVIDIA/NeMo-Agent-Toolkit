@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import Usage
 from nat.data_models.function import FunctionBaseConfig
 
 
@@ -35,7 +36,14 @@ async def echo_function(config: EchoFunctionConfig, builder: Builder):
         return message
 
     async def inner_oai(message: ChatRequest) -> ChatResponse:
-        return ChatResponse.from_string(message.messages[0].content)
+        content = message.messages[0].content
+
+        # Create usage statistics for the response
+        prompt_tokens = sum(len(str(msg.content).split()) for msg in message.messages)
+        completion_tokens = len(content.split()) if content else 0
+        total_tokens = prompt_tokens + completion_tokens
+        usage = Usage(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, total_tokens=total_tokens)
+        return ChatResponse.from_string(content, usage=usage)
 
     if (config.use_openai_api):
         yield inner_oai
@@ -53,8 +61,8 @@ async def streaming_function(config: StreamingEchoFunctionConfig, builder: Build
     def oai_to_list(message: ChatRequest) -> list[str]:
         return [m.content for m in message.messages]
 
-    async def inner(message: list[str]) -> AsyncGenerator[str]:
-        for value in message:
+    async def inner(input_message: list[str]) -> AsyncGenerator[str]:
+        for value in input_message:
             yield value
 
     async def inner_oai(message: ChatRequest) -> AsyncGenerator[ChatResponseChunk]:

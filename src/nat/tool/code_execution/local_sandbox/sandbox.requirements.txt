@@ -1,6 +1,0 @@
-numpy
-pandas
-scipy
-ipython
-plotly
-pydantic

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,11 +14,22 @@
 # limitations under the License.
 
 import os
+import random
 import subprocess
+import time
+import types
 import typing
+from collections.abc import AsyncGenerator
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
+import pytest_asyncio
+
+if typing.TYPE_CHECKING:
+    import galileo.log_streams
+    import galileo.projects
+    import langsmith.client
 
 if typing.TYPE_CHECKING:
     from docker.client import DockerClient
@@ -133,10 +144,10 @@ def openai_api_key_fixture(fail_missing: bool):
     """
     Use for integration tests that require an Openai API key.
     """
-    yield require_env_variables(
-        varnames=["OPENAI_API_KEY"],
-        reason="openai integration tests require the `OPENAI_API_KEY` environment variable to be defined.",
-        fail_missing=fail_missing)
+    yield require_env_variables(varnames=["OPENAI_API_KEY", "OPENAI_BASE_URL"],
+                                reason="openai integration tests require the `OPENAI_API_KEY` and " +
+                                "`OPENAI_BASE_URL` environment variables to be defined.",
+                                fail_missing=fail_missing)
 
 
 @pytest.fixture(name="nvidia_api_key", scope='session')
@@ -153,11 +164,22 @@ def nvidia_api_key_fixture(fail_missing: bool):
 @pytest.fixture(name="serp_api_key", scope='session')
 def serp_api_key_fixture(fail_missing: bool):
     """
-    Use for integration tests that require a SERP API key.
+    Use for integration tests that require a SERP API (serpapi.com) key.
     """
     yield require_env_variables(
         varnames=["SERP_API_KEY"],
         reason="SERP integration tests require the `SERP_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="serperdev", scope='session')
+def serperdev_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Serper Dev API (https://serper.dev) key.
+    """
+    yield require_env_variables(
+        varnames=["SERPERDEV_API_KEY"],
+        reason="SERPERDEV integration tests require the `SERPERDEV_API_KEY` environment variable to be defined.",
         fail_missing=fail_missing)
 
 
@@ -205,8 +227,156 @@ def azure_openai_keys_fixture(fail_missing: bool):
     yield require_env_variables(
         varnames=["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
         reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
-        "variable to be defined.",
+        "variables to be defined.",
         fail_missing=fail_missing)
+
+
+@pytest.fixture(name="langfuse_keys", scope='session')
+def langfuse_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require Langfuse credentials.
+    """
+    yield require_env_variables(
+        varnames=["LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY"],
+        reason="Langfuse integration tests require the `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` environment "
+        "variables to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="wandb_api_key", scope='session')
+def wandb_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Weights & Biases API key.
+    """
+    yield require_env_variables(
+        varnames=["WANDB_API_KEY"],
+        reason="Weights & Biases integration tests require the `WANDB_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="weave", scope='session')
+def require_weave_fixture(fail_missing: bool) -> types.ModuleType:
+    """
+    Use for integration tests that require Weave to be running.
+    """
+    try:
+        import weave
+        return weave
+    except Exception as e:
+        reason = "Weave must be installed to run weave based tests"
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langsmith_api_key", scope='session')
+def langsmith_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a LangSmith API key.
+    """
+    yield require_env_variables(
+        varnames=["LANGSMITH_API_KEY"],
+        reason="LangSmith integration tests require the `LANGSMITH_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="langsmith_client")
+def langsmith_client_fixture(langsmith_api_key: str, fail_missing: bool) -> "langsmith.client.Client":
+    try:
+        import langsmith.client
+        client = langsmith.client.Client()
+        return client
+    except ImportError:
+        reason = "LangSmith integration tests require the `langsmith` package to be installed."
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="project_name")
+def project_name_fixture() -> str:
+    # Create a unique project name for each test run
+    return f"nat-e2e-test-{time.time()}-{random.random()}"
+
+
+@pytest.fixture(name="langsmith_project_name")
+def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client", project_name: str) -> Generator[str]:
+    langsmith_client.create_project(project_name)
+    yield project_name
+
+    langsmith_client.delete_project(project_name=project_name)
+
+
+@pytest.fixture(name="galileo_api_key", scope='session')
+def galileo_api_key_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require a Galileo API key.
+    """
+    yield require_env_variables(
+        varnames=["GALILEO_API_KEY"],
+        reason="Galileo integration tests require the `GALILEO_API_KEY` environment variable to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="galileo_project")
+def galileo_project_fixture(galileo_api_key: str, fail_missing: bool,
+                            project_name: str) -> Generator["galileo.projects.Project"]:
+    """
+    Creates a unique Galileo project and deletes it after the test run.
+    """
+    try:
+        import galileo.projects
+        project = galileo.projects.create_project(name=project_name)
+        yield project
+
+        galileo.projects.delete_project(id=project.id)
+    except ImportError as e:
+        reason = "Galileo integration tests require the `galileo` package to be installed."
+        if fail_missing:
+            raise RuntimeError(reason) from e
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="galileo_log_stream")
+def galileo_log_stream_fixture(galileo_project: "galileo.projects.Project") -> "galileo.log_streams.LogStream":
+    """
+    Creates a Galileo log stream for integration tests.
+
+    The log stream is automatically deleted when the associated project is deleted.
+    """
+    import galileo.log_streams
+    return galileo.log_streams.create_log_stream(project_id=galileo_project.id, name="test")
+
+
+@pytest.fixture(name="catalyst_keys", scope='session')
+def catalyst_keys_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require RagaAI Catalyst credentials.
+    """
+    yield require_env_variables(
+        varnames=["CATALYST_ACCESS_KEY", "CATALYST_SECRET_KEY"],
+        reason="Catalyst integration tests require the `CATALYST_ACCESS_KEY` and `CATALYST_SECRET_KEY` environment "
+        "variables to be defined.",
+        fail_missing=fail_missing)
+
+
+@pytest.fixture(name="catalyst_project_name")
+def catalyst_project_name_fixture(catalyst_keys) -> str:
+    return os.environ.get("NAT_CI_CATALYST_PROJECT_NAME", "nat-e2e")
+
+
+@pytest.fixture(name="catalyst_dataset_name")
+def catalyst_dataset_name_fixture(catalyst_project_name: str, project_name: str) -> str:
+    """
+    We can't create and delete projects, but we can create and delete datasets, so use a unique dataset name
+    """
+    dataset_name = project_name.replace('.', '-')
+    yield dataset_name
+
+    from ragaai_catalyst import Dataset
+    ds = Dataset(catalyst_project_name)
+    if dataset_name in ds.list_datasets():
+        ds.delete_dataset(dataset_name)
 
 
 @pytest.fixture(name="require_docker", scope='session')
@@ -245,8 +415,20 @@ def root_repo_dir_fixture() -> Path:
     return locate_repo_root()
 
 
-@pytest.fixture(name="require_etcd", scope="session")
-def require_etcd_fixture(fail_missing: bool = False) -> bool:
+@pytest.fixture(name="examples_dir", scope='session')
+def examples_dir_fixture(root_repo_dir: Path) -> Path:
+    return root_repo_dir / "examples"
+
+
+@pytest.fixture(name="env_without_nat_log_level", scope='function')
+def env_without_nat_log_level_fixture() -> dict[str, str]:
+    env = os.environ.copy()
+    env.pop("NAT_LOG_LEVEL", None)
+    return env
+
+
+@pytest.fixture(name="etcd_url", scope="session")
+def etcd_url_fixture(fail_missing: bool = False) -> str:
     """
     To run these tests, an etcd server must be running
     """
@@ -254,21 +436,22 @@ def require_etcd_fixture(fail_missing: bool = False) -> bool:
 
     host = os.getenv("NAT_CI_ETCD_HOST", "localhost")
     port = os.getenv("NAT_CI_ETCD_PORT", "2379")
-    health_url = f"http://{host}:{port}/health"
+    url = f"http://{host}:{port}"
+    health_url = f"{url}/health"
 
     try:
         response = requests.get(health_url, timeout=5)
         response.raise_for_status()
-        return True
+        return url
     except:  # noqa: E722
-        failure_reason = f"Unable to connect to etcd server at {health_url}"
+        failure_reason = f"Unable to connect to etcd server at {url}"
         if fail_missing:
             raise RuntimeError(failure_reason)
         pytest.skip(reason=failure_reason)
 
 
 @pytest.fixture(name="milvus_uri", scope="session")
-def milvus_uri_fixture(require_etcd: bool, fail_missing: bool = False) -> str:
+def milvus_uri_fixture(etcd_url: str, fail_missing: bool = False) -> str:
     """
     To run these tests, a Milvus server must be running
     """
@@ -332,3 +515,377 @@ def populate_milvus_fixture(milvus_uri: str, root_repo_dir: Path):
         "wikipedia_docs"
     ],
                    check=True)
+
+
+@pytest.fixture(name="require_nest_asyncio", scope="session", autouse=True)
+def require_nest_asyncio_fixture():
+    """
+    Some tests require the nest_asyncio2 patch to be applied to allow nested event loops, calling
+    `nest_asyncio2.apply()` more than once is a no-op. However we need to ensure that the nest_asyncio2 patch is
+    applied prior to the older nest_asyncio patch is applied. Requiring us to ensure that any library which will apply
+    the patch on import is lazily imported.
+    """
+    import nest_asyncio2
+    try:
+        nest_asyncio2.apply(error_on_mispatched=True)
+    except RuntimeError as e:
+        raise RuntimeError(
+            "nest_asyncio2 fixture called but asyncio is already patched, most likely this is due to the nest_asyncio "
+            "being applied first, which is not compatible with Python 3.12+. Please ensure that any libraries which "
+            "apply nest_asyncio on import are lazily imported.") from e
+
+
+@pytest.fixture(name="phoenix_url", scope="session")
+def phoenix_url_fixture(fail_missing: bool) -> str:
+    """
+    To run these tests, a phoenix server must be running.
+    The phoenix server can be started by running the following command:
+    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
+    """
+    import requests
+
+    url = os.getenv("NAT_CI_PHOENIX_URL", "http://localhost:6006")
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to Phoenix server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="phoenix_trace_url", scope="session")
+def phoenix_trace_url_fixture(phoenix_url: str) -> str:
+    """
+    Some of our tools expect the base url provided by the phoenix_url fixture, however the
+    general.telemetry.tracing["phoenix"].endpoint expects the trace url which is what this fixture provides.
+    """
+    return f"{phoenix_url}/v1/traces"
+
+
+@pytest.fixture(name="redis_server", scope="session")
+def fixture_redis_server(fail_missing: bool) -> Generator[dict[str, str | int]]:
+    """Fixture to safely skip redis based tests if redis is not running"""
+    host = os.environ.get("NAT_CI_REDIS_HOST", "localhost")
+    port = int(os.environ.get("NAT_CI_REDIS_PORT", "6379"))
+    db = int(os.environ.get("NAT_CI_REDIS_DB", "0"))
+    password = os.environ.get("REDIS_PASSWORD", "redis")
+    bucket_name = os.environ.get("NAT_CI_REDIS_BUCKET_NAME", "test")
+
+    try:
+        import redis
+        client = redis.Redis(host=host, port=port, db=db, password=password)
+        if not client.ping():
+            raise RuntimeError("Failed to connect to Redis")
+        yield {"host": host, "port": port, "db": db, "bucket_name": bucket_name, "password": password}
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("redis not installed, skipping redis tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        pytest.skip(f"Error connecting to Redis server: {e}, skipping redis tests")
+
+
+@pytest_asyncio.fixture(name="mysql_server", scope="session")
+async def fixture_mysql_server(fail_missing: bool) -> AsyncGenerator[dict[str, str | int]]:
+    """Fixture to safely skip MySQL based tests if MySQL is not running"""
+    host = os.environ.get('NAT_CI_MYSQL_HOST', '127.0.0.1')
+    port = int(os.environ.get('NAT_CI_MYSQL_PORT', '3306'))
+    user = os.environ.get('NAT_CI_MYSQL_USER', 'root')
+    password = os.environ.get('MYSQL_ROOT_PASSWORD', 'my_password')
+    bucket_name = os.environ.get('NAT_CI_MYSQL_BUCKET_NAME', 'test')
+    try:
+        import aiomysql
+        conn = await aiomysql.connect(host=host, port=port, user=user, password=password)
+        yield {"host": host, "port": port, "username": user, "password": password, "bucket_name": bucket_name}
+        conn.close()
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aiomysql not installed, skipping MySQL tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        pytest.skip(f"Error connecting to MySQL server: {e}, skipping MySQL tests")
+
+
+@pytest.fixture(name="minio_server", scope="session")
+def minio_server_fixture(fail_missing: bool) -> Generator[dict[str, str | int]]:
+    """Fixture to safely skip MinIO based tests if MinIO is not running"""
+    host = os.getenv("NAT_CI_MINIO_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_MINIO_PORT", "9000"))
+    bucket_name = os.getenv("NAT_CI_MINIO_BUCKET_NAME", "test")
+    aws_access_key_id = os.getenv("NAT_CI_MINIO_ACCESS_KEY_ID", "minioadmin")
+    aws_secret_access_key = os.getenv("NAT_CI_MINIO_SECRET_ACCESS_KEY", "minioadmin")
+    endpoint_url = f"http://{host}:{port}"
+
+    minio_info = {
+        "host": host,
+        "port": port,
+        "bucket_name": bucket_name,
+        "endpoint_url": endpoint_url,
+        "aws_access_key_id": aws_access_key_id,
+        "aws_secret_access_key": aws_secret_access_key,
+    }
+
+    try:
+        import botocore.session
+        session = botocore.session.get_session()
+
+        client = session.create_client("s3",
+                                       aws_access_key_id=aws_access_key_id,
+                                       aws_secret_access_key=aws_secret_access_key,
+                                       endpoint_url=endpoint_url)
+        client.list_buckets()
+        yield minio_info
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        else:
+            pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")
+
+
+@pytest.fixture(name="langfuse_bucket", scope="session")
+def langfuse_bucket_fixture(fail_missing: bool, minio_server: dict[str, str | int]) -> Generator[str]:
+
+    bucket_name = os.getenv("NAT_CI_LANGFUSE_BUCKET", "langfuse")
+    try:
+        import botocore.session
+        session = botocore.session.get_session()
+
+        client = session.create_client("s3",
+                                       aws_access_key_id=minio_server["aws_access_key_id"],
+                                       aws_secret_access_key=minio_server["aws_secret_access_key"],
+                                       endpoint_url=minio_server["endpoint_url"])
+
+        buckets = client.list_buckets()
+        bucket_names = [b['Name'] for b in buckets['Buckets']]
+        if bucket_name not in bucket_names:
+            client.create_bucket(Bucket=bucket_name)
+
+        yield bucket_name
+    except ImportError:
+        if fail_missing:
+            raise
+        pytest.skip("aioboto3 not installed, skipping MinIO tests")
+    except Exception as e:
+        if fail_missing:
+            raise
+        else:
+            pytest.skip(f"Error connecting to MinIO server: {e}, skipping MinIO tests")
+
+
+@pytest.fixture(name="langfuse_url", scope="session")
+def langfuse_url_fixture(fail_missing: bool, langfuse_bucket: str) -> str:
+    """
+    To run these tests, a langfuse server must be running.
+    """
+    import requests
+
+    host = os.getenv("NAT_CI_LANGFUSE_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_LANGFUSE_PORT", "3000"))
+    url = f"http://{host}:{port}"
+    health_endpoint = f"{url}/api/public/health"
+    try:
+        response = requests.get(health_endpoint, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to Langfuse server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="langfuse_trace_url", scope="session")
+def langfuse_trace_url_fixture(langfuse_url: str) -> str:
+    """
+    The langfuse_url fixture provides the base url, however the general.telemetry.tracing["langfuse"].endpoint expects
+    the trace url which is what this fixture provides.
+    """
+    return f"{langfuse_url}/api/public/otel/v1/traces"
+
+
+@pytest.fixture(name="oauth2_server_url", scope="session")
+def oauth2_server_url_fixture(fail_missing: bool) -> str:
+    """
+    To run these tests, an oauth2 server must be running.
+    """
+    import requests
+
+    host = os.getenv("NAT_CI_OAUTH2_HOST", "localhost")
+    port = int(os.getenv("NAT_CI_OAUTH2_PORT", "5001"))
+    url = f"http://{host}:{port}"
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+
+        return url
+    except Exception as e:
+        reason = f"Unable to connect to OAuth2 server at {url}: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="oauth2_client_credentials", scope="session")
+def oauth2_client_credentials_fixture(oauth2_server_url: str, fail_missing: bool) -> dict[str, typing.Any]:
+    """
+    Fixture to provide OAuth2 client credentials for testing
+
+    Simulates the steps a user would take in a web browser to create a new OAuth2 client as documented in:
+    examples/front_ends/simple_auth/README.md
+    """
+
+    try:
+        import requests
+        from bs4 import BeautifulSoup
+        username = os.getenv("NAT_CI_OAUTH2_CLIENT_USERNAME", "Testy Testerson")
+
+        # This post request responds with a cookie that we need for future requests and a 302 redirect, the response
+        # for the redirected url doesn't contain the cookie, so we disable the redirect here to capture the cookie
+        user_create_response = requests.post(oauth2_server_url,
+                                             data=[("username", username)],
+                                             headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                             allow_redirects=False,
+                                             timeout=5)
+        user_create_response.raise_for_status()
+        cookies = user_create_response.cookies
+
+        client_create_response = requests.post(f"{oauth2_server_url}/create_client",
+                                               cookies=cookies,
+                                               headers={"Content-Type": "application/x-www-form-urlencoded"},
+                                               data=[
+                                                   ("client_name", "test"),
+                                                   ("client_uri", "https://test.com"),
+                                                   ("scope", "openid profile email"),
+                                                   ("redirect_uri", "http://localhost:8000/auth/redirect"),
+                                                   ("grant_type", "authorization_code\nrefresh_token"),
+                                                   ("response_type", "code"),
+                                                   ("token_endpoint_auth_method", "client_secret_post"),
+                                               ],
+                                               timeout=5)
+        client_create_response.raise_for_status()
+
+        # Unfortunately the response is HTML so we need to parse it to get the client ID and secret, which are not
+        # locatable via ID tags
+        soup = BeautifulSoup(client_create_response.text, 'html.parser')
+        strong_tags = soup.find_all('strong')
+        i = 0
+        client_id = None
+        client_secret = None
+        while i < len(strong_tags) and None in (client_id, client_secret):
+            tag = strong_tags[i]
+            contents = "".join(tag.contents)
+            if client_id is None and "client_id:" in contents:
+                client_id = tag.next_sibling.strip()
+            elif client_secret is None and "client_secret:" in contents:
+                client_secret = tag.next_sibling.strip()
+
+            i += 1
+
+        assert client_id is not None and client_secret is not None, "Failed to parse client credentials from response"
+
+        return {
+            "id": client_id,
+            "secret": client_secret,
+            "username": username,
+            "url": oauth2_server_url,
+            "cookies": cookies
+        }
+
+    except Exception as e:
+        reason = f"Unable to create OAuth2 client: {e}"
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason=reason)
+
+
+@pytest.fixture(name="local_sandbox_url", scope="session")
+def local_sandbox_url_fixture(fail_missing: bool) -> str:
+    """Check if sandbox server is running before running tests."""
+    import requests
+    url = os.environ.get("NAT_CI_SANDBOX_URL", "http://127.0.0.1:6000")
+    try:
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        return url
+    except Exception:
+        reason = (f"Sandbox server is not running at {url}. "
+                  "Please start it with: cd src/nat/tool/code_execution/local_sandbox && ./start_local_sandbox.sh")
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason)
+
+
+@pytest.fixture(name="sandbox_config", scope="session")
+def sandbox_config_fixture(local_sandbox_url: str) -> dict[str, typing.Any]:
+    """Configuration for sandbox testing."""
+    return {
+        "base_url": local_sandbox_url,
+        "execute_url": f"{local_sandbox_url.rstrip('/')}/execute",
+        "timeout": int(os.environ.get("SANDBOX_TIMEOUT", "30")),
+        "connection_timeout": 5
+    }
+
+
+@pytest.fixture(name="piston_url", scope="session")
+def piston_url_fixture(fail_missing: bool) -> str:
+    """
+    Verify that a Piston server is running and has the required python version installed.
+    """
+    import requests
+
+    url = os.environ.get("NAT_CI_PISTON_URL", "http://localhost:2000/api/v2")
+    url = url.rstrip('/')
+
+    # This is the version of Python used in `src/nat/tool/code_execution/code_sandbox.py`
+    python_version = os.environ.get("NAT_CI_PISTON_PYTHON_VERSION", "3.10.0")
+    try:
+        # If this request returns a 200 status code then the server is running
+        response = requests.get(f"{url}/runtimes", timeout=30)
+        response.raise_for_status()
+
+        # Check if the required python version is installed
+        runtimes = response.json()
+        for runtime in runtimes:
+            if runtime["language"] == "python" and runtime["version"] == python_version:
+                return url
+
+        # Install the required python version
+        response = requests.post(f"{url}/packages", json={"language": "python", "version": python_version}, timeout=60)
+        response.raise_for_status()
+
+        return url
+    except Exception:
+        reason = (f"Piston server is not running at {url}. "
+                  "Please start it along with the other integration services by running: "
+                  "docker compose -f tests/test_data/docker-compose.services.yml up -d")
+        if fail_missing:
+            raise RuntimeError(reason)
+        pytest.skip(reason)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def import_adk_early():
+    """
+    Import ADK early to work-around slow import issue (https://github.com/google/adk-python/issues/2433),
+    when ADK is imported early it takes about 8 seconds, however if we wait until the `packages/nvidia_nat_adk/tests`
+    run the same import will take about 70 seconds.
+
+    Since ADK is an optional dependency, we will ignore any import errors.
+    """
+    try:
+        import google.adk  # noqa: F401
+    except ImportError:
+        pass

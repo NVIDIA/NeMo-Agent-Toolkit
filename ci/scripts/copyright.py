@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: Copyright (c) 2019-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2019-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 FilesToCheck = [
     # Get all of these extensions and templates (*.in)
-    re.compile(r"[.](cmake|cpp|cc|cu|cuh|h|hpp|md|rst|sh|pxd|py|pyx|yml|yaml)(\.in)?$"),
+    re.compile(r"[.](cmake|cpp|cc|css|cu|cuh|h|hpp|md|rst|sh|pxd|py|pyx|yml|yaml)(\.in)?$"),
     # And files with a particular file/extension combo
     re.compile(r"CMakeLists[.]txt$"),
     re.compile(r"setup[.]cfg$"),
@@ -46,7 +46,7 @@ ExemptFiles: list[re.Pattern] = [
     re.compile(r"[^ \/\n]*docs/source/(_lib|_modules|_templates)/.*$"),
     re.compile(r"PULL_REQUEST_TEMPLATE.md"),  # Ignore the PR template,
     re.compile(r"[^ \/\n]*conda/environments/.*\.yaml$"),  # Ignore generated environment files
-    re.compile(r"^LICENSE\.md$"),  # Ignore the license file itself
+    re.compile(r"LICENSE\.md$"),  # Ignore the license file itself
     re.compile(r"^examples/.*/data/.*.md$"),  # Ignore data files in examples
 ]
 
@@ -444,6 +444,7 @@ EXT_LIC_MAPPING = {
     'c': A2_LIC_C,
     'cc': A2_LIC_C,
     'cmake': A2_LIC_HASH,
+    'css': A2_LIC_C,
     'cpp': A2_LIC_C,
     'cu': A2_LIC_C,
     'cuh': A2_LIC_C,

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+import typing
 
 from pydantic import Field
 
@@ -27,7 +28,11 @@ logger = logging.getLogger(__name__)
 class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
     """A telemetry exporter to transmit traces to Weights & Biases Weave using OpenTelemetry."""
     project: str = Field(description="The W&B project name.")
-    entity: str | None = Field(default=None, description="The W&B username or team name.")
+    entity: str | None = Field(default=None,
+                               description="The W&B username or team name.",
+                               deprecated=('This field is deprecated and will be removed in future versions. '
+                                           'This value is set automatically by the weave library, and setting it will '
+                                           'have no effect.'))
     redact_pii: bool = Field(default=False, description="Whether to redact PII from the traces.")
     redact_pii_fields: list[str] | None = Field(
         default=None,
@@ -37,6 +42,8 @@ class WeaveTelemetryExporter(TelemetryExporterBaseConfig, name="weave"):
         default=None,
         description="Additional keys to redact from traces beyond the default (api_key, auth_headers, authorization).")
     verbose: bool = Field(default=False, description="Whether to enable verbose logging.")
+    attributes: dict[str, typing.Any] | None = Field(default=None,
+                                                     description="Custom attributes to include in the traces.")
 
 
 @register_telemetry_exporter(config_type=WeaveTelemetryExporter)
@@ -62,14 +69,12 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
 
     # Handle custom redact keys if specified
     if config.redact_keys and config.redact_pii:
-        # Need to create a new list combining default keys and custom ones
-        from weave.trace import sanitize
-        default_keys = sanitize.REDACT_KEYS
+        from weave.utils import sanitize
 
-        # Create a new list with all keys
-        all_keys = list(default_keys) + config.redact_keys
+        for key in config.redact_keys:
+            sanitize.add_redact_key(key)
 
-        # Replace the default REDACT_KEYS with our extended list
-        sanitize.REDACT_KEYS = tuple(all_keys)
-
-    yield WeaveExporter(project=config.project, entity=config.entity, verbose=config.verbose)
+    yield WeaveExporter(project=config.project,
+                        entity=config.entity,
+                        verbose=config.verbose,
+                        attributes=config.attributes)

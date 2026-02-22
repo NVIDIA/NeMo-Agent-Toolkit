@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nat.plugins.opentelemetry.mixin.otlp_span_exporter_mixin import OTLPProtocol
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 from nat.plugins.opentelemetry.otlp_span_adapter_exporter import OTLPSpanAdapterExporter
 from nat.plugins.opentelemetry.otlp_span_redaction_adapter_exporter import OTLPSpanHeaderRedactionAdapterExporter
 
 __all__ = [
+    "OTLPProtocol",
     "OTLPSpanHeaderRedactionAdapterExporter",
     "OTLPSpanAdapterExporter",
     "OtelSpanExporter",

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 from .span_extractor import extract_timestamp
 from .span_extractor import extract_token_usage
 from .span_extractor import extract_usage_info
-from .span_to_dfw_record import span_to_dfw_record
+from .span_to_dfw import span_to_dfw_record
 from .trace_adapter_registry import TraceAdapterRegistry
 from .trace_adapter_registry import register_adapter
 

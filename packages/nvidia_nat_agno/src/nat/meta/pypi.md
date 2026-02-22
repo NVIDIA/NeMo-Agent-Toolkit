@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,11 +15,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Subpackage
 
 <!-- Note: "Agno" is the official product name despite Vale spelling checker warnings -->
-This is a subpackage for `Agno` integration in NeMo Agent toolkit.
+This is a subpackage for `Agno` integration in NeMo Agent Toolkit.
 
-For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
+For more information about the NVIDIA NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

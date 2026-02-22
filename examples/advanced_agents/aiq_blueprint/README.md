@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@ limitations under the License.
 
 <!-- This document is explicitly retaining the name "AIQ" -->
 # AIQ Blueprint - Enterprise Research Agent
+
+**Complexity:** 🛑 Advanced
 
 ## Overview
 
@@ -36,7 +38,7 @@ This documentation points to the official NVIDIA AIQ Blueprint for building an A
 
 - Access to NVIDIA NIM services
 - Enterprise-grade development environment
-- NeMo Agent toolkit installed and configured
+- NeMo Agent Toolkit installed and configured
 
 ### Getting Started
 
@@ -50,7 +52,7 @@ This documentation points to the official NVIDIA AIQ Blueprint for building an A
 
 This blueprint provides comprehensive guidance and resources for:
 
-- Building enterprise-grade AI agents using NeMo Agent toolkit
+- Building enterprise-grade AI agents using NeMo Agent Toolkit
 - Implementing research-focused workflows
 - Leveraging NVIDIA NIM for scalable AI solutions
 - Best practices for enterprise deployment

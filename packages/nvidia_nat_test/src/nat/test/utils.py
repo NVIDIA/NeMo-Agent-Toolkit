@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,14 +13,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import importlib.resources
 import inspect
+import json
 import subprocess
+import time
 import typing
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 if typing.TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from httpx import AsyncClient
+
     from nat.data_models.config import Config
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
     from nat.utils.type_utils import StrPath
 
 
@@ -61,27 +70,148 @@ def locate_example_config(example_config_class: type,
     return config_path
 
 
-async def run_workflow(
-    config_file: "StrPath | None",
-    question: str,
-    expected_answer: str,
-    assert_expected_answer: bool = True,
-    config: "Config | None" = None,
-) -> str:
-    from nat.builder.workflow_builder import WorkflowBuilder
-    from nat.runtime.loader import load_config
-    from nat.runtime.session import SessionManager
+async def run_workflow(*,
+                       config: "Config | None" = None,
+                       config_file: "StrPath | None" = None,
+                       question: str,
+                       expected_answer: str | None = None,
+                       assert_expected_answer: bool = True,
+                       **kwargs) -> str:
+    """
+    Test specific wrapper for `nat.utils.run_workflow` to run a workflow with a question and validate the expected
+    answer. This variant always sets the result type to `str`.
+    """
+    from nat.utils import run_workflow as nat_run_workflow
 
-    if config is None:
-        assert config_file is not None, "Either config_file or config must be provided"
-        config = load_config(config_file)
+    result = await nat_run_workflow(config=config, config_file=config_file, prompt=question, to_type=str, **kwargs)
 
-    async with WorkflowBuilder.from_config(config=config) as workflow_builder:
-        workflow = SessionManager(await workflow_builder.build())
-        async with workflow.run(question) as runner:
-            result = await runner.result(to_type=str)
-
-    if assert_expected_answer:
-        assert expected_answer.lower() in result.lower(), f"Expected '{expected_answer}' in '{result}'"
+    if expected_answer is not None and assert_expected_answer:
+        # sometimes LLMs use fancy unicode space characters like \u202f, normalize before comparing
+        normalized_result = ' '.join(result.split())
+        assert expected_answer.lower() in normalized_result.lower(), f"Expected '{expected_answer}' in '{result}'"
 
     return result
+
+
+async def serve_workflow(*,
+                         config_path: Path,
+                         question: str,
+                         expected_answer: str | None = None,
+                         assert_expected_answer: bool = True,
+                         port: int = 8000,
+                         pipeline_timeout: int = 60,
+                         request_timeout: int = 30) -> dict:
+    """
+    Execute a workflow using `nat serve`, and issue a POST request to the `/generate` endpoint with the given question.
+
+    Intended to be analogous to `run_workflow` but for the REST API serving mode.
+    """
+    import requests
+    workflow_url = f"http://localhost:{port}"
+    workflow_cmd = ["nat", "serve", "--port", str(port), "--config_file", str(config_path.absolute())]
+    proc = subprocess.Popen(workflow_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    assert proc.poll() is None, f"NAT server process failed to start: {proc.stdout.read()}"
+
+    response_payload = {}
+    try:
+        deadline = time.time() + pipeline_timeout  # timeout waiting for the workflow to respond
+        response = None
+        while response is None and time.time() < deadline:
+            try:
+                response = requests.post(url=f"{workflow_url}/generate",
+                                         json={"messages": [{
+                                             "role": "user", "content": question
+                                         }]},
+                                         timeout=request_timeout)
+            except Exception:
+                await asyncio.sleep(0.1)
+
+        assert response is not None, f"deadline exceeded waiting for workflow response: {proc.stdout.read()}"
+        response.raise_for_status()
+        response_payload = response.json()
+        combined_response = []
+        response_value = response_payload.get('value', {})
+        if isinstance(response_value, str):
+            response_text = response_value
+        else:
+            for choice in response_value.get('choices', []):
+                combined_response.append(choice.get('message', {}).get('content', ''))
+
+            response_text = "\n".join(combined_response)
+
+        if expected_answer is not None and assert_expected_answer:
+            assert expected_answer.lower() in response_text.lower(), \
+                f"Unexpected response: {response.text}"
+    finally:
+        # Teardown
+        i = 0
+        while proc.poll() is None and i < 5:
+            if i == 0:
+                proc.terminate()
+            else:
+                proc.kill()
+            await asyncio.sleep(0.1)
+            i += 1
+
+        assert proc.poll() is not None, "NAT server process failed to terminate"
+
+    return response_payload
+
+
+@asynccontextmanager
+async def build_nat_client(
+        config: "Config",
+        worker_class: "type[FastApiFrontEndPluginWorker] | None" = None) -> "AsyncIterator[AsyncClient]":
+    """
+    Build a NAT client for testing purposes.
+
+    Creates a test client with an ASGI transport for the specified configuration.
+    The client is backed by a FastAPI application built from the provided worker class.
+
+    Args:
+        config: The NAT configuration to use for building the client.
+        worker_class: Optional worker class to use. Defaults to FastApiFrontEndPluginWorker.
+
+    Yields:
+        An AsyncClient instance configured for testing.
+    """
+    from asgi_lifespan import LifespanManager
+    from httpx import ASGITransport
+    from httpx import AsyncClient
+
+    from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+
+    if worker_class is None:
+        worker_class = FastApiFrontEndPluginWorker
+
+    worker = worker_class(config)
+    app = worker.build_app()
+
+    async with LifespanManager(app):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            yield client
+
+
+def validate_workflow_output(workflow_output_file: Path) -> None:
+    """
+    Validate the contents of the workflow output file.
+    WIP: output format should be published as a schema and this validation should be done against that schema.
+    """
+    # Ensure the workflow_output.json file was created
+    assert workflow_output_file.exists(), "The workflow_output.json file was not created"
+
+    # Read and validate the workflow_output.json file
+    try:
+        with open(workflow_output_file, encoding="utf-8") as f:
+            result_json = json.load(f)
+    except json.JSONDecodeError as err:
+        raise RuntimeError("Failed to parse workflow_output.json as valid JSON") from err
+
+    assert isinstance(result_json, list), "The workflow_output.json file is not a list"
+    assert len(result_json) > 0, "The workflow_output.json file is empty"
+    assert isinstance(result_json[0], dict), "The workflow_output.json file is not a list of dictionaries"
+
+    # Ensure required keys exist
+    required_keys = ["id", "question", "answer", "generated_answer", "intermediate_steps"]
+    for key in required_keys:
+        assert all(item.get(key) for item in result_json), f"The '{key}' key is missing in workflow_output.json"

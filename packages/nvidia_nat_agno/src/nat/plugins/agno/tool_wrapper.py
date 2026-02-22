@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -148,7 +148,7 @@ def execute_agno_tool(name: str,
         List of required fields for validation
     loop : asyncio.AbstractEventLoop
         The event loop to use for async execution
-    **kwargs : Any
+    kwargs : Any
         The arguments to pass to the function
 
     Returns

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,9 +17,11 @@ limitations under the License.
 
 # Sequential Executor
 
-This example demonstrates how to use the sequential executor functionality with the NVIDIA NeMo Agent toolkit. The sequential executor is a control flow component that chains multiple functions together, where each function's output becomes the input for the next function. This creates a linear tool execution pipeline that executes functions in a predetermined sequence.
+**Complexity:** 🟢 Beginner
 
-The NeMo Agent toolkit provides a [`sequential_executor`](../../../src/nat/control_flow/sequential_executor.py) tool to implement this functionality.
+This example demonstrates how to use the sequential executor functionality with the NVIDIA NeMo Agent Toolkit. The sequential executor is a control flow component that chains multiple functions together, where each function's output becomes the input for the next function. This creates a linear tool execution pipeline that executes functions in a predetermined sequence.
+
+The NeMo Agent Toolkit provides a [`sequential_executor`](../../../packages/nvidia_nat_langchain/src/nat/plugins/langchain/control_flow/sequential_executor.py) tool to implement this functionality.
 
 ## Table of Contents
 
@@ -28,6 +30,7 @@ The NeMo Agent toolkit provides a [`sequential_executor`](../../../src/nat/contr
 - [Configuration](#configuration)
   - [Required Configuration Options](#required-configuration-options)
   - [Optional Configuration Options](#optional-configuration-options)
+  - [Exceptions](#exceptions)
   - [Example Configuration](#example-configuration)
 - [Installation and Setup](#installation-and-setup)
   - [Install this Workflow](#install-this-workflow)
@@ -64,12 +67,18 @@ The following options are required for the sequential executor:
 
 - **`_type`**: Set to `sequential_executor` to use the sequential executor tool
 - **`tool_list`**: List of functions to execute in order (such as `[text_processor, data_analyzer, report_generator]`)
-- **`raise_type_incompatibility`**: Whether to raise an exception if the type compatibility check fails (default: `false`).The type compatibility check runs before executing the tool list, based on the type annotations of the functions. When set to `true`, any incompatibility immediately raises an exception. When set to `false`, incompatibilities generate warning messages and the sequential executor continues execution. Set this to `false` when functions in the tool list include custom type converters, as the type compatibility check may fail even though the sequential executor can still execute the tool list.
+- **`raise_type_incompatibility`**: Whether to raise an exception if the type compatibility check fails (default: `false`). The type compatibility check runs before executing the tool list, based on the type annotations of the functions. When set to `true`, any incompatibility immediately raises an exception. When set to `false`, incompatibilities generate warning messages and the sequential executor continues execution. Set this to `false` when functions in the tool list include custom type converters, as the type compatibility check may fail even though the sequential executor can still execute the tool list.
+- **`return_error_on_exception`**: Whether to return an error message instead of raising an exception when a tool fails during execution (default: `false`). When set to `true`, the sequential executor exits early and returns an error message as the workflow output instead of raising the exception. When set to `false`, exceptions are re-raised. Set this to `true` when you want the workflow to gracefully handle uncaught tool failures and immediately return error information to the user.
 
 ### Optional Configuration Options
 
+- **`description`**: Description of the workflow (default: "Sequential Executor Workflow")
 - **`tool_execution_config`**: Configuration for each tool in the sequential execution tool list. Keys must match the tool names from the `tool_list`
   - **`use_streaming`**: Whether to use streaming output for the tool (default: `false`)
+
+### Exceptions
+
+- **`SequentialExecutorExit`**: Raised by a tool to exit the chain early and return a custom message as the workflow output. Unlike `return_error_on_exception` which handles unexpected errors, this exception is for intentional early termination. Import from `nat.plugins.langchain.control_flow.sequential_executor`.
 
 ### Example Configuration
 
@@ -89,6 +98,7 @@ workflow:
   _type: sequential_executor
   tool_list: [text_processor, data_analyzer, report_generator]
   raise_type_incompatibility: false
+  return_error_on_exception: false
 ```
 
 #### Configuration with Tool Execution Settings
@@ -112,15 +122,16 @@ workflow:
     report_generator:
       use_streaming: false
   raise_type_incompatibility: false
+  return_error_on_exception: false
 ```
 
 ## Installation and Setup
 
-Before running this example, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
+Before running this example, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install the NeMo Agent Toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit repository, run the following command:
+From the root directory of the NeMo Agent Toolkit repository, run the following command:
 
 ```bash
 uv pip install -e examples/control_flow/sequential_executor
@@ -129,7 +140,7 @@ uv pip install -e examples/control_flow/sequential_executor
 
 This workflow demonstrates sequential executor functionality by processing raw text through a three-stage pipeline. Each function's output becomes the input for the next function in the chain.
 
-Run the following command from the root of the NeMo Agent toolkit repository to execute this workflow:
+Run the following command from the root of the NeMo Agent Toolkit repository to execute this workflow:
 
 ```bash
 nat run --config_file=examples/control_flow/sequential_executor/configs/config.yml --input "The quick brown fox jumps over the lazy dog. This is a simple test sentence to demonstrate text processing capabilities."

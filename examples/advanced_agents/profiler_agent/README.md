@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,20 +17,24 @@ limitations under the License.
 
 # NeMo Agent Toolkit Profiler Agent
 
-The profiler agent is a tool that allows you to analyze the performance of NeMo Agent toolkit workflows. It uses the Phoenix server to store and retrieve traces of workflow runs.
+**Complexity:** 🟨 Intermediate
+
+The profiler agent is a tool that allows you to analyze the performance of NeMo Agent Toolkit workflows. It uses the Phoenix server to store and retrieve traces of workflow runs.
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [Installation and Setup](#installation-and-setup)
-  - [Install this Workflow](#install-this-workflow)
-  - [Set Up API Keys](#set-up-api-keys)
-- [Run the Workflow](#run-the-workflow)
-- [Features](#features)
+- [NeMo Agent Toolkit Profiler Agent](#nemo-agent-toolkit-profiler-agent)
+  - [Table of Contents](#table-of-contents)
+  - [Key Features](#key-features)
+  - [Installation and Setup](#installation-and-setup)
+    - [Install this Workflow:](#install-this-workflow)
+    - [Set Up API Keys](#set-up-api-keys)
+  - [Run the Workflow](#run-the-workflow)
+  - [Features](#features)
 
 ## Key Features
 
-- **Workflow Performance Analysis:** Demonstrates a specialized agent that analyzes NeMo Agent toolkit workflow performance using Phoenix server traces for comprehensive performance monitoring.
+- **Workflow Performance Analysis:** Demonstrates a specialized agent that analyzes NeMo Agent Toolkit workflow performance using Phoenix server traces for comprehensive performance monitoring.
 - **Token Usage Tracking:** Shows how to retrieve and analyze token consumption patterns across multiple workflow runs, providing insights into LLM resource utilization.
 - **Trace Visualization:** Generates flowcharts and visual representations of workflow execution patterns from stored Phoenix traces using natural language queries.
 - **Phoenix Server Integration:** Demonstrates integration with Phoenix observability platform for storing, retrieving, and analyzing workflow telemetry data.
@@ -38,18 +42,18 @@ The profiler agent is a tool that allows you to analyze the performance of NeMo 
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/advanced_agents/profiler_agent
 ```
 
 ### Set Up API Keys
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -63,7 +67,8 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
    ```
 
 2. Ensure that there are traces in the Phoenix server. You can use the simple calculator example to generate traces.
-   > Note: This requires installing both the optional `telemetry` dependencies along with the simple calculator. You can do this by running the following commands:
+   > [!NOTE]
+   > This requires installing both the optional `telemetry` dependencies along with the simple calculator. You can do this by running the following commands:
    > ```bash
    > uv pip install -e examples/observability/simple_calculator_observability
    > ```
@@ -81,7 +86,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
    nat serve --config_file=examples/advanced_agents/profiler_agent/configs/config.yml
    ```
 
-4. Launch the NeMo Agent Toolkit User Interface by using the instructions in the [Launching the User Interface](../../../docs/source/quick-start/launching-ui.md#launch-the-nemo-agent-toolkit-user-interface) guide.
+4. Launch the NeMo Agent Toolkit User Interface by using the instructions in the [Launching the UI](../../../docs/source/run-workflows/launching-ui.md) guide.
 
 5. Query the agent with natural language via the UI:
    ```

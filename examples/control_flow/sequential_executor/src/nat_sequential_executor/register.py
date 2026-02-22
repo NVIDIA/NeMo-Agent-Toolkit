@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +42,7 @@ async def text_processor_function(config: TextProcessorFunctionConfig, builder: 
     config : TextProcessorFunctionConfig
         Configuration for the text processor function
     builder : Builder
-        The NeMo Agent toolkit builder instance
+        The NeMo Agent Toolkit builder instance
 
     Returns
     -------
@@ -96,7 +96,7 @@ async def data_analyzer_function(config: DataAnalyzerFunctionConfig, builder: Bu
     config : DataAnalyzerFunctionConfig
         Configuration for the data analyzer function
     builder : Builder
-        The NeMo Agent toolkit builder instance
+        The NeMo Agent Toolkit builder instance
 
     Returns
     -------
@@ -155,9 +155,9 @@ async def data_analyzer_function(config: DataAnalyzerFunctionConfig, builder: Bu
             return json.dumps(analysis_results)
 
         except json.JSONDecodeError:
-            # Handle invalid JSON input
-            error_result = {"error": "Invalid input format", "analysis_status": "failed"}
-            return json.dumps(error_result)
+            # Handle invalid JSON input - exit chain early
+            from nat.plugins.langchain.control_flow.sequential_executor import SequentialExecutorExit
+            raise SequentialExecutorExit("Invalid input format - cannot proceed") from None
 
     yield FunctionInfo.from_fn(
         analyze_data, description="Analyze processed text data and generate insights about complexity and content")
@@ -179,7 +179,7 @@ async def report_generator_function(config: ReportGeneratorFunctionConfig, build
     config : ReportGeneratorFunctionConfig
         Configuration for the report generator function
     builder : Builder
-        The NeMo Agent toolkit builder instance
+        The NeMo Agent Toolkit builder instance
 
     Returns
     -------

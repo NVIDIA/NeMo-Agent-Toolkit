@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,17 +23,33 @@ import pytest
 
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import LLMFrameworkEnum
-from nat.plugins.adk.adk_callback_handler import ADKProfilerHandler
+from nat.data_models.profiler_callback import BaseProfilerCallback
+from nat.plugins.adk.callback_handler import ADKProfilerHandler
+
 
 # ----------------------------
 # Test Fixtures and Helpers
 # ----------------------------
+@pytest.fixture(autouse=True)
+def reset_patches():
+    import litellm
+    from google.adk.tools.function_tool import FunctionTool
+
+    # Store original functions
+    original_acompletion = litellm.acompletion
+    original_function_tool_run_async = FunctionTool.run_async
+
+    yield
+
+    # Restore original functions
+    litellm.acompletion = original_acompletion
+    FunctionTool.run_async = original_function_tool_run_async
 
 
 @pytest.fixture
 def mock_context():
     """Mock context with intermediate step manager."""
-    with patch('nat.plugins.adk.adk_callback_handler.Context') as mock_context_class:
+    with patch('nat.plugins.adk.callback_handler.Context') as mock_context_class:
         mock_context_instance = MagicMock()
         mock_step_manager = MagicMock()
         mock_context_instance.intermediate_step_manager = mock_step_manager
@@ -50,6 +66,34 @@ def handler(mock_context: MagicMock) -> ADKProfilerHandler:
 # ----------------------------
 # Pytest Unit Tests
 # ----------------------------
+
+
+def test_no_double_patching():
+    a1 = ADKProfilerHandler()
+    a2 = ADKProfilerHandler()
+    a1.instrument()
+    a2.instrument()
+    assert a1._original_llm_call is a2._original_llm_call
+    assert a1._original_tool_call is a2._original_tool_call
+
+
+def test_uninstrument_restores_originals():
+    import litellm
+    from google.adk.tools.function_tool import FunctionTool
+
+    original_acompletion = litellm.acompletion
+    original_function_tool_run_async = FunctionTool.run_async
+
+    handler = ADKProfilerHandler()
+    handler.instrument()
+    assert handler._instrumented
+    assert handler._original_llm_call is original_acompletion
+    assert handler._original_tool_call is original_function_tool_run_async
+
+    handler.uninstrument()
+    assert not handler._instrumented
+    assert handler._original_llm_call is None
+    assert handler._original_tool_call is None
 
 
 def test_adk_profiler_handler_initialization(handler, mock_context):
@@ -282,7 +326,6 @@ async def test_llm_call_monkey_patch_with_multiple_messages(mock_acompletion, ha
 
 def test_handler_inheritance(handler):
     """Test that ADKProfilerHandler inherits from BaseProfilerCallback."""
-    from nat.profiler.callbacks.base_callback_class import BaseProfilerCallback
     assert isinstance(handler, BaseProfilerCallback)
 
 

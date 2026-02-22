@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,10 @@
 
 import logging
 
+from openinference.instrumentation import dangerously_using_project
+
 from nat.plugins.opentelemetry.otel_span import OtelSpan
 from phoenix.otel import HTTPSpanExporter
-from phoenix.trace.projects import using_project
 
 logger = logging.getLogger(__name__)
 
@@ -35,20 +36,22 @@ class PhoenixMixin:
 
     This mixin is designed to be used with OtelSpanExporter as a base class:
 
-    Example:
+    Example::
+
         class MyPhoenixExporter(OtelSpanExporter, PhoenixMixin):
             def __init__(self, endpoint, project, **kwargs):
                 super().__init__(endpoint=endpoint, project=project, **kwargs)
     """
 
-    def __init__(self, *args, endpoint: str, project: str, **kwargs):
+    def __init__(self, *args, endpoint: str, project: str, timeout: float = 60.0, **kwargs):
         """Initialize the Phoenix exporter.
 
         Args:
             endpoint: Phoenix service endpoint URL.
             project: Phoenix project name for trace grouping.
+            timeout: Timeout in seconds for HTTP requests to Phoenix server.
         """
-        self._exporter = HTTPSpanExporter(endpoint=endpoint)
+        self._exporter = HTTPSpanExporter(endpoint=endpoint, timeout=timeout)
         self._project = project
 
         # Add Phoenix project name to resource attributes
@@ -67,7 +70,7 @@ class PhoenixMixin:
             Exception: If there's an error during span export (logged but not re-raised).
         """
         try:
-            with using_project(self._project):
+            with dangerously_using_project(self._project):
                 self._exporter.export(spans)  # type: ignore
         except Exception as e:
             logger.error("Error exporting spans: %s", e, exc_info=True)

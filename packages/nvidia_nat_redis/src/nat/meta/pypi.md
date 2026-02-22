@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Subpackage
-This is a subpackage for Redis memory integration in NeMo Agent toolkit.
+This is a subpackage for Redis memory integration in NeMo Agent Toolkit.
 
-For more information about NeMo Agent toolkit, please visit the [NeMo Agent toolkit package](https://pypi.org/project/nvidia-nat/).
+For more information about NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit package](https://pypi.org/project/nvidia-nat/).

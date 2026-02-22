@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,6 +21,7 @@ from langchain_community.document_loaders import BSHTMLLoader
 from langchain_milvus import Milvus
 from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pymilvus import MilvusClient
 from web_utils import cache_html
 from web_utils import get_file_path_from_url
 from web_utils import scrape
@@ -38,8 +39,17 @@ async def main(*,
                milvus_uri: str,
                collection_name: str,
                clean_cache: bool = True,
+               drop_collection: bool = False,
                embedding_model: str = "nvidia/nv-embedqa-e5-v5",
                base_path: str = "./.tmp/data"):
+
+    if drop_collection:
+        client = MilvusClient(uri=milvus_uri)
+        if client.has_collection(collection_name):
+            logger.info("Dropping existing collection: %s", collection_name)
+            client.drop_collection(collection_name)
+        else:
+            logger.info("Collection '%s' does not exist, nothing to drop", collection_name)
 
     embedder = NVIDIAEmbeddings(model=embedding_model, truncate="END")
 
@@ -124,11 +134,22 @@ if __name__ == "__main__":
     DEFAULT_URI = "http://localhost:19530"
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("--urls", default=CUDA_URLS, action="append", help="Urls to scrape for RAG context")
+    parser.add_argument("--urls",
+                        default=[],
+                        action="append",
+                        help="Urls to scrape for RAG context. Defaults to built-in URLs for NVIDIA CUDA documentation.")
     parser.add_argument("--collection_name", "-n", default=CUDA_COLLECTION_NAME, help="Collection name for the data.")
     parser.add_argument("--milvus_uri", "-u", default=DEFAULT_URI, help="Milvus host URI")
     parser.add_argument("--clean_cache", default=False, help="If true, deletes local files", action="store_true")
+    parser.add_argument("--drop_collection",
+                        default=False,
+                        help="Drop existing collection before ingesting",
+                        action="store_true")
+    parser.add_argument("--embedding_model", "-e", default="nvidia/nv-embedqa-e5-v5", help="Embedding model to use")
     args = parser.parse_args()
+
+    if len(args.urls) == 0:
+        args.urls = CUDA_URLS
 
     asyncio.run(
         main(
@@ -136,4 +157,6 @@ if __name__ == "__main__":
             milvus_uri=args.milvus_uri,
             collection_name=args.collection_name,
             clean_cache=args.clean_cache,
+            drop_collection=args.drop_collection,
+            embedding_model=args.embedding_model,
         ))

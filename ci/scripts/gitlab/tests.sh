@@ -1,5 +1,5 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +20,7 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
-create_env group:dev extra:all
+create_env
 
 rapids-logger "Git Version: $(git describe)"
 
@@ -31,6 +31,10 @@ PYTEST_ARGS=""
 REPORT_NAME="${CI_PROJECT_DIR}/pytest_junit_report.xml"
 COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report.xml"
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
+       rapids-logger "Installing jq (needed for notebook tests)"
+       apt update
+       apt install --no-install-recommends -y jq
+
        PYTEST_ARGS="--run_slow --run_integration"
 
        DATE_TAG=$(date +"%Y%m%d")
@@ -38,10 +42,8 @@ if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
        COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report_${DATE_TAG}.xml"
 fi
 
-pytest ${PYTEST_ARGS}  \
-       --junit-xml=${REPORT_NAME} \
-       --cov=nat --cov-report term-missing \
-       --cov-report=xml:${COV_REPORT_NAME}
+python ${GITLAB_SCRIPT_DIR}/../run_tests.py ${PYTEST_ARGS} --junit_xml=${REPORT_NAME} --cov_xml=${COV_REPORT_NAME}
+
 PYTEST_RESULTS=$?
 
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then

@@ -1,0 +1,104 @@
+---
+description: Guidelines for placing documentation in the correct category within the docs/source directory
+globs: docs/source/**/*.md
+alwaysApply: false
+---
+
+# Documentation Categories
+
+When adding new documentation, place it in the appropriate category within the `docs/source` directory.
+
+## Category Reference
+
+| Category          | Directory                | Purpose                                                 |
+| ----------------- | ------------------------ | ------------------------------------------------------- |
+| About             | `about`                  | Overview, key features, concepts, release notes         |
+| Get Started       | `get-started`            | Introductory documentation for new users                |
+| Tutorials         | `get-started/tutorials`  | Step-by-step learning guides                            |
+| Build             | `build-workflows`        | Workflow creation, configuration, MCP tools, A2A agents |
+| Run               | `run-workflows`          | Execution, observability, serving via MCP and A2A       |
+| Improve           | `improve-workflows`      | Evaluation and optimization                             |
+| Components        | `components`             | Specific implementations (agents, tools, connectors)    |
+| Extend            | `extend`                 | Custom component development and testing                |
+| Reference         | `reference`              | Python API, REST API, and CLI documentation only        |
+| Resources         | `resources`              | Project information (contributing, licensing, FAQs)     |
+| Contributing      | `resources/contributing` | Development environment and contribution guides         |
+
+## Category Details
+
+### About (`about`)
+Documentation limited to:
+- Overview of NeMo Agent Toolkit
+- Key features
+- Core concepts
+- Release notes
+
+### Get Started (`get-started`)
+
+Introductory documentation to help users get started with NeMo Agent Toolkit. Includes installation guides and basic concepts.
+
+**Tutorials** (`get-started/tutorials`): Step-by-step guides to help users learn how to use the toolkit.
+
+### Build (`build-workflows`)
+
+Documentation on how to build workflows and workflow configuration. Includes information on component types (LLMs, agents) that can be used in workflows, and adding remote MCP tools or A2A agents to workflows.
+
+**Note**: Documentation for specific component implementations belongs in the Components category, not here.
+
+### Run (`run-workflows`)
+
+Documentation on how to run workflows, including:
+
+- Observing workflows
+- Serving workflows via MCP and A2A protocols
+
+### Improve (`improve-workflows`)
+
+Documentation on workflow improvement:
+
+- Evaluation guides
+- Optimization guides
+
+### Components (`components`)
+
+Documentation on specific component implementations:
+
+- Agents (for example, ReAct Agent)
+- Tools (for example, Code Execution tool)
+- Connectors
+
+### Extend NeMo Agent Toolkit (`extend`)
+
+Documentation on extending the toolkit:
+
+- Writing custom components
+- Testing custom components
+
+**Note**: Focus on helping users extend the toolkit for their needs, not on contributing to the core library.
+
+### Reference (`reference`)
+
+Limited to API documentation:
+
+- Python API reference
+- REST API reference
+- CLI reference
+
+### Resources (`resources`)
+
+Project-wide documentation:
+
+- Contributing guidelines
+- Code of conduct
+- Licensing
+- FAQs
+
+**Contributing** (`resources/contributing`): Development environment setup and contribution processes.
+
+## Placement Guidelines
+
+1. **Before adding documentation**, identify the correct category from the table above
+2. **Avoid overlap**: Place content in only one category
+3. **Component implementations** always go in `components`
+4. **API documentation** belongs only in `reference`
+5. **Contribution-related content** goes in `resources/contributing`

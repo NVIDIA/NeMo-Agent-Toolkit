@@ -31,6 +31,9 @@ public/
 # and user settings will go in .vscode/
 .vscode/
 
+# Git worktrees
+.worktrees/
+
 ##### Do not alter the items below this line! #####
 ########## They are managed by a script! ##########
 
@@ -211,9 +214,8 @@ tags
 [._]*.un~
 
 # Vector db files
-deploy/compose/volumes
-examples/RAG/simple_rag/deploy/volumes
-examples/RAG/compose/volumes
+**/deploy/compose/volumes
+**/deploy/volumes
 examples/notebooks/examples/retail_sales_agent/deploy/volumes/
 
 # Mac Metadata

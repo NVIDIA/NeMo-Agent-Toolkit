@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 # Alert Triage using NeMo Agent Toolkit
-This example demonstrates how to build an intelligent alert triage system using NeMo Agent toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
+
+**Complexity:** 🟨 Intermediate
+
+This example demonstrates how to build an intelligent alert triage system using NeMo Agent Toolkit and LangGraph. The system analyzes system monitoring alerts, performs diagnostic checks using various tools, and generates structured triage reports with root cause categorization. It showcases how to combine LLMs with domain-specific diagnostic tools to create an automated troubleshooting workflow.
 
 ## Table of Contents
 
@@ -54,11 +57,11 @@ This example demonstrates how to build an intelligent alert triage system using 
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 ### Install This Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 ```bash
 uv pip install -e examples/advanced_agents/alert_triage_agent
 ```
@@ -221,7 +224,7 @@ workflow:
 ```
 
 * `_type`: The name of the agent (matching the agent's name in `register.py`).
-* `tool_names`: List of tools (from the `functions` section) used in the triage process.
+* `tool_names`: List of tools (from the `functions` or `function_groups` section) used in the triage process.
 * `llm_name`: Main LLM used by the agent for reasoning, tool-calling, and report generation.
 * `offline_mode`: Enables offline execution using predefined input/output instead of real systems.
 * `offline_data_path`: CSV file containing offline test alerts and their corresponding mocked tool responses.
@@ -260,15 +263,15 @@ eval:
       _type: json
       file_path: examples/advanced_agents/alert_triage_agent/data/offline_data.json
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
-    rag_groundedness:
+    groundedness:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_rag_eval_llm
-    rag_relevance:
+    relevance:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
@@ -333,7 +336,8 @@ This will trigger a full end-to-end triage process using live data sources.
 
 #### Credentials and Access
 
-> **Note:** We recommend managing secrets (for example, API keys, SSH keys) using a secure method such as environment variables, secret management tools, or encrypted `.env` files. Never hard-code sensitive values into the source code.
+> [!NOTE]
+> We recommend managing secrets (for example, API keys, SSH keys) using a secure method such as environment variables, secret management tools, or encrypted `.env` files. Never hard-code sensitive values into the source code.
 
 ### Running live with a HTTP server listening for alerts
 The example includes a Flask-based HTTP server ([`run.py`](./src/nat_alert_triage_agent/run.py)) that can continuously listen for and process alerts. This allows integration with monitoring systems that send alerts via HTTP POST requests.
@@ -341,7 +345,7 @@ The example includes a Flask-based HTTP server ([`run.py`](./src/nat_alert_triag
 To use this mode, first ensure you have configured your live environment as described in the previous section. Then:
 1. **Start the Alert Triage Server**
 
-   From the root directory of the NeMo Agent toolkit library, run:
+   From the root directory of the NeMo Agent Toolkit library, run:
    ```bash
    python examples/advanced_agents/alert_triage_agent/src/nat_alert_triage_agent/run.py \
      --host 0.0.0.0 \

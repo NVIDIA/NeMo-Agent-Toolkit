@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,7 @@
 from collections.abc import AsyncIterator
 
 from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
@@ -26,7 +27,7 @@ class WeatherToolConfig(FunctionBaseConfig, name="weather_update"):
     pass
 
 
-@register_function(config_type=WeatherToolConfig)
+@register_function(config_type=WeatherToolConfig, framework_wrappers=[LLMFrameworkEnum.ADK])
 async def weather_update(_config: WeatherToolConfig, _builder: Builder) -> AsyncIterator[FunctionInfo]:
 
     async def _weather_update(city: str) -> str:

@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,13 +16,15 @@ limitations under the License.
 -->
 
 <!--
-  SPDX-FileCopyrightText: Copyright (c) 2024-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+  SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
   SPDX-License-Identifier: Apache-2.0
 -->
 
 # Plot Charts Agent
 
-A simple and reusable example that demonstrates creating charts from data using the NeMo Agent toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows NeMo Agent toolkit best practices for configuration-driven, reusable workflows.
+**Complexity:** 🟢 Beginner
+
+A simple and reusable example that demonstrates creating charts from data using the NeMo Agent Toolkit. This workflow can generate line charts, bar charts, and scatter plots from JSON data files based on user requests. The implementation follows NeMo Agent Toolkit best practices for configuration-driven, reusable workflows.
 
 ## Table of Contents
 
@@ -34,7 +36,7 @@ A simple and reusable example that demonstrates creating charts from data using 
 ## Key Features
 
 - **Data Visualization Workflow:** Demonstrates a custom `plot_charts` workflow type that generates line charts, bar charts, and scatter plots from JSON data files based on natural language requests.
-- **Python Plotting Integration:** Shows how to integrate Python's `matplotlib` library for chart generation within the NeMo Agent toolkit framework.
+- **Python Plotting Integration:** Shows how to integrate Python's `matplotlib` library for chart generation within the NeMo Agent Toolkit framework.
 - **JSON Data Processing:** Demonstrates parsing and visualization of structured JSON data with configurable x-values and multiple y-value series with labels.
 - **LLM-Enhanced Descriptions:** Uses configured LLMs to generate intelligent, contextual descriptions of the created charts for better user understanding.
 - **Configurable Chart Parameters:** Shows how to customize chart types, data sources, output directories, figure sizes, and data point limits through YAML configuration.
@@ -43,11 +45,11 @@ A simple and reusable example that demonstrates creating charts from data using 
 
 ### Setup Virtual Environment and Install NeMo Agent Toolkit
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/custom_functions/plot_charts
@@ -55,7 +57,7 @@ uv pip install -e examples/custom_functions/plot_charts
 
 ### Set Up API Keys
 
-If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/quick-start/installing.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
 
 ```bash
 export NVIDIA_API_KEY=<YOUR_API_KEY>
@@ -111,7 +113,7 @@ The data file should be in JSON format with the following structure:
 
 ### Run the Workflow
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow:
+Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow:
 
 ```bash
 nat run --config_file examples/custom_functions/plot_charts/configs/config.yml --input "create a line chart"
@@ -149,7 +151,7 @@ nat run --config_file examples/custom_functions/plot_charts/configs/config.yml -
 
 ### Launch the Workflow Server
 
-Run the following command from the root of the NeMo Agent toolkit repo to serve this workflow:
+Run the following command from the root of the NeMo Agent Toolkit repo to serve this workflow:
 
 ```bash
 nat serve --config_file examples/custom_functions/plot_charts/configs/config.yml

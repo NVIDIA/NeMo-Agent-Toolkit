@@ -1,0 +1,388 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+import logging
+import os
+import re
+import typing
+from abc import abstractmethod
+from typing import TypeVar
+
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepState
+from nat.data_models.intermediate_step import TraceMetadata
+from nat.data_models.span import MimeTypes
+from nat.data_models.span import Span
+from nat.data_models.span import SpanAttributes
+from nat.data_models.span import SpanContext
+from nat.data_models.span import event_type_to_span_kind
+from nat.observability.exporter.base_exporter import IsolatedAttribute
+from nat.observability.exporter.processing_exporter import ProcessingExporter
+from nat.observability.mixin.serialize_mixin import SerializeMixin
+from nat.observability.utils.dict_utils import merge_dicts
+from nat.observability.utils.time_utils import ns_timestamp
+from nat.utils.type_utils import override
+
+if typing.TYPE_CHECKING:
+    from nat.builder.context import ContextState
+
+logger = logging.getLogger(__name__)
+
+InputSpanT = TypeVar("InputSpanT")
+OutputSpanT = TypeVar("OutputSpanT")
+
+
+class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
+    """Abstract base class for span exporters with processing pipeline support.
+
+    This class specializes ProcessingExporter for span-based telemetry export. It converts
+    IntermediateStep events into Span objects and supports processing pipelines for
+    span transformation before export.
+
+    The generic types work as follows:
+    - InputSpanT: The type of spans that enter the processing pipeline (typically Span)
+    - OutputSpanT: The type of spans after processing through the pipeline (e.g., OtelSpan)
+
+    Key Features:
+    - Automatic span creation from IntermediateStep events
+    - Span lifecycle management (start/end event tracking)
+    - Processing pipeline support via ProcessingExporter
+    - Metadata and attribute handling
+    - Usage information tracking
+    - Automatic isolation of mutable state for concurrent execution using descriptors
+
+    Inheritance Hierarchy:
+    - BaseExporter: Core event subscription and lifecycle management + DescriptorIsolationMixin
+    - ProcessingExporter: Adds processor pipeline functionality
+    - SpanExporter: Specializes for span creation and export
+
+    Event Processing Flow:
+    1. IntermediateStep (START) → Create Span → Add to tracking
+    2. IntermediateStep (END) → Complete Span → Process through pipeline → Export
+
+    Parameters
+    ----------
+        context_state: `ContextState`, optional
+            The context state to use for the exporter. Defaults to None.
+        span_prefix: `str`, optional
+            The prefix name to use for span attributes. If `None` the value of the `NAT_SPAN_PREFIX` environment
+            variable is used. Defaults to `"nat"` if neither are defined.
+    """
+
+    # Use descriptors for automatic isolation of span-specific state
+    _outstanding_spans: IsolatedAttribute[dict] = IsolatedAttribute(dict)
+    _span_stack: IsolatedAttribute[dict] = IsolatedAttribute(dict)
+    _metadata_stack: IsolatedAttribute[dict] = IsolatedAttribute(dict)
+
+    def __init__(self, context_state: "ContextState | None" = None, span_prefix: str | None = None):
+        super().__init__(context_state=context_state)
+        if span_prefix is None:
+            span_prefix = os.getenv("NAT_SPAN_PREFIX", "nat").strip() or "nat"
+
+        self._span_prefix = span_prefix
+
+    @abstractmethod
+    async def export_processed(self, item: OutputSpanT) -> None:
+        """Export the processed span.
+
+        Args:
+            item (OutputSpanT): The processed span to export.
+        """
+        pass
+
+    @override
+    def export(self, event: IntermediateStep) -> None:
+        """The main logic that reacts to each IntermediateStep.
+
+        Args:
+            event (IntermediateStep): The event to process.
+        """
+        if not isinstance(event, IntermediateStep):
+            return
+
+        if (event.event_state == IntermediateStepState.START):
+            self._process_start_event(event)
+        elif (event.event_state == IntermediateStepState.END):
+            self._process_end_event(event)
+
+    def _process_start_event(self, event: IntermediateStep):
+        """Process the start event of an intermediate step.
+
+        Args:
+            event (IntermediateStep): The event to process.
+        """
+
+        parent_span = None
+        span_ctx = None
+        workflow_trace_id = self._context_state.workflow_trace_id.get()
+
+        # Look up the parent span to establish hierarchy
+        # event.parent_id is the UUID of the last START step with a different UUID from current step
+        # This maintains proper parent-child relationships in the span tree
+        # Skip lookup if parent_id is "root" (indicates this is a top-level span)
+        if len(self._span_stack) > 0 and event.parent_id and event.parent_id != "root":
+
+            parent_span = self._span_stack.get(event.parent_id, None)
+            if parent_span is None:
+                logger.warning("No parent span found for step %s", event.UUID)
+                return
+
+            parent_span = parent_span.model_copy() if isinstance(parent_span, Span) else None
+            if parent_span and parent_span.context:
+                span_ctx = SpanContext(trace_id=parent_span.context.trace_id)
+        # No parent: adopt workflow trace id if available to keep all spans in the same trace
+        if span_ctx is None and workflow_trace_id:
+            span_ctx = SpanContext(trace_id=workflow_trace_id)
+
+        # Extract start/end times from the step
+        # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.
+        # If span_event_timestamp is missing, we default to event_timestamp (meaning zero-length).
+        s_ts = event.payload.span_event_timestamp or event.payload.event_timestamp
+        start_ns = ns_timestamp(s_ts)
+
+        # Use display_name from trace metadata for observability if set, otherwise fall back to name, then event type
+        display_name = None
+        if (event.payload.metadata and hasattr(event.payload.metadata, 'provided_metadata')
+                and event.payload.metadata.provided_metadata):
+            display_name = event.payload.metadata.provided_metadata.get("display_name")
+        sub_span_name = display_name or event.payload.name or f"{event.payload.event_type}"
+
+        # Prefer parent/context trace id for attribute, else workflow trace id
+        _attr_trace_id = None
+        if span_ctx is not None:
+            _attr_trace_id = span_ctx.trace_id
+        elif parent_span and parent_span.context:
+            _attr_trace_id = parent_span.context.trace_id
+        elif workflow_trace_id:
+            _attr_trace_id = workflow_trace_id
+
+        attributes = {
+            f"{self._span_prefix}.event_type":
+                event.payload.event_type.value,
+            f"{self._span_prefix}.function.id":
+                event.function_ancestry.function_id if event.function_ancestry else "unknown",
+            f"{self._span_prefix}.function.name":
+                event.function_ancestry.function_name if event.function_ancestry else "unknown",
+            f"{self._span_prefix}.function.parent_id":
+                event.function_ancestry.parent_id
+                if event.function_ancestry and event.function_ancestry.parent_id else "unknown",
+            f"{self._span_prefix}.function.parent_name":
+                event.function_ancestry.parent_name
+                if event.function_ancestry and event.function_ancestry.parent_name else "unknown",
+            f"{self._span_prefix}.subspan.name":
+                event.payload.name or "",
+            f"{self._span_prefix}.event_timestamp":
+                event.event_timestamp,
+            f"{self._span_prefix}.framework":
+                event.payload.framework.value if event.payload.framework else "unknown",
+            f"{self._span_prefix}.conversation.id":
+                self._context_state.conversation_id.get() or "unknown",
+            f"{self._span_prefix}.workflow.run_id":
+                self._context_state.workflow_run_id.get() or "unknown",
+            f"{self._span_prefix}.workflow.trace_id": (f"{_attr_trace_id:032x}" if _attr_trace_id else "unknown"),
+        }
+
+        sub_span = Span(name=sub_span_name,
+                        parent=parent_span,
+                        context=span_ctx,
+                        attributes=attributes,
+                        start_time=start_ns)
+
+        span_kind = event_type_to_span_kind(event.event_type)
+        sub_span.set_attribute(f"{self._span_prefix}.span.kind", span_kind.value)
+
+        # Enable session grouping by setting session.id from conversation_id
+        try:
+            conversation_id = self._context_state.conversation_id.get()
+            if conversation_id:
+                sub_span.set_attribute("session.id", conversation_id)
+        except (AttributeError, LookupError):
+            pass
+
+        if event.payload.data and event.payload.data.input:
+            match = re.search(r"Human:\s*Question:\s*(.*)", str(event.payload.data.input))
+            if match:
+                human_question = match.group(1).strip()
+                sub_span.set_attribute(SpanAttributes.INPUT_VALUE.value, human_question)
+            else:
+                serialized_input, is_json = self._serialize_payload(event.payload.data.input)
+                sub_span.set_attribute(SpanAttributes.INPUT_VALUE.value, serialized_input)
+                sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE.value,
+                                       MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+                sub_span.set_attribute("input.value_obj", self._to_json_string(event.payload.data.input))
+
+        # Add metadata to the metadata stack
+        start_metadata = event.payload.metadata or {}
+
+        if isinstance(start_metadata, dict):
+            self._metadata_stack[event.UUID] = start_metadata  # type: ignore
+        elif isinstance(start_metadata, TraceMetadata):
+            self._metadata_stack[event.UUID] = start_metadata.model_dump()  # type: ignore
+        else:
+            logger.warning("Invalid metadata type for step %s", event.UUID)
+            return
+
+        # Inject request attributes into provided_metadata
+        try:
+            request_metadata = self._context_state.metadata.get()
+            if request_metadata:
+                request_attrs = request_metadata.to_dict()
+                if request_attrs:
+                    stored = self._metadata_stack[event.UUID]
+                    if "provided_metadata" not in stored or stored["provided_metadata"] is None:
+                        stored["provided_metadata"] = {}
+                    stored["provided_metadata"]["request_attributes"] = request_attrs
+        except (AttributeError, LookupError):
+            pass
+
+        self._span_stack[event.UUID] = sub_span  # type: ignore
+        self._outstanding_spans[event.UUID] = sub_span  # type: ignore
+
+        logger.debug(
+            "Added span to tracking (outstanding: %d, stack: %d, event_id: %s)",
+            len(self._outstanding_spans),  # type: ignore
+            len(self._span_stack),  # type: ignore
+            event.UUID)
+
+    def _process_end_event(self, event: IntermediateStep):
+        """Process the end event of an intermediate step.
+
+        Args:
+            event (IntermediateStep): The event to process.
+        """
+
+        # Find the subspan that was created in the start event
+        sub_span: Span | None = self._outstanding_spans.pop(event.UUID, None)  # type: ignore
+
+        if sub_span is None:
+            logger.warning("No subspan found for step %s", event.UUID)
+            return
+
+        self._span_stack.pop(event.UUID, None)  # type: ignore
+
+        # Optionally add more attributes from usage_info or data
+        usage_info = event.payload.usage_info
+        if usage_info:
+            sub_span.set_attribute(SpanAttributes.NAT_USAGE_NUM_LLM_CALLS.value,
+                                   usage_info.num_llm_calls if usage_info.num_llm_calls else 0)
+            sub_span.set_attribute(SpanAttributes.NAT_USAGE_SECONDS_BETWEEN_CALLS.value,
+                                   usage_info.seconds_between_calls if usage_info.seconds_between_calls else 0)
+            sub_span.set_attribute(SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value,
+                                   usage_info.token_usage.prompt_tokens if usage_info.token_usage else 0)
+            sub_span.set_attribute(SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value,
+                                   usage_info.token_usage.completion_tokens if usage_info.token_usage else 0)
+            sub_span.set_attribute(SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value,
+                                   usage_info.token_usage.total_tokens if usage_info.token_usage else 0)
+
+        if event.payload.data and event.payload.data.output is not None:
+            serialized_output, is_json = self._serialize_payload(event.payload.data.output)
+            sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE.value, serialized_output)
+            sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE.value,
+                                   MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+            sub_span.set_attribute("output.value_obj", self._to_json_string(event.payload.data.output))
+
+        # Merge metadata from start event with end event metadata
+        start_metadata = self._metadata_stack.pop(event.UUID)  # type: ignore
+
+        if start_metadata is None:
+            logger.warning("No metadata found for step %s", event.UUID)
+            return
+
+        end_metadata = event.payload.metadata or {}
+
+        if not isinstance(end_metadata, dict | TraceMetadata):
+            logger.warning("Invalid metadata type for step %s", event.UUID)
+            return
+
+        if isinstance(end_metadata, TraceMetadata):
+            end_metadata = end_metadata.model_dump()
+
+        merged_metadata = merge_dicts(start_metadata, end_metadata)
+        serialized_metadata, is_json = self._serialize_payload(merged_metadata)
+        sub_span.set_attribute(f"{self._span_prefix}.metadata", serialized_metadata)
+        sub_span.set_attribute(f"{self._span_prefix}.metadata.mime_type",
+                               MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
+
+        end_ns = ns_timestamp(event.payload.event_timestamp)
+
+        # End the subspan
+        sub_span.end(end_time=end_ns)
+
+        # Export the span with processing pipeline
+        self._create_export_task(self._export_with_processing(sub_span))  # type: ignore
+
+    def _to_json_string(self, data: typing.Any) -> str:
+        """Transform payload into a JSON string for span attributes.
+
+        Converts the input data to a JSON string representation that is always
+        compatible with OTLP span attribute encoding. Raw dicts and nested structures
+        can contain types (None, custom objects) that OTLP cannot encode, so the
+        result is serialized to a JSON string for safety.
+
+        The normalization process:
+        1. Recursively processes nested structures (dicts, lists, tuples)
+        2. Converts Pydantic models via model_dump(mode='json', exclude_none=True)
+        3. Filters out None values from dicts
+        4. Extracts 'value' key if present in dict and not None
+        5. Falls back to str() for non-serializable objects
+
+        Returns:
+            A valid JSON string representation of the data.
+        """
+
+        def _normalize(obj: typing.Any) -> typing.Any:
+            """Recursively normalize objects for JSON serialization."""
+            # Pydantic models: dump with JSON mode and recursively normalize
+            if hasattr(obj, 'model_dump'):
+                dumped = obj.model_dump(mode='json', exclude_none=True)
+                return _normalize(dumped)
+
+            # Dicts: drop None values, normalize values, optionally extract 'value' key
+            if isinstance(obj, dict):
+                normalized = {k: _normalize(v) for k, v in obj.items() if v is not None}
+                # Extract 'value' key if present and not None
+                if 'value' in normalized and normalized['value'] is not None:
+                    return _normalize(normalized['value'])
+                return normalized
+
+            # Lists/tuples: normalize each element
+            if isinstance(obj, (list, tuple)):
+                return [_normalize(item) for item in obj]
+
+            # Primitives and other objects: return as-is (json.dumps will handle via default=str)
+            return obj
+
+        try:
+            normalized = _normalize(data)
+            return json.dumps(normalized, default=str)
+        except Exception as e:
+            # Last-resort fallback: str() representation wrapped in JSON
+            logger.debug("Span attribute serialization failed, using str fallback: %s", e)
+            return json.dumps(str(data))
+
+    @override
+    async def _cleanup(self):
+        """Clean up any remaining spans."""
+        if self._outstanding_spans:  # type: ignore
+            logger.warning("Not all spans were closed. Remaining: %s", self._outstanding_spans)  # type: ignore
+
+            for span_info in self._outstanding_spans.values():  # type: ignore
+                span_info.end()
+
+        self._outstanding_spans.clear()  # type: ignore
+        self._span_stack.clear()  # type: ignore
+        self._metadata_stack.clear()  # type: ignore
+        await super()._cleanup()

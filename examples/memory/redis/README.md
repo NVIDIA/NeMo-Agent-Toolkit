@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@ limitations under the License.
 
 # Redis Examples
 
+**Complexity:** 🟨 Intermediate
+
 These examples use the redis memory backend.
 
 ## Table of Contents
@@ -31,7 +33,7 @@ These examples use the redis memory backend.
 
 ## Key Features
 
-- **Redis Memory Backend Integration:** Demonstrates how to integrate Redis as a memory backend for NeMo Agent toolkit workflows, enabling persistent memory storage and retrieval across agent interactions.
+- **Redis Memory Backend Integration:** Demonstrates how to integrate Redis as a memory backend for NeMo Agent Toolkit workflows, enabling persistent memory storage and retrieval across agent interactions.
 - **Chat Memory Management:** Shows implementation of simple chat functionality with the ability to create, store, and recall memories using Redis as the underlying storage system.
 - **Embeddings-Based Memory Search:** Uses embeddings models to create vector representations of queries and stored memories, implementing HNSW indexing with L2 distance metrics for efficient similarity search.
 
@@ -50,11 +52,11 @@ docker info
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 To run this example, install the required dependencies by running the following command:
 ```bash
-uv sync --extra langchain --extra redis --extra telemetry
+uv pip install -e .
 ```
 
 ### Start Services

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +18,7 @@ from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.authentication.interfaces import AuthProviderBaseConfig
+from nat.data_models.common import OptionalSecretStr
 
 
 class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
@@ -36,7 +37,8 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
 
     # Client registration (manual registration vs DCR)
     client_id: str | None = Field(default=None, description="OAuth2 client ID for pre-registered clients")
-    client_secret: str | None = Field(default=None, description="OAuth2 client secret for pre-registered clients")
+    client_secret: OptionalSecretStr = Field(default=None,
+                                             description="OAuth2 client secret for pre-registered clients")
     enable_dynamic_registration: bool = Field(default=True,
                                               description="Enable OAuth2 Dynamic Client Registration (RFC 7591)")
     client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name for dynamic registration")
@@ -50,8 +52,14 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     # Advanced options
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
 
+    # These fields are only used for shared workflow (not per-user workflows)
     default_user_id: str | None = Field(default=None, description="Default user ID for authentication")
     allow_default_user_id_for_tool_calls: bool = Field(default=True, description="Allow default user ID for tool calls")
+
+    # Token storage configuration
+    token_storage_object_store: str | None = Field(
+        default=None,
+        description="Reference to object store for secure token storage. If None, uses in-memory storage.")
 
     @model_validator(mode="after")
     def validate_auth_config(self):

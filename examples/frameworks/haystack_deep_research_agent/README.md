@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,8 @@ limitations under the License.
 -->
 
 # Haystack Deep Research Agent
+
+**Complexity:** 🟨 Intermediate
 
 This example demonstrates how to build a deep research agent using Haystack framework  that combines web search and Retrieval Augmented Generation (RAG) capabilities using the NeMo-Agent-Toolkit.
 
@@ -56,7 +58,7 @@ Before using this workflow, ensure you have:
 
 ## Installation and Usage
 
-Follow the instructions in the [Install Guide](../../../docs/source/quick-start/installing.md#install-from-source) to create the development environment and install NVIDIA NeMo Agent Toolkit.
+Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NVIDIA NeMo Agent Toolkit.
 
 ### Step 1: Set Your API Keys
 

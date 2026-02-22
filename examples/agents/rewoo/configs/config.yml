@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,28 +17,24 @@
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
     max_tokens: 4096
 
+function_groups:
+  calculator:
+    _type: calculator
+
 functions:
-  calculator_multiply:
-    _type: calculator_multiply
-  calculator_inequality:
-    _type: calculator_inequality
-  calculator_divide:
-    _type: calculator_divide
-  calculator_subtract:
-    _type: calculator_subtract
   internet_search:
     _type: tavily_internet_search
   haystack_chitchat_agent:
     _type: haystack_chitchat_agent
-    llm_name: meta/llama-3.1-405b-instruct
+    llm_name: nvidia/nemotron-mini-4b-instruct
 
 workflow:
   _type: rewoo_agent
-  tool_names: [calculator_multiply, calculator_inequality, calculator_divide, calculator_subtract, internet_search, haystack_chitchat_agent]
+  tool_names: [calculator, internet_search, haystack_chitchat_agent]
   llm_name: nim_llm
   verbose: true
   tool_call_max_retries: 3
@@ -50,15 +46,15 @@ eval:
       _type: json
       file_path: examples/agents/data/rewoo.json
   evaluators:
-    rag_accuracy:
+    accuracy:
       _type: ragas
       metric: AnswerAccuracy
       llm_name: nim_llm
-    rag_groundedness:
+    relevance:
       _type: ragas
       metric: ContextRelevance
       llm_name: nim_llm
-    rag_relevance:
+    groundedness:
       _type: ragas
       metric: ResponseGroundedness
       llm_name: nim_llm
