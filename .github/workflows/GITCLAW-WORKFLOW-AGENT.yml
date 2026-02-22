@@ -1,0 +1,61 @@
+name: GITCLAW-WORKFLOW-AGENT
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+jobs:
+  run-agent:
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'issues')
+      || (github.event_name == 'issue_comment' && github.event.comment.user.login != 'github-actions[bot]')
+    steps:
+      - name: Authorize
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PERM=$(gh api "repos/${{ github.repository }}/collaborators/${{ github.actor }}/permission" --jq '.permission' 2>/dev/null || echo "none")
+          echo "Actor: ${{ github.actor }}, Permission: $PERM"
+          if [[ "$PERM" != "admin" && "$PERM" != "maintain" && "$PERM" != "write" ]]; then
+            echo "::error::Unauthorized: ${{ github.actor }} has '$PERM' permission"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Guard
+        run: bun .GITCLAW/lifecycle/GITCLAW-ENABLED.ts
+
+      - name: Heart Guard
+        run: bun .GITCLAW/lifecycle/GITCLAW-HEART-GUARD.ts
+
+      - name: Preinstall
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun .GITCLAW/lifecycle/GITCLAW-INDICATOR.ts
+
+      - name: Install dependencies
+        run: cd .GITCLAW && bun install --frozen-lockfile
+
+      - name: Run
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bun .GITCLAW/lifecycle/GITCLAW-AGENT.ts

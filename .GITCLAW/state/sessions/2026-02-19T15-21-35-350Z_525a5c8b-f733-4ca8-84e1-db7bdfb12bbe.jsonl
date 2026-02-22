@@ -1,0 +1,5 @@
+{"type":"session","version":3,"id":"525a5c8b-f733-4ca8-84e1-db7bdfb12bbe","timestamp":"2026-02-19T15:21:35.350Z","cwd":"/home/runner/work/gitclaw/gitclaw"}
+{"type":"model_change","id":"ac42adf1","parentId":null,"timestamp":"2026-02-19T15:21:35.419Z","provider":"github-copilot","modelId":"gpt-4o"}
+{"type":"thinking_level_change","id":"5bc9fda8","parentId":"ac42adf1","timestamp":"2026-02-19T15:21:35.420Z","thinkingLevel":"off"}
+{"type":"message","id":"b9996b47","parentId":"5bc9fda8","timestamp":"2026-02-19T15:21:35.723Z","message":{"role":"user","content":[{"type":"text","text":"Hail"}],"timestamp":1771514495716}}
+{"type":"message","id":"1024ec39","parentId":"b9996b47","timestamp":"2026-02-19T15:21:36.146Z","message":{"role":"assistant","content":[],"api":"openai-completions","provider":"github-copilot","model":"gpt-4o","usage":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"totalTokens":0,"cost":{"input":0,"output":0,"cacheRead":0,"cacheWrite":0,"total":0}},"stopReason":"error","timestamp":1771514495718,"errorMessage":"400 bad request: GitHub App Server-To-Server Tokens are not supported for this endpoint\n"}}

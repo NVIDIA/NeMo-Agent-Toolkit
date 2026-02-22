@@ -1,0 +1,279 @@
+name: GITCLAW Installer (Move to .github/workflows to execute, the master version lives .GITCLAW/GITCLAW-INSTALLER.yml)
+
+on:
+  workflow_dispatch:
+    inputs:
+      overwrite:
+        description: 'Overwrite existing files (true = replace, false = skip)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      node-version:
+        description: 'Node.js version for converted workflows'
+        required: false
+        default: '20'
+        type: string
+  push:
+    paths:
+      - '.github/workflows/GITCLAW-INSTALLER.yml'
+  workflow_run:
+    workflows:
+      - 'GITCLAW-WORKFLOW-AGENT'
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-actions[bot]'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Resolve inputs
+        id: inputs
+        run: |
+          echo "overwrite=${{ inputs.overwrite || 'false' }}" >> "$GITHUB_OUTPUT"
+          echo "node_version=${{ inputs.node-version || '20' }}" >> "$GITHUB_OUTPUT"
+
+      - name: Create bootstrap branch
+        run: |
+          BRANCH="gitclaw/bootstrap-$(date +%Y%m%d-%H%M%S)"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          git checkout -b "$BRANCH"
+
+      - name: Install workflows (bun → npm)
+        env:
+          OVERWRITE: ${{ steps.inputs.outputs.overwrite }}
+          NODE_VERSION: ${{ steps.inputs.outputs.node_version }}
+        run: |
+          SRC_DIR=".GITCLAW/install"
+          DEST_DIR=".github/workflows"
+
+          if [ ! -d "$SRC_DIR" ]; then
+            echo "::notice::No workflow sources in $SRC_DIR — skipping"
+            exit 0
+          fi
+
+          mkdir -p "$DEST_DIR"
+
+          shopt -s dotglob
+          for src in "$SRC_DIR"/*.yml "$SRC_DIR"/*.yaml; do
+            [ -f "$src" ] || continue
+            filename="$(basename "$src")"
+
+            # Never overwrite the bootstrap workflow itself
+            if [ "$filename" = "bootstrap.yml" ] || [ "$filename" = "bootstrap.yaml" ]; then
+              echo "::notice::Skipping $filename (bootstrap workflow)"
+              continue
+            fi
+
+            dest="$DEST_DIR/$filename"
+
+            if [ -f "$dest" ] && [ "$OVERWRITE" != "true" ]; then
+              echo "::notice::Skipping $filename (already exists; set overwrite=true to replace)"
+              continue
+            fi
+
+            cp "$src" "$dest"
+
+            # ── Bun → Node / npm conversion ──────────────────────────
+            # Action: setup-bun → setup-node
+            sed -i -E 's|oven-sh/setup-bun@v[0-9]+|actions/setup-node@v4|g' "$dest"
+
+            # Input key: bun-version → node-version
+            sed -i "s|bun-version:.*|node-version: '${NODE_VERSION}'|g" "$dest"
+
+            # Step name cosmetics
+            sed -i 's|Setup Bun|Setup Node|g' "$dest"
+
+            # Install commands
+            sed -i 's|bun install --frozen-lockfile|npm ci|g'   "$dest"
+            sed -i 's|bun install|npm install|g'                "$dest"
+
+            # Script / test commands
+            sed -i 's|bun test|npm test|g'                      "$dest"
+            sed -i 's|bun run |npm run |g'                      "$dest"
+
+            # Direct file execution: bun <file>.ts → npx tsx <file>.ts
+            sed -i -E 's|bun ([^ ]+\.ts)|npx tsx \1|g'         "$dest"
+
+            # Direct file execution: bun <file>.js → node <file>.js
+            sed -i -E 's|bun ([^ ]+\.js)|node \1|g'            "$dest"
+
+            echo "::notice::Installed $filename → $dest (bun → npm converted)"
+          done
+
+      - name: Merge .gitignore
+        run: |
+          MARKER_START="# --- GITCLAW managed rules (do not edit below) ---"
+          MARKER_END="# --- End GITCLAW managed rules ---"
+
+          # Collect rules from fragment files
+          new_rules=""
+          for candidate in .GITCLAW/.gitignore .GITCLAW/gitignore; do
+            if [ -f "$candidate" ]; then
+              new_rules="${new_rules}$(cat "$candidate")
+          "
+            fi
+          done
+
+          if [ -z "$new_rules" ]; then
+            echo "::notice::No .gitignore fragments in .GITCLAW/ — skipping"
+            exit 0
+          fi
+
+          if [ ! -f .gitignore ]; then
+            printf '%s\n%s\n%s\n' "$MARKER_START" "$new_rules" "$MARKER_END" > .gitignore
+            echo "::notice::Created .gitignore with GITCLAW rules"
+            exit 0
+          fi
+
+          # Remove previous managed block if present
+          if grep -qF "$MARKER_START" .gitignore; then
+            start_line=$(grep -nF "$MARKER_START" .gitignore | head -1 | cut -d: -f1)
+            end_line=$(grep -nF "$MARKER_END" .gitignore | tail -1 | cut -d: -f1)
+            if [ -n "$start_line" ] && [ -n "$end_line" ]; then
+              sed -i "${start_line},${end_line}d" .gitignore
+            fi
+          fi
+
+          # Append managed block
+          printf '\n%s\n%s\n%s\n' "$MARKER_START" "$new_rules" "$MARKER_END" >> .gitignore
+          echo "::notice::Merged GITCLAW rules into .gitignore"
+
+      - name: Copy issue templates
+        env:
+          OVERWRITE: ${{ steps.inputs.outputs.overwrite }}
+        run: |
+          SRC_DIR=".GITCLAW/install"
+          DEST_DIR=".github/ISSUE_TEMPLATE"
+
+          if [ ! -d "$SRC_DIR" ]; then
+            echo "::notice::No issue templates in .GITCLAW/ — skipping"
+            exit 0
+          fi
+
+          mkdir -p "$DEST_DIR"
+
+          for src in "$SRC_DIR"/GITCLAW-TEMPLATE-*; do
+            [ -f "$src" ] || continue
+            filename="$(basename "$src")"
+            dest="$DEST_DIR/$filename"
+
+            if [ -f "$dest" ] && [ "$OVERWRITE" != "true" ]; then
+              echo "::notice::Skipping issue template $filename (already exists)"
+              continue
+            fi
+
+            cp "$src" "$dest"
+            echo "::notice::Installed issue template → $dest"
+          done
+
+      - name: Copy optional config files
+        env:
+          OVERWRITE: ${{ steps.inputs.outputs.overwrite }}
+        run: |
+          for pattern in .editorconfig .nvmrc .npmrc .eslintrc* .prettierrc*; do
+            for src in .GITCLAW/$pattern; do
+              [ -f "$src" ] || continue
+              filename="$(basename "$src")"
+
+              if [ -f "$filename" ] && [ "$OVERWRITE" != "true" ]; then
+                echo "::notice::Skipping config $filename (already exists)"
+                continue
+              fi
+
+              cp "$src" "$filename"
+              echo "::notice::Installed config → $filename"
+            done
+          done
+
+          if [ -d ".GITCLAW/scripts" ]; then
+            mkdir -p scripts
+            for src in .GITCLAW/scripts/*; do
+              [ -f "$src" ] || continue
+              filename="$(basename "$src")"
+              dest="scripts/$filename"
+
+              if [ -f "$dest" ] && [ "$OVERWRITE" != "true" ]; then
+                echo "::notice::Skipping script $filename (already exists)"
+                continue
+              fi
+
+              cp "$src" "$dest"
+              chmod +x "$dest"
+              echo "::notice::Installed script → $dest"
+            done
+          fi
+
+      - name: Mark installation complete
+        run: |
+          if [ -f ".GITCLAW/GITCLAW-NOT-INSTALLED.md" ]; then
+            mv ".GITCLAW/GITCLAW-NOT-INSTALLED.md" ".GITCLAW/GITCLAW-INSTALLED.md"
+            echo "::notice::Renamed GITCLAW-NOT-INSTALLED.md → GITCLAW-INSTALLED.md"
+          elif [ -f ".GITCLAW/GITCLAW-INSTALLED.md" ]; then
+            echo "::notice::GITCLAW-INSTALLED.md already exists — install verified"
+          else
+            echo "::warning::Neither GITCLAW-NOT-INSTALLED.md nor GITCLAW-INSTALLED.md found"
+          fi
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No changes detected — nothing to commit"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Changed files:"
+            git diff --cached --name-only
+          fi
+
+      - name: Commit and push
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git commit -m "chore: bootstrap GITCLAW workflows and config"
+          git push origin "$BRANCH"
+
+      - name: Open pull request
+        if: steps.changes.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr create \
+            --title "chore: bootstrap GITCLAW workflows and config" \
+            --body "## GITCLAW Bootstrap
+
+          This PR was automatically created by the **GITCLAW Bootstrap** workflow.
+
+          ### Changes
+          - Installed workflow files from \`.GITCLAW/workflows/\` → \`.github/workflows/\`
+          - Converted **bun** references to **Node.js / npm**
+          - Merged \`.gitignore\` rules (if any fragments found)
+          - Copied issue templates (if any found)
+          - Copied optional config files (if any found)
+
+          ### Review before merging
+          1. Verify installed workflows are correct
+          2. Confirm no existing files were unintentionally overwritten
+          3. Check \`.gitignore\` rules are appropriate
+
+          > Auto-generated by \`bootstrap.yml\`" \
+            --head "$BRANCH" \
+            --base "${{ github.event.repository.default_branch }}"

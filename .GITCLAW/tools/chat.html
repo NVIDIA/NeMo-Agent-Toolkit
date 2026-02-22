@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitClaw — Chat with Pi 🦞🥧</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-hover: #1c2129;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #e8533f;
+      --accent-hover: #f06a58;
+      --accent-glow: rgba(232, 83, 63, 0.25);
+      --user-bg: #1a2233;
+      --assistant-bg: #1a1a2e;
+      --input-bg: #0d1117;
+      --radius: 12px;
+      --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.3px;
+    }
+
+    .header-title span {
+      color: var(--accent);
+    }
+
+    .header-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 7px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: var(--font-sans);
+    }
+
+    .btn:hover { background: var(--surface-hover); border-color: var(--text-muted); }
+
+    .btn-accent {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn-accent:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+    /* Setup Panel */
+    .setup-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      backdrop-filter: blur(4px);
+    }
+
+    .setup-overlay.hidden { display: none; }
+
+    .setup-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+
+    .setup-panel h2 {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .setup-panel h2 span { color: var(--accent); }
+
+    .setup-panel .subtitle {
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+
+    .form-group select,
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .form-group select { cursor: pointer; }
+
+    .form-group select option { background: var(--surface); }
+
+    .form-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .setup-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    /* Chat Area */
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .chat-container::-webkit-scrollbar { width: 6px; }
+    .chat-container::-webkit-scrollbar-track { background: transparent; }
+    .chat-container::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .welcome-card {
+      text-align: center;
+      padding: 60px 20px;
+      max-width: 520px;
+      margin: auto;
+    }
+
+    .welcome-card .logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 30px var(--accent-glow);
+    }
+
+    .welcome-card h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .welcome-card h1 span { color: var(--accent); }
+
+    .welcome-card p {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 12px;
+    }
+
+    .welcome-card .suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .suggestion-chip {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .suggestion-chip:hover {
+      border-color: var(--accent);
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+
+    /* Messages */
+    .message {
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 14px 18px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      line-height: 1.65;
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      background: var(--user-bg);
+      border: 1px solid rgba(56, 139, 253, 0.15);
+    }
+
+    .message.assistant {
+      background: var(--assistant-bg);
+      border: 1px solid rgba(232, 83, 63, 0.12);
+    }
+
+    .message-role {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .message.user .message-role { color: #58a6ff; }
+    .message.assistant .message-role { color: var(--accent); }
+
+    .message-content {
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .message-content code {
+      font-family: var(--font-mono);
+      background: rgba(255,255,255,0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .message-content pre {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      margin: 10px 0;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .message-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .typing-indicator {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px 0;
+    }
+
+    .typing-indicator span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-indicator span:nth-child(2) { animation-delay: 0.16s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.32s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    .error-banner {
+      max-width: 780px;
+      margin: 4px auto;
+      padding: 10px 14px;
+      background: rgba(248, 81, 73, 0.1);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+      border-radius: 8px;
+      color: #f85149;
+      font-size: 13px;
+    }
+
+    /* Input Area */
+    .input-area {
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      padding: 14px 20px;
+      flex-shrink: 0;
+    }
+
+    .input-wrapper {
+      max-width: 780px;
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .input-wrapper textarea {
+      flex: 1;
+      padding: 12px 14px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--font-sans);
+      resize: none;
+      outline: none;
+      min-height: 44px;
+      max-height: 200px;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+
+    .input-wrapper textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .input-wrapper textarea::placeholder {
+      color: var(--text-muted);
+    }
+
+    .send-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .send-btn:hover { background: var(--accent-hover); transform: scale(1.04); }
+    .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .send-btn svg { width: 18px; height: 18px; }
+
+    .input-footer {
+      max-width: 780px;
+      margin: 6px auto 0;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .header { padding: 10px 14px; }
+      .chat-container { padding: 12px; }
+      .input-area { padding: 10px 14px; }
+      .message { padding: 12px 14px; }
+      .setup-panel { padding: 24px; margin: 10px; }
+      .welcome-card { padding: 40px 16px; }
+      .welcome-card .logo { width: 72px; height: 72px; }
+      .welcome-card h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Setup Overlay -->
+  <div class="setup-overlay" id="setupOverlay">
+    <div class="setup-panel">
+      <h2>🦞 <span>GitClaw</span> — Connect to Pi</h2>
+      <p class="subtitle">Enter your LLM provider credentials to start chatting. Keys are stored locally in your browser and sent only to your chosen provider.</p>
+
+      <div class="form-group">
+        <label for="providerSelect">Provider</label>
+        <select id="providerSelect">
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="openai">OpenAI (GPT)</option>
+          <option value="google">Google (Gemini)</option>
+          <option value="xai">xAI (Grok)</option>
+          <option value="openrouter">OpenRouter</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="modelSelect">Model</label>
+        <select id="modelSelect"></select>
+      </div>
+
+      <div class="form-group">
+        <label for="apiKeyInput">API Key</label>
+        <input type="password" id="apiKeyInput" placeholder="sk-..." autocomplete="off">
+        <p class="form-hint">🔒 Stored only in your browser's localStorage. Never sent to any server except your chosen provider.</p>
+      </div>
+
+      <div class="setup-actions">
+        <button class="btn btn-accent" id="connectBtn" onclick="handleConnect()">Start Chatting</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <img src="https://raw.githubusercontent.com/japer-technology/gitclaw/main/.GITCLAW/GITCLAW-LOGO.png" alt="GitClaw" class="header-logo">
+      <div>
+        <div class="header-title">🦞 <span>GitClaw</span> × Pi 🥧</div>
+        <div class="header-subtitle" id="connectionStatus">Not connected</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-sm" id="clearBtn" onclick="clearChat()">Clear</button>
+      <button class="btn btn-sm" id="settingsBtn" onclick="openSettings()">⚙️ Settings</button>
+    </div>
+  </div>
+
+  <!-- Chat Area -->
+  <div class="chat-container" id="chatContainer">
+    <div class="welcome-card" id="welcomeCard">
+      <img src="https://raw.githubusercontent.com/japer-technology/gitclaw/main/.GITCLAW/GITCLAW-LOGO.png" alt="GitClaw" class="logo">
+      <h1>Chat with <span>Pi</span> 🥧</h1>
+      <p>An interactive conversation powered by GitClaw's AI engine. Choose your LLM provider and start a conversation — Pi is ready to help with code, ideas, and anything in between.</p>
+      <p style="font-size: 13px;">Configure your provider to begin ↗</p>
+      <div class="suggestions">
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Explain what GitClaw is</div>
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Help me write a Python script</div>
+        <div class="suggestion-chip" onclick="useSuggestion(this)">Review this code for bugs</div>
+        <div class="suggestion-chip" onclick="useSuggestion(this)">What can you help me with?</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Area -->
+  <div class="input-area">
+    <div class="input-wrapper">
+      <textarea id="userInput" placeholder="Message Pi..." rows="1" onkeydown="handleKeyDown(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+    <div class="input-footer">
+      Press Enter to send · Shift+Enter for new line · Powered by <a href="https://github.com/japer-technology/gitclaw" style="color:var(--accent);text-decoration:none;">GitClaw</a> 🦞
+    </div>
+  </div>
+
+  <script>
+    // ── State ──
+    let messages = [];
+    let isStreaming = false;
+    let currentProvider = null;
+    let currentModel = null;
+    let apiKey = null;
+    let abortController = null;
+
+    const SYSTEM_PROMPT = `You are Pi, the AI engine that powers GitClaw 🦞 — a personal AI assistant that runs entirely through GitHub Issues and Actions. You are helpful, opinionated, and resourceful. You skip filler phrases and get straight to the point. You have a warm but efficient communication style. You can help with code, ideas, debugging, architecture, writing, and just about anything a developer might need. You were built on the pi coding agent (https://github.com/badlogic/pi-mono) and you live inside repositories as a .GITCLAW folder. You are knowledgeable about Git, GitHub, software engineering, and many programming languages. When writing code, you produce clean, well-structured solutions. You use markdown formatting in your responses when it helps readability.`;
+
+    const PROVIDER_MODELS = {
+      anthropic: [
+        { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+        { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+        { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku (Fast)' }
+      ],
+      openai: [
+        { id: 'gpt-4o', name: 'GPT-4o' },
+        { id: 'gpt-4o-mini', name: 'GPT-4o Mini (Fast)' },
+        { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' }
+      ],
+      google: [
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Fast)' }
+      ],
+      xai: [
+        { id: 'grok-3', name: 'Grok 3' },
+        { id: 'grok-3-mini', name: 'Grok 3 Mini (Fast)' }
+      ],
+      openrouter: [
+        { id: 'anthropic/claude-sonnet-4-20250514', name: 'Claude Sonnet 4 (via OpenRouter)' },
+        { id: 'openai/gpt-4o', name: 'GPT-4o (via OpenRouter)' },
+        { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro (via OpenRouter)' },
+        { id: 'deepseek/deepseek-r1', name: 'DeepSeek R1 (via OpenRouter)' }
+      ]
+    };
+
+    const PROVIDER_ENDPOINTS = {
+      anthropic: 'https://api.anthropic.com/v1/messages',
+      openai: 'https://api.openai.com/v1/chat/completions',
+      google: null, // constructed dynamically
+      xai: 'https://api.x.ai/v1/chat/completions',
+      openrouter: 'https://openrouter.ai/api/v1/chat/completions'
+    };
+
+    const STORAGE_KEY = 'gitclaw-pi-chat';
+
+    // ── Init ──
+    document.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      populateModels();
+      document.getElementById('providerSelect').addEventListener('change', populateModels);
+      document.getElementById('userInput').addEventListener('input', updateSendButton);
+    });
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const state = JSON.parse(saved);
+          currentProvider = state.provider || null;
+          currentModel = state.model || null;
+          apiKey = state.apiKey || null;
+          messages = state.messages || [];
+
+          if (currentProvider && currentModel && apiKey) {
+            document.getElementById('setupOverlay').classList.add('hidden');
+            updateConnectionStatus();
+            renderMessages();
+          }
+
+          if (currentProvider) document.getElementById('providerSelect').value = currentProvider;
+          populateModels();
+          if (currentModel) document.getElementById('modelSelect').value = currentModel;
+          if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+        }
+      } catch {
+        // Fresh start
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          provider: currentProvider,
+          model: currentModel,
+          apiKey: apiKey,
+          messages: messages
+        }));
+      } catch {
+        // Storage full or unavailable
+      }
+    }
+
+    function populateModels() {
+      const provider = document.getElementById('providerSelect').value;
+      const modelSelect = document.getElementById('modelSelect');
+      const models = PROVIDER_MODELS[provider] || [];
+      modelSelect.innerHTML = models.map(m =>
+        `<option value="${m.id}">${m.name}</option>`
+      ).join('');
+    }
+
+    // ── Setup ──
+    function handleConnect() {
+      const provider = document.getElementById('providerSelect').value;
+      const model = document.getElementById('modelSelect').value;
+      const key = document.getElementById('apiKeyInput').value.trim();
+
+      if (!key) {
+        document.getElementById('apiKeyInput').focus();
+        return;
+      }
+
+      currentProvider = provider;
+      currentModel = model;
+      apiKey = key;
+
+      document.getElementById('setupOverlay').classList.add('hidden');
+      updateConnectionStatus();
+      saveState();
+    }
+
+    function openSettings() {
+      document.getElementById('setupOverlay').classList.remove('hidden');
+      if (currentProvider) document.getElementById('providerSelect').value = currentProvider;
+      populateModels();
+      if (currentModel) document.getElementById('modelSelect').value = currentModel;
+      if (apiKey) document.getElementById('apiKeyInput').value = apiKey;
+    }
+
+    function updateConnectionStatus() {
+      const providerNames = {
+        anthropic: 'Anthropic',
+        openai: 'OpenAI',
+        google: 'Google',
+        xai: 'xAI',
+        openrouter: 'OpenRouter'
+      };
+      const el = document.getElementById('connectionStatus');
+      el.textContent = `Connected · ${providerNames[currentProvider]} · ${currentModel}`;
+      el.style.color = '#3fb950';
+    }
+
+    // ── Chat ──
+    function handleKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+    }
+
+    function updateSendButton() {
+      const hasText = document.getElementById('userInput').value.trim().length > 0;
+      document.getElementById('sendBtn').disabled = !hasText || isStreaming;
+    }
+
+    function useSuggestion(el) {
+      if (!apiKey) {
+        openSettings();
+        return;
+      }
+      document.getElementById('userInput').value = el.textContent;
+      updateSendButton();
+      sendMessage();
+    }
+
+    function clearChat() {
+      messages = [];
+      saveState();
+      const container = document.getElementById('chatContainer');
+      container.innerHTML = '';
+      // Re-add welcome card
+      container.innerHTML = `
+        <div class="welcome-card" id="welcomeCard">
+          <img src="https://raw.githubusercontent.com/japer-technology/gitclaw/main/.GITCLAW/GITCLAW-LOGO.png" alt="GitClaw" class="logo">
+          <h1>Chat with <span>Pi</span> 🥧</h1>
+          <p>An interactive conversation powered by GitClaw's AI engine. Choose your LLM provider and start a conversation — Pi is ready to help with code, ideas, and anything in between.</p>
+          <div class="suggestions">
+            <div class="suggestion-chip" onclick="useSuggestion(this)">Explain what GitClaw is</div>
+            <div class="suggestion-chip" onclick="useSuggestion(this)">Help me write a Python script</div>
+            <div class="suggestion-chip" onclick="useSuggestion(this)">Review this code for bugs</div>
+            <div class="suggestion-chip" onclick="useSuggestion(this)">What can you help me with?</div>
+          </div>
+        </div>`;
+    }
+
+    function renderMessages() {
+      const container = document.getElementById('chatContainer');
+      if (messages.length === 0) return;
+
+      // Remove welcome card
+      const welcome = document.getElementById('welcomeCard');
+      if (welcome) welcome.remove();
+
+      // Clear and re-render
+      container.innerHTML = '';
+      for (const msg of messages) {
+        appendMessageToDOM(msg.role, msg.content);
+      }
+      scrollToBottom();
+    }
+
+    function appendMessageToDOM(role, content) {
+      const container = document.getElementById('chatContainer');
+      const welcome = document.getElementById('welcomeCard');
+      if (welcome) welcome.remove();
+
+      const div = document.createElement('div');
+      div.className = `message ${role}`;
+
+      const roleLabel = role === 'user' ? 'You' : 'Pi 🥧';
+      div.innerHTML = `<div class="message-role">${roleLabel}</div><div class="message-content"></div>`;
+      div.querySelector('.message-content').textContent = content;
+
+      container.appendChild(div);
+      return div;
+    }
+
+    function scrollToBottom() {
+      const container = document.getElementById('chatContainer');
+      container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text || isStreaming) return;
+      if (!apiKey) { openSettings(); return; }
+
+      // Add user message
+      messages.push({ role: 'user', content: text });
+      appendMessageToDOM('user', text);
+      input.value = '';
+      input.style.height = 'auto';
+      updateSendButton();
+      scrollToBottom();
+
+      // Add assistant placeholder
+      const assistantDiv = appendMessageToDOM('assistant', '');
+      const contentEl = assistantDiv.querySelector('.message-content');
+      contentEl.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+      scrollToBottom();
+
+      isStreaming = true;
+      updateSendButton();
+
+      try {
+        const responseText = await callProvider(contentEl);
+        messages.push({ role: 'assistant', content: responseText });
+        saveState();
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          contentEl.textContent = '[Cancelled]';
+        } else {
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'error-banner';
+          errorDiv.textContent = `Error: ${err.message}`;
+          document.getElementById('chatContainer').appendChild(errorDiv);
+          scrollToBottom();
+          // Remove the empty assistant message
+          assistantDiv.remove();
+        }
+      } finally {
+        isStreaming = false;
+        updateSendButton();
+      }
+    }
+
+    // ── Provider API Calls ──
+    async function callProvider(contentEl) {
+      abortController = new AbortController();
+
+      if (currentProvider === 'anthropic') {
+        return await callAnthropic(contentEl);
+      } else if (currentProvider === 'google') {
+        return await callGoogle(contentEl);
+      } else {
+        // OpenAI-compatible: openai, xai, openrouter
+        return await callOpenAICompatible(contentEl);
+      }
+    }
+
+    function buildConversationMessages() {
+      return messages.map(m => ({ role: m.role, content: m.content }));
+    }
+
+    // ── Anthropic ──
+    async function callAnthropic(contentEl) {
+      const response = await fetch(PROVIDER_ENDPOINTS.anthropic, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: currentModel,
+          max_tokens: 4096,
+          system: SYSTEM_PROMPT,
+          messages: buildConversationMessages(),
+          stream: true
+        }),
+        signal: abortController.signal
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Anthropic API error (${response.status}): ${err}`);
+      }
+
+      return await readSSEStream(response, contentEl, parseAnthropicSSE);
+    }
+
+    function parseAnthropicSSE(data) {
+      if (data.type === 'content_block_delta' && data.delta?.type === 'text_delta') {
+        return data.delta.text;
+      }
+      return null;
+    }
+
+    // ── OpenAI-compatible (OpenAI, xAI, OpenRouter) ──
+    async function callOpenAICompatible(contentEl) {
+      const endpoint = PROVIDER_ENDPOINTS[currentProvider];
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      };
+
+      if (currentProvider === 'openrouter') {
+        headers['HTTP-Referer'] = location.href;
+        headers['X-Title'] = 'GitClaw Pi Chat';
+      }
+
+      const msgs = [{ role: 'system', content: SYSTEM_PROMPT }, ...buildConversationMessages()];
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({
+          model: currentModel,
+          messages: msgs,
+          stream: true,
+          max_tokens: 4096
+        }),
+        signal: abortController.signal
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`API error (${response.status}): ${err}`);
+      }
+
+      return await readSSEStream(response, contentEl, parseOpenAISSE);
+    }
+
+    function parseOpenAISSE(data) {
+      if (data.choices?.[0]?.delta?.content) {
+        return data.choices[0].delta.content;
+      }
+      return null;
+    }
+
+    // ── Google Gemini ──
+    async function callGoogle(contentEl) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+      const contents = [];
+      for (const m of messages) {
+        contents.push({
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }]
+        });
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: contents,
+          generationConfig: { maxOutputTokens: 4096 }
+        }),
+        signal: abortController.signal
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error(`Gemini API error (${response.status}): ${err}`);
+      }
+
+      const result = await response.json();
+      const text = result.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
+      contentEl.textContent = text;
+      scrollToBottom();
+      return text;
+    }
+
+    // ── SSE Stream Reader ──
+    async function readSSEStream(response, contentEl, parser) {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer = '';
+
+      contentEl.textContent = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') continue;
+
+          try {
+            const data = JSON.parse(payload);
+            const chunk = parser(data);
+            if (chunk) {
+              fullText += chunk;
+              contentEl.textContent = fullText;
+              scrollToBottom();
+            }
+          } catch {
+            // Skip unparseable lines
+          }
+        }
+      }
+
+      return fullText || 'No response generated.';
+    }
+  </script>
+</body>
+</html>
