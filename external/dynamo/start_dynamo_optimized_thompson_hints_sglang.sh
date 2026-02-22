@@ -201,7 +201,7 @@ SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-$(basename "$LOCAL_MODEL_DIR")}"
 
 # Repository directory - auto-detect from script location
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CUSTOM_DYNAMO_DIR="${SCRIPT_DIR}/optimized"
+CUSTOM_DYNAMO_DIR="${SCRIPT_DIR}/components"
 
 echo "========================================================="
 echo "Dynamo SGLang with OPTIMIZED Thompson Sampling Router"

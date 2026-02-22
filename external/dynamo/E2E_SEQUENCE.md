@@ -645,6 +645,6 @@ Key fields and defaults:
 
 ### Router config
 
-See [`external/dynamo/optimized/config.yaml`](optimized/config.yaml).
+See [`external/dynamo/components/config.yaml`](components/config.yaml).
 
 ---

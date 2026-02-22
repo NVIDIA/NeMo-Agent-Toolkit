@@ -167,7 +167,7 @@ curl http://localhost:8000/v1/chat/completions \
 To confirm that requests are flowing through the processor (not directly to workers), run:
 
 ```bash
-docker logs dynamo-sglang-optimized 2>&1 | grep -E "(Processor|processor|Processing request|Routing decision|dynamo.backend|backend.generate|find_worker)" | tail -50
+docker logs dynamo-sglang-components 2>&1 | grep -E "(Processor|processor|Processing request|Routing decision|dynamo.backend|backend.generate|find_worker)" | tail -50
 ```
 
 ### Expected Output (Nominal Operation)
@@ -215,7 +215,7 @@ INFO processor.generate: Routing decision: worker=7587892168930944779 decision=b
 **Verification:**
 ```bash
 # Check if processor registered its model card
-docker logs dynamo-sglang-optimized 2>&1 | grep -i "model card"
+docker logs dynamo-sglang-components 2>&1 | grep -i "model card"
 
 # Check ETCD for registered models
 curl -s http://localhost:2379/v3/kv/range -X POST \
@@ -234,7 +234,7 @@ curl -s http://localhost:2379/v3/kv/range -X POST \
 
 **Solution:** Ensure workers are registered and running:
 ```bash
-docker logs dynamo-sglang-optimized 2>&1 | grep "worker.generate"
+docker logs dynamo-sglang-components 2>&1 | grep "worker.generate"
 ```
 
 #### 3. Requests Bypassing Processor
@@ -246,7 +246,7 @@ docker logs dynamo-sglang-optimized 2>&1 | grep "worker.generate"
 **Verification:**
 ```bash
 # Check if processor is receiving requests
-docker logs dynamo-sglang-optimized 2>&1 | grep "Processing request"
+docker logs dynamo-sglang-components 2>&1 | grep "Processing request"
 ```
 
 **Solution:**
@@ -262,7 +262,7 @@ docker logs dynamo-sglang-optimized 2>&1 | grep "Processing request"
 
 **Solution:** Check router logs:
 ```bash
-docker logs dynamo-sglang-optimized 2>&1 | grep -i router
+docker logs dynamo-sglang-components 2>&1 | grep -i router
 ```
 
 ---
