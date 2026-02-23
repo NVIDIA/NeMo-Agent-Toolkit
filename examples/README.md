@@ -54,7 +54,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
 - **[Platform Integrations](#platform-integrations)**
   - [Dynamo Integration](#dynamo-integration)
   - [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
-  - [Safety and Security](#safety-and-security)
+  - [NeMo Agent Toolkit Safety and Security](#nemo-agent-toolkit-safety-and-security)
 - [Documentation Guide Files](#documentation-guide-files)
   - [Locally Hosted LLMs](#locally-hosted-llms)
   - [Workflow Artifacts](#workflow-artifacts)
@@ -188,8 +188,8 @@ _See the [Dynamo Integration README](dynamo_integration/README.md) for additiona
 ### Retrieval Augmented Generation (RAG)
 - **[`simple_rag`](RAG/simple_rag/README.md)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform **[🛑 Advanced]**
 
-### Safety and Security
-- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Outlines the features of the Safety and Security Engine (NASSE) included in NVIDIA NeMo Agent Toolkit and demonstrates its capabilities by assessing and improving the safety and security posture of an example Retail Agent **[🛑 Advanced]**
+### NeMo Agent Toolkit Safety and Security
+- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Demonstrates the NeMo Agent Toolkit Safety and Security capabilities by assessing and improving the security posture of an example Retail Agent **[🛑 Advanced]**
 
 ## Documentation Guide Files
 
