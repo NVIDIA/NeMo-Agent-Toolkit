@@ -114,9 +114,7 @@ def parse_args() -> argparse.Namespace:
                         help="Transport protocol to use. Defaults to ws.")
     parser.add_argument("--user-id", default=USER_ID_1, help="User ID value for JWT name/sub claims.")
     parser.add_argument("--input", default=INPUT_MESSAGE_1, help="User message to send.")
-    parser.add_argument("--ws-url",
-                        default="ws://localhost:8000/websocket",
-                        help="WebSocket URL for ws mode.")
+    parser.add_argument("--ws-url", default="ws://localhost:8000/websocket", help="WebSocket URL for ws mode.")
     parser.add_argument("--http-endpoint",
                         choices=["chat", "chat-stream"],
                         default="chat",
@@ -125,22 +123,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--http-url",
                         default=None,
                         help="HTTP URL override for http mode. If omitted, uses --http-endpoint preset.")
-    parser.add_argument("--open-browser",
-                        action=argparse.BooleanOptionalAction,
-                        default=True,
-                        help="Open OAuth URLs in a browser when interactive auth is required.")
-    parser.add_argument("--follow-interactive",
-                        action=argparse.BooleanOptionalAction,
-                        default=True,
-                        help="For /v1/chat, poll execution status until completion.")
-    parser.add_argument("--poll-interval-seconds",
-                        type=float,
-                        default=1.0,
-                        help="Polling interval in seconds for interactive HTTP execution status.")
-    parser.add_argument("--poll-timeout-seconds",
-                        type=float,
-                        default=300.0,
-                        help="Maximum time to wait for interactive HTTP execution completion.")
     return parser.parse_args()
 
 
@@ -186,7 +168,7 @@ def _handle_execution_status_payload(status_payload: dict) -> tuple[bool, bool]:
     return False, False
 
 
-def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload: dict, args: argparse.Namespace) -> None:
+def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload: dict) -> None:
     status_url = _absolute_url(http_url, first_payload.get("status_url"))
     if not status_url:
         print(json.dumps(first_payload, indent=2))
@@ -194,6 +176,8 @@ def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload:
 
     opened_oauth_states: set[str] = set()
     start = time.monotonic()
+    poll_interval_seconds = 1.0
+    poll_timeout_seconds = 300.0
 
     current_payload = first_payload
     while True:
@@ -202,7 +186,7 @@ def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload:
             auth_url = current_payload.get("auth_url")
             oauth_state = current_payload.get("oauth_state")
             state_key = oauth_state if isinstance(oauth_state, str) else "<none>"
-            if args.open_browser and isinstance(auth_url, str) and state_key not in opened_oauth_states:
+            if isinstance(auth_url, str) and state_key not in opened_oauth_states:
                 webbrowser.open(auth_url)
                 opened_oauth_states.add(state_key)
         elif status == "interaction_required":
@@ -215,10 +199,10 @@ def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload:
                 raise RuntimeError("Interactive HTTP execution failed.")
             return
 
-        if time.monotonic() - start > args.poll_timeout_seconds:
-            raise TimeoutError(f"Timed out polling execution status after {args.poll_timeout_seconds} seconds.")
+        if time.monotonic() - start > poll_timeout_seconds:
+            raise TimeoutError(f"Timed out polling execution status after {poll_timeout_seconds} seconds.")
 
-        time.sleep(args.poll_interval_seconds)
+        time.sleep(poll_interval_seconds)
         status_response = client.get(status_url)
         status_response.raise_for_status()
         current_payload = status_response.json()
@@ -313,14 +297,12 @@ def run_http(args: argparse.Namespace) -> None:
                     continue
                 if current_event == "oauth_required":
                     auth_url = data.get("auth_url")
-                    if args.open_browser and isinstance(auth_url, str):
+                    if isinstance(auth_url, str):
                         webbrowser.open(auth_url)
                     continue
 
-                chunk = (
-                    data.get("choices", [{}])[0].get("delta", {}).get("content")
-                    or data.get("choices", [{}])[0].get("message", {}).get("content")
-                )
+                chunk = (data.get("choices", [{}])[0].get("delta", {}).get("content")
+                         or data.get("choices", [{}])[0].get("message", {}).get("content"))
                 if isinstance(chunk, str) and chunk:
                     text_chunks.append(chunk)
 
@@ -337,10 +319,7 @@ def run_http(args: argparse.Namespace) -> None:
         data = response.json()
 
         if isinstance(data, dict) and data.get("status") in {"oauth_required", "interaction_required", "running"}:
-            if args.follow_interactive:
-                _follow_http_interactive(client, http_url, data, args)
-            else:
-                print(json.dumps(data, indent=2))
+            _follow_http_interactive(client, http_url, data)
             return
 
         if isinstance(data, dict):
