@@ -31,9 +31,9 @@ from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.data_models.optimizer import SamplerType
 from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.optimizer.eval_runtime_loader import load_evaluation_run
-from nat.optimizer.parameter_selection import pick_trial
-from nat.optimizer.update_helpers import apply_suggestions
+from nat.config_optimizer.eval_runtime_loader import load_evaluation_run
+from nat.config_optimizer.parameters.selection import pick_trial
+from nat.config_optimizer.update_helpers import apply_suggestions
 
 if TYPE_CHECKING:
     from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
@@ -265,7 +265,7 @@ def optimize_parameters(
 
     # Generate Pareto front visualizations
     try:
-        from nat.optimizer.pareto_visualizer import create_pareto_visualization
+        from nat.config_optimizer.parameters.pareto_visualizer import create_pareto_visualization
         logger.info("Generating Pareto front visualizations...")
         create_pareto_visualization(
             data_source=study,
@@ -279,7 +279,7 @@ def optimize_parameters(
     except ImportError as ie:
         logger.warning(
             "Could not import visualization dependencies: %s. "
-            "Install with: pip install nvidia-nat-optimizer[visualization]",
+            "Install with: pip install nvidia-nat-config-optimizer[visualization]",
             ie)
     except Exception as e:
         logger.warning("Failed to generate visualizations: %s", e)

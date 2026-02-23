@@ -18,7 +18,7 @@ from pathlib import Path
 import optuna
 import pandas as pd
 
-from nat.optimizer.pareto_visualizer import create_pareto_visualization
+from nat.config_optimizer.parameters.pareto_visualizer import create_pareto_visualization
 
 
 def _make_two_obj_study():

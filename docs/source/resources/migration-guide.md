@@ -126,7 +126,8 @@ To migrate:
 For users migrating existing integrations, the primary import change is:
 - `nat.eval.*` -> `nat.plugins.eval.*`
 - `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
-- `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
+- Optimizer logic (`parameter_optimizer`, `prompt_optimizer`, etc.) -> `nat.config_optimizer.*` (in `nvidia-nat-config-optimizer` package)
+- Optimizer callbacks (`OptimizerCallbackManager`, `TrialResult`) remain in `nat.profiler.parameter_optimization.optimizer_callbacks` (in `nvidia-nat-core`)
 - `nat.eval.runtime_event_subscriber.pull_intermediate` -> `nat.builder.runtime_event_subscriber.pull_intermediate`
 
 For evaluation data models, prefer canonical core paths:

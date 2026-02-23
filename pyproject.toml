@@ -45,7 +45,7 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
   "nvidia-nat-core == {version}",
-  "nvidia-nat-optimizer == {version}",
+  "nvidia-nat-config-optimizer == {version}",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -67,7 +67,7 @@ mcp = ["nvidia-nat-mcp == {version}"]
 mem0ai = ["nvidia-nat-mem0ai == {version}"]
 nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
 openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
-optimizer = ["nvidia-nat-optimizer == {version}"]
+optimizer = ["nvidia-nat-config-optimizer == {version}"]
 opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
 profiler = ["nvidia-nat-profiler == {version}"]
@@ -107,7 +107,7 @@ most = [
   "nvidia-nat-mem0ai == {version}",
   "nvidia-nat-mysql == {version}",
   "nvidia-nat-nemo-customizer == {version}",
-  "nvidia-nat-optimizer == {version}",
+  "nvidia-nat-config-optimizer == {version}",
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
   "nvidia-nat-profiler == {version}",
@@ -241,7 +241,7 @@ nvidia-nat-llama-index = { path = "packages/nvidia_nat_llama_index", editable = 
 nvidia-nat-mcp = { path = "packages/nvidia_nat_mcp", editable = true }
 nvidia-nat-mem0ai = { path = "packages/nvidia_nat_mem0ai", editable = true }
 nvidia-nat-nemo-customizer = { path = "packages/nvidia_nat_nemo_customizer", editable = true }
-nvidia-nat-optimizer = { path = "packages/nvidia_nat_optimizer", editable = true }
+nvidia-nat-config-optimizer = { path = "packages/nvidia_nat_config_optimizer", editable = true }
 nvidia-nat-openpipe-art = { path = "packages/nvidia_nat_openpipe_art", editable = true }
 nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }

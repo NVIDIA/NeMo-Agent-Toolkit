@@ -19,8 +19,8 @@ from pydantic import BaseModel
 from nat.data_models.optimizer import NumericOptimizationConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.data_models.optimizer import PromptGAOptimizationConfig
-from nat.optimizer.optimizer_runtime import optimize_config
+from nat.data_models.optimizer import GAPromptOptimizationConfig
+from nat.config_optimizer.optimizer_runtime import optimize_config
 
 
 class _DummyConfig(BaseModel):
@@ -37,7 +37,7 @@ async def test_optimize_config_returns_input_when_no_space(monkeypatch):
     cfg.optimizer.prompt.enabled = False
 
     # Force walk_optimizables to empty mapping
-    from nat.optimizer import optimizer_runtime as rt
+    from nat.config_optimizer import optimizer_runtime as rt
 
     monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {}, raising=True)
     # Also bypass load_config by passing BaseModel directly
@@ -56,7 +56,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
 
     from contextlib import asynccontextmanager
 
-    from nat.optimizer import optimizer_runtime as rt
+    from nat.config_optimizer import optimizer_runtime as rt
 
     # Provide a small non-empty space
     monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {"x": object()}, raising=True)
@@ -99,7 +99,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     )
     prompt_info = RegisteredOptimizerInfo(
         full_type="test/ga",
-        config_type=PromptGAOptimizationConfig,
+        config_type=GAPromptOptimizationConfig,
         build_fn=lambda c: _fake_build_prompt(c),
         discovery_metadata=DiscoveryMetadata(),
     )
@@ -108,7 +108,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
         "_registered_optimizer_infos",
         {
             NumericOptimizationConfig: numeric_info,
-            PromptGAOptimizationConfig: prompt_info,
+            GAPromptOptimizationConfig: prompt_info,
         },
     )
 

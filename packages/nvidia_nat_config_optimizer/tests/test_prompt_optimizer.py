@@ -29,8 +29,8 @@ from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.optimizer.ga_prompt_optimizer import PromptOptimizerInputSchema
-from nat.optimizer.ga_prompt_optimizer import optimize_prompts
+from nat.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
+from nat.config_optimizer.prompts.ga_prompt_optimizer import optimize_prompts
 
 # Module-level tracking for oracle feedback verification in tests
 oracle_feedback_received: dict[str, typing.Any] = {"count": 0, "values": []}
@@ -158,9 +158,9 @@ async def test_optimize_prompts_happy_path_with_recombine(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.optimizer.evolutionary_base.load_evaluation_run",
+    with patch("nat.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
                return_value=_EvalRun), \
-         patch("nat.optimizer.evolutionary_base.apply_suggestions",
+         patch("nat.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(base_cfg=base_cfg,
@@ -213,9 +213,9 @@ async def test_optimize_prompts_happy_path_without_recombine(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.optimizer.evolutionary_base.load_evaluation_run",
+    with patch("nat.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
                return_value=_EvalRun), \
-         patch("nat.optimizer.evolutionary_base.apply_suggestions",
+         patch("nat.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(base_cfg=base_cfg,
@@ -276,8 +276,8 @@ async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.optimizer.evolutionary_base.load_evaluation_run", return_value=_EvalRun), \
-         patch("nat.optimizer.evolutionary_base.apply_suggestions",
+    with patch("nat.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run", return_value=_EvalRun), \
+         patch("nat.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(

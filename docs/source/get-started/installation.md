@@ -30,7 +30,7 @@ The following [LLM](../build-workflows/llms/index.md) API providers are supporte
 
 ## Packages
 
-The default `nvidia-nat` install includes `nvidia-nat-core` and `nvidia-nat-optimizer` (parameter and prompt optimization). To keep the library lightweight, many other first-party plugins are in separate distribution packages. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific and LangGraph-specific plugins, and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
+The default `nvidia-nat` install includes `nvidia-nat-core` and `nvidia-nat-config-optimizer` (parameter and prompt optimization). To keep the library lightweight, many other first-party plugins are in separate distribution packages. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific and LangGraph-specific plugins, and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
 
 To install these first-party plugin libraries, you can use the full distribution name (for example, `nvidia-nat-langchain`) or use the `nvidia-nat[langchain]` extra distribution. The following extras are supported:
 
@@ -44,7 +44,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[mcp]` or `nvidia-nat-mcp` - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - `nvidia-nat[mem0ai]` or `nvidia-nat-mem0ai` - [Mem0](https://mem0.ai/)
 - `nvidia-nat[mysql]` or `nvidia-nat-mysql` - [MySQL](https://www.mysql.com/)
-- `nvidia-nat[optimizer]` or `nvidia-nat-optimizer` - Parameter and prompt optimizer (included by default with `nvidia-nat`; add this extra if you installed only `nvidia-nat-core` and want to use `nat optimize`)
+- `nvidia-nat[optimizer]` or `nvidia-nat-config-optimizer` - Parameter and prompt optimizer (included by default with `nvidia-nat`; add this extra if you installed only `nvidia-nat-core` and want to use `nat optimize`)
 - `nvidia-nat[openpipe-art]` or `nvidia-nat-openpipe-art` - [Agent Reinforcement Trainer](https://art.openpipe.ai/getting-started/about) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[crewai]`.
 - `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/)
 - `nvidia-nat[phoenix]` or `nvidia-nat-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)

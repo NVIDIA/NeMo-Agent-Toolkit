@@ -1898,7 +1898,7 @@ requires-dist = [
 provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "profiling", "test"]
 
 [[package]]
-name = "nvidia-nat-optimizer"
+name = "nvidia-nat-config-optimizer"
 source = { editable = "." }
 dependencies = [
     { name = "numpy" },

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use it except in compliance with the License.
+# you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
@@ -28,18 +28,19 @@ from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.optimizer.evolutionary_base import BaseEvolutionaryPromptOptimizer
-from nat.optimizer.ga_config import GAOptimizerConfig
-from nat.optimizer.ga_individual import Individual
-from nat.optimizer.oracle_feedback import build_oracle_feedback
-from nat.optimizer.oracle_feedback import check_adaptive_triggers
-from nat.optimizer.oracle_feedback import extract_worst_reasoning
-from nat.optimizer.oracle_feedback import should_inject_feedback
-from nat.optimizer.update_helpers import apply_suggestions
+from nat.config_optimizer.eval_runtime_loader import load_evaluation_run
+from nat.config_optimizer.prompts.base import BasePromptOptimizer
+from nat.config_optimizer.prompts.ga_individual import Individual
+from nat.config_optimizer.prompts.oracle_feedback import build_oracle_feedback
+from nat.config_optimizer.prompts.oracle_feedback import check_adaptive_triggers
+from nat.config_optimizer.prompts.oracle_feedback import extract_worst_reasoning
+from nat.config_optimizer.prompts.oracle_feedback import should_inject_feedback
+from nat.config_optimizer.update_helpers import apply_suggestions
 
 logger = logging.getLogger(__name__)
 
@@ -59,44 +60,67 @@ async def optimize_prompts(
     opt_run_config: OptimizerRunConfig,
 ) -> None:
     """Entry point: run GA prompt optimizer (thin wrapper around GAPromptOptimizer)."""
-    p = optimizer_config.prompt
-    extra = getattr(p, "model_extra", None) or {}
-    ga_config = GAOptimizerConfig(
-        output_path=optimizer_config.output_path,
-        eval_metrics=optimizer_config.eval_metrics,
-        reps_per_param_set=optimizer_config.reps_per_param_set,
-        target=optimizer_config.target,
-        multi_objective_combination_mode=optimizer_config.multi_objective_combination_mode,
-        prompt=p,
-        oracle_feedback_mode=extra.get("oracle_feedback_mode", "never"),
-        oracle_feedback_worst_n=extra.get("oracle_feedback_worst_n", 5),
-        oracle_feedback_max_chars=extra.get("oracle_feedback_max_chars", 4000),
-        oracle_feedback_fitness_threshold=extra.get("oracle_feedback_fitness_threshold", 0.3),
-        oracle_feedback_stagnation_generations=extra.get("oracle_feedback_stagnation_generations", 3),
-        oracle_feedback_fitness_variance_threshold=extra.get("oracle_feedback_fitness_variance_threshold", 0.01),
-        oracle_feedback_diversity_threshold=extra.get("oracle_feedback_diversity_threshold", 0.5),
-    )
     runner = GAPromptOptimizer()
     await runner.run(
         base_cfg=base_cfg,
         full_space=full_space,
-        optimizer_config=ga_config,
+        optimizer_config=optimizer_config,
         opt_run_config=opt_run_config,
     )
 
 
-class GAPromptOptimizer(BaseEvolutionaryPromptOptimizer):
-    """Genetic-algorithm prompt optimizer. Implements the evolutionary loop using base helpers."""
+class GAPromptOptimizer(BasePromptOptimizer):
+    """Genetic-algorithm prompt optimizer."""
+
+    # ---------- evaluation (merged from BaseEvolutionaryPromptOptimizer) ---------- #
+
+    async def _evaluate_single_given_trial(
+        self,
+        ind: Individual,
+        cfg_trial: Config,
+        optimizer_config: OptimizerConfig,
+        opt_run_config: OptimizerRunConfig,
+    ) -> None:
+        """Run EvaluationRun for an already-built trial config; fill ind.metrics."""
+        EvaluationRun = load_evaluation_run()
+        eval_cfg = EvaluationRunConfig(
+            config_file=cfg_trial,
+            dataset=opt_run_config.dataset,
+            result_json_path=opt_run_config.result_json_path,
+            endpoint=opt_run_config.endpoint,
+            endpoint_timeout=opt_run_config.endpoint_timeout,
+            override=opt_run_config.override,
+        )
+        metric_cfg = optimizer_config.eval_metrics or {}
+        eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
+        reps = max(1, getattr(optimizer_config, "reps_per_param_set", 1))
+
+        all_results: list[list[tuple[str, Any]]] = []
+        for _ in range(reps):
+            res = (await EvaluationRun(config=eval_cfg).run_and_evaluate()).evaluation_results
+            all_results.append(res)
+
+        metrics: dict[str, float] = {}
+        for metric_name in eval_metrics:
+            scores: list[float] = []
+            for run_results in all_results:
+                for name, result in run_results:
+                    if name == metric_name:
+                        scores.append(result.average_score)
+                        break
+            metrics[metric_name] = float(sum(scores) / len(scores)) if scores else 0.0
+        ind.metrics = metrics
+        await self._post_evaluate_single(ind, all_results, optimizer_config, opt_run_config)
 
     async def _post_evaluate_single(
         self,
         ind: Individual,
         all_results: list[list[tuple[str, Any]]],
-        optimizer_config: GAOptimizerConfig,
+        optimizer_config: OptimizerConfig,
         opt_run_config: OptimizerRunConfig,
     ) -> None:
-        """GA adds worst_items_reasoning for oracle feedback."""
-        if all_results and optimizer_config.oracle_feedback_mode != "never":
+        """Extract worst_items_reasoning for oracle feedback."""
+        if all_results and optimizer_config.prompt.oracle_feedback_mode != "never":
             metric_cfg = optimizer_config.eval_metrics or {}
             weights_by_name = {v.evaluator_name: v.weight for v in metric_cfg.values()}
             directions_by_name = {
@@ -106,10 +130,32 @@ class GAPromptOptimizer(BaseEvolutionaryPromptOptimizer):
                 evaluation_results=all_results[-1],
                 weights_by_name=weights_by_name,
                 directions_by_name=directions_by_name,
-                worst_n=optimizer_config.oracle_feedback_worst_n,
+                worst_n=optimizer_config.prompt.oracle_feedback_worst_n,
             )
 
-    # ---------- fitness (GA-specific) ---------- #
+    async def _evaluate_population(
+        self,
+        population: list[Individual],
+        base_cfg: Config,
+        optimizer_config: OptimizerConfig,
+        opt_run_config: OptimizerRunConfig,
+        max_concurrency: int = 8,
+    ) -> None:
+        """Evaluate all individuals (concurrently)."""
+        unevaluated = [ind for ind in population if not ind.metrics]
+        if unevaluated:
+            sem = asyncio.Semaphore(max_concurrency)
+
+            async def _eval_one(ind: Individual) -> None:
+                async with sem:
+                    cfg_trial = apply_suggestions(base_cfg, ind.prompts)
+                await self._evaluate_single_given_trial(
+                    ind, cfg_trial, optimizer_config, opt_run_config
+                )
+
+            await asyncio.gather(*[_eval_one(ind) for ind in unevaluated])
+
+    # ---------- fitness ---------- #
 
     @staticmethod
     def _normalize_generation(
@@ -184,7 +230,7 @@ class GAPromptOptimizer(BaseEvolutionaryPromptOptimizer):
     def _compute_fitness(
         self,
         population: list[Individual],
-        optimizer_config: GAOptimizerConfig,
+        optimizer_config: OptimizerConfig,
         diversity_lambda: float = 0.0,
     ) -> None:
         """Set scalar_fitness on each individual (normalize, scalarize, diversity penalty)."""
@@ -203,7 +249,7 @@ class GAPromptOptimizer(BaseEvolutionaryPromptOptimizer):
                 self._scalarize(norm_scores, mode=mode, weights=weights) - penalty
             )
 
-    # ---------- persistence (GA-specific) ---------- #
+    # ---------- persistence ---------- #
 
     @staticmethod
     def _persist_checkpoint(
@@ -262,7 +308,7 @@ class GAPromptOptimizer(BaseEvolutionaryPromptOptimizer):
         *,
         base_cfg: Config,
         full_space: dict[str, SearchSpace],
-        optimizer_config: GAOptimizerConfig,
+        optimizer_config: OptimizerConfig,
         opt_run_config: OptimizerRunConfig,
     ) -> None:
         prompt_space: dict[str, tuple[str, str]] = {
@@ -296,13 +342,13 @@ class GAPromptOptimizer(BaseEvolutionaryPromptOptimizer):
         max_eval_concurrency = max(1, int(prompt_cfg.ga_parallel_evaluations))
         diversity_lambda = float(prompt_cfg.ga_diversity_lambda)
 
-        oracle_feedback_mode = optimizer_config.oracle_feedback_mode
-        oracle_feedback_worst_n = optimizer_config.oracle_feedback_worst_n
-        oracle_feedback_max_chars = optimizer_config.oracle_feedback_max_chars
-        oracle_feedback_fitness_threshold = optimizer_config.oracle_feedback_fitness_threshold
-        oracle_feedback_stagnation_generations = optimizer_config.oracle_feedback_stagnation_generations
-        oracle_feedback_fitness_variance_threshold = optimizer_config.oracle_feedback_fitness_variance_threshold
-        oracle_feedback_diversity_threshold = optimizer_config.oracle_feedback_diversity_threshold
+        oracle_feedback_mode = prompt_cfg.oracle_feedback_mode
+        oracle_feedback_worst_n = prompt_cfg.oracle_feedback_worst_n
+        oracle_feedback_max_chars = prompt_cfg.oracle_feedback_max_chars
+        oracle_feedback_fitness_threshold = prompt_cfg.oracle_feedback_fitness_threshold
+        oracle_feedback_stagnation_generations = prompt_cfg.oracle_feedback_stagnation_generations
+        oracle_feedback_fitness_variance_threshold = prompt_cfg.oracle_feedback_fitness_variance_threshold
+        oracle_feedback_diversity_threshold = prompt_cfg.oracle_feedback_diversity_threshold
 
         best_fitness_history: list[float] = []
         adaptive_state: dict[str, bool] = {"enabled": False}
