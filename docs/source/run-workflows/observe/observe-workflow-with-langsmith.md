@@ -19,13 +19,16 @@ limitations under the License.
 
 This guide provides a step-by-step process to enable observability in a NeMo Agent Toolkit workflow using LangSmith for tracing. By the end of this guide, you will have:
 
-- Configured telemetry to send OTEL traces to LangSmith.
+- Configured telemetry to send OTel traces to LangSmith.
 - Ability to view workflow traces in the LangSmith UI.
 - Understanding of how evaluation and optimization results are tracked as structured experiments.
 
 ### Prerequisites
 
-An account on [LangSmith](https://www.langchain.com/langsmith) is required. You can create an account at [smith.langchain.com](https://smith.langchain.com/).
+<!-- vale Vale.Spelling = NO -->
+An account on [LangSmith](https://www.langchain.com/langsmith) is required. You can create an account at
+[smith.langchain.com](https://smith.langchain.com/).
+<!-- vale Vale.Spelling = YES -->
 
 Set your API key as an environment variable:
 
@@ -76,7 +79,9 @@ As the workflow runs, telemetry data will start showing up in LangSmith.
 
 ### Step 4: View Traces in LangSmith
 
+<!-- vale Vale.Spelling = NO -->
 - Open your browser and navigate to [smith.langchain.com](https://smith.langchain.com/).
+<!-- vale Vale.Spelling = YES -->
 - Locate your workflow traces under your project name in the Projects section.
 - Inspect function execution details, latency, token counts, and other information for individual traces.
 
@@ -87,7 +92,7 @@ LangSmith implements the [evaluation callback](../../improve-workflows/evaluate.
 - A **Dataset** is created from your eval questions (named "Benchmark Dataset (\<dataset-name\>)"). Each dataset entry becomes a LangSmith example with inputs and expected outputs.
 - An **Experiment** project (named "\<project\> (Run #N)") is linked to the dataset. Each evaluation run increments the run number.
 - Per-example **runs** are linked to their corresponding dataset examples with evaluator scores attached as **feedback** on each run.
-- **OTEL span traces** capture each LLM call within each workflow run.
+- **OTel span traces** capture each LLM call within each workflow run.
 
 ### Running an Evaluation with LangSmith
 
@@ -128,7 +133,7 @@ After running, check your LangSmith project for:
 - A dataset created from the eval questions.
 - Per-example runs with model answers linked to dataset examples.
 - Evaluator scores as feedback on each run.
-- OTEL span traces for each LLM call.
+- OTel span traces for each LLM call.
 
 ## Structured Optimization Experiments
 
@@ -138,7 +143,7 @@ LangSmith implements the [optimization callback](../../improve-workflows/optimiz
 - Each trial gets its own **Experiment** project (named "\<base\> (Run #N, Trial M)"), all linked to the shared dataset. This enables per-trial comparison in the Datasets & Experiments UI.
 - Parameter configurations are recorded as project **metadata** on each trial.
 - Evaluator scores are attached as **feedback** per trial.
-- For prompt optimization, prompt versions are pushed to **LangSmith prompt repos** with commit tags for each trial (e.g., `trial-1`, `trial-2`). The best trial's prompt is tagged with `best`.
+- For prompt optimization, prompt versions are pushed to **LangSmith prompt repositories** with commit tags for each trial (e.g., `trial-1`, `trial-2`). The best trial's prompt is tagged with `best`.
 
 ### Running an Optimization with LangSmith
 
@@ -191,7 +196,7 @@ After running, check your LangSmith project for:
 
 - Trial runs with parameter configurations recorded as metadata.
 - Feedback scores per trial for each configured metric.
-- OTEL span traces for each LLM call within each trial.
+- OTel span traces for each LLM call within each trial.
 
 ### Resources
 
