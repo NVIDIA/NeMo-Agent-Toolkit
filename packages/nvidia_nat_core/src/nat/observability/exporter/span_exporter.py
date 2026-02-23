@@ -145,7 +145,14 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
                 span_ctx = SpanContext(trace_id=parent_span.context.trace_id)
         # No parent: adopt workflow trace id if available to keep all spans in the same trace
         if span_ctx is None and workflow_trace_id:
-            span_ctx = SpanContext(trace_id=workflow_trace_id)
+            # Check for a pre-generated root span_id (set by eval loop for eager trace linking).
+            # Use it once for the root span, then clear so child spans get fresh random IDs.
+            pre_generated_span_id = self._context_state._root_span_id.get()
+            if pre_generated_span_id is not None:
+                span_ctx = SpanContext(trace_id=workflow_trace_id, span_id=pre_generated_span_id)
+                self._context_state._root_span_id.set(None)
+            else:
+                span_ctx = SpanContext(trace_id=workflow_trace_id)
 
         # Extract start/end times from the step
         # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.

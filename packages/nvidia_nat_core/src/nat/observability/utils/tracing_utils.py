@@ -13,19 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
-# isort:skip_file
+from typing import Any
 
-# Import any providers which need to be automatically registered here
 
-from . import embedder
-from . import langgraph_workflow
-from . import llm
-from . import tool_wrapper
-from . import retriever
-from .tools import register as tools_register
-from .agent import register as agent_register
-from .control_flow import register as control_flow_register
-from .dataset_loader import register as dataset_loader_register
-from .eval import register as eval_register
-from .langsmith import register as langsmith_register
+def get_tracing_configs(config: Any) -> dict[str, Any]:
+    """Extract tracing configs from a loaded NAT config object."""
+    return getattr(getattr(getattr(config, 'general', None), 'telemetry', None), 'tracing', None) or {}

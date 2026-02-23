@@ -156,9 +156,50 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
     click.echo("")
 
 
+def _build_eval_callback_manager(config: EvaluationRunConfig):
+    """Build callback manager from registered eval callbacks matching the tracing config."""
+    try:
+        from nat.cli.type_registry import GlobalTypeRegistry
+        from nat.eval.eval_callbacks import EvalCallbackManager
+        from nat.observability.utils.tracing_utils import get_tracing_configs
+        from nat.runtime.loader import load_config as _load_cfg
+
+        loaded = _load_cfg(config.config_file) if isinstance(config.config_file, Path) else config.config_file
+        tracing = get_tracing_configs(loaded)
+        if not tracing:
+            return None
+
+        manager = EvalCallbackManager()
+        registry = GlobalTypeRegistry.get()
+
+        for _name, exporter_config in tracing.items():
+            try:
+                registered = registry.get_eval_callback(type(exporter_config))
+            except KeyError:
+                continue
+            cb = registered.factory_fn(exporter_config)
+            manager.register(cb)
+
+        # Let the callback set an eval-specific project name so the OTEL
+        # exporter (initialised later by WorkflowBuilder) uses it.
+        eval_project = manager.get_eval_project_name()
+        if eval_project:
+            for _name, exporter_config in tracing.items():
+                if hasattr(exporter_config, 'project'):
+                    exporter_config.project = eval_project
+            config.config_file = loaded
+
+        return manager if manager.has_callbacks else None
+    except Exception:
+        logger.debug("Could not build eval callback manager", exc_info=True)
+        return None
+
+
 async def run_and_evaluate(config: EvaluationRunConfig):
+    callback_manager = _build_eval_callback_manager(config)
+
     # Run evaluation
-    eval_runner = EvaluationRun(config=config)
+    eval_runner = EvaluationRun(config=config, callback_manager=callback_manager)
     eval_run_output = await eval_runner.run_and_evaluate()
 
     write_tabular_output(eval_run_output)

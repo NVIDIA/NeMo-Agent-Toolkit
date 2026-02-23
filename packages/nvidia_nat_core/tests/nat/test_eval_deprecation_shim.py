@@ -14,12 +14,16 @@
 # limitations under the License.
 
 import importlib
+import sys
 
 import pytest
 
 
 def test_nat_eval_shim_warns_and_reexports_models():
     pytest.importorskip("nat.plugins.eval")
+
+    # Remove cached module so re-import triggers the deprecation warning
+    sys.modules.pop("nat.eval", None)
 
     with pytest.warns(UserWarning, match="deprecated"):
         importlib.import_module("nat.eval")

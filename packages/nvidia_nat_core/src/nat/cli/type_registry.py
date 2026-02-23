@@ -195,6 +195,22 @@ class RegisteredTelemetryExporter(RegisteredInfo[TelemetryExporterBaseConfig]):
     build_fn: TeleExporterRegisteredCallableT = Field(repr=False)
 
 
+class RegisteredEvalCallback(BaseModel):
+    """Registered factory for creating eval callbacks tied to a telemetry exporter config type."""
+
+    model_config = ConfigDict(frozen=True)
+    config_type: type[TelemetryExporterBaseConfig]
+    factory_fn: Callable[..., typing.Any] = Field(repr=False)
+
+
+class RegisteredOptimizerCallback(BaseModel):
+    """Registered factory for creating optimizer callbacks tied to a telemetry exporter config type."""
+
+    model_config = ConfigDict(frozen=True)
+    config_type: type[TelemetryExporterBaseConfig]
+    factory_fn: Callable[..., typing.Any] = Field(repr=False)
+
+
 class RegisteredLoggingMethod(RegisteredInfo[LoggingBaseConfig]):
 
     build_fn: LoggingMethodRegisteredCallableT = Field(repr=False)
@@ -500,6 +516,12 @@ class TypeRegistry:
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
 
+        # Eval Callbacks (keyed by telemetry exporter config type)
+        self._registered_eval_callbacks: dict[type[TelemetryExporterBaseConfig], RegisteredEvalCallback] = {}
+
+        # Optimizer Callbacks (keyed by telemetry exporter config type)
+        self._registered_optimizer_callbacks: dict[type[TelemetryExporterBaseConfig], RegisteredOptimizerCallback] = {}
+
         self._registration_changed_hooks: list[Callable[[], None]] = []
         self._registration_changed_hooks_active: bool = True
 
@@ -553,6 +575,37 @@ class TypeRegistry:
     def get_registered_telemetry_exporters(self) -> list[RegisteredInfo[TelemetryExporterBaseConfig]]:
 
         return list(self._registered_telemetry_exporters.values())
+
+    def register_eval_callback(self, registration: RegisteredEvalCallback):
+
+        if (registration.config_type in self._registered_eval_callbacks):
+            raise ValueError(f"An eval callback with the same config type `{registration.config_type}` has already "
+                             "been registered.")
+
+        self._registered_eval_callbacks[registration.config_type] = registration
+
+    def get_eval_callback(self, config_type: type[TelemetryExporterBaseConfig]) -> RegisteredEvalCallback:
+
+        try:
+            return self._registered_eval_callbacks[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered eval callback for config `{config_type}`.") from err
+
+    def register_optimizer_callback(self, registration: RegisteredOptimizerCallback):
+
+        if (registration.config_type in self._registered_optimizer_callbacks):
+            raise ValueError(
+                f"An optimizer callback with the same config type `{registration.config_type}` has already "
+                "been registered.")
+
+        self._registered_optimizer_callbacks[registration.config_type] = registration
+
+    def get_optimizer_callback(self, config_type: type[TelemetryExporterBaseConfig]) -> RegisteredOptimizerCallback:
+
+        try:
+            return self._registered_optimizer_callbacks[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered optimizer callback for config `{config_type}`.") from err
 
     def register_logging_method(self, registration: RegisteredLoggingMethod):
 

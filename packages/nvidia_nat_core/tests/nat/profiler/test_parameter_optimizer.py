@@ -200,13 +200,16 @@ def test_optimize_parameters_happy_path(tmp_path: Path):
          patch("nat.parameter_optimization.parameter_optimizer.load_evaluation_run",
                return_value=_DummyEvalRun) as eval_run_mock:
 
-        tuned = optimize_parameters(base_cfg=base_cfg,
-                                    full_space=full_space,
-                                    optimizer_config=optimizer_config,
-                                    opt_run_config=run_cfg)
+        tuned, returned_best_params, n_trials = optimize_parameters(
+            base_cfg=base_cfg,
+            full_space=full_space,
+            optimizer_config=optimizer_config,
+            opt_run_config=run_cfg)
 
         # Returned config should be what apply_suggestions returned for best_params
         assert tuned is final_cfg
+        assert returned_best_params == best_params
+        assert n_trials == optimizer_config.numeric.n_trials
 
         # Study created with correct directions
         study_mock.assert_called_once()
