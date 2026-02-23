@@ -115,7 +115,7 @@ def parse_args() -> argparse.Namespace:
                         default="ws://localhost:8000/websocket",
                         help="WebSocket URL for ws mode.")
     parser.add_argument("--http-url",
-                        default="http://localhost:8000/v1/chat/completions",
+                        default="http://localhost:8000/v1/chat",
                         help="HTTP URL for http mode.")
     return parser.parse_args()
 
