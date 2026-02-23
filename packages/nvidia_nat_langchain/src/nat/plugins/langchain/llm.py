@@ -16,6 +16,7 @@
 
 import logging
 import os
+from collections.abc import AsyncIterator
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -37,6 +38,7 @@ from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.huggingface_inference_llm import HuggingFaceInferenceLLMConfig
 from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
@@ -370,6 +372,67 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
                              run_manager: AsyncCallbackManagerForLLMRun | None = None,
                              stream: bool | None = None,
                              **kwargs: Any):
+            return await asyncio.to_thread(
+                self._generate,
+                messages,
+                stop,
+                run_manager.get_sync() if run_manager else None,
+                stream,
+                **kwargs,
+            )
+
+    client = AsyncChatHuggingFace(llm=llm)
+
+    yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=HuggingFaceInferenceLLMConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceLLMConfig,
+                                          _builder: Builder) -> AsyncIterator[Any]:
+    """LangChain client for HuggingFace Inference API.
+
+    Uses `langchain_huggingface.HuggingFaceEndpoint` for Serverless API,
+    Inference Endpoints, and TGI servers.
+    """
+    import asyncio
+
+    from langchain_core.callbacks.manager import AsyncCallbackManagerForLLMRun
+    from langchain_core.messages import BaseMessage
+    from langchain_huggingface import ChatHuggingFace
+    from langchain_huggingface import HuggingFaceEndpoint
+
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
+
+    endpoint_kwargs = {}
+    if llm_config.endpoint_url:
+        endpoint_kwargs["endpoint_url"] = llm_config.endpoint_url
+    else:
+        endpoint_kwargs["repo_id"] = llm_config.model_name
+
+    llm = HuggingFaceEndpoint(
+        **endpoint_kwargs,
+        huggingfacehub_api_token=get_secret_value(llm_config.api_key),
+        task="text-generation",
+        max_new_tokens=llm_config.max_new_tokens,
+        temperature=llm_config.temperature,
+        top_p=llm_config.top_p,
+        top_k=llm_config.top_k,
+        repetition_penalty=llm_config.repetition_penalty,
+        seed=llm_config.seed,
+        timeout=llm_config.timeout,
+    )
+
+    class AsyncChatHuggingFace(ChatHuggingFace):
+        """Adds async support for HuggingFaceEndpoint-backed chat models."""
+
+        async def _agenerate(
+            self,
+            messages: list[BaseMessage],
+            stop: list[str] | None = None,
+            run_manager: AsyncCallbackManagerForLLMRun | None = None,
+            stream: bool | None = None,
+            **kwargs: Any,
+        ):
             return await asyncio.to_thread(
                 self._generate,
                 messages,
