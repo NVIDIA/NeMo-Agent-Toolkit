@@ -64,7 +64,7 @@ llms:
     prefix_iat: MEDIUM
 
     # UPDATE THIS PATH to your profiled prediction trie
-    prediction_trie_path: ./examples/dynamo_integration/latency_sensitivity_demo/outputs/profile/REPLACE_WITH_JOB_ID/prediction_trie.json
+    prediction_trie_path: ./examples/dynamo_integration/latency_sensitivity_demo/outputs/profile/prediction_trie.json
 
 workflow:
   _type: latency_sensitivity_demo
@@ -76,12 +76,12 @@ workflow:
 
 eval:
   general:
-    max_concurrency: 4
+    max_concurrency: 16
     output:
       dir: ./examples/dynamo_integration/latency_sensitivity_demo/outputs/with_trie/
       cleanup: false
       job_management:
-        append_job_id_to_output_dir: true
+        append_job_id_to_output_dir: false
     dataset:
       _type: json
       file_path: ./examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/data/customer_queries.json
