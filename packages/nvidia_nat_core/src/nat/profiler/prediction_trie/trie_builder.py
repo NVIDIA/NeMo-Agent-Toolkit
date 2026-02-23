@@ -61,6 +61,8 @@ class LLMCallContext:
     workflow_duration_s: float = 0.0
     parallel_slack_ratio: float = 0.0
     sensitivity_score: float = 0.0
+    span_start_time: float = 0.0
+    span_end_time: float = 0.0
 
 
 @dataclass
@@ -175,12 +177,19 @@ class PredictionTrieBuilder:
                     call_duration_s=call_duration_s,
                     workflow_duration_s=workflow_duration_s,
                     parallel_slack_ratio=parallel_slack,
+                    span_start_time=span_start if span_start is not None else 0.0,
+                    span_end_time=end_step.event_timestamp,
                 ))
 
         return contexts
 
     def _compute_sensitivity_scores(self, contexts: list[LLMCallContext]) -> None:
         """Compute composite sensitivity scores for each call in the trace.
+
+        Parallel siblings are detected via temporal overlap and assigned the
+        same logical position so that the U-shaped position signal and fan-out
+        signal treat them as a single workflow step rather than spreading them
+        across sequential indices.
 
         After computing raw weighted scores, the values are min-max normalized
         across all calls in the trace so the full 0–1 range is used.  This
@@ -190,33 +199,65 @@ class PredictionTrieBuilder:
         if not contexts:
             return
 
-        total_calls = len(contexts)
-        max_remaining = max(c.remaining_calls for c in contexts)
         cfg = self._sensitivity_config
+
+        # --- Compute logical positions that collapse parallel siblings ---
+        #
+        # Calls that overlap in time are parallel siblings and should share
+        # the same logical position.  We use a greedy sweep: any call whose
+        # start time is before the current group's latest end time belongs
+        # to the same parallel group.
+        logical_positions = self._compute_logical_positions(contexts)
+        num_logical_steps = max(logical_positions) + 1 if logical_positions else 1
+
+        # Remaining calls should also reflect logical steps, not raw index.
+        # For each call, remaining = (num_logical_steps - 1) - logical_pos.
+        max_logical_remaining = num_logical_steps - 1
+
+        # Count how many calls share each logical position.  A group of size > 1
+        # is a parallel group.  Members get a parallel-group penalty that
+        # reflects "this work is shared / parallelizable."
+        from collections import Counter
+        group_sizes = Counter(logical_positions)
 
         raw_scores: list[float] = []
         for i, ctx in enumerate(contexts):
+            lpos = logical_positions[i]
+
             # Signal 1: Critical path weight
             if ctx.workflow_duration_s > 0:
                 critical_path_weight = min(ctx.call_duration_s / ctx.workflow_duration_s, 1.0)
             else:
                 critical_path_weight = 1.0
 
-            # Signal 2: Fan-out score
-            if max_remaining > 0:
-                fanout_score = ctx.remaining_calls / max_remaining
+            # Signal 2: Fan-out score (based on logical remaining steps)
+            logical_remaining = max_logical_remaining - lpos
+            if max_logical_remaining > 0:
+                fanout_score = logical_remaining / max_logical_remaining
             else:
                 fanout_score = 0.0
 
-            # Signal 3: Position score (U-shaped)
-            if total_calls > 1:
-                normalized_pos = i / (total_calls - 1)
+            # Signal 3: Position score (U-shaped, based on logical position)
+            if num_logical_steps > 1:
+                normalized_pos = lpos / (num_logical_steps - 1)
                 position_score = max(1.0 - normalized_pos, normalized_pos)
             else:
                 position_score = 1.0
 
+            # Parallel penalty: combines per-call slack ratio with a group
+            # membership penalty.  Any call in a parallel group of size N > 1
+            # gets a base penalty of (N-1)/N (e.g. 0.75 for a group of 4).
+            # This is averaged with the individual slack ratio so that the
+            # longest sibling (slack=0) still gets penalized for being in a
+            # parallel group, while shorter siblings get penalized more.
+            parallel_penalty = ctx.parallel_slack_ratio
+            gs = group_sizes[lpos]
+            if gs > 1:
+                group_penalty = (gs - 1) / gs
+                parallel_penalty = (parallel_penalty + group_penalty) / 2.0
+
             score = (cfg.w_critical * critical_path_weight + cfg.w_fanout * fanout_score +
-                     cfg.w_position * position_score - cfg.w_parallel * ctx.parallel_slack_ratio)
+                     cfg.w_position * position_score - cfg.w_parallel * parallel_penalty)
             raw_scores.append(score)
 
         # Min-max normalize across the trace so scores span the full 0–1 range
@@ -229,6 +270,47 @@ class PredictionTrieBuilder:
                 ctx.sensitivity_score = (raw - min_score) / score_range
             else:
                 ctx.sensitivity_score = 0.5
+
+    @staticmethod
+    def _compute_logical_positions(contexts: list[LLMCallContext]) -> list[int]:
+        """Assign a logical position to each call, collapsing parallel siblings.
+
+        Calls are processed in LLM_END order (the same order as *contexts*).
+        A call belongs to the current parallel group if its span started before
+        the group's earliest end time — meaning it was already running when the
+        first member of the group finished.  Otherwise it starts a new group.
+
+        All calls in a parallel group share the same logical position index,
+        so the U-shaped position signal and fan-out signal treat them as
+        occupying a single workflow step.
+        """
+        if not contexts:
+            return []
+
+        positions: list[int] = []
+        current_group = 0
+        # Track the earliest end time in the current group.  A new call whose
+        # span_start_time is before this threshold overlaps with at least one
+        # group member, so it joins the group.
+        group_earliest_end = contexts[0].span_end_time
+
+        for i, ctx in enumerate(contexts):
+            if i == 0:
+                positions.append(current_group)
+                continue
+
+            if ctx.span_start_time < group_earliest_end:
+                # This call's span started before the first group member
+                # finished → temporal overlap → same parallel group.
+                positions.append(current_group)
+                # Keep the earliest end time (don't advance it)
+            else:
+                # No overlap → new sequential step.
+                current_group += 1
+                positions.append(current_group)
+                group_earliest_end = ctx.span_end_time
+
+        return positions
 
     @staticmethod
     def _build_sibling_map(steps: list[IntermediateStep]) -> dict[str, list[_SiblingSpan]]:

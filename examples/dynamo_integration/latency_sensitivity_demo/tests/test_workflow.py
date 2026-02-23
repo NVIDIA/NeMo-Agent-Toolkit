@@ -47,23 +47,34 @@ class TestConfigFiles:
         assert "w_parallel" in trie_cfg
 
     def test_config_declares_sub_functions(self):
-        """All configs should declare the 5 sub-functions in the functions section."""
+        """All configs should declare the 7 sub-functions in the functions section."""
+        expected = {
+            "classify_query",
+            "research_context",
+            "lookup_policy",
+            "check_compliance",
+            "analyze_sentiment",
+            "draft_response",
+            "review_response",
+        }
         for config_name in ["config_profile.yml", "config_with_trie.yml"]:
             with open(CONFIGS_DIR / config_name) as f:
                 config = yaml.safe_load(f)
             functions = config.get("functions", {})
-            expected = {"classify_query", "research_context", "lookup_policy", "draft_response", "review_response"}
-            missing = expected - set(functions.keys())
-            assert expected == set(functions.keys()), f"{config_name} missing functions: {missing}"
+            assert expected == set(functions.keys()), (
+                f"{config_name} functions mismatch: "
+                f"missing={expected - set(functions.keys())}, extra={set(functions.keys()) - expected}")
 
     def test_config_workflow_references_sub_functions(self):
-        """Workflow section should reference the 5 sub-functions."""
+        """Workflow section should reference the 7 sub-functions."""
         with open(CONFIGS_DIR / "config_profile.yml") as f:
             config = yaml.safe_load(f)
         workflow = config["workflow"]
         assert workflow["classify_fn"] == "classify_query"
         assert workflow["research_fn"] == "research_context"
         assert workflow["policy_fn"] == "lookup_policy"
+        assert workflow["compliance_fn"] == "check_compliance"
+        assert workflow["sentiment_fn"] == "analyze_sentiment"
         assert workflow["draft_fn"] == "draft_response"
         assert workflow["review_fn"] == "review_response"
 
@@ -105,6 +116,8 @@ class TestWorkflowRegistration:
         assert latency_sensitivity_demo_function is not None
 
     def test_sub_function_configs_exist(self):
+        from latency_sensitivity_demo.workflow import AnalyzeSentimentConfig
+        from latency_sensitivity_demo.workflow import CheckComplianceConfig
         from latency_sensitivity_demo.workflow import ClassifyConfig
         from latency_sensitivity_demo.workflow import DraftResponseConfig
         from latency_sensitivity_demo.workflow import LookupPolicyConfig
@@ -113,10 +126,14 @@ class TestWorkflowRegistration:
         assert ClassifyConfig is not None
         assert ResearchContextConfig is not None
         assert LookupPolicyConfig is not None
+        assert CheckComplianceConfig is not None
+        assert AnalyzeSentimentConfig is not None
         assert DraftResponseConfig is not None
         assert ReviewConfig is not None
 
     def test_sub_function_registrations_exist(self):
+        from latency_sensitivity_demo.workflow import analyze_sentiment_function
+        from latency_sensitivity_demo.workflow import check_compliance_function
         from latency_sensitivity_demo.workflow import classify_query_function
         from latency_sensitivity_demo.workflow import draft_response_function
         from latency_sensitivity_demo.workflow import lookup_policy_function
@@ -125,6 +142,8 @@ class TestWorkflowRegistration:
         assert classify_query_function is not None
         assert research_context_function is not None
         assert lookup_policy_function is not None
+        assert check_compliance_function is not None
+        assert analyze_sentiment_function is not None
         assert draft_response_function is not None
         assert review_response_function is not None
 
@@ -134,6 +153,8 @@ class TestWorkflowRegistration:
         assert "classify_fn" in fields
         assert "research_fn" in fields
         assert "policy_fn" in fields
+        assert "compliance_fn" in fields
+        assert "sentiment_fn" in fields
         assert "draft_fn" in fields
         assert "review_fn" in fields
 

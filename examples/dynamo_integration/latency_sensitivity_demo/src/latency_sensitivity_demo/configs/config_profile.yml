@@ -15,16 +15,23 @@
 # <!-- path-check-skip-file -->
 
 # =============================================================================
-# PROFILER CONFIGURATION - Latency Sensitivity Demo (NIM LLM)
+# PROFILER CONFIGURATION - Latency Sensitivity Demo (Dynamo LLM)
 # =============================================================================
-# Purpose: Build a prediction trie with auto-sensitivity scores using NIM
+# Purpose: Build a prediction trie with auto-sensitivity scores
 #
-# Each LangGraph node is a registered NAT function with its own profiler span,
-# so the trie captures per-node metrics and the auto-sensitivity algorithm can
-# differentiate nodes by position, fan-out, critical path, and parallel slack.
+# Topology (7 LLM calls per workflow):
+#
+#                       ┌─── research_context   (LOW,  ~500 tok) ──────┐
+#                       ├─── lookup_policy       (LOW,  ~500 tok) ──────┤
+#   classify (HIGH) ──► ├─── check_compliance    (LOW,  ~500 tok) ──────├──► draft_response (MED) ──► review (HIGH)
+#     (~5 tok)          └─── analyze_sentiment   (LOW,  ~500 tok) ──────┘       (~500 tok)              (~20 tok)
+#
+# The 4 parallel LOW-priority branches produce long outputs to saturate GPU
+# decode at high concurrency.  HIGH-priority classify/review produce short
+# outputs that benefit most from priority-based scheduling.
 #
 # Usage:
-#   nat eval --config_file examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/configs/config_profile.yml
+#   nat eval --reps 8 --config_file examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/configs/config_profile.yml
 #
 # Output: prediction_trie.json in the output directory
 # =============================================================================
@@ -38,6 +45,12 @@ functions:
     llm: dynamo_llm
   lookup_policy:
     _type: lookup_policy
+    llm: dynamo_llm
+  check_compliance:
+    _type: check_compliance
+    llm: dynamo_llm
+  analyze_sentiment:
+    _type: analyze_sentiment
     llm: dynamo_llm
   draft_response:
     _type: draft_response
@@ -53,13 +66,14 @@ llms:
     base_url: http://localhost:8099/v1
     api_key: dummy
     temperature: 0.0
-    max_tokens: 1024
+    max_tokens: 8192
+    max_sensitivity: 5
 
     # Dynamo prefix configuration
     prefix_template: "latency-demo-{uuid}"
 
     # Static fallback values (not used because baseline does not use agent hints)
-    prefix_total_requests: 5
+    prefix_total_requests: 7
     prefix_osl: MEDIUM
     prefix_iat: MEDIUM
 
@@ -68,6 +82,8 @@ workflow:
   classify_fn: classify_query
   research_fn: research_context
   policy_fn: lookup_policy
+  compliance_fn: check_compliance
+  sentiment_fn: analyze_sentiment
   draft_fn: draft_response
   review_fn: review_response
 

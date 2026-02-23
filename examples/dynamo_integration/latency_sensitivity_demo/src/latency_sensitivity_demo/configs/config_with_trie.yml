@@ -21,12 +21,12 @@
 #
 # Prerequisites:
 #   1. Run profiling first to build the prediction trie:
-#      nat eval --config_file .../configs/config_profile.yml
+#      nat eval --reps 8 --config_file .../configs/config_profile.yml
 #
 #   2. Update prediction_trie_path below to point to the generated trie
 #
 # Usage:
-#   nat eval --config_file .../configs/config_with_trie.yml
+#   nat eval --reps 8 --config_file .../configs/config_with_trie.yml
 # =============================================================================
 
 functions:
@@ -38,6 +38,12 @@ functions:
     llm: dynamo_llm
   lookup_policy:
     _type: lookup_policy
+    llm: dynamo_llm
+  check_compliance:
+    _type: check_compliance
+    llm: dynamo_llm
+  analyze_sentiment:
+    _type: analyze_sentiment
     llm: dynamo_llm
   draft_response:
     _type: draft_response
@@ -53,13 +59,14 @@ llms:
     base_url: http://localhost:8099/v1
     api_key: dummy
     temperature: 0.0
-    max_tokens: 1024
+    max_tokens: 8192
+    max_sensitivity: 5
 
     # Dynamo prefix configuration
     prefix_template: "latency-demo-{uuid}"
 
     # Static fallback values (used if trie lookup fails)
-    prefix_total_requests: 5
+    prefix_total_requests: 7
     prefix_osl: MEDIUM
     prefix_iat: MEDIUM
 
@@ -71,6 +78,8 @@ workflow:
   classify_fn: classify_query
   research_fn: research_context
   policy_fn: lookup_policy
+  compliance_fn: check_compliance
+  sentiment_fn: analyze_sentiment
   draft_fn: draft_response
   review_fn: review_response
 

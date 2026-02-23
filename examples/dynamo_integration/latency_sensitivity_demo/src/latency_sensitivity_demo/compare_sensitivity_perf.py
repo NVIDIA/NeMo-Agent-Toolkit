@@ -25,9 +25,10 @@ with its sensitivity score from the prediction trie, and prints a comparison
 showing whether HIGH-priority calls achieved lower latency than LOW-priority
 calls.
 
-When multiple CSVs are provided (e.g. a baseline NIM run and a Dynamo run with
-sensitivity hints), the report prints side-by-side columns so you can see the
-improvement.
+When multiple CSVs are provided (e.g. a baseline Dynamo run and a Dynamo run
+with sensitivity hints), the report prints side-by-side columns so you can see
+the improvement.  The ``--skip-warmup N`` flag drops the first *N* examples to
+remove cold-cache effects.
 """
 
 import argparse
@@ -90,7 +91,7 @@ def _parse_csv(csv_path: Path) -> list[dict]:
 
     Each record contains:
         function_name, example_number, duration_s, completion_tokens,
-        prompt_tokens, total_tokens, ttft_s (if derivable)
+        prompt_tokens, tokens_per_second, ms_per_token
     """
     with open(csv_path) as f:
         reader = csv.DictReader(f)
@@ -120,6 +121,8 @@ def _parse_csv(csv_path: Path) -> list[dict]:
         duration_s = end_ts - start_ts
 
         completion_tokens = int(end_row.get("completion_tokens") or 0)
+        tps = completion_tokens / duration_s if duration_s > 0 else 0.0
+        ms_per_tok = (duration_s * 1000 / completion_tokens) if completion_tokens > 0 else 0.0
 
         calls.append({
             "function_name": start_row.get("function_name", ""),
@@ -127,14 +130,15 @@ def _parse_csv(csv_path: Path) -> list[dict]:
             "duration_s": duration_s,
             "completion_tokens": completion_tokens,
             "prompt_tokens": int(end_row.get("prompt_tokens") or 0),
-            "tokens_per_second": completion_tokens / duration_s if duration_s > 0 else 0.0,
+            "tokens_per_second": tps,
+            "ms_per_token": ms_per_tok,
         })
 
     return calls
 
 
 # ---------------------------------------------------------------------------
-# Report
+# Report helpers
 # ---------------------------------------------------------------------------
 
 
@@ -148,8 +152,13 @@ def _fmt_tps(value: float) -> str:
     return f"{value:.1f}"
 
 
+def _fmt_mspt(value: float) -> str:
+    """Format milliseconds per token."""
+    return f"{value:.1f}"
+
+
 def _pct_change(baseline: float, current: float) -> str:
-    """Format percentage change with color."""
+    """Format percentage change with color (lower is better for latency)."""
     if baseline == 0:
         return ""
     pct = ((current - baseline) / baseline) * 100
@@ -158,6 +167,50 @@ def _pct_change(baseline: float, current: float) -> str:
     if pct > 1:
         return f"  {_RED}{pct:+.1f}%{_RESET}"
     return f"  {_DIM}{pct:+.1f}%{_RESET}"
+
+
+def _pct_change_higher_better(baseline: float, current: float) -> str:
+    """Format percentage change with color (higher is better, e.g. TPS)."""
+    if baseline == 0:
+        return ""
+    pct = ((current - baseline) / baseline) * 100
+    if pct > 1:
+        return f"  {_GREEN}{pct:+.1f}%{_RESET}"
+    if pct < -1:
+        return f"  {_RED}{pct:+.1f}%{_RESET}"
+    return f"  {_DIM}{pct:+.1f}%{_RESET}"
+
+
+def _group_by_fn(calls: list[dict]) -> dict[str, list[dict]]:
+    """Group calls by function_name."""
+    by_fn: dict[str, list[dict]] = {}
+    for c in calls:
+        by_fn.setdefault(c["function_name"], []).append(c)
+    return by_fn
+
+
+def _percentile(data: list[float], pct: int) -> float:
+    """Compute a percentile value."""
+    if not data:
+        return 0.0
+    sorted_data = sorted(data)
+    idx = (pct / 100) * (len(sorted_data) - 1)
+    lower = int(idx)
+    upper = min(lower + 1, len(sorted_data) - 1)
+    frac = idx - lower
+    return sorted_data[lower] * (1 - frac) + sorted_data[upper] * frac
+
+
+def _sensitivity_str(score: int, width: int = 14) -> str:
+    """Return a colored sensitivity string padded to *width* visible chars."""
+    label, color = _SENSITIVITY_LABELS.get(score, ("?", _RESET))
+    visible = f"{score}/5 ({label})"
+    return f"{color}{visible.ljust(width)}{_RESET}"
+
+
+# ---------------------------------------------------------------------------
+# Report
+# ---------------------------------------------------------------------------
 
 
 def print_report(
@@ -181,19 +234,21 @@ def print_report(
         print("No LLM calls matched the prediction trie. Check that function names match.")
         return
 
+    table_w = 110
+
     # --- Header ---
     print()
-    print(f"{_BOLD}{'=' * 110}{_RESET}")
+    print(f"{_BOLD}{'=' * table_w}{_RESET}")
     print(f"{_BOLD}LATENCY SENSITIVITY PERFORMANCE COMPARISON{_RESET}")
-    print(f"{_BOLD}{'=' * 110}{_RESET}")
-    print()
-
-    # --- Per-function detail table ---
-    print(f"{_BOLD}Per-Function Breakdown{_RESET}")
+    print(f"{_BOLD}{'=' * table_w}{_RESET}")
     print()
 
     # Collect all function names, sorted by sensitivity (descending)
     all_fns = sorted(sensitivity_map.keys(), key=lambda fn: -sensitivity_map.get(fn, 0))
+
+    # --- Per-function detail table ---
+    print(f"{_BOLD}Per-Function Breakdown{_RESET}")
+    print()
 
     if len(enriched_datasets) == 1:
         _print_single_run_table(all_fns, sensitivity_map, enriched_datasets[0])
@@ -201,51 +256,17 @@ def print_report(
         _print_multi_run_table(all_fns, sensitivity_map, enriched_datasets)
 
     # --- Priority group summary ---
-    print()
-    print(f"{_BOLD}Priority Group Summary{_RESET}")
-    print()
+    _print_priority_summary(enriched_datasets)
 
-    for label, calls in enriched_datasets:
-        if len(enriched_datasets) > 1:
-            print(f"  {_BOLD}{label}{_RESET}")
+    # --- Cross-run priority ratio comparison ---
+    if len(enriched_datasets) > 1:
+        _print_priority_ratio_comparison(enriched_datasets)
 
-        for group_name, group_filter in _PRIORITY_GROUPS.items():
-            group_calls = [c for c in calls if group_filter(c["sensitivity"])]
-            if not group_calls:
-                continue
 
-            durations = [c["duration_s"] for c in group_calls]
-            tps_values = [c["tokens_per_second"] for c in group_calls]
-            fn_names = sorted(set(c["function_name"] for c in group_calls))
-
-            color = _RED if "HIGH" in group_name else (_YELLOW if "MEDIUM" in group_name else _GREEN)
-            print(f"  {color}{group_name}{_RESET}  "
-                  f"p50={_fmt_ms(statistics.median(durations)):>8}  "
-                  f"p90={_fmt_ms(_percentile(durations, 90)):>8}  "
-                  f"mean={_fmt_ms(statistics.mean(durations)):>8}  "
-                  f"tps={_fmt_tps(statistics.mean(tps_values)):>6}  "
-                  f"n={len(group_calls):<3}  "
-                  f"fns=[{', '.join(fn_names)}]")
-
-        print()
-
-    # --- Key insight ---
-    first_label, first_calls = enriched_datasets[0]
-    high_calls = [c for c in first_calls if c["sensitivity"] >= 4]
-    low_calls = [c for c in first_calls if c["sensitivity"] <= 2]
-    if high_calls and low_calls:
-        high_p50 = statistics.median([c["duration_s"] for c in high_calls])
-        low_p50 = statistics.median([c["duration_s"] for c in low_calls])
-        print(f"{_BOLD}Key Comparison ({first_label}):{_RESET}")
-        print(f"  HIGH-priority p50: {_fmt_ms(high_p50):>8}")
-        print(f"  LOW-priority  p50: {_fmt_ms(low_p50):>8}")
-        if low_p50 > 0:
-            ratio = low_p50 / high_p50
-            if ratio > 1:
-                print(f"  LOW calls are {_RED}{ratio:.1f}x slower{_RESET} than HIGH calls")
-            else:
-                print(f"  LOW calls are {_GREEN}{1/ratio:.1f}x faster{_RESET} than HIGH calls")
-        print()
+def _print_fn_header() -> str:
+    """Return the column header line for function tables."""
+    return (f"  {'Function':<22}  {'Sensitivity':<14}  {'p50':>7}  {'p90':>7}  {'Mean':>7}"
+            f"  {'ms/tok':>6}  {'TPS':>5}  {'Tokens':>6}  {'N':>3}")
 
 
 def _print_single_run_table(
@@ -257,11 +278,9 @@ def _print_single_run_table(
     label, calls = dataset
     calls_by_fn = _group_by_fn(calls)
 
-    header = (f"  {'Function':<22} {'Sens':>5}  {'p50':>8}  {'p90':>8}  {'Mean':>8}  "
-              f"{'TPS':>6}  {'Tokens':>6}  {'N':>3}")
     print(f"  {_DIM}{label}{_RESET}")
-    print(header)
-    print(f"  {'-' * 80}")
+    print(_print_fn_header())
+    print(f"  {'-' * 100}")
 
     for fn in all_fns:
         fn_calls = calls_by_fn.get(fn, [])
@@ -277,7 +296,7 @@ def _print_multi_run_table(
     sensitivity_map: dict[str, int],
     datasets: list[tuple[str, list[dict]]],
 ) -> None:
-    """Print a multi-run comparison table."""
+    """Print a multi-run comparison table with ms/tok delta."""
     baseline_label, baseline_calls = datasets[0]
     baseline_by_fn = _group_by_fn(baseline_calls)
 
@@ -287,10 +306,8 @@ def _print_multi_run_table(
 
         suffix = " (baseline)" if is_baseline else ""
         print(f"  {_BOLD}{label}{suffix}{_RESET}")
-        header = (f"  {'Function':<22} {'Sens':>5}  {'p50':>8}  {'p90':>8}  {'Mean':>8}  "
-                  f"{'TPS':>6}  {'Tokens':>6}  {'N':>3}")
-        print(header)
-        print(f"  {'-' * 80}")
+        print(_print_fn_header())
+        print(f"  {'-' * 100}")
 
         for fn in all_fns:
             fn_calls = calls_by_fn.get(fn, [])
@@ -301,9 +318,9 @@ def _print_multi_run_table(
             if not is_baseline:
                 bl_calls = baseline_by_fn.get(fn, [])
                 if bl_calls:
-                    bl_mean = statistics.mean([c["duration_s"] for c in bl_calls])
-                    cur_mean = statistics.mean([c["duration_s"] for c in fn_calls])
-                    delta = _pct_change(bl_mean, cur_mean)
+                    bl_mspt = statistics.mean([c["ms_per_token"] for c in bl_calls])
+                    cur_mspt = statistics.mean([c["ms_per_token"] for c in fn_calls])
+                    delta = _pct_change(bl_mspt, cur_mspt)
 
             _print_fn_row(fn, sensitivity_map.get(fn, 0), fn_calls, delta)
 
@@ -314,39 +331,111 @@ def _print_fn_row(fn: str, sensitivity: int, fn_calls: list[dict], delta: str = 
     """Print a single function row."""
     durations = [c["duration_s"] for c in fn_calls]
     tps_values = [c["tokens_per_second"] for c in fn_calls]
+    mspt_values = [c["ms_per_token"] for c in fn_calls]
     tokens = [c["completion_tokens"] for c in fn_calls]
 
-    sens_label, sens_color = _SENSITIVITY_LABELS.get(sensitivity, ("?", _RESET))
-    sens_str = f"{sens_color}{sensitivity}/5{_RESET}"
+    sens_str = _sensitivity_str(sensitivity)
 
-    print(f"  {fn:<22} {sens_str:>14}  "
-          f"{_fmt_ms(statistics.median(durations)):>8}  "
-          f"{_fmt_ms(_percentile(durations, 90)):>8}  "
-          f"{_fmt_ms(statistics.mean(durations)):>8}  "
-          f"{_fmt_tps(statistics.mean(tps_values)):>6}  "
+    print(f"  {fn:<22}  {sens_str}  "
+          f"{_fmt_ms(statistics.median(durations)):>7}  "
+          f"{_fmt_ms(_percentile(durations, 90)):>7}  "
+          f"{_fmt_ms(statistics.mean(durations)):>7}  "
+          f"{_fmt_mspt(statistics.mean(mspt_values)):>6}  "
+          f"{_fmt_tps(statistics.mean(tps_values)):>5}  "
           f"{statistics.mean(tokens):>6.0f}  "
           f"{len(fn_calls):>3}"
           f"{delta}")
 
 
-def _group_by_fn(calls: list[dict]) -> dict[str, list[dict]]:
-    """Group calls by function_name."""
-    by_fn: dict[str, list[dict]] = {}
-    for c in calls:
-        by_fn.setdefault(c["function_name"], []).append(c)
-    return by_fn
+def _print_priority_summary(enriched_datasets: list[tuple[str, list[dict]]]) -> None:
+    """Print per-priority-group summary with ms/tok."""
+    print()
+    print(f"{_BOLD}Priority Group Summary{_RESET}")
+    print()
+
+    for label, calls in enriched_datasets:
+        if len(enriched_datasets) > 1:
+            print(f"  {_BOLD}{label}{_RESET}")
+
+        for group_name, group_filter in _PRIORITY_GROUPS.items():
+            group_calls = [c for c in calls if group_filter(c["sensitivity"])]
+            if not group_calls:
+                continue
+
+            durations = [c["duration_s"] for c in group_calls]
+            tps_values = [c["tokens_per_second"] for c in group_calls]
+            mspt_values = [c["ms_per_token"] for c in group_calls]
+            fn_names = sorted(set(c["function_name"] for c in group_calls))
+
+            color = _RED if "HIGH" in group_name else (_YELLOW if "MEDIUM" in group_name else _GREEN)
+            print(f"  {color}{group_name}{_RESET}  "
+                  f"p50={_fmt_ms(statistics.median(durations)):>8}  "
+                  f"mean={_fmt_ms(statistics.mean(durations)):>8}  "
+                  f"ms/tok={_fmt_mspt(statistics.mean(mspt_values)):>5}  "
+                  f"tps={_fmt_tps(statistics.mean(tps_values)):>5}  "
+                  f"n={len(group_calls):<3}  "
+                  f"fns=[{', '.join(fn_names)}]")
+
+        print()
 
 
-def _percentile(data: list[float], pct: int) -> float:
-    """Compute a percentile value."""
-    if not data:
-        return 0.0
-    sorted_data = sorted(data)
-    idx = (pct / 100) * (len(sorted_data) - 1)
-    lower = int(idx)
-    upper = min(lower + 1, len(sorted_data) - 1)
-    frac = idx - lower
-    return sorted_data[lower] * (1 - frac) + sorted_data[upper] * frac
+def _print_priority_ratio_comparison(enriched_datasets: list[tuple[str, list[dict]]]) -> None:
+    """Print cross-run comparison of the HIGH/LOW priority ratio.
+
+    The key metric: within each run, how much faster (per token) are HIGH
+    calls vs LOW calls?  If sensitivity routing works, the ratio should
+    improve (HIGH gets relatively faster).
+    """
+    print(f"{_BOLD}Priority Routing Effectiveness{_RESET}")
+    print()
+
+    ratios: list[tuple[str, float]] = []
+
+    for label, calls in enriched_datasets:
+        high_calls = [c for c in calls if c["sensitivity"] >= 4]
+        low_calls = [c for c in calls if c["sensitivity"] <= 2]
+
+        if not high_calls or not low_calls:
+            continue
+
+        high_mspt = statistics.mean([c["ms_per_token"] for c in high_calls])
+        low_mspt = statistics.mean([c["ms_per_token"] for c in low_calls])
+        high_tps = statistics.mean([c["tokens_per_second"] for c in high_calls])
+        low_tps = statistics.mean([c["tokens_per_second"] for c in low_calls])
+
+        ratio = low_mspt / high_mspt if high_mspt > 0 else 0.0
+        ratios.append((label, ratio))
+
+        print(f"  {_BOLD}{label}{_RESET}")
+        print(f"    HIGH-priority  ms/tok: {_fmt_mspt(high_mspt):>6}   tps: {_fmt_tps(high_tps):>5}")
+        print(f"    LOW-priority   ms/tok: {_fmt_mspt(low_mspt):>6}   tps: {_fmt_tps(low_tps):>5}")
+        if ratio > 1:
+            print(f"    HIGH calls are {_GREEN}{ratio:.2f}x faster per token{_RESET} than LOW")
+        elif ratio < 1:
+            inv = 1.0 / ratio if ratio > 0 else 0.0
+            print(f"    HIGH calls are {_RED}{inv:.2f}x slower per token{_RESET} than LOW")
+        else:
+            print("    HIGH and LOW are equal per token")
+        print()
+
+    # Cross-run comparison
+    if len(ratios) >= 2:
+        baseline_label, baseline_ratio = ratios[0]
+        print(f"  {_BOLD}Routing Impact{_RESET}")
+        for run_label, run_ratio in ratios[1:]:
+            improvement = run_ratio - baseline_ratio
+            if improvement > 0.01:
+                print(f"    {run_label}: HIGH/LOW ratio improved "
+                      f"{_GREEN}{baseline_ratio:.2f}x → {run_ratio:.2f}x{_RESET} "
+                      f"({_GREEN}+{improvement:.2f}{_RESET})")
+            elif improvement < -0.01:
+                print(f"    {run_label}: HIGH/LOW ratio regressed "
+                      f"{_RED}{baseline_ratio:.2f}x → {run_ratio:.2f}x{_RESET} "
+                      f"({_RED}{improvement:.2f}{_RESET})")
+            else:
+                print(f"    {run_label}: HIGH/LOW ratio unchanged "
+                      f"{_DIM}{baseline_ratio:.2f}x → {run_ratio:.2f}x{_RESET}")
+        print()
 
 
 # ---------------------------------------------------------------------------
@@ -363,15 +452,21 @@ def main() -> None:
 Examples:
   # Single run analysis
   python -m latency_sensitivity_demo.compare_sensitivity_perf \\
-      --trie outputs/profile/jobs/<job_id>/prediction_trie.json \\
-      --csv  outputs/profile/jobs/<job_id>/standardized_data_all.csv
+      --trie outputs/profile/prediction_trie.json \\
+      --csv  outputs/profile/standardized_data_all.csv
 
-  # Compare baseline (NIM) vs Dynamo with sensitivity hints
+  # Compare baseline vs Dynamo with sensitivity hints
   python -m latency_sensitivity_demo.compare_sensitivity_perf \\
-      --trie outputs/profile/jobs/<job_id>/prediction_trie.json \\
-      --csv  outputs/profile/jobs/<nim_job>/standardized_data_all.csv \\
-      --csv  outputs/with_trie/jobs/<dynamo_job>/standardized_data_all.csv \\
-      --labels "NIM (baseline)" "Dynamo + sensitivity"
+      --trie outputs/profile/prediction_trie.json \\
+      --csv  outputs/profile/standardized_data_all.csv \\
+      --csv  outputs/with_trie/standardized_data_all.csv \\
+      --labels "Dynamo (baseline)" "Dynamo + sensitivity"
+
+  # Skip first 2 examples to remove warmup effects
+  python -m latency_sensitivity_demo.compare_sensitivity_perf \\
+      --trie outputs/profile/prediction_trie.json \\
+      --csv  outputs/profile/standardized_data_all.csv \\
+      --skip-warmup 2
 """,
     )
     parser.add_argument("--trie", required=True, type=Path, help="Path to prediction_trie.json")
@@ -382,6 +477,11 @@ Examples:
                         dest="csvs",
                         help="Path to standardized_data_all.csv (can specify multiple)")
     parser.add_argument("--labels", nargs="*", help="Labels for each CSV (default: filenames)")
+    parser.add_argument("--skip-warmup",
+                        type=int,
+                        default=0,
+                        metavar="N",
+                        help="Drop the first N examples from each CSV (removes cold-cache effects)")
 
     args = parser.parse_args()
 
@@ -410,7 +510,23 @@ Examples:
     csv_datasets = []
     for label, csv_path in zip(labels, args.csvs):
         calls = _parse_csv(csv_path)
+
+        # Apply warmup filter
+        if args.skip_warmup > 0:
+            skip_examples = set()
+            all_examples = sorted(set(c["example_number"] for c in calls))
+            skip_examples = set(all_examples[:args.skip_warmup])
+            before = len(calls)
+            calls = [c for c in calls if c["example_number"] not in skip_examples]
+            skipped = before - len(calls)
+            if skipped > 0:
+                print(f"{_DIM}  [{label}] Skipped {skipped} calls from first "
+                      f"{args.skip_warmup} examples (warmup){_RESET}")
+
         csv_datasets.append((label, calls))
+
+    if args.skip_warmup > 0:
+        print()
 
     print_report(sensitivity_map, csv_datasets)
 

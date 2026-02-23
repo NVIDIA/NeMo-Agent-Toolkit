@@ -14,6 +14,8 @@
 # limitations under the License.
 
 # Import all functions to trigger registration
+from .workflow import analyze_sentiment_function  # noqa: F401
+from .workflow import check_compliance_function  # noqa: F401
 from .workflow import classify_query_function  # noqa: F401
 from .workflow import draft_response_function  # noqa: F401
 from .workflow import latency_sensitivity_demo_function  # noqa: F401
