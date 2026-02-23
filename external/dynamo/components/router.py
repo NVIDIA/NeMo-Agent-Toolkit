@@ -1463,7 +1463,8 @@ async def worker(runtime: DistributedRuntime):
             logger.warning(
                 "KV_BLOCK_SIZE env var (%d) overrides config.yaml block_size (%d). "
                 "Update config.yaml to match DYNAMO_KV_BLOCK_SIZE in .env to silence this warning.",
-                env_block_size, config_block_size,
+                env_block_size,
+                config_block_size,
             )
         block_size = env_block_size
     else:

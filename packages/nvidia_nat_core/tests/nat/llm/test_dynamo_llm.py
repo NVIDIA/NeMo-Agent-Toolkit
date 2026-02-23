@@ -640,7 +640,7 @@ class TestDynamoTransport:
 
         assert agent_hints["total_requests"] == 25
         assert agent_hints["osl"] == 2500  # raw output_tokens.p90
-        assert agent_hints["iat"] == 50    # raw interarrival_ms.mean
+        assert agent_hints["iat"] == 50  # raw interarrival_ms.mean
 
         # Verify lookup was called
         assert mock_lookup.find.called
@@ -1147,8 +1147,9 @@ class TestDynamoTransport:
         normal usage. We patch the context read directly to simulate a negative value
         arriving via a custom subclass or mock.
         """
-        import httpx
         from unittest.mock import patch
+
+        import httpx
 
         from nat.llm.dynamo_llm import _DynamoTransport
 
