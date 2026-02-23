@@ -25,10 +25,8 @@ This guide provides a step-by-step process to enable observability in a NeMo Age
 
 ### Prerequisites
 
-<!-- vale Vale.Spelling = NO -->
-An account on [LangSmith](https://www.langchain.com/langsmith) is required. You can create an account at
-[smith.langchain.com](https://smith.langchain.com/).
-<!-- vale Vale.Spelling = YES -->
+An account on LangSmith is required. You can create an account at
+[LangSmith](https://smith.langchain.com/).
 
 Set your API key as an environment variable:
 
@@ -79,9 +77,7 @@ As the workflow runs, telemetry data will start showing up in LangSmith.
 
 ### Step 4: View Traces in LangSmith
 
-<!-- vale Vale.Spelling = NO -->
-- Open your browser and navigate to [smith.langchain.com](https://smith.langchain.com/).
-<!-- vale Vale.Spelling = YES -->
+- Open your browser and navigate to [LangSmith](https://smith.langchain.com/).
 - Locate your workflow traces under your project name in the Projects section.
 - Inspect function execution details, latency, token counts, and other information for individual traces.
 
