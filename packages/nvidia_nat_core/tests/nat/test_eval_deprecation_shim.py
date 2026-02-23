@@ -14,12 +14,18 @@
 # limitations under the License.
 
 import importlib
+import sys
 
 import pytest
 
 
 def test_nat_eval_shim_warns_and_reexports_models():
     pytest.importorskip("nat.plugins.eval")
+
+    # Remove cached shim so the deprecation warning fires on re-import
+    cached_keys = [k for k in sys.modules if k == "nat.eval" or k.startswith("nat.eval.")]
+    for k in cached_keys:
+        del sys.modules[k]
 
     with pytest.warns(UserWarning, match="deprecated"):
         importlib.import_module("nat.eval")

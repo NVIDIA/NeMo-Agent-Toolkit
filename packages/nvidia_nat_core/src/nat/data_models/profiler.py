@@ -48,6 +48,7 @@ class PredictionTrieConfig(BaseModel):
     w_critical: float = 0.5
     w_fanout: float = 0.3
     w_position: float = 0.2
+    w_parallel: float = 0.0
 
 
 class ProfilerConfig(BaseModel):
