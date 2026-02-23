@@ -266,24 +266,24 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 
    User Alice:
    ```bash
-   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Alice --input "What is the status of AIQ-1935?"
+   python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_cookie.py --protocol ws --user-id Alice --input "What is the status of AIQ-1935?"
    ```
 
    User Hatter (has a separate MCP client instance):
    ```bash
-   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Hatter --input "What is the status of AIQ-1935?"
+   python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_cookie.py --protocol ws --user-id Hatter --input "What is the status of AIQ-1935?"
    ```
 
 4. (Alternative to 3) Test with JWT (user identified by `Authorization: Bearer <JWT>`; no session query parameter):
 
    User Alice:
    ```bash
-   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Alice --input "What is the status of AIQ-1935?"
+   python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_jwt.py --protocol ws --user-id Alice --input "What is the status of AIQ-1935?"
    ```
 
    User Hatter:
    ```bash
-   python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_jwt.py --user-id Hatter --input "What is the status of AIQ-1935?"
+   python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_jwt.py --protocol ws --user-id Hatter --input "What is the status of AIQ-1935?"
    ```
 
 Each user gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.

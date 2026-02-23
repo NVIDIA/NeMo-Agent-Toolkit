@@ -13,14 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Test script to send a websocket message using the nat-session cookie for user identification.
+Test script for cookie-based user identification for MCP authentication flows.
 
-This script identifies the user via the nat-session cookie by passing ?session={user_id} in the
-WebSocket URL (the server injects it as the cookie). Use this script to test cookie-based user
-identification.
-- Sends a websocket message to the server and waits for the response.
-- Handles the OAuth consent window if needed.
-Complements check_ws_mcp_auth_jwt.py (JWT-based identification via Authorization: Bearer <JWT>).
+Supports:
+- WebSocket: identifies user via `?session={user_id}` query parameter.
+- HTTP: identifies user via `nat-session` cookie.
 
 Sample usage:
 1. Start the NAT server, for example:
@@ -28,16 +25,18 @@ Sample usage:
 # Terminal 1
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
 ```
-2. Run the script to test the websocket MCP authentication (cookie-based user ID):
-```bash
-# Terminal 2
-# Run with default user ID and input message
-python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py
 
-# Run with specific user ID and input message
-python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Alice \
+2. Run WebSocket mode:
+```bash
+python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_cookie.py --protocol ws
+python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_cookie.py --protocol ws --user-id Alice \
     --input "What is the status of AIQ-1935?"
-python3 packages/nvidia_nat_mcp/scripts/check_ws_mcp_auth_cookie.py --user-id Hatter \
+```
+
+3. Run HTTP mode:
+```bash
+python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_cookie.py --protocol http
+python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_cookie.py --protocol http --user-id Hatter \
     --input "What is the status of AIQ-1935?"
 ```
 """
@@ -48,19 +47,19 @@ import json
 import sys
 import webbrowser
 
+import httpx
 import websockets
 
-# Sample user IDs
 USER_ID_1 = "Alice"
 USER_ID_2 = "Hatter"
 USER_ID_3 = "Rabbit"
 
-# Sample input messages
 INPUT_MESSAGE_1 = "What is the status of AIQ-1935?"
 INPUT_MESSAGE_2 = "Summarize AIQ-1935"
 
 
-def build_message(input_message: str) -> dict:
+def build_ws_message(input_message: str) -> dict:
+    """Build a WebSocket chat request payload."""
     return {
         "type": "user_message",
         "schema_type": "chat",
@@ -77,21 +76,38 @@ def build_message(input_message: str) -> dict:
     }
 
 
+def build_http_payload(input_message: str) -> dict:
+    """Build an OpenAI-compatible HTTP chat payload."""
+    return {
+        "messages": [{
+            "role": "user",
+            "content": input_message,
+        }],
+        "stream": False,
+    }
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Send a websocket message using nat-session cookie for user identification.")
-    parser.add_argument("--user-id", default=USER_ID_1, help="User ID for the websocket session (via cookie).")
+    parser = argparse.ArgumentParser(description="Send cookie-authenticated requests over WebSocket or HTTP.")
+    parser.add_argument("--protocol",
+                        choices=["ws", "http"],
+                        default="ws",
+                        help="Transport protocol to use. Defaults to ws.")
+    parser.add_argument("--user-id", default=USER_ID_1, help="User ID for cookie/session identification.")
     parser.add_argument("--input", default=INPUT_MESSAGE_1, help="User message to send.")
     parser.add_argument("--ws-url-template",
                         default="ws://localhost:8000/websocket?session={user_id}",
-                        help="Websocket URL template with {user_id} placeholder.")
+                        help="WebSocket URL template with {user_id} placeholder for ws mode.")
+    parser.add_argument("--http-url",
+                        default="http://localhost:8000/v1/chat/completions",
+                        help="HTTP URL for http mode.")
     return parser.parse_args()
 
 
-async def main() -> None:
-    args = parse_args()
+async def run_ws(args: argparse.Namespace) -> None:
+    """Execute a WebSocket request using nat-session cookie injection via query parameter."""
     ws_url = args.ws_url_template.format(user_id=args.user_id)
-    message = build_message(args.input)
+    message = build_ws_message(args.input)
     async with websockets.connect(ws_url) as ws:
         await ws.send(json.dumps(message))
         response_chunks: list[str] = []
@@ -134,4 +150,31 @@ async def main() -> None:
                     continue
 
 
-asyncio.run(main())
+def run_http(args: argparse.Namespace) -> None:
+    """Execute an HTTP request using a nat-session cookie."""
+    payload = build_http_payload(args.input)
+    cookies = {"nat-session": args.user_id}
+    response = httpx.post(args.http_url, json=payload, cookies=cookies, timeout=120.0)
+    response.raise_for_status()
+    data = response.json()
+
+    message = (
+        data.get("choices", [{}])[0].get("message", {}).get("content")
+        if isinstance(data, dict) else None
+    )
+    if isinstance(message, str) and message.strip():
+        print(message)
+    else:
+        print(json.dumps(data, indent=2))
+
+
+async def main() -> None:
+    args = parse_args()
+    if args.protocol == "ws":
+        await run_ws(args)
+    else:
+        run_http(args)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
