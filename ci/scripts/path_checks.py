@@ -195,7 +195,10 @@ ALLOWLISTED_WORDS: set[str] = {
     "microsoft/[Pp]hi.*",
     "ssmits/[Qq]wen.*",
     "Qwen/Qwen.*",
-    "deepseek-ai/deepseek-.*",  #
+    "deepseek-ai/deepseek-.*",
+    "BAAI/bge.*",
+    "sentence-transformers/.*",
+    "meta-llama/.*",  #
     # MIME types
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
