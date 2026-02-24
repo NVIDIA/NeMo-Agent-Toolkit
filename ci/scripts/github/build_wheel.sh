@@ -104,7 +104,7 @@ for whl in "${MOVED_WHEELS[@]}"; do
                 exit ${NAT_CMD_EXIT_CODE}
             fi
         else
-            rapids-logger "Skipping nat import/CLI test for nvidia_nat_app (framework-agnostic package with different structure)"
+            rapids-logger "Skipping nat CLI test for nvidia_nat_app (framework-agnostic package); verifying nat_app import"
             PYTHON_IMPORT_OUT=$(python -c "import nat_app" 2>&1)
             IMPORT_TEST_RESULT=$?
             if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
