@@ -492,6 +492,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
     BEFORE httpx's internal state machine processes it.
 
     All hints are placed in a single ``nvext.agent_hints`` dict:
+
     - Standard Dynamo fields (``latency_sensitivity``, ``osl``, ``priority``): consumed
       by Dynamo's built-in router and engine scheduler.
     - Custom routing fields (``prefix_id``, ``total_requests``, ``iat``): consumed by

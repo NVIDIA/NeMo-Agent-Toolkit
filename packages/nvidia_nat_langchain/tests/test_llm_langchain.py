@@ -244,7 +244,6 @@ class TestDynamoLangChain:
                 timeout=300.0,
                 prediction_lookup=None,
                 use_raw_values=True,
-                disable_headers=True,
                 cache_pin_type=CachePinType.EPHEMERAL,
                 max_sensitivity=1000,
             )
