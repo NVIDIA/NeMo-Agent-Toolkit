@@ -22,7 +22,7 @@ Supports multiple state parameters (e.g. ``state``, ``memory``, ``config``)
 via the ``param_to_obj`` mapping.  Each parameter is tracked as a separate
 object namespace in the resulting `AccessSet`.
 
-Framework-specific call detection (e.g. LangGraph's Send/Command) is
+Framework-specific call detection (e.g. LangGraph's `Send`/`Command`) is
 pluggable via the ``special_call_names`` parameter.
 
 Limitations
@@ -78,7 +78,7 @@ _KNOWN_SAFE_ATTR_READS = frozenset({"get", "keys", "values", "items", "copy"})
 class StaticAnalysisResult:
     """Results of static analysis for a single node function.
 
-    Uncertainty flags (has_dynamic_exec, has_closure_write, etc.) indicate
+    Uncertainty flags (`has_dynamic_exec`, `has_closure_write`, etc.) indicate
     patterns that prevent full confidence. When any flag is True, callers
     should treat the node as dependent (sequential) for safety.
     """
@@ -96,17 +96,17 @@ class StaticAnalysisResult:
 
     # Uncertainty principle flags (conservative fallback)
     has_dynamic_exec: bool = False
-    """True if exec, eval, or compile is called."""
+    """True if `exec`, `eval`, or `compile` is called."""
     has_closure_write: bool = False
     """True if writing to a closure freevar."""
     has_global_write: bool = False
     """True if writing to a non-param global."""
     has_unknown_attr_access: bool = False
-    """True if state.attr where attr is not in known-safe set."""
+    """True if `state.attr` where `attr` is not in known-safe set."""
     has_return_lambda_mutates_state: bool = False
-    """True if return lambda references state (delayed mutation)."""
+    """True if return lambda references `state` (delayed mutation)."""
     has_dynamic_attr: bool = False
-    """True if setattr/getattr with non-Constant attr argument."""
+    """True if `setattr`/`getattr` with non-Constant `attr` argument."""
 
     warnings: list[str] = field(default_factory=list)
 
@@ -717,7 +717,7 @@ class _NodeASTVisitor(ast.NodeVisitor):
 
         return None
 
-    def _resolve_name(self, name: str):
+    def _resolve_name(self, name: str) -> object | None:
         """Resolve a name through globals, closure vars, and default args.
 
         Args:
@@ -757,7 +757,7 @@ class _NodeASTVisitor(ast.NodeVisitor):
 
         return None
 
-    def _resolve_subscript_container(self, node: ast.expr):
+    def _resolve_subscript_container(self, node: ast.expr) -> object | None:
         """Resolve the container part of a subscript (e.g. STEP_FUNCTIONS).
 
         Args:
@@ -770,7 +770,7 @@ class _NodeASTVisitor(ast.NodeVisitor):
             return self._resolve_name(node.id)
         return None
 
-    def _resolve_subscript_key(self, node: ast.expr):
+    def _resolve_subscript_key(self, node: ast.expr) -> object | None:
         """Resolve the key/index of a subscript to a concrete value.
 
         Args:
@@ -1018,6 +1018,8 @@ def analyze_function_ast(
             else:
                 effective_param_to_obj = {state_param: _DEFAULT_OBJ}
         else:
+            if not param_to_obj:
+                raise ValueError("param_to_obj must contain at least one mapping")
             effective_param_to_obj = dict(param_to_obj)
             state_param = next(iter(effective_param_to_obj))
 
@@ -1045,6 +1047,8 @@ def analyze_function_ast(
         if param_to_obj is None:
             effective_param_to_obj = {state_param: _DEFAULT_OBJ}
         else:
+            if not param_to_obj:
+                raise ValueError("param_to_obj must contain at least one mapping")
             effective_param_to_obj = dict(param_to_obj)
 
         visitor = _NodeASTVisitor(
@@ -1081,9 +1085,10 @@ def analyze_function_ast(
     result.has_dynamic_attr = visitor.has_dynamic_attr
     result.warnings = visitor.warnings
 
+    func_name = getattr(func, "__name__", type(func).__name__)
     logger.debug(
         "AST analysis of %s: reads=%s, writes=%s, mutations=%s, specials=%s",
-        func.__name__,
+        func_name,
         result.reads,
         result.writes,
         result.mutations,

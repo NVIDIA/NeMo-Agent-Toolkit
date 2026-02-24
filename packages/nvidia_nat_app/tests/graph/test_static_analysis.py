@@ -42,7 +42,7 @@ class TestAnalyzeFunctionAST:
 
     def test_dict_write_via_return(self):
 
-        def fn(state):
+        def fn(_state):
             return {"result": "done"}
 
         r = analyze_function_ast(fn)
@@ -72,7 +72,7 @@ class TestAnalyzeFunctionAST:
 
     def test_dynamic_key_flagged(self):
 
-        def fn(state):
+        def fn(_state):
             key = some_func()  # noqa: F821
             return {key: "val"}
 
@@ -169,7 +169,7 @@ class TestDelete:
     def test_del_closure_subscript(self):
         outer = {}
 
-        def fn(state):
+        def fn(_state):
             del outer["x"]
             return {}
 
@@ -255,6 +255,15 @@ class TestParamToObj:
         r = analyze_function_ast(fn, param_to_obj={"state": "state", "memory": "memory"})
         assert "query" in r.reads.all_fields_flat
         assert "cache" in r.mutations.all_fields_flat or "cache" in r.writes.all_fields_flat
+
+    def test_empty_param_to_obj_raises(self):
+        """Empty param_to_obj raises ValueError instead of StopIteration."""
+
+        def fn(state):
+            return state.get("x", {})
+
+        with pytest.raises(ValueError, match="param_to_obj must contain at least one mapping"):
+            analyze_function_ast(fn, param_to_obj={})
 
     def test_vararg_state_access(self):
 
@@ -348,7 +357,7 @@ class TestUncertaintyFlags:
 
     def test_has_dynamic_exec(self):
 
-        def fn(state):
+        def fn(_state):
             exec("x=1")  # noqa: S102
             return {}
 
@@ -357,7 +366,7 @@ class TestUncertaintyFlags:
 
     def test_has_dynamic_exec_eval(self):
 
-        def fn(state):
+        def fn(_state):
             eval("state")  # noqa: S307
             return {}
 
@@ -421,7 +430,7 @@ class TestUncertaintyFlags:
     def test_augassign_closure_write(self):
         outer = {}
 
-        def fn(state):
+        def fn(_state):
             outer["x"] += 1
             return {}
 
@@ -430,7 +439,7 @@ class TestUncertaintyFlags:
 
     def test_augassign_global_write(self):
 
-        def fn(state):
+        def fn(_state):
             module_var["x"] += 1  # noqa: F821
             return {}
 
@@ -439,7 +448,7 @@ class TestUncertaintyFlags:
 
     def test_has_dynamic_exec_compile(self):
 
-        def fn(state):
+        def fn(_state):
             compile("x=1", "<string>", "exec")  # noqa: S102
             return {}
 
