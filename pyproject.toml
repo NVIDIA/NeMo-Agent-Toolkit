@@ -258,6 +258,7 @@ nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_hybrid_control_flow = { path = "examples/control_flow/hybrid_control_flow", editable = true }
 nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
+nat_latency_sensitivity_demo = { path = "examples/dynamo_integration/latency_sensitivity_demo", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
