@@ -23,7 +23,7 @@ Agentic workflows are not flat sequences of identical LLM calls. Some calls gate
 
 ## Workflow: Customer Support Triage
 
-The demo implements a customer support pipeline as a LangGraph `StateGraph` with seven nodes. Each node is a separately registered NAT function, giving the profiler individual visibility into every LLM call.
+The demo implements a customer support pipeline as a LangGraph `StateGraph` with seven nodes. Each node is a separately registered NeMo Agent Toolkit function, giving the profiler individual visibility into every LLM call.
 
 The topology is designed to make priority-based scheduling effective: 4 parallel LOW-priority branches produce long outputs (~500 tokens each) that saturate GPU decode capacity, while 2 HIGH-priority nodes produce short outputs (~5 and ~20 tokens) that benefit from queue-jumping.
 
@@ -208,7 +208,7 @@ ROUTING RECOMMENDATIONS
 
 | Column | Meaning |
 |--------|---------|
-| **Path** | Trie path: `root/<workflow>/<function_name>`. Each registered NAT function gets its own node. |
+| **Path** | Trie path: `root/<workflow>/<function_name>`. Each registered NeMo Agent Toolkit function gets its own node. |
 | **Call#** | The LLM call index within this function (always 1 here since each function makes one call). |
 | **Remaining** | Average number of LLM calls that follow this one in the workflow. `classify_query` = 6 (everything after it), `review_response` = 0 (last). |
 | **IAT (ms)** | Mean inter-arrival time — milliseconds between this call ending and the next call starting. `research_context` shows ~1250ms because it finishes first and waits for `lookup_policy` to complete before `draft_response` can start. |
@@ -312,7 +312,7 @@ Use `--skip-warmup N` to drop the first N examples and remove cold-cache effects
 
 | File | Description |
 |------|-------------|
-| `workflow.py` | 7 registered NAT functions + LangGraph orchestrator with 4-way parallel fan-out |
+| `workflow.py` | 7 registered NeMo Agent Toolkit functions + LangGraph orchestrator with 4-way parallel fan-out |
 | `sensitivity_report.py` | CLI tool: `python -m latency_sensitivity_demo.sensitivity_report <trie.json> [--csv <profiler.csv>]` |
 | `compare_sensitivity_perf.py` | CLI tool: compare LLM call latency grouped by sensitivity level |
 | `configs/config_profile.yml` | NIM profiling config — builds prediction trie with auto-sensitivity |
