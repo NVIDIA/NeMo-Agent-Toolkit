@@ -14,6 +14,11 @@
 # limitations under the License.
 
 
+general:
+  front_end:
+    _type: fastapi
+    enable_interactive_extensions: true
+    
 function_groups:
   mcp_jira:
     _type: per_user_mcp_client
