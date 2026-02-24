@@ -178,7 +178,7 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed config
 <!-- path-check-skip-begin -->
 ```bash
 cd ../../examples/dynamo_integration
-export HF_TOKEN=<your_huggingface_token>
+export HF_TOKEN=your_huggingface_token
 
 python scripts/download_agent_leaderboard_v2.py --domains banking
 ```

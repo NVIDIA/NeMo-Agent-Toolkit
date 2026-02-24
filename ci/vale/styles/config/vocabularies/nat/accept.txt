@@ -94,6 +94,8 @@ Jira
 jsonlines
 [Kk]aggle
 [Kk]eycloak
+kv
+KV
 LangChain
 Langfuse
 LangGraph
@@ -126,6 +128,7 @@ NIC
 NIM(s?)
 npm
 NumPy
+nvext
 NVIDIA
 OAuth
 Ollama
@@ -145,6 +148,7 @@ PDF(s?)
 [Pp]luggable
 [Pp]ostprocess
 [Pp]ostprocessing
+[Pp]refill
 [Pp]reprocess
 [Pp]retrained
 [Pp]rofiler
@@ -201,6 +205,8 @@ uv
 Vanna
 [Vv]env
 VectorDB
+[Vv]llm
+[Vv]LLM
 [Ww]alkthrough
 [Ww]eb[Ss]ocket
 XGBoost
