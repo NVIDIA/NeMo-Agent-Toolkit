@@ -703,9 +703,9 @@ NeMo Agent Toolkit provides the following built-in evaluator:
 - `trajectory` - An evaluator to run and evaluate the LangChain/LangGraph agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 - `tunable_rag_evaluator` - A customizable LLM evaluator for flexible RAG workflow evaluation.
-- [`langsmith`](#built-in-openevals-evaluator-langsmith) - Built-in openevals evaluators (e.g., exact match, Levenshtein distance).
-- [`langsmith_custom`](#custom-evaluator-langsmith_custom) - Import any LangSmith-compatible evaluator by Python dotted path.
-- [`langsmith_judge`](#llm-as-judge-evaluator-langsmith_judge) - LLM-as-judge evaluator powered by openevals.
+- `langsmith` - Built-in openevals evaluators (e.g., exact match, Levenshtein distance).
+- `langsmith_custom` - Import any LangSmith-compatible evaluator by Python dotted path.
+- `langsmith_judge` - LLM-as-judge evaluator powered by openevals.
 
 #### Ragas Evaluator
 [Ragas](https://docs.ragas.io/) is an open-source evaluation framework that enables end-to-end
@@ -848,7 +848,7 @@ NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/
 uv pip install -e '.[langchain]'
 ```
 
-##### Built-in openevals Evaluator (`langsmith`)
+##### Built-in openevals Evaluator
 
 Uses a built-in openevals evaluator selected by short name. Available evaluators: `exact_match`, `levenshtein_distance`.
 
@@ -880,7 +880,7 @@ eval:
 `extra_fields` requires `pass_full_entry: true` in the dataset configuration so that the full dataset entry is available to the evaluator.
 :::
 
-##### Custom Evaluator (`langsmith_custom`)
+##### Custom Evaluator
 
 Imports any LangSmith-compatible evaluator by Python dotted path. The calling convention is auto-detected:
 
@@ -899,7 +899,7 @@ eval:
 
 `extra_fields` is supported for evaluators using the `(inputs, outputs, reference_outputs)` convention.
 
-##### LLM-as-Judge Evaluator (`langsmith_judge`)
+##### LLM-as-Judge Evaluator
 
 Uses openevals `create_llm_as_judge` to score workflow outputs with a judge LLM. Supports prebuilt prompts from openevals (e.g., `correctness`, `hallucination`) and custom prompt templates.
 
