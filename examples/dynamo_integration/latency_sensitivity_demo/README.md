@@ -25,7 +25,7 @@ Agentic workflows are not flat sequences of identical LLM calls. Some calls gate
 
 The demo implements a customer support pipeline as a LangGraph `StateGraph` with seven nodes. Each node is a separately registered NAT function, giving the profiler individual visibility into every LLM call.
 
-The topology is deliberately designed to make priority-based scheduling effective: 4 parallel LOW-priority branches produce long outputs (~500 tokens each) that saturate GPU decode capacity, while 2 HIGH-priority nodes produce short outputs (~5 and ~20 tokens) that benefit from queue-jumping.
+The topology is designed to make priority-based scheduling effective: 4 parallel LOW-priority branches produce long outputs (~500 tokens each) that saturate GPU decode capacity, while 2 HIGH-priority nodes produce short outputs (~5 and ~20 tokens) that benefit from queue-jumping.
 
 <!-- path-check-skip-begin -->
 ```
