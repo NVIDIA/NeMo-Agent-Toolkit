@@ -182,7 +182,7 @@ def optimize_parameters(
     except ImportError as ie:
         logger.warning(
             "Could not import visualization dependencies: %s. "
-            "Install with: pip install nvidia-nat-optimizer[visualization]",
+            "Install with: pip install nvidia-nat-config-optimizer[visualization]",
             ie)
     except Exception as e:
         logger.warning("Failed to generate visualizations: %s", e)

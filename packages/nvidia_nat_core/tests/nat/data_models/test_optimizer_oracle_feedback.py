@@ -20,7 +20,7 @@ Tests for PromptGAOptimizationConfig and extra (oracle) fields.
 Oracle feedback is implementation-specific; it is not part of the shared
 PromptGAOptimizationConfig contract. Extra fields (e.g. oracle_feedback_mode)
 are allowed and stored in model_extra so YAML can still specify them.
-Validation of oracle_* is done by GAOptimizerConfig in nvidia_nat_optimizer.
+Validation of oracle_* is done by GAOptimizerConfig in nvidia_nat_config_optimizer.
 """
 
 from nat.data_models.optimizer import PromptGAOptimizationConfig
