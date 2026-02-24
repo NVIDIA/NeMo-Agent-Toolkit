@@ -30,6 +30,7 @@ NVIDIA NeMo Agent Toolkit supports the following LLM providers:
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
 | [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
 | [HuggingFace](https://huggingface.co) | `huggingface` | HuggingFace API |
+| [HuggingFace Inference](https://huggingface.co/docs/api-inference) | `huggingface_inference` | HuggingFace Inference API, Endpoints, and TGI |
 
 
 ## LLM Configuration
@@ -175,6 +176,51 @@ HuggingFace is a built-in NeMo Agent Toolkit LLM provider, but requires extra de
 pip install "transformers[torch,accelerate]~=4.57"
 ```
 :::
+
+### HuggingFace Inference
+
+HuggingFace Inference is an LLM provider for remote model inference via the HuggingFace Serverless Inference API, Dedicated Inference Endpoints, or self-hosted TGI servers.
+
+You can use the following environment variables to configure the HuggingFace Inference LLM provider:
+
+* `HF_TOKEN` - The API token to access HuggingFace Inference resources
+
+The HuggingFace Inference LLM provider is defined by the {py:class}`~nat.llm.huggingface_inference_llm.HuggingFaceInferenceLLMConfig` class.
+
+* `model_name` - The HuggingFace model identifier (for example, `meta-llama/Llama-3.2-8B-Instruct`)
+* `api_key` - The HuggingFace API token for authentication
+* `endpoint_url` - Custom endpoint URL for Inference Endpoints or self-hosted TGI servers. If not provided, uses Serverless API
+* `max_new_tokens` - Maximum number of new tokens to generate (default: `512`)
+* `temperature` - Sampling temperature (default: `0.7`)
+* `top_p` - Top-p (nucleus) sampling parameter
+* `top_k` - Top-k sampling parameter
+* `repetition_penalty` - Penalty for repeating tokens
+* `seed` - Random seed for reproducible generation
+* `timeout` - Request timeout in seconds (default: `120.0`)
+
+```yaml
+llms:
+  # Serverless Inference API
+  serverless_llm:
+    _type: huggingface_inference
+    model_name: meta-llama/Llama-3.2-8B-Instruct
+    api_key: ${HF_TOKEN}
+    max_new_tokens: 512
+    temperature: 0.7
+
+  # Dedicated Inference Endpoint
+  endpoint_llm:
+    _type: huggingface_inference
+    model_name: your-model-name
+    api_key: ${HF_TOKEN}
+    endpoint_url: https://your-endpoint.endpoints.huggingface.cloud
+
+  # Self-hosted TGI server
+  tgi_llm:
+    _type: huggingface_inference
+    model_name: local-model
+    endpoint_url: http://localhost:8080
+```
 
 ### NVIDIA Dynamo (experimental)
 

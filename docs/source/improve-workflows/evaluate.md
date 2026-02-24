@@ -425,6 +425,46 @@ To inspect results for individual dataset entries, go to the `Dataset Results` t
 ![Weave Eval Dataset Results](../_static/weave_eval_dataset_results.png)
 Note: Plotting metrics for individual dataset entries is only available across two runs.
 
+## Evaluation Callbacks
+
+The evaluation system provides a callback interface that allows observability providers to hook into the evaluation lifecycle. Callbacks enable providers to create structured experiments, link workflow runs to dataset examples, and attach evaluator scores in their respective platforms.
+
+### `EvalCallback` Protocol
+
+Any class implementing the following methods can be registered as an evaluation callback:
+
+| Lifecycle Hook | When It Fires | What a Callback Can Do |
+| -------------- | ------------- | ---------------------- |
+| `on_dataset_loaded(dataset_name, items)` | After the eval dataset is loaded, before any workflow runs begin | Create a dataset or experiment in the observability provider, map eval items to provider-specific examples |
+| `on_eval_complete(result)` | After all items are evaluated and scores are computed | Link workflow traces to dataset examples, attach evaluator scores as feedback, record metadata |
+
+The `on_eval_complete` callback receives an `EvalResult` object containing:
+
+- `metric_scores`: A dictionary of evaluator names to average scores across all dataset entries.
+- `items`: A list of `EvalResultItem` objects, each containing the item's input, expected output, actual output, per-evaluator scores, and reasoning.
+
+### Registration
+
+Callbacks are registered via the `@register_eval_callback(config_type=...)` decorator, keyed to a telemetry exporter configuration type. When that exporter is configured in `general.telemetry.tracing`, the callback is automatically constructed and registered with no additional user configuration needed.
+
+For example, a provider registers its callback by decorating a factory function:
+
+```python
+from nat.cli.register_workflow import register_eval_callback
+
+@register_eval_callback(config_type=MyTelemetryExporter)
+def _build_my_eval_callback(config, **kwargs):
+    return MyEvaluationCallback(project=config.project)
+```
+
+When the user configures the corresponding telemetry exporter in their workflow YAML, the callback is created and registered automatically.
+
+### Built-in Implementation
+
+LangSmith implements this callback pattern to create structured experiments in the LangSmith Datasets & Experiments UI. See the [LangSmith integration guide](../run-workflows/observe/observe.md?provider=LangSmith#provider-integration-guides){.external} for details on what LangSmith tracks during evaluation.
+
+Other observability providers can implement the same `EvalCallback` protocol to add their own experiment tracking during evaluation.
+
 
 ## Evaluating Remote Workflows
 You can evaluate remote workflows by using the `nat eval` command with the `--endpoint` flag. In this mode the workflow is run on the remote server specified in the `--endpoint` configuration and evaluation is done on the local server.
