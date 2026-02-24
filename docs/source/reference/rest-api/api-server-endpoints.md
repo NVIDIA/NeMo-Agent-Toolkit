@@ -25,10 +25,15 @@ There are currently five workflow transactions that can be initiated using HTTP 
 
 ## Default Endpoint Paths
 
-The default endpoint paths use a versioned URL scheme. Legacy paths are also registered for
-backward compatibility unless explicitly disabled.
+The default endpoint paths use a versioned URL scheme.
 
-| Endpoint | Default Path | Legacy Path |
+:::note
+Versioned paths are currently experimental due to the added support of HTTP Human-in-the-loop (HITL) and OAuth. They are 1:1 compatible with the legacy endpoints for workflows not relying on those behaviors.
+:::
+
+Legacy paths are registered by default for backward compatibility unless explicitly disabled.
+
+| Endpoint | Versioned Path | Legacy Path |
 |----------|-------------|-------------|
 | Generate (non-streaming) | `/v1/workflow` | `/generate` |
 | Generate (streaming) | `/v1/workflow/stream` | `/generate/stream` |
