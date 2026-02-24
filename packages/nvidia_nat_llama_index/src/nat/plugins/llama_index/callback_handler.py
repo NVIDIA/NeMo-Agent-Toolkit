@@ -34,8 +34,8 @@ from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
-from nat.profiler.callbacks.base_callback_class import BaseProfilerCallback
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.data_models.profiler_callback import BaseProfilerCallback
+from nat.data_models.token_usage import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
 

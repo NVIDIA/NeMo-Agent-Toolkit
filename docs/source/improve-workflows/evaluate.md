@@ -23,17 +23,34 @@ NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. I
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the [`profiling`](./profiler.md) sub-package to use the `nat eval` command.
+In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`.
 
-If you are installing from source, you can install the sub-package by running the following command from the root directory of the NeMo Agent Toolkit repository:
+If you are installing from source, install the evaluation extra from the NeMo Agent Toolkit repository root:
 ```bash
-uv pip install -e '.[profiling]'
+uv pip install -e '.[eval]'
 ```
 
-If you are installing from a package, you can install the sub-package by running the following command:
+If you are installing from a package, install either the `eval` extra or the standalone package:
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval]"
 ```
+
+```bash
+uv pip install nvidia-nat-eval
+```
+
+If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install profiling dependencies as well:
+
+```bash
+uv pip install -e '.[eval,profiling]'
+```
+
+For package installs, use:
+
+```bash
+uv pip install "nvidia-nat[eval,profiling]"
+```
+
 
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `nat eval` command. The `nat eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
@@ -408,6 +425,46 @@ To inspect results for individual dataset entries, go to the `Dataset Results` t
 ![Weave Eval Dataset Results](../_static/weave_eval_dataset_results.png)
 Note: Plotting metrics for individual dataset entries is only available across two runs.
 
+## Evaluation Callbacks
+
+The evaluation system provides a callback interface that allows observability providers to hook into the evaluation lifecycle. Callbacks enable providers to create structured experiments, link workflow runs to dataset examples, and attach evaluator scores in their respective platforms.
+
+### `EvalCallback` Protocol
+
+Any class implementing the following methods can be registered as an evaluation callback:
+
+| Lifecycle Hook | When It Fires | What a Callback Can Do |
+| -------------- | ------------- | ---------------------- |
+| `on_dataset_loaded(dataset_name, items)` | After the eval dataset is loaded, before any workflow runs begin | Create a dataset or experiment in the observability provider, map eval items to provider-specific examples |
+| `on_eval_complete(result)` | After all items are evaluated and scores are computed | Link workflow traces to dataset examples, attach evaluator scores as feedback, record metadata |
+
+The `on_eval_complete` callback receives an `EvalResult` object containing:
+
+- `metric_scores`: A dictionary of evaluator names to average scores across all dataset entries.
+- `items`: A list of `EvalResultItem` objects, each containing the item's input, expected output, actual output, per-evaluator scores, and reasoning.
+
+### Registration
+
+Callbacks are registered via the `@register_eval_callback(config_type=...)` decorator, keyed to a telemetry exporter configuration type. When that exporter is configured in `general.telemetry.tracing`, the callback is automatically constructed and registered with no additional user configuration needed.
+
+For example, a provider registers its callback by decorating a factory function:
+
+```python
+from nat.cli.register_workflow import register_eval_callback
+
+@register_eval_callback(config_type=MyTelemetryExporter)
+def _build_my_eval_callback(config, **kwargs):
+    return MyEvaluationCallback(project=config.project)
+```
+
+When the user configures the corresponding telemetry exporter in their workflow YAML, the callback is created and registered automatically.
+
+### Built-in Implementation
+
+LangSmith implements this callback pattern to create structured experiments in the LangSmith Datasets & Experiments UI. See the [LangSmith integration guide](../run-workflows/observe/observe.md?provider=LangSmith#provider-integration-guides){.external} for details on what LangSmith tracks during evaluation.
+
+Other observability providers can implement the same `EvalCallback` protocol to add their own experiment tracking during evaluation.
+
 
 ## Evaluating Remote Workflows
 You can evaluate remote workflows by using the `nat eval` command with the `--endpoint` flag. In this mode the workflow is run on the remote server specified in the `--endpoint` configuration and evaluation is done on the local server.
@@ -581,8 +638,8 @@ The example dataset `simple_calculator_nested.json` is a nested JSON file with q
 def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
 ```
 
-{py:class}`~nat.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
-{py:class}`~nat.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
+{py:class}`~nat.data_models.evaluator.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
+{py:class}`~nat.data_models.evaluator.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
 The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
 - `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
 - `input_obj`: This is the question.

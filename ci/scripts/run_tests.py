@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from __future__ import annotations
 
 import argparse
 import logging
@@ -33,7 +32,6 @@ REPO = Path(__file__).resolve().parents[2]
 ART = REPO / ".artifacts"
 JUNIT_DIR = ART / "junit"
 COV_DIR = ART / "coverage"
-VENV_DIR = ART / "venvs"
 MAX_PROJECT_DEPTH = 5
 SKIP_DIRS = {"__pycache__", "node_modules"}
 
@@ -64,12 +62,41 @@ def discover_projects(max_depth: int = MAX_PROJECT_DEPTH) -> list[Path]:
     return projects
 
 
-def make_env() -> dict[str, str]:
+def resolve_project(project: str) -> Path:
+    candidate = Path(project)
+    if candidate.is_absolute():
+        resolved = candidate
+    else:
+        direct = (REPO / candidate).resolve()
+        if (direct / "pyproject.toml").exists():
+            return direct
+
+        normalized = project.replace("-", "_")
+        package_path = (REPO / "packages" / normalized).resolve()
+        if (package_path / "pyproject.toml").exists():
+            return package_path
+
+        if not normalized.startswith("nvidia_nat_"):
+            package_path = (REPO / "packages" / f"nvidia_nat_{normalized}").resolve()
+            if (package_path / "pyproject.toml").exists():
+                return package_path
+
+        example_path = (REPO / "examples" / normalized).resolve()
+        if (example_path / "pyproject.toml").exists():
+            return example_path
+
+        resolved = direct
+
+    if not (resolved / "pyproject.toml").exists():
+        raise ValueError(f"Could not resolve a project with pyproject.toml from: {project}")
+    return resolved
+
+
+def make_env(project_dir: Path) -> dict[str, str]:
     env = os.environ.copy()
 
-    # One environment per worker process (runner), reused across projects handled by that process.
-    venv_path = VENV_DIR / f"pid-{os.getpid()}"
-    env["UV_PROJECT_ENVIRONMENT"] = str(venv_path)
+    env["UV_PROJECT_ENVIRONMENT"] = str(project_dir / ".venv")
+    env["VIRTUAL_ENV"] = str(project_dir / ".venv")
 
     if env_values := dotenv_values():
         env.update({k: v for k, v in env_values.items() if v is not None})
@@ -89,6 +116,7 @@ def run_one(
     enable_junit: bool,
     run_slow: bool,
     run_integration: bool,
+    extra_flags: list[str],
 ) -> int:
     logger = logging.getLogger("testing")
     logger.setLevel(logging.INFO)
@@ -98,7 +126,7 @@ def run_one(
     if not logger.hasHandlers():
         logger.addHandler(logging.StreamHandler(sys.stdout))
 
-    env = make_env()
+    env = make_env(project_dir)
 
     display_project_dir = project_dir.relative_to(REPO).as_posix()
 
@@ -112,7 +140,6 @@ def run_one(
     cmd = [
         "uv",
         "sync",
-        "--active",
         "-q",
         "--project",
         str(project_dir),
@@ -120,48 +147,69 @@ def run_one(
         "--all-extras",
         "--no-progress",
     ]
-    if rc := sh(cmd, env=env):
-        logger.error(f"{display_project_dir} (sync failed)")
-        return rc
-    else:
-        logger.info(f"{display_project_dir} (synced)")
+    try:
+        if rc := sh(cmd, env=env):
+            logger.error(f"{display_project_dir} (sync failed)")
+            return rc
+        else:
+            logger.info(f"{display_project_dir} (synced)")
 
-    if not (project_dir / "tests").exists():
-        logger.info(f"{display_project_dir} (no tests)")
+        if not (project_dir / "tests").exists():
+            logger.info(f"{display_project_dir} (no tests)")
+            return 0
+
+        # 2) Run pytest in that environment.
+        cmd = ["uv", "run", "--project", str(project_dir), "--", "pytest", "-q", *extra_flags, str(project_dir)]
+        if run_slow:
+            cmd.append("--run_slow")
+        if run_integration:
+            cmd.append("--run_integration")
+        if enable_junit:
+            cmd.append(f"--junitxml={junit}")
+        if enable_coverage:
+            # always include nat module in the coverage report
+            cmd.append("--cov=nat")
+            # if the project has a src directory, include it in the coverage report
+            source_dir = project_dir / "src"
+            if source_dir.exists():
+                cmd.append(f"--cov={str(source_dir)}")
+            cmd.append("--cov-report=")
+
+        if rc := sh(cmd, env=env):
+            logger.error(f"{display_project_dir} (test failed)")
+            return rc
+        else:
+            logger.info(f"{display_project_dir} (tested)")
         return 0
-
-    # 2) Run pytest in that environment.
-    cmd = ["uv", "run", "--active", "--", "pytest", "-q", str(project_dir)]
-    if run_slow:
-        cmd.append("--run_slow")
-    if run_integration:
-        cmd.append("--run_integration")
-    if enable_junit:
-        cmd.append(f"--junitxml={junit}")
-    if enable_coverage:
-        # always include nat module in the coverage report
-        cmd.append("--cov=nat")
-        # if the project has a src directory, include it in the coverage report
-        source_dir = project_dir / "src"
-        if source_dir.exists():
-            cmd.append(f"--cov={str(source_dir)}")
-        cmd.append("--cov-report=")
-
-    if rc := sh(cmd, env=env):
-        logger.error(f"{display_project_dir} (test failed)")
-        return rc
-    else:
-        logger.info(f"{display_project_dir} (tested)")
-    return 0
+    finally:
+        cmd = ["rm", "-rf", str(project_dir / ".venv")]
+        sh(cmd, env=env)
 
 
-def main(junit_xml: str | None, cov_xml: str | None, run_slow: bool, run_integration: bool, jobs: int) -> int:
+def main(junit_xml: str | None,
+         cov_xml: str | None,
+         run_slow: bool,
+         run_integration: bool,
+         jobs: int,
+         project: str | None,
+         extra_flags: list[str]) -> int:
     projects = discover_projects()
     if not projects:
         print("No projects found under packages/ or examples/")
         return 2
+    if project:
+        try:
+            selected_project = resolve_project(project).resolve()
+        except ValueError as exc:
+            print(exc)
+            return 2
 
-    for d in (ART, JUNIT_DIR, COV_DIR, VENV_DIR):
+        projects = [p for p in projects if p.resolve() == selected_project]
+        if not projects:
+            print(f"Resolved project is not in discovered packages/examples set: {selected_project}")
+            return 2
+
+    for d in (ART, JUNIT_DIR, COV_DIR):
         d.mkdir(parents=True, exist_ok=True)
 
     failures = 0
@@ -184,7 +232,8 @@ def main(junit_xml: str | None, cov_xml: str | None, run_slow: bool, run_integra
                       enable_coverage=cov_xml is not None,
                       enable_junit=junit_xml is not None,
                       run_slow=run_slow,
-                      run_integration=run_integration) for p in projects
+                      run_integration=run_integration,
+                      extra_flags=extra_flags) for p in projects
         ]
         try:
             for fut in as_completed(futs):
@@ -192,6 +241,8 @@ def main(junit_xml: str | None, cov_xml: str | None, run_slow: bool, run_integra
                     failures += 1
         finally:
             ex = None
+            for p in projects:
+                sh(["rm", "-rf", str(p / ".venv")])
 
     if cov_xml is not None:
         sh(["uv", "tool", "install", "coverage[toml]"])
@@ -213,10 +264,20 @@ if __name__ == "__main__":
     parser.add_argument("--run_slow", action="store_true", default=False)
     parser.add_argument("--run_integration", action="store_true", default=False)
     parser.add_argument("--jobs", type=int, default=1)
+    parser.add_argument(
+        "--project",
+        action="store",
+        default=None,
+        help=("Run only one project path or name (e.g. packages/nvidia_nat_a2a, "
+              "examples/agents, nvidia_nat_a2a, nvidia-nat-a2a, a2a, agents)."),
+    )
+    parser.add_argument("extra_flags", nargs="*", default=[], help="Extra flags to pass to pytest")
     args = parser.parse_args()
     raise SystemExit(
         main(junit_xml=args.junit_xml,
              cov_xml=args.cov_xml,
              run_slow=args.run_slow,
              run_integration=args.run_integration,
-             jobs=args.jobs))
+             jobs=args.jobs,
+             project=args.project,
+             extra_flags=args.extra_flags))

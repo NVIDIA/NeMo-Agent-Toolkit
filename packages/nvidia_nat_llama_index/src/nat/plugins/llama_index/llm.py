@@ -102,11 +102,15 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
 
+    config_dict = llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version", "request_timeout"},
+                                        by_alias=True,
+                                        exclude_none=True,
+                                        exclude_unset=True)
+    if llm_config.request_timeout is not None:
+        config_dict["timeout"] = llm_config.request_timeout
+
     llm = AzureOpenAI(
-        **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True),
+        **config_dict,
         api_version=llm_config.api_version,
     )
 
@@ -133,7 +137,7 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
     from llama_index.llms.openai import OpenAIResponses
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        exclude={"type", "thinking", "api_type", "api_key", "base_url", "request_timeout"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -143,6 +147,8 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
         config_dict["api_key"] = api_key
     if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
         config_dict["base_url"] = base_url
+    if llm_config.request_timeout is not None:
+        config_dict["timeout"] = llm_config.request_timeout
 
     if llm_config.api_type == APITypeEnum.RESPONSES:
         llm = OpenAIResponses(**config_dict)

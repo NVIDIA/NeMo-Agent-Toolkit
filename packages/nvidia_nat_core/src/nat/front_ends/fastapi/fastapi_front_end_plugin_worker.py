@@ -28,9 +28,9 @@ from fastapi import Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from nat.builder.eval_builder import WorkflowEvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.builder.workflow_builder import WorkflowEvalBuilderBase
 from nat.data_models.config import Config
 from nat.runtime.session import SessionManager
 from nat.utils.log_utils import setup_logging
@@ -42,8 +42,6 @@ from .fastapi_front_end_config import FastApiFrontEndConfig
 from .message_handler import WebSocketMessageHandler
 from .routes.auth import add_authorization_route
 from .routes.chat import add_chat_routes
-from .routes.evaluate import add_evaluate_item_route
-from .routes.evaluate import add_evaluate_route
 from .routes.execution import add_execution_routes
 from .routes.generate import add_generate_routes
 from .routes.health import add_health_route
@@ -209,7 +207,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         # Evaluator storage for single-item evaluation
         self._evaluators: dict[str, EvaluatorInfo] = {}
-        self._eval_builder: WorkflowEvalBuilder | None = None
+        self._eval_builder: WorkflowEvalBuilderBase | None = None
 
         # HTTP interactive execution store
         self._execution_store = ExecutionStore()
@@ -234,6 +232,12 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def initialize_evaluators(self, config: Config):
         """Initialize and store evaluators from config for single-item evaluation."""
+        try:
+            from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder
+        except ImportError:
+            logger.info("Evaluation package not installed, skipping evaluator initialization")
+            return
+
         if not config.eval or not config.eval.evaluators:
             logger.info("No evaluators configured, skipping evaluator initialization")
             return
@@ -241,20 +245,23 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         try:
             # Build evaluators using WorkflowEvalBuilder (same pattern as nat eval)
             # Start with registry=None and let populate_builder set everything up
-            self._eval_builder = WorkflowEvalBuilder(general_config=config.general,
-                                                     eval_general_config=config.eval.general,
-                                                     registry=None)
+            eval_builder = WorkflowEvalBuilder(
+                general_config=config.general,
+                eval_general_config=config.eval.general,
+                registry=None,
+            )
+            self._eval_builder = eval_builder
 
             # Enter the async context and keep it alive
-            await self._eval_builder.__aenter__()
+            await eval_builder.__aenter__()
 
             # Populate builder with config (this sets up LLMs, functions, etc.)
             # Skip workflow build since we already have it from the main builder
-            await self._eval_builder.populate_builder(config, skip_workflow=True)
+            await eval_builder.populate_builder(config, skip_workflow=True)
 
             # Now evaluators should be populated by populate_builder
             for name in config.eval.evaluators.keys():
-                self._evaluators[name] = self._eval_builder.get_evaluator(name)
+                self._evaluators[name] = eval_builder.get_evaluator(name)
                 logger.info("Initialized evaluator: %s", name)
 
             logger.info("Successfully initialized %d evaluators", len(self._evaluators))
@@ -330,9 +337,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         await self.add_default_route(app, session_manager)
 
-        # Eventually move evaluate routes to separate plugin
-        await add_evaluate_route(self, app, session_manager=session_manager)
-        await add_evaluate_item_route(self, app, session_manager=session_manager)
+        try:
+            from nat.plugins.eval.fastapi.routes import add_evaluate_routes
+            await add_evaluate_routes(self, app, session_manager=session_manager)
+        except ImportError:
+            logger.warning("nvidia-nat-eval is not installed; skipping evaluate routes.")
 
         try:
             from nat.plugins.mcp.client.fastapi_routes import add_mcp_client_tool_list_route

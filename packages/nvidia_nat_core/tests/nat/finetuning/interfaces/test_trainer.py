@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import FinetuneRunConfig
@@ -28,7 +29,6 @@ from nat.data_models.finetuning import TrainingJobRef
 from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.eval.config import EvaluationRunOutput
 from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder

@@ -49,7 +49,7 @@ async def test_run_full_workflow():
 async def test_optimize_full_workflow(capsys):
     from nat.data_models.config import Config
     from nat.data_models.optimizer import OptimizerRunConfig
-    from nat.profiler.parameter_optimization.optimizer_runtime import optimize_config
+    from nat.parameter_optimization.optimizer_runtime import optimize_config
     from nat_email_phishing_analyzer.register import EmailPhishingAnalyzerConfig
 
     config_file: Path = locate_example_config(EmailPhishingAnalyzerConfig, "config_optimizer.yml")

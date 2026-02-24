@@ -276,7 +276,10 @@ class ReActAgentGraph(DualNodeAgent):
                         return state
                     # retry parsing errors, if configured
                     logger.info("%s Retrying ReAct Agent, including output parsing Observation", AGENT_LOG_PREFIX)
-                    working_state.append(output_message)
+                    # Only append non-empty messages to prevent LLM 400 errors
+                    # when empty content is forwarded via agent_scratchpad (#1611)
+                    if output_message.content and str(output_message.content).strip():
+                        working_state.append(output_message)
                     working_state.append(HumanMessage(content=str(ex.observation)))
         except Exception as ex:
             logger.error("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)

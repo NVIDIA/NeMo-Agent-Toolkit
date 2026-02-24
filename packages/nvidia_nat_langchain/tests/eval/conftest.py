@@ -18,8 +18,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
 
 
 def make_mock_builder(mock_llm=None):

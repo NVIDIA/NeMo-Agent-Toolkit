@@ -54,6 +54,7 @@ agno = ["nvidia-nat-agno == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
 core = ["nvidia-nat-core == {version}"]
 crewai = ["nvidia-nat-crewai == {version}"]
+eval = ["nvidia-nat-eval == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
 fastmcp = ["nvidia-nat-fastmcp == {version}"]
 langchain = ["nvidia-nat-langchain == {version}"]
@@ -64,6 +65,7 @@ nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
 openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
 opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
+rag = ["nvidia-nat-rag == {version}"]
 ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
@@ -79,25 +81,26 @@ zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
 pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
-profiling = [ "nvidia-nat-core[profiling] == {version}" ]
+profiling = [ "nvidia-nat-eval[profiling] == {version}" ]
 
 most = [
   "nvidia-nat-a2a == {version}",
   "nvidia-nat-adk == {version}",
   "nvidia-nat-agno == {version}",
   "nvidia-nat-autogen == {version}",
-  "nvidia-nat-core[async_endpoints,gunicorn,pii-defense,profiling] == {version}",
+  "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
+  "nvidia-nat-eval[profiling] == {version}",
   "nvidia-nat-fastmcp == {version}",
   "nvidia-nat-langchain == {version}",
   "nvidia-nat-llama-index == {version}",
   "nvidia-nat-mcp == {version}",
   "nvidia-nat-mem0ai == {version}",
+  "nvidia-nat-mysql == {version}",
   "nvidia-nat-nemo-customizer == {version}",
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
-  "nvidia-nat-mysql == {version}",
   "nvidia-nat-redis == {version}",
   "nvidia-nat-s3 == {version}",
   "nvidia-nat-semantic-kernel == {version}",
@@ -205,6 +208,9 @@ conflicts = [
     [{ extra = "adk" }, { extra = "ragaai" }],
     [{ extra = "strands" }, { extra = "ragaai" }],
     [{ extra = "most" }, { extra = "ragaai" }],
+    # rag<>autogen have incompatible protobuf versions
+    [{ extra = "rag" }, { extra = "autogen" }],
+    [{ extra = "rag" }, { extra = "most" }],
 ]
 
 [tool.uv.sources]
@@ -216,6 +222,7 @@ nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
 nvidia-nat-core = { path = "packages/nvidia_nat_core", editable = true }
 nvidia-nat-crewai = { path = "packages/nvidia_nat_crewai", editable = true }
 nvidia-nat-data-flywheel = { path = "packages/nvidia_nat_data_flywheel", editable = true }
+nvidia-nat-eval = { path = "packages/nvidia_nat_eval", editable = true }
 nvidia-nat-fastmcp = { path = "packages/nvidia_nat_fastmcp", editable = true }
 nvidia-nat-langchain = { path = "packages/nvidia_nat_langchain", editable = true }
 nvidia-nat-llama-index = { path = "packages/nvidia_nat_llama_index", editable = true }
@@ -225,6 +232,7 @@ nvidia-nat-nemo-customizer = { path = "packages/nvidia_nat_nemo_customizer", edi
 nvidia-nat-openpipe-art = { path = "packages/nvidia_nat_openpipe_art", editable = true }
 nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
+nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragaai = { path = "packages/nvidia_nat_ragaai", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }

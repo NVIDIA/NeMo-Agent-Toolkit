@@ -761,7 +761,7 @@ For more information about per-user workflows, refer to:
 - [Writing Per-User Functions](../../extend/custom-components/custom-functions/per-user-functions.md)
 
 ## Evaluation Endpoint
-You can also evaluate workflows via the NeMo Agent Toolkit `evaluate` endpoint. For more information, refer to the [NeMo Agent Toolkit Evaluation Endpoint](./evaluate-api.md) documentation.
+You can also evaluate workflows via the NeMo Agent Toolkit `evaluate` endpoint. The endpoint is registered by the core FastAPI worker and enabled only when `nvidia-nat-eval` is installed (plus `async_endpoints` support for async job handling). For more information, refer to the [NeMo Agent Toolkit Evaluation Endpoint](./evaluate-api.md) documentation.
 
 ## Choosing between Streaming and Non-Streaming
 Use streaming if you need real-time updates or live communication where users expect immediate feedback. Use non-streaming if your workflow responds with simple updates and less feedback is needed.

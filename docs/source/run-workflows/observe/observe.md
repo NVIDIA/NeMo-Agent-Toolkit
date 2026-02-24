@@ -66,7 +66,7 @@ The following table lists each exporter with its supported features and configur
 | [Dynatrace](https://dynatrace.com/) | [Observing with Dynatrace](?provider=Dynatrace#provider-integration-guides){.external} | Logging, Tracing |
 | [Galileo](https://galileo.ai/) | [Observing with Galileo](?provider=Galileo#provider-integration-guides){.external} | Logging, Tracing |
 | [Langfuse](https://langfuse.com/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
-| [LangSmith](https://www.langchain.com/langsmith) | Refer to the `examples/observability/simple_calculator_observability` example for usage details| Logging, Tracing |
+| [LangSmith](https://www.langchain.com/langsmith) | [Observing with LangSmith](?provider=LangSmith#provider-integration-guides){.external} | Logging, Tracing, Evaluation Metrics |
 | [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) | [Observing with OTel Collector](?provider=OTel-collector#provider-integration-guides){.external} | Logging, Tracing |
 | [Patronus](https://www.patronus.ai/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
 | [Phoenix](https://phoenix.arize.com/) | [Observing with Phoenix](?provider=Phoenix#provider-integration-guides){.external} | Logging, Tracing |
@@ -170,8 +170,8 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 #### Integration Components
 
-- **{py:class}`nat.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
-- **{py:class}`~nat.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
+- **{py:class}`nat.plugins.eval.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
+- **{py:class}`~nat.plugins.eval.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 
@@ -214,6 +214,13 @@ For complete information about developing and integrating custom telemetry expor
   :sync: Galileo
 
     :::{include} ./observe-workflow-with-galileo.md
+
+  :::
+
+  :::{tab-item} LangSmith
+  :sync: LangSmith
+
+    :::{include} ./observe-workflow-with-langsmith.md
 
   :::
 

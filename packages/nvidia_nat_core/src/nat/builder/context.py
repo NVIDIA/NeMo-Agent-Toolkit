@@ -81,6 +81,7 @@ class ContextState(metaclass=Singleton):
         self._event_stream: ContextVar[Subject[IntermediateStep] | None] = ContextVar("event_stream", default=None)
         self._active_function: ContextVar[InvocationNode | None] = ContextVar("active_function", default=None)
         self._active_span_id_stack: ContextVar[list[str] | None] = ContextVar("active_span_id_stack", default=None)
+        self._root_span_id: ContextVar[int | None] = ContextVar("root_span_id", default=None)
         self._function_path_stack: ContextVar[list[str] | None] = ContextVar("function_path_stack", default=None)
         self._latency_sensitivity_stack: ContextVar[list[int] | None] = ContextVar("latency_sensitivity_stack",
                                                                                    default=None)
@@ -388,6 +389,15 @@ class Context:
         """
         stack = self._context_state.latency_sensitivity_stack.get()
         return max(stack)
+
+    @property
+    def has_manual_latency_sensitivity(self) -> bool:
+        """True if any @latency_sensitive decorator is active in the current scope.
+
+        The default stack is [2] (length 1). Any push_latency_sensitivity call
+        adds to the stack, making length > 1.
+        """
+        return len(self._context_state.latency_sensitivity_stack.get()) > 1
 
     @contextmanager
     def push_latency_sensitivity(self, sensitivity: int):

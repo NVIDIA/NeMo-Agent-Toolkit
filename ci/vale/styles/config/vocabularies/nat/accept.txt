@@ -53,6 +53,7 @@ Databricks
 Datadog
 [Dd]atastore
 DB(s?)
+[Dd]eclaratively
 [Dd]enylist
 [Dd]eserialize
 [Dd]ev
@@ -153,6 +154,7 @@ Qwen
 [Rr]eimplement(ing)?
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
+[Rr]erank(er|ing)?
 [Rr]epo
 [Rr]eputational
 [Rr]etarget(ed?)
@@ -162,6 +164,7 @@ Qwen
 [Ss]andboxing
 [Ss]anitiz(e|ed|ation|ing)
 [Ss]erializable
+[Ss]erverless
 spaCy
 SQLAlchemy
 SSE

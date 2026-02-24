@@ -263,8 +263,8 @@ class TestRegistration:
 
     def test_yaml_backward_compat(self):
         import nat.plugins.langchain.dataset_loader.register  # noqa: F401
-        from nat.data_models.evaluate import EvalConfig
-        from nat.data_models.evaluate import EvalGeneralConfig
+        from nat.data_models.evaluate_config import EvalConfig
+        from nat.data_models.evaluate_config import EvalGeneralConfig
 
         EvalConfig.rebuild_annotations()
 

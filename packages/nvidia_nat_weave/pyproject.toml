@@ -70,6 +70,7 @@ dependencies = [
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 test = [
+  "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",
 ]
 

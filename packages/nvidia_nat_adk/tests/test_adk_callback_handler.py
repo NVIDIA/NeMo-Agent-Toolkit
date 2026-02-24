@@ -23,6 +23,7 @@ import pytest
 
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import LLMFrameworkEnum
+from nat.data_models.profiler_callback import BaseProfilerCallback
 from nat.plugins.adk.callback_handler import ADKProfilerHandler
 
 
@@ -325,7 +326,6 @@ async def test_llm_call_monkey_patch_with_multiple_messages(mock_acompletion, ha
 
 def test_handler_inheritance(handler):
     """Test that ADKProfilerHandler inherits from BaseProfilerCallback."""
-    from nat.profiler.callbacks.base_callback_class import BaseProfilerCallback
     assert isinstance(handler, BaseProfilerCallback)
 
 

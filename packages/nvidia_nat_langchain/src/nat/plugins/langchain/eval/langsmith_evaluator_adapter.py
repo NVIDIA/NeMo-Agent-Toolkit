@@ -22,9 +22,9 @@ from typing import Any
 from langsmith.run_helpers import tracing_context
 from typing_extensions import override
 
-from nat.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 
 from .utils import eval_input_item_to_openevals_kwargs
 from .utils import eval_input_item_to_run_and_example

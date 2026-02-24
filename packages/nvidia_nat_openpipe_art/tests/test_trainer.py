@@ -21,6 +21,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import FinetuneRunConfig
@@ -30,7 +31,6 @@ from nat.data_models.finetuning import TrainingJobStatus
 from nat.data_models.finetuning import TrainingStatusEnum
 from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.eval.config import EvaluationRunOutput
 from nat.plugins.openpipe.config import ARTTrainerConfig
 from nat.plugins.openpipe.trainer import ARTTrainer
 
