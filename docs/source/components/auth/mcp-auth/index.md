@@ -161,7 +161,7 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 - Connect to the UI at `http://localhost:3000`
 
 :::important
-Ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out. WebSocket connections are required for OAuth authentication workflows.
+For UI-based testing, ensure that `WebSocket` mode is enabled by navigating to the top-right corner and selecting the `WebSocket` option in the arrow pop-out.
 :::
 
 4. Send the input to the workflow using the UI:
@@ -172,19 +172,9 @@ On the first request, a per-user workflow instance is created for the UI user. D
 
 ### Testing Per-User Workflows with MCP Authentication
 
-Use the helper scripts below to validate per-user MCP authentication behavior in FastAPI workflows across supported transport and auth modes.
+After starting the per-user FastAPI workflow above, use the helper scripts below to validate per-user MCP authentication behavior across supported transport and auth modes.
 
-1. Set the environment variables to access the protected MCP server:
-```bash
-export CORPORATE_MCP_JIRA_URL="https://your-jira-mcp-url"
-```
-
-2. Start the server:
-```bash
-nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
-```
-
-3. Test with session cookie (user identified by `?session={user_id}`):
+1. Test with session cookie (user identified by `?session={user_id}`):
 
    User Alice:
    ```bash
@@ -196,7 +186,7 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
    python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_cookie.py --protocol ws --user-id Hatter --input "What is the status of AIQ-1935?"
    ```
 
-4. (Alternative to 3) Test with JWT (user identified by `Authorization: Bearer <JWT>`; no session query parameter):
+2. (Alternative to 1) Test with JWT (user identified by `Authorization: Bearer <JWT>`; no session query parameter):
 
    User Alice:
    ```bash
@@ -208,7 +198,7 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
    python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_jwt.py --protocol ws --user-id Hatter --input "What is the status of AIQ-1935?"
    ```
 
-5. Per-user workflows can be tested over both WebSocket and HTTP.
+3. Per-user workflows can be tested over both WebSocket and HTTP.
 
    For HTTP, use JWT-based auth (`Authorization: Bearer <JWT>`):
 
@@ -218,14 +208,14 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 
 Each user gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
 
-### Displaying Protected MCP Tools through the CLI
+## Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
 This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Client](../../../build-workflows/mcp-client.md).
 
-### Running the Workflow on a Remote Server
+## Running the Workflow on a Remote Server
 
 When running the NeMo Agent Toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
 
