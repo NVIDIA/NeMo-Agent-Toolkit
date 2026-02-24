@@ -397,6 +397,13 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         "Set to null/None to disable cache control hints.",
     )
 
+    disable_headers: bool = Field(
+        default=False,
+        description="When True, disable injection of Dynamo prefix headers (x-prefix-id, "
+        "x-prefix-total-requests, x-prefix-osl, x-prefix-iat) even when prefix_template is set. "
+        "Useful for A/B testing or debugging without prefix routing.",
+    )
+
     max_sensitivity: int = Field(
         default=1000,
         ge=1,
@@ -464,6 +471,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             "prefix_osl",
             "prefix_iat",
             "prefix_use_raw_values",
+            "disable_headers",
             "request_timeout",
             "prediction_trie_path",
             "cache_pin_type",

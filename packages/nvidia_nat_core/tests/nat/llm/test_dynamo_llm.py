@@ -178,6 +178,7 @@ class TestDynamoModelConfig:
             "prefix_osl",
             "prefix_iat",
             "prefix_use_raw_values",
+            "disable_headers",
             "request_timeout",
             "prediction_trie_path",
             "cache_pin_type",
