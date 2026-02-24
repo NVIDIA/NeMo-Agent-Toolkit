@@ -386,7 +386,7 @@ Results can vary across runs because LLM outputs are non-deterministic. Running 
 
 ## Red Teaming the Retail Agent with Defenses
 
-Install HuggingFace support for local guard models:
+Install Hugging Face support for local guard models:
 
 ```bash
 uv pip install 'transformers[torch,accelerate]~=4.57'

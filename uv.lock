@@ -5862,6 +5862,16 @@ dependencies = [
 requires-dist = [{ name = "nvidia-nat", extras = ["mcp", "test"], editable = "." }]
 
 [[package]]
+name = "nat-latency-sensitivity-demo"
+source = { editable = "examples/dynamo_integration/latency_sensitivity_demo" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." }]
+
+[[package]]
 name = "nat-math-assistant-a2a"
 source = { editable = "examples/A2A/math_assistant_a2a" }
 dependencies = [
@@ -6615,6 +6625,7 @@ examples = [
     { name = "nat-haystack-deep-research-agent" },
     { name = "nat-hybrid-control-flow" },
     { name = "nat-kaggle-mcp" },
+    { name = "nat-latency-sensitivity-demo" },
     { name = "nat-math-assistant-a2a" },
     { name = "nat-math-assistant-a2a-protected" },
     { name = "nat-multi-frameworks" },
@@ -6793,6 +6804,7 @@ requires-dist = [
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
     { name = "nat-hybrid-control-flow", marker = "extra == 'examples'", editable = "examples/control_flow/hybrid_control_flow" },
     { name = "nat-kaggle-mcp", marker = "extra == 'examples'", editable = "examples/MCP/kaggle_mcp" },
+    { name = "nat-latency-sensitivity-demo", marker = "extra == 'examples'", editable = "examples/dynamo_integration/latency_sensitivity_demo" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },
     { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a_protected" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
