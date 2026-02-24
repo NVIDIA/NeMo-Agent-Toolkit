@@ -117,7 +117,7 @@ class TestAnalyzeFunction:
 
     def test_writes_detected(self):
         info = analyze_function(step_a)
-        assert "ticker" in info["writes"] or "ticker" in info["writes"]
+        assert "ticker" in info["writes"]
 
     def test_confidence_full_for_clean_function(self):
         info = analyze_function(step_a)
@@ -377,6 +377,41 @@ class TestBenchmark:
             n_runs=1,
         )
         assert result["outputs"]["returns_string"] == "custom_result"
+
+    async def test_execute_node_non_dict_sequential_raises(self):
+
+        async def execute_node(name, state):
+            return None  # invalid
+
+        with pytest.raises(TypeError, match="execute_node must return a dict.*got NoneType.*node"):
+            await benchmark(
+                nodes={
+                    "a": step_a, "b": step_b
+                },
+                edges=[("a", "b")],
+                execute_node=execute_node,
+                n_runs=1,
+            )
+
+    async def test_execute_node_non_dict_parallel_raises(self):
+        call_count = [0]
+
+        async def execute_node(name, state):
+            call_count[0] += 1
+            # Sequential runs first (a, b); parallel then runs (a, b, c). Fail on 4th call (b in parallel).
+            if call_count[0] >= 4:
+                return "error"
+            return {f"{name}_done": True, **state}
+
+        with pytest.raises(TypeError, match="execute_node must return a dict.*got str.*node"):
+            await benchmark(
+                nodes={
+                    "a": step_a, "b": step_b, "c": step_c
+                },
+                edges=[("a", "b"), ("a", "c")],
+                execute_node=execute_node,
+                n_runs=1,
+            )
 
 
 # -- speculative_opportunities tests -----------------------------------------

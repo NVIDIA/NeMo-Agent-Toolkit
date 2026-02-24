@@ -278,8 +278,9 @@ async def benchmark(
     Args:
         nodes: Mapping of node name to callable (or None).
         edges: List of ``(source, target)`` dependency edges.
-        execute_node: Async callable ``(node_name, state) -> updated_state``
-            used for the built-in sequential and parallel baselines.
+        execute_node: Async callable ``(node_name, state) -> dict``. Must return
+            a dict (updated state); non-dict returns raise TypeError. Used for
+            the built-in sequential and parallel baselines.
         strategies: Optional dict of ``{name: async_executor}``.  Each
             executor is called as ``await executor(copy.deepcopy(state))``
             and is responsible for its own execution logic.
@@ -327,7 +328,10 @@ async def benchmark(
         s = copy.deepcopy(state)
         t0 = time.perf_counter()
         for name in topo_order:
-            s = await execute_node(name, s)
+            result = await execute_node(name, s)
+            if not isinstance(result, dict):
+                raise TypeError(f"execute_node must return a dict, got {type(result).__name__} from node {name!r}")
+            s = result
         return (time.perf_counter() - t0) * 1000, s
 
     async def _run_parallel() -> tuple[float, dict]:
@@ -335,10 +339,11 @@ async def benchmark(
         t0 = time.perf_counter()
         for stage in stages:
             stage_results = await asyncio.gather(*(execute_node(name, copy.deepcopy(s)) for name in sorted(stage)))
-            for r in stage_results:
-                if isinstance(r, dict):
-                    # Scheduler ensures no write-write conflicts in parallel stages.
-                    s.update(r)
+            for name, r in zip(sorted(stage), stage_results, strict=True):
+                if not isinstance(r, dict):
+                    raise TypeError(f"execute_node must return a dict, got {type(r).__name__} from node {name!r}")
+                # Scheduler ensures no write-write conflicts in parallel stages.
+                s.update(r)
         return (time.perf_counter() - t0) * 1000, s
 
     seq_output: dict = {}

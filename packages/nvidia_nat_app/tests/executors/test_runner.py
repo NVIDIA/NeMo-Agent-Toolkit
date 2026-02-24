@@ -58,7 +58,7 @@ async def _slow_node(name: str, delay: float = 0.05, result: str | None = None) 
 
 class _RaisingResolution:
 
-    def resolve(self, label: str):
+    def resolve(self, _label: str):
         raise RuntimeError("resolve failed")
 
 
@@ -82,7 +82,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=run_node,
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         assert isinstance(result, SpeculativeResult)
@@ -101,7 +101,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=lambda name: _slow_node(name),
-            get_decision=lambda r: "right",
+            get_decision=lambda _: "right",
         )
 
         assert result.chosen_label == "right"
@@ -118,7 +118,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=lambda name: _slow_node(name),
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         # router + 2 targets launched
@@ -137,7 +137,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=lambda name: _slow_node(name),
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         assert "router" in state.speculation_decisions
@@ -152,7 +152,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=lambda name: _slow_node(name),
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         nodes_in_timeline = {e["node"] for e in state.execution_timeline}
@@ -173,7 +173,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=lambda name: _slow_node(name),
-            get_decision=lambda r: "right",
+            get_decision=lambda _: "right",
         )
 
         assert result.cancelled_nodes == frozenset()
@@ -192,7 +192,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=lambda name: _slow_node(name),
-            get_decision=lambda r: "only_target",
+            get_decision=lambda _: "only_target",
         )
 
         assert result.cancelled_nodes == frozenset()
@@ -215,7 +215,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=run_node,
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         assert "a" in result.chosen_results
@@ -235,7 +235,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=run_node,
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         assert result.decision_result == "router_string_result"
@@ -254,7 +254,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=lambda name: _slow_node(name),
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         assert "a" in result.chosen_results
@@ -277,7 +277,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=run_node,
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         assert "a" in result.chosen_results
@@ -301,7 +301,7 @@ class TestRunSpeculativeRouter:
             plan,
             state,
             run_node=run_node,
-            get_decision=lambda r: "left",
+            get_decision=lambda _: "left",
         )
 
         assert result.chosen_label == "left"
@@ -322,7 +322,7 @@ class TestRunSpeculativeRouter:
 
         with pytest.raises(ValueError, match="decision failed"):
             await asyncio.wait_for(
-                run_speculation(plan, state, run_node=run_node, get_decision=lambda r: "left"),
+                run_speculation(plan, state, run_node=run_node, get_decision=lambda _: "left"),
                 timeout=2.0,
             )
 
@@ -372,7 +372,7 @@ class TestRunSpeculativeRouter:
 
         with pytest.raises(RuntimeError, match="resolve failed"):
             await asyncio.wait_for(
-                run_speculation(plan, state, run_node=run_node, get_decision=lambda r: "left"),
+                run_speculation(plan, state, run_node=run_node, get_decision=lambda _: "left"),
                 timeout=2.0,
             )
 

@@ -861,7 +861,8 @@ def _analyze_callee(
         if state_param is None:
             return None
 
-        callee_param_to_obj = {state_param: next(iter(param_to_obj.values()))}
+        obj_name = next(iter(param_to_obj.values()), _DEFAULT_OBJ)
+        callee_param_to_obj = {state_param: obj_name}
 
         visitor = _NodeASTVisitor(
             state_param,
@@ -890,7 +891,8 @@ def _analyze_callee(
         if resolved_param is None:
             resolved_param = state_param
 
-        callee_param_to_obj = {resolved_param: next(iter(param_to_obj.values()))}
+        obj_name = next(iter(param_to_obj.values()), _DEFAULT_OBJ)
+        callee_param_to_obj = {resolved_param: obj_name}
 
         visitor = _NodeASTVisitor(
             resolved_param,

@@ -168,13 +168,15 @@ async def run_speculation(
         if not task.done():
             try:
                 await task
-            except (asyncio.CancelledError, Exception):
+            except asyncio.CancelledError:
                 pass
+            except Exception:  # noqa: BLE001
+                logger.exception("  '%s' raised while cancelling", name)
         elif not task.cancelled():
             try:
                 task.result()
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001
+                logger.exception("  '%s' raised after cancellation", name)
         cancel_time = time.time()
         execution_state.tools_cancelled += 1
         execution_state.record_timeline_event(
@@ -196,8 +198,8 @@ async def run_speculation(
                 result = await task
             else:
                 result = task.result()
-        except Exception:
-            logger.debug("  '%s' failed during speculation (will retry later)", name)
+        except Exception:  # noqa: BLE001
+            logger.exception("  '%s' failed during speculation (will retry later)", name)
             continue
 
         end_time = time.time()
