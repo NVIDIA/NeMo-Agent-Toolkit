@@ -21,12 +21,12 @@ from pathlib import Path
 import pytest
 
 from nat.data_models.workspace import ActionContext
-from nat.workspace_actions.workspace.bash_action import BashAction
+from nat.workspace_actions.workspace.terminal.bash_action import BashAction
 
 
 @pytest.fixture(name="fixture_action_context")
 def fixture_action_context(tmp_path: Path) -> ActionContext:
-    return ActionContext(session_id="test-session", root_path=tmp_path)
+    return ActionContext(session_id="test-session", root_path=tmp_path.resolve())
 
 
 @pytest.fixture(name="fixture_bash_action")
@@ -58,6 +58,10 @@ async def test_bash_action_executes_command(
     assert result["exit_code"] == 0
     assert result["stderr"] == ""
     assert result["stdout"].strip() == str(fixture_action_context.root_path)
+    assert isinstance(result["duration_ms"], int)
+    assert result["duration_ms"] >= 0
+    assert result["signal"] is None
+    assert result["exit_code_interpretation"] is None
 
 
 async def test_bash_action_timeout(
@@ -75,6 +79,8 @@ async def test_bash_action_timeout(
 
     assert result["timed_out"] is True
     assert result["exit_code"] is None
+    assert result["signal"] == "SIGTERM"
+    assert "timed out" in result["stderr"]
 
 
 async def test_bash_action_parallel_commands(
@@ -88,7 +94,7 @@ async def test_bash_action_parallel_commands(
 
     async with fixture_bash_action as action:
         long_command = "echo started > marker.txt; sleep 0.4; rm -f marker.txt"
-        long_task = asyncio.create_task(action.execute(fixture_action_context, {"command": long_command}), )
+        long_task = asyncio.create_task(action.execute(fixture_action_context, {"command": long_command}))
 
         await _wait_for_marker(marker_path)
 
@@ -101,3 +107,96 @@ async def test_bash_action_parallel_commands(
     assert short_result["stdout"].strip() == "busy"
     assert long_result["timed_out"] is False
     assert long_result["exit_code"] == 0
+
+
+async def test_bash_separate_stderr(
+    fixture_action_context: ActionContext,
+    fixture_bash_action: BashAction,
+) -> None:
+    """Verify stdout and stderr are captured independently."""
+    fixture_bash_action.set_context(fixture_action_context)
+    async with fixture_bash_action as action:
+        result = await action.execute(
+            fixture_action_context,
+            {"command": "echo out_msg; echo err_msg >&2"},
+        )
+
+    assert result["exit_code"] == 0
+    assert "out_msg" in result["stdout"]
+    assert "err_msg" in result["stderr"]
+    # stderr should NOT leak into stdout
+    assert "err_msg" not in result["stdout"]
+
+
+async def test_bash_exit_code_interpretation(
+    fixture_action_context: ActionContext,
+    fixture_bash_action: BashAction,
+) -> None:
+    """Non-zero well-known exit codes get a human-readable interpretation."""
+    fixture_bash_action.set_context(fixture_action_context)
+    async with fixture_bash_action as action:
+        result = await action.execute(
+            fixture_action_context,
+            {"command": "exit 127"},
+        )
+
+    assert result["exit_code"] == 127
+    assert result["exit_code_interpretation"] == "Command not found"
+
+
+async def test_bash_output_truncation(
+    fixture_action_context: ActionContext,
+    fixture_bash_action: BashAction,
+) -> None:
+    """Output exceeding 100 KB is truncated with a notice."""
+    fixture_bash_action.set_context(fixture_action_context)
+    # Generate ~150 KB of output (each line ~101 bytes with padding)
+    async with fixture_bash_action as action:
+        result = await action.execute(
+            fixture_action_context,
+            {"command": "python3 -c \"print('A' * 100 + '\\n') * 1500\""},
+        )
+
+    # Fallback: generate via seq + printf for reliability
+    async with fixture_bash_action as action:
+        result = await action.execute(
+            fixture_action_context,
+            {"command": "for i in $(seq 1 1500); do printf '%0100d\\n' $i; done"},
+        )
+
+    assert result["exit_code"] == 0
+    assert "[..." in result["stdout"]
+    assert "truncated...]" in result["stdout"]
+
+
+async def test_bash_working_directory(
+    fixture_action_context: ActionContext,
+    fixture_bash_action: BashAction,
+) -> None:
+    """Custom working_directory resolves relative to workspace root."""
+    fixture_bash_action.set_context(fixture_action_context)
+    subdir = fixture_action_context.root_path / "subdir"
+    subdir.mkdir()
+
+    async with fixture_bash_action as action:
+        result = await action.execute(
+            fixture_action_context,
+            {"command": "pwd", "working_directory": "subdir"},
+        )
+
+    assert result["exit_code"] == 0
+    assert result["stdout"].strip() == str(subdir)
+
+
+async def test_bash_working_directory_escape_rejected(
+    fixture_action_context: ActionContext,
+    fixture_bash_action: BashAction,
+) -> None:
+    """working_directory outside the workspace root is rejected."""
+    fixture_bash_action.set_context(fixture_action_context)
+    async with fixture_bash_action as action:
+        with pytest.raises(ValueError, match="within the workspace root"):
+            await action.execute(
+                fixture_action_context,
+                {"command": "pwd", "working_directory": "/tmp"},
+            )

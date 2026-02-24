@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .terminal import bash_action  # noqa: F401
-from .file import edit_action  # noqa: F401
-from .file import multi_edit_action  # noqa: F401
-from .file import read_action  # noqa: F401
-from .file import write_action  # noqa: F401
-from .search import glob_action  # noqa: F401
-from .search import grep_action  # noqa: F401
-from .search import list_action  # noqa: F401
-from .todo import todo_read_action  # noqa: F401
-from .todo import todo_write_action  # noqa: F401
-from .web import web_search_action  # noqa: F401
-from .web import web_fetch_action  # noqa: F401
+"""Ripgrep binary detection utility."""
+
+from __future__ import annotations
+
+import functools
+import shutil
+
+
+@functools.lru_cache(maxsize=1)
+def get_ripgrep_path() -> str | None:
+    """Return the path to the ripgrep binary, or None if unavailable."""
+    return shutil.which("rg")
