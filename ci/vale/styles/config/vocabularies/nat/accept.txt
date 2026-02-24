@@ -203,8 +203,7 @@ URIs
 uv
 Vanna
 VectorDB
-[Vv]llm
-[Vv]LLM
+vLLM
 [Ww]alkthrough
 [Ww]eb[Ss]ocket
 XGBoost
