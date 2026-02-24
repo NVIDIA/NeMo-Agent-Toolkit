@@ -77,6 +77,7 @@ class TestCompilePipeline:
 
     def test_prepare_called(self):
         c = _TestPipelinedCompiler()
+        c.compile("my_source")
         assert c.last_context.compiled == "my_source"
 
     def test_finalize_returns_compiled(self):
