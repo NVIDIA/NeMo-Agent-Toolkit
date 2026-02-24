@@ -22,7 +22,8 @@ from nat.builder.function import Function
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.plugins.runtime import tool_wrapper as runtime_tool_wrapper
+from nat.plugins.runtime.tool_wrapper import RuntimeToolWrapper
+from nat.sdk.tool.tool import Tool
 
 
 class InputSchema(BaseModel):
@@ -71,44 +72,36 @@ def _event_types(payloads: list[IntermediateStepPayload]) -> list[IntermediateSt
     return [payload.event_type for payload in payloads]
 
 
-def test_json_schema_from_pydantic_removes_openai_defaults() -> None:
-    """Ensure title/additionalProperties are stripped."""
-    schema = runtime_tool_wrapper._json_schema_from_pydantic(InputSchema)
-    assert "title" not in schema
-    assert "additionalProperties" not in schema
+def _make_tool(fn: Function, name: str = "tool") -> Tool:
+    """Create a Tool from a Function, mirroring the runtime_tool_wrapper factory."""
+    return Tool.from_function(fn)
 
 
-def test_runtime_tool_wrapper_schema() -> None:
+def test_backward_compat_alias() -> None:
+    """RuntimeToolWrapper should be an alias for Tool."""
+    assert RuntimeToolWrapper is Tool
+
+
+def test_tool_schema() -> None:
     """Tool schema should include name, description, and parameters."""
     fn = RuntimeTestFunction(description="desc", has_streaming_output=False, has_single_output=True, invoke_result="ok")
-    wrapper = runtime_tool_wrapper.RuntimeToolWrapper(
-        name="tool-name",
-        description=fn.description or "tool-name",
-        parameters=runtime_tool_wrapper._json_schema_from_pydantic(fn.input_schema),
-        fn=fn,
-    )
-    schema = wrapper.tool_schema
+    tool = _make_tool(fn)
+    schema = tool.tool_schema
     function_schema = cast(dict[str, object], schema["function"])
-    assert function_schema["name"] == "tool-name"
     assert function_schema["description"] == "desc"
     assert "parameters" in function_schema
 
 
-async def test_runtime_tool_wrapper_invoke_streaming(step_payloads) -> None:
+async def test_tool_invoke_streaming(step_payloads) -> None:
     """Streaming invoke aggregates text outputs."""
     fn = RuntimeTestFunction(description="desc",
                              has_streaming_output=True,
                              has_single_output=False,
                              stream_chunks=["hi", " there"])
-    wrapper = runtime_tool_wrapper.RuntimeToolWrapper(
-        name="tool",
-        description="desc",
-        parameters={},
-        fn=fn,
-    )
-    result = await wrapper.invoke(name="alice")
+    tool = _make_tool(fn)
+    result = await tool.invoke(name="alice")
 
-    assert result == "hi there"
+    assert result.output == "hi there"
     assert _event_types(step_payloads) == [
         IntermediateStepType.TOOL_START,
         IntermediateStepType.FUNCTION_START,
@@ -118,22 +111,17 @@ async def test_runtime_tool_wrapper_invoke_streaming(step_payloads) -> None:
     assert step_payloads[-1].data.output == "hi there"
 
 
-async def test_runtime_tool_wrapper_invoke_non_streaming(step_payloads) -> None:
+async def test_tool_invoke_non_streaming(step_payloads) -> None:
     """Non-streaming invoke forwards to acall_invoke."""
     fn = RuntimeTestFunction(description="desc",
                              has_streaming_output=False,
                              has_single_output=True,
                              invoke_result={"ok": True})
-    wrapper = runtime_tool_wrapper.RuntimeToolWrapper(
-        name="tool",
-        description="desc",
-        parameters={},
-        fn=fn,
-    )
+    tool = _make_tool(fn)
 
-    result = await wrapper.invoke(name="bob")
+    result = await tool.invoke(name="bob")
 
-    assert result == {"ok": True}
+    assert result.output == {"ok": True}
     assert _event_types(step_payloads) == [
         IntermediateStepType.TOOL_START,
         IntermediateStepType.FUNCTION_START,
@@ -143,21 +131,16 @@ async def test_runtime_tool_wrapper_invoke_non_streaming(step_payloads) -> None:
     assert step_payloads[-1].data.output == {"ok": True}
 
 
-async def test_runtime_tool_wrapper_invoke_error_emits_end(step_payloads) -> None:
+async def test_tool_invoke_error_emits_end(step_payloads) -> None:
     """Errors should still emit TOOL_END with a None output."""
     fn = RuntimeTestFunction(description="desc",
                              has_streaming_output=False,
                              has_single_output=True,
                              invoke_error=RuntimeError("boom"))
-    wrapper = runtime_tool_wrapper.RuntimeToolWrapper(
-        name="tool",
-        description="desc",
-        parameters={},
-        fn=fn,
-    )
+    tool = _make_tool(fn)
 
     with pytest.raises(RuntimeError, match="boom"):
-        await wrapper.invoke(name="bob")
+        await tool.invoke(name="bob")
 
     assert _event_types(step_payloads) == [
         IntermediateStepType.TOOL_START,
@@ -168,20 +151,15 @@ async def test_runtime_tool_wrapper_invoke_error_emits_end(step_payloads) -> Non
     assert step_payloads[-1].data.output is None
 
 
-async def test_runtime_tool_wrapper_stream_streaming(step_payloads) -> None:
+async def test_tool_stream_streaming(step_payloads) -> None:
     """Streaming API yields chunks and aggregates output."""
     fn = RuntimeTestFunction(description="desc",
                              has_streaming_output=True,
                              has_single_output=False,
                              stream_chunks=["a", "b"])
-    wrapper = runtime_tool_wrapper.RuntimeToolWrapper(
-        name="tool",
-        description="desc",
-        parameters={},
-        fn=fn,
-    )
+    tool = _make_tool(fn)
 
-    results = [chunk async for chunk in wrapper.stream(name="cara")]
+    results = [chunk async for chunk in tool.stream(name="cara")]
 
     assert results == ["a", "b"]
     assert _event_types(step_payloads) == [
@@ -193,17 +171,12 @@ async def test_runtime_tool_wrapper_stream_streaming(step_payloads) -> None:
     assert step_payloads[-1].data.output == "ab"
 
 
-async def test_runtime_tool_wrapper_stream_non_streaming(step_payloads) -> None:
+async def test_tool_stream_non_streaming(step_payloads) -> None:
     """Stream API should yield a single result for non-streaming tools."""
     fn = RuntimeTestFunction(description="desc", has_streaming_output=False, has_single_output=True, invoke_result="ok")
-    wrapper = runtime_tool_wrapper.RuntimeToolWrapper(
-        name="tool",
-        description="desc",
-        parameters={},
-        fn=fn,
-    )
+    tool = _make_tool(fn)
 
-    results = [chunk async for chunk in wrapper.stream(name="dana")]
+    results = [chunk async for chunk in tool.stream(name="dana")]
 
     assert results == ["ok"]
     assert _event_types(step_payloads) == [

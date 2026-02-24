@@ -32,8 +32,6 @@ async def test_crewai_handler_time_between_calls(reactive_stream: Subject):
     Test CrewAIProfilerHandler ensures seconds_between_calls is properly set for consecutive calls.
     We'll mock time.time() to produce stable intervals.
     """
-    pytest.importorskip("crewai")
-
     import math
 
     from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler

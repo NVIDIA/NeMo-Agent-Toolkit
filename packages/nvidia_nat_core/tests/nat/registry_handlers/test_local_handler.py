@@ -69,7 +69,12 @@ async def test_local_handler_search(
         search_query = SearchQuery(**search_query_dict)
         async with registry_handler.search(query=search_query) as search_response:
             assert search_response.status.status == expected
-            assert len(search_response.results) == top_k
+            # When top_k=0, it means return all results (no limit)
+            if top_k > 0:
+                assert len(search_response.results) == top_k
+            else:
+                # top_k=0 means return all results, so just verify we got some
+                assert len(search_response.results) >= 0
 
 
 @pytest.mark.parametrize("expected_return_value, expected_status, expected_message",

@@ -21,7 +21,6 @@ import uuid
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from pathlib import Path
-from types import NoneType
 from typing import Any
 
 from dotenv import load_dotenv
@@ -42,6 +41,10 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.cli.register_workflow import register_function
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import Usage
 from nat.data_models.function import FunctionBaseConfig
 
 GraphDefType = Callable[[RunnableConfig], CompiledStateGraph | StateGraph] | CompiledStateGraph
@@ -76,7 +79,7 @@ class LanggraphWrapperConfig(FunctionBaseConfig, name="langgraph_wrapper"):
     env: FilePath | dict[str, str] | None = None
 
 
-class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, LanggraphWrapperOutput]):
+class LanggraphWrapperFunction(Function[LanggraphWrapperInput, LanggraphWrapperOutput, LanggraphWrapperOutput]):
     """Function for the LangGraph wrapper."""
 
     def __init__(self, *, config: LanggraphWrapperConfig, description: str | None = None, graph: CompiledStateGraph):
@@ -88,21 +91,17 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, Langgra
             graph: The graph to wrap.
         """
 
-        super().__init__(config=config, description=description, converters=[LanggraphWrapperFunction.convert_to_str])
+        super().__init__(config=config,
+                         description=description,
+                         converters=[
+                             LanggraphWrapperFunction.convert_to_str,
+                             LanggraphWrapperFunction.convert_chat_request,
+                             LanggraphWrapperFunction.convert_str,
+                             LanggraphWrapperFunction.convert_to_chat_response,
+                             LanggraphWrapperFunction.convert_to_chat_response_chunk,
+                         ])
 
         self._graph = graph
-
-    def _convert_input(self, value: Any) -> LanggraphWrapperInput:
-
-        # If the value is not a list, wrap it in a list to be compatible with the graph input and use the normal
-        # conversion logic
-        if (not isinstance(value, list)):
-            value = [value]
-
-        # Convert the value to message format using LangChain utils. Ensures is compatible with the message format
-        messages = convert_to_messages(value)
-
-        return LanggraphWrapperInput(messages=messages)
 
     async def _ainvoke(self, value: LanggraphWrapperInput) -> LanggraphWrapperOutput:
 
@@ -125,12 +124,23 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, Langgra
                 logger.info("Graph is an async context manager")
                 async with self._graph as graph:
                     async for output in graph.astream(value.model_dump()):
-                        yield LanggraphWrapperOutput.model_validate(output)
+                        yield self._parse_stream_output(output)
             else:
                 async for output in self._graph.astream(value.model_dump()):
-                    yield LanggraphWrapperOutput.model_validate(output)
+                    yield self._parse_stream_output(output)
         except Exception as e:
             raise RuntimeError(f"Error in LangGraph workflow: {e}") from e
+
+    @staticmethod
+    def _parse_stream_output(output: dict) -> LanggraphWrapperOutput:
+        """Unwrap node-keyed dicts that LangGraph astream() yields."""
+        try:
+            return LanggraphWrapperOutput.model_validate(output)
+        except Exception:
+            if len(output) == 1:
+                node_output = next(iter(output.values()))
+                return LanggraphWrapperOutput.model_validate(node_output)
+            raise
 
     @staticmethod
     def convert_to_str(value: LanggraphWrapperOutput) -> str:
@@ -139,6 +149,29 @@ class LanggraphWrapperFunction(Function[LanggraphWrapperInput, NoneType, Langgra
             return ""
 
         return value.messages[-1].text
+
+    @staticmethod
+    def convert_chat_request(value: ChatRequest) -> LanggraphWrapperInput:
+        """Convert a ChatRequest to LanggraphWrapperInput."""
+        message_dicts: list[dict[str, Any]] = [m.model_dump() for m in value.messages]
+        return LanggraphWrapperInput(messages=convert_to_messages(message_dicts))
+
+    @staticmethod
+    def convert_str(value: str) -> LanggraphWrapperInput:
+        """Convert a plain text string to LanggraphWrapperInput."""
+        return LanggraphWrapperInput(messages=convert_to_messages([value]))
+
+    @staticmethod
+    def convert_to_chat_response(value: LanggraphWrapperOutput) -> ChatResponse:
+        """Convert LanggraphWrapperOutput to ChatResponse."""
+        text: str = value.messages[-1].text if value.messages else ""
+        return ChatResponse.from_string(text, usage=Usage())
+
+    @staticmethod
+    def convert_to_chat_response_chunk(value: LanggraphWrapperOutput) -> ChatResponseChunk:
+        """Convert LanggraphWrapperOutput to ChatResponseChunk."""
+        text: str = value.messages[-1].text if value.messages else ""
+        return ChatResponseChunk.from_string(text)
 
 
 @register_function(config_type=LanggraphWrapperConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])

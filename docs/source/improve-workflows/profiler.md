@@ -32,35 +32,35 @@ Will allow for features such as offline-replay or simulation of workflow runs wi
 
 ## Prerequisites
 
-The NeMo Agent Toolkit profiler requires additional dependencies not installed by default.
+The NeMo Agent Toolkit profiler is provided by the evaluation package, and some profiler features rely on additional profiling dependencies such as `scikit-learn`.
 
-Install these dependencies by running the following command from the root directory of the NeMo Agent Toolkit repository:
+For source installs from the NeMo Agent Toolkit repository root, install both evaluation and profiling support:
 ```bash
-uv pip install -e ".[profiling]"
+uv pip install -e ".[eval,profiling]"
 ```
 
-If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
+For package installs, install both extras:
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval,profiling]"
 ```
 
 ## Current Profiler Architecture
 The NeMo Agent Toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
-- `packages/nvidia_nat_core/src/nat/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- `packages/nvidia_nat_core/src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent Toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent Toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
 LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 
 ### Profiler Runner
 
-- `packages/nvidia_nat_core/src/nat/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent Toolkit [Eval](./evaluate.md) module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent Toolkit [Eval](./evaluate.md) module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
 
-- Under `packages/nvidia_nat_core/src/nat/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
+- Under `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).
 base_model.py, linear_model.py, and random_forest_regressor.py define the abstract base and specific scikit-learn wrappers.
 
-- Under `packages/nvidia_nat_core/src/nat/profiler/inference_optimization` we have several metrics that can be computed out evaluation traces of your workflow including workflow latency, commonly used prompt prefixes for caching, identifying workflow bottlenecks, and concurrency analysis.
+- Under `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/inference_optimization` we have several metrics that can be computed out evaluation traces of your workflow including workflow latency, commonly used prompt prefixes for caching, identifying workflow bottlenecks, and concurrency analysis.
 
 ### CLI Integrations
 Native integrations with `nat eval` to allow for running of the profiler through a unified evaluation interface. Configurability is exposed through a workflow YAML configuration file consistent with evaluation configurations.
@@ -115,7 +115,7 @@ It supports all kinds of functions:
 Just decorate your custom function with `@track_function` and provide any optional metadata if needed:
 
 ```python
-from nat.profiler.decorators.function_tracking import track_function
+from nat.plugins.eval.profiler.decorators.function_tracking import track_function
 
 @track_function(metadata={"action": "compute", "source": "custom_function"})
 def my_custom_function(a, b):

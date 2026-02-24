@@ -67,7 +67,7 @@ class CustomStatusWorker(MCPFrontEndPluginWorker):
         then adds custom routes.
 
         Args:
-            mcp: The FastMCP server instance
+            mcp: The MCP server instance created by FastMCP
             builder: The workflow builder containing functions to expose
         """
         # Get all default routes and tool registration

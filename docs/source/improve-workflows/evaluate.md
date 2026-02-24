@@ -23,17 +23,34 @@ NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. I
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the [`profiling`](./profiler.md) sub-package to use the `nat eval` command.
+In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`.
 
-If you are installing from source, you can install the sub-package by running the following command from the root directory of the NeMo Agent Toolkit repository:
+If you are installing from source, install the evaluation extra from the NeMo Agent Toolkit repository root:
 ```bash
-uv pip install -e '.[profiling]'
+uv pip install -e '.[eval]'
 ```
 
-If you are installing from a package, you can install the sub-package by running the following command:
+If you are installing from a package, install either the `eval` extra or the standalone package:
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval]"
 ```
+
+```bash
+uv pip install nvidia-nat-eval
+```
+
+If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install profiling dependencies as well:
+
+```bash
+uv pip install -e '.[eval,profiling]'
+```
+
+For package installs, use:
+
+```bash
+uv pip install "nvidia-nat[eval,profiling]"
+```
+
 
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `nat eval` command. The `nat eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
@@ -81,7 +98,7 @@ eval:
       llm_name: nim_rag_eval_llm
 ```
 
-The dataset section specifies the dataset to use for running the workflow. The dataset can be of type `json`, `jsonl`, `csv`, `xls`, or `parquet`. The dataset file path is specified using the `file_path` key.
+The dataset section specifies the dataset to use for running the workflow. The built-in dataset types are `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`. The dataset file path is specified using the `file_path` key. Additional dataset formats can be added via the [plugin system](../extend/custom-components/custom-dataset-loader.md).
 
 ## Evaluation outputs (what you will get)
 Running `nat eval` produces a set of artifacts in the configured output directory. These files fall into four groups: workflow outputs, configuration outputs, evaluator outputs, and profiler observability outputs.
@@ -429,6 +446,9 @@ You can also evaluate workflows using the NeMo Agent Toolkit evaluation endpoint
 ## Adding Custom Evaluators
 You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.
 
+## Adding Custom Dataset Loaders
+You can add support for additional dataset formats by creating a custom dataset loader plugin. See the [Custom Dataset Loader](../extend/custom-components/custom-dataset-loader.md) documentation for more information.
+
 ## Overriding Evaluation Configuration
 You can override the configuration in the `eval_config.yml` file using the `--override` command line flag. The following is an example of overriding the configuration:
 ```bash
@@ -447,7 +467,7 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/c
 ```
 
 ### Using Datasets
-Run and evaluate the workflow on a specified dataset. The dataset files types are `json`, `jsonl`, `csv`, `xls`, or `parquet`.
+Run and evaluate the workflow on a specified dataset. The built-in dataset file types are `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom`. You can also add support for additional dataset formats via the [dataset loader plugin system](../extend/custom-components/custom-dataset-loader.md).
 
 Download and use datasets provided by NeMo Agent Toolkit examples by running the following.
 
@@ -578,8 +598,8 @@ The example dataset `simple_calculator_nested.json` is a nested JSON file with q
 def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
 ```
 
-{py:class}`~nat.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
-{py:class}`~nat.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
+{py:class}`~nat.data_models.evaluator.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
+{py:class}`~nat.data_models.evaluator.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
 The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
 - `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
 - `input_obj`: This is the question.

@@ -18,108 +18,78 @@
 The output is stored as `sbom_list.tsv` and includes package name, version, and
 license metadata from PyPI. This is intended for lightweight SBOM checks in CI.
 """
-
+import argparse
 import csv
-import json
 import tomllib
-import urllib.request
+import typing
 from pathlib import Path
 
+from package_utils import UvLock
+from package_utils import pypi_license
 from tqdm import tqdm
 
 
-def pypi_license(name: str, version: str | None = None) -> str:
-    """Resolve a package license from PyPI metadata.
-
-    Args:
-        name: Distribution name on PyPI.
-        version: Optional version pin used to query version-specific metadata.
-
-    Returns:
-        A best-effort license string from the available metadata fields.
-    """
-    # Use version-specific metadata when available to avoid mismatches.
-    try:
-        url = f"https://pypi.org/pypi/{name}/json" if version is None else f"https://pypi.org/pypi/{name}/{version}/json"
-        with urllib.request.urlopen(url) as r:
-            data = json.load(r)
-    except Exception:
-        return "(License not found)"
-
-    info = data.get("info", {})
-    candidates = []
-    lic = (info.get("license_expression") or "").strip()
-    if lic:
-        candidates.append(lic)
-    classifiers = info.get("classifiers") or []
-    lic_cls = [c for c in classifiers if c.startswith("License ::")]
-    if lic_cls:
-        candidates.append("; ".join(lic_cls))
-    lic = (info.get("license") or "").strip()
-    if lic:
-        candidates.append(lic)
-
-    if candidates:
-        return min(candidates, key=len)
-    return "(License not found)"
+class SbomEntry(typing.TypedDict):
+    name: str
+    version: str
+    license: str
 
 
-def process_uvlock(uvlock: dict, base_name: str) -> Path:
+def process_uvlock(uvlock: UvLock, output_path: Path) -> None:
     """Write a generic license table from a loaded `uv.lock` structure.
 
     Args:
         uvlock: Parsed `uv.lock` content.
-        base_name: Logical label for the source data (kept for compatibility).
-
-    Returns:
-        Path to the generated `licenses.tsv` file.
+        output_path: Path to the output file.
     """
     # Keep packages ordered to make diffs stable between runs.
-    sorted_packages = sorted(uvlock["package"], key=lambda x: x["name"])
-
-    with open("licenses.tsv", "w") as f:
-        writer = csv.writer(f, delimiter="\t")
-        writer.writerow(["Name", "Version", "License"])
-        for pkg in tqdm(sorted_packages, desc="Checking licenses", unit="packages"):
-            try:
-                name = pkg["name"]
-                version = pkg["version"]
-                license = pypi_license(name, version)
-                writer.writerow([name, version, license])
-            except KeyError:
-                # Skip entries that do not have name/version info.
-                pass
-    return Path("licenses.tsv")
-
-
-def main() -> None:
-    """Create `sbom_list.tsv` for third-party license reporting."""
-    # Load the lockfile that captures the dependency graph.
-    with open("uv.lock", "rb") as f:
-        head = tomllib.load(f)
-
-    # Index packages by name for quick lookups.
-    pkgs = {pkg["name"]: pkg for pkg in head["package"]}
-
-    sbom_list = []
-    for pkg in tqdm(pkgs.keys(), desc="Processing packages", unit="packages"):
+    sbom_entries: dict[tuple[str, str], SbomEntry] = {}
+    for pkg in tqdm(uvlock["package"], desc="Processing packages", unit="packages"):
         try:
-            sbom_list.append({
-                "name": pkg,
-                "version": pkgs[pkg]["version"],
-                "license": pypi_license(pkg, pkgs[pkg]["version"]),
-            })
+            name = pkg["name"]
+            version = pkg["version"]
         except KeyError:
             # Skip entries that do not contain a version field.
-            pass
+            continue
+        key = (name, version)
+        if key in sbom_entries:
+            continue
+        sbom_entries[key] = SbomEntry(
+            name=name,
+            version=version,
+            license=pypi_license(name, version),
+        )
+
+    sbom_list: list[SbomEntry] = sorted(sbom_entries.values(), key=lambda entry: (entry["name"], entry["version"]))
 
     # Write the final SBOM table in a TSV format to keep it spreadsheet-friendly.
-    with open("sbom_list.tsv", "w") as f:
+    with open(output_path, "w") as f:
         writer = csv.writer(f, delimiter="\t")
         writer.writerow(["Name", "Version", "License"])
         for pkg in sbom_list:
             writer.writerow([pkg["name"], pkg["version"], pkg["license"].replace("\n", "\\n")])
 
 
+def main(uvlock_path: Path, output_path: Path) -> None:
+    """Create SBOM list for third-party license reporting."""
+    # Load the lockfile that captures the dependency graph.
+    with open(uvlock_path, "rb") as f:
+        head: UvLock = typing.cast(UvLock, tomllib.load(f))
+
+    process_uvlock(head, output_path)
+
+    print(f"SBOM list written successfully to {output_path}")
+
+
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Create SBOM list for third-party license reporting.")
+    parser.add_argument("--uvlock",
+                        type=Path,
+                        help="Path to the lockfile to process. Defaults to 'uv.lock'.",
+                        default="uv.lock")
+    parser.add_argument("--output",
+                        type=Path,
+                        help="Path to the output file. Defaults to 'sbom_list.tsv'.",
+                        default="sbom_list.tsv")
+    args = parser.parse_args()
+    main(uvlock_path=args.uvlock, output_path=args.output)

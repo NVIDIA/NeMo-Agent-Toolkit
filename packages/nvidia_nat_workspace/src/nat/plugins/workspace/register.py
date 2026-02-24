@@ -17,4 +17,4 @@ from . import apptainer  # noqa: F401
 from . import docker  # noqa: F401
 from . import local  # noqa: F401
 from . import remote  # noqa: F401
-from .actions.bash_action import BashAction  # noqa: F401
+from . import workspace_actions  # noqa: F401

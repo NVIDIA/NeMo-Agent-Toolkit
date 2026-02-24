@@ -20,6 +20,8 @@ from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi import Request
 from pydantic import BaseModel
+from pydantic import field_validator
+from pydantic import model_validator
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -33,7 +35,23 @@ class WeaveFeedbackPayload(BaseModel):
     """Payload for adding feedback to a Weave trace."""
 
     observability_trace_id: str
-    reaction_type: str
+    reaction_type: str | None = None
+    comment: str | None = None
+
+    @field_validator('comment')
+    @classmethod
+    def validate_comment_length(cls, v: str | None) -> str | None:
+        """Validate that comment does not exceed Weave's 1024 character limit."""
+        if v is not None and len(v) > 1024:
+            raise ValueError('Comment must not exceed 1024 characters')
+        return v
+
+    @model_validator(mode='after')
+    def validate_at_least_one_feedback(self) -> 'WeaveFeedbackPayload':
+        """Validate that at least one feedback field is provided."""
+        if not self.reaction_type and not self.comment:
+            raise ValueError("At least one of 'reaction_type' or 'comment' must be provided")
+        return self
 
 
 class WeaveFeedbackResponse(BaseModel):
@@ -91,34 +109,76 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
             weave_project = f"{entity}/{project}" if entity else project
 
             async def add_chat_feedback(request: Request, payload: WeaveFeedbackPayload) -> WeaveFeedbackResponse:
-                """Add reaction feedback for an assistant message via observability trace ID."""
+                """Add reaction and/or comment feedback for an assistant message via observability trace ID."""
 
                 async with session_manager.session(http_connection=request,
                                                    user_authentication_callback=self._http_flow_handler.authenticate):
                     observability_trace_id = payload.observability_trace_id
                     reaction_type = payload.reaction_type
+                    comment = payload.comment
 
                     def add_weave_feedback():
                         import weave
 
                         client = weave.init(weave_project)
                         call = client.get_call(observability_trace_id)
-                        call.feedback.add_reaction(reaction_type)
+
+                        feedback_added = []
+                        if reaction_type:
+                            call.feedback.add_reaction(reaction_type)
+                            feedback_added.append(f"reaction '{reaction_type}'")
+
+                        if comment:
+                            call.feedback.add_note(comment)
+                            feedback_added.append("comment")
+
+                        return feedback_added
 
                     try:
-                        await asyncio.to_thread(add_weave_feedback)
-                        return WeaveFeedbackResponse(
-                            message=f"Added reaction '{reaction_type}' to call {observability_trace_id}")
+                        feedback_added = await asyncio.to_thread(add_weave_feedback)
+                        feedback_str = " and ".join(feedback_added)
+                        return WeaveFeedbackResponse(message=f"Added {feedback_str} to call {observability_trace_id}")
                     except Exception as e:
-                        logger.exception("Failed to add feedback to Weave")
+                        logger.error("Failed to add feedback to Weave: %s", e)
                         raise HTTPException(status_code=500, detail=f"Failed to add feedback: {str(e)}") from e
 
             app.add_api_route(
                 path="/feedback",
                 endpoint=add_chat_feedback,
                 methods=["POST"],
-                description="Set reaction feedback for an assistant message via observability trace ID",
+                description=(
+                    "Add reaction and/or comment feedback for an assistant message via observability trace ID. "
+                    "Comments are limited to 1024 characters."),
                 responses={
+                    422: {
+                        "description": "Validation Error - Invalid input",
+                        "content": {
+                            "application/json": {
+                                "examples": {
+                                    "missing_feedback": {
+                                        "summary": "Missing required feedback",
+                                        "value": {
+                                            "detail": [{
+                                                "type": "value_error",
+                                                "loc": ["body"],
+                                                "msg": "At least one of 'reaction_type' or 'comment' must be provided"
+                                            }]
+                                        }
+                                    },
+                                    "comment_too_long": {
+                                        "summary": "Comment exceeds length limit",
+                                        "value": {
+                                            "detail": [{
+                                                "type": "value_error",
+                                                "loc": ["body", "comment"],
+                                                "msg": "Comment must not exceed 1024 characters"
+                                            }]
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    },
                     500: {
                         "description": "Internal Server Error",
                         "content": {
