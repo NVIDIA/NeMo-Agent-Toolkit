@@ -275,10 +275,10 @@ class PredictionTrieBuilder:
     def _compute_logical_positions(contexts: list[LLMCallContext]) -> list[int]:
         """Assign a logical position to each call, collapsing parallel siblings.
 
-        Calls are processed in LLM_END order (the same order as *contexts*).
-        A call belongs to the current parallel group if its span started before
-        the group's earliest end time — meaning it was already running when the
-        first member of the group finished.  Otherwise it starts a new group.
+        Uses standard interval-merging: contexts are sorted by span start time,
+        and any call whose start is before the current group's *latest* end time
+        joins the group (capturing transitive overlaps).  The resulting group
+        indices are then mapped back to the original LLM_END ordering.
 
         All calls in a parallel group share the same logical position index,
         so the U-shaped position signal and fan-out signal treat them as
@@ -287,30 +287,30 @@ class PredictionTrieBuilder:
         if not contexts:
             return []
 
-        positions: list[int] = []
+        n = len(contexts)
+
+        # Sort indices by span start time for interval merging.
+        sorted_indices = sorted(range(n), key=lambda i: contexts[i].span_start_time)
+
+        # Merge overlapping intervals using max end time to capture transitive overlaps.
+        group_assignments: list[int] = [0] * n
         current_group = 0
-        # Track the earliest end time in the current group.  A new call whose
-        # span_start_time is before this threshold overlaps with at least one
-        # group member, so it joins the group.
-        group_earliest_end = contexts[0].span_end_time
+        group_max_end = contexts[sorted_indices[0]].span_end_time
 
-        for i, ctx in enumerate(contexts):
-            if i == 0:
-                positions.append(current_group)
-                continue
-
-            if ctx.span_start_time < group_earliest_end:
-                # This call's span started before the first group member
-                # finished → temporal overlap → same parallel group.
-                positions.append(current_group)
-                # Keep the earliest end time (don't advance it)
+        group_assignments[sorted_indices[0]] = current_group
+        for k in range(1, n):
+            idx = sorted_indices[k]
+            if contexts[idx].span_start_time < group_max_end:
+                # Overlaps with current group (possibly transitively).
+                group_assignments[idx] = current_group
+                group_max_end = max(group_max_end, contexts[idx].span_end_time)
             else:
                 # No overlap → new sequential step.
                 current_group += 1
-                positions.append(current_group)
-                group_earliest_end = ctx.span_end_time
+                group_assignments[idx] = current_group
+                group_max_end = contexts[idx].span_end_time
 
-        return positions
+        return group_assignments
 
     @staticmethod
     def _build_sibling_map(steps: list[IntermediateStep]) -> dict[str, list[_SiblingSpan]]:

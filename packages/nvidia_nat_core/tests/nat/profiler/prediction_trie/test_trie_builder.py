@@ -21,6 +21,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.token_usage import TokenUsageBaseModel
+from nat.profiler.prediction_trie.trie_builder import LLMCallContext
 from nat.profiler.prediction_trie.trie_builder import PredictionTrieBuilder
 from nat.profiler.prediction_trie.trie_builder import SensitivityConfig
 
@@ -569,3 +570,55 @@ def test_backward_compat_default_w_parallel(simple_trace):
     for idx in node_default.predictions_by_call_index:
         assert (node_default.predictions_by_call_index[idx].latency_sensitivity ==
                 node_explicit.predictions_by_call_index[idx].latency_sensitivity)
+
+
+def _make_ctx(start: float, end: float) -> LLMCallContext:
+    """Helper to create a minimal LLMCallContext with span timestamps."""
+    return LLMCallContext(
+        path=["root"],
+        call_index=1,
+        remaining_calls=0,
+        time_to_next_ms=None,
+        output_tokens=10,
+        span_start_time=start,
+        span_end_time=end,
+    )
+
+
+def test_logical_positions_transitive_overlap():
+    """Transitive overlaps must be collapsed into one group.
+
+    A(0–10) overlaps B(1–3) and C(4–6).  B and C do not overlap each other
+    directly, but both overlap with A, so all three should share position 0.
+    """
+    # LLM_END order: B, C, A
+    contexts = [_make_ctx(1, 3), _make_ctx(4, 6), _make_ctx(0, 10)]
+    positions = PredictionTrieBuilder._compute_logical_positions(contexts)
+    assert positions == [0, 0, 0]
+
+
+def test_logical_positions_no_overlap():
+    """Fully sequential calls get distinct positions."""
+    contexts = [_make_ctx(0, 1), _make_ctx(2, 3), _make_ctx(4, 5)]
+    positions = PredictionTrieBuilder._compute_logical_positions(contexts)
+    assert positions == [0, 1, 2]
+
+
+def test_logical_positions_two_groups():
+    """Two separate parallel groups get two distinct positions."""
+    # Group 1: A(0–5), B(1–4)   Group 2: C(10–15), D(11–14)
+    # LLM_END order: B, A, D, C
+    contexts = [_make_ctx(1, 4), _make_ctx(0, 5), _make_ctx(11, 14), _make_ctx(10, 15)]
+    positions = PredictionTrieBuilder._compute_logical_positions(contexts)
+    assert positions == [0, 0, 1, 1]
+
+
+def test_logical_positions_empty():
+    """Empty contexts returns empty positions."""
+    assert PredictionTrieBuilder._compute_logical_positions([]) == []
+
+
+def test_logical_positions_single():
+    """Single context gets position 0."""
+    positions = PredictionTrieBuilder._compute_logical_positions([_make_ctx(0, 1)])
+    assert positions == [0]
