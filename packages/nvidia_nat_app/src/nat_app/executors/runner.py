@@ -125,24 +125,30 @@ async def run_speculation(
         target_tasks[target_name] = asyncio.create_task(run_node(target_name))
 
     # -- Await decision node -----------------------------------------------
-    decision_result = await decision_task
-    decision_end = time.time()
-    decision_duration = decision_end - decision_start
+    try:
+        decision_result = await decision_task
+        decision_end = time.time()
+        decision_duration = decision_end - decision_start
 
-    execution_state.mark_node_completed(
-        decision_name,
-        decision_result if isinstance(decision_result, dict) else {},
-    )
-    execution_state.record_node_duration(decision_name, decision_duration)
-    execution_state.record_timeline_event(decision_name, decision_start, decision_end)
+        execution_state.mark_node_completed(
+            decision_name,
+            decision_result if isinstance(decision_result, dict) else {},
+        )
+        execution_state.record_node_duration(decision_name, decision_duration)
+        execution_state.record_timeline_event(decision_name, decision_start, decision_end)
 
-    # -- Decide ------------------------------------------------------------
-    chosen_label = get_decision(decision_result)
-    execution_state.record_decision(decision_name, chosen_label, 1)
-    logger.info("Decision '%s' chose: '%s'", decision_name, chosen_label)
+        # -- Decide ------------------------------------------------------------
+        chosen_label = get_decision(decision_result)
+        execution_state.record_decision(decision_name, chosen_label, 1)
+        logger.info("Decision '%s' chose: '%s'", decision_name, chosen_label)
 
-    # -- Resolve via strategy policy ---------------------------------------
-    resolution = plan.resolution.resolve(chosen_label)
+        # -- Resolve via strategy policy ---------------------------------------
+        resolution = plan.resolution.resolve(chosen_label)
+    except Exception:
+        for task in target_tasks.values():
+            task.cancel()
+        await asyncio.gather(*target_tasks.values(), return_exceptions=True)
+        raise
 
     # -- Cancel unchosen ---------------------------------------------------
     actually_cancelled: set[str] = set()

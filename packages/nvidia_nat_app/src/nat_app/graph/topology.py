@@ -592,14 +592,19 @@ def get_safe_parallelization_groups(
 
     while remaining:
         ready: set[str] = set()
-        for node in remaining:
+        for node in sorted(remaining):
             deps = data_dependencies.get(node, set())
             relevant_deps = deps & parallelizable
             if relevant_deps <= completed:
                 ready.add(node)
 
         if not ready:
-            ready = {next(iter(remaining))}
+            logger.warning(
+                "Dependency cycle detected in parallelizable nodes; falling back to sequential groups: %s",
+                sorted(remaining),
+            )
+            safe_groups.extend({n} for n in sorted(remaining))
+            return safe_groups
 
         safe_groups.append(ready)
         completed.update(ready)

@@ -141,7 +141,7 @@ def analyze_function(
     )
 
     reads = result.reads.all_fields_flat if result.source_available else set()
-    writes = result.mutations.all_fields_flat if result.source_available else set()
+    writes = result.all_writes.all_fields_flat if result.source_available else set()
 
     if not result.source_available:
         confidence = "opaque"

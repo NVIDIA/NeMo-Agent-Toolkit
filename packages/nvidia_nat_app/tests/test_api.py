@@ -51,6 +51,14 @@ def step_e(state):
     state["risk"] = state["support"]
 
 
+def step_return_dict(state):
+    return {"ticker": "MSFT", "thesis": "growth"}
+
+
+def step_reads_ticker(state):
+    state["revenue"] = state["ticker"]
+
+
 # -- quick_optimize tests ---------------------------------------------------
 
 
@@ -179,6 +187,11 @@ class TestAnalyzeFunction:
         info = analyze_function(global_mutable)
         assert info["confidence"] == "partial"
 
+    def test_return_dict_writes_included(self):
+        info = analyze_function(step_return_dict)
+        assert "ticker" in info["writes"]
+        assert "thesis" in info["writes"]
+
 
 # -- classify_edge tests ----------------------------------------------------
 
@@ -196,6 +209,10 @@ class TestClassifyEdge:
     def test_returns_string(self):
         result = classify_edge(step_a, step_b)
         assert result in ("necessary", "unnecessary", "unknown")
+
+    def test_necessary_edge_return_dict_writes(self):
+        result = classify_edge(step_return_dict, step_reads_ticker)
+        assert result == "necessary"
 
 
 # -- find_parallel_stages tests ---------------------------------------------

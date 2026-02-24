@@ -16,6 +16,8 @@
 
 import pytest
 
+from nat_app.graph.types import Edge
+from nat_app.graph.types import EdgeKind
 from nat_app.graph.types import Graph
 from nat_app.graph.types import NodeInfo
 
@@ -99,6 +101,29 @@ class TestGraphSubgraphPriority:
 
 class TestStructureHashIgnoresPriority:
 
+    def test_conditional_edges_different_branches_different_hash(self):
+        """Graphs with same topology but different branch labels must have different structure_hash."""
+        g1 = Graph()
+        g1.add_node("r", func=None)
+        g1.add_node("a", func=None)
+        g1.add_node("b", func=None)
+        g1.add_conditional_edges("r", {"left": "a", "right": "b"})
+
+        g2 = Graph()
+        g2.add_node("r", func=None)
+        g2.add_node("a", func=None)
+        g2.add_node("b", func=None)
+        g2.add_conditional_edges("r", {"x": "a", "y": "b"})
+
+        assert g1.structure_hash != g2.structure_hash
+
+    def test_edge_branch_in_equality(self):
+        """Edges with same source/target/kind but different branch must not compare equal."""
+        e1 = Edge(source="r", target="a", kind=EdgeKind.CONDITIONAL, branch="left")
+        e2 = Edge(source="r", target="a", kind=EdgeKind.CONDITIONAL, branch="right")
+        assert e1 != e2
+        assert hash(e1) != hash(e2)
+
     def test_same_hash_different_priorities(self):
         g1 = Graph()
         g1.add_node("a", func=None, priority=0.1)
@@ -145,6 +170,20 @@ class TestDuplicateEdgeDeduplication:
         g.add_conditional_edges("r", {"branch": "a"})
         assert g.edge_count == 1
         assert set(g.successors("r")) == {"a"}
+
+    def test_add_conditional_edges_replace_removes_old(self):
+        """Replace semantics: second call removes old conditional edges for source."""
+        g = Graph()
+        g.add_node("r", func=None)
+        g.add_node("x", func=None)
+        g.add_node("y", func=None)
+        g.add_conditional_edges("r", {"a": "x"})
+        g.add_conditional_edges("r", {"b": "y"})
+        assert g.get_conditional_targets("r") == {"b": ["y"]}
+        assert g.edge_count == 1
+        edge = g.edges[0]
+        assert edge.branch == "b"
+        assert edge.target == "y"
 
 
 class TestGraphValidate:

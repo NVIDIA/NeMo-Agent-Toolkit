@@ -238,7 +238,7 @@ def find_parallel_groups(
     if not independent_pairs:
         return []
 
-    groups = _merge_into_groups(independent_pairs, analyses, reducers, conflict_cache)
+    groups = _merge_into_groups(independent_pairs, analyses, reducers, conflict_cache, dependencies)
     return [g for g in groups if len(g) > 1]
 
 
@@ -247,6 +247,7 @@ def _merge_into_groups(
     analyses: dict[str, NodeAnalysis],
     reducer_fields: ReducerSet,
     conflict_cache: dict[tuple[str, str], bool],
+    dependencies: dict[str, set[str]],
 ) -> list[set[str]]:
     """Merge independent pairs into maximal compatible groups.
 
@@ -255,6 +256,7 @@ def _merge_into_groups(
         analyses: Per-node analysis results keyed by node name.
         reducer_fields: Per-object reducer fields (parallel-safe writes).
         conflict_cache: Cached pairwise conflict results.
+        dependencies: Node dependency graph.
 
     Returns:
         List of merged node sets, each containing compatible nodes.
@@ -275,7 +277,7 @@ def _merge_into_groups(
                 if j in used:
                     continue
                 potential = merged | group_b
-                if _group_is_compatible(potential, analyses, reducer_fields, conflict_cache):
+                if _group_is_compatible(potential, analyses, reducer_fields, conflict_cache, dependencies):
                     merged = potential
                     used.add(j)
                     changed = True
@@ -290,6 +292,7 @@ def _group_is_compatible(
     analyses: dict[str, NodeAnalysis],
     reducer_fields: ReducerSet,
     conflict_cache: dict[tuple[str, str], bool],
+    dependencies: dict[str, set[str]],
 ) -> bool:
     """Check if all nodes in a group are pairwise non-conflicting.
 
@@ -298,6 +301,7 @@ def _group_is_compatible(
         analyses: Per-node analysis results keyed by node name.
         reducer_fields: Per-object reducer fields (parallel-safe writes).
         conflict_cache: Cached pairwise conflict results.
+        dependencies: Node dependency graph.
 
     Returns:
         ``True`` if all nodes in the group are pairwise non-conflicting.
@@ -305,6 +309,8 @@ def _group_is_compatible(
     nodes = list(group)
     for i, a_name in enumerate(nodes):
         for b_name in nodes[i + 1:]:
+            if b_name in dependencies.get(a_name, set()) or a_name in dependencies.get(b_name, set()):
+                return False
             key = (min(a_name, b_name), max(a_name, b_name))
             if key not in conflict_cache:
                 conflict_cache[key] = analyses[key[0]].conflicts_with(

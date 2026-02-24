@@ -260,6 +260,25 @@ class TestAnalyzeGraphTopologyMultiCycle:
 
 class TestGetSafeParallelizationGroups:
 
+    def test_cycle_fallback_deterministic_singletons(self):
+        """When dependency cycle detected, fall back to singleton groups deterministically."""
+        topo = analyze_graph_topology(_linear_graph())
+        deps = {"a": {"c"}, "b": {"a"}, "c": {"b"}}
+        groups = get_safe_parallelization_groups(topo, deps)
+        assert groups == [{"a"}, {"b"}, {"c"}]
+        assert all(len(g) == 1 for g in groups)
+
+    def test_cycle_fallback_warns(self, caplog):
+        """Cycle fallback logs a warning."""
+        import logging
+
+        with caplog.at_level(logging.WARNING):
+            topo = analyze_graph_topology(_linear_graph())
+            deps = {"a": {"c"}, "b": {"a"}, "c": {"b"}}
+            get_safe_parallelization_groups(topo, deps)
+        assert "Dependency cycle" in caplog.text
+        assert "a" in caplog.text and "b" in caplog.text and "c" in caplog.text
+
     def test_independent_nodes(self):
         topo = analyze_graph_topology(_linear_graph())
         deps = {"a": set(), "b": set(), "c": set()}

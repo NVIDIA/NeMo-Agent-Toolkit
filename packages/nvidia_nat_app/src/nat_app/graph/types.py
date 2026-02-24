@@ -135,6 +135,7 @@ class Edge:
     source: str
     target: str
     kind: EdgeKind = EdgeKind.DIRECT
+    branch: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict, hash=False, compare=False)
 
 
@@ -338,6 +339,18 @@ class Graph:
         self._successors.setdefault(source, set()).add(target)
         self._predecessors.setdefault(target, set()).add(source)
 
+    def _remove_conditional_edges_for_source(self, source: str) -> None:
+        """Remove all conditional edges from source. Keeps _edges, _edge_keys, _successors, _predecessors consistent."""
+        to_remove = [e for e in self._edges if e.source == source and e.kind == EdgeKind.CONDITIONAL]
+        for e in to_remove:
+            self._edges.remove(e)
+            key = (e.source, e.target, e.branch)
+            self._edge_keys.discard(key)
+            self._successors.get(source, set()).discard(e.target)
+            self._predecessors.get(e.target, set()).discard(source)
+        if source in self._conditional_targets:
+            del self._conditional_targets[source]
+
     def add_conditional_edges(
         self,
         source: str,
@@ -354,6 +367,7 @@ class Graph:
                 1-to-many routing (one label triggers multiple targets).
             **metadata: Attached to each created edge.
         """
+        self._remove_conditional_edges_for_source(source)
         normalized: dict[str, list[str]] = {
             label: [t] if isinstance(t, str) else list(t)
             for label, t in branch_targets.items()
@@ -369,9 +383,8 @@ class Graph:
                     source=source,
                     target=target,
                     kind=EdgeKind.CONDITIONAL,
-                    metadata={
-                        **metadata, "branch": branch_name
-                    },
+                    branch=branch_name,
+                    metadata=metadata,
                 )
                 self._edges.append(edge)
                 self._successors.setdefault(source, set()).add(target)
@@ -475,13 +488,13 @@ class Graph:
         for edge in self._edges:
             if edge.source in nodes and edge.target in nodes:
                 if edge.kind == EdgeKind.CONDITIONAL:
-                    branch = edge.metadata.get("branch", "")
+                    branch = edge.branch or ""
                     existing = sub._conditional_targets.setdefault(edge.source, {})
                     existing.setdefault(branch, []).append(edge.target)
                 key = (
                     edge.source,
                     edge.target,
-                    edge.metadata.get("branch") if edge.kind == EdgeKind.CONDITIONAL else None,
+                    edge.branch if edge.kind == EdgeKind.CONDITIONAL else None,
                 )
                 sub._edge_keys.add(key)
                 sub._edges.append(edge)
@@ -566,7 +579,7 @@ class Graph:
             A hex digest string identifying the graph structure.
         """
         parts = sorted(self._nodes.keys())
-        parts.extend(sorted(f"{e.source}->{e.target}:{e.kind.value}" for e in self._edges))
+        parts.extend(sorted(f"{e.source}->{e.target}:{e.kind.value}:{e.branch or ''}" for e in self._edges))
         return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
 
     # -- Representation ----------------------------------------------------

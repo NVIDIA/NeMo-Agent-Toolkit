@@ -207,6 +207,19 @@ class TestFindParallelGroups:
         for g in groups:
             assert not ({"a", "b"} <= g), "a and b should not be in the same group"
 
+    def test_transitive_merge_respects_dependencies(self):
+        """Nodes with dependency must not be merged transitively via intermediate pair."""
+        analyses = {
+            "a": _node("a", reads=set(), writes={"a_out"}),
+            "b": _node("b", reads=set(), writes={"b_out"}),
+            "c": _node("c", reads=set(), writes={"c_out"}),
+        }
+        # C depends on A (e.g. explicit constraint); no data conflict between A and C
+        deps = {"a": set(), "b": set(), "c": {"a"}}
+        groups = find_parallel_groups(analyses, deps)
+        for g in groups:
+            assert not ({"a", "c"} <= g), "a and c have dependency, must not be in same group"
+
 
 # -- GraphAnalysisResult ---------------------------------------------------
 

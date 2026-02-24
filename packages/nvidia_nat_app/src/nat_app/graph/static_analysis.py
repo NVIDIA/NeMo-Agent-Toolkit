@@ -482,7 +482,7 @@ class _NodeASTVisitor(ast.NodeVisitor):
                     self._dict_vars[target.id] = keys
 
         if isinstance(target, ast.Tuple) and isinstance(value, ast.Tuple):
-            for t, v in zip(target.elts, value.elts):
+            for t, v in zip(target.elts, value.elts, strict=True):
                 if isinstance(t, ast.Name):
                     alias_info = self._resolve_state_source(v)
                     if alias_info:
@@ -514,7 +514,7 @@ class _NodeASTVisitor(ast.NodeVisitor):
 
     def _extract_writes_from_expr(self, node: ast.expr):
         # Return dict writes go to the primary object by default
-        obj = list(self._param_to_obj.values())[0] if self._param_to_obj else _DEFAULT_OBJ
+        obj = next(iter(self._param_to_obj.values())) if self._param_to_obj else _DEFAULT_OBJ
 
         if isinstance(node, ast.Dict):
             self._extract_dict_keys_as_writes(node, obj)
@@ -737,7 +737,7 @@ class _NodeASTVisitor(ast.NodeVisitor):
         if func_code:
             free_vars = func_code.co_freevars
             closure_cells = getattr(self._enclosing_func, "__closure__", None) or ()
-            for var_name, cell in zip(free_vars, closure_cells):
+            for var_name, cell in zip(free_vars, closure_cells, strict=True):
                 if var_name == name:
                     try:
                         return cell.cell_contents
@@ -750,7 +750,7 @@ class _NodeASTVisitor(ast.NodeVisitor):
             arg_names = func_code.co_varnames[:func_code.co_argcount]
             n_defaults = len(defaults)
             defaulted_params = arg_names[len(arg_names) - n_defaults:]
-            for param_name, default_val in zip(defaulted_params, defaults):
+            for param_name, default_val in zip(defaulted_params, defaults, strict=True):
                 if param_name == name:
                     return default_val
 
@@ -861,7 +861,7 @@ def _analyze_callee(
         if state_param is None:
             return None
 
-        callee_param_to_obj = {state_param: list(param_to_obj.values())[0]}
+        callee_param_to_obj = {state_param: next(iter(param_to_obj.values()))}
 
         visitor = _NodeASTVisitor(
             state_param,
@@ -890,7 +890,7 @@ def _analyze_callee(
         if resolved_param is None:
             resolved_param = state_param
 
-        callee_param_to_obj = {resolved_param: list(param_to_obj.values())[0]}
+        callee_param_to_obj = {resolved_param: next(iter(param_to_obj.values()))}
 
         visitor = _NodeASTVisitor(
             resolved_param,
@@ -1028,10 +1028,8 @@ def analyze_function_ast(
             self_state_attrs=self_state_attrs,
             max_recursion_depth=max_recursion_depth,
         )
-        try:
-            visitor._freevars = set(getattr(func.__code__, "co_freevars", ()))
-        except Exception:
-            pass
+        code = getattr(func, "__code__", None)
+        visitor._freevars = set(getattr(code, "co_freevars", ())) if code else set()
         visitor.visit(func_def)
 
     elif lambda_node is not None:
@@ -1055,10 +1053,8 @@ def analyze_function_ast(
             visited_funcs={id(func)},
             max_recursion_depth=max_recursion_depth,
         )
-        try:
-            visitor._freevars = set(getattr(func.__code__, "co_freevars", ()))
-        except Exception:
-            pass
+        code = getattr(func, "__code__", None)
+        visitor._freevars = set(getattr(code, "co_freevars", ())) if code else set()
         # Visit the lambda body and treat it as a return value
         visitor._extract_writes_from_expr(lambda_node.body)
         visitor.visit(lambda_node.body)

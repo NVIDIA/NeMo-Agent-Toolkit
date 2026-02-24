@@ -34,13 +34,16 @@ class _FakeLLM:
     def ainvoke(self, prompt: str) -> str:
         return "response"
 
+    def stream(self, prompt: str):
+        return iter(["response"])
+
 
 class _MockDetector:
     """Minimal LLMDetector for unit tests."""
 
     @property
     def invocation_methods(self) -> frozenset[str]:
-        return frozenset({"invoke", "ainvoke"})
+        return frozenset({"invoke", "ainvoke", "stream"})
 
     def is_llm(self, obj) -> bool:
         return isinstance(obj, _FakeLLM)
@@ -259,7 +262,53 @@ class TestCountLLMCalls:
                 return llm.invoke("b")
 
         result = count_llm_calls(node_func, _DETECTOR)
-        assert result.call_count == 1
+        assert result.call_count == 2  # worst case: body + handler
+
+    def test_match_includes_subject_and_guard(self):
+        llm = _FakeLLM()
+
+        def node_func(state):
+            match llm.invoke("subject"):
+                case x if llm.invoke("guard"):
+                    return x
+                case _:
+                    return "default"
+
+        result = count_llm_calls(node_func, _DETECTOR)
+        # subject (1) + max(guard+body, default body) = 1 + (1+0) or (0+0) = 2
+        assert result.call_count >= 2
+
+    def test_with_includes_context_expr(self):
+        llm = _FakeLLM()
+
+        def node_func(state):
+            with llm.stream("hi"):
+                return "done"
+
+        result = count_llm_calls(node_func, _DETECTOR)
+        assert result.call_count >= 1  # context_expr (stream) + body
+
+    def test_loop_includes_iter(self):
+        llm = _FakeLLM()
+
+        def node_func(state):
+            yield from llm.stream(state["items"])
+
+        result = count_llm_calls(node_func, _DETECTOR)
+        # iter (1) + body (0) * multiplier = 1
+        assert result.call_count >= 1
+
+    def test_dynamic_receiver_sets_partial_confidence(self):
+        llm = _FakeLLM()
+
+        def node_func(state):
+            # llm in closure so we run the counter; state["x"] is Subscript, not resolvable
+            _ = llm.invoke("a")  # known LLM call
+            return state["llm"].invoke("hi")  # dynamic receiver
+
+        result = count_llm_calls(node_func, _DETECTOR)
+        assert result.confidence == "partial"
+        assert any("dynamic" in w.lower() for w in result.warnings)
 
     def test_llm_call_info_with_values(self):
         info = LLMCallInfo(

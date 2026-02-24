@@ -56,6 +56,12 @@ async def _slow_node(name: str, delay: float = 0.05, result: str | None = None) 
     return {f"{name}_out": result or f"{name}_done"}
 
 
+class _RaisingResolution:
+
+    def resolve(self, label: str):
+        raise RuntimeError("resolve failed")
+
+
 # -- Tests -------------------------------------------------------------------
 
 
@@ -301,6 +307,74 @@ class TestRunSpeculativeRouter:
         assert result.chosen_label == "left"
         assert "a" not in result.chosen_results
         assert "b" in result.cancelled_nodes
+
+    async def test_decision_task_raises_cancels_targets(self):
+        """When decision task raises, target tasks are cancelled before re-raising."""
+        plan = _make_plan()
+        state = ExecutionState()
+        state.execution_start_time = 0.0
+
+        async def run_node(name: str):
+            if name == "router":
+                raise ValueError("decision failed")
+            await asyncio.sleep(10)  # Long sleep - would hang if not cancelled
+            return {f"{name}_out": "done"}
+
+        with pytest.raises(ValueError, match="decision failed"):
+            await asyncio.wait_for(
+                run_speculation(plan, state, run_node=run_node, get_decision=lambda r: "left"),
+                timeout=2.0,
+            )
+
+    async def test_get_decision_raises_cancels_targets(self):
+        """When get_decision raises, target tasks are cancelled before re-raising."""
+        plan = _make_plan()
+        state = ExecutionState()
+        state.execution_start_time = 0.0
+
+        async def run_node(name: str):
+            if name == "router":
+                await asyncio.sleep(0.02)
+                return {"x": 1}
+            await asyncio.sleep(10)  # Long sleep - would hang if not cancelled
+            return {f"{name}_out": "done"}
+
+        def get_decision(_result):
+            raise RuntimeError("bad decision")
+
+        with pytest.raises(RuntimeError, match="bad decision"):
+            await asyncio.wait_for(
+                run_speculation(plan, state, run_node=run_node, get_decision=get_decision),
+                timeout=2.0,
+            )
+
+    async def test_resolution_resolve_raises_cancels_targets(self):
+        """When plan.resolution.resolve raises, target tasks are cancelled before re-raising."""
+        plan = SpeculationPlan(
+            strategy="router_branch",
+            decision_node="router",
+            targets_to_launch=frozenset({"a", "b"}),
+            excluded_nodes=frozenset(),
+            resolution=_RaisingResolution(),
+            merge_nodes=frozenset(),
+            max_branch_depth=1,
+            is_cycle_exit=False,
+        )
+        state = ExecutionState()
+        state.execution_start_time = 0.0
+
+        async def run_node(name: str):
+            if name == "router":
+                await asyncio.sleep(0.02)
+                return "left"
+            await asyncio.sleep(10)  # Long sleep - would hang if not cancelled
+            return {f"{name}_out": "done"}
+
+        with pytest.raises(RuntimeError, match="resolve failed"):
+            await asyncio.wait_for(
+                run_speculation(plan, state, run_node=run_node, get_decision=lambda r: "left"),
+                timeout=2.0,
+            )
 
 
 class TestSpeculativeResultDataclass:

@@ -154,8 +154,8 @@ def _scan_namespace(
                     sentinel = object.__new__(ret) if not inspect.isabstract(ret) else None
                     if sentinel is not None and detector.is_llm(sentinel):
                         found[name] = obj
-            except Exception:  # pylint: disable=broad-exception-caught
-                pass
+            except (NameError, TypeError, AttributeError, ValueError, ImportError) as exc:
+                logger.debug("Could not get type hints for %r: %s", name, exc, exc_info=True)
 
 
 # ---------------------------------------------------------------------------
@@ -264,11 +264,11 @@ class _LLMCallCounter:
     def _count_stmt(self, node: ast.stmt) -> int:
         if isinstance(node, ast.If):
             return self._count_if(node)
-        if isinstance(node, (ast.For, ast.While)):
+        if isinstance(node, (ast.For, ast.AsyncFor, ast.While)):
             return self._count_loop(node)
         if isinstance(node, (ast.Try, ast.TryStar)):
             return self._count_try(node)
-        if isinstance(node, ast.With):
+        if isinstance(node, (ast.With, ast.AsyncWith)):
             return self._count_with(node)
         if isinstance(node, ast.Match):
             return self._count_match(node)
@@ -280,10 +280,15 @@ class _LLMCallCounter:
         test_count = self._count_calls_in_node(node.test) if hasattr(node, "test") else 0
         return test_count + max(body_count, else_count)
 
-    def _count_loop(self, node: ast.For | ast.While) -> int:
+    def _count_loop(self, node: ast.For | ast.AsyncFor | ast.While) -> int:
         body_count = self.count_in_body(node.body)
         else_count = self.count_in_body(node.orelse) if node.orelse else 0
-        return body_count * _DEFAULT_LOOP_MULTIPLIER + else_count
+        header_count = 0
+        if isinstance(node, (ast.For, ast.AsyncFor)):
+            header_count = self._count_calls_in_node(node.iter)
+        elif isinstance(node, ast.While):
+            header_count = self._count_calls_in_node(node.test)
+        return header_count + body_count * _DEFAULT_LOOP_MULTIPLIER + else_count
 
     def _count_try(self, node: ast.Try | ast.TryStar) -> int:
         body_count = self.count_in_body(node.body)
@@ -291,14 +296,17 @@ class _LLMCallCounter:
         else_count = self.count_in_body(node.orelse) if node.orelse else 0
         finally_count = self.count_in_body(node.finalbody) if node.finalbody else 0
         worst_handler = max(handler_counts) if handler_counts else 0
-        return max(body_count + else_count, worst_handler) + finally_count
+        return max(body_count + else_count, body_count + worst_handler) + finally_count
 
-    def _count_with(self, node: ast.With) -> int:
-        return self.count_in_body(node.body)
+    def _count_with(self, node: ast.With | ast.AsyncWith) -> int:
+        header = sum(self._count_calls_in_node(item.context_expr) for item in node.items)
+        return header + self.count_in_body(node.body)
 
     def _count_match(self, node: ast.Match) -> int:
-        case_counts = [self.count_in_body(c.body) for c in node.cases]
-        return max(case_counts) if case_counts else 0
+        subject_count = self._count_calls_in_node(node.subject)
+        case_counts = [(self._count_calls_in_node(c.guard) if c.guard is not None else 0) + self.count_in_body(c.body)
+                       for c in node.cases]
+        return subject_count + (max(case_counts) if case_counts else 0)
 
     def _count_calls_in_node(self, node: ast.AST) -> int:
         """Count LLM calls in an arbitrary AST node (expression, statement).
@@ -330,8 +338,12 @@ class _LLMCallCounter:
             return False
         name = self._resolve_receiver(node.value)
         if name is None:
+            self.has_dynamic_targets = True
             return False
-        return name in self._llm_names
+        if name not in self._llm_names:
+            self.has_dynamic_targets = True
+            return False
+        return True
 
     def _resolve_receiver(self, node: ast.expr) -> str | None:
         """Resolve the receiver of a method call to a name string.
