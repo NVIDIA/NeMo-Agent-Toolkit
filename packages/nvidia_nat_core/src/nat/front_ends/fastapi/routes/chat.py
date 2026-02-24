@@ -117,7 +117,7 @@ async def add_chat_routes(
                         endpoint_type=_ChatEndpointType.SINGLE,
                         endpoint_method=endpoint_method,
                         endpoint_description=endpoint.description,
-                        enable_interactive=enable_interactive_extensions)
+                        enable_interactive=True)
         _add_chat_route(app=app,
                         worker=worker,
                         endpoint_path=f"{openai_path}/stream",
@@ -125,7 +125,7 @@ async def add_chat_routes(
                         endpoint_type=_ChatEndpointType.STREAMING,
                         endpoint_method=endpoint_method,
                         endpoint_description=endpoint.description,
-                        enable_interactive=enable_interactive_extensions)
+                        enable_interactive=True)
 
     if not disable_legacy_routes and endpoint.legacy_openai_api_path:
         _add_chat_route(app=app,
