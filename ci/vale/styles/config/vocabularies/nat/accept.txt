@@ -82,7 +82,7 @@ Grafana
 [Gg]uardrail(s|ed|ing)?
 [Hh]ashable
 [Hh]ardcode(s|d)?
-[Hh]uggingface
+[Hh]ugging[Ff]ace
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
