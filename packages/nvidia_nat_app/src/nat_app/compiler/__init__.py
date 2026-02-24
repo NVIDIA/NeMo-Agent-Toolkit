@@ -18,8 +18,7 @@ General-purpose compilation framework for agent optimization.
 The package provides a layered architecture:
 
 - ``AbstractCompiler`` -- framework-agnostic base (any source -> any artifact)
-- ``AbstractPipelinedCompiler`` -- ordered stage pipeline over a
-  ``CompilationContext``
+- ``AbstractPipelinedCompiler`` -- ordered stage pipeline over a ``CompilationContext``
 - ``CompilationStage`` -- protocol for individual pipeline stages
 - ``CompilationContext`` -- shared mutable state between stages
 
