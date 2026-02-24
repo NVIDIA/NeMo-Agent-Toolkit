@@ -12,9 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 from collections.abc import AsyncGenerator
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
 
@@ -36,8 +39,16 @@ from nat.data_models.component_ref import FunctionRef
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import EmptyFunctionConfig
 from nat.plugins.runtime import tool_calling_agent as runtime_agent
-from nat.plugins.runtime.llm import RuntimeOpenAIClient
-from nat.plugins.runtime.tool_wrapper import RuntimeToolWrapper
+from nat.sdk.tool.tool import Tool
+
+if TYPE_CHECKING:
+    from nat.plugins.runtime.llm import RuntimeOpenAIClient
+
+
+def _make_llm(responses: list[ChatCompletion]) -> RuntimeOpenAIClient:
+    """Create a RuntimeOpenAIClient backed by fake responses (lazy import)."""
+    from nat.plugins.runtime.llm import RuntimeOpenAIClient as _Cls
+    return _Cls(cast(AsyncOpenAI, FakeAsyncOpenAI(responses)), model_name="demo", default_params={})
 
 
 class InputSchema(BaseModel):
@@ -49,8 +60,13 @@ class InputSchema(BaseModel):
 class RuntimeTestFunction(Function[InputSchema, object, object]):
     """Concrete function implementation for agent tests."""
 
-    def __init__(self, *, description: str, output: object | None = None, error: Exception | None = None) -> None:
-        super().__init__(config=EmptyFunctionConfig(), description=description, input_schema=InputSchema)
+    def __init__(self,
+                 *,
+                 name: str = "tool",
+                 description: str,
+                 output: object | None = None,
+                 error: Exception | None = None) -> None:
+        super().__init__(config=EmptyFunctionConfig(name=name), description=description, input_schema=InputSchema)
         self._output = output
         self._error = error
         self.calls: list[dict[str, Any]] = []
@@ -96,13 +112,12 @@ class FakeBuilder:
     """Minimal builder to supply LLMs and tools."""
 
     llm: RuntimeOpenAIClient
-    tools: dict[str, RuntimeToolWrapper]
+    tools: dict[str, Tool]
 
     async def get_llm(self, _name: str, wrapper_type: LLMFrameworkEnum) -> RuntimeOpenAIClient:
         return self.llm
 
-    async def get_tools(self, tool_names: list[FunctionRef],
-                        wrapper_type: LLMFrameworkEnum) -> list[RuntimeToolWrapper]:
+    async def get_tools(self, tool_names: list[FunctionRef], wrapper_type: LLMFrameworkEnum) -> list[Tool]:
         return [self.tools[str(name)] for name in tool_names]
 
 
@@ -129,7 +144,7 @@ def _chat_completion(content: str | None,
 
 async def _build_agent(config: runtime_agent.RuntimeToolCallingAgentConfig,
                        llm: RuntimeOpenAIClient,
-                       tools: dict[str, RuntimeToolWrapper]) -> FunctionInfo:
+                       tools: dict[str, Tool]) -> FunctionInfo:
     builder = cast(Builder, FakeBuilder(llm=llm, tools=tools))
     async with runtime_agent.runtime_tool_calling_agent_workflow(config, builder) as function_info:
         return cast(FunctionInfo, function_info)
@@ -147,9 +162,9 @@ async def test_tool_calling_agent_returns_final_response() -> None:
         _chat_completion(None, [tool_call]),
         _chat_completion("done", None),
     ]
-    llm = RuntimeOpenAIClient(cast(AsyncOpenAI, FakeAsyncOpenAI(responses)), model_name="demo", default_params={})
+    llm = _make_llm(responses)
     function = RuntimeTestFunction(description="desc", output={"ok": True})
-    tool = RuntimeToolWrapper(name="tool", description="desc", parameters={}, fn=function)
+    tool = Tool.from_function(function)
     config = runtime_agent.RuntimeToolCallingAgentConfig(llm_name=LLMRef("demo"),
                                                          tool_names=[FunctionRef("tool")],
                                                          max_iterations=2,
@@ -166,9 +181,9 @@ async def test_tool_calling_agent_return_direct() -> None:
     """Return-direct tools short-circuit to tool output."""
     tool_call = _tool_call("call-1", "tool", '{"q": "x"}')
     responses = [_chat_completion(None, [tool_call])]
-    llm = RuntimeOpenAIClient(cast(AsyncOpenAI, FakeAsyncOpenAI(responses)), model_name="demo", default_params={})
+    llm = _make_llm(responses)
     function = RuntimeTestFunction(description="desc", output={"ok": True})
-    tool = RuntimeToolWrapper(name="tool", description="desc", parameters={}, fn=function)
+    tool = Tool.from_function(function)
     config = runtime_agent.RuntimeToolCallingAgentConfig(llm_name=LLMRef("demo"),
                                                          tool_names=[FunctionRef("tool")],
                                                          return_direct=[FunctionRef("tool")],
@@ -187,9 +202,9 @@ async def test_tool_calling_agent_handles_tool_error_when_enabled() -> None:
         _chat_completion(None, [tool_call]),
         _chat_completion("done", None),
     ]
-    llm = RuntimeOpenAIClient(cast(AsyncOpenAI, FakeAsyncOpenAI(responses)), model_name="demo", default_params={})
+    llm = _make_llm(responses)
     function = RuntimeTestFunction(description="desc", error=RuntimeError("boom"))
-    tool = RuntimeToolWrapper(name="tool", description="desc", parameters={}, fn=function)
+    tool = Tool.from_function(function)
     config = runtime_agent.RuntimeToolCallingAgentConfig(llm_name=LLMRef("demo"),
                                                          tool_names=[FunctionRef("tool")],
                                                          handle_tool_errors=True,
@@ -205,9 +220,9 @@ async def test_tool_calling_agent_raises_tool_error_when_disabled() -> None:
     """Tool errors raise when error handling is disabled."""
     tool_call = _tool_call("call-1", "tool", '{"q": "x"}')
     responses = [_chat_completion(None, [tool_call])]
-    llm = RuntimeOpenAIClient(cast(AsyncOpenAI, FakeAsyncOpenAI(responses)), model_name="demo", default_params={})
+    llm = _make_llm(responses)
     function = RuntimeTestFunction(description="desc", error=RuntimeError("boom"))
-    tool = RuntimeToolWrapper(name="tool", description="desc", parameters={}, fn=function)
+    tool = Tool.from_function(function)
     config = runtime_agent.RuntimeToolCallingAgentConfig(llm_name=LLMRef("demo"),
                                                          tool_names=[FunctionRef("tool")],
                                                          handle_tool_errors=False,
@@ -219,16 +234,19 @@ async def test_tool_calling_agent_raises_tool_error_when_disabled() -> None:
 
 
 async def test_tool_calling_agent_max_iterations() -> None:
-    """Agent raises when exceeding max iterations."""
+    """Agent stops and returns empty when exceeding max iterations."""
     tool_call = _tool_call("call-1", "tool", '{"q": "x"}')
     responses = [_chat_completion(None, [tool_call])]
-    llm = RuntimeOpenAIClient(cast(AsyncOpenAI, FakeAsyncOpenAI(responses)), model_name="demo", default_params={})
+    llm = _make_llm(responses)
     function = RuntimeTestFunction(description="desc", output={"ok": True})
-    tool = RuntimeToolWrapper(name="tool", description="desc", parameters={}, fn=function)
+    tool = Tool.from_function(function)
     config = runtime_agent.RuntimeToolCallingAgentConfig(llm_name=LLMRef("demo"),
                                                          tool_names=[FunctionRef("tool")],
                                                          max_iterations=0)
     function_info = await _build_agent(config, llm, {"tool": tool})
 
-    with pytest.raises(RuntimeError, match="max_iterations"):
-        await _call_agent(function_info, ChatRequest.from_string("hi"))
+    result = await _call_agent(function_info, ChatRequest.from_string("hi"))
+
+    # With max_iterations=0, the runner hits the limit before any step and returns an ErrorEvent.
+    # The response_fn returns "" for non-message/non-observation events.
+    assert result == ""

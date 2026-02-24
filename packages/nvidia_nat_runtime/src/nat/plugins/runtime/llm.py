@@ -19,6 +19,8 @@ so workflows can call models directly while still emitting intermediate step
 events and honoring toolkit configuration defaults.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 from collections.abc import AsyncGenerator

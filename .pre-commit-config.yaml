@@ -51,12 +51,14 @@ repos:
       - { id: uv-lock, name: "uv-lock-phoenix", args: [--project, packages/nvidia_nat_phoenix], files: "packages/nvidia_nat_phoenix/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-ragaai", args: [--project, packages/nvidia_nat_ragaai], files: "packages/nvidia_nat_ragaai/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-redis", args: [--project, packages/nvidia_nat_redis], files: "packages/nvidia_nat_redis/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-runtime", args: [--project, packages/nvidia_nat_runtime], files: "packages/nvidia_nat_runtime/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-s3", args: [--project, packages/nvidia_nat_s3], files: "packages/nvidia_nat_s3/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-semantic_kernel", args: [--project, packages/nvidia_nat_semantic_kernel], files: "packages/nvidia_nat_semantic_kernel/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-strands", args: [--project, packages/nvidia_nat_strands], files: "packages/nvidia_nat_strands/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-test", args: [--project, packages/nvidia_nat_test], files: "packages/nvidia_nat_test/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-vanna", args: [--project, packages/nvidia_nat_vanna], files: "packages/nvidia_nat_vanna/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-weave", args: [--project, packages/nvidia_nat_weave], files: "packages/nvidia_nat_weave/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-workspace", args: [--project, packages/nvidia_nat_workspace], files: "packages/nvidia_nat_workspace/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-zep_cloud", args: [--project, packages/nvidia_nat_zep_cloud], files: "packages/nvidia_nat_zep_cloud/pyproject.toml" }
   - repo: local
     hooks:

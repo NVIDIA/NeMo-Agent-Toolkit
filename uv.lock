@@ -6421,6 +6421,7 @@ most = [
     { name = "nvidia-nat-test" },
     { name = "nvidia-nat-vanna" },
     { name = "nvidia-nat-weave" },
+    { name = "nvidia-nat-workspace" },
     { name = "nvidia-nat-zep-cloud" },
 ]
 mysql = [
@@ -6613,6 +6614,7 @@ requires-dist = [
     { name = "nvidia-nat-vanna", marker = "extra == 'vanna'", editable = "packages/nvidia_nat_vanna" },
     { name = "nvidia-nat-weave", marker = "extra == 'most'", editable = "packages/nvidia_nat_weave" },
     { name = "nvidia-nat-weave", marker = "extra == 'weave'", editable = "packages/nvidia_nat_weave" },
+    { name = "nvidia-nat-workspace", marker = "extra == 'most'", editable = "packages/nvidia_nat_workspace" },
     { name = "nvidia-nat-workspace", marker = "extra == 'workspace'", editable = "packages/nvidia_nat_workspace" },
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'most'", editable = "packages/nvidia_nat_zep_cloud" },
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },

@@ -110,6 +110,7 @@ most = [
   "nvidia-nat-test == {version}",
   "nvidia-nat-vanna == {version}",
   "nvidia-nat-weave == {version}",
+  "nvidia-nat-workspace == {version}",
   "nvidia-nat-zep-cloud == {version}",
 ]
 
