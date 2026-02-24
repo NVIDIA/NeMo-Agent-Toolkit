@@ -32,7 +32,7 @@ Limitations
 - Cannot detect invisible mutations: C extensions, other threads, deserialization.
 - Multi-param aliasing: when state and memory could refer to the same object
   at the call site, analysis may under-report dependencies.
-- Recursion depth limited to 3; deeper call chains may be under-analyzed.
+- Recursion depth limited to 5 by default; deeper call chains may be under-analyzed.
 """
 
 from __future__ import annotations
@@ -482,7 +482,8 @@ class _NodeASTVisitor(ast.NodeVisitor):
                     self._dict_vars[target.id] = keys
 
         if isinstance(target, ast.Tuple) and isinstance(value, ast.Tuple):
-            for t, v in zip(target.elts, value.elts, strict=True):
+            # strict=False: starred unpacking (a, *rest = x, y, z) yields different lengths
+            for t, v in zip(target.elts, value.elts, strict=False):
                 if isinstance(t, ast.Name):
                     alias_info = self._resolve_state_source(v)
                     if alias_info:

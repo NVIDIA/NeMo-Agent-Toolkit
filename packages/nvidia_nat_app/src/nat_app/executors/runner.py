@@ -200,6 +200,11 @@ async def run_speculation(
                 result = task.result()
         except Exception:  # noqa: BLE001
             logger.exception("  '%s' failed during speculation (will retry later)", name)
+            end_time = time.time()
+            start = target_starts[name]
+            execution_state.mark_node_completed(name, {})
+            execution_state.record_node_duration(name, end_time - start)
+            execution_state.record_timeline_event(name, start, end_time, status="failed")
             continue
 
         end_time = time.time()

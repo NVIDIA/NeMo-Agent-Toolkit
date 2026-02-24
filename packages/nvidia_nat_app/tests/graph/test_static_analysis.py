@@ -94,6 +94,18 @@ class TestAnalyzeFunctionAST:
         assert "output" in r.writes.all_fields_flat
         assert "input" in r.reads.all_fields_flat
 
+    def test_starred_unpacking_no_crash(self):
+        """Starred unpacking (a, *rest = x, y, z) has different lengths; must not crash."""
+
+        def fn(state):
+            a, *_ = state["x"], state["y"], state["z"]
+            return {"out": a}
+
+        r = analyze_function_ast(fn)
+        assert r.source_available
+        assert "x" in r.reads.all_fields_flat or "y" in r.reads.all_fields_flat
+        assert "out" in r.writes.all_fields_flat
+
     def test_confidence_full_simple(self):
 
         def fn(state):

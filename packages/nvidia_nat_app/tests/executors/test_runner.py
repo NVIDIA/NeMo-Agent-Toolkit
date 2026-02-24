@@ -308,6 +308,14 @@ class TestRunSpeculativeRouter:
         assert "a" not in result.chosen_results
         assert "b" in result.cancelled_nodes
 
+        # Metrics reconcile: launched == completed + cancelled
+        assert state.tools_launched == 3
+        assert state.tools_completed == 2  # router + failed node
+        assert state.tools_cancelled == 1
+        a_events = [e for e in state.execution_timeline if e["node"] == "a"]
+        assert len(a_events) == 1
+        assert a_events[0]["status"] == "failed"
+
     async def test_decision_task_raises_cancels_targets(self):
         """When decision task raises, target tasks are cancelled before re-raising."""
         plan = _make_plan()
