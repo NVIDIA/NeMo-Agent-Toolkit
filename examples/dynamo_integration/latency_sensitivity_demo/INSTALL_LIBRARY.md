@@ -79,32 +79,6 @@ sudo apt-get install -y \
 > **Already have these?** Run `protoc --version` and `dpkg -l libclang-dev`.
 > If both succeed you can skip this step.
 
-### CUDA toolkit (needed for GPU inference)
-
-If you plan to run GPU inference backends (SGLang, vLLM, TensorRT-LLM),
-install the CUDA toolkit so that FlashInfer can JIT-compile its kernels.
-
-```bash
-sudo apt-get install -y nvidia-cuda-toolkit
-```
-
-FlashInfer expects `nvcc` at `/usr/local/cuda/bin/nvcc`. The Ubuntu package
-installs it to `/usr/bin/nvcc` instead, so create a symlink:
-
-```bash
-sudo ln -sf /usr /usr/local/cuda
-```
-
-Verify:
-
-```bash
-nvcc --version            # should print CUDA compilation tools
-ls /usr/local/cuda/bin/nvcc   # should exist
-```
-
-> **Already have the CUDA toolkit?** If `nvcc --version` works and
-> `/usr/local/cuda` exists you can skip this.
-
 ---
 
 ## Step 2 — Install Rust
