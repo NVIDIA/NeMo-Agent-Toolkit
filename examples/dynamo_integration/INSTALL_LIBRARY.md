@@ -5,9 +5,7 @@ fresh machine. Every command is explicit so you can copy-paste your way
 through it. If you already have some of the prerequisites installed, skip
 the corresponding section.
 
-Tested on Ubuntu 22.04 and 24.04 (x86_64). See the
-[support matrix](docs/pages/reference/support-matrix.md) for the full list
-of supported platforms.
+Tested on Ubuntu 22.04 and 24.04 (x86_64).
 
 ---
 
@@ -46,8 +44,6 @@ cd dynamo
 
 These are needed by the Rust build (protobuf codegen, C bindings, linking).
 
-**Ubuntu / Debian:**
-
 ```bash
 sudo apt-get update
 sudo apt-get install -y \
@@ -61,25 +57,13 @@ sudo apt-get install -y \
   libudev-dev
 ```
 
-**macOS (Homebrew):**
-
-```bash
-brew install cmake protobuf
-
-# Verify Metal is accessible (expected output: "metal: error: no input files")
-xcrun -sdk macosx metal
-```
-
-> **Already have these?** Run `protoc --version` and `llvm-config --version`
-> (or `dpkg -l libclang-dev` on Ubuntu). If both succeed you can skip this
-> step.
+> **Already have these?** Run `protoc --version` and `dpkg -l libclang-dev`.
+> If both succeed you can skip this step.
 
 ### CUDA toolkit (needed for GPU inference)
 
 If you plan to run GPU inference backends (SGLang, vLLM, TensorRT-LLM),
 install the CUDA toolkit so that FlashInfer can JIT-compile its kernels.
-
-**Ubuntu / Debian:**
 
 ```bash
 sudo apt-get install -y nvidia-cuda-toolkit
@@ -245,8 +229,18 @@ python -m dynamo.trtllm --model-path Qwen/Qwen3-0.6B --discovery-backend file
 ```
 
 > **Note:** The backend frameworks (vLLM, SGLang, TensorRT-LLM) are
-> **not** installed by the base `uv pip install -e .` command. Install them
-> with extras, e.g. `uv pip install -e ".[vllm]"`.
+> **not** installed by the base `uv pip install -e .` command.
+
+### Installing SGLang from source (recommended)
+
+Install SGLang from the main branch to get the latest fixes and features:
+
+```bash
+git clone https://github.com/sgl-project/sglang.git
+uv pip install -e sglang/python
+```
+
+For other backends, install via extras, e.g. `uv pip install -e ".[vllm]"`.
 
 Send a test request:
 
@@ -294,6 +288,10 @@ uv pip install pip maturin
 cd lib/bindings/python && maturin develop --uv && cd ../../..
 uv pip install -e lib/gpu_memory_service
 uv pip install -e .
+
+# SGLang from source (recommended)
+git clone https://github.com/sgl-project/sglang.git
+uv pip install -e sglang/python
 
 # Verify
 python -c "from dynamo.runtime import DistributedRuntime; print('OK')"
