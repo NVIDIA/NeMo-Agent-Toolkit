@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+<!-- path-check-skip-begin -->
+
 # Installing Dynamo from Source
 
 This guide walks through building and installing Dynamo from source on a
@@ -33,10 +35,10 @@ Tested on Ubuntu 22.04 and 24.04 (x86_64).
 | Dependency | Why |
 |---|---|
 | Python 3.10+ | Runtime language |
-| Rust (via rustup) | Core runtime is written in Rust |
+| Rust (via `rustup`) | Core runtime is written in Rust |
 | `uv` | Python package manager (recommended by the Dynamo team) |
 | `maturin` | Builds the Rust-to-Python bindings |
-| System libraries | C/C++ compiler, protobuf compiler, libclang, etc. |
+| System libraries | C/C++ compiler, `protobuf` compiler, `libclang`, etc. |
 
 ### Optional
 
@@ -59,7 +61,7 @@ cd dynamo
 
 ## Step 1 — Install system libraries
 
-These are needed by the Rust build (protobuf codegen, C bindings, linking).
+These are needed by the Rust build (`protobuf` `codegen`, C bindings, linking).
 
 ```bash
 sudo apt-get update
@@ -184,7 +186,7 @@ compile several hundred crates.
 | `Could not find protoc` | Install `protobuf-compiler` (step 1) |
 | `fatal error: 'stdbool.h' file not found` | Install `libclang-dev` (step 1) |
 | `rustc ... is not installed or not in PATH` | Run `source "$HOME/.cargo/env"` before `maturin develop` |
-| `NIXL build failed ... falling back to stub API` then a bindgen error | Install `libclang-dev`. The NIXL headers warning itself is harmless — it just means the NIXL native library is not present and a stub will be used |
+| `NIXL build failed ... falling back to stub API` then a `bindgen` error | Install `libclang-dev`. The NIXL headers warning itself is harmless — it just means the NIXL native library is not present and a stub will be used |
 | `Failed to set rpath ... patchelf` | Non-fatal warning. Fix with `uv pip install patchelf` if desired |
 | `Could not find nvcc and default cuda_home='/usr/local/cuda' doesn't exist` | Install the CUDA toolkit and create the symlink (see step 1) |
 
@@ -313,3 +315,5 @@ uv pip install -e sglang/python
 # Verify
 python -c "from dynamo.runtime import DistributedRuntime; print('OK')"
 ```
+
+<!-- path-check-skip-end -->

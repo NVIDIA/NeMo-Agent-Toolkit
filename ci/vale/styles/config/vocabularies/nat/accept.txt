@@ -82,9 +82,11 @@ Grafana
 [Gg]uardrail(s|ed|ing)?
 [Hh]ashable
 [Hh]ardcode(s|d)?
+[Hh]uggingface
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
+[Ii]nterarrival
 [Ii]nterquartile
 isort
 Jama
@@ -165,6 +167,7 @@ Qwen
 [Ss]anitiz(e|ed|ation|ing)
 [Ss]erializable
 [Ss]erverless
+SGLang
 spaCy
 SQLAlchemy
 SSE
@@ -181,6 +184,7 @@ Tavily
 [Tt]eardown
 [Tt]imestamp(s?)
 [Tt]okenization
+[Tt]oolchain
 [Tt]okenizer(s?)
 [Tt]rie(s?)
 triages
@@ -195,6 +199,7 @@ triages
 URIs
 uv
 Vanna
+[Vv]env
 VectorDB
 [Ww]alkthrough
 [Ww]eb[Ss]ocket

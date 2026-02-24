@@ -98,7 +98,7 @@ First, run the workflow against a Dynamo endpoint to collect profiler traces and
 
 In a new terminal and directory, or on another machine, install Dynamo from source by following the [Dynamo installation guide](./INSTALL_LIBRARY.md).
 
-Download the NVIDIA Nemotron 3 Nano model from huggingface by running the command below in the directory where you installed Dynamo. 
+Download the `NVIDIA-Nemotron-3-Nano-30B-A3B-BF16` model from Hugging Face by running the command below in the directory where you installed Dynamo.
 
 ```bash
 export HF_TOKEN=hf_...
