@@ -125,6 +125,7 @@ examples = [
   "nat_haystack_deep_research_agent",
   "nat_hybrid_control_flow",
   "nat_kaggle_mcp",
+  "nat_latency_sensitivity_demo",
   "nat_math_assistant_a2a",
   "nat_math_assistant_a2a_protected",
   "nat_multi_frameworks",
