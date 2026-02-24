@@ -27,7 +27,7 @@ There are currently five workflow transactions that can be initiated using HTTP 
 
 The default endpoint paths use a versioned URL scheme.
 
-:::note
+:::{note}
 Versioned paths are currently experimental due to the added support of HTTP Human-in-the-loop (HITL) and OAuth. They are 1:1 compatible with the legacy endpoints for workflows not relying on those behaviors.
 :::
 
