@@ -88,7 +88,7 @@ When the NeMo Agent Toolkit Dynamo LLM client (`_type: dynamo`) is configured wi
 - **NeMo Agent Toolkit** installed with LangChain integration
 - **NVIDIA API key** for NIM endpoint access (Step 1)
 - **Dynamo backend** on a Linux GPU system (Steps 3–4). See the [Dynamo Setup Guide](../../../external/dynamo/README.md) for hardware and software requirements. 
-- **Dynamo installed from source**: This example requires Dynamo to be installed from source. See the [installation guide](../INSTALL_LIBRARY.md) for instructions.
+- **Dynamo installed from source**: This example requires Dynamo to be installed from source. See the [installation guide](./INSTALL_LIBRARY.md) for instructions.
 
 ## Step 1: Profile the Workflow with Baseline Configuration
 
@@ -96,7 +96,7 @@ First, run the workflow against a Dynamo endpoint to collect profiler traces and
 
 ### Step 1a: Start a Dynamo Endpoint
 
-In a new terminal and directory, or on another machine, install Dynamo from source by following the [Dynamo installation guide](../INSTALL_LIBRARY.md).
+In a new terminal and directory, or on another machine, install Dynamo from source by following the [Dynamo installation guide](./INSTALL_LIBRARY.md).
 
 Download the NVIDIA Nemotron 3 Nano model from huggingface by running the command below in the directory where you installed Dynamo. 
 
