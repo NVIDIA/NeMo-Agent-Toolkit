@@ -28,3 +28,4 @@ from .agent import register as agent_register
 from .control_flow import register as control_flow_register
 from .dataset_loader import register as dataset_loader_register
 from .eval import register as eval_register
+from .langsmith import register as langsmith_register

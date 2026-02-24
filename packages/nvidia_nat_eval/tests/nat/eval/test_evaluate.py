@@ -156,10 +156,19 @@ def default_eval_config(mock_evaluator):
 
 
 # Simple mock workflow class defined to the extent needed for eval testing
+class _MockExporterManager:
+    """Minimal mock for ExporterManager used by evaluate.py."""
+
+    @asynccontextmanager
+    async def start(self, **_kwargs):
+        yield self
+
+
 class MockWorkflow:
 
     def __init__(self):
         self.has_single_output = True
+        self.exporter_manager = _MockExporterManager()
 
 
 @pytest.fixture

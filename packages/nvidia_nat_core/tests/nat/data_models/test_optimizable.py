@@ -358,3 +358,26 @@ class TestOptimizableMixin:
         field = schema["properties"]["optimizable_params"]
         assert field["type"] == "array"
         assert field["description"] == "List of parameters that can be optimized."
+
+
+class TestSearchSpacePromptFormat:
+    """Tests for SearchSpace.prompt_format validation."""
+
+    @pytest.mark.parametrize("fmt", ["f-string", "jinja2", "mustache"])
+    def test_accepts_valid_formats(self, fmt):
+        s = SearchSpace(is_prompt=True, prompt="test", prompt_format=fmt)
+        assert s.prompt_format == fmt
+
+    def test_accepts_none(self):
+        s = SearchSpace(is_prompt=True, prompt="test", prompt_format=None)
+        assert s.prompt_format is None
+
+    def test_rejects_invalid_format(self):
+        with pytest.raises(Exception):  # Pydantic ValidationError
+            SearchSpace(is_prompt=True, prompt="test", prompt_format="invalid")
+
+    def test_prompt_format_ignored_for_numeric_space(self):
+        # prompt_format is only meaningful for prompts but should not
+        # cause errors on numeric spaces (it's just unused)
+        s = SearchSpace(low=0.0, high=1.0, prompt_format=None)
+        assert s.prompt_format is None
