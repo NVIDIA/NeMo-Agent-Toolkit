@@ -51,6 +51,70 @@ class TestDetectCycles:
         assert c.back_edge[0] == c.exit_node
         assert c.back_edge[1] == c.entry_node
 
+    def test_self_loop_detected(self):
+        """Single-node cycle (self-loop A → A) is detected."""
+        g = Graph()
+        g.add_node("a")
+        g.add_edge("a", "a")
+        g.entry_point = "a"
+        cycles = detect_cycles(g)
+        assert len(cycles) == 1
+        c = cycles[0]
+        assert c.nodes == {"a"}
+        assert c.entry_node == "a"
+        assert c.exit_node == "a"
+        assert c.back_edge == ("a", "a")
+
+    def test_single_node_no_self_loop_not_cycle(self):
+        """Single node without self-loop is not reported as a cycle."""
+        g = Graph()
+        g.add_node("a")
+        g.entry_point = "a"
+        cycles = detect_cycles(g)
+        assert cycles == []
+
+    def test_self_loop_in_scc_returns_only_self_loop_node(self):
+        """Self-loop within multi-node SCC: cycle.nodes is {A}, not {A,B,C}."""
+        g = Graph()
+        g.add_node("a")
+        g.add_node("b")
+        g.add_node("c")
+        g.add_edge("a", "a")  # self-loop
+        g.add_edge("a", "b")
+        g.add_edge("b", "c")
+        g.add_edge("c", "a")
+        g.entry_point = "a"
+        cycles = detect_cycles(g)
+        # Expect at least the self-loop cycle; may also have the A->B->C->A cycle
+        self_loop_cycles = [c for c in cycles if c.back_edge == ("a", "a")]
+        assert len(self_loop_cycles) == 1
+        assert self_loop_cycles[0].nodes == {"a"}
+
+    def test_fallback_uses_entry_order_for_exit_entry(self):
+        """When fallback runs, returned edge has dst=best_entry (correct exit/entry)."""
+        from nat_app.graph.topology import _find_scc_back_edges
+
+        scc = {"a", "b", "c"}
+        adj = {"a": ["b"], "c": ["a"]}  # a→b, c→a (DAG; DFS finds no back edge)
+        rev_adj = {"b": ["a"], "a": ["c"]}
+        entry_order = {"a": 0, "b": 1, "c": 2}
+
+        result = _find_scc_back_edges(scc, adj, rev_adj, entry_order)
+        assert result == [("c", "a")]
+        # (exit, entry) = (c, a); a has lowest entry_order, so a is correct entry
+
+    def test_fallback_without_entry_order_uses_lexicographic_entry(self):
+        """When fallback runs and entry_order is empty, best_entry is min(scc)."""
+        from nat_app.graph.topology import _find_scc_back_edges
+
+        scc = {"x", "y", "z"}
+        adj = {"x": ["y"], "z": ["x"]}
+        rev_adj = {"y": ["x"], "x": ["z"]}
+
+        result = _find_scc_back_edges(scc, adj, rev_adj, entry_order=None)
+        assert result == [("z", "x")]
+        # best_entry = min(scc) = "x"; edge z→x points to x
+
 
 class TestCycleNodeOrder:
 

@@ -596,7 +596,9 @@ def compute_optimized_order(
 
     Args:
         graph: The graph to schedule.
-        node_analyses: Per-node analysis results with reads/writes.
+        node_analyses: Per-node analysis results with reads/writes. If any graph
+            node is missing, it is treated as opaque (confidence="opaque") and
+            receives structural dependencies only.
         topology: Topological analysis with cycles and routers.
         resolved_constraints: Per-node resolved optimization constraints.
         reducer_fields: Fields with reducer semantics (parallel-safe writes).
@@ -613,6 +615,13 @@ def compute_optimized_order(
 
     all_node_names = graph.node_names
     edge_pairs = graph.edge_pairs
+
+    missing = all_node_names - node_analyses.keys()
+    if missing:
+        logger.warning("Nodes missing from analysis, treating as opaque: %s", sorted(missing))
+        node_analyses = dict(node_analyses)
+        for name in missing:
+            node_analyses[name] = NodeAnalysis(name=name, confidence="opaque")
 
     cycle_node_sets: list[set[str]] = []
     all_cycle_nodes: set[str] = set()

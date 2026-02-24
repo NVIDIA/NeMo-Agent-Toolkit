@@ -226,6 +226,10 @@ def detect_cycles(graph: Graph) -> list[CycleInfo]:
                             break
                     if len(scc) > 1:
                         sccs.append(scc)
+                    elif len(scc) == 1:
+                        n = next(iter(scc))
+                        if n in adj.get(n, []):
+                            sccs.append(scc)
                 work.pop()
                 if work:
                     parent = work[-1][0]
@@ -315,6 +319,15 @@ def _find_scc_back_edges(
             work.pop()
 
     if not back_edges:
+        if entry_order:
+            best_entry = min(scc, key=lambda n: entry_order.get(n, float("inf")))
+        else:
+            best_entry = min(scc)
+        for src in sorted(scc):
+            for dst in adj.get(src, []):
+                if dst in scc and dst == best_entry:
+                    return [(src, dst)]
+        # If no edge points to best_entry, fall back to any intra-SCC edge
         for src in sorted(scc):
             for dst in adj.get(src, []):
                 if dst in scc:
@@ -341,7 +354,7 @@ def _cycle_path_nodes(
     Falls back to the full SCC if no forward path exists.
     """
     if entry == exit_node:
-        return set(scc)
+        return {entry}
 
     is_back_edge = (exit_node, entry)
 

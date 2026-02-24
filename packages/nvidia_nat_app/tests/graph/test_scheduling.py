@@ -259,6 +259,23 @@ class TestComputeOptimizedOrder:
             all_nodes |= stage
         assert all_nodes == {"a", "b", "c", "d"}
 
+    def test_missing_nodes_treated_as_opaque(self):
+        """Missing nodes in node_analyses are treated as opaque and scheduled safely."""
+        g = Graph()
+        g.add_node("a")
+        g.add_node("b")
+        g.add_node("c")
+        g.add_edge("a", "b")
+        g.add_edge("b", "c")
+        g.entry_point = "a"
+        analyses = {"a": _node("a", writes={"x"}), "b": _node("b", reads={"x"})}
+        topo = analyze_graph_topology(g)
+        order = compute_optimized_order(g, analyses, topo)
+        all_nodes = {n for stage in order for n in stage}
+        assert all_nodes == {"a", "b", "c"}
+        flat = [n for stage in order for n in stage]
+        assert flat.index("a") < flat.index("b") < flat.index("c")
+
     def test_write_write_conflict_serializes_nodes(self):
         """Two nodes writing the same non-reducer key must not be in the same stage."""
         g = _diamond_graph()
