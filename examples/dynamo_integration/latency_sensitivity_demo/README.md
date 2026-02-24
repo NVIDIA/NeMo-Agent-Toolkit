@@ -144,7 +144,7 @@ curl http://localhost:8099/v1/chat/completions \
     "max_tokens": 64
   }'
 ```
-### Step 2a: Run the Profiler to Build the Prediction Trie
+### Step 1b: Run the Profiler to Build the Prediction Trie
 
 ```bash
 # Install the example package
@@ -225,7 +225,7 @@ This ensures you have a fresh deployment ready to receive routing hints in Step 
 
 ```bash
 bash dynamo_stack_sensitivity.sh
-````
+```
 
 Verify the endpoint is responding:
 
