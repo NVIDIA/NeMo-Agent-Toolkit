@@ -155,7 +155,6 @@ export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
 ```bash
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
 ```
-At this point, a consent window is displayed to the user. The user must authorize the workflow to access the MCP server. Each user authenticates independently and receives a separate per-user workflow and MCP client session.
 
 3. Launch the UI:
 - Launch the UI by following the instructions in the [User Interface](../../../run-workflows/launching-ui.md) documentation.
@@ -169,56 +168,7 @@ Ensure that `WebSocket` mode is enabled by navigating to the top-right corner an
 ```text
 What is ticket AIQ-1935 about
 ```
-At this point, a consent window is displayed again. The `UI` user must authorize the workflow to access the MCP server and call the tool. This user's information is cached separately using the `WebSocket` session cookie as the user ID.
-
-### Running the Workflow on a Remote Server
-
-When running the NeMo Agent Toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
-
-#### Why This Is Required
-
-OAuth2 authentication redirects your browser to the `redirect_uri` after you approve access. If the `redirect_uri` uses `localhost`, your browser will try to connect to your local machine instead of the remote server, causing the authentication to fail.
-
-#### Configuration
-
-Set the `NAT_REDIRECT_URI` environment variable to match your remote server's address:
-```bash
-export NAT_REDIRECT_URI="http://192.168.1.100:8080/auth/redirect"
-```
-This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your server is accessible from your browser.
-
-For production environments using a reverse proxy, specify the public HTTPS URL:
-```bash
-export NAT_REDIRECT_URI="https://myapp.example.com/auth/redirect"
-```
-
-:::{important}
-When `redirect_uri` does not include an explicit port, the server will bind to port **8000** by default (not port 80 or 443). For HTTPS redirect URIs, you must use a reverse proxy to handle TLS termination on port 443 and forward requests to the server on port 8000.
-:::
-
-Configure the authentication provider in the workflow configuration:
-```yaml
-authentication:
-  mcp_oauth2_jira:
-    _type: mcp_oauth2
-    server_url: ${CORPORATE_MCP_JIRA_URL}
-    redirect_uri: ${NAT_REDIRECT_URI}
-```
-
-The `redirect_uri` must match the address where your server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main server for handling OAuth callbacks.
-
-Start the server using the `--host` and `--port` flags that match your `redirect_uri`:
-```bash
-# For the remote server example above
-nat serve --host 192.168.1.100 --port 8080
-
-# Or for production with a reverse proxy
-nat serve --host 0.0.0.0 --port 8000
-```
-
-:::{note}
-For production deployments with HTTPS, you typically run behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your server's internal address and port.
-:::
+On the first request, a per-user workflow instance is created for the UI user. During this initial setup, the user must complete OAuth consent to authorize access to the protected Jira MCP server before tool calls can proceed.
 
 ### Testing Per-User Workflows with MCP Authentication
 
@@ -268,12 +218,61 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
 
 Each user gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
 
-## Displaying Protected MCP Tools through the CLI
+### Displaying Protected MCP Tools through the CLI
 MCP client CLI can be used to display and call MCP tools on a remote MCP server. To use a protected MCP server, you need to provide the `--auth` flag:
 ```bash
 nat mcp client tool list --url http://example.com/mcp --auth
 ```
 This will use the `mcp_oauth2` authentication provider to authenticate the user. For more information, refer to [MCP Client](../../../build-workflows/mcp-client.md).
+
+### Running the Workflow on a Remote Server
+
+When running the NeMo Agent Toolkit on a remote server accessible from your local browser, you must configure the `redirect_uri` to use the remote server's network address instead of `localhost`.
+
+#### Why This Is Required
+
+OAuth2 authentication redirects your browser to the `redirect_uri` after you approve access. If the `redirect_uri` uses `localhost`, your browser will try to connect to your local machine instead of the remote server, causing the authentication to fail.
+
+#### Configuration
+
+Set the `NAT_REDIRECT_URI` environment variable to match your remote server's address:
+```bash
+export NAT_REDIRECT_URI="http://192.168.1.100:8080/auth/redirect"
+```
+This is an example value for a remote server at `192.168.1.100` running on port `8080`. Replace this with the actual network address where your server is accessible from your browser.
+
+For production environments using a reverse proxy, specify the public HTTPS URL:
+```bash
+export NAT_REDIRECT_URI="https://myapp.example.com/auth/redirect"
+```
+
+:::{important}
+When `redirect_uri` does not include an explicit port, the server will bind to port **8000** by default (not port 80 or 443). For HTTPS redirect URIs, you must use a reverse proxy to handle TLS termination on port 443 and forward requests to the server on port 8000.
+:::
+
+Configure the authentication provider in the workflow configuration:
+```yaml
+authentication:
+  mcp_oauth2_jira:
+    _type: mcp_oauth2
+    server_url: ${CORPORATE_MCP_JIRA_URL}
+    redirect_uri: ${NAT_REDIRECT_URI}
+```
+
+The `redirect_uri` must match the address where your server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main server for handling OAuth callbacks.
+
+Start the server using the `--host` and `--port` flags that match your `redirect_uri`:
+```bash
+# For the remote server example above
+nat serve --host 192.168.1.100 --port 8080
+
+# Or for production with a reverse proxy
+nat serve --host 0.0.0.0 --port 8000
+```
+
+:::{note}
+For production deployments with HTTPS, you typically run behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your server's internal address and port.
+:::
 
 ## Security Considerations
 
