@@ -20,7 +20,7 @@ Supports:
 - HTTP: identifies user via `nat-session` cookie.
 
 Sample usage:
-1. Start the NAT server, for example:
+1. Start the NeMo Agent Toolkit server, for example:
 ```bash
 # Terminal 1
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
@@ -44,10 +44,13 @@ python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_cookie.py --protocol http
 import argparse
 import asyncio
 import json
+import re
 import sys
 import time
 import webbrowser
+from urllib.parse import quote
 from urllib.parse import urljoin
+from urllib.parse import urlsplit
 
 import httpx
 import websockets
@@ -58,10 +61,32 @@ USER_ID_3 = "Rabbit"
 
 INPUT_MESSAGE_1 = "What is the status of AIQ-1935?"
 INPUT_MESSAGE_2 = "Summarize AIQ-1935"
+_USER_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+class _InteractiveExecutionError(RuntimeError):
+    """Raised when interactive `HTTP` execution fails."""
+
+    def __init__(self) -> None:
+        super().__init__("Interactive HTTP execution failed.")
+
+
+class _ExecutionStatusTimeout(TimeoutError):
+    """Raised when execution status polling exceeds timeout."""
+
+    def __init__(self, timeout_seconds: float) -> None:
+        super().__init__(f"Timed out polling execution status after {timeout_seconds} seconds.")
 
 
 def build_ws_message(input_message: str) -> dict:
-    """Build a WebSocket chat request payload."""
+    """Build a `WebSocket` chat request payload.
+
+    Args:
+        input_message: User message to include in the request payload.
+
+    Returns:
+        `dict`: A serialized `WebSocket` request payload.
+    """
     return {
         "type": "user_message",
         "schema_type": "chat",
@@ -79,7 +104,14 @@ def build_ws_message(input_message: str) -> dict:
 
 
 def build_http_payload(input_message: str) -> dict:
-    """Build an OpenAI-compatible HTTP chat payload."""
+    """Build an OpenAI-compatible `HTTP` chat payload.
+
+    Args:
+        input_message: User message to include in the request payload.
+
+    Returns:
+        `dict`: A serialized non-streaming `HTTP` request payload.
+    """
     return {
         "messages": [{
             "role": "user",
@@ -90,6 +122,11 @@ def build_http_payload(input_message: str) -> dict:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate CLI arguments.
+
+    Returns:
+        `argparse.Namespace`: Parsed and validated CLI arguments.
+    """
     parser = argparse.ArgumentParser(description="Send cookie-authenticated requests over WebSocket or HTTP.")
     parser.add_argument("--protocol",
                         choices=["ws", "http"],
@@ -107,7 +144,33 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--http-url",
                         default=None,
                         help="HTTP URL override for http mode. If omitted, uses --http-endpoint preset.")
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    try:
+        args.user_id = _validate_user_id(args.user_id)
+        if args.http_url:
+            args.http_url = _validate_http_url(args.http_url)
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
+
+    return args
+
+
+def _validate_user_id(raw_user_id: str) -> str:
+    value = raw_user_id.strip()
+    if not value:
+        raise argparse.ArgumentTypeError("--user-id must not be empty.")
+    if not _USER_ID_PATTERN.fullmatch(value):
+        raise argparse.ArgumentTypeError("--user-id may contain only letters, numbers, '-' and '_'.")
+    return value
+
+
+def _validate_http_url(raw_url: str) -> str:
+    value = raw_url.strip()
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise argparse.ArgumentTypeError("--http-url must be a valid http/https URL.")
+    return value
 
 
 def _resolve_http_url(args: argparse.Namespace) -> str:
@@ -173,11 +236,11 @@ def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload:
         done, failed = _handle_execution_status_payload(current_payload)
         if done:
             if failed:
-                raise RuntimeError("Interactive HTTP execution failed.")
+                raise _InteractiveExecutionError()
             return
 
         if time.monotonic() - start > poll_timeout_seconds:
-            raise TimeoutError(f"Timed out polling execution status after {poll_timeout_seconds} seconds.")
+            raise _ExecutionStatusTimeout(poll_timeout_seconds)
 
         time.sleep(poll_interval_seconds)
         status_response = client.get(status_url)
@@ -186,8 +249,13 @@ def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload:
 
 
 async def run_ws(args: argparse.Namespace) -> None:
-    """Execute a WebSocket request using nat-session cookie injection via query parameter."""
-    ws_url = args.ws_url_template.format(user_id=args.user_id)
+    """Execute a `WebSocket` request with a `nat-session` user identifier.
+
+    Args:
+        args: Parsed CLI arguments from `parse_args()`.
+    """
+    safe_user_id = quote(args.user_id, safe="")
+    ws_url = args.ws_url_template.format(user_id=safe_user_id)
     message = build_ws_message(args.input)
     async with websockets.connect(ws_url) as ws:
         await ws.send(json.dumps(message))
@@ -232,10 +300,15 @@ async def run_ws(args: argparse.Namespace) -> None:
 
 
 def run_http(args: argparse.Namespace) -> None:
-    """Execute an HTTP request using a nat-session cookie."""
+    """Execute an `HTTP` request using a `nat-session` cookie.
+
+    Args:
+        args: Parsed CLI arguments from `parse_args()`.
+    """
     http_url = _resolve_http_url(args)
     payload = build_http_payload(args.input)
-    cookies = {"nat-session": args.user_id}
+    safe_user_id = quote(args.user_id, safe="")
+    cookies = {"nat-session": safe_user_id}
     with httpx.Client(cookies=cookies, timeout=120.0) as client:
         response = client.post(http_url, json=payload)
         response.raise_for_status()
@@ -252,6 +325,7 @@ def run_http(args: argparse.Namespace) -> None:
 
 
 async def main() -> None:
+    """Run the selected transport path for cookie-based auth testing."""
     args = parse_args()
     if args.protocol == "ws":
         await run_ws(args)

@@ -20,7 +20,7 @@ Supports:
 - HTTP: identifies user by `Authorization: Bearer <JWT>` header.
 
 Sample usage:
-1. Start the NAT server, for example:
+1. Start the NeMo Agent Toolkit server, for example:
 ```bash
 # Terminal 1
 nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
@@ -45,18 +45,28 @@ python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_jwt.py --protocol http --
 import argparse
 import asyncio
 import json
+import re
 import sys
 import time
 import webbrowser
 from urllib.parse import urljoin
+from urllib.parse import urlsplit
 
 import httpx
 import websockets
 
+
+class _AuthlibMissingError(ImportError):
+    """Raised when `authlib` is not installed."""
+
+    def __init__(self) -> None:
+        super().__init__("`authlib` is required for `check_mcp_auth_jwt`. Install with: `pip install authlib`.")
+
+
 try:
     from authlib.jose import jwt
 except ImportError as e:
-    raise ImportError("authlib is required for check_mcp_auth_jwt. Install with: pip install authlib") from e
+    raise _AuthlibMissingError() from e
 
 USER_ID_1 = "Alice"
 USER_ID_2 = "Hatter"
@@ -64,13 +74,35 @@ USER_ID_3 = "Rabbit"
 
 INPUT_MESSAGE_1 = "What is the status of AIQ-1935?"
 INPUT_MESSAGE_2 = "Summarize AIQ-1935"
+_USER_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 
 # Secret used only to sign a test JWT.
 _TEST_JWT_SECRET = b"test-secret-for-mcp-jwt-script"
 
 
+class _InteractiveExecutionError(RuntimeError):
+    """Raised when interactive `HTTP` execution fails."""
+
+    def __init__(self) -> None:
+        super().__init__("Interactive HTTP execution failed.")
+
+
+class _ExecutionStatusTimeout(TimeoutError):
+    """Raised when execution status polling exceeds timeout."""
+
+    def __init__(self, timeout_seconds: float) -> None:
+        super().__init__(f"Timed out polling execution status after {timeout_seconds} seconds.")
+
+
 def make_test_jwt(user_id: str) -> str:
-    """Build a JWT with user identity claims for server-side user_id resolution."""
+    """Build a JWT with user identity claims for server-side user resolution.
+
+    Args:
+        user_id: User identifier injected into `sub` and `name` claims.
+
+    Returns:
+        `str`: Encoded JWT token.
+    """
     header = {"alg": "HS256", "typ": "JWT"}
     payload = {"sub": user_id, "name": user_id}
     token = jwt.encode(header, payload, _TEST_JWT_SECRET)
@@ -78,7 +110,14 @@ def make_test_jwt(user_id: str) -> str:
 
 
 def build_ws_message(input_message: str) -> dict:
-    """Build a WebSocket chat request payload."""
+    """Build a `WebSocket` chat request payload.
+
+    Args:
+        input_message: User message to include in the request payload.
+
+    Returns:
+        `dict`: A serialized `WebSocket` request payload.
+    """
     return {
         "type": "user_message",
         "schema_type": "chat",
@@ -96,7 +135,15 @@ def build_ws_message(input_message: str) -> dict:
 
 
 def build_http_payload(input_message: str, *, stream: bool = False) -> dict:
-    """Build an OpenAI-compatible HTTP chat payload."""
+    """Build an OpenAI-compatible `HTTP` chat payload.
+
+    Args:
+        input_message: User message to include in the request payload.
+        stream: Whether to request streaming response payloads.
+
+    Returns:
+        `dict`: Serialized `HTTP` request payload.
+    """
     return {
         "messages": [{
             "role": "user",
@@ -107,6 +154,11 @@ def build_http_payload(input_message: str, *, stream: bool = False) -> dict:
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse and validate CLI arguments.
+
+    Returns:
+        `argparse.Namespace`: Parsed and validated CLI arguments.
+    """
     parser = argparse.ArgumentParser(description="Send JWT-authenticated requests over WebSocket or HTTP.")
     parser.add_argument("--protocol",
                         choices=["ws", "http"],
@@ -123,7 +175,33 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--http-url",
                         default=None,
                         help="HTTP URL override for http mode. If omitted, uses --http-endpoint preset.")
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    try:
+        args.user_id = _validate_user_id(args.user_id)
+        if args.http_url:
+            args.http_url = _validate_http_url(args.http_url)
+    except argparse.ArgumentTypeError as exc:
+        parser.error(str(exc))
+
+    return args
+
+
+def _validate_user_id(raw_user_id: str) -> str:
+    value = raw_user_id.strip()
+    if not value:
+        raise argparse.ArgumentTypeError("--user-id must not be empty.")
+    if not _USER_ID_PATTERN.fullmatch(value):
+        raise argparse.ArgumentTypeError("--user-id may contain only letters, numbers, '-' and '_'.")
+    return value
+
+
+def _validate_http_url(raw_url: str) -> str:
+    value = raw_url.strip()
+    parsed = urlsplit(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise argparse.ArgumentTypeError("--http-url must be a valid http/https URL.")
+    return value
 
 
 def _resolve_http_url(args: argparse.Namespace) -> str:
@@ -153,7 +231,14 @@ def _print_chat_result(data: dict) -> None:
 
 
 def _handle_execution_status_payload(status_payload: dict) -> tuple[bool, bool]:
-    """Return (done, failed) for an execution status payload."""
+    """Interpret execution status payload.
+
+    Args:
+        status_payload: Execution-status payload from the server.
+
+    Returns:
+        `tuple[bool, bool]`: `(done, failed)` flags for polling control flow.
+    """
     status = status_payload.get("status")
     if status == "completed":
         result = status_payload.get("result")
@@ -168,7 +253,14 @@ def _handle_execution_status_payload(status_payload: dict) -> tuple[bool, bool]:
     return False, False
 
 
-def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload: dict) -> None:
+async def _follow_http_interactive(client: httpx.AsyncClient, http_url: str, first_payload: dict) -> None:
+    """Follow interactive `HTTP` execution until completion.
+
+    Args:
+        client: Configured async `httpx` client.
+        http_url: Base request URL used to resolve `status_url`.
+        first_payload: Initial interactive response payload.
+    """
     status_url = _absolute_url(http_url, first_payload.get("status_url"))
     if not status_url:
         print(json.dumps(first_payload, indent=2))
@@ -196,20 +288,24 @@ def _follow_http_interactive(client: httpx.Client, http_url: str, first_payload:
         done, failed = _handle_execution_status_payload(current_payload)
         if done:
             if failed:
-                raise RuntimeError("Interactive HTTP execution failed.")
+                raise _InteractiveExecutionError()
             return
 
         if time.monotonic() - start > poll_timeout_seconds:
-            raise TimeoutError(f"Timed out polling execution status after {poll_timeout_seconds} seconds.")
+            raise _ExecutionStatusTimeout(poll_timeout_seconds)
 
-        time.sleep(poll_interval_seconds)
-        status_response = client.get(status_url)
+        await asyncio.sleep(poll_interval_seconds)
+        status_response = await client.get(status_url)
         status_response.raise_for_status()
         current_payload = status_response.json()
 
 
 async def run_ws(args: argparse.Namespace) -> None:
-    """Execute a WebSocket request using a JWT auth header."""
+    """Execute a `WebSocket` request using a JWT auth header.
+
+    Args:
+        args: Parsed CLI arguments from `parse_args()`.
+    """
     token = make_test_jwt(args.user_id)
     message = build_ws_message(args.input)
     headers = {"Authorization": f"Bearer {token}"}
@@ -255,8 +351,12 @@ async def run_ws(args: argparse.Namespace) -> None:
                     continue
 
 
-def run_http(args: argparse.Namespace) -> None:
-    """Execute an HTTP request using a JWT auth header."""
+async def run_http(args: argparse.Namespace) -> None:
+    """Execute an `HTTP` request using a JWT auth header.
+
+    Args:
+        args: Parsed CLI arguments from `parse_args()`.
+    """
     token = make_test_jwt(args.user_id)
     http_url = _resolve_http_url(args)
     use_streaming = _is_streaming_http_target(args, http_url)
@@ -267,44 +367,45 @@ def run_http(args: argparse.Namespace) -> None:
         text_chunks: list[str] = []
         captured_payloads: list[dict] = []
         current_event = "message"
-        with httpx.stream("POST", http_url, json=payload, headers=headers, timeout=120.0) as response:
-            response.raise_for_status()
-            for line in response.iter_lines():
-                if not line:
-                    continue
+        async with httpx.AsyncClient(timeout=120.0, headers=headers) as client:
+            async with client.stream("POST", http_url, json=payload) as response:
+                response.raise_for_status()
+                async for line in response.aiter_lines():
+                    if not line:
+                        continue
 
-                if line.startswith("event:"):
-                    current_event = line[len("event:"):].strip()
-                    continue
+                    if line.startswith("event:"):
+                        current_event = line[len("event:"):].strip()
+                        continue
 
-                if not line.startswith("data:"):
-                    continue
+                    if not line.startswith("data:"):
+                        continue
 
-                data_str = line[len("data:"):].strip()
-                if data_str == "[DONE]":
-                    break
+                    data_str = line[len("data:"):].strip()
+                    if data_str == "[DONE]":
+                        break
 
-                try:
-                    data = json.loads(data_str)
-                except json.JSONDecodeError:
-                    if data_str:
-                        text_chunks.append(data_str)
-                    continue
+                    try:
+                        data = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        if data_str:
+                            text_chunks.append(data_str)
+                        continue
 
-                captured_payloads.append(data)
-                if current_event == "error":
-                    print(json.dumps(data, indent=2), file=sys.stderr)
-                    continue
-                if current_event == "oauth_required":
-                    auth_url = data.get("auth_url")
-                    if isinstance(auth_url, str):
-                        webbrowser.open(auth_url)
-                    continue
+                    captured_payloads.append(data)
+                    if current_event == "error":
+                        print(json.dumps(data, indent=2), file=sys.stderr)
+                        continue
+                    if current_event == "oauth_required":
+                        auth_url = data.get("auth_url")
+                        if isinstance(auth_url, str):
+                            webbrowser.open(auth_url)
+                        continue
 
-                chunk = (data.get("choices", [{}])[0].get("delta", {}).get("content")
-                         or data.get("choices", [{}])[0].get("message", {}).get("content"))
-                if isinstance(chunk, str) and chunk:
-                    text_chunks.append(chunk)
+                    chunk = (data.get("choices", [{}])[0].get("delta", {}).get("content")
+                             or data.get("choices", [{}])[0].get("message", {}).get("content"))
+                    if isinstance(chunk, str) and chunk:
+                        text_chunks.append(chunk)
 
         final_text = "".join(text_chunks).strip()
         if final_text:
@@ -313,13 +414,13 @@ def run_http(args: argparse.Namespace) -> None:
             print(json.dumps(captured_payloads, indent=2))
         return
 
-    with httpx.Client(headers=headers, timeout=120.0) as client:
-        response = client.post(http_url, json=payload)
+    async with httpx.AsyncClient(headers=headers, timeout=120.0) as client:
+        response = await client.post(http_url, json=payload)
         response.raise_for_status()
         data = response.json()
 
         if isinstance(data, dict) and data.get("status") in {"oauth_required", "interaction_required", "running"}:
-            _follow_http_interactive(client, http_url, data)
+            await _follow_http_interactive(client, http_url, data)
             return
 
         if isinstance(data, dict):
@@ -329,11 +430,12 @@ def run_http(args: argparse.Namespace) -> None:
 
 
 async def main() -> None:
+    """Run the selected transport path for JWT-based auth testing."""
     args = parse_args()
     if args.protocol == "ws":
         await run_ws(args)
     else:
-        run_http(args)
+        await run_http(args)
 
 
 if __name__ == "__main__":

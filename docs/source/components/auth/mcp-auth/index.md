@@ -110,12 +110,12 @@ Set `CORPORATE_MCP_JIRA_URL` to your protected Jira MCP server URL, not the samp
 :::
 
 ### Running the Workflow in Single-User Mode (CLI)
-This is a single user mode with the user id defaulting to `nat_run_user_id`
+This is a single-user mode with the user ID defaulting to `nat_run_user_id`.
 
 ```mermaid
 flowchart LR
-  U[User<br/>nat-run-user-id] --> H[MCP Host<br/>Workflow]
-  H --> C[MCP Client<br/>nat-run-user-id]
+  U[User<br/>nat_run_user_id] --> H[MCP Host<br/>Workflow]
+  H --> C[MCP Client<br/>nat_run_user_id]
   C --> S[MCP Server<br/>Protected Jira Service]
 ```
 
