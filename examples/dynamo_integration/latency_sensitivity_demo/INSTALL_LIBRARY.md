@@ -123,7 +123,7 @@ uv venv
 source .venv/bin/activate
 ```
 
-From this point on, every command assumes the venv is active **and** Rust is
+From this point on, every command assumes the `venv` is active **and** Rust is
 on `PATH`. If you open a new terminal, re-run:
 
 ```bash
@@ -150,7 +150,7 @@ cd ../../..
 ```
 
 This compiles the Rust core and installs the `ai-dynamo-runtime` Python
-package into your venv. On a first build expect this to download and
+package into your `venv`. On a first build expect this to download and
 compile several hundred crates.
 
 ### Troubleshooting this step
@@ -206,7 +206,7 @@ Start the frontend (no external dependencies needed):
 python -m dynamo.frontend --discovery-backend file
 ```
 
-In another terminal (with the venv activated), start a worker. Pick the
+In another terminal (with the `venv` activated), start a worker. Pick the
 backend you have installed:
 
 ```bash

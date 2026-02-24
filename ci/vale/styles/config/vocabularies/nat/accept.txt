@@ -82,7 +82,6 @@ Grafana
 [Gg]uardrail(s|ed|ing)?
 [Hh]ashable
 [Hh]ardcode(s|d)?
-[Hh]ugging[Ff]ace
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
@@ -203,7 +202,6 @@ triages
 URIs
 uv
 Vanna
-[Vv]env
 VectorDB
 [Vv]llm
 [Vv]LLM

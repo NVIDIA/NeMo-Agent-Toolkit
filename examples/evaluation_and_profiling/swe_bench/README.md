@@ -38,7 +38,7 @@ This example provides a skeleton workflow which can be used to implement predict
 
 - **SWE-bench Dataset Integration:** Demonstrates how to use NeMo Agent Toolkit with Software Engineering benchmark datasets including SWE-bench_Lite and SWE-bench_Verified for systematic code problem solving evaluation.
 - **Docker-based Evaluation Environment:** Shows containerized evaluation setup ensuring consistent and isolated environments for running code modifications and testing solutions against benchmark problems.
-- **Multi-Dataset Support:** Supports multiple SWE-bench dataset formats including JSON and Parquet files from HuggingFace datasets, with both local and remote dataset loading capabilities.
+- **Multi-Dataset Support:** Supports multiple SWE-bench dataset formats including JSON and Parquet files from Hugging Face datasets, with both local and remote dataset loading capabilities.
 - **Configurable Problem Filtering:** Provides filtering mechanisms to limit dataset entries for focused evaluation and testing, enabling iterative development and debugging of solutions.
 - **Pydantic Model Integration:** Uses structured `SWEBenchInput` data models for type-safe processing of software engineering problems with clear input/output specifications.
 
@@ -78,11 +78,11 @@ The configuration file specified above contains configurations for the NeMo Agen
 
 
 ## Datasets
-This workflow requires the `swe_bench` dataset as a Parquet file loaded directly from HuggingFace. The following public datasets are available:
+This workflow requires the `swe_bench` dataset as a Parquet file loaded directly from Hugging Face. The following public datasets are available:
 - [SWE-bench_Lite](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Lite) - Lightweight version for faster testing
 - [SWE-bench_Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified) - Verified subset with high-quality instances
 
-You can use these datasets by specifying the HuggingFace URL in the configuration file:
+You can use these datasets by specifying the Hugging Face URL in the configuration file:
 ```yaml
 eval:
   general:
