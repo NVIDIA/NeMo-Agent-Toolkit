@@ -24,6 +24,7 @@ from nat_app.constraints.resolution import apply_constraints_to_analysis
 from nat_app.constraints.resolution import get_constraints
 from nat_app.constraints.resolution import merge_dependencies
 from nat_app.constraints.resolution import resolve_constraints
+from nat_app.graph.analysis import NodeAnalysis
 
 # -- Test functions -----------------------------------------------------------
 
@@ -142,7 +143,7 @@ class TestResolveConstraints:
 class TestApplyConstraintsToAnalysis:
 
     def test_builds_per_node_constraints(self):
-        node_analyses = {"a": {}, "b": {}}
+        node_analyses = {"a": NodeAnalysis(name="a"), "b": NodeAnalysis(name="b")}
         node_funcs = {"a": plain_fn, "b": sequential_fn}
         config = OptimizationConfig()
 
@@ -153,7 +154,7 @@ class TestApplyConstraintsToAnalysis:
         assert constraints["b"].force_sequential is True
 
     def test_warns_for_side_effect_nodes(self):
-        node_analyses = {"api_call": {}}
+        node_analyses = {"api_call": NodeAnalysis(name="api_call")}
         node_funcs = {"api_call": side_effect_fn}
         config = OptimizationConfig()
 
@@ -163,7 +164,7 @@ class TestApplyConstraintsToAnalysis:
         assert any("side effects" in w for w in warnings)
 
     def test_no_warning_for_sequential_side_effect(self):
-        node_analyses = {"db_write": {}}
+        node_analyses = {"db_write": NodeAnalysis(name="db_write")}
         node_funcs = {"db_write": sequential_fn}
         config = OptimizationConfig()
 

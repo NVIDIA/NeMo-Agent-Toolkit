@@ -17,7 +17,7 @@
 import pytest
 
 from nat_app.compiler.compilation_context import CompilationContext
-from nat_app.compiler.default import context_to_result
+from nat_app.compiler.default_graph_compiler import context_to_result
 from nat_app.compiler.errors import GraphValidationError
 from nat_app.compiler.optimizer import GraphOptimizer
 from nat_app.graph.analysis import NodeAnalysis
@@ -60,6 +60,27 @@ class TestGraphOptimizer:
     def test_default_config(self):
         optimizer = GraphOptimizer(adapter=_TestAdapter())
         assert optimizer.config is not None
+
+    def test_optimize_and_build_equivalent_to_two_step(self):
+        """optimize_and_build returns same result as optimize + adapter.build."""
+        g = Graph()
+        g.add_node("a", func=lambda s: {"x": 1})
+        g.add_node("b", func=lambda s: {"y": s["x"]})
+        g.add_edge("a", "b")
+        g.entry_point = "a"
+        g.terminal_nodes = {"b"}
+
+        optimizer = GraphOptimizer(adapter=_TestAdapter())
+        one_call = optimizer.optimize_and_build(g)
+        two_step = optimizer.adapter.build(g, optimizer.optimize(g))
+
+        # MinimalAdapter.build returns result; both paths yield equivalent output
+        assert one_call.optimized_order == two_step.optimized_order
+        assert one_call.graph is two_step.graph
+        all_nodes = set()
+        for stage in one_call.optimized_order:
+            all_nodes |= stage
+        assert all_nodes == {"a", "b"}
 
 
 class TestContextToResult:

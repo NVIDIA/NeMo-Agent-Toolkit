@@ -17,11 +17,14 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import TYPE_CHECKING
 
 from nat_app.constraints.models import NodeConstraints
 from nat_app.constraints.models import OptimizationConfig
 from nat_app.constraints.models import ResolvedConstraints
+
+if TYPE_CHECKING:
+    from nat_app.graph.analysis import NodeAnalysis
 
 
 def get_constraints(func: Callable) -> NodeConstraints | None:
@@ -106,14 +109,15 @@ def resolve_constraints(
 
 
 def apply_constraints_to_analysis(
-    node_analyses: dict[str, Any],
+    node_analyses: dict[str, NodeAnalysis],
     node_funcs: dict[str, Callable],
     config: OptimizationConfig,
 ) -> tuple[dict[str, ResolvedConstraints], list[str]]:
     """Apply constraints to analysis results.
 
     Args:
-        node_analyses: Per-node analysis results keyed by node name.
+        node_analyses: Per-node analysis results keyed by node name. Values are
+            ``NodeAnalysis`` objects from static analysis.
         node_funcs: Mapping of node name to callable.
         config: Optimization configuration with constraint overrides.
 

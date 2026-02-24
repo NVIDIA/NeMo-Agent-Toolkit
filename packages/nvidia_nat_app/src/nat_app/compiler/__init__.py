@@ -47,8 +47,8 @@ from nat_app.compiler.compilation_stage import CompilationStage
 from nat_app.compiler.compiler import AbstractCompiler
 from nat_app.compiler.compiler import UnsupportedSourceError
 from nat_app.compiler.compiler import compile_with
-from nat_app.compiler.default import DefaultGraphCompiler
-from nat_app.compiler.default import context_to_result
+from nat_app.compiler.default_graph_compiler import DefaultGraphCompiler
+from nat_app.compiler.default_graph_compiler import context_to_result
 from nat_app.compiler.errors import GraphValidationError
 from nat_app.compiler.optimizer import GraphOptimizer
 from nat_app.compiler.pipelined_compiler import AbstractPipelinedCompiler

@@ -25,9 +25,11 @@ Example:
     from nat_app.compiler.optimizer import GraphOptimizer
 
     optimizer = GraphOptimizer(adapter=MyAdapter())
+    # One-call path:
+    optimized = optimizer.optimize_and_build(my_graph)
+    # Or two-step (when you need the TransformationResult):
     result = optimizer.optimize(my_graph)
-    # result.optimized_order is a list of parallel stages
-    optimized = adapter.build(my_graph, result)
+    optimized = optimizer.adapter.build(my_graph, result)
 """
 
 from __future__ import annotations
@@ -35,8 +37,8 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from nat_app.compiler.default import DefaultGraphCompiler
-from nat_app.compiler.default import context_to_result
+from nat_app.compiler.default_graph_compiler import DefaultGraphCompiler
+from nat_app.compiler.default_graph_compiler import context_to_result
 from nat_app.constraints import OptimizationConfig
 from nat_app.graph.adapter import AbstractFrameworkAdapter
 from nat_app.graph.models import TransformationResult
@@ -56,8 +58,7 @@ class GraphOptimizer:
     Example:
 
         optimizer = GraphOptimizer(adapter=MyCrewAIAdapter())
-        result = optimizer.optimize(my_crew_graph)
-        optimized = adapter.build(my_crew_graph, result)
+        optimized = optimizer.optimize_and_build(my_crew_graph)
     """
 
     def __init__(
@@ -87,3 +88,17 @@ class GraphOptimizer:
         context = compiler.compile(source)
 
         return context_to_result(context)
+
+    def optimize_and_build(self, source: Any) -> Any:
+        """Optimize the graph and build the framework artifact in one call.
+
+        Equivalent to: self.adapter.build(source, self.optimize(source))
+
+        Args:
+            source: The framework's graph artifact.
+
+        Returns:
+            The optimized framework artifact from adapter.build().
+        """
+        result = self.optimize(source)
+        return self.adapter.build(source, result)

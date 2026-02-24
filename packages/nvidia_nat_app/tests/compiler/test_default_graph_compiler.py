@@ -17,7 +17,7 @@
 import pytest
 
 from nat_app.compiler.compilation_context import CompilationContext
-from nat_app.compiler.default import DefaultGraphCompiler
+from nat_app.compiler.default_graph_compiler import DefaultGraphCompiler
 from nat_app.graph.models import TransformationResult
 from tests.conftest import MinimalAdapter as _SimpleAdapter
 from tests.graph.conftest import simple_graph as _simple_graph

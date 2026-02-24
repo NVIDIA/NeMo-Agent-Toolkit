@@ -45,7 +45,7 @@ from collections.abc import Awaitable
 from collections.abc import Callable
 from typing import Any
 
-from nat_app.compiler.default import DefaultGraphCompiler
+from nat_app.compiler.default_graph_compiler import DefaultGraphCompiler
 from nat_app.graph.factory import build_graph_and_adapter
 from nat_app.graph.scheduling import compute_branch_info
 from nat_app.graph.static_analysis import analyze_function_ast
