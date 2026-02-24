@@ -34,10 +34,9 @@
 CONTAINER_NAME="dynamo-sglang"
 WORKER_GPUS="${DYNAMO_GPU_DEVICES:-0,1,2,3,4,5,6,7}"
 TP_SIZE="${DYNAMO_TP_SIZE:-2}"
-HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
-MODEL="/workspace/models/Llama-3.3-70B-Instruct"
-SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
-IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
+HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
+SERVED_MODEL_NAME=""  # set after validation
+IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.9.0"
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
 
 # Infrastructure ports (can be overridden via environment variables)
@@ -46,12 +45,54 @@ ETCD_PEER_PORT="${DYNAMO_ETCD_PEER_PORT:-2390}"
 NATS_PORT="${DYNAMO_NATS_PORT:-4222}"
 WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 
+# KV Cache-Aware Routing (optional)
+# Set ENABLE_KV_AWARE_ROUTING=true to enable KV cache-aware routing.
+# This adds --kv-cache-block-size to the frontend and --page-size to each worker
+# so the frontend can make routing decisions based on KV cache overlap.
+# The block size (in tokens) must match between the frontend and all workers.
+ENABLE_KV_AWARE_ROUTING="${ENABLE_KV_AWARE_ROUTING:-false}"
+KV_BLOCK_SIZE="${DYNAMO_KV_BLOCK_SIZE:-64}"
+# Prometheus metrics base port for workers (each worker gets WORKER_METRICS_PORT+i).
+# --enable-metrics is always on so Prometheus/Grafana can scrape worker metrics.
+WORKER_METRICS_PORT="${DYNAMO_WORKER_METRICS_PORT:-18081}"
+
+# Worker performance tuning (can be overridden via environment variables)
+# Fraction of GPU memory reserved for the KV cache (0.0-1.0)
+MEM_FRACTION_STATIC="${DYNAMO_MEM_FRACTION_STATIC:-0.9}"
+echo "MEM_FRACTION_STATIC=${MEM_FRACTION_STATIC} (from DYNAMO_MEM_FRACTION_STATIC=${DYNAMO_MEM_FRACTION_STATIC:-<unset, using default 0.9>})"
+# Maximum sequence length the model will handle (unset = model default)
+MAX_MODEL_LEN="${DYNAMO_MAX_MODEL_LEN:-}"
+# Hard override for the number of GPU KV cache blocks (unset = auto)
+NUM_GPU_BLOCKS_OVERRIDE="${DYNAMO_NUM_GPU_BLOCKS_OVERRIDE:-}"
+
 # Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
 NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
 CONTAINER_GPU_INDICES=$(seq -s, 0 $((NUM_GPUS - 1)))
 
 # Calculate number of workers based on available GPUs and TP size
 NUM_WORKERS=$((NUM_GPUS / TP_SIZE))
+
+# Validate GPU/TP sizing
+if [ "$TP_SIZE" -le 0 ] 2>/dev/null; then
+    echo "ERROR: TP_SIZE must be a positive integer (got: '$TP_SIZE')" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
+if [ "$NUM_GPUS" -lt "$TP_SIZE" ]; then
+    echo "ERROR: Not enough GPUs for the requested TP size (NUM_GPUS=$NUM_GPUS < TP_SIZE=$TP_SIZE)" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
+if [ $((NUM_GPUS % TP_SIZE)) -ne 0 ]; then
+    echo "ERROR: NUM_GPUS ($NUM_GPUS) is not divisible by TP_SIZE ($TP_SIZE)" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE  NUM_WORKERS would be $NUM_WORKERS" >&2
+    exit 1
+fi
+if [ "$NUM_WORKERS" -le 0 ]; then
+    echo "ERROR: NUM_WORKERS is 0 — no workers can be started with this GPU/TP configuration" >&2
+    echo "  WORKER_GPUS=$WORKER_GPUS  NUM_GPUS=$NUM_GPUS  TP_SIZE=$TP_SIZE" >&2
+    exit 1
+fi
 
 # Local paths - DYNAMO_MODEL_DIR must be set or script will error
 if [ -z "${DYNAMO_MODEL_DIR}" ]; then
@@ -89,12 +130,14 @@ if [ -d "${DYNAMO_MODEL_DIR}" ]; then
         exit 1
     fi
 fi
-LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
+LOCAL_MODEL_DIR="$(eval echo "${DYNAMO_MODEL_DIR}")"
+MODEL="/workspace/models/$(basename "$LOCAL_MODEL_DIR")"
+SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-$(basename "$LOCAL_MODEL_DIR")}"
 
 echo "========================================================="
 echo "Dynamo SGLang FULL STACK (UNIFIED MODE)"
 echo "========================================================="
-echo "Model: Llama-3.3-70B-Instruct"
+echo "Model: $SERVED_MODEL_NAME"
 echo "Container: $CONTAINER_NAME"
 echo "HTTP Port: $HTTP_PORT"
 echo ""
@@ -108,6 +151,15 @@ echo "Backend Workers:"
 echo "  Workers: $NUM_WORKERS (GPUs: $NUM_GPUS, TP=$TP_SIZE per worker)"
 echo "  GPUs: $WORKER_GPUS"
 echo "  Mode: UNIFIED (no prefill/decode disaggregation)"
+echo ""
+echo "Routing Mode:"
+if [ "${ENABLE_KV_AWARE_ROUTING}" = "true" ]; then
+    echo "  KV Cache-Aware (ENABLE_KV_AWARE_ROUTING=true)"
+    echo "  KV Block Size: $KV_BLOCK_SIZE tokens"
+else
+    echo "  Round-Robin (default)"
+    echo "  Set ENABLE_KV_AWARE_ROUTING=true to enable KV cache-aware routing"
+fi
 echo ""
 echo "========================================================="
 
@@ -179,6 +231,56 @@ done
 
 echo ""
 
+# Start monitoring stack (Prometheus + Grafana) if not running
+MONITORING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/monitoring"
+if [ -f "$MONITORING_DIR/docker-compose.yml" ]; then
+    PROMETHEUS_RUNNING=$(docker ps --format '{{.Names}}' | grep -q "^dynamo-prometheus$" && echo "true" || echo "false")
+    GRAFANA_RUNNING=$(docker ps --format '{{.Names}}' | grep -q "^dynamo-grafana$" && echo "true" || echo "false")
+
+    if [ "$PROMETHEUS_RUNNING" = "false" ] || [ "$GRAFANA_RUNNING" = "false" ]; then
+        echo "Starting monitoring stack (Prometheus + Grafana)..."
+        cd "$MONITORING_DIR"
+        docker compose up -d
+        cd - > /dev/null
+
+        # Wait for Prometheus to be ready
+        echo "Waiting for Prometheus to be ready..."
+        for i in {1..30}; do
+            if curl -s http://localhost:9090/-/ready > /dev/null 2>&1; then
+                echo "✓ Prometheus is ready (http://localhost:9090)"
+                break
+            fi
+            if [ $i -eq 30 ]; then
+                echo "⚠ WARNING: Prometheus may not be fully ready yet"
+            fi
+            sleep 1
+        done
+
+        # Wait for Grafana to be ready
+        echo "Waiting for Grafana to be ready..."
+        for i in {1..30}; do
+            if curl -s http://localhost:3000/api/health > /dev/null 2>&1; then
+                echo "✓ Grafana is ready (http://localhost:3000)"
+                break
+            fi
+            if [ $i -eq 30 ]; then
+                echo "⚠ WARNING: Grafana may not be fully ready yet"
+            fi
+            sleep 1
+        done
+        echo ""
+    else
+        echo "✓ Monitoring stack already running"
+        echo "  Prometheus: http://localhost:9090"
+        echo "  Grafana:    http://localhost:3000"
+        echo ""
+    fi
+else
+    echo "⚠ Monitoring docker-compose.yml not found at: $MONITORING_DIR"
+    echo "  Skipping monitoring stack startup"
+    echo ""
+fi
+
 # Clean up existing Dynamo container if it exists
 if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "Removing existing Dynamo container: $CONTAINER_NAME"
@@ -248,6 +350,12 @@ docker run -d \
   -e PYTHONUNBUFFERED=1 \
   -e ETCD_ENDPOINTS=http://localhost:$ETCD_CLIENT_PORT \
   -e NATS_SERVER=nats://localhost:$NATS_PORT \
+  -e WORKER_METRICS_PORT=$WORKER_METRICS_PORT \
+  -e DYNAMO_WORKER_COMPONENT=backend \
+  -e ENABLE_KV_AWARE_ROUTING=$ENABLE_KV_AWARE_ROUTING \
+  -e KV_BLOCK_SIZE=$KV_BLOCK_SIZE \
+  -e MAX_MODEL_LEN=$MAX_MODEL_LEN \
+  -e NUM_GPU_BLOCKS_OVERRIDE=$NUM_GPU_BLOCKS_OVERRIDE \
   $IMAGE \
   bash -c "
     set -e  # Exit on any error
@@ -346,7 +454,26 @@ docker run -d \
         WORKER_PORT=\$((30000 + i))
 
         echo \"Starting Worker \$i: GPUs \$WORKER_GPU_LIST, Port \$WORKER_PORT\"
+        # Build optional flags for the worker
+        # --enable-metrics is always on so Prometheus/Grafana can scrape worker metrics
+        EXTRA_WORKER_FLAGS=\"--enable-metrics\"
+        if [ \"\$ENABLE_KV_AWARE_ROUTING\" = \"true\" ]; then
+            EXTRA_WORKER_FLAGS=\"\$EXTRA_WORKER_FLAGS --page-size \$KV_BLOCK_SIZE\"
+        fi
+        if [ -n \"\$MAX_MODEL_LEN\" ]; then
+            EXTRA_WORKER_FLAGS=\"\$EXTRA_WORKER_FLAGS --max-total-tokens \$MAX_MODEL_LEN\"
+        fi
+        if [ -n \"\$NUM_GPU_BLOCKS_OVERRIDE\" ]; then
+            EXTRA_WORKER_FLAGS=\"\$EXTRA_WORKER_FLAGS --num-gpu-blocks-override \$NUM_GPU_BLOCKS_OVERRIDE\"
+        fi
+        # DYN_SYSTEM_PORT: unique Prometheus metrics port per worker (required by --enable-metrics;
+        # workers share the host network so each needs a distinct port).
+        # DYN_NAMESPACE=workers: puts workers in the workers namespace so the Grafana dashboard
+        # Request Flow panel Worker series (filtered on namespace=workers) is populated.
+        # dynamo.frontend is started with --namespace workers below to match.
         CUDA_VISIBLE_DEVICES=\$WORKER_GPU_LIST \
+        DYN_SYSTEM_PORT=\$((${WORKER_METRICS_PORT} + i)) \
+        DYN_NAMESPACE=workers \
         python3 -m dynamo.sglang \
           --model-path $MODEL \
           --served-model-name $SERVED_MODEL_NAME \
@@ -354,7 +481,8 @@ docker run -d \
           --port \$WORKER_PORT \
           --tp $TP_SIZE \
           --trust-remote-code \
-          --mem-fraction-static 0.9 &
+          --mem-fraction-static $MEM_FRACTION_STATIC \
+          \$EXTRA_WORKER_FLAGS &
         WORKER_PIDS+=(\$!)
         echo \"  Worker \$i PID: \${WORKER_PIDS[\$i]}\"
     done
@@ -377,10 +505,24 @@ docker run -d \
     echo '========================================================='
     echo 'Step 2: Starting Dynamo Frontend (HTTP API on port $HTTP_PORT)...'
     echo '========================================================='
+    # Build optional KV cache flag for the frontend
+    # Worker metrics are always available (--enable-metrics is always on)
+    echo \"Worker metrics: http://localhost:$WORKER_METRICS_PORT/metrics ... http://localhost:\$((${WORKER_METRICS_PORT} + $NUM_WORKERS - 1))/metrics\"
+    KV_FRONTEND_FLAGS=\"\"
+    if [ \"\$ENABLE_KV_AWARE_ROUTING\" = \"true\" ]; then
+        echo \"KV Cache-Aware Routing enabled (block size: \$KV_BLOCK_SIZE tokens)\"
+        # --router-mode kv: switches the frontend from default routing to KV-aware routing
+        # --kv-cache-block-size: sets block size for KV overlap computation (must match worker --page-size)
+        # --no-kv-events: router predicts cache state from its own routing decisions
+        #   (workers in unified mode don't publish kv-events-config, so events are unavailable)
+        KV_FRONTEND_FLAGS=\"--router-mode kv --kv-cache-block-size \$KV_BLOCK_SIZE --no-kv-events\"
+    fi
     python3 -m dynamo.frontend \
       --http-port=$HTTP_PORT \
       --model-name $SERVED_MODEL_NAME \
-      --model-path $MODEL &
+      --model-path $MODEL \
+      --namespace workers \
+      \$KV_FRONTEND_FLAGS &
     FRONTEND_PID=\$!
     echo \"Frontend PID: \$FRONTEND_PID\"
     echo \"Waiting 15s for frontend to discover workers...\"
@@ -464,6 +606,10 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "  Frontend: HTTP API on port $HTTP_PORT"
     echo "  Unified Workers: $NUM_WORKERS workers (TP=$TP_SIZE each, ports 30000-$((30000 + NUM_WORKERS - 1)))"
     echo ""
+    echo "Prometheus Metrics Endpoints:"
+    echo "  Frontend: http://localhost:$HTTP_PORT/metrics"
+    echo "  Workers:  http://localhost:$WORKER_METRICS_PORT/metrics - $((WORKER_METRICS_PORT + NUM_WORKERS - 1))/metrics"
+    echo ""
     echo "API Endpoint: http://localhost:$HTTP_PORT/v1/chat/completions"
     echo "Health Check: http://localhost:$HTTP_PORT/health"
     echo "Models Endpoint: http://localhost:$HTTP_PORT/v1/models"
@@ -475,6 +621,10 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo "  View NATS logs:       docker logs -f nats-dynamo"
     echo "  GPU usage:            watch -n 2 nvidia-smi"
     echo "  Stop all:             bash stop_dynamo.sh"
+    echo ""
+    echo "Monitoring Dashboards:"
+    echo "  Grafana:    http://localhost:3000 (no login required)"
+    echo "  Prometheus: http://localhost:9090"
     echo ""
     echo "========================================================="
     echo "Test Request:"

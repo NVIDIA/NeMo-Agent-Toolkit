@@ -148,7 +148,7 @@ uv pip install "nvidia-nat[crewai]"
 
 LangChain is a framework for building applications that utilize large language models (LLMs) to interact with data. It provides a set of tools for creating chains of LLM calls, allowing for complex workflows powered by LLMs. LangChain focuses on modularity and extensibility, making it suitable for integrating custom data pipelines and enhancing intelligent applications.
 
-For more information, visit the [LangChain website](https://www.langchain.com/).
+For more information, visit the [LangChain documentation](https://docs.langchain.com/oss/python/langchain/overview).
 
 
 | Capability              | Providers / Details                                                                 |

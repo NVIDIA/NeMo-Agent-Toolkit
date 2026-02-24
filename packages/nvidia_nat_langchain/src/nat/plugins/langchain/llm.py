@@ -284,7 +284,6 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
                 timeout=llm_config.request_timeout,
                 prediction_lookup=prediction_lookup,
                 use_raw_values=llm_config.prefix_use_raw_values,
-                disable_headers=llm_config.disable_headers,
                 cache_pin_type=llm_config.cache_pin_type,
                 max_sensitivity=llm_config.max_sensitivity,
             )
