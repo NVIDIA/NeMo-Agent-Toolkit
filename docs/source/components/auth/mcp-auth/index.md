@@ -22,15 +22,19 @@ This document covers **interactive OAuth2 authentication** (`mcp_oauth2`) for us
 
 The `mcp_oauth2` provider is the default authentication provider in the NeMo Agent Toolkit for MCP servers that require user authorization. It conforms to the [MCP OAuth2](https://modelcontextprotocol.io/specification/draft/basic/authorization) specification.
 
-::{important}
-For protected MCP services, use `per_user_mcp_client` with per-user workflows (for example, `per_user_react_agent`). This is the recommended deployment pattern for user-facing applications.
-:::
-
 ## Supported Capabilities
 NeMo Agent Toolkit MCP authentication provides the capabilities required to access protected MCP servers:
 - Dynamic endpoint discovery using the procedures defined in [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728), [RFC 8414](https://www.rfc-editor.org/rfc/rfc8414), and [OpenID Connect](https://openid.net/specs/openid-connect-core-1_0.html)
 - Client registration using the procedures defined in [RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)
 - Authentication using the procedures defined in the [OAuth2 specification](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-v2-1-13)
+
+## Recommended Pattern for Protected MCP Services
+
+For user-facing access to protected MCP services, use `per_user_mcp_client` with a per-user workflow (for example, `per_user_react_agent`).
+
+This pattern provides:
+- Lazy authentication where users authenticate on first request
+- Complete per-user workflow and MCP client state isolation
 
 ## Configuring an Auth Provider
 `mcp_oauth2` is a built-in authentication provider in the NeMo Agent Toolkit that implements the MCP OAuth2 specification. It is used to authenticate with MCP servers that require authentication.
@@ -80,8 +84,7 @@ function_groups:
 ### Supported Transports
 - **streamable-http**: Supports authentication (recommended for production)
 - **stdio**: Local process communication, no network authentication needed
-- **SSE**: Does not support authentication, use only for local development
-
+- **SSE**: Does not support authentication, maintained for backwards compatibility
 
 ## Example Workflow
 The MCP Authentication Example Workflow, `examples/MCP/simple_auth_mcp/README.md`, provides an example of how to use the `mcp_oauth2` authentication provider to authenticate with an MCP server.
@@ -111,7 +114,7 @@ This is a single user mode with the user id defaulting to `nat_run_user_id`
 
 ```mermaid
 flowchart LR
-  U[User<br/>nar_run_user_id] --> H[MCP Host<br/>Workflow]
+  U[User<br/>nat-run-user-id] --> H[MCP Host<br/>Workflow]
   H --> C[MCP Client<br/>nat-run-user-id]
   C --> S[MCP Server<br/>Protected Jira Service]
 ```
@@ -130,13 +133,16 @@ In this mode, the workflow is served through a FastAPI frontend. Multiple users 
 
 ```mermaid
 flowchart LR
-  U1[User<br/>UI-User-1] --> H2
-  U2[User<br/>UI-User-2] --> H2
+  U1[User<br/>UI-User-Alice] --> H2[MCP Host<br/>FastAPI Server]
+  U2[User<br/>UI-User-Hatter] --> H2
 
-  H2 --> C1[MCP Client<br/>UI-User-1]
-  H2 --> C2[MCP Client<br/>UI-User-2]
+  H2 --> W1[Per-user Workflow<br/>UI-User-Alice]
+  H2 --> W2[Per-user Workflow<br/>UI-User-Hatter]
 
-  C1 --> S2
+  W1 --> C1[MCP Client<br/>UI-User-Alice]
+  W2 --> C2[MCP Client<br/>UI-User-Hatter]
+
+  C1 --> S2[MCP Server<br/>Protected Jira Service]
   C2 --> S2
 ```
 
@@ -214,26 +220,9 @@ nat serve --host 0.0.0.0 --port 8000
 For production deployments with HTTPS, you typically run behind a reverse proxy (such as nginx) that handles TLS termination. In this case, set `NAT_REDIRECT_URI` to your public HTTPS address, and configure the reverse proxy to forward requests to your server's internal address and port.
 :::
 
-### Running Per-User Workflows with MCP Authentication
+### Testing Per-User Workflows with MCP Authentication
 
-For workflows that require complete per-user isolation (including separate MCP client instances per user), use the `per_user_mcp_client` function group with a per-user workflow like `per_user_react_agent`. This ensures each user gets their own MCP client with independent authentication state.
-
-```mermaid
-flowchart LR
-  U1[User Alice] --> H[MCP Host<br/>FastAPI Server]
-  U2[User Bob] --> H
-
-  H --> W1[Per-user Workflow Instance<br/>Alice]
-  H --> W2[Per-user Workflow Instance<br/>Bob]
-
-  W1 --> C1[MCP Client<br/>Alice]
-  W2 --> C2[MCP Client<br/>Bob]
-
-  C1 --> S[MCP Server]
-  C2 --> S
-```
-
-Follow the steps below to run a per-user workflow with MCP authentication.
+Use the helper scripts below to validate per-user MCP authentication behavior in FastAPI workflows across supported transport and auth modes.
 
 1. Set the environment variables to access the protected MCP server:
 ```bash
