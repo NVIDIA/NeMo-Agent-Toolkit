@@ -83,24 +83,35 @@ for whl in "${MOVED_WHEELS[@]}"; do
         fi
 
         # run a simple command to verify installation
-        PYTHON_IMPORT_OUT=$(python -c "import nat" 2>&1)
-        IMPORT_TEST_RESULT=$?
+        if [[ ! "${whl}" =~ nvidia_nat_app ]]; then
+            PYTHON_IMPORT_OUT=$(python -c "import nat" 2>&1)
+            IMPORT_TEST_RESULT=$?
 
-        if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
-            rapids-logger "This may indicate missing dependencies, Python version incompatibility, or build issues"
-            rapids-logger "Check if the wheel includes all necessary binary extensions for this Python version"
-            echo "${PYTHON_IMPORT_OUT}"
-            exit ${IMPORT_TEST_RESULT}
-        fi
+            if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
+                rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
+                rapids-logger "This may indicate missing dependencies, Python version incompatibility, or build issues"
+                rapids-logger "Check if the wheel includes all necessary binary extensions for this Python version"
+                echo "${PYTHON_IMPORT_OUT}"
+                exit ${IMPORT_TEST_RESULT}
+            fi
 
-        REPORTED_VERSION=$(nat --version 2>&1)
-        NAT_CMD_EXIT_CODE=$?
+            REPORTED_VERSION=$(nat --version 2>&1)
+            NAT_CMD_EXIT_CODE=$?
 
-        if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
-            rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
-            echo "${REPORTED_VERSION}"
-            exit ${NAT_CMD_EXIT_CODE}
+            if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
+                rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
+                echo "${REPORTED_VERSION}"
+                exit ${NAT_CMD_EXIT_CODE}
+            fi
+        else
+            rapids-logger "Skipping nat import/CLI test for nvidia_nat_app (framework-agnostic package with different structure)"
+            PYTHON_IMPORT_OUT=$(python -c "import nat_app" 2>&1)
+            IMPORT_TEST_RESULT=$?
+            if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
+                rapids-logger "Error, failed to import nat_app from wheel ${whl} with Python ${pyver}"
+                echo "${PYTHON_IMPORT_OUT}"
+                exit ${IMPORT_TEST_RESULT}
+            fi
         fi
 
         set -e
