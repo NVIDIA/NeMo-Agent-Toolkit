@@ -22,6 +22,10 @@ This document covers **interactive OAuth2 authentication** (`mcp_oauth2`) for us
 
 The `mcp_oauth2` provider is the default authentication provider in the NeMo Agent Toolkit for MCP servers that require user authorization. It conforms to the [MCP OAuth2](https://modelcontextprotocol.io/specification/draft/basic/authorization) specification.
 
+::{important}
+For protected MCP services, use `per_user_mcp_client` with per-user workflows (for example, `per_user_react_agent`). This is the recommended deployment pattern for user-facing applications.
+:::
+
 ## Supported Capabilities
 NeMo Agent Toolkit MCP authentication provides the capabilities required to access protected MCP servers:
 - Dynamic endpoint discovery using the procedures defined in [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728), [RFC 8414](https://www.rfc-editor.org/rfc/rfc8414), and [OpenID Connect](https://openid.net/specs/openid-connect-core-1_0.html)
@@ -37,14 +41,10 @@ authentication:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
     redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
-    default_user_id: ${NAT_USER_ID}
-    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
 - `redirect_uri`: The redirect URI for the OAuth2 flow. This must match the address where your server is accessible from your browser.
-- `default_user_id`: The user ID for discovering and adding tools to the workflow at startup. The `default_user_id` can be any string and is used as the key to cache the user's information. It defaults to the `server_url` if not provided.
-- `allow_default_user_id_for_tool_calls`: Whether to allow the default user ID for tool calls. This is typically enabled for single-user workflows, for example, a workflow that is launched using the `nat run` CLI command. For multi-user workflows, this should be disabled to avoid accidental tool calls by unauthorized users.
 
 To view all configuration options for the `mcp_oauth2` authentication provider, run the following command:
 ```bash
@@ -53,14 +53,10 @@ To view all configuration options for the `mcp_oauth2` authentication provider, 
 
 ### Environment Variables
 Some configuration values are commonly provided through environment variables:
-- `NAT_USER_ID`: Used as `default_user_id` to cache the authenticating user during setup and optionally for tool calls. Defaults to the `server_url` if not provided.
-- `ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS`: Controls whether the default user can invoke tools. Defaults to `true` if not provided.
 - `NAT_REDIRECT_URI`: The full redirect URI for OAuth2 callbacks. Defaults to `http://localhost:8000/auth/redirect` if not provided. For remote servers or production deployments, set this to match the address where your server is accessible from your browser. **Note**: If no port is specified in the URI, the server will bind to port 8000 by default.
 
 Set them for your current shell:
 ```bash
-export NAT_USER_ID="dev-user"
-export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=true
 export NAT_REDIRECT_URI="http://localhost:8000/auth/redirect"
 ```
 ## Referencing Auth Providers in Clients
@@ -68,7 +64,7 @@ The authentication provider is referenced by name through the `auth_provider` pa
 ```yaml
 function_groups:
   mcp_tools:
-    _type: mcp_client
+    _type: per_user_mcp_client
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
@@ -93,7 +89,7 @@ The MCP Authentication Example Workflow, `examples/MCP/simple_auth_mcp/README.md
 ```yaml
 function_groups:
   mcp_jira:
-    _type: mcp_client
+    _type: per_user_mcp_client
     server:
       transport: streamable-http
       url: ${CORPORATE_MCP_JIRA_URL}
@@ -104,8 +100,6 @@ authentication:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
     redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
-    default_user_id: ${NAT_USER_ID}
-    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 
 :::{warning}
@@ -113,20 +107,18 @@ Set `CORPORATE_MCP_JIRA_URL` to your protected Jira MCP server URL, not the samp
 :::
 
 ### Running the Workflow in Single-User Mode (CLI)
-In this mode, the `default_user_id` is used for authentication during setup and for subsequent tool calls.
+This is a single user mode with the user id defaulting to `nat_run_user_id`
 
 ```mermaid
 flowchart LR
-  U[User<br/>default-user-id] --> H[MCP Host<br/>Workflow]
-  H --> C[MCP Client<br/>default-user-id]
+  U[User<br/>nar_run_user_id] --> H[MCP Host<br/>Workflow]
+  H --> C[MCP Client<br/>nat-run-user-id]
   C --> S[MCP Server<br/>Protected Jira Service]
 ```
 
 Set the environment variables to access the protected MCP server:
 ```bash
 export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
-export NAT_USER_ID="dev-user"
-export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=true
 ```
 Then run the workflow:
 ```bash
@@ -134,19 +126,16 @@ nat run --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.
 ```
 
 ### Running the Workflow in Multi-User Mode (FastAPI)
-In this mode, the workflow is served through a FastAPI frontend. Multiple users can access the workflow concurrently using a UI with `WebSocket` mode enabled.
+In this mode, the workflow is served through a FastAPI frontend. Multiple users can access the workflow concurrently, and each user is isolated through per-user workflow and MCP client instances.
 
 ```mermaid
 flowchart LR
-  U0[User<br/>default-user-id] --> H2[MCP Host<br/>Workflow]
   U1[User<br/>UI-User-1] --> H2
   U2[User<br/>UI-User-2] --> H2
 
-  H2 --> C0[MCP Client<br/>default-user-id]
   H2 --> C1[MCP Client<br/>UI-User-1]
   H2 --> C2[MCP Client<br/>UI-User-2]
 
-  C0 --> S2[MCP Server]
   C1 --> S2
   C2 --> S2
 ```
@@ -155,16 +144,12 @@ Follow the steps below to run the workflow in multi-user mode.
 1. Set the environment variables to access the protected MCP server:
 ```bash
 export CORPORATE_MCP_JIRA_URL="https://your-jira-server.com/mcp"
-export NAT_USER_ID="dev-user"
-export ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS=false
 ```
 2. Start the workflow:
 ```bash
-nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira.yml
+nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jira-per-user.yml
 ```
-At this point, a consent window is displayed to the user. The user must authorize the workflow to access the MCP server. This user's information is cached as the default user ID. The `default_user_id` credentials are only used for the initial setup and for populating the tools in the workflow or agent prompt at startup.
-
-Subsequent tool calls can be disabled for the default user ID by setting `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration. This is recommended for multi-user workflows to avoid accidental tool calls by unauthorized users.
+At this point, a consent window is displayed to the user. The user must authorize the workflow to access the MCP server. Each user authenticates independently and receives a separate per-user workflow and MCP client session.
 
 3. Launch the UI:
 - Launch the UI by following the instructions in the [User Interface](../../../run-workflows/launching-ui.md) documentation.
@@ -212,8 +197,6 @@ authentication:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
     redirect_uri: ${NAT_REDIRECT_URI}
-    default_user_id: ${NAT_USER_ID}
-    allow_default_user_id_for_tool_calls: false
 ```
 
 The `redirect_uri` must match the address where your server is accessible from your browser. The `/auth/redirect` endpoint is automatically registered on the main server for handling OAuth callbacks.
@@ -286,6 +269,14 @@ nat serve --config_file examples/MCP/simple_auth_mcp/configs/config-mcp-auth-jir
    python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_jwt.py --protocol ws --user-id Hatter --input "What is the status of AIQ-1935?"
    ```
 
+5. Per-user workflows can be tested over both WebSocket and HTTP.
+
+   For HTTP, use JWT-based auth (`Authorization: Bearer <JWT>`):
+
+   ```bash
+   python3 packages/nvidia_nat_mcp/scripts/check_mcp_auth_jwt.py --protocol http --http-endpoint chat --user-id Rabbit --input "What is the status of AIQ-1935?"
+   ```
+
 Each user gets their own workflow instance and MCP client. When a user makes their first request, they will be prompted to complete OAuth authentication. Their tokens are stored separately from other users.
 
 ## Displaying Protected MCP Tools through the CLI
@@ -304,7 +295,7 @@ This will use the `mcp_oauth2` authentication provider to authenticate the user.
 
 ### Authentication Best Practices
 When using MCP authentication, consider the following security recommendations:
-- The `default_user_id` is used to cache the authenticating user during setup and optionally for tool calls. It is recommended to set `allow_default_user_id_for_tool_calls` to `false` in the authentication configuration for multi-user workflows to avoid accidental tool calls by unauthorized users.
+- Use `per_user_mcp_client` with per-user workflows so each user has isolated authentication state.
 - Use HTTPS redirect URIs in production environments.
 - Scope OAuth2 tokens to the minimum required permissions.
 - For production deployments, configure [secure token storage](./mcp-auth-token-storage.md) using an external [object store](../../../build-workflows/object-store.md) (S3, MySQL, or Redis) with encryption enabled.
@@ -316,12 +307,13 @@ When using MCP authentication, consider the following security recommendations:
 
 ## Troubleshooting
 Setup may fail if one of the following happens:
-- The user identified by `default_user_id` did not complete the authentication flow through the pop-up UI, or
+- The user did not complete the authentication flow through the pop-up UI, or
 - The user did not authorize the workflow to access the MCP server
 
 Tool calls may fail if one of the following happens:
-- The workflow was not accessed in `WebSocket` mode, or
-- The user did not complete the authentication flow through the `WebSocket` UI, or
+- The workflow was not accessed through a supported frontend path (`WebSocket` or HTTP `/v1/chat`), or
+- For HTTP requests, the `Authorization` header did not include a valid JWT, or
+- The user did not complete the authentication flow (via `WebSocket` UI or HTTP interactive flow), or
 - The user is not authorized to call the tool
 
 ## Related Documentation
