@@ -172,7 +172,7 @@ class EvaluationRun:
                                                                      llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
-    async def run_workflow_local(self, session_manager: SessionManager):
+    async def run_workflow_local(self, session_manager: SessionManager, dataset_handler: DatasetHandler):
         '''
         Launch the workflow with the specified questions and extract the output using the jsonpath
         '''
@@ -272,6 +272,30 @@ class EvaluationRun:
 
                         self.weave_eval.log_prediction(item, output)
                         await self.weave_eval.log_usage_stats(item, usage_stats_item)
+
+                        # --- START INCREMENTAL CHECKPOINTING ---
+                        if self.config.write_output:
+                            output_dir = self.eval_config.general.output_dir
+                            output_dir.mkdir(parents=True, exist_ok=True)
+                            checkpoint_file = output_dir / "workflow_output.jsonl"
+                            
+                            # Use the same filtering logic as the final output
+                            step_filter = self.eval_config.general.output.workflow_output_step_filter \
+                                if self.eval_config.general.output else None
+                            
+                            # Format just this one item
+                            from nat.data_models.evaluator import EvalInput
+                            temp_input = EvalInput(eval_input_items=[item])
+                            item_json_list = dataset_handler.publish_eval_input(temp_input, step_filter)
+                            
+                            # publish_eval_input returns a JSON string of a list. 
+                            # We extract the first object to write as a single line in JSONL.
+                            item_dict = json.loads(item_json_list)[0]
+                            
+                            with open(checkpoint_file, "a", encoding="utf-8") as f:
+                                f.write(json.dumps(item_dict) + "\n")
+                                f.flush() # Ensure it's written to disk immediately
+                        # --- END INCREMENTAL CHECKPOINTING ---
             finally:
                 if root_span_token is not None:
                     ctx_state._root_span_id.reset(root_span_token)
@@ -292,14 +316,26 @@ class EvaluationRun:
         await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
         pbar.close()
 
-    async def run_workflow_remote(self):
+    async def run_workflow_remote(self, dataset_handler: DatasetHandler):
         from nat.plugins.eval.runtime.remote_workflow import EvaluationRemoteWorkflowHandler
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
-        for item in self.eval_input.eval_input_items:
-            usage_stats_item = self._compute_usage_stats(item)
-            self.weave_eval.log_prediction(item, item.output_obj)
-            await self.weave_eval.log_usage_stats(item, usage_stats_item)
+        
+        # Add the checkpointing here too for remote runs
+        if self.config.write_output:
+            output_dir = self.eval_config.general.output_dir
+            output_dir.mkdir(parents=True, exist_ok=True)
+            checkpoint_file = output_dir / "workflow_output.jsonl"
+            step_filter = self.eval_config.general.output.workflow_output_step_filter if self.eval_config.general.output else None
+            
+            # Since remote returns all at once, we write them all to the JSONL
+            for item in self.eval_input.eval_input_items:
+                from nat.data_models.evaluator import EvalInput
+                temp_input = EvalInput(eval_input_items=[item])
+                item_dict = json.loads(dataset_handler.publish_eval_input(temp_input, step_filter))[0]
+                with open(checkpoint_file, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(item_dict) + "\n")
+                    f.flush()
 
     async def profile_workflow(self) -> ProfilerResults:
         """
@@ -720,7 +756,7 @@ class EvaluationRun:
                 local_session_manager: SessionManager | None = None
                 try:
                     if self.config.endpoint:
-                        await self.run_workflow_remote()
+                        await self.run_workflow_remote(dataset_handler)
                     elif not self.config.skip_workflow:
                         if session_manager is None:
                             session_manager = await SessionManager.create(
@@ -728,7 +764,7 @@ class EvaluationRun:
                                 shared_builder=eval_workflow,
                                 max_concurrency=self.eval_config.general.max_concurrency)
                             local_session_manager = session_manager
-                        await self.run_workflow_local(session_manager)
+                        await self.run_workflow_local(session_manager, dataset_handler)
 
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
