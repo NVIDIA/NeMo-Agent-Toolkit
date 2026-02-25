@@ -5656,14 +5656,14 @@ source = { editable = "examples/agents" }
 dependencies = [
     { name = "nat-multi-frameworks" },
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test", "zep-cloud"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-multi-frameworks", editable = "examples/frameworks/multi_frameworks" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test", "zep-cloud"], editable = "." },
 ]
 
 [[package]]
