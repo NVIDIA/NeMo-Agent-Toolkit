@@ -178,7 +178,6 @@ dev = [
   "ruff==0.15.0", # align with .pre-commit-config.yaml
   "setuptools >= 64",
   "setuptools_scm>=8",
-  "tomlkit>=0.13.2",
   "twine~=6.0",
   "uv==0.9.28", # align with .pre-commit-config.yaml
   "vale~=3.12",
