@@ -125,6 +125,7 @@ def run_one(
     run_slow: bool,
     run_integration: bool,
     exitfirst: bool,
+    is_verbose: bool,
     extra_flags: list[str],
 ) -> int:
     logger = logging.getLogger("testing")
@@ -169,8 +170,9 @@ def run_one(
 
         # 2) Run pytest in that environment.
         cmd = ["uv", "run", "--project", str(project_dir), "--", "pytest"]
-        if ("-v" not in extra_flags) and ("--verbose" not in extra_flags):
-            # Use the -q flag unless the user explicitly requested verbose output via extra_flags
+
+        if not is_verbose:
+            # Use -q unless verbose output was explicitly requested.
             cmd.append("-q")
 
         cmd.extend([*extra_flags, str(project_dir)])
@@ -211,6 +213,7 @@ def main(junit_xml: str | None,
          jobs: int,
          project: str | None,
          extra_flags: list[str]) -> int:
+    has_verbose_flag = any(re.fullmatch(r"--verbose|-v+", flag) for flag in extra_flags)
     projects = discover_projects(examples_only=examples_only)
     if not projects:
         print("No projects found under packages/ or examples/")
@@ -252,6 +255,7 @@ def main(junit_xml: str | None,
                       run_slow=run_slow,
                       run_integration=run_integration,
                       exitfirst=exitfirst,
+                      is_verbose=has_verbose_flag,
                       extra_flags=extra_flags) for p in projects
         ]
         try:
