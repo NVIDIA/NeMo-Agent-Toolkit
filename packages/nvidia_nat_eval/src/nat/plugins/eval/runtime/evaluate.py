@@ -146,6 +146,12 @@ class EvaluationRun:
             max_timestamp = 0.0
             runtime = 0.0
 
+    def _write_checkpoint_item(self, checkpoint_file: Path, item_dict: dict[str, Any]) -> None:
+        """Helper to write a single JSONL line to disk. Called via to_thread to avoid blocking."""
+        with open(checkpoint_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(item_dict) + "\n")
+            f.flush()
+
         # find llm latency by calculating p95 of all llm calls
         llm_latencies = []
         previous_llm_start_time = None
@@ -172,7 +178,7 @@ class EvaluationRun:
                                                                      llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
-    async def run_workflow_local(self, session_manager: SessionManager, dataset_handler: DatasetHandler):
+    async def run_workflow_local(self, session_manager: SessionManager, dataset_handler: DatasetHandler) -> None:
         '''
         Launch the workflow with the specified questions and extract the output using the jsonpath
         '''
@@ -275,26 +281,24 @@ class EvaluationRun:
 
                         # START INCREMENTAL CHECKPOINTING
                         if self.config.write_output:
-                            output_dir = self.eval_config.general.output_dir
-                            output_dir.mkdir(parents=True, exist_ok=True)
-                            checkpoint_file = output_dir / "workflow_output.jsonl"
-                            
-                            # Use the same filtering logic as the final output
-                            step_filter = self.eval_config.general.output.workflow_output_step_filter \
-                                if self.eval_config.general.output else None
-                            
-                            # Format just this one item
-                            from nat.data_models.evaluator import EvalInput
-                            temp_input = EvalInput(eval_input_items=[item])
-                            item_json_list = dataset_handler.publish_eval_input(temp_input, step_filter)
-                            
-                            # publish_eval_input returns a JSON string of a list. 
-                            # We extract the first object to write as a single line in JSONL.
-                            item_dict = json.loads(item_json_list)[0]
-                            
-                            with open(checkpoint_file, "a", encoding="utf-8") as f:
-                                f.write(json.dumps(item_dict) + "\n")
-                                f.flush() # Ensure it's written to disk immediately
+                            try:
+                                output_dir = self.eval_config.general.output_dir
+                                output_dir.mkdir(parents=True, exist_ok=True)
+                                checkpoint_file = output_dir / "workflow_output.jsonl"
+                                
+                                step_filter = self.eval_config.general.output.workflow_output_step_filter \
+                                    if self.eval_config.general.output else None
+                                
+                                from nat.data_models.evaluator import EvalInput
+                                temp_input = EvalInput(eval_input_items=[item])
+                                item_json_list = dataset_handler.publish_eval_input(temp_input, step_filter)
+                                item_dict = json.loads(item_json_list)[0]
+                                
+                                # Use to_thread to prevent blocking the event loop
+                                await asyncio.to_thread(self._write_checkpoint_item, checkpoint_file, item_dict)
+                            except Exception as e:
+                                logger.warning("Failed to write incremental checkpoint for item %s: %s", item.id, e)
+                        # --- END INCREMENTAL CHECKPOINTING ---
             finally:
                 if root_span_token is not None:
                     ctx_state._root_span_id.reset(root_span_token)
@@ -315,26 +319,28 @@ class EvaluationRun:
         await asyncio.gather(*[wrapped_run(item) for item in eval_input_items])
         pbar.close()
 
-    async def run_workflow_remote(self, dataset_handler: DatasetHandler):
+    async def run_workflow_remote(self, dataset_handler: DatasetHandler) -> None:
         from nat.plugins.eval.runtime.remote_workflow import EvaluationRemoteWorkflowHandler
         handler = EvaluationRemoteWorkflowHandler(self.config, self.eval_config.general.max_concurrency)
         await handler.run_workflow_remote(self.eval_input)
         
         # Add the checkpointing here too for remote runs
         if self.config.write_output:
-            output_dir = self.eval_config.general.output_dir
-            output_dir.mkdir(parents=True, exist_ok=True)
-            checkpoint_file = output_dir / "workflow_output.jsonl"
-            step_filter = self.eval_config.general.output.workflow_output_step_filter if self.eval_config.general.output else None
-            
-            # Since remote returns all at once, we write them all to the JSONL
-            for item in self.eval_input.eval_input_items:
-                from nat.data_models.evaluator import EvalInput
-                temp_input = EvalInput(eval_input_items=[item])
-                item_dict = json.loads(dataset_handler.publish_eval_input(temp_input, step_filter))[0]
-                with open(checkpoint_file, "a", encoding="utf-8") as f:
-                    f.write(json.dumps(item_dict) + "\n")
-                    f.flush()
+            try:
+                output_dir = self.eval_config.general.output_dir
+                output_dir.mkdir(parents=True, exist_ok=True)
+                checkpoint_file = output_dir / "workflow_output.jsonl"
+                step_filter = self.eval_config.general.output.workflow_output_step_filter if self.eval_config.general.output else None
+                
+                for item in self.eval_input.eval_input_items:
+                    from nat.data_models.evaluator import EvalInput
+                    temp_input = EvalInput(eval_input_items=[item])
+                    item_dict = json.loads(dataset_handler.publish_eval_input(temp_input, step_filter))[0]
+                    
+                    # Use to_thread here as well
+                    await asyncio.to_thread(self._write_checkpoint_item, checkpoint_file, item_dict)
+            except Exception as e:
+                logger.warning("Failed to write remote checkpoint items: %s", e)
 
     async def profile_workflow(self) -> ProfilerResults:
         """
