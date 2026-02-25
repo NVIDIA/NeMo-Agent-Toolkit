@@ -703,9 +703,9 @@ NeMo Agent Toolkit provides the following built-in evaluator:
 - `trajectory` - An evaluator to run and evaluate the LangChain/LangGraph agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 - `tunable_rag_evaluator` - A customizable LLM evaluator for flexible RAG workflow evaluation.
-- `langsmith` - Built-in openevals evaluators (e.g., exact match, Levenshtein distance).
+- `langsmith` - Built-in `openevals` evaluators (e.g., exact match, `Levenshtein distance`).
 - `langsmith_custom` - Import any LangSmith-compatible evaluator by Python dotted path.
-- `langsmith_judge` - LLM-as-judge evaluator powered by openevals.
+- `langsmith_judge` - LLM-as-judge evaluator powered by `openevals`.
 
 #### Ragas Evaluator
 [Ragas](https://docs.ragas.io/) is an open-source evaluation framework that enables end-to-end
@@ -842,15 +842,23 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/
 
 #### LangSmith Evaluators
 
-NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [openevals](https://github.com/langchain-ai/openevals) to provide three evaluator types. To use these evaluators, install the LangChain integration package:
+NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [`openevals`](https://github.com/langchain-ai/`openevals`) to provide three evaluator types. To use these evaluators, install the LangChain integration package:
+
+If you have performed a source code checkout:
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-##### Built-in openevals Evaluator
+If you have installed the NeMo Agent Toolkit from a package:
 
-Uses a built-in openevals evaluator selected by short name. Available evaluators: `exact_match`, `levenshtein_distance`.
+```bash
+uv pip install "nvidia-nat[langchain]"
+```
+
+##### Built-in `openevals` Evaluator
+
+Uses a built-in `openevals` evaluator selected by short name. Available evaluators: `exact_match`, `levenshtein_distance`.
 
 **Example:**
 ```yaml
@@ -861,7 +869,7 @@ eval:
       evaluator: exact_match
 ```
 
-To pass additional dataset fields to the evaluator (beyond the standard inputs/outputs/reference_outputs), use `extra_fields`. Keys are the kwarg names passed to the evaluator; values are the field names looked up in the dataset entry:
+To pass additional dataset fields to the evaluator (beyond the standard inputs/outputs/reference_outputs), use `extra_fields`. Keys are the `kwarg` names passed to the evaluator; values are the field names looked up in the dataset entry:
 
 ```yaml
 eval:
@@ -886,7 +894,7 @@ Imports any LangSmith-compatible evaluator by Python dotted path. The calling co
 
 - **RunEvaluator class** — subclasses of `langsmith.evaluation.evaluator.RunEvaluator`
 - **`(run, example)` function** — receives synthetic LangSmith `Run` and `Example` objects
-- **`(inputs, outputs, reference_outputs)` function** — openevals-style keyword arguments
+- **`(inputs, outputs, reference_outputs)` function** — `openevals`-style keyword arguments
 
 **Example:**
 ```yaml
@@ -901,7 +909,7 @@ eval:
 
 ##### LLM-as-Judge Evaluator
 
-Uses openevals `create_llm_as_judge` to score workflow outputs with a judge LLM. Supports prebuilt prompts from openevals (e.g., `correctness`, `hallucination`) and custom prompt templates.
+Uses `openevals` `create_llm_as_judge` to score workflow outputs with a judge LLM. Supports prebuilt prompts from `openevals` (e.g., `correctness`, `hallucination`) and custom prompt templates.
 
 **Important:** The judge LLM must support structured output (JSON schema mode). Models that do not support structured output will produce parsing errors.
 
@@ -935,18 +943,18 @@ eval:
 
 | Parameter | Default | Description |
 | --------- | ------- | ----------- |
-| `prompt` | *(required)* | Prebuilt openevals prompt name (e.g., `correctness`) or a custom f-string template. |
+| `prompt` | *(required)* | Prebuilt `openevals` prompt name (e.g., `correctness`) or a custom f-string template. |
 | `llm_name` | *(required)* | Name of the judge LLM from the workflow's `llms:` section. |
 | `feedback_key` | `score` | Metric name in evaluation output. |
 | `continuous` | `false` | If true, score is a float between 0 and 1. Mutually exclusive with `choices`. |
 | `choices` | `null` | Explicit list of allowed score values (e.g., `[0, 0.5, 1]`). Mutually exclusive with `continuous`. |
 | `use_reasoning` | `true` | Whether the judge provides chain-of-thought reasoning. |
-| `system` | `null` | Optional system message prepended to the prompt. |
+| `system` | `null` | Optional system message added to the beginning of the prompt. |
 | `few_shot_examples` | `null` | List of few-shot examples to calibrate the judge. Each entry should have `inputs`, `outputs`, `score`, and optionally `reasoning`. |
 | `output_schema` | `null` | Python dotted path to a TypedDict or Pydantic model for custom structured output. |
 | `score_field` | `score` | Dot-notation path to the score in custom `output_schema` results. Only used when `output_schema` is set. |
 | `judge_kwargs` | `null` | Additional keyword arguments forwarded to `create_llm_as_judge`. Must not overlap with typed fields. |
-| `extra_fields` | `null` | Maps evaluator kwargs to dataset field names (requires `pass_full_entry: true`). |
+| `extra_fields` | `null` | Maps evaluator arguments to dataset field names (requires `pass_full_entry: true`). |
 
 The `langsmith_judge` evaluator also inherits retry configuration from `RetryMixin`:
 
