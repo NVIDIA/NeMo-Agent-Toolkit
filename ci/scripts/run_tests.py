@@ -35,6 +35,7 @@ COV_DIR = ART / "coverage"
 MAX_PROJECT_DEPTH = 5
 SKIP_DIRS = {"__pycache__", "node_modules"}
 
+
 class TestFailure(Exception):
     pass
 
