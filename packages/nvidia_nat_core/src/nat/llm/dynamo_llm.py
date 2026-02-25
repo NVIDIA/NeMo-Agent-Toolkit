@@ -490,11 +490,10 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 
         if cache_pin_type is not None:
             warnings.warn(
-                "nvext.cache_control is configured (type=%s). cache_control requires "
+                f"nvext.cache_control is configured (type={cache_pin_type.value}). cache_control requires "
                 "sglang >v0.5.9 with hierarchical cache enabled. Parameters will be "
                 "sent but may be silently ignored by the backend. "
-                "See https://github.com/sgl-project/sglang/pull/18941"
-                % cache_pin_type.value,
+                "See https://github.com/sgl-project/sglang/pull/18941",
                 stacklevel=2,
             )
 
