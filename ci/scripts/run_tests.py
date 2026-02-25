@@ -45,9 +45,13 @@ def slug(path: Path) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "__", rel).strip("_")
 
 
-def discover_projects(max_depth: int = MAX_PROJECT_DEPTH) -> list[Path]:
+def discover_projects(max_depth: int = MAX_PROJECT_DEPTH, examples_only: bool = False) -> list[Path]:
     projects: list[Path] = []
-    locations = [REPO / "packages", REPO / "examples"]
+    if examples_only:
+        locations = [REPO / "examples"]
+    else:
+        locations = [REPO / "packages", REPO / "examples"]
+
     for location in locations:
         if location.exists():
             curr_projects = []
@@ -159,7 +163,12 @@ def run_one(
             return 0
 
         # 2) Run pytest in that environment.
-        cmd = ["uv", "run", "--project", str(project_dir), "--", "pytest", "-q", *extra_flags, str(project_dir)]
+        cmd = ["uv", "run", "--project", str(project_dir), "--", "pytest"] #, "-q", *extra_flags, str(project_dir)]
+        if ("-v" not in extra_flags) and ("--verbose" not in extra_flags):
+            # Use the -q flag unless the user explicitly requested verbose output via extra_flags
+            cmd.append("-q")
+
+        cmd.extend([*extra_flags, str(project_dir)])
         if run_slow:
             cmd.append("--run_slow")
         if run_integration:
@@ -190,10 +199,11 @@ def main(junit_xml: str | None,
          cov_xml: str | None,
          run_slow: bool,
          run_integration: bool,
+         examples_only: bool,
          jobs: int,
          project: str | None,
          extra_flags: list[str]) -> int:
-    projects = discover_projects()
+    projects = discover_projects(examples_only=examples_only)
     if not projects:
         print("No projects found under packages/ or examples/")
         return 2
@@ -263,6 +273,7 @@ if __name__ == "__main__":
     parser.add_argument("--cov_xml", action="store", default=None)
     parser.add_argument("--run_slow", action="store_true", default=False)
     parser.add_argument("--run_integration", action="store_true", default=False)
+    parser.add_argument("--examples_only", action="store_true", default=False)
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument(
         "--project",
@@ -278,6 +289,7 @@ if __name__ == "__main__":
              cov_xml=args.cov_xml,
              run_slow=args.run_slow,
              run_integration=args.run_integration,
+             examples_only=args.examples_only,
              jobs=args.jobs,
              project=args.project,
              extra_flags=args.extra_flags))
