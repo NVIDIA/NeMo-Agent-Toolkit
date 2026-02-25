@@ -842,7 +842,7 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/
 
 #### LangSmith Evaluators
 
-NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [`openevals`](https://github.com/langchain-ai/`openevals`) to provide three evaluator types. To use these evaluators, install the LangChain integration package:
+NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [openevals](https://github.com/langchain-ai/`openevals`) to provide three evaluator types. To use these evaluators, install the LangChain integration package:
 
 If you have performed a source code checkout:
 
