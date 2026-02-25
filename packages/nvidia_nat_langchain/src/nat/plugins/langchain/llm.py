@@ -239,9 +239,9 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 @register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     """
-    Create a LangChain ChatOpenAI client for Dynamo with automatic prefix header injection.
+    Create a LangChain ChatOpenAI client for Dynamo with automatic agent hint injection.
 
-    This client injects Dynamo prefix headers at the HTTP transport level using httpx event hooks,
+    This client injects Dynamo routing hints via nvext.agent_hints at the HTTP transport level,
     enabling KV cache optimization and request routing.
     """
     from langchain_openai import ChatOpenAI
@@ -262,38 +262,35 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
 
     # Load prediction trie if configured
     prediction_lookup: PredictionTrieLookup | None = None
-    if llm_config.prediction_trie_path:
+    if llm_config.nvext_prediction_trie_path:
         try:
-            trie_path = Path(llm_config.prediction_trie_path)
+            trie_path = Path(llm_config.nvext_prediction_trie_path)
             trie = load_prediction_trie(trie_path)
             prediction_lookup = PredictionTrieLookup(trie)
-            logger.info("Loaded prediction trie from %s", llm_config.prediction_trie_path)
+            logger.info("Loaded prediction trie from %s", llm_config.nvext_prediction_trie_path)
         except FileNotFoundError:
-            logger.warning("Prediction trie file not found: %s", llm_config.prediction_trie_path)
+            logger.warning("Prediction trie file not found: %s", llm_config.nvext_prediction_trie_path)
         except Exception as e:
             logger.warning("Failed to load prediction trie: %s", e)
 
     try:
-        # If prefix_template is set, create a custom httpx client with Dynamo hooks
-        if llm_config.prefix_template is not None:
+        if llm_config.enable_nvext_hints:
             http_async_client = create_httpx_client_with_dynamo_hooks(
-                prefix_template=llm_config.prefix_template,
-                total_requests=llm_config.prefix_total_requests,
-                osl=llm_config.prefix_osl,
-                iat=llm_config.prefix_iat,
+                total_requests=llm_config.nvext_prefix_total_requests,
+                osl=llm_config.nvext_prefix_osl,
+                iat=llm_config.nvext_prefix_iat,
                 timeout=llm_config.request_timeout,
                 prediction_lookup=prediction_lookup,
-                use_raw_values=llm_config.prefix_use_raw_values,
-                cache_pin_type=llm_config.cache_pin_type,
-                max_sensitivity=llm_config.max_sensitivity,
+                cache_pin_type=llm_config.nvext_cache_pin_type,
+                cache_control_mode=llm_config.nvext_cache_control_mode,
+                max_sensitivity=llm_config.nvext_max_sensitivity,
             )
             config_dict["http_async_client"] = http_async_client
             logger.info(
-                "Dynamo prefix headers enabled: template=%s, total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
-                llm_config.prefix_template,
-                llm_config.prefix_total_requests,
-                llm_config.prefix_osl,
-                llm_config.prefix_iat,
+                "Dynamo agent hints enabled: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
+                llm_config.nvext_prefix_total_requests,
+                llm_config.nvext_prefix_osl,
+                llm_config.nvext_prefix_iat,
                 "loaded" if prediction_lookup else "disabled",
             )
 

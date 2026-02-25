@@ -147,13 +147,14 @@ llms:
     max_tokens: 16384
     stop: ["Observation:", "\nThought:"]
 
-    # Dynamo prefix configuration (required for prefix routing)
-    prefix_template: "react-benchmark-{uuid}"
+    # Dynamo nvext hints configuration (required for prefix routing)
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "react-benchmark-{uuid}"
 
     # Static fallback values (used if trie lookup fails)
-    prefix_total_requests: 10
-    prefix_osl: MEDIUM
-    prefix_iat: MEDIUM
+    nvext_prefix_total_requests: 10
+    nvext_prefix_osl: MEDIUM
+    nvext_prefix_iat: MEDIUM
 
     # =========================================================================
     # PREDICTION TRIE - Dynamic per-call header injection

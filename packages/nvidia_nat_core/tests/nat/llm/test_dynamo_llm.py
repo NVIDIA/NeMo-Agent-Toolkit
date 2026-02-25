@@ -19,6 +19,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from nat.llm.dynamo_llm import CacheControlMode
 from nat.llm.dynamo_llm import CachePinType
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import DynamoPrefixContext
@@ -37,97 +38,106 @@ class TestDynamoModelConfig:
         config = DynamoModelConfig(model_name="test-model")
 
         assert config.model_name == "test-model"
-        assert config.prefix_template == "nat-dynamo-{uuid}"  # Enabled by default
-        assert config.prefix_total_requests == 10
-        assert config.prefix_osl == 512
-        assert config.prefix_iat == 250
-        assert config.prefix_use_raw_values is True
+        assert config.nvext_prefix_id_template == "nat-dynamo-{uuid}"  # Enabled by default
+        assert config.nvext_prefix_total_requests == 10
+        assert config.nvext_prefix_osl == 512
+        assert config.nvext_prefix_iat == 250
         assert config.request_timeout == 600.0
-        assert config.cache_pin_type == CachePinType.EPHEMERAL
-        assert config.max_sensitivity == 1000
+        assert config.nvext_cache_pin_type == CachePinType.EPHEMERAL
+        assert config.nvext_cache_control_mode == CacheControlMode.ALWAYS
+        assert config.enable_nvext_hints is False
+        assert config.nvext_max_sensitivity == 1000
+
+    def test_enable_nvext_hints_toggle(self):
+        """Test that enable_nvext_hints can be set to True."""
+        config = DynamoModelConfig(model_name="test-model", enable_nvext_hints=True)
+        assert config.enable_nvext_hints is True
+
+        config = DynamoModelConfig(model_name="test-model", enable_nvext_hints=False)
+        assert config.enable_nvext_hints is False
 
     def test_custom_prefix_values(self):
         """Test custom prefix parameter values."""
         config = DynamoModelConfig(
             model_name="test-model",
-            prefix_template="session-{uuid}",
-            prefix_total_requests=20,
-            prefix_osl=2048,
-            prefix_iat=50,
+            nvext_prefix_id_template="session-{uuid}",
+            nvext_prefix_total_requests=20,
+            nvext_prefix_osl=2048,
+            nvext_prefix_iat=50,
             request_timeout=300.0,
         )
 
-        assert config.prefix_template == "session-{uuid}"
-        assert config.prefix_total_requests == 20
-        assert config.prefix_osl == 2048
-        assert config.prefix_iat == 50
+        assert config.nvext_prefix_id_template == "session-{uuid}"
+        assert config.nvext_prefix_total_requests == 20
+        assert config.nvext_prefix_osl == 2048
+        assert config.nvext_prefix_iat == 50
         assert config.request_timeout == 300.0
 
     def test_disable_prefix_headers(self):
-        """Test that prefix headers can be disabled by setting prefix_template to None."""
+        """Test that agent hints can be disabled by setting prefix_template to None."""
         config = DynamoModelConfig(
             model_name="test-model",
-            prefix_template=None,  # Explicitly disable prefix headers
+            nvext_prefix_id_template=None,  # Explicitly disable agent hints
         )
 
-        assert config.prefix_template is None
+        assert config.nvext_prefix_id_template is None
 
     def test_prefix_total_requests_validation(self):
         """Test that prefix_total_requests validates bounds."""
         # Valid range
-        config = DynamoModelConfig(model_name="test-model", prefix_total_requests=1)
-        assert config.prefix_total_requests == 1
+        config = DynamoModelConfig(model_name="test-model", nvext_prefix_total_requests=1)
+        assert config.nvext_prefix_total_requests == 1
 
-        config = DynamoModelConfig(model_name="test-model", prefix_total_requests=50)
-        assert config.prefix_total_requests == 50
+        config = DynamoModelConfig(model_name="test-model", nvext_prefix_total_requests=50)
+        assert config.nvext_prefix_total_requests == 50
 
         # Invalid: below minimum
         with pytest.raises(ValueError):
-            DynamoModelConfig(model_name="test-model", prefix_total_requests=0)
+            DynamoModelConfig(model_name="test-model", nvext_prefix_total_requests=0)
 
         # Invalid: above maximum
         with pytest.raises(ValueError):
-            DynamoModelConfig(model_name="test-model", prefix_total_requests=51)
+            DynamoModelConfig(model_name="test-model", nvext_prefix_total_requests=51)
 
     def test_prefix_osl_iat_accept_integers(self):
         """Test that prefix_osl and prefix_iat accept integer values."""
-        config = DynamoModelConfig(model_name="test-model", prefix_osl=1024, prefix_iat=100)
-        assert config.prefix_osl == 1024
-        assert config.prefix_iat == 100
+        config = DynamoModelConfig(model_name="test-model", nvext_prefix_osl=1024, nvext_prefix_iat=100)
+        assert config.nvext_prefix_osl == 1024
+        assert config.nvext_prefix_iat == 100
 
     def test_prefix_osl_iat_reject_invalid(self):
         """Test that prefix_osl and prefix_iat reject invalid values."""
         with pytest.raises(ValueError):
-            DynamoModelConfig(model_name="test-model", prefix_osl=0)
+            DynamoModelConfig(model_name="test-model", nvext_prefix_osl=0)
 
         with pytest.raises(ValueError):
-            DynamoModelConfig(model_name="test-model", prefix_iat=0)
+            DynamoModelConfig(model_name="test-model", nvext_prefix_iat=0)
 
         with pytest.raises(ValueError):
-            DynamoModelConfig(model_name="test-model", prefix_osl="INVALID")
+            DynamoModelConfig(model_name="test-model", nvext_prefix_osl="INVALID")
 
         with pytest.raises(ValueError):
-            DynamoModelConfig(model_name="test-model", prefix_iat="INVALID")
+            DynamoModelConfig(model_name="test-model", nvext_prefix_iat="INVALID")
 
     def test_backward_compat_categorical_strings(self):
         """Test that categorical string values (LOW/MEDIUM/HIGH) are coerced to integers."""
-        config = DynamoModelConfig(model_name="test-model", prefix_osl="LOW", prefix_iat="LOW")
-        assert config.prefix_osl == 128
-        assert config.prefix_iat == 50
+        config = DynamoModelConfig(model_name="test-model", nvext_prefix_osl="LOW", nvext_prefix_iat="LOW")
+        assert config.nvext_prefix_osl == 128
+        assert config.nvext_prefix_iat == 50
 
-        config = DynamoModelConfig(model_name="test-model", prefix_osl="MEDIUM", prefix_iat="MEDIUM")
-        assert config.prefix_osl == 512
-        assert config.prefix_iat == 250
+        config = DynamoModelConfig(model_name="test-model", nvext_prefix_osl="MEDIUM", nvext_prefix_iat="MEDIUM")
+        assert config.nvext_prefix_osl == 512
+        assert config.nvext_prefix_iat == 250
 
-        config = DynamoModelConfig(model_name="test-model", prefix_osl="HIGH", prefix_iat="HIGH")
-        assert config.prefix_osl == 2048
-        assert config.prefix_iat == 750
+        config = DynamoModelConfig(model_name="test-model", nvext_prefix_osl="HIGH", nvext_prefix_iat="HIGH")
+        assert config.nvext_prefix_osl == 2048
+        assert config.nvext_prefix_iat == 750
 
     def test_backward_compat_case_insensitive(self):
         """Test that categorical coercion is case-insensitive."""
-        config = DynamoModelConfig(model_name="test-model", prefix_osl="low", prefix_iat="high")
-        assert config.prefix_osl == 128
-        assert config.prefix_iat == 750
+        config = DynamoModelConfig(model_name="test-model", nvext_prefix_osl="low", nvext_prefix_iat="high")
+        assert config.nvext_prefix_osl == 128
+        assert config.nvext_prefix_iat == 750
 
     def test_request_timeout_validation(self):
         """Test that request_timeout validates positive values."""
@@ -155,34 +165,73 @@ class TestDynamoModelConfig:
 
     def test_cache_pin_type_none_disables(self):
         """Test that cache_pin_type can be set to None to disable cache control."""
-        config = DynamoModelConfig(model_name="test-model", cache_pin_type=None)
-        assert config.cache_pin_type is None
+        config = DynamoModelConfig(model_name="test-model", nvext_cache_pin_type=None)
+        assert config.nvext_cache_pin_type is None
 
     def test_cache_pin_type_accepts_enum(self):
         """Test that cache_pin_type accepts CachePinType enum values."""
-        config = DynamoModelConfig(model_name="test-model", cache_pin_type=CachePinType.EPHEMERAL)
-        assert config.cache_pin_type == CachePinType.EPHEMERAL
+        config = DynamoModelConfig(model_name="test-model", nvext_cache_pin_type=CachePinType.EPHEMERAL)
+        assert config.nvext_cache_pin_type == CachePinType.EPHEMERAL
 
     def test_cache_pin_type_accepts_string(self):
         """Test that cache_pin_type accepts string values matching enum."""
-        config = DynamoModelConfig(model_name="test-model", cache_pin_type="ephemeral")
-        assert config.cache_pin_type == CachePinType.EPHEMERAL
+        config = DynamoModelConfig(model_name="test-model", nvext_cache_pin_type="ephemeral")
+        assert config.nvext_cache_pin_type == CachePinType.EPHEMERAL
+
+    def test_cache_pin_type_rejects_invalid_string(self):
+        """Test that cache_pin_type rejects invalid string values."""
+        with pytest.raises(ValueError):
+            DynamoModelConfig(model_name="test-model", nvext_cache_pin_type="invalid")
+
+    def test_cache_control_mode_default(self):
+        """Test that cache_control_mode defaults to ALWAYS."""
+        config = DynamoModelConfig(model_name="test-model")
+        assert config.nvext_cache_control_mode == CacheControlMode.ALWAYS
+
+    def test_cache_control_mode_accepts_enum(self):
+        """Test that cache_control_mode accepts CacheControlMode enum values."""
+        config = DynamoModelConfig(model_name="test-model", nvext_cache_control_mode=CacheControlMode.FIRST_ONLY)
+        assert config.nvext_cache_control_mode == CacheControlMode.FIRST_ONLY
+
+    def test_cache_control_mode_accepts_string(self):
+        """Test that cache_control_mode accepts string values matching enum."""
+        config = DynamoModelConfig(model_name="test-model", nvext_cache_control_mode="first_only")
+        assert config.nvext_cache_control_mode == CacheControlMode.FIRST_ONLY
+
+    def test_cache_control_mode_rejects_invalid_string(self):
+        """Test that cache_control_mode rejects invalid string values."""
+        with pytest.raises(ValueError):
+            DynamoModelConfig(model_name="test-model", nvext_cache_control_mode="invalid")
+
+    def test_max_sensitivity_validation(self):
+        """Test that nvext_max_sensitivity validates bounds."""
+        config = DynamoModelConfig(model_name="test-model", nvext_max_sensitivity=1)
+        assert config.nvext_max_sensitivity == 1
+
+        config = DynamoModelConfig(model_name="test-model", nvext_max_sensitivity=10000)
+        assert config.nvext_max_sensitivity == 10000
+
+        with pytest.raises(ValueError):
+            DynamoModelConfig(model_name="test-model", nvext_max_sensitivity=0)
+
+        with pytest.raises(ValueError):
+            DynamoModelConfig(model_name="test-model", nvext_max_sensitivity=-1)
 
     def test_get_dynamo_field_names(self):
         """Test that get_dynamo_field_names returns the correct field set."""
         field_names = DynamoModelConfig.get_dynamo_field_names()
 
         expected = frozenset({
-            "prefix_template",
-            "prefix_total_requests",
-            "prefix_osl",
-            "prefix_iat",
-            "prefix_use_raw_values",
-            "disable_headers",
+            "enable_nvext_hints",
+            "nvext_prefix_id_template",
+            "nvext_prefix_total_requests",
+            "nvext_prefix_osl",
+            "nvext_prefix_iat",
             "request_timeout",
-            "prediction_trie_path",
-            "cache_pin_type",
-            "max_sensitivity",
+            "nvext_prediction_trie_path",
+            "nvext_cache_pin_type",
+            "nvext_cache_control_mode",
+            "nvext_max_sensitivity",
         })
 
         assert field_names == expected
@@ -288,6 +337,67 @@ class TestDynamoPrefixContext:
         DynamoPrefixContext.clear()
         assert DynamoPrefixContext.is_set() is True
 
+    def test_prefix_id_stable_across_multiple_calls(self):
+        """Test that the same prefix ID is returned for multiple calls within the same context."""
+        DynamoPrefixContext.clear()
+
+        first = DynamoPrefixContext.get()
+        second = DynamoPrefixContext.get()
+        third = DynamoPrefixContext.get()
+
+        assert first == second == third
+        assert "-d0" in first
+
+    def test_override_prefix_id_stable_across_multiple_calls(self):
+        """Test that an override prefix ID is stable across multiple get() calls."""
+        DynamoPrefixContext.clear()
+        DynamoPrefixContext.set("workflow-abc-123")
+
+        assert DynamoPrefixContext.get() == "workflow-abc-123"
+        assert DynamoPrefixContext.get() == "workflow-abc-123"
+        assert DynamoPrefixContext.get() == "workflow-abc-123"
+
+        DynamoPrefixContext.clear()
+
+    async def test_prefix_id_consistent_across_transport_requests(self):
+        """Test that the same prefix_id appears in agent_hints across multiple LLM requests.
+
+        This verifies the critical property that all requests within the same
+        workflow/conversation share the same prefix_id for KV cache affinity.
+        """
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+        )
+
+        DynamoPrefixContext.set("stable-prefix-test")
+
+        prefix_ids = []
+        for _ in range(5):
+            request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+            await transport.handle_async_request(request)
+
+            body = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
+            prefix_ids.append(body["nvext"]["agent_hints"]["prefix_id"])
+
+        assert all(pid == "stable-prefix-test" for pid in prefix_ids)
+        assert len(prefix_ids) == 5
+
+        DynamoPrefixContext.clear()
+
 
 # ---------------------------------------------------------------------------
 # HTTPX Client Creation Tests
@@ -300,7 +410,6 @@ class TestCreateHttpxClient:
     def test_uses_custom_timeout(self):
         """Test that the function uses the provided timeout."""
         client = create_httpx_client_with_dynamo_hooks(
-            prefix_template=None,
             total_requests=10,
             osl=512,
             iat=250,
@@ -314,7 +423,6 @@ class TestCreateHttpxClient:
     def test_uses_default_timeout(self):
         """Test that the function uses default timeout when not specified."""
         client = create_httpx_client_with_dynamo_hooks(
-            prefix_template=None,
             total_requests=10,
             osl=512,
             iat=250,
@@ -327,7 +435,6 @@ class TestCreateHttpxClient:
         from nat.llm.dynamo_llm import _DynamoTransport
 
         client = create_httpx_client_with_dynamo_hooks(
-            prefix_template="test-{uuid}",
             total_requests=7,
             osl=2048,
             iat=50,
@@ -342,7 +449,6 @@ class TestCreateHttpxClient:
         assert client._transport._total_requests == 7
         assert client._transport._osl == 2048
         assert client._transport._iat == 50
-        assert client._transport._use_raw_values is True
         assert client._transport._cache_pin_type == CachePinType.EPHEMERAL
 
         # Verify timeout
@@ -353,7 +459,6 @@ class TestCreateHttpxClient:
         from nat.llm.dynamo_llm import _DynamoTransport
 
         client = create_httpx_client_with_dynamo_hooks(
-            prefix_template="test-{uuid}",
             total_requests=10,
             osl=512,
             iat=250,
@@ -362,6 +467,20 @@ class TestCreateHttpxClient:
 
         assert isinstance(client._transport, _DynamoTransport)
         assert client._transport._cache_pin_type is None
+
+    def test_creates_client_with_cache_control_mode_first_only(self):
+        """Test that create_httpx_client_with_dynamo_hooks passes cache_control_mode through."""
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        client = create_httpx_client_with_dynamo_hooks(
+            total_requests=10,
+            osl=512,
+            iat=250,
+            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        )
+
+        assert isinstance(client._transport, _DynamoTransport)
+        assert client._transport._cache_control_mode == CacheControlMode.FIRST_ONLY
 
 
 # ---------------------------------------------------------------------------
@@ -405,44 +524,6 @@ class TestDynamoTransport:
         assert agent_hints["total_requests"] == 15
         assert agent_hints["osl"] == 2048
         assert agent_hints["iat"] == 50
-
-        DynamoPrefixContext.clear()
-
-    async def test_transport_injects_categorical_agent_hints_when_raw_disabled(self):
-        """Test that _DynamoTransport maps categorical values correctly when use_raw_values=False."""
-        import json
-
-        import httpx
-
-        from nat.llm.dynamo_llm import _DynamoTransport
-
-        mock_response = httpx.Response(200, json={"result": "ok"})
-        mock_transport = MagicMock()
-        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
-
-        # osl=2048 -> HIGH (mapped to int 2048), iat=50 -> LOW (mapped to int 50)
-        transport = _DynamoTransport(
-            transport=mock_transport,
-            total_requests=15,
-            osl=2048,
-            iat=50,
-            prediction_lookup=None,
-            use_raw_values=False,
-        )
-
-        DynamoPrefixContext.set("test-categorical")
-
-        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
-        await transport.handle_async_request(request)
-
-        modified_request = mock_transport.handle_async_request.call_args[0][0]
-        body = json.loads(modified_request.content.decode("utf-8"))
-        agent_hints = body["nvext"]["agent_hints"]
-
-        # osl: "HIGH" maps back to integer 2048 for agent_hints.osl (Dynamo u32)
-        assert agent_hints["osl"] == 2048
-        # iat: "LOW" string is kept as-is in agent_hints for processor.py
-        assert agent_hints["iat"] == "LOW"
 
         DynamoPrefixContext.clear()
 
@@ -645,53 +726,6 @@ class TestDynamoTransport:
 
         # Verify lookup was called
         assert mock_lookup.find.called
-
-        DynamoPrefixContext.clear()
-
-    async def test_transport_uses_prediction_override_categorical(self):
-        """Test that prediction lookup converts to categories when use_raw_values=False."""
-        import httpx
-
-        from nat.llm.dynamo_llm import _DynamoTransport
-        from nat.profiler.prediction_trie.data_models import LLMCallPrediction
-        from nat.profiler.prediction_trie.data_models import PredictionMetrics
-
-        mock_prediction = LLMCallPrediction(
-            remaining_calls=PredictionMetrics(mean=25.0, p50=25.0, p90=30.0),
-            output_tokens=PredictionMetrics(mean=2000.0, p50=2000.0, p90=2500.0),  # >= 1024 -> HIGH
-            interarrival_ms=PredictionMetrics(mean=50.0, p50=50.0, p90=70.0),  # < 100 -> LOW
-        )
-
-        mock_lookup = MagicMock()
-        mock_lookup.find = MagicMock(return_value=mock_prediction)
-
-        mock_response = httpx.Response(200, json={"result": "ok"})
-        mock_transport = MagicMock()
-        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
-
-        transport = _DynamoTransport(
-            transport=mock_transport,
-            total_requests=10,
-            osl=512,
-            iat=250,
-            prediction_lookup=mock_lookup,
-            use_raw_values=False,
-        )
-
-        DynamoPrefixContext.set("prediction-categorical")
-
-        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
-        await transport.handle_async_request(request)
-
-        modified_request = mock_transport.handle_async_request.call_args[0][0]
-
-        import json
-        body = json.loads(modified_request.content.decode("utf-8"))
-        agent_hints = body["nvext"]["agent_hints"]
-        # osl: "HIGH" maps back to integer 2048 for agent_hints.osl (Dynamo u32)
-        assert agent_hints["osl"] == 2048
-        # iat: "LOW" string kept for processor.py
-        assert agent_hints["iat"] == "LOW"
 
         DynamoPrefixContext.clear()
 
@@ -1290,6 +1324,169 @@ class TestDynamoTransport:
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
         with pytest.raises(ValueError, match="iat must be >= 1"):
             await transport.handle_async_request(request)
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_first_only_injects_cache_control_on_first_request(self):
+        """Test that FIRST_ONLY mode injects cache_control on the first request for a prefix."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        )
+
+        DynamoPrefixContext.set("first-only-test")
+
+        # First request: cache_control should be injected
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test", "messages": []})
+        await transport.handle_async_request(request)
+
+        modified_request = mock_transport.handle_async_request.call_args[0][0]
+        body = json.loads(modified_request.content.decode("utf-8"))
+
+        assert "cache_control" in body["nvext"]
+        assert body["nvext"]["cache_control"]["type"] == "ephemeral"
+        assert body["nvext"]["cache_control"]["ttl"] == "3s"  # 10 * 250 = 2500ms -> ceil = 3s
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_first_only_skips_cache_control_on_subsequent_requests(self):
+        """Test that FIRST_ONLY mode does NOT inject cache_control on the second+ request."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        )
+
+        DynamoPrefixContext.set("first-only-skip-test")
+
+        # First request (call_index=1): should have cache_control
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        first_body = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
+        assert "cache_control" in first_body["nvext"]
+
+        # Second request (call_index=2): should NOT have cache_control
+        request2 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request2)
+
+        second_body = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
+        assert "cache_control" not in second_body["nvext"]
+
+        # Third request (call_index=3): should still NOT have cache_control
+        request3 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request3)
+
+        third_body = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
+        assert "cache_control" not in third_body["nvext"]
+
+        # agent_hints should still be present on all requests
+        assert "agent_hints" in third_body["nvext"]
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_first_only_tracks_prefixes_independently(self):
+        """Test that FIRST_ONLY mode tracks each prefix_id independently."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        )
+
+        # First prefix, first request: should have cache_control
+        DynamoPrefixContext.set("prefix-a")
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        body_a1 = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
+        assert "cache_control" in body_a1["nvext"]
+
+        # First prefix, second request: should NOT have cache_control
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        body_a2 = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
+        assert "cache_control" not in body_a2["nvext"]
+
+        # Second prefix, first request: SHOULD have cache_control (new prefix)
+        DynamoPrefixContext.set("prefix-b")
+        request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+        await transport.handle_async_request(request)
+
+        body_b1 = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
+        assert "cache_control" in body_b1["nvext"]
+
+        DynamoPrefixContext.clear()
+
+    async def test_transport_always_mode_injects_cache_control_every_request(self):
+        """Test that ALWAYS mode (default) injects cache_control on every request."""
+        import json
+
+        import httpx
+
+        from nat.llm.dynamo_llm import _DynamoTransport
+
+        mock_response = httpx.Response(200, json={"result": "ok"})
+        mock_transport = MagicMock()
+        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
+
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_control_mode=CacheControlMode.ALWAYS,
+        )
+
+        DynamoPrefixContext.set("always-mode-test")
+
+        for i in range(3):
+            request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
+            await transport.handle_async_request(request)
+
+            body = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
+            assert "cache_control" in body["nvext"], f"cache_control missing on request {i + 1}"
 
         DynamoPrefixContext.clear()
 

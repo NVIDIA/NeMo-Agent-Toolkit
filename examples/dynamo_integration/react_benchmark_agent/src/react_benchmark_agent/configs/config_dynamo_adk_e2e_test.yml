@@ -58,14 +58,15 @@ llms:
     temperature: 0.0
     max_tokens: 1024
     
-    # ===== DYNAMO PREFIX CONFIGURATION FOR ADK =====
+    # ===== DYNAMO NVEXT HINTS CONFIGURATION FOR ADK =====
     # These headers are passed to LiteLLM via extra_headers
     # All requests from this LLM instance will share the same prefix ID
-    prefix_template: "adk-dynamo-test-{uuid}"
-    prefix_total_requests: 5  # Expected tool calls per conversation
-    prefix_osl: MEDIUM        # Output Sequence Length hint
-    prefix_iat: MEDIUM        # Inter-Arrival Time hint
-    # ================================================
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "adk-dynamo-test-{uuid}"
+    nvext_prefix_total_requests: 5  # Expected tool calls per conversation
+    nvext_prefix_osl: MEDIUM        # Output Sequence Length hint
+    nvext_prefix_iat: MEDIUM        # Inter-Arrival Time hint
+    # ====================================================
 
 workflow:
   _type: adk
