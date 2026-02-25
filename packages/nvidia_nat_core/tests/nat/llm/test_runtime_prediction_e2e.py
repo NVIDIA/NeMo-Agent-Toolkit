@@ -110,7 +110,7 @@ async def test_e2e_prediction_headers_injected_correctly():
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        # Create transport with prediction lookup (default use_raw_values=True)
+        # Create transport with prediction lookup
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,

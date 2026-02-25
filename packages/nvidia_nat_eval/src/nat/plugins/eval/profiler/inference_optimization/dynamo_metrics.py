@@ -252,7 +252,8 @@ class DynamoCoreMetrics(BaseModel):
         description="KV Efficiency (0-1): fraction of prompt tokens served from cache. "
         "Computed as cached_tokens / prompt_tokens from Thompson Sampling processor. "
         "Higher values indicate more computational work saved via KV cache reuse. "
-        "This is the PRIMARY metric affected by prefix routing hints (prefix_id, prefix_osl, prefix_iat).",
+        "This is the PRIMARY metric affected by prefix routing hints "
+        "(nvext_prefix_id, nvext_prefix_osl, nvext_prefix_iat).",
     )
     kv_efficiency_fallback: float | None = Field(
         default=None,
