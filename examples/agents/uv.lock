@@ -2324,14 +2324,14 @@ source = { editable = "." }
 dependencies = [
     { name = "nat-multi-frameworks" },
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test", "zep-cloud"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-multi-frameworks", editable = "../frameworks/multi_frameworks" },
     { name = "nat-simple-calculator", editable = "../getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "../../" },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test", "zep-cloud"], editable = "../../" },
 ]
 
 [[package]]
@@ -2499,6 +2499,9 @@ llama-index = [
 ]
 test = [
     { name = "nvidia-nat-test" },
+]
+zep-cloud = [
+    { name = "nvidia-nat-zep-cloud" },
 ]
 
 [package.metadata]
@@ -2855,6 +2858,22 @@ requires-dist = [
     { name = "pytest-httpserver", specifier = "==1.1.*" },
     { name = "pytest-timeout", specifier = "~=2.4" },
 ]
+
+[[package]]
+name = "nvidia-nat-zep-cloud"
+source = { editable = "../../packages/nvidia_nat_zep_cloud" }
+dependencies = [
+    { name = "nvidia-nat-core" },
+    { name = "zep-cloud" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat-core", editable = "../../packages/nvidia_nat_core" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../packages/nvidia_nat_test" },
+    { name = "zep-cloud", specifier = "~=3.0" },
+]
+provides-extras = ["test"]
 
 [[package]]
 name = "openai"
@@ -4642,6 +4661,22 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/31/74/8b74bae38ed7fe6793d0c15a0c8207bbb819cf287788459e5ed230996cdd/yarl-1.22.0-cp313-cp313t-win_amd64.whl", hash = "sha256:ff86011bd159a9d2dfc89c34cfd8aff12875980e3bd6a39ff097887520e60249", size = 93715, upload-time = "2025-10-06T14:11:11.739Z" },
     { url = "https://files.pythonhosted.org/packages/69/66/991858aa4b5892d57aef7ee1ba6b4d01ec3b7eb3060795d34090a3ca3278/yarl-1.22.0-cp313-cp313t-win_arm64.whl", hash = "sha256:7861058d0582b847bc4e3a4a4c46828a410bca738673f35a29ba3ca5db0b473b", size = 83857, upload-time = "2025-10-06T14:11:13.586Z" },
     { url = "https://files.pythonhosted.org/packages/73/ae/b48f95715333080afb75a4504487cbe142cae1268afc482d06692d605ae6/yarl-1.22.0-py3-none-any.whl", hash = "sha256:1380560bdba02b6b6c90de54133c81c9f2a453dee9912fe58c1dcced1edb7cff", size = 46814, upload-time = "2025-10-06T14:12:53.872Z" },
+]
+
+[[package]]
+name = "zep-cloud"
+version = "3.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-core" },
+    { name = "python-dateutil" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3a/79/46f8d46d90c15dab68e062a10cb802ec24bedf6d4df6c708fe5ab4232b64/zep_cloud-3.16.0.tar.gz", hash = "sha256:5e6e363797ce613a79e56625aa282bde1fd819b8b70028415a5ba16817b19433", size = 66447, upload-time = "2026-01-17T02:08:09.665Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/48/85ccaec38ef7ee44d5e255139af36e5ecee76a893c1a5827a983d3471e13/zep_cloud-3.16.0-py3-none-any.whl", hash = "sha256:d740cb2432bd23895f78f5340dcc1ae8474e62b8c7a32dab84bd1133432d7778", size = 115116, upload-time = "2026-01-17T02:08:08.24Z" },
 ]
 
 [[package]]
