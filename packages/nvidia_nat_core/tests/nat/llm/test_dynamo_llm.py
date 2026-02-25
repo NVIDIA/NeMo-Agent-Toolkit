@@ -812,14 +812,8 @@ class TestDynamoTransport:
         DynamoPrefixContext.clear()
 
     async def test_transport_injects_cache_control_by_default(self):
-        """Test that cache_control is NOT injected (disabled until sglang >v0.5.9).
-
-        TODO: Revert to assert cache_control IS injected when
-        https://github.com/sgl-project/sglang/pull/18941 is merged and
-        Dynamo uses that version of sglang.
-        """
+        """Test that _DynamoTransport injects nvext.cache_control with ephemeral type and computed TTL."""
         import json
-        import warnings
 
         import httpx
 
@@ -830,15 +824,13 @@ class TestDynamoTransport:
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
         # total_requests=10, iat=250 -> TTL = 10 * 250 = 2500ms
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            transport = _DynamoTransport(
-                transport=mock_transport,
-                total_requests=10,
-                osl=512,
-                iat=250,
-                prediction_lookup=None,
-            )
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+        )
 
         DynamoPrefixContext.set("cache-control-test")
 
@@ -849,19 +841,16 @@ class TestDynamoTransport:
         body = json.loads(modified_request.content.decode("utf-8"))
 
         assert "nvext" in body
-        assert "cache_control" not in body["nvext"]
+        assert "cache_control" in body["nvext"]
+        cache_control = body["nvext"]["cache_control"]
+        assert cache_control["type"] == "ephemeral"
+        assert cache_control["ttl"] == "3s"  # 10 * 250 = 2500ms -> ceil = 3s
 
         DynamoPrefixContext.clear()
 
     async def test_transport_cache_control_ttl_formatted_as_minutes(self):
-        """Test that cache_control is NOT injected (disabled until sglang >v0.5.9).
-
-        TODO: Revert to assert TTL is formatted as '<N>m' when
-        https://github.com/sgl-project/sglang/pull/18941 is merged and
-        Dynamo uses that version of sglang.
-        """
+        """Test that TTL is formatted as '<N>m' when evenly divisible by 60 seconds."""
         import json
-        import warnings
 
         import httpx
 
@@ -872,15 +861,13 @@ class TestDynamoTransport:
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
         # total_requests=20, iat=3000 -> TTL = 60000ms = 60s = 1m
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            transport = _DynamoTransport(
-                transport=mock_transport,
-                total_requests=20,
-                osl=512,
-                iat=3000,
-                prediction_lookup=None,
-            )
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=20,
+            osl=512,
+            iat=3000,
+            prediction_lookup=None,
+        )
 
         DynamoPrefixContext.set("ttl-minutes-test")
 
@@ -890,19 +877,13 @@ class TestDynamoTransport:
         modified_request = mock_transport.handle_async_request.call_args[0][0]
         body = json.loads(modified_request.content.decode("utf-8"))
 
-        assert "cache_control" not in body["nvext"]
+        assert body["nvext"]["cache_control"]["ttl"] == "1m"  # 20 * 3000 = 60000ms = 1m
 
         DynamoPrefixContext.clear()
 
     async def test_transport_cache_control_ttl_formatted_as_seconds(self):
-        """Test that cache_control is NOT injected (disabled until sglang >v0.5.9).
-
-        TODO: Revert to assert TTL is formatted as '<N>s' when
-        https://github.com/sgl-project/sglang/pull/18941 is merged and
-        Dynamo uses that version of sglang.
-        """
+        """Test that TTL is formatted as '<N>s' when not evenly divisible by 60."""
         import json
-        import warnings
 
         import httpx
 
@@ -913,15 +894,13 @@ class TestDynamoTransport:
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
         # total_requests=20, iat=500 -> TTL = 10000ms = 10s
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            transport = _DynamoTransport(
-                transport=mock_transport,
-                total_requests=20,
-                osl=512,
-                iat=500,
-                prediction_lookup=None,
-            )
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=20,
+            osl=512,
+            iat=500,
+            prediction_lookup=None,
+        )
 
         DynamoPrefixContext.set("ttl-seconds-test")
 
@@ -931,7 +910,7 @@ class TestDynamoTransport:
         modified_request = mock_transport.handle_async_request.call_args[0][0]
         body = json.loads(modified_request.content.decode("utf-8"))
 
-        assert "cache_control" not in body["nvext"]
+        assert body["nvext"]["cache_control"]["ttl"] == "10s"  # 20 * 500 = 10000ms = 10s
 
         DynamoPrefixContext.clear()
 
@@ -972,14 +951,8 @@ class TestDynamoTransport:
         DynamoPrefixContext.clear()
 
     async def test_transport_cache_control_uses_prediction_override(self):
-        """Test that cache_control is NOT injected (disabled until sglang >v0.5.9).
-
-        TODO: Revert to assert cache_control TTL uses prediction-overridden
-        values when https://github.com/sgl-project/sglang/pull/18941 is
-        merged and Dynamo uses that version of sglang.
-        """
+        """Test that cache_control TTL uses prediction-overridden total_requests and iat."""
         import json
-        import warnings
 
         import httpx
 
@@ -1002,15 +975,13 @@ class TestDynamoTransport:
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            transport = _DynamoTransport(
-                transport=mock_transport,
-                total_requests=10,
-                osl=512,
-                iat=250,
-                prediction_lookup=mock_lookup,
-            )
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=mock_lookup,
+        )
 
         DynamoPrefixContext.set("prediction-cache-test")
 
@@ -1020,7 +991,9 @@ class TestDynamoTransport:
         modified_request = mock_transport.handle_async_request.call_args[0][0]
         body = json.loads(modified_request.content.decode("utf-8"))
 
-        assert "cache_control" not in body["nvext"]
+        cache_control = body["nvext"]["cache_control"]
+        assert cache_control["type"] == "ephemeral"
+        assert cache_control["ttl"] == "2s"  # 25 * 50 = 1250ms -> ceil = 2s
 
         DynamoPrefixContext.clear()
 
@@ -1359,15 +1332,8 @@ class TestDynamoTransport:
         DynamoPrefixContext.clear()
 
     async def test_transport_first_only_injects_cache_control_on_first_request(self):
-        """Test that cache_control is NOT injected even on first request (disabled until sglang >v0.5.9).
-
-        TODO: Revert to assert FIRST_ONLY mode injects cache_control on
-        the first request when
-        https://github.com/sgl-project/sglang/pull/18941 is merged and
-        Dynamo uses that version of sglang.
-        """
+        """Test that FIRST_ONLY mode injects cache_control on the first request for a prefix."""
         import json
-        import warnings
 
         import httpx
 
@@ -1377,39 +1343,33 @@ class TestDynamoTransport:
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            transport = _DynamoTransport(
-                transport=mock_transport,
-                total_requests=10,
-                osl=512,
-                iat=250,
-                prediction_lookup=None,
-                cache_control_mode=CacheControlMode.FIRST_ONLY,
-            )
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        )
 
         DynamoPrefixContext.set("first-only-test")
 
+        # First request: cache_control should be injected
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test", "messages": []})
         await transport.handle_async_request(request)
 
         modified_request = mock_transport.handle_async_request.call_args[0][0]
         body = json.loads(modified_request.content.decode("utf-8"))
 
-        assert "cache_control" not in body["nvext"]
+        assert "cache_control" in body["nvext"]
+        assert body["nvext"]["cache_control"]["type"] == "ephemeral"
+        assert body["nvext"]["cache_control"]["ttl"] == "3s"  # 10 * 250 = 2500ms -> ceil = 3s
 
         DynamoPrefixContext.clear()
 
     async def test_transport_first_only_skips_cache_control_on_subsequent_requests(self):
-        """Test that cache_control is NOT injected on any request (disabled until sglang >v0.5.9).
-
-        TODO: Revert to assert FIRST_ONLY mode injects on first request
-        but not subsequent ones when
-        https://github.com/sgl-project/sglang/pull/18941 is merged and
-        Dynamo uses that version of sglang.
-        """
+        """Test that FIRST_ONLY mode does NOT inject cache_control on the second+ request."""
         import json
-        import warnings
 
         import httpx
 
@@ -1419,25 +1379,23 @@ class TestDynamoTransport:
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            transport = _DynamoTransport(
-                transport=mock_transport,
-                total_requests=10,
-                osl=512,
-                iat=250,
-                prediction_lookup=None,
-                cache_control_mode=CacheControlMode.FIRST_ONLY,
-            )
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        )
 
         DynamoPrefixContext.set("first-only-skip-test")
 
-        # First request (call_index=1): cache_control NOT injected (disabled)
+        # First request (call_index=1): should have cache_control
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
         await transport.handle_async_request(request)
 
         first_body = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
-        assert "cache_control" not in first_body["nvext"]
+        assert "cache_control" in first_body["nvext"]
 
         # Second request (call_index=2): should NOT have cache_control
         request2 = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
@@ -1459,15 +1417,8 @@ class TestDynamoTransport:
         DynamoPrefixContext.clear()
 
     async def test_transport_first_only_tracks_prefixes_independently(self):
-        """Test that cache_control is NOT injected for any prefix (disabled until sglang >v0.5.9).
-
-        TODO: Revert to assert FIRST_ONLY mode tracks each prefix_id
-        independently when
-        https://github.com/sgl-project/sglang/pull/18941 is merged and
-        Dynamo uses that version of sglang.
-        """
+        """Test that FIRST_ONLY mode tracks each prefix_id independently."""
         import json
-        import warnings
 
         import httpx
 
@@ -1477,24 +1428,22 @@ class TestDynamoTransport:
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            transport = _DynamoTransport(
-                transport=mock_transport,
-                total_requests=10,
-                osl=512,
-                iat=250,
-                prediction_lookup=None,
-                cache_control_mode=CacheControlMode.FIRST_ONLY,
-            )
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        )
 
-        # First prefix, first request: cache_control NOT injected (disabled)
+        # First prefix, first request: should have cache_control
         DynamoPrefixContext.set("prefix-a")
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
         await transport.handle_async_request(request)
 
         body_a1 = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
-        assert "cache_control" not in body_a1["nvext"]
+        assert "cache_control" in body_a1["nvext"]
 
         # First prefix, second request: should NOT have cache_control
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
@@ -1503,73 +1452,19 @@ class TestDynamoTransport:
         body_a2 = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
         assert "cache_control" not in body_a2["nvext"]
 
-        # Second prefix, first request: cache_control NOT injected (disabled)
+        # Second prefix, first request: SHOULD have cache_control (new prefix)
         DynamoPrefixContext.set("prefix-b")
         request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
         await transport.handle_async_request(request)
 
         body_b1 = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
-        assert "cache_control" not in body_b1["nvext"]
+        assert "cache_control" in body_b1["nvext"]
 
         DynamoPrefixContext.clear()
 
-    def test_transport_warns_when_cache_pin_type_is_set(self):
-        """Test that _DynamoTransport emits a warning when cache_pin_type is not None.
-
-        TODO: Remove this test when
-        https://github.com/sgl-project/sglang/pull/18941 is merged and
-        Dynamo uses that version of sglang.
-        """
-        import warnings
-
-        from nat.llm.dynamo_llm import _DynamoTransport
-
-        mock_transport = MagicMock()
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            _DynamoTransport(
-                transport=mock_transport,
-                total_requests=10,
-                osl=512,
-                iat=250,
-                prediction_lookup=None,
-            )
-
-        assert len(w) == 1
-        assert "not supported until sglang >v0.5.9" in str(w[0].message)
-        assert "sgl-project/sglang/pull/18941" in str(w[0].message)
-
-    def test_transport_no_warning_when_cache_pin_type_is_none(self):
-        """Test that _DynamoTransport does NOT emit a warning when cache_pin_type is None."""
-        import warnings
-
-        from nat.llm.dynamo_llm import _DynamoTransport
-
-        mock_transport = MagicMock()
-
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
-            _DynamoTransport(
-                transport=mock_transport,
-                total_requests=10,
-                osl=512,
-                iat=250,
-                prediction_lookup=None,
-                cache_pin_type=None,
-            )
-
-        assert len(w) == 0
-
     async def test_transport_always_mode_injects_cache_control_every_request(self):
-        """Test that cache_control is NOT injected on any request (disabled until sglang >v0.5.9).
-
-        TODO: Revert to assert ALWAYS mode injects cache_control on every
-        request when https://github.com/sgl-project/sglang/pull/18941 is
-        merged and Dynamo uses that version of sglang.
-        """
+        """Test that ALWAYS mode (default) injects cache_control on every request."""
         import json
-        import warnings
 
         import httpx
 
@@ -1579,16 +1474,14 @@ class TestDynamoTransport:
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            transport = _DynamoTransport(
-                transport=mock_transport,
-                total_requests=10,
-                osl=512,
-                iat=250,
-                prediction_lookup=None,
-                cache_control_mode=CacheControlMode.ALWAYS,
-            )
+        transport = _DynamoTransport(
+            transport=mock_transport,
+            total_requests=10,
+            osl=512,
+            iat=250,
+            prediction_lookup=None,
+            cache_control_mode=CacheControlMode.ALWAYS,
+        )
 
         DynamoPrefixContext.set("always-mode-test")
 
@@ -1597,7 +1490,7 @@ class TestDynamoTransport:
             await transport.handle_async_request(request)
 
             body = json.loads(mock_transport.handle_async_request.call_args[0][0].content.decode("utf-8"))
-            assert "cache_control" not in body["nvext"], f"cache_control should not be injected on request {i + 1}"
+            assert "cache_control" in body["nvext"], f"cache_control missing on request {i + 1}"
 
         DynamoPrefixContext.clear()
 

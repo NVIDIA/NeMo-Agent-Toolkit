@@ -490,10 +490,11 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 
         if cache_pin_type is not None:
             warnings.warn(
-                "nvext.cache_control.type and nvext.cache_control.ttl are configured but "
-                "not supported until sglang >v0.5.9. Dynamo 1.0.0 uses sglang ==0.5.9. "
-                "These parameters will not be sent. "
-                "See https://github.com/sgl-project/sglang/pull/18941",
+                "nvext.cache_control is configured (type=%s). cache_control requires "
+                "sglang >v0.5.9 with hierarchical cache enabled. Parameters will be "
+                "sent but may be silently ignored by the backend. "
+                "See https://github.com/sgl-project/sglang/pull/18941"
+                % cache_pin_type.value,
                 stacklevel=2,
             )
 
@@ -640,9 +641,6 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                     with self._call_counts_lock:
                         self._call_counts[prefix_id] = call_index
 
-                    # TODO: Uncomment when sglang >v0.5.9 lands in Dynamo and
-                    # https://github.com/sgl-project/sglang/pull/18941 is merged.
-                    #
                     # Inject cache_control for KV cache lifetime management.
                     # TTL = total_requests * iat_raw (ms): estimated total conversation
                     # duration before the cache entry should auto-expire.
@@ -651,21 +649,20 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                     # When cache_control_mode is FIRST_ONLY, only inject on the
                     # first request per prefix_id — pinning the system prompt when
                     # it is first established in the KV cache.
-                    #
-                    # should_pin = (self._cache_pin_type is not None
-                    #               and (self._cache_control_mode == CacheControlMode.ALWAYS or
-                    #                    (self._cache_control_mode == CacheControlMode.FIRST_ONLY and call_index == 1)))
-                    # if should_pin:
-                    #     ttl_ms = total_requests * iat_raw
-                    #     ttl_seconds = max(1, -(-ttl_ms // 1000))  # ceil division
-                    #     if ttl_seconds >= 60 and ttl_seconds % 60 == 0:
-                    #         ttl_str = f"{ttl_seconds // 60}m"
-                    #     else:
-                    #         ttl_str = f"{ttl_seconds}s"
-                    #     body["nvext"]["cache_control"] = {
-                    #         "type": self._cache_pin_type.value,
-                    #         "ttl": ttl_str,
-                    #     }
+                    should_pin = (self._cache_pin_type is not None
+                                  and (self._cache_control_mode == CacheControlMode.ALWAYS or
+                                       (self._cache_control_mode == CacheControlMode.FIRST_ONLY and call_index == 1)))
+                    if should_pin:
+                        ttl_ms = total_requests * iat_raw
+                        ttl_seconds = max(1, -(-ttl_ms // 1000))  # ceil division
+                        if ttl_seconds >= 60 and ttl_seconds % 60 == 0:
+                            ttl_str = f"{ttl_seconds // 60}m"
+                        else:
+                            ttl_str = f"{ttl_seconds}s"
+                        body["nvext"]["cache_control"] = {
+                            "type": self._cache_pin_type.value,
+                            "ttl": ttl_str,
+                        }
 
                     content = json.dumps(body).encode("utf-8")
                     headers["content-length"] = str(len(content))
