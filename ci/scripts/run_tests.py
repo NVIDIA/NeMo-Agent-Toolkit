@@ -238,11 +238,11 @@ def main(junit_xml: str | None,
     with ProcessPoolExecutor(max_workers=jobs) as executor:
         ex = executor
 
-        def shutdown_executor(signum, frame):
+        def shutdown_executor(signum, frame, wait: bool = False):
             nonlocal ex
             if ex is not None:
                 print("Shutting down executor...")
-                ex.shutdown(wait=False, cancel_futures=True)
+                ex.shutdown(wait=wait, cancel_futures=True)
             else:
                 print("Executor not found")
 
@@ -267,7 +267,7 @@ def main(junit_xml: str | None,
 
         except TestFailure:
             print("Cancelling remaining tests...")
-            shutdown_executor(None, None)
+            shutdown_executor(None, None, wait=True)
         finally:
             ex = None
             for p in projects:
