@@ -65,6 +65,12 @@ MAX_MODEL_LEN="${DYNAMO_MAX_MODEL_LEN:-}"
 # Hard override for the number of GPU KV cache blocks (unset = auto)
 NUM_GPU_BLOCKS_OVERRIDE="${DYNAMO_NUM_GPU_BLOCKS_OVERRIDE:-}"
 
+# HiCache (hierarchical KV cache) configuration
+# Enables CPU-backed overflow cache for the SGLang KV cache.
+ENABLE_HIERARCHICAL_CACHE="${DYNAMO_ENABLE_HIERARCHICAL_CACHE:-false}"
+HICACHE_RATIO="${DYNAMO_HICACHE_RATIO:-1.0}"
+HICACHE_POLICY="${DYNAMO_HICACHE_POLICY:-write_through}"
+
 # Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
 NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
 CONTAINER_GPU_INDICES=$(seq -s, 0 $((NUM_GPUS - 1)))
@@ -159,6 +165,15 @@ if [ "${ENABLE_KV_AWARE_ROUTING}" = "true" ]; then
 else
     echo "  Round-Robin (default)"
     echo "  Set ENABLE_KV_AWARE_ROUTING=true to enable KV cache-aware routing"
+fi
+echo ""
+echo "HiCache:"
+if [ "${ENABLE_HIERARCHICAL_CACHE}" = "true" ]; then
+    echo "  Enabled (DYNAMO_ENABLE_HIERARCHICAL_CACHE=true)"
+    echo "  Ratio: $HICACHE_RATIO, Policy: $HICACHE_POLICY"
+else
+    echo "  Disabled (default)"
+    echo "  Set DYNAMO_ENABLE_HIERARCHICAL_CACHE=true to enable"
 fi
 echo ""
 echo "========================================================="
@@ -356,6 +371,9 @@ docker run -d \
   -e KV_BLOCK_SIZE=$KV_BLOCK_SIZE \
   -e MAX_MODEL_LEN=$MAX_MODEL_LEN \
   -e NUM_GPU_BLOCKS_OVERRIDE=$NUM_GPU_BLOCKS_OVERRIDE \
+  -e ENABLE_HIERARCHICAL_CACHE=$ENABLE_HIERARCHICAL_CACHE \
+  -e HICACHE_RATIO=$HICACHE_RATIO \
+  -e HICACHE_POLICY=$HICACHE_POLICY \
   $IMAGE \
   bash -c "
     set -e  # Exit on any error
@@ -465,6 +483,11 @@ docker run -d \
         fi
         if [ -n \"\$NUM_GPU_BLOCKS_OVERRIDE\" ]; then
             EXTRA_WORKER_FLAGS=\"\$EXTRA_WORKER_FLAGS --num-gpu-blocks-override \$NUM_GPU_BLOCKS_OVERRIDE\"
+        fi
+        if [ \"\$ENABLE_HIERARCHICAL_CACHE\" = \"true\" ]; then
+            EXTRA_WORKER_FLAGS=\"\$EXTRA_WORKER_FLAGS --enable-hierarchical-cache\"
+            EXTRA_WORKER_FLAGS=\"\$EXTRA_WORKER_FLAGS --hicache-ratio \$HICACHE_RATIO\"
+            EXTRA_WORKER_FLAGS=\"\$EXTRA_WORKER_FLAGS --hicache-write-policy \$HICACHE_POLICY\"
         fi
         # DYN_SYSTEM_PORT: unique Prometheus metrics port per worker (required by --enable-metrics;
         # workers share the host network so each needs a distinct port).
