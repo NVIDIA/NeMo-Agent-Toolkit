@@ -427,9 +427,7 @@ class ProcessorRequestHandler:
             value < thresholds[1]  → MEDIUM
             value >= thresholds[1] → HIGH
 
-        This makes the processor agnostic to whether the client sends raw
-        integers (``prefix_use_raw_values: true``) or categorical strings
-        (``prefix_use_raw_values: false``).
+        Values are always raw integers.
         """
         if not value:
             return default

@@ -49,41 +49,41 @@ def fixture_trie_file() -> Path:
 
 
 def test_dynamo_config_with_trie_path(trie_file):
-    """Test that DynamoModelConfig accepts prediction_trie_path."""
+    """Test that DynamoModelConfig accepts nvext_prediction_trie_path."""
     config = DynamoModelConfig(
         base_url="http://localhost:8000",
         model_name="test-model",
         api_key="test-key",
-        prediction_trie_path=str(trie_file),
+        nvext_prediction_trie_path=str(trie_file),
     )
 
-    assert config.prediction_trie_path == str(trie_file)
-    assert "prediction_trie_path" in DynamoModelConfig.get_dynamo_field_names()
+    assert config.nvext_prediction_trie_path == str(trie_file)
+    assert "nvext_prediction_trie_path" in DynamoModelConfig.get_dynamo_field_names()
 
 
 def test_dynamo_config_without_trie_path():
-    """Test that DynamoModelConfig works without prediction_trie_path."""
+    """Test that DynamoModelConfig works without nvext_prediction_trie_path."""
     config = DynamoModelConfig(
         base_url="http://localhost:8000",
         model_name="test-model",
         api_key="test-key",
     )
 
-    assert config.prediction_trie_path is None
+    assert config.nvext_prediction_trie_path is None
 
 
 def test_dynamo_field_names_excludes_trie_path():
-    """Test that prediction_trie_path is excluded from OpenAI client kwargs."""
+    """Test that nvext_prediction_trie_path is excluded from OpenAI client kwargs."""
     config = DynamoModelConfig(
         base_url="http://localhost:8000",
         model_name="test-model",
         api_key="test-key",
-        prediction_trie_path="/path/to/trie.json",
+        nvext_prediction_trie_path="/path/to/trie.json",
     )
 
     # Simulate what would be passed to an OpenAI client
     exclude_fields = {"type", "thinking", *DynamoModelConfig.get_dynamo_field_names()}
     config_dict = config.model_dump(exclude=exclude_fields, exclude_none=True)
 
-    # prediction_trie_path should not be in the config dict
-    assert "prediction_trie_path" not in config_dict
+    # nvext_prediction_trie_path should not be in the config dict
+    assert "nvext_prediction_trie_path" not in config_dict

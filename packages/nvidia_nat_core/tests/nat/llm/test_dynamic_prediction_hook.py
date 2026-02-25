@@ -108,47 +108,6 @@ class TestDynamicPredictionTransport:
 
         DynamoPrefixContext.clear()
 
-    async def test_transport_injects_prediction_agent_hints_categorical(self, sample_trie_lookup):
-        """Test that transport converts predictions to categories when use_raw_values=False."""
-        mock_response = httpx.Response(200, json={"result": "ok"})
-        mock_transport = MagicMock()
-        mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
-
-        transport = _DynamoTransport(
-            transport=mock_transport,
-            total_requests=10,
-            osl=512,
-            iat=250,
-            prediction_lookup=sample_trie_lookup,
-            use_raw_values=False,
-        )
-
-        ctx = Context.get()
-        state = ctx._context_state
-        state._function_path_stack.set(None)
-
-        DynamoPrefixContext.set("test-prediction-cat")
-
-        with ctx.push_active_function("my_workflow", input_data=None):
-            with ctx.push_active_function("react_agent", input_data=None):
-                tracker = get_call_tracker()
-                tracker.increment(ctx.active_function.function_id)
-
-                request = httpx.Request("POST", "https://api.example.com/chat", json={"model": "test"})
-                await transport.handle_async_request(request)
-
-                modified_request = mock_transport.handle_async_request.call_args[0][0]
-                body = json.loads(modified_request.content.decode("utf-8"))
-                agent_hints = body["nvext"]["agent_hints"]
-
-                # Categorical conversion:
-                # - output_tokens.p90=200.0 -> LOW (< 256) -> mapped back to int 128 for osl
-                # - interarrival_ms.mean=500.0 -> HIGH (>= 500) -> kept as "HIGH" string for iat
-                assert agent_hints["osl"] == 128  # LOW -> _OSL_CATEGORY_TO_INT["LOW"]
-                assert agent_hints["iat"] == "HIGH"
-
-        DynamoPrefixContext.clear()
-
     async def test_transport_uses_root_fallback(self, sample_trie_lookup):
         """Test that transport falls back to root prediction for unknown paths."""
         mock_response = httpx.Response(200, json={"result": "ok"})
