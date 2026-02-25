@@ -117,6 +117,12 @@ class EvaluationRun:
         # Pre-generated OTEL root span_ids for eager trace linking (item_id -> span_id)
         self._item_span_ids: dict[str, int] = {}
 
+    def _write_checkpoint_item(self, checkpoint_file: Path, item_dict: dict[str, Any]) -> None:
+        """Helper to write a single JSONL line to disk. Called via to_thread to avoid blocking."""
+        with open(checkpoint_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(item_dict) + "\n")
+            f.flush()
+
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
         # get the prompt and completion tokens from the intermediate steps
@@ -145,12 +151,6 @@ class EvaluationRun:
             min_timestamp = 0.0
             max_timestamp = 0.0
             runtime = 0.0
-
-    def _write_checkpoint_item(self, checkpoint_file: Path, item_dict: dict[str, Any]) -> None:
-        """Helper to write a single JSONL line to disk. Called via to_thread to avoid blocking."""
-        with open(checkpoint_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(item_dict) + "\n")
-            f.flush()
 
         # find llm latency by calculating p95 of all llm calls
         llm_latencies = []
@@ -296,9 +296,9 @@ class EvaluationRun:
                                 
                                 # Use to_thread to prevent blocking the event loop
                                 await asyncio.to_thread(self._write_checkpoint_item, checkpoint_file, item_dict)
-                            except Exception as e:
-                                logger.warning("Failed to write incremental checkpoint for item %s: %s", item.id, e)
-                        # --- END INCREMENTAL CHECKPOINTING ---
+                            except Exception:
+                                logger.exception("Failed to write incremental checkpoint for item %s", item.id)
+                        # END INCREMENTAL CHECKPOINTING
             finally:
                 if root_span_token is not None:
                     ctx_state._root_span_id.reset(root_span_token)
@@ -339,8 +339,8 @@ class EvaluationRun:
                     
                     # Use to_thread here as well
                     await asyncio.to_thread(self._write_checkpoint_item, checkpoint_file, item_dict)
-            except Exception as e:
-                logger.warning("Failed to write remote checkpoint items: %s", e)
+            except Exception:
+                logger.exception("Failed to write remote checkpoint items")
 
     async def profile_workflow(self) -> ProfilerResults:
         """
