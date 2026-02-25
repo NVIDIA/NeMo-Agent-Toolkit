@@ -28,11 +28,6 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Ag
   - [Install this Workflow:](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
   - [Run the Workflow](#run-the-workflow)
-- [Deployment-Oriented Setup](#deployment-oriented-setup)
-  - [Build the Docker Image](#build-the-docker-image)
-  - [Run the Docker Container](#run-the-docker-container)
-  - [Test the API](#test-the-api)
-  - [Expected API Output](#expected-api-output)
 
 ---
 
@@ -78,49 +73,4 @@ nat run --config_file examples/getting_started/simple_calculator/configs/config.
 Note that the output is subject to the time of day when the workflow was run. For this example output, it was run in the afternoon.
 ```
 No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).
-```
-
-
-## Deployment-Oriented Setup
-
-For a production deployment, use Docker:
-
-### Build the Docker Image
-
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent Toolkit virtual environment.
-
-From the root directory of the NeMo Agent Toolkit repository, build the Docker image:
-
-```bash
-docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
-```
-
-### Run the Docker Container
-Deploy the container:
-
-```bash
-docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY -e OPENAI_API_KEY simple_calculator
-```
-
-Note, a phoenix telemetry service will be exposed at port 6006.
-
-### Test the API
-Use the following curl command to test the deployed API:
-
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/generate' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'
-```
-
-### Expected API Output
-The API response should be similar to the following:
-
-```bash
-{
-  "input": "Is the product of 2 * 4 greater than the current hour of the day?",
-  "value": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
-}
 ```
