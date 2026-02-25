@@ -35,6 +35,9 @@ COV_DIR = ART / "coverage"
 MAX_PROJECT_DEPTH = 5
 SKIP_DIRS = {"__pycache__", "node_modules"}
 
+class TestFailure(Exception):
+    pass
+
 
 def sh(cmd: list[str], *, env: dict[str, str] | None = None) -> int:
     return subprocess.run(cmd, check=False, cwd=REPO, env=env).returncode
@@ -120,6 +123,7 @@ def run_one(
     enable_junit: bool,
     run_slow: bool,
     run_integration: bool,
+    exitfirst: bool,
     extra_flags: list[str],
 ) -> int:
     logger = logging.getLogger("testing")
@@ -183,6 +187,8 @@ def run_one(
             if source_dir.exists():
                 cmd.append(f"--cov={str(source_dir)}")
             cmd.append("--cov-report=")
+        if exitfirst:
+            cmd.append("--exitfirst")
 
         if rc := sh(cmd, env=env):
             logger.error(f"{display_project_dir} (test failed)")
@@ -200,6 +206,7 @@ def main(junit_xml: str | None,
          run_slow: bool,
          run_integration: bool,
          examples_only: bool,
+         exitfirst: bool,
          jobs: int,
          project: str | None,
          extra_flags: list[str]) -> int:
@@ -243,12 +250,19 @@ def main(junit_xml: str | None,
                       enable_junit=junit_xml is not None,
                       run_slow=run_slow,
                       run_integration=run_integration,
+                      exitfirst=exitfirst,
                       extra_flags=extra_flags) for p in projects
         ]
         try:
             for fut in as_completed(futs):
                 if fut.result() != 0:
                     failures += 1
+                    if exitfirst:
+                        raise TestFailure("Exiting on first failure as requested.")
+
+        except TestFailure:
+            print("Cancelling remaining tests...")
+            shutdown_executor(None, None)
         finally:
             ex = None
             for p in projects:
@@ -274,6 +288,7 @@ if __name__ == "__main__":
     parser.add_argument("--run_slow", action="store_true", default=False)
     parser.add_argument("--run_integration", action="store_true", default=False)
     parser.add_argument("--examples_only", action="store_true", default=False)
+    parser.add_argument("-x", "--exitfirst", action="store_true", default=False, help="Exit on first test failure")
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument(
         "--project",
@@ -290,6 +305,7 @@ if __name__ == "__main__":
              run_slow=args.run_slow,
              run_integration=args.run_integration,
              examples_only=args.examples_only,
+             exitfirst=args.exitfirst,
              jobs=args.jobs,
              project=args.project,
              extra_flags=args.extra_flags))
