@@ -273,7 +273,7 @@ class EvaluationRun:
                         self.weave_eval.log_prediction(item, output)
                         await self.weave_eval.log_usage_stats(item, usage_stats_item)
 
-                        # --- START INCREMENTAL CHECKPOINTING ---
+                        # START INCREMENTAL CHECKPOINTING
                         if self.config.write_output:
                             output_dir = self.eval_config.general.output_dir
                             output_dir.mkdir(parents=True, exist_ok=True)
@@ -295,7 +295,6 @@ class EvaluationRun:
                             with open(checkpoint_file, "a", encoding="utf-8") as f:
                                 f.write(json.dumps(item_dict) + "\n")
                                 f.flush() # Ensure it's written to disk immediately
-                        # --- END INCREMENTAL CHECKPOINTING ---
             finally:
                 if root_span_token is not None:
                     ctx_state._root_span_id.reset(root_span_token)
