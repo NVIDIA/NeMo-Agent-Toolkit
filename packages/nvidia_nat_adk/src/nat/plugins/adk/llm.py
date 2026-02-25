@@ -200,7 +200,7 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
             except FileNotFoundError:
                 logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
             except Exception as e:
-                logger.warning("Failed to load prediction trie: %s", e)
+                logger.exception("Failed to load prediction trie: %s", e)
 
         http_client = create_httpx_client_with_dynamo_hooks(
             total_requests=config.nvext_prefix_total_requests,

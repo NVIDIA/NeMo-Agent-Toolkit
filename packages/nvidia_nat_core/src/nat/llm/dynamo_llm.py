@@ -13,14 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Dynamo LLM provider with automatic nvext.agent_hints injection for KV cache optimization.
+Dynamo LLM provider with automatic nvext.agent_hints and nvnext.cache_control injection for KV cache optimization.
 
 This module provides a specialized OpenAI-compatible LLM that sends Dynamo routing
 hints for optimal KV cache management and request routing. The hint parameters are
 optimizable via the NAT optimizer.
 
 The implementation uses a custom httpx transport to inject hints at the HTTP level,
-making it framework-agnostic (works with LangChain, LlamaIndex, ADK, etc.).
+making it framework-agnostic (works with LangChain, LlamaIndex, ADK).
 
 Transport Mechanism
 -------------------
@@ -279,7 +279,7 @@ class DynamoPrefixContext(metaclass=Singleton):
 
 class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     """
-    A Dynamo LLM provider with automatic nvext.agent_hints injection for KV cache optimization.
+    A Dynamo LLM provider with automatic nvext.agent_hints and nvext.cache_control injection for KV cache optimization.
 
     This is a specialized OpenAI-compatible LLM that sends Dynamo routing hints
     for optimal KV cache management and request routing. Hints are injected when
@@ -505,11 +505,13 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         osl_raw = self._osl
         iat_raw = self._iat
 
-        # Increment per-prefix call counter. Used for prediction trie lookups
-        # and for cache_control_mode="first_only" gating.
+        # Read the tentative per-prefix call index for prediction trie lookups.
+        # The counter is committed to _call_counts only after the request is
+        # confirmed eligible for injection (see below), so non-injectable requests
+        # (non-POST, empty body, invalid JSON, non-dict body) do not consume the
+        # FIRST_ONLY slot.
         with self._call_counts_lock:
             call_index = self._call_counts.get(prefix_id, 0) + 1
-            self._call_counts[prefix_id] = call_index
 
         # Check for prediction override
         if self._prediction_lookup is not None:
@@ -622,6 +624,11 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                     if not isinstance(existing, dict):
                         existing = {}
                     body["nvext"]["agent_hints"] = {**existing, **agent_hints}
+
+                    # Commit the per-prefix counter now that the request is
+                    # confirmed eligible for injection.
+                    with self._call_counts_lock:
+                        self._call_counts[prefix_id] = call_index
 
                     # Inject cache_control for KV cache lifetime management.
                     # TTL = total_requests * iat_raw (ms): estimated total conversation

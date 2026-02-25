@@ -59,9 +59,7 @@ llms:
     max_tokens: 1024
     
     # ===== DYNAMO NVEXT HINTS CONFIGURATION FOR ADK =====
-    # These headers are passed to LiteLLM via extra_headers
-    # All requests from this LLM instance will share the same prefix ID
-    enable_nvext_hints: true
+    enable_nvext_hints: false
     nvext_prefix_id_template: "adk-dynamo-test-{uuid}"
     nvext_prefix_total_requests: 5  # Expected tool calls per conversation
     nvext_prefix_osl: MEDIUM        # Output Sequence Length hint

@@ -179,7 +179,7 @@ class TestDynamoLangChain:
 
     @pytest.fixture
     def dynamo_cfg_no_prefix(self):
-        """Dynamo config with nvext hints disabled (no header injection)."""
+        """Dynamo config with nvext hints disabled (no nvext request-body injection)."""
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
@@ -187,7 +187,7 @@ class TestDynamoLangChain:
 
     @pytest.fixture
     def dynamo_cfg_with_prefix(self):
-        """Dynamo config with nvext hints enabled (enables header injection)."""
+        """Dynamo config with nvext hints enabled (injects nvext fields into the JSON request body)."""
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
@@ -291,10 +291,11 @@ class TestDynamoLangChain:
         DynamoModelConfig has fields (enable_nvext_hints, nvext_prefix_id_template,
         nvext_prefix_total_requests, nvext_prefix_osl, nvext_prefix_iat, request_timeout)
         that are only used internally by NAT to configure the custom httpx client for
-        Dynamo header injection. These fields must NOT be passed to ChatOpenAI because:
+        Dynamo nvext request-body injection (injects nvext.agent_hints / nvext.cache_control
+        into the JSON body). These fields must NOT be passed to ChatOpenAI because:
 
         1. ChatOpenAI doesn't understand them and would error or ignore them
-        2. They configure NAT's header injection behavior, not the LLM client itself
+        2. They configure NAT's nvext request-body injection behavior, not the LLM client itself
 
         This test ensures the `exclude` set in model_dump() properly filters these fields.
         If someone accidentally removes a field from the exclude set, this test will fail.

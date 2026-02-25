@@ -73,11 +73,15 @@ class TestDynamoModelConfig:
         assert config.nvext_prefix_iat == 50
         assert config.request_timeout == 300.0
 
-    def test_disable_prefix_headers(self):
-        """Test that agent hints can be disabled by setting prefix_template to None."""
+    def test_prefix_template_none_does_not_toggle_hints(self):
+        """Test that setting nvext_prefix_id_template to None only clears the template value.
+
+        Hint injection is controlled by enable_nvext_hints, not by this field,
+        so this assignment does not affect whether hints are enabled or disabled.
+        """
         config = DynamoModelConfig(
             model_name="test-model",
-            nvext_prefix_id_template=None,  # Explicitly disable agent hints
+            nvext_prefix_id_template=None,
         )
 
         assert config.nvext_prefix_id_template is None

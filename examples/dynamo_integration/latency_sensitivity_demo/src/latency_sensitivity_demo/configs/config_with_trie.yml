@@ -63,7 +63,7 @@ llms:
     max_sensitivity: 5
 
     # Dynamo nvext hints configuration
-    enable_nvext_hints: true
+    enable_nvext_hints: false
     nvext_prefix_id_template: "latency-demo-{uuid}"
 
     # Static fallback values (used if trie lookup fails)

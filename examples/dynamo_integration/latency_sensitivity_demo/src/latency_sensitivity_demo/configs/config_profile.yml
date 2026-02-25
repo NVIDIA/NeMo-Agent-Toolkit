@@ -70,9 +70,8 @@ llms:
     max_sensitivity: 5
 
     # Dynamo nvext hints configuration
-    enable_nvext_hints: true
+    enable_nvext_hints: false
     nvext_prefix_id_template: "latency-demo-{uuid}"
-
     # Static fallback values (not used because baseline does not use agent hints)
     nvext_prefix_total_requests: 7
     nvext_prefix_osl: MEDIUM
