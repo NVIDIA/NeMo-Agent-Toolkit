@@ -151,11 +151,12 @@ llms:
     # Including </think> as a stop token disables extended thinking (shorter, faster calls).
     # Removing it enables full thinking (longer calls, higher GPU utilization).
     stop: ["Observation:", "\nObservation"]
-    # Note: Setting prefix_template enables dynamic prefix headers
-    prefix_template: "react-benchmark-{uuid}"
-    prefix_total_requests: 10 # 6
-    prefix_osl: MEDIUM # HIGH
-    prefix_iat: MEDIUM # LOW
+    # Note: Setting enable_nvext_hints enables nvext agent hints
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "react-benchmark-{uuid}"
+    nvext_prefix_total_requests: 10 # 6
+    nvext_prefix_osl: MEDIUM # HIGH
+    nvext_prefix_iat: MEDIUM # LOW
     # Enable parameter optimization for this LLM
     # optimizable_params: [temperature]
     # search_space:

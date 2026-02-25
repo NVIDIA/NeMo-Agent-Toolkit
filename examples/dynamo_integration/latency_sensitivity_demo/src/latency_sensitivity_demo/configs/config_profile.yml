@@ -69,13 +69,13 @@ llms:
     max_tokens: 8192
     max_sensitivity: 5
 
-    # Dynamo prefix configuration
-    prefix_template: "latency-demo-{uuid}"
-
+    # Dynamo nvext hints configuration
+    enable_nvext_hints: false
+    nvext_prefix_id_template: "latency-demo-{uuid}"
     # Static fallback values (not used because baseline does not use agent hints)
-    prefix_total_requests: 7
-    prefix_osl: MEDIUM
-    prefix_iat: MEDIUM
+    nvext_prefix_total_requests: 7
+    nvext_prefix_osl: MEDIUM
+    nvext_prefix_iat: MEDIUM
 
 workflow:
   _type: latency_sensitivity_demo

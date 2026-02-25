@@ -81,11 +81,12 @@ llms:
     temperature: 0.0
     max_tokens: 8192
     stop: ["Observation:", "\nThought:"]  # CRITICAL: Prevent LLM from hallucinating observations
-    # Dynamo prefix headers for KV cache optimization (enabled when prefix_template is set)
-    prefix_template: "react-benchmark-{uuid}"  # Template for prefix IDs ({uuid} replaced per request)
-    prefix_total_requests: 10  # 1 for independent questions, higher for conversations
-    prefix_osl: MEDIUM  # Output Sequence Length: LOW | MEDIUM | HIGH
-    prefix_iat: MEDIUM  # Inter-Arrival Time: LOW | MEDIUM | HIGH
+    # Dynamo nvext hints for KV cache optimization (enabled when enable_nvext_hints is set)
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "react-benchmark-{uuid}"  # Template for prefix IDs ({uuid} replaced per request)
+    nvext_prefix_total_requests: 10  # 1 for independent questions, higher for conversations
+    nvext_prefix_osl: MEDIUM  # Output Sequence Length: LOW | MEDIUM | HIGH
+    nvext_prefix_iat: MEDIUM  # Inter-Arrival Time: LOW | MEDIUM | HIGH
     # # Optimizer: Parameters that can be tuned during optimization
     # optimizable_params:
     #   - temperature
