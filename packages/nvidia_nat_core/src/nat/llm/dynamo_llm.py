@@ -70,6 +70,7 @@ import httpx
 if TYPE_CHECKING:
     from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
+from pydantic import AliasChoices
 from pydantic import Field
 from pydantic import field_validator
 
@@ -370,6 +371,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     nvext_max_sensitivity: int = Field(
         default=1000,
         ge=1,
+        validation_alias=AliasChoices("nvext_max_sensitivity", "max_sensitivity"),
         description="Maximum latency sensitivity value used to compute request priority. "
         "Priority is the integer complement: priority = max_sensitivity - latency_sensitivity. "
         "Lower priority values indicate higher priority requests.",
