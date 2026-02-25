@@ -163,7 +163,7 @@ def run_one(
             return 0
 
         # 2) Run pytest in that environment.
-        cmd = ["uv", "run", "--project", str(project_dir), "--", "pytest"] #, "-q", *extra_flags, str(project_dir)]
+        cmd = ["uv", "run", "--project", str(project_dir), "--", "pytest"]
         if ("-v" not in extra_flags) and ("--verbose" not in extra_flags):
             # Use the -q flag unless the user explicitly requested verbose output via extra_flags
             cmd.append("-q")
