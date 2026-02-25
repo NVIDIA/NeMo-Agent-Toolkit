@@ -213,7 +213,7 @@ def main(junit_xml: str | None,
          jobs: int,
          project: str | None,
          extra_flags: list[str]) -> int:
-    has_verbose_flag = any(re.fullmatch(r"--verbose|-v+", flag) for flag in extra_flags)
+    has_verbose_flag = any(re.fullmatch(r"--verbose|--verbosity=\d+|-v+", flag) for flag in extra_flags)
     projects = discover_projects(examples_only=examples_only)
     if not projects:
         print("No projects found under packages/ or examples/")
