@@ -71,6 +71,24 @@ ENABLE_HIERARCHICAL_CACHE="${DYNAMO_ENABLE_HIERARCHICAL_CACHE:-false}"
 HICACHE_RATIO="${DYNAMO_HICACHE_RATIO:-1.0}"
 HICACHE_POLICY="${DYNAMO_HICACHE_POLICY:-write_through}"
 
+# Validate HiCache settings when enabled
+if [ "${ENABLE_HIERARCHICAL_CACHE}" = "true" ]; then
+    if ! printf '%s' "$HICACHE_RATIO" | grep -qE '^[0-9]*\.?[0-9]+$' || \
+       [ "$(echo "$HICACHE_RATIO <= 0" | bc -l 2>/dev/null)" = "1" ]; then
+        echo "ERROR: HICACHE_RATIO must be a positive number (got: '$HICACHE_RATIO')" >&2
+        echo "  Set via DYNAMO_HICACHE_RATIO (e.g., 1.0)" >&2
+        exit 1
+    fi
+    case "$HICACHE_POLICY" in
+        write_through|write_back) ;;
+        *)
+            echo "ERROR: HICACHE_POLICY must be 'write_through' or 'write_back' (got: '$HICACHE_POLICY')" >&2
+            echo "  Set via DYNAMO_HICACHE_POLICY" >&2
+            exit 1
+            ;;
+    esac
+fi
+
 # Compute container-internal GPU indices (GPUs are renumbered 0,1,2,... inside the container)
 NUM_GPUS=$(echo "$WORKER_GPUS" | tr ',' '\n' | wc -l)
 CONTAINER_GPU_INDICES=$(seq -s, 0 $((NUM_GPUS - 1)))
