@@ -25,6 +25,7 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.dynamo_llm import CacheControlMode
 from nat.llm.dynamo_llm import CachePinType
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.nim_llm import NIMModelConfig
@@ -178,23 +179,23 @@ class TestDynamoLangChain:
 
     @pytest.fixture
     def dynamo_cfg_no_prefix(self):
-        """Dynamo config without prefix template (no header injection)."""
+        """Dynamo config with nvext hints disabled (no header injection)."""
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
-            prefix_template=None,
         )
 
     @pytest.fixture
     def dynamo_cfg_with_prefix(self):
-        """Dynamo config with prefix template (enables header injection)."""
+        """Dynamo config with nvext hints enabled (enables header injection)."""
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
-            prefix_template="session-{uuid}",
-            prefix_total_requests=15,
-            prefix_osl=2048,
-            prefix_iat=50,
+            enable_nvext_hints=True,
+            nvext_prefix_id_template="session-{uuid}",
+            nvext_prefix_total_requests=15,
+            nvext_prefix_osl=2048,
+            nvext_prefix_iat=50,
             request_timeout=300.0,
         )
 
@@ -205,12 +206,13 @@ class TestDynamoLangChain:
             model_name="test-model",
             base_url="http://localhost:8000/v1",
             api_type=APITypeEnum.RESPONSES,
-            prefix_template="session-{uuid}",
+            enable_nvext_hints=True,
+            nvext_prefix_id_template="session-{uuid}",
         )
 
     @patch("langchain_openai.ChatOpenAI")
     async def test_basic_creation_without_prefix(self, mock_chat, dynamo_cfg_no_prefix, mock_builder):
-        """Wrapper should create ChatOpenAI without custom httpx client when no prefix template."""
+        """Wrapper should create ChatOpenAI without custom httpx client when nvext hints disabled."""
         async with dynamo_langchain(dynamo_cfg_no_prefix, mock_builder) as client:
             mock_chat.assert_called_once()
             kwargs = mock_chat.call_args.kwargs
@@ -229,7 +231,7 @@ class TestDynamoLangChain:
                                                  mock_create_client,
                                                  dynamo_cfg_with_prefix,
                                                  mock_builder):
-        """Wrapper should create ChatOpenAI with custom httpx client when prefix template is set."""
+        """Wrapper should create ChatOpenAI with custom httpx client when nvext hints enabled."""
         mock_httpx_client = MagicMock()
         mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
         mock_create_client.return_value = mock_httpx_client
@@ -237,14 +239,13 @@ class TestDynamoLangChain:
         async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder) as client:
             # Verify httpx client was created with correct parameters
             mock_create_client.assert_called_once_with(
-                prefix_template="session-{uuid}",
                 total_requests=15,
                 osl=2048,
                 iat=50,
                 timeout=300.0,
                 prediction_lookup=None,
-                use_raw_values=True,
                 cache_pin_type=CachePinType.EPHEMERAL,
+                cache_control_mode=CacheControlMode.ALWAYS,
                 max_sensitivity=1000,
             )
 
@@ -287,10 +288,10 @@ class TestDynamoLangChain:
                                                    mock_builder):
         """Dynamo-specific fields should be excluded from ChatOpenAI kwargs.
 
-        DynamoModelConfig has fields (prefix_template, prefix_total_requests, prefix_osl,
-        prefix_iat, request_timeout) that are only used internally by NAT to configure
-        the custom httpx client for Dynamo header injection. These fields must NOT be
-        passed to ChatOpenAI because:
+        DynamoModelConfig has fields (enable_nvext_hints, nvext_prefix_id_template,
+        nvext_prefix_total_requests, nvext_prefix_osl, nvext_prefix_iat, request_timeout)
+        that are only used internally by NAT to configure the custom httpx client for
+        Dynamo header injection. These fields must NOT be passed to ChatOpenAI because:
 
         1. ChatOpenAI doesn't understand them and would error or ignore them
         2. They configure NAT's header injection behavior, not the LLM client itself
@@ -308,12 +309,11 @@ class TestDynamoLangChain:
         kwargs = mock_chat.call_args.kwargs
 
         # These Dynamo-specific fields should NOT be passed to ChatOpenAI
-        assert "prefix_template" not in kwargs
-        assert "prefix_total_requests" not in kwargs
-        assert "prefix_osl" not in kwargs
-        assert "prefix_iat" not in kwargs
-        assert "prefix_use_raw_values" not in kwargs
-        assert "disable_headers" not in kwargs
+        assert "nvext_prefix_id_template" not in kwargs
+        assert "nvext_prefix_total_requests" not in kwargs
+        assert "nvext_prefix_osl" not in kwargs
+        assert "nvext_prefix_iat" not in kwargs
+        assert "enable_nvext_hints" not in kwargs
         assert "request_timeout" not in kwargs
 
         # Verify the httpx client was properly closed

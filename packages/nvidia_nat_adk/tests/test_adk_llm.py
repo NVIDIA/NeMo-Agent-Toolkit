@@ -166,30 +166,30 @@ class TestDynamoAdk:
 
     @pytest.fixture
     def dynamo_cfg_no_prefix(self):
-        """Dynamo config without prefix template (no header injection)."""
+        """Dynamo config without nvext hints (no custom client injection)."""
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
-            prefix_template=None,
+            nvext_prefix_id_template=None,
         )
 
     @pytest.fixture
     def dynamo_cfg_with_prefix(self):
-        """Dynamo config with prefix template (enables header injection)."""
+        """Dynamo config with nvext hints enabled (injects custom client)."""
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
-            prefix_template="session-{uuid}",
-            prefix_total_requests=15,
-            prefix_osl=2048,
-            prefix_iat=50,
-            disable_headers=False,
+            nvext_prefix_id_template="session-{uuid}",
+            nvext_prefix_total_requests=15,
+            nvext_prefix_osl=2048,
+            nvext_prefix_iat=50,
+            enable_nvext_hints=True,
         )
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
     async def test_basic_creation_without_prefix(self, mock_litellm_class, dynamo_cfg_no_prefix, mock_builder):
-        """Wrapper should create LiteLlm without extra_headers when no prefix template."""
+        """Wrapper should create LiteLlm without client kwarg when nvext hints are disabled."""
         mock_llm_instance = MagicMock()
         mock_litellm_class.return_value = mock_llm_instance
 
@@ -199,14 +199,13 @@ class TestDynamoAdk:
 
             assert mock_litellm_class.call_args.args[0] == "test-model"
             assert kwargs["api_base"] == "http://localhost:8000/v1"
-            # Should NOT have extra_headers
-            assert "extra_headers" not in kwargs
+            assert "client" not in kwargs
             assert client is mock_llm_instance
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
-    async def test_creation_with_prefix_template(self, mock_litellm_class, dynamo_cfg_with_prefix, mock_builder):
-        """Wrapper should create LiteLlm with extra_headers when prefix template is set."""
+    async def test_creation_with_nvext_hints_enabled(self, mock_litellm_class, dynamo_cfg_with_prefix, mock_builder):
+        """Wrapper should create LiteLlm with a custom AsyncOpenAI client when nvext hints are enabled."""
         mock_llm_instance = MagicMock()
         mock_litellm_class.return_value = mock_llm_instance
 
@@ -214,16 +213,7 @@ class TestDynamoAdk:
             mock_litellm_class.assert_called_once()
             kwargs = mock_litellm_class.call_args.kwargs
 
-            # Should have extra_headers with Dynamo headers
-            assert "extra_headers" in kwargs
-            headers = kwargs["extra_headers"]
-
-            assert "x-prefix-id" in headers
-            assert headers["x-prefix-id"].startswith("session-")
-            assert headers["x-prefix-total-requests"] == "15"
-            assert headers["x-prefix-osl"] == "2048"
-            assert headers["x-prefix-iat"] == "50"
-
+            assert "client" in kwargs
             assert client is mock_llm_instance
 
     @patch('google.adk.models.lite_llm.LiteLlm')
@@ -231,10 +221,11 @@ class TestDynamoAdk:
     async def test_excludes_dynamo_specific_fields(self, mock_litellm_class, dynamo_cfg_with_prefix, mock_builder):
         """Dynamo-specific fields should be excluded from LiteLlm kwargs.
 
-        DynamoModelConfig has fields (prefix_template, prefix_total_requests, prefix_osl,
-        prefix_iat, request_timeout) that are only used internally by NAT to configure
-        the Dynamo headers. These fields must NOT be passed directly to LiteLlm because
-        LiteLlm doesn't understand them - they're NAT-specific configuration.
+        DynamoModelConfig has fields (nvext_prefix_id_template, nvext_prefix_total_requests,
+        nvext_prefix_osl, nvext_prefix_iat, enable_nvext_hints, request_timeout, etc.) that
+        are only used internally by NAT to configure the Dynamo client hooks. These fields
+        must NOT be passed directly to LiteLlm because LiteLlm doesn't understand them -
+        they're NAT-specific configuration.
 
         This test ensures the `exclude` set in model_dump() properly filters these fields.
         """
@@ -246,40 +237,30 @@ class TestDynamoAdk:
 
         kwargs = mock_litellm_class.call_args.kwargs
 
-        # These Dynamo-specific fields should NOT be passed to LiteLlm
-        assert "prefix_template" not in kwargs
-        assert "prefix_total_requests" not in kwargs
-        assert "prefix_osl" not in kwargs
-        assert "prefix_iat" not in kwargs
-        assert "prefix_use_raw_values" not in kwargs
-        assert "disable_headers" not in kwargs
+        assert "nvext_prefix_id_template" not in kwargs
+        assert "nvext_prefix_total_requests" not in kwargs
+        assert "nvext_prefix_osl" not in kwargs
+        assert "nvext_prefix_iat" not in kwargs
+        assert "enable_nvext_hints" not in kwargs
         assert "request_timeout" not in kwargs
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
-    async def test_prefix_id_is_unique_per_instance(self, mock_litellm_class, mock_builder):
-        """Each LiteLlm instance should get a unique prefix ID."""
+    async def test_client_passed_per_instance(self, mock_litellm_class, mock_builder):
+        """Each LiteLlm instance should receive a client kwarg when nvext hints are enabled."""
         mock_llm_instance = MagicMock()
         mock_litellm_class.return_value = mock_llm_instance
 
         config = DynamoModelConfig(
             model_name="test-model",
-            prefix_template="session-{uuid}",
-            disable_headers=False,
+            nvext_prefix_id_template="session-{uuid}",
+            enable_nvext_hints=True,
         )
 
-        prefix_ids = set()
-
-        # Create multiple instances
         for _ in range(5):
             async with dynamo_adk(config, mock_builder):
                 pass
-            headers = mock_litellm_class.call_args.kwargs.get("extra_headers", {})
-            if "x-prefix-id" in headers:
-                prefix_ids.add(headers["x-prefix-id"])
-
-        # All IDs should be unique
-        assert len(prefix_ids) == 5
+            assert "client" in mock_litellm_class.call_args.kwargs
 
     @pytest.mark.asyncio
     async def test_dynamo_adk_decorator_registration(self):
