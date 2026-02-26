@@ -215,10 +215,9 @@ def main(junit_xml: str | None,
          extra_flags: list[str]) -> int:
     verbose_flag_pattern = re.compile(r"--verbose|--verbosity(?:=\d+|\s\d+)|-v+")
     has_verbose_flag = any(
-        verbose_flag_pattern.fullmatch(flag)
-        or (i + 1 < len(extra_flags) and verbose_flag_pattern.fullmatch(f"{flag} {extra_flags[i + 1]}"))
-        for i, flag in enumerate(extra_flags)
-    )
+        verbose_flag_pattern.fullmatch(flag) or (
+            i + 1 < len(extra_flags) and verbose_flag_pattern.fullmatch(f"{flag} {extra_flags[i + 1]}"))
+        for i, flag in enumerate(extra_flags))
     projects = discover_projects(examples_only=examples_only)
     if not projects:
         print("No projects found under packages/ or examples/")
