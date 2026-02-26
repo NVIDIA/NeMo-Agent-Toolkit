@@ -17,6 +17,7 @@ import asyncio
 import logging
 import select
 import sys
+import unicodedata
 
 import click
 from colorama import Fore
@@ -31,6 +32,32 @@ from nat.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontE
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
+
+_UNICODE_REPLACEMENTS = {
+    '\u202f': ' ',  # narrow no-break space
+    '\u00a0': ' ',  # no-break space
+    '\u2011': '-',  # non-breaking hyphen
+    '\u2013': '-',  # en dash
+    '\u2014': '--',  # em dash
+    '\u2018': "'",  # left single quotation mark
+    '\u2019': "'",  # right single quotation mark
+    '\u201c': '"',  # left double quotation mark
+    '\u201d': '"',  # right double quotation mark
+}
+
+
+def _normalize_unicode(text: str) -> str:
+    """Replace common Unicode whitespace and punctuation with ASCII equivalents for clean console display."""
+    for orig, repl in _UNICODE_REPLACEMENTS.items():
+        text = text.replace(orig, repl)
+    return unicodedata.normalize('NFKC', text)
+
+
+def _format_output(runner_outputs) -> str:
+    """Format workflow outputs as human-readable text with normalized Unicode."""
+    if isinstance(runner_outputs, list):
+        return "\n".join(_normalize_unicode(str(item)) for item in runner_outputs)
+    return _normalize_unicode(str(runner_outputs))
 
 
 async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
@@ -125,10 +152,12 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         prefix = f"{line}\n{Fore.GREEN}Workflow Result:\n"
         suffix = f"{Fore.RESET}\n{line}"
 
-        logger.info(f"{prefix}%s{suffix}", runner_outputs)
+        display_output = _format_output(runner_outputs)
+
+        logger.info(f"{prefix}%s{suffix}", display_output)
 
         # (handler is a stream handler) => (level > INFO)
         effective_level_too_high = all(
             type(h) is not logging.StreamHandler or h.level > logging.INFO for h in logging.getLogger().handlers)
         if effective_level_too_high:
-            print(f"{prefix}{runner_outputs}{suffix}")
+            print(f"{prefix}{display_output}{suffix}")
