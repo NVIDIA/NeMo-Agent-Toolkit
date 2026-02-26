@@ -162,28 +162,35 @@ class ReActAgentGraph(DualNodeAgent):
         returns the original input string and False.
         """
         if tool_input_str == "None":
-            return None, True
+            # Preserve backward-compatible behavior for literal "None" input.
+            return tool_input_str, True
 
         try:
             return json.loads(tool_input_str), True
         except JSONDecodeError:
             pass
 
-        if self.normalize_tool_input_quotes:
-            normalized_str = tool_input_str.replace("'", '"')
-            try:
-                return json.loads(normalized_str), True
-            except JSONDecodeError:
-                pass
+        if not self.normalize_tool_input_quotes:
+            return tool_input_str, False
+
+        normalized_str = tool_input_str.replace("'", '"')
+        try:
+            return json.loads(normalized_str), True
+        except JSONDecodeError:
+            pass
 
         # Last structured-input fallback: parse Python-like literals
-        # (e.g. {'x': None}) emitted by some models.
-        try:
-            parsed_literal = ast.literal_eval(tool_input_str)
-            if parsed_literal is None or isinstance(parsed_literal, (dict, list)):
-                return parsed_literal, True
-        except (ValueError, SyntaxError):
-            pass
+        # only when python-specific literals are present.
+        # This avoids broad behavior changes for mixed-quote strings that
+        # intentionally fall back to raw string input today.
+        has_python_none = any(x in tool_input_str for x in (": None", "[None", ", None"))
+        if has_python_none:
+            try:
+                parsed_literal = ast.literal_eval(tool_input_str)
+                if parsed_literal is None or isinstance(parsed_literal, (dict, list)):
+                    return parsed_literal, True
+            except (ValueError, SyntaxError):
+                pass
 
         return tool_input_str, False
 
