@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ast
 import json
 import logging
 import re
@@ -152,6 +153,39 @@ class ReActAgentGraph(DualNodeAgent):
         except Exception as ex:
             logger.error("%s Unable to find tool with the name %s\n%s", AGENT_LOG_PREFIX, tool_name, ex)
             raise
+
+    def _parse_tool_input(self, tool_input_str: str) -> tuple[typing.Any, bool]:
+        """
+        Parse ReAct tool input into a structured value when possible.
+
+        Returns a tuple of (parsed_value, is_structured). If parsing fails,
+        returns the original input string and False.
+        """
+        if tool_input_str == "None":
+            return None, True
+
+        try:
+            return json.loads(tool_input_str), True
+        except JSONDecodeError:
+            pass
+
+        if self.normalize_tool_input_quotes:
+            normalized_str = tool_input_str.replace("'", '"')
+            try:
+                return json.loads(normalized_str), True
+            except JSONDecodeError:
+                pass
+
+        # Last structured-input fallback: parse Python-like literals
+        # (e.g. {'x': None}) emitted by some models.
+        try:
+            parsed_literal = ast.literal_eval(tool_input_str)
+            if parsed_literal is None or isinstance(parsed_literal, (dict, list)):
+                return parsed_literal, True
+        except (ValueError, SyntaxError):
+            pass
+
+        return tool_input_str, False
 
     async def agent_node(self, state: ReActGraphState):
         try:
@@ -333,36 +367,14 @@ class ReActAgentGraph(DualNodeAgent):
                      agent_thoughts.tool_input)
 
         # Run the tool. Try to use structured input, if possible.
-        tool_input_str = agent_thoughts.tool_input.strip()
+        tool_input_str = str(agent_thoughts.tool_input).strip()
 
-        try:
-            tool_input = json.loads(tool_input_str) if tool_input_str != 'None' else tool_input_str
+        tool_input, parsed_structured = self._parse_tool_input(tool_input_str)
+        if parsed_structured:
             logger.debug("%s Successfully parsed structured tool input from Action Input", AGENT_LOG_PREFIX)
-
-        except JSONDecodeError as original_ex:
-            if self.normalize_tool_input_quotes:
-                # If initial JSON parsing fails, try with quote normalization as a fallback
-                normalized_str = tool_input_str.replace("'", '"')
-                try:
-                    tool_input = json.loads(normalized_str)
-                    logger.debug("%s Successfully parsed structured tool input after quote normalization",
-                                 AGENT_LOG_PREFIX)
-                except JSONDecodeError:
-                    # the quote normalization failed, use raw string input
-                    logger.debug(
-                        "%s Unable to parse structured tool input after quote normalization. Using Action Input as is."
-                        "\nParsing error: %s",
-                        AGENT_LOG_PREFIX,
-                        original_ex)
-                    tool_input = tool_input_str
-            else:
-                # use raw string input
-                logger.debug(
-                    "%s Unable to parse structured tool input from Action Input. Using Action Input as is."
-                    "\nParsing error: %s",
-                    AGENT_LOG_PREFIX,
-                    original_ex)
-                tool_input = tool_input_str
+        else:
+            logger.debug("%s Unable to parse structured tool input from Action Input. Using Action Input as is.",
+                         AGENT_LOG_PREFIX)
 
         # Call tool once with the determined input (either parsed dict or raw string)
         tool_response = await self._call_tool(requested_tool, tool_input, max_retries=self.tool_call_max_retries)
