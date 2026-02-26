@@ -27,12 +27,13 @@ from typing import Any
 
 from pydantic import Field
 
+from nat.middleware.common import TargetLocation
 from nat.middleware.defense.defense_middleware import DefenseMiddleware
 from nat.middleware.defense.defense_middleware import DefenseMiddlewareConfig
 from nat.middleware.defense.defense_middleware_data_models import OutputVerificationResult
-from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationContext
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +46,8 @@ class OutputVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="output_verif
 
     Actions:
     - 'partial_compliance': Detect and log threats, but allow content to pass through
-    - 'refusal': Block output if threat detected (hard stop)
-    - 'redirection': Replace incorrect output with correct answer from LLM
-
-    Note: Only output analysis is currently supported (target_location='output').
+    - 'refusal': Block function output if threat detected (hard stop)
+    - 'redirection': Replace incorrect function output with correct answer from LLM
     """
 
     llm_name: str = Field(description="Name of the LLM to use for verification (must be defined in llms section)")
@@ -68,8 +67,6 @@ class OutputVerifierMiddleware(DefenseMiddleware):
     * Security validation (detecting malicious content and manipulated values)
     * Providing automatic corrections when errors are detected
 
-    Only output analysis is currently supported (``target_location='output'``).
-
     Streaming Behavior:
         For 'refusal' and 'redirection' actions, chunks are buffered and checked
         before yielding to prevent incorrect content from being streamed to clients.
@@ -87,12 +84,6 @@ class OutputVerifierMiddleware(DefenseMiddleware):
         super().__init__(config, builder)
         # Store config with correct type for linter
         self.config: OutputVerifierMiddlewareConfig = config
-
-        # Output Verifier only supports output analysis
-        if config.target_location == "input":
-            raise ValueError("OutputVerifierMiddleware only supports target_location='output'. "
-                             "Input analysis is not yet supported.")
-
         self._llm = None  # Lazy loaded LLM
 
     async def _get_llm(self):
@@ -125,14 +116,14 @@ class OutputVerifierMiddleware(DefenseMiddleware):
 
     async def _analyze_content(self,
                                content: Any,
-                               content_type: str,
+                               content_type: TargetLocation,
                                inputs: Any = None,
                                function_name: str | None = None) -> OutputVerificationResult:
         """Check content for threats using the configured LLM.
 
         Args:
             content: The content to analyze
-            content_type: Either 'input' or 'output' (for logging only)
+            content_type: TargetLocation used in the LLM prompt and result model.
             inputs: Optional function inputs for context (helps LLM calculate correct answers)
             function_name: Name of the function being verified (for context)
 
@@ -238,7 +229,7 @@ Respond ONLY with valid JSON in this exact format:
         action = self.config.action
 
         if action == "refusal":
-            logger.error("Output Verifier refusing output of %s: %s", context.name, analysis_result.reason)
+            logger.error("Output Verifier refusing function output of %s: %s", context.name, analysis_result.reason)
             raise ValueError(f"Content blocked by security policy: {analysis_result.reason}")
 
         elif action == "redirection":
@@ -281,7 +272,6 @@ Respond ONLY with valid JSON in this exact format:
     async def _process_output_verification(
         self,
         value: Any,
-        location: str,
         context: FunctionMiddlewareContext,
         inputs: Any = None,
     ) -> Any:
@@ -294,10 +284,9 @@ Respond ONLY with valid JSON in this exact format:
         - Applying corrected value back to original structure
 
         Args:
-            value: The value to analyze (input or output)
-            location: Either "input" or "output" (for logging)
-            context: Function context metadata
-            inputs: Original function inputs (for analysis context)
+            value: The value to analyze.
+            context: Function context metadata.
+            inputs: Original function inputs (for analysis context).
 
         Returns:
             The value after output verification handling (may be unchanged, corrected, or raise exception)
@@ -305,20 +294,17 @@ Respond ONLY with valid JSON in this exact format:
         # Extract field from value if target_field is specified
         content_to_analyze, field_info = self._extract_field_from_value(value)
 
-        # Check the output (either extracted field or entire value)
-        logger.info("OutputVerifierMiddleware: Checking %s %s for %s",
-                    f"field '{self.config.target_field}'" if field_info else "entire",
-                    location,
+        logger.info("OutputVerifierMiddleware: Checking %s function output for %s",
+                    f"field '{self.config.target_field}' of" if field_info else "entire",
                     context.name)
         output_result = await self._analyze_content(content_to_analyze,
-                                                    location,
+                                                    TargetLocation.OUTPUT,
                                                     inputs=inputs,
                                                     function_name=context.name)
 
         if not output_result.should_refuse:
             # Content verified as correct, return original value
-            logger.info("OutputVerifierMiddleware: Verified %s of %s as correct (confidence=%s)",
-                        location,
+            logger.info("OutputVerifierMiddleware: %s function output verified as correct (confidence=%s)",
                         context.name,
                         output_result.confidence)
             return value
@@ -333,44 +319,33 @@ Respond ONLY with valid JSON in this exact format:
             # No field extraction - return sanitized content directly
             return sanitized_content
 
-    async def function_middleware_invoke(self,
-                                         *args: Any,
-                                         call_next: CallNext,
-                                         context: FunctionMiddlewareContext,
-                                         **kwargs: Any) -> Any:
-        """Apply output verifier to function invocation.
-
-        Analyzes function outputs for correctness and security, with auto-correction.
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Analyze function output for correctness and security after execution.
 
         Args:
-            args: Positional arguments passed to the function (first arg is typically the input value).
-            call_next: Next middleware/function to call.
-            context: Function metadata.
-            kwargs: Keyword arguments passed to the function.
+            context: Invocation context with function metadata and output.
 
         Returns:
-            Function output (potentially corrected, blocked, or sanitized).
+            Modified context if output was processed, None to pass through.
         """
-        value = args[0] if args else None
+        if self.config.target_location != TargetLocation.OUTPUT:
+            return None
 
         # Check if defense should apply to this function
-        if not self._should_apply_defense(context.name):
-            logger.debug("OutputVerifierMiddleware: Skipping %s (not targeted)", context.name)
-            return await call_next(value, *args[1:], **kwargs)
+        func_ctx: FunctionMiddlewareContext = context.function_context
+        if not self._should_apply_defense(func_ctx.name):
+            logger.debug("OutputVerifierMiddleware: Skipping %s (not targeted)", func_ctx.name)
+            return None
 
         try:
-            # Call the function
-            output = await call_next(value, *args[1:], **kwargs)
-
             # Process output verification (handles field extraction, analysis, and application)
-            output = await self._process_output_verification(output, "output", context, inputs=value)
-
-            return output
-
+            original_input = context.original_args[0] if context.original_args else None
+            context.output = await self._process_output_verification(context.output, func_ctx, inputs=original_input)
+            return context
         except Exception:
             logger.error(
                 "Failed to apply output verification to function %s",
-                context.name,
+                func_ctx.name,
                 exc_info=True,
             )
             raise
@@ -418,7 +393,7 @@ Respond ONLY with valid JSON in this exact format:
             full_output_str = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
 
             # Process output verification (handles field extraction, analysis, and application)
-            processed_output = await self._process_output_verification(full_output_str, "output", context, inputs=value)
+            processed_output = await self._process_output_verification(full_output_str, context, inputs=value)
 
             processed_str = str(processed_output)
             if self.config.action == "redirection" and processed_str != full_output_str:
