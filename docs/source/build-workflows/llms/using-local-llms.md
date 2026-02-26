@@ -62,7 +62,7 @@ docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
 ### Running the NIM Containers
 
 :::{note}
-The `--gpus` flag is used to specify the GPUs to use for the LLM and embedding model. Each user's setup may vary, so adjust the commands to suit the system.
+The `--gpus` flag is used to specify the GPUs to use for the LLM and embedding model. The following commands assume the system is equipped with at least two GPUs, one for each model. Each user's setup may vary, so adjust the commands to suit the system.
 :::
 
 Run the LLM container listening on port 8000:
@@ -71,6 +71,7 @@ export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 mkdir -p "$LOCAL_NIM_CACHE"
 docker run -it --rm \
+    --runtime=nvidia \
     --gpus '"device=0"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
@@ -85,6 +86,7 @@ Open a new terminal and run the embedding model container, listening on port 800
 export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 docker run -it --rm \
+    --runtime=nvidia \
     --gpus '"device=1"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
