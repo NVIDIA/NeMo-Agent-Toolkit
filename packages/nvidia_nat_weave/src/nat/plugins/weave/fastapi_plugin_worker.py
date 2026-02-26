@@ -123,15 +123,15 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
 
                         client = weave.init(weave_project)
                         call = client.get_call(observability_trace_id)
-                        user_id = (call.summary or {}).get("user_email") or "anonymous"
+                        user = (call.summary or {}).get("user") or "anonymous"
 
                         feedback_added = []
                         if reaction_type:
-                            call.feedback.add_reaction(reaction_type, user_id)
+                            call.feedback.add_reaction(reaction_type, user)
                             feedback_added.append(f"reaction '{reaction_type}'")
 
                         if comment:
-                            call.feedback.add_note(comment, user_id)
+                            call.feedback.add_note(comment, user)
                             feedback_added.append("comment")
 
                         return feedback_added
