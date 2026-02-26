@@ -50,8 +50,8 @@ class AgentMemoryServerEditor(MemoryEditor):
         """Insert MemoryItems into long-term memory via the Agent Memory Server."""
         if not items:
             return
-        from agent_memory_client import ClientMemoryRecord
-        from agent_memory_client import MemoryTypeEnum
+        from agent_memory_client.models import ClientMemoryRecord
+        from agent_memory_client.models import MemoryTypeEnum
 
         records = []
         for item in items:
