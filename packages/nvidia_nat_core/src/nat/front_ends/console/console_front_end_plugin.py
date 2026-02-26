@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import re
 import select
 import sys
 import unicodedata
@@ -33,23 +34,21 @@ from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
 
-_UNICODE_REPLACEMENTS = {
-    '\u202f': ' ',  # narrow no-break space
-    '\u00a0': ' ',  # no-break space
-    '\u2011': '-',  # non-breaking hyphen
-    '\u2013': '-',  # en dash
-    '\u2014': '--',  # em dash
-    '\u2018': "'",  # left single quotation mark
-    '\u2019': "'",  # right single quotation mark
-    '\u201c': '"',  # left double quotation mark
-    '\u201d': '"',  # right double quotation mark
-}
+_RE_UNICODE_WHITESPACE = re.compile(r'[\u00a0\u2000-\u200a\u202f\u205f\u3000]')
+_RE_ZERO_WIDTH = re.compile(r'[\u200b-\u200d\u2060\ufeff]')
+_RE_UNICODE_DASHES = re.compile(r'[\u2010-\u2015\ufe58\ufe63\uff0d]')
+_RE_SINGLE_QUOTES = re.compile(r'[\u2018\u2019\u201a\u201b]')
+_RE_DOUBLE_QUOTES = re.compile(r'[\u201c\u201d\u201e\u201f]')
 
 
 def _normalize_unicode(text: str) -> str:
     """Replace common Unicode whitespace and punctuation with ASCII equivalents for clean console display."""
-    for orig, repl in _UNICODE_REPLACEMENTS.items():
-        text = text.replace(orig, repl)
+    text = _RE_UNICODE_WHITESPACE.sub(' ', text)
+    text = _RE_ZERO_WIDTH.sub('', text)
+    text = _RE_UNICODE_DASHES.sub('-', text)
+    text = _RE_SINGLE_QUOTES.sub("'", text)
+    text = _RE_DOUBLE_QUOTES.sub('"', text)
+    text = text.replace('\u2026', '...')
     return unicodedata.normalize('NFKC', text)
 
 
