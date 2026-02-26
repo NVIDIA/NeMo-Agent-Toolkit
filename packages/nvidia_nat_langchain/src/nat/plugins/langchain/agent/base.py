@@ -104,9 +104,11 @@ class BaseAgent(ABC):
         reasoning_parts = []
         async for event in runnable.astream(inputs, config=self._runnable_config):
             content_parts.append(event.content)
-            reasoning = event.additional_kwargs.get('reasoning_content', '')
-            if reasoning:
-                reasoning_parts.append(reasoning)
+            extra = getattr(event, 'additional_kwargs', None)
+            if isinstance(extra, dict):
+                reasoning = extra.get('reasoning_content', '')
+                if reasoning:
+                    reasoning_parts.append(reasoning)
 
         additional_kwargs: dict[str, Any] = {}
         if reasoning_parts:

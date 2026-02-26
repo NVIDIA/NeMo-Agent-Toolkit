@@ -277,10 +277,11 @@ class ReActAgentGraph(DualNodeAgent):
                     # the agent might have also missed Action or Action Input in its output
 
                     # Reasoning models may answer directly without ReAct format.
-                    # Accept as final answer if: missing_action, has content, and no "Thought:" prefix.
+                    # Accept as final answer if: missing_action, has content, and doesn't look like
+                    # a ReAct prompt echo (Thought:/Question:/Previous conversation history:).
                     content_str = str(output_message.content).strip()
-                    if (ex.missing_action and content_str
-                            and not re.match(r'\s*thought\s*:', content_str, re.IGNORECASE)):
+                    if (ex.missing_action and content_str and not re.match(
+                            r'\s*(thought\s*:|question\s*:|previous\s+conversation)', content_str, re.IGNORECASE)):
                         logger.info(
                             "%s Agent produced direct answer without ReAct format, "
                             "accepting as final answer",
