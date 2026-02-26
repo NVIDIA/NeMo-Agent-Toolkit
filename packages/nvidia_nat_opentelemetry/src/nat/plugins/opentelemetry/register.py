@@ -76,6 +76,9 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
     )
     api_key: SerializableSecretStr = Field(description="The Langsmith API key",
                                            default_factory=lambda: SerializableSecretStr(""))
+    workspace_id: str = Field(default="",
+                              description="The Langsmith workspace ID. "
+                              "Falls back to LANGSMITH_WORKSPACE_ID env var if not set.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -91,6 +94,10 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
         raise ValueError("API key is required for langsmith")
 
     headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
+    workspace_id = config.workspace_id or os.environ.get("LANGSMITH_WORKSPACE_ID") or os.environ.get(
+        "LANGCHAIN_WORKSPACE_ID")
+    if workspace_id:
+        headers["X-Tenant-Id"] = workspace_id
     yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
                                   headers=headers,
                                   batch_size=config.batch_size,

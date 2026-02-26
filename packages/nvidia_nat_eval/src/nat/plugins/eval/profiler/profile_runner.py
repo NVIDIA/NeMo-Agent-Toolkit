@@ -45,6 +45,7 @@ class InferenceOptimizationHolder(BaseModel):
     common_prefixes: Any
     token_uniqueness: Any
     workflow_runtimes: Any
+    dynamo_metrics: Any = None
 
 
 class ProfilerRunner:
@@ -81,6 +82,41 @@ class ProfilerRunner:
 
         # Ensure output directory
         os.makedirs(output_dir, exist_ok=True)
+
+    def _get_workflow_time_window(
+        self,
+        all_steps: list[list[IntermediateStep]],
+    ) -> tuple[float | None, float | None]:
+        """
+        Extract the workflow time window from intermediate steps.
+
+        Finds the earliest and latest event timestamps across all workflow executions
+        to determine the time range for Prometheus queries.
+
+        Args:
+            all_steps: List of workflow executions, each containing intermediate steps
+
+        Returns:
+            Tuple of (start_timestamp, end_timestamp) in Unix seconds, or (None, None) if no data
+        """
+        min_timestamp = float('inf')
+        max_timestamp = float('-inf')
+
+        for workflow_steps in all_steps:
+            for step in workflow_steps:
+                ts = step.event_timestamp
+                min_timestamp = min(min_timestamp, ts)
+                max_timestamp = max(max_timestamp, ts)
+                # Also check span_event_timestamp for start times of END events
+                span_ts = step.span_event_timestamp
+                if span_ts is not None:
+                    min_timestamp = min(min_timestamp, span_ts)
+
+        if min_timestamp == float('inf') or max_timestamp == float('-inf'):
+            logger.warning("Could not determine workflow time window from intermediate steps")
+            return None, None
+
+        return min_timestamp, max_timestamp
 
     async def run(self, all_steps: list[list[IntermediateStep]]) -> ProfilerResults:
         """
@@ -192,10 +228,38 @@ class ProfilerRunner:
             workflow_runtimes = compute_workflow_runtime_metrics(all_steps)
             workflow_runtimes_results = workflow_runtimes
 
+        # ------------------------------------------------------------
+        # Collect Dynamo inference stack metrics (if enabled)
+        # ------------------------------------------------------------
+        dynamo_metrics_results = None
+        if self.profile_config.dynamo_metrics.enable:
+            from nat.plugins.eval.profiler.inference_optimization.dynamo_metrics import collect_dynamo_metrics
+            try:
+                # Calculate workflow time window from intermediate steps
+                workflow_start, workflow_end = self._get_workflow_time_window(all_steps)
+                if workflow_start is not None and workflow_end is not None:
+                    # Set both start and end timestamps so Prometheus range queries
+                    # are isolated to THIS eval run (not picking up data from other runs)
+                    self.profile_config.dynamo_metrics.workflow_start_timestamp = workflow_start
+                    self.profile_config.dynamo_metrics.workflow_end_timestamp = workflow_end
+                    workflow_duration = workflow_end - workflow_start
+                    logger.info("Workflow time window: %.1f seconds (%.2f to %.2f) - metrics isolated to this eval run",
+                                workflow_duration,
+                                workflow_start,
+                                workflow_end)
+
+                dynamo_metrics_results = await collect_dynamo_metrics(self.profile_config.dynamo_metrics)
+                if dynamo_metrics_results.errors:
+                    logger.warning("Dynamo metrics collection had errors: %s", dynamo_metrics_results.errors)
+                logger.info("Collected Dynamo metrics successfully")
+            except Exception as e:
+                logger.warning("Failed to collect Dynamo metrics: %s", e)
+
         inference_optimization_results = InferenceOptimizationHolder(confidence_intervals=simple_metrics,
                                                                      common_prefixes=common_prefix_results,
                                                                      token_uniqueness=token_uniqueness_results,
-                                                                     workflow_runtimes=workflow_runtimes_results)
+                                                                     workflow_runtimes=workflow_runtimes_results,
+                                                                     dynamo_metrics=dynamo_metrics_results)
 
         if self.write_output and inference_optimization_results:
             # Save to JSON
@@ -281,9 +345,18 @@ class ProfilerRunner:
             # ------------------------------------------------------------
             from nat.profiler.prediction_trie import PredictionTrieBuilder
             from nat.profiler.prediction_trie import save_prediction_trie
+            from nat.profiler.prediction_trie.trie_builder import SensitivityConfig
 
             logger.info("Building prediction trie from traces...")
-            trie_builder = PredictionTrieBuilder()
+            trie_config = self.profile_config.prediction_trie
+            sensitivity_config = SensitivityConfig(
+                sensitivity_scale=trie_config.sensitivity_scale,
+                w_critical=trie_config.w_critical,
+                w_fanout=trie_config.w_fanout,
+                w_position=trie_config.w_position,
+                w_parallel=trie_config.w_parallel,
+            ) if trie_config.auto_sensitivity else None
+            trie_builder = PredictionTrieBuilder(sensitivity_config=sensitivity_config)
             for trace in all_steps:
                 trie_builder.add_trace(trace)
 

@@ -43,7 +43,15 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
 
     config_dict = config.model_dump(
         exclude={
-            "type", "max_retries", "thinking", "azure_endpoint", "azure_deployment", "model_name", "model", "api_type"
+            "type",
+            "max_retries",
+            "thinking",
+            "azure_endpoint",
+            "azure_deployment",
+            "model_name",
+            "model",
+            "api_type",
+            "request_timeout"
         },
         by_alias=True,
         exclude_none=True,
@@ -51,6 +59,8 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
     )
     if config.azure_endpoint:
         config_dict["api_base"] = config.azure_endpoint
+    if config.request_timeout is not None:
+        config_dict["timeout"] = config.request_timeout
 
     config_dict["api_version"] = config.api_version
 
@@ -116,7 +126,7 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
+        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type", "request_timeout"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -126,40 +136,30 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
         config_dict["api_key"] = api_key
     if (base_url := config.base_url or os.getenv("OPENAI_BASE_URL")):
         config_dict["api_base"] = base_url
+    if config.request_timeout is not None:
+        config_dict["timeout"] = config.request_timeout
 
     yield LiteLlm(config.model_name, **config_dict)
 
 
 @register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
 async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
-    """Create and yield a Google ADK LiteLlm client for Dynamo with prefix header support.
+    """Create and yield a Google ADK LiteLlm client for Dynamo with nvext.agent_hints support.
 
-    This client configures Dynamo routing hints via LiteLLM's extra_headers parameter.
-    Unlike the LangChain implementation which injects headers per-request via httpx hooks,
-    LiteLLM sets headers at initialization time.
-
-    For dynamic prefix IDs (e.g., per-evaluation-question), use the DynamoPrefixContext class::
-
-        from nat.llm.dynamo_llm import DynamoPrefixContext
-
-        DynamoPrefixContext.set("my-prefix-id")
-        # ... run LLM calls ...
-        DynamoPrefixContext.clear()
-
-        # Or use the context manager:
-        with DynamoPrefixContext.scope("my-prefix-id"):
-            # ... run LLM calls ...
-
-    Note: The context variable approach requires custom integration as LiteLLM's headers
-    are static. For full dynamic prefix ID support, consider using the LangChain client.
+    When ``enable_nvext_hints`` is True, this client injects Dynamo routing hints via
+    nvext.agent_hints in the request body using a custom httpx transport wrapped in an
+    AsyncOpenAI client. This gives the same per-request hint injection as the LangChain
+    implementation, including dynamic prefix IDs via DynamoPrefixContext.
 
     Args:
         config (DynamoModelConfig): The configuration for the Dynamo model.
         _builder (Builder): The NAT builder instance.
     """
-    import uuid
+    import os
 
     from google.adk.models.lite_llm import LiteLlm
+
+    from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
 
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
@@ -182,27 +182,53 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
-    # Build Dynamo prefix headers if prefix_template is configured and headers are enabled
-    if config.prefix_template is not None and not config.disable_headers:
-        # Generate a static prefix ID for this LLM instance
-        # For dynamic prefix IDs, users should use the LangChain client or manage sessions manually
-        unique_id = uuid.uuid4().hex[:16]
-        prefix_id = config.prefix_template.format(uuid=unique_id)
+    if config.enable_nvext_hints:
+        from pathlib import Path
 
-        extra_headers = {
-            "x-prefix-id": prefix_id,
-            "x-prefix-total-requests": str(config.prefix_total_requests),
-            "x-prefix-osl": str(config.prefix_osl),
-            "x-prefix-iat": str(config.prefix_iat),
-        }
-        config_dict["extra_headers"] = extra_headers
+        from openai import AsyncOpenAI
+
+        from nat.profiler.prediction_trie import load_prediction_trie
+        from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
+
+        prediction_lookup: PredictionTrieLookup | None = None
+        if config.nvext_prediction_trie_path:
+            try:
+                trie_path = Path(config.nvext_prediction_trie_path)
+                trie = load_prediction_trie(trie_path)
+                prediction_lookup = PredictionTrieLookup(trie)
+                logger.info("Loaded prediction trie from %s", config.nvext_prediction_trie_path)
+            except FileNotFoundError:
+                logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
+            except Exception as e:
+                logger.exception("Failed to load prediction trie: %s", e)
+
+        http_client = create_httpx_client_with_dynamo_hooks(
+            total_requests=config.nvext_prefix_total_requests,
+            osl=config.nvext_prefix_osl,
+            iat=config.nvext_prefix_iat,
+            timeout=config.request_timeout,
+            prediction_lookup=prediction_lookup,
+            cache_pin_type=config.nvext_cache_pin_type,
+            cache_control_mode=config.nvext_cache_control_mode,
+            max_sensitivity=config.nvext_max_sensitivity,
+        )
+
+        api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
+        base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
+
+        openai_client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=http_client,
+        )
+        config_dict["client"] = openai_client
 
         logger.info(
-            "Dynamo prefix headers configured for ADK: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
-            prefix_id,
-            config.prefix_total_requests,
-            config.prefix_osl,
-            config.prefix_iat,
+            "Dynamo agent hints enabled for ADK: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
+            config.nvext_prefix_total_requests,
+            config.nvext_prefix_osl,
+            config.nvext_prefix_iat,
+            "loaded" if prediction_lookup else "disabled",
         )
 
     yield LiteLlm(config.model_name, **config_dict)

@@ -37,7 +37,7 @@ NeMo Agent Toolkit integrates with the following frameworks:
 NeMo Agent Toolkit provides different levels of support for each framework across the following dimensions:
 
 ### LLM Provider Support
-The ability to use various large language model providers with a framework, including NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, and HuggingFace.
+The ability to use various large language model providers with a framework, including NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, and Hugging Face.
 
 ### Embedder Provider Support
 The ability to use embedding model providers for vector representations, including NVIDIA NIM embeddings, OpenAI embeddings, and Azure OpenAI embeddings.
@@ -148,12 +148,12 @@ uv pip install "nvidia-nat[crewai]"
 
 LangChain is a framework for building applications that utilize large language models (LLMs) to interact with data. It provides a set of tools for creating chains of LLM calls, allowing for complex workflows powered by LLMs. LangChain focuses on modularity and extensibility, making it suitable for integrating custom data pipelines and enhancing intelligent applications.
 
-For more information, visit the [LangChain website](https://www.langchain.com/).
+For more information, visit the [LangChain documentation](https://docs.langchain.com/oss/python/langchain/overview).
 
 
 | Capability              | Providers / Details                                                                 |
 |-------------------------|-------------------------------------------------------------------------------------|
-| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, HuggingFace                 |
+| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, Hugging Face                |
 | **Embedder Providers**  | NVIDIA NIM, OpenAI, Azure OpenAI                                                    |
 | **Retriever Providers** | NeMo Retriever, Milvus                                                              |
 | **Tool Calling**        | Fully supported through LangChain's `StructuredTool` interface                      |

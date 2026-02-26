@@ -69,7 +69,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     def _fake_optimize_parameters(**kwargs):  # noqa: ANN001, ARG001
         del kwargs
         calls["numeric"] += 1
-        return cfg
+        return cfg, {}, 0
 
     async def _fake_optimize_prompts(**kwargs):  # noqa: ANN001, ARG001
         del kwargs

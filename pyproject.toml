@@ -51,6 +51,7 @@ dependencies = ["nvidia-nat-core == {version}"]
 a2a = ["nvidia-nat-a2a == {version}"]
 adk = ["nvidia-nat-adk == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
+app = ["nvidia-nat-app == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
 core = ["nvidia-nat-core == {version}"]
 crewai = ["nvidia-nat-crewai == {version}"]
@@ -65,6 +66,7 @@ nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
 openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
 opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
+rag = ["nvidia-nat-rag == {version}"]
 ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
@@ -88,6 +90,7 @@ most = [
   "nvidia-nat-a2a == {version}",
   "nvidia-nat-adk == {version}",
   "nvidia-nat-agno == {version}",
+  "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
@@ -98,10 +101,10 @@ most = [
   "nvidia-nat-llama-index == {version}",
   "nvidia-nat-mcp == {version}",
   "nvidia-nat-mem0ai == {version}",
+  "nvidia-nat-mysql == {version}",
   "nvidia-nat-nemo-customizer == {version}",
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
-  "nvidia-nat-mysql == {version}",
   "nvidia-nat-redis == {version}",
   "nvidia-nat-runtime == {version}",
   "nvidia-nat-s3 == {version}",
@@ -128,6 +131,7 @@ examples = [
   "nat_haystack_deep_research_agent",
   "nat_hybrid_control_flow",
   "nat_kaggle_mcp",
+  "nat_latency_sensitivity_demo",
   "nat_math_assistant_a2a",
   "nat_math_assistant_a2a_protected",
   "nat_multi_frameworks",
@@ -211,6 +215,9 @@ conflicts = [
     [{ extra = "adk" }, { extra = "ragaai" }],
     [{ extra = "strands" }, { extra = "ragaai" }],
     [{ extra = "most" }, { extra = "ragaai" }],
+    # rag<>autogen have incompatible protobuf versions
+    [{ extra = "rag" }, { extra = "autogen" }],
+    [{ extra = "rag" }, { extra = "most" }],
 ]
 
 [tool.uv.sources]
@@ -218,6 +225,7 @@ conflicts = [
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
 nvidia-nat-adk = { path = "packages/nvidia_nat_adk", editable = true }
 nvidia-nat-agno = { path = "packages/nvidia_nat_agno", editable = true }
+nvidia-nat-app = { path = "packages/nvidia_nat_app", editable = true }
 nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
 nvidia-nat-core = { path = "packages/nvidia_nat_core", editable = true }
 nvidia-nat-crewai = { path = "packages/nvidia_nat_crewai", editable = true }
@@ -232,6 +240,7 @@ nvidia-nat-nemo-customizer = { path = "packages/nvidia_nat_nemo_customizer", edi
 nvidia-nat-openpipe-art = { path = "packages/nvidia_nat_openpipe_art", editable = true }
 nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
+nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragaai = { path = "packages/nvidia_nat_ragaai", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
@@ -259,6 +268,7 @@ nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_hybrid_control_flow = { path = "examples/control_flow/hybrid_control_flow", editable = true }
 nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
+nat_latency_sensitivity_demo = { path = "examples/dynamo_integration/latency_sensitivity_demo", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }

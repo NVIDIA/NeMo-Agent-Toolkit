@@ -387,7 +387,7 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
     async def _remove_flow(self, state: str):
         async with self._outstanding_flows_lock:
-            del self._outstanding_flows[state]
+            self._outstanding_flows.pop(state, None)
 
 
 # Prevent Sphinx from documenting items not a part of the public API

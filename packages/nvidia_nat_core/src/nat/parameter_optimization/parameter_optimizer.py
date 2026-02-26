@@ -13,9 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 import asyncio
 import logging
 from collections.abc import Mapping as Dict
+from typing import TYPE_CHECKING
+from typing import Any
 
 import optuna
 import yaml
@@ -31,8 +35,70 @@ from nat.parameter_optimization.eval_runtime_loader import load_evaluation_run
 from nat.parameter_optimization.parameter_selection import pick_trial
 from nat.parameter_optimization.update_helpers import apply_suggestions
 
+if TYPE_CHECKING:
+    from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
+
 logger = logging.getLogger(__name__)
 """Optional eval runtime class."""
+
+
+def _on_numeric_trial_end(
+    callback_manager: OptimizerCallbackManager | None,
+    trial: Any,
+    eval_metrics: list[str],
+    avg_scores: list[float],
+    suggestions: dict[str, Any],
+    last_eval_output: Any,
+    all_scores: list[list[float]],
+) -> None:
+    """Build a TrialResult from one numeric-optimisation trial and fire on_trial_end."""
+    if callback_manager is None:
+        return
+    from nat.eval.eval_callbacks import build_eval_result
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    eval_result = None
+    try:
+        eval_result = build_eval_result(
+            eval_input_items=last_eval_output.eval_input.eval_input_items,
+            evaluation_results=last_eval_output.evaluation_results,
+            metric_scores=dict(zip(eval_metrics, avg_scores)),
+            usage_stats=last_eval_output.usage_stats,
+        )
+    except Exception:
+        logger.warning("Failed to build EvalResult for optimizer callback", exc_info=True)
+
+    callback_manager.on_trial_end(
+        TrialResult(
+            trial_number=trial.number,
+            parameters=dict(suggestions),
+            metric_scores=dict(zip(eval_metrics, avg_scores)),
+            is_best=False,
+            rep_scores=all_scores,
+            eval_result=eval_result,
+        ))
+
+
+def _on_numeric_study_end(
+    callback_manager: OptimizerCallbackManager | None,
+    best_trial_obj: Any,
+    eval_metrics: list[str],
+    n_trials: int,
+) -> None:
+    """Fire on_study_end for a completed numeric optimisation study."""
+    if callback_manager is None:
+        return
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    callback_manager.on_study_end(
+        best_trial=TrialResult(
+            trial_number=best_trial_obj.number,
+            parameters=dict(best_trial_obj.params),
+            metric_scores=dict(zip(eval_metrics, best_trial_obj.values)),
+            is_best=True,
+        ),
+        total_trials=n_trials,
+    )
 
 
 @experimental(feature_name="Optimizer")
@@ -42,7 +108,8 @@ def optimize_parameters(
     full_space: Dict[str, SearchSpace],
     optimizer_config: OptimizerConfig,
     opt_run_config: OptimizerRunConfig,
-) -> Config:
+    callback_manager: OptimizerCallbackManager | None = None,
+) -> tuple[Config, dict[str, Any], int]:
     """Tune all *non-prompt* hyper-parameters and persist the best config."""
     EvaluationRun = load_evaluation_run()
     space = {k: v for k, v in full_space.items() if not v.is_prompt}
@@ -92,7 +159,17 @@ def optimize_parameters(
         suggestions = {p: spec.suggest(trial, p) for p, spec in space.items()}
         cfg_trial = apply_suggestions(base_cfg, suggestions)
 
-        async def _single_eval(trial_idx: int) -> list[float]:  # noqa: ARG001
+        # Route this trial's OTEL traces to a per-trial experiment project
+        if callback_manager:
+            trial_project = callback_manager.get_trial_project_name(trial.number)
+            if trial_project:
+                from nat.observability.utils.tracing_utils import get_tracing_configs
+                tracing = get_tracing_configs(cfg_trial)
+                for exporter_config in tracing.values():
+                    if hasattr(exporter_config, 'project'):
+                        exporter_config.project = trial_project
+
+        async def _single_eval(trial_idx: int) -> tuple[list[float], Any]:  # noqa: ARG001
             eval_cfg = EvaluationRunConfig(
                 config_file=cfg_trial,
                 dataset=opt_run_config.dataset,
@@ -100,13 +177,13 @@ def optimize_parameters(
                 endpoint=opt_run_config.endpoint,
                 endpoint_timeout=opt_run_config.endpoint_timeout,
             )
-            scores = await _run_eval(EvaluationRun(config=eval_cfg))
+            eval_output = await _run_eval(EvaluationRun(config=eval_cfg))
             values = []
             for metric_name in eval_metrics:
-                metric = next(r[1] for r in scores.evaluation_results if r[0] == metric_name)
+                metric = next(r[1] for r in eval_output.evaluation_results if r[0] == metric_name)
                 values.append(metric.average_score)
 
-            return values
+            return values, eval_output
 
         # Create tasks for all evaluations
         async def _run_all_evals():
@@ -119,20 +196,38 @@ def optimize_parameters(
         with (out_dir / f"config_numeric_trial_{trial_id_padded}.yml").open("w") as fh:
             yaml.dump(cfg_trial.model_dump(), fh)
 
-        all_scores = asyncio.run(_run_all_evals())
-        # Persist raw per‑repetition scores so they appear in `trials_dataframe`.
+        all_results = asyncio.run(_run_all_evals())
+        all_scores = [r[0] for r in all_results]
+        last_eval_output = all_results[-1][1]  # Use last rep for per-item data
+        # Persist raw per-repetition scores so they appear in `trials_dataframe`.
         trial.set_user_attr("rep_scores", all_scores)
-        return [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
+        avg_scores = [sum(run[i] for run in all_scores) / reps for i in range(len(eval_metrics))]
+
+        _on_numeric_trial_end(
+            callback_manager,
+            trial,
+            eval_metrics,
+            avg_scores,
+            suggestions,
+            last_eval_output,
+            all_scores,
+        )
+
+        return avg_scores
 
     logger.info("Starting numeric / enum parameter optimization...")
     study.optimize(_objective, n_trials=optimizer_config.numeric.n_trials)
     logger.info("Numeric optimization finished")
 
-    best_params = pick_trial(
+    best_trial_obj = pick_trial(
         study=study,
         mode=optimizer_config.multi_objective_combination_mode,
         weights=weights,
-    ).params
+    )
+    best_params = best_trial_obj.params
+
+    _on_numeric_study_end(callback_manager, best_trial_obj, eval_metrics, optimizer_config.numeric.n_trials)
+
     tuned_cfg = apply_suggestions(base_cfg, best_params)
 
     # Save final results (out_dir already created and defined above)
@@ -188,4 +283,4 @@ def optimize_parameters(
     except Exception as e:
         logger.warning("Failed to generate visualizations: %s", e)
 
-    return tuned_cfg
+    return tuned_cfg, dict(best_params), optimizer_config.numeric.n_trials

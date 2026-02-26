@@ -53,6 +53,7 @@ Databricks
 Datadog
 [Dd]atastore
 DB(s?)
+[Dd]eclaratively
 [Dd]enylist
 [Dd]eserialize
 [Dd]ev
@@ -84,6 +85,7 @@ Grafana
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
+[Ii]nterarrival
 [Ii]nterquartile
 isort
 Jama
@@ -91,6 +93,8 @@ Jira
 jsonlines
 [Kk]aggle
 [Kk]eycloak
+kv
+KV
 LangChain
 Langfuse
 LangGraph
@@ -123,6 +127,7 @@ NIC
 NIM(s?)
 npm
 NumPy
+nvext
 NVIDIA
 OAuth
 Ollama
@@ -142,6 +147,7 @@ PDF(s?)
 [Pp]luggable
 [Pp]ostprocess
 [Pp]ostprocessing
+[Pp]refill
 [Pp]reprocess
 [Pp]retrained
 [Pp]rofiler
@@ -153,6 +159,7 @@ Qwen
 [Rr]eimplement(ing)?
 [Rr]einstall(s?)
 [Rr]eplatform(ing)?
+[Rr]erank(er|ing)?
 [Rr]epo
 [Rr]eputational
 [Rr]etarget(ed?)
@@ -162,6 +169,8 @@ Qwen
 [Ss]andboxing
 [Ss]anitiz(e|ed|ation|ing)
 [Ss]erializable
+[Ss]erverless
+SGLang
 spaCy
 SQLAlchemy
 SSE
@@ -178,6 +187,7 @@ Tavily
 [Tt]eardown
 [Tt]imestamp(s?)
 [Tt]okenization
+[Tt]oolchain
 [Tt]okenizer(s?)
 [Tt]rie(s?)
 triages
@@ -193,6 +203,7 @@ URIs
 uv
 Vanna
 VectorDB
+vLLM
 [Ww]alkthrough
 [Ww]eb[Ss]ocket
 XGBoost

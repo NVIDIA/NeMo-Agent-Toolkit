@@ -287,7 +287,7 @@ async def test_legacy_non_streaming_response_format():
     """Test non-streaming legacy endpoint response format matches exact OpenAI structure"""
 
     front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_path = "/chat"
+    front_end_config.workflow.legacy_openai_api_path = "/chat"
 
     # Use EchoFunctionConfig with specific content to match expected response
     config = Config(
@@ -363,7 +363,7 @@ async def test_legacy_streaming_response_format():
     (/chat/stream).
     """
     front_end_config = FastApiFrontEndConfig()
-    front_end_config.workflow.openai_api_path = "/chat"
+    front_end_config.workflow.legacy_openai_api_path = "/chat"
 
     config = Config(
         general=GeneralConfig(front_end=front_end_config),

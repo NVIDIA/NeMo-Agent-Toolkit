@@ -70,14 +70,24 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
         for attempt in range(tool_config.max_retries):
             try:
                 search_docs = await tavily_search.ainvoke({"query": question})
+                # langchain_tavily may return a string error message instead of a dict
+                # (e.g. when ToolException is raised for zero-result queries), or a dict
+                # without a "results" key (e.g. {"detail": {"error": "Unauthorized"}} on
+                # auth failures). Guard against both to avoid crashing the workflow item.
+                if not isinstance(search_docs, dict) or "results" not in search_docs:
+                    return f"No web search results found for: {question}"
+                if not search_docs["results"]:
+                    return f"No web search results found for: {question}"
                 # Format
                 web_search_results = "\n\n---\n\n".join([
                     f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs["results"]
                 ])
                 return web_search_results
             except Exception:
+                # Return a graceful message instead of raising, so the agent can
+                # continue reasoning without web search rather than failing entirely.
                 if attempt == tool_config.max_retries - 1:
-                    raise
+                    return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
                 await asyncio.sleep(2**attempt)
 
     # Create a Generic NAT tool that can be used with any supported LLM framework
