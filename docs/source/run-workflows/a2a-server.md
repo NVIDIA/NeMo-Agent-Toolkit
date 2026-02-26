@@ -114,10 +114,10 @@ general:
     _type: a2a
     host: 0.0.0.0
     port: 10000
-    public_base_url: ${PUBLIC_BASE_URL}
+    public_base_url: ${NAT_PUBLIC_BASE_URL}
 ```
 
-Use your deployment tooling (for example Helm values or environment injection) to provide `PUBLIC_BASE_URL` at runtime.
+Use your deployment tooling (for example Helm values or environment injection) to provide `NAT_PUBLIC_BASE_URL` at runtime.
 
 ## How Workflows Map to A2A Agents
 
