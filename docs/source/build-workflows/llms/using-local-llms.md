@@ -161,7 +161,9 @@ uv pip install -e examples/getting_started/simple_web_query
 Similar to the NIM approach we will be running the LLM on the default port of 8000 and the embedding model on port 8001.
 
 :::{note}
-The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to use for the LLM and embedding model. Each user's setup may vary, so adjust the commands to suit the system.
+For this example we are using vLLM v0.16.0, the command line flags and configuration may differ for other versions, refer to the vLLM documentation for the version you are using.
+
+The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to use for the LLM and embedding model. The following commands assume a system with at least two GPUs. Each user's setup may vary, so adjust the commands to suit the system.
 :::
 
 In a terminal from within the vLLM environment, run the following command to serve the LLM:
@@ -171,7 +173,7 @@ CUDA_VISIBLE_DEVICES=0 vllm serve nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
 
 In a second terminal also from within the vLLM environment, run the following command to serve the embedding model:
 ```bash
-CUDA_VISIBLE_DEVICES=1 vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
+CUDA_VISIBLE_DEVICES=1 vllm serve --port 8001 --runner pooling --convert embed --pooler-config '{"pooling_type": "MEAN"}' ssmits/Qwen2-7B-Instruct-embed-base
 ```
 
 :::{note}
