@@ -866,9 +866,7 @@ def test_optional_field_with_explicit_null_default_becomes_nullable():
         'type': 'object',
         'properties': {
             'cursor': {
-                'description': 'Pagination cursor',
-                'type': 'string',
-                'default': None
+                'description': 'Pagination cursor', 'type': 'string', 'default': None
             }
         },
         'required': []
