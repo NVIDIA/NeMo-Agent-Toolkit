@@ -50,6 +50,7 @@ dependencies = ["nvidia-nat-core == {version}"]
 # Keep sorted!!!
 a2a = ["nvidia-nat-a2a == {version}"]
 adk = ["nvidia-nat-adk == {version}"]
+agent-memory-server = ["nvidia-nat-agent-memory-server == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
 app = ["nvidia-nat-app == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
@@ -87,6 +88,7 @@ profiling = [ "nvidia-nat-eval[profiling] == {version}" ]
 most = [
   "nvidia-nat-a2a == {version}",
   "nvidia-nat-adk == {version}",
+  "nvidia-nat-agent-memory-server == {version}",
   "nvidia-nat-agno == {version}",
   "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
