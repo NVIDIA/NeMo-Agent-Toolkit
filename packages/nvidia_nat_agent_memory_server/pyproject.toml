@@ -1,0 +1,7 @@
+[project]
+name = "nvidia-nat-agent-memory-server"
+version = "0.1.0"
+description = "Redis Agent Memory Server is a full featured package that manages agent memory."
+readme = "README.md"
+requires-python = ">=3.11, <3.14"
+dependencies = []
