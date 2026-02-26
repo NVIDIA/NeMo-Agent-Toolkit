@@ -1735,7 +1735,6 @@ dev = [
     { name = "sphinx-design", specifier = "~=0.6" },
     { name = "sphinx-mermaid" },
     { name = "sphinx-reredirects", specifier = "~=1.1" },
-    { name = "tomlkit", specifier = ">=0.13.2" },
     { name = "twine", specifier = "~=6.0" },
     { name = "uv", specifier = "==0.9.28" },
     { name = "vale", specifier = "~=3.12" },

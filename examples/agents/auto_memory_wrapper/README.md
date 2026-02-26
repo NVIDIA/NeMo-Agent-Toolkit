@@ -56,12 +56,26 @@ workflow:
   llm_name: nim_llm
 ```
 
+### Install this Workflow
+
+From the root directory of the NeMo Agent Toolkit repository, run the following commands:
+
+```bash
+uv pip install -e examples/agents
+```
+
+### Set Up API Keys
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+
+# Set Zep credentials
+export ZEP_API_KEY=<YOUR_ZEP_API_KEY>
+```
+
 ### Running the Example
 
 ```bash
-# Set Zep credentials
-export ZEP_API_KEY="your_api_key"
-
 # Run the agent
 nat run --config examples/agents/auto_memory_wrapper/configs/config_zep.yml
 ```
