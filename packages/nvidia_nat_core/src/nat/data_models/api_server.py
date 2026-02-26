@@ -523,6 +523,36 @@ class ResponsePayloadOutput(BaseModel, ResponseSerializable):
         return f"data: {self.payload}\n\n"
 
 
+class ResponseATIFStep(BaseModel, ResponseSerializable):
+    """An ATIF step emitted during streaming on the ``/v1/workflow/atif`` endpoint."""
+
+    step_id: int
+    source: str
+    message: str = ""
+    timestamp: str | None = None
+    model_name: str | None = None
+    reasoning_content: str | None = None
+    tool_calls: list[dict[str, typing.Any]] | None = None
+    observation: dict[str, typing.Any] | None = None
+    metrics: dict[str, typing.Any] | None = None
+    extra: dict[str, typing.Any] | None = None
+
+    def get_stream_data(self) -> str:
+        return f"data: {self.model_dump_json(exclude_none=True)}\n\n"
+
+
+class ResponseATIFTrajectory(BaseModel, ResponseSerializable):
+    """Final ATIF trajectory summary emitted at the end of an ATIF stream."""
+
+    schema_version: str
+    session_id: str
+    agent: dict[str, typing.Any]
+    final_metrics: dict[str, typing.Any] | None = None
+
+    def get_stream_data(self) -> str:
+        return f"data: {self.model_dump_json(exclude_none=True)}\n\n"
+
+
 class GenerateResponse(BaseModel):
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")

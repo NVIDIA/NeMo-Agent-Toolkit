@@ -1,0 +1,655 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Convert NAT IntermediateStep traces to the Agent Trajectory Interchange Format (ATIF).
+
+ATIF is a standardized JSON format for logging the complete interaction history
+of autonomous LLM agents. Reference: https://github.com/laude-institute/harbor
+
+This module provides:
+- Pydantic models mirroring ATIF v1.6
+- `IntermediateStepToATIFConverter` for batch conversion
+- `ATIFStreamConverter` for incremental / streaming conversion
+"""
+
+from __future__ import annotations
+
+import datetime
+import logging
+import uuid
+from typing import Any
+
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepCategory
+from nat.data_models.intermediate_step import IntermediateStepState
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import TraceMetadata
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+
+logger = logging.getLogger(__name__)
+
+ATIF_VERSION = "ATIF-v1.6"
+
+# ---------------------------------------------------------------------------
+# ATIF Pydantic models
+# ---------------------------------------------------------------------------
+
+
+class ATIFToolCall(BaseModel):
+    """A single tool/function invocation by the agent."""
+
+    tool_call_id: str
+    function_name: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+
+
+class ATIFObservationResult(BaseModel):
+    """Result from a single tool call or action."""
+
+    source_call_id: str | None = None
+    content: str | None = None
+
+
+class ATIFObservation(BaseModel):
+    """Environment feedback after tool calls or system events."""
+
+    results: list[ATIFObservationResult] = Field(default_factory=list)
+
+
+class ATIFStepMetrics(BaseModel):
+    """LLM operational metrics for a single step."""
+
+    prompt_tokens: int | None = None
+    completion_tokens: int | None = None
+    cached_tokens: int | None = None
+    extra: dict[str, Any] | None = None
+
+
+class ATIFFinalMetrics(BaseModel):
+    """Aggregate metrics for an entire trajectory."""
+
+    total_prompt_tokens: int | None = None
+    total_completion_tokens: int | None = None
+    total_cached_tokens: int | None = None
+    total_steps: int | None = None
+    extra: dict[str, Any] | None = None
+
+
+class ATIFAgentConfig(BaseModel):
+    """Agent system identification and configuration."""
+
+    name: str = "nat-agent"
+    version: str = "0.0.0"
+    model_name: str | None = None
+    tool_definitions: list[dict[str, Any]] | None = None
+    extra: dict[str, Any] | None = None
+
+
+class ATIFStep(BaseModel):
+    """A single step in an ATIF trajectory."""
+
+    model_config = ConfigDict(exclude_none=True)
+
+    step_id: int
+    source: str  # "system", "user", or "agent"
+    message: str = ""
+    timestamp: str | None = None
+    model_name: str | None = None
+    reasoning_content: str | None = None
+    tool_calls: list[ATIFToolCall] | None = None
+    observation: ATIFObservation | None = None
+    metrics: ATIFStepMetrics | None = None
+    extra: dict[str, Any] | None = None
+
+
+class ATIFTrajectory(BaseModel):
+    """ATIF v1.6 trajectory — the complete interaction history of an agent run."""
+
+    model_config = ConfigDict(exclude_none=True)
+
+    schema_version: str = ATIF_VERSION
+    session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    agent: ATIFAgentConfig = Field(default_factory=ATIFAgentConfig)
+    steps: list[ATIFStep] = Field(default_factory=list)
+    notes: str | None = None
+    final_metrics: ATIFFinalMetrics | None = None
+    extra: dict[str, Any] | None = None
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _epoch_to_iso(epoch: float) -> str:
+    """Convert a Unix epoch timestamp to an ISO 8601 string."""
+    return datetime.datetime.fromtimestamp(epoch, tz=datetime.timezone.utc).isoformat()
+
+
+def _extract_tool_definitions(step: IntermediateStep) -> list[dict[str, Any]] | None:
+    """Extract OpenAI-style tool definitions from an IntermediateStep's metadata."""
+    if not isinstance(step.metadata, TraceMetadata):
+        return None
+    schemas = step.metadata.tools_schema
+    if not schemas:
+        return None
+    return [s.model_dump(by_alias=True) for s in schemas]
+
+
+def _extract_metrics(step: IntermediateStep) -> ATIFStepMetrics | None:
+    """Build ATIF step metrics from a NAT IntermediateStep's usage_info."""
+    usage = step.usage_info
+    if usage is None:
+        return None
+    tu = usage.token_usage
+    if tu.prompt_tokens == 0 and tu.completion_tokens == 0 and tu.total_tokens == 0:
+        return None
+    extra: dict[str, Any] = {}
+    if tu.reasoning_tokens:
+        extra["reasoning_tokens"] = tu.reasoning_tokens
+    return ATIFStepMetrics(
+        prompt_tokens=tu.prompt_tokens or None,
+        completion_tokens=tu.completion_tokens or None,
+        cached_tokens=tu.cached_tokens or None,
+        extra=extra or None,
+    )
+
+
+def _safe_str(value: Any) -> str:
+    """Coerce a value to a string, returning empty string for None."""
+    if value is None:
+        return ""
+    return str(value)
+
+
+def _extract_user_input(value: Any) -> str:
+    """Extract the user-facing input text from a workflow start payload.
+
+    The ``data.input`` on a ``WORKFLOW_START`` step may be a raw string, a
+    Pydantic model (e.g. ``ChatRequestOrMessage``), or a dict.  This helper
+    tries to pull out the meaningful text.
+    """
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    # Pydantic model or dict with input_message / messages
+    obj = value
+    if hasattr(value, "model_dump"):
+        obj = value.model_dump()
+    if isinstance(obj, dict):
+        if obj.get("input_message"):
+            return str(obj["input_message"])
+        msgs = obj.get("messages")
+        if msgs and isinstance(msgs, list):
+            last_user = ""
+            for m in msgs:
+                if isinstance(m, dict) and m.get("role") == "user":
+                    last_user = m.get("content", "")
+            if last_user:
+                return str(last_user)
+    return str(value)
+
+
+def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
+    """Best-effort extraction of tool arguments as a dict.
+
+    The ``data.input`` on a ``TOOL_END`` step can be a dict, a JSON string,
+    a Python repr string, or some other type.  This helper normalises it.
+    """
+    if isinstance(raw_input, dict):
+        return raw_input
+    if isinstance(raw_input, str):
+        import ast
+        import json
+        # Try JSON first
+        try:
+            parsed = json.loads(raw_input)
+            if isinstance(parsed, dict):
+                return parsed
+        except (json.JSONDecodeError, ValueError):
+            pass
+        # Try Python literal (handles single-quoted dicts/lists)
+        try:
+            parsed = ast.literal_eval(raw_input)
+            if isinstance(parsed, dict):
+                return parsed
+        except (ValueError, SyntaxError):
+            pass
+        return {"input": raw_input} if raw_input else {}
+    if raw_input is not None:
+        return {"input": str(raw_input)}
+    return {}
+
+
+# ---------------------------------------------------------------------------
+# Batch converter
+# ---------------------------------------------------------------------------
+
+
+class _PendingAgentTurn:
+    """Accumulator for an in-progress ATIF agent turn."""
+
+    def __init__(self, message: str, timestamp: float, model_name: str | None, metrics: ATIFStepMetrics | None):
+        self.message = message
+        self.timestamp = timestamp
+        self.model_name = model_name
+        self.metrics = metrics
+        self.tool_calls: list[ATIFToolCall] = []
+        self.observations: list[ATIFObservationResult] = []
+        self.extra: dict[str, Any] = {}
+
+
+class IntermediateStepToATIFConverter:
+    """Convert a complete list of NAT IntermediateSteps to an ATIF Trajectory.
+
+    This is the batch / offline converter. For streaming use-cases see
+    `ATIFStreamConverter`.
+    """
+
+    def convert(
+        self,
+        steps: list[IntermediateStep],
+        *,
+        session_id: str | None = None,
+        agent_name: str | None = None,
+    ) -> ATIFTrajectory:
+        """Convert a list of IntermediateSteps to an ATIF Trajectory.
+
+        Args:
+            steps: Complete list of NAT IntermediateSteps from a workflow execution.
+            session_id: Override the trajectory session ID. Generated if ``None``.
+            agent_name: Override the agent name. Inferred from the workflow step if ``None``.
+
+        Returns:
+            A fully populated ATIFTrajectory.
+        """
+        if not steps:
+            return ATIFTrajectory(session_id=session_id or str(uuid.uuid4()))
+
+        sorted_steps = sorted(steps, key=lambda s: s.event_timestamp)
+        atif_steps: list[ATIFStep] = []
+        step_id = 1
+
+        agent_config = ATIFAgentConfig(name=agent_name or "nat-agent")
+        tool_defs_captured = False
+        pending: _PendingAgentTurn | None = None
+        total_prompt = 0
+        total_completion = 0
+        total_cached = 0
+
+        def _flush_pending() -> None:
+            nonlocal step_id, pending
+            if pending is None:
+                return
+            observation = ATIFObservation(results=pending.observations) if pending.observations else None
+            atif_steps.append(
+                ATIFStep(
+                    step_id=step_id,
+                    source="agent",
+                    message=pending.message,
+                    timestamp=_epoch_to_iso(pending.timestamp),
+                    model_name=pending.model_name,
+                    tool_calls=pending.tool_calls or None,
+                    observation=observation,
+                    metrics=pending.metrics,
+                    extra=pending.extra or None,
+                ))
+            step_id += 1
+            pending = None
+
+        for ist in sorted_steps:
+            event_type = ist.event_type
+            category = ist.event_category
+            state = ist.event_state
+
+            # --- WORKFLOW_START → user step ---
+            if event_type == IntermediateStepType.WORKFLOW_START:
+                user_input = ""
+                if ist.data and ist.data.input is not None:
+                    user_input = _extract_user_input(ist.data.input)
+                if agent_name is None:
+                    fn_name = ist.function_ancestry.function_name
+                    if fn_name and fn_name != "root":
+                        agent_config.name = fn_name
+                atif_steps.append(
+                    ATIFStep(
+                        step_id=step_id,
+                        source="user",
+                        message=user_input,
+                        timestamp=_epoch_to_iso(ist.event_timestamp),
+                    ))
+                step_id += 1
+                continue
+
+            # --- WORKFLOW_END → flush and maybe add final agent step ---
+            if event_type == IntermediateStepType.WORKFLOW_END:
+                _flush_pending()
+                final_output = ""
+                if ist.data and ist.data.output is not None:
+                    final_output = _safe_str(ist.data.output)
+                last_agent_msg = ""
+                for s in reversed(atif_steps):
+                    if s.source == "agent":
+                        last_agent_msg = s.message
+                        break
+                if final_output and final_output != last_agent_msg:
+                    atif_steps.append(
+                        ATIFStep(
+                            step_id=step_id,
+                            source="agent",
+                            message=final_output,
+                            timestamp=_epoch_to_iso(ist.event_timestamp),
+                        ))
+                    step_id += 1
+                continue
+
+            # --- LLM_END → start a new agent turn ---
+            if event_type == IntermediateStepType.LLM_END:
+                _flush_pending()
+                llm_output = ""
+                if ist.data and ist.data.output is not None:
+                    llm_output = _safe_str(ist.data.output)
+                metrics = _extract_metrics(ist)
+                if metrics:
+                    total_prompt += metrics.prompt_tokens or 0
+                    total_completion += metrics.completion_tokens or 0
+                    total_cached += metrics.cached_tokens or 0
+                if not tool_defs_captured:
+                    defs = _extract_tool_definitions(ist)
+                    if defs:
+                        agent_config.tool_definitions = defs
+                        tool_defs_captured = True
+                if ist.name and not agent_config.model_name:
+                    agent_config.model_name = ist.name
+                pending = _PendingAgentTurn(
+                    message=llm_output,
+                    timestamp=ist.event_timestamp,
+                    model_name=ist.name,
+                    metrics=metrics,
+                )
+                continue
+
+            # --- TOOL_END → attach to current agent turn ---
+            if event_type == IntermediateStepType.TOOL_END:
+                tool_name = ist.name or "unknown_tool"
+                tool_input: dict[str, Any] = {}
+                tool_output = ""
+                if ist.data:
+                    tool_input = _parse_tool_arguments(ist.data.input)
+                    tool_output = _safe_str(ist.data.output)
+                call_id = f"call_{ist.UUID}"
+                tc = ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input)
+                obs = ATIFObservationResult(source_call_id=call_id, content=tool_output)
+                if pending is not None:
+                    pending.tool_calls.append(tc)
+                    pending.observations.append(obs)
+                else:
+                    atif_steps.append(
+                        ATIFStep(
+                            step_id=step_id,
+                            source="agent",
+                            message="",
+                            timestamp=_epoch_to_iso(ist.event_timestamp),
+                            tool_calls=[tc],
+                            observation=ATIFObservation(results=[obs]),
+                        ))
+                    step_id += 1
+                continue
+
+            # --- Skip START events and other non-terminal events ---
+            if state == IntermediateStepState.START:
+                continue
+            if event_type == IntermediateStepType.LLM_NEW_TOKEN:
+                continue
+            if event_type == IntermediateStepType.SPAN_CHUNK:
+                continue
+
+            # --- Other END events (FUNCTION_END, TASK_END, CUSTOM_END, SPAN_END, TTC_END) ---
+            if state == IntermediateStepState.END and category not in (
+                    IntermediateStepCategory.LLM,
+                    IntermediateStepCategory.TOOL,
+                    IntermediateStepCategory.WORKFLOW,
+            ):
+                if pending is not None:
+                    pending.extra.setdefault("nat_events", []).append({
+                        "type": str(event_type),
+                        "name": ist.name,
+                        "timestamp": _epoch_to_iso(ist.event_timestamp),
+                    })
+
+        # Flush any remaining turn
+        _flush_pending()
+
+        # Build final metrics
+        final_metrics = None
+        agent_step_count = sum(1 for s in atif_steps if s.source == "agent")
+        if total_prompt or total_completion or total_cached or agent_step_count:
+            final_metrics = ATIFFinalMetrics(
+                total_prompt_tokens=total_prompt or None,
+                total_completion_tokens=total_completion or None,
+                total_cached_tokens=total_cached or None,
+                total_steps=agent_step_count,
+            )
+
+        return ATIFTrajectory(
+            session_id=session_id or str(uuid.uuid4()),
+            agent=agent_config,
+            steps=atif_steps,
+            final_metrics=final_metrics,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Streaming / incremental converter
+# ---------------------------------------------------------------------------
+
+
+class ATIFStreamConverter:
+    """Stateful converter that emits ATIF Steps one at a time as IntermediateSteps arrive.
+
+    Designed for use in streaming endpoints: call `push()` for each
+    incoming IntermediateStep and collect any returned ATIFStep.
+    When the stream ends, call `finalize()` to flush any pending turn.
+    """
+
+    def __init__(self, agent_name: str = "nat-agent"):
+        self._step_id: int = 1
+        self._agent_config = ATIFAgentConfig(name=agent_name)
+        self._tool_defs_captured = False
+        self._pending: _PendingAgentTurn | None = None
+        self._emitted_steps: list[ATIFStep] = []
+        self._total_prompt = 0
+        self._total_completion = 0
+        self._total_cached = 0
+
+    @property
+    def agent_config(self) -> ATIFAgentConfig:
+        """Current agent configuration (populated as steps arrive)."""
+        return self._agent_config
+
+    def push(self, ist: IntermediateStep) -> ATIFStep | None:
+        """Process one IntermediateStep.
+
+        Returns an ATIFStep if a complete turn was flushed, otherwise ``None``.
+        """
+        event_type = ist.event_type
+        category = ist.event_category
+        state = ist.event_state
+
+        # --- WORKFLOW_START → emit user step ---
+        if event_type == IntermediateStepType.WORKFLOW_START:
+            user_input = ""
+            if ist.data and ist.data.input is not None:
+                user_input = _extract_user_input(ist.data.input)
+            fn_name = ist.function_ancestry.function_name
+            if fn_name and fn_name != "root":
+                self._agent_config.name = fn_name
+            step = ATIFStep(
+                step_id=self._step_id,
+                source="user",
+                message=user_input,
+                timestamp=_epoch_to_iso(ist.event_timestamp),
+            )
+            self._step_id += 1
+            self._emitted_steps.append(step)
+            return step
+
+        # --- WORKFLOW_END → flush pending, optionally emit final step ---
+        if event_type == IntermediateStepType.WORKFLOW_END:
+            results: list[ATIFStep] = []
+            flushed = self._flush_pending()
+            if flushed:
+                results.append(flushed)
+            final_output = ""
+            if ist.data and ist.data.output is not None:
+                final_output = _safe_str(ist.data.output)
+            last_agent_msg = ""
+            for s in reversed(self._emitted_steps):
+                if s.source == "agent":
+                    last_agent_msg = s.message
+                    break
+            if final_output and final_output != last_agent_msg:
+                final_step = ATIFStep(
+                    step_id=self._step_id,
+                    source="agent",
+                    message=final_output,
+                    timestamp=_epoch_to_iso(ist.event_timestamp),
+                )
+                self._step_id += 1
+                self._emitted_steps.append(final_step)
+                results.append(final_step)
+            # Return first result; caller should use finalize() for completeness
+            return results[0] if results else None
+
+        # --- LLM_END → flush previous turn, start new pending turn ---
+        if event_type == IntermediateStepType.LLM_END:
+            flushed = self._flush_pending()
+            llm_output = ""
+            if ist.data and ist.data.output is not None:
+                llm_output = _safe_str(ist.data.output)
+            metrics = _extract_metrics(ist)
+            if metrics:
+                self._total_prompt += metrics.prompt_tokens or 0
+                self._total_completion += metrics.completion_tokens or 0
+                self._total_cached += metrics.cached_tokens or 0
+            if not self._tool_defs_captured:
+                defs = _extract_tool_definitions(ist)
+                if defs:
+                    self._agent_config.tool_definitions = defs
+                    self._tool_defs_captured = True
+            if ist.name and not self._agent_config.model_name:
+                self._agent_config.model_name = ist.name
+            self._pending = _PendingAgentTurn(
+                message=llm_output,
+                timestamp=ist.event_timestamp,
+                model_name=ist.name,
+                metrics=metrics,
+            )
+            return flushed
+
+        # --- TOOL_END → attach to current pending turn ---
+        if event_type == IntermediateStepType.TOOL_END:
+            tool_name = ist.name or "unknown_tool"
+            tool_input: dict[str, Any] = {}
+            tool_output = ""
+            if ist.data:
+                tool_input = _parse_tool_arguments(ist.data.input)
+                tool_output = _safe_str(ist.data.output)
+            call_id = f"call_{ist.UUID}"
+            tc = ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input)
+            obs = ATIFObservationResult(source_call_id=call_id, content=tool_output)
+            if self._pending is not None:
+                self._pending.tool_calls.append(tc)
+                self._pending.observations.append(obs)
+                return None
+
+            orphan_step = ATIFStep(
+                step_id=self._step_id,
+                source="agent",
+                message="",
+                timestamp=_epoch_to_iso(ist.event_timestamp),
+                tool_calls=[tc],
+                observation=ATIFObservation(results=[obs]),
+            )
+            self._step_id += 1
+            self._emitted_steps.append(orphan_step)
+            return orphan_step
+
+        # --- Other END events → stash as metadata ---
+        if state == IntermediateStepState.END and category not in (
+                IntermediateStepCategory.LLM,
+                IntermediateStepCategory.TOOL,
+                IntermediateStepCategory.WORKFLOW,
+        ):
+            if self._pending is not None:
+                self._pending.extra.setdefault("nat_events", []).append({
+                    "type": str(event_type),
+                    "name": ist.name,
+                    "timestamp": _epoch_to_iso(ist.event_timestamp),
+                })
+
+        return None
+
+    def finalize(self) -> list[ATIFStep]:
+        """Flush any pending agent turn and return remaining steps.
+
+        Call this after the IntermediateStep stream completes.
+        """
+        result: list[ATIFStep] = []
+        flushed = self._flush_pending()
+        if flushed:
+            result.append(flushed)
+        return result
+
+    def get_trajectory(self) -> ATIFTrajectory:
+        """Build the complete ATIF Trajectory from all emitted steps."""
+        agent_step_count = sum(1 for s in self._emitted_steps if s.source == "agent")
+        final_metrics = None
+        if self._total_prompt or self._total_completion or self._total_cached or agent_step_count:
+            final_metrics = ATIFFinalMetrics(
+                total_prompt_tokens=self._total_prompt or None,
+                total_completion_tokens=self._total_completion or None,
+                total_cached_tokens=self._total_cached or None,
+                total_steps=agent_step_count,
+            )
+        return ATIFTrajectory(
+            agent=self._agent_config,
+            steps=list(self._emitted_steps),
+            final_metrics=final_metrics,
+        )
+
+    def _flush_pending(self) -> ATIFStep | None:
+        """Convert the pending turn into an ATIFStep and clear it."""
+        if self._pending is None:
+            return None
+        pending = self._pending
+        observation = ATIFObservation(results=pending.observations) if pending.observations else None
+        step = ATIFStep(
+            step_id=self._step_id,
+            source="agent",
+            message=pending.message,
+            timestamp=_epoch_to_iso(pending.timestamp),
+            model_name=pending.model_name,
+            tool_calls=pending.tool_calls or None,
+            observation=observation,
+            metrics=pending.metrics,
+            extra=pending.extra or None,
+        )
+        self._step_id += 1
+        self._emitted_steps.append(step)
+        self._pending = None
+        return step
