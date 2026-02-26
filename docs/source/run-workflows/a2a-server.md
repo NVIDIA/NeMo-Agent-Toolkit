@@ -73,6 +73,7 @@ general:
     description: "A calculator agent for mathematical operations"
     host: localhost
     port: 10000
+    public_base_url: "https://agents.example.com/calculator"  # Optional public URL for Agent Card
     version: "1.0.0"
 ```
 
@@ -102,6 +103,21 @@ You can get the complete list of configuration options and their schemas by runn
 ```bash
 nat info components -t front_end -q a2a
 ```
+
+### Kubernetes and Ingress Deployments
+
+In Kubernetes deployments, the server bind address (`host` and `port`) is often not the public address that clients use. Set `public_base_url` so the generated Agent Card advertises the external URL:
+
+```yaml
+general:
+  front_end:
+    _type: a2a
+    host: 0.0.0.0
+    port: 10000
+    public_base_url: ${PUBLIC_BASE_URL}
+```
+
+Use your deployment tooling (for example Helm values or environment injection) to provide `PUBLIC_BASE_URL` at runtime.
 
 ## How Workflows Map to A2A Agents
 
