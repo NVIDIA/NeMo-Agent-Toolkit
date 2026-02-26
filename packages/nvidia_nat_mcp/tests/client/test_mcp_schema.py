@@ -858,3 +858,33 @@ def test_type_list_with_object_properties():
     # Test with null value
     m2 = _model.model_validate({"config_or_null": None})
     assert m2.config_or_null is None
+
+
+def test_optional_field_with_explicit_null_default_becomes_nullable():
+    """Test explicit default null with non-null type is treated as nullable."""
+    schema = {
+        'type': 'object',
+        'properties': {
+            'cursor': {
+                'description': 'Pagination cursor',
+                'type': 'string',
+                'default': None
+            }
+        },
+        'required': []
+    }
+
+    _model = model_from_mcp_schema("test_explicit_null_default", schema)
+
+    # Verify field type includes str and None
+    field_type = _model.model_fields["cursor"].annotation
+    args = get_args(field_type)
+    assert str in args and type(None) in args, f"Expected str | None, got {field_type}"
+
+    # Test explicit null value validates
+    m1 = _model.model_validate({"cursor": None})
+    assert m1.cursor is None
+
+    # Test string value validates
+    m2 = _model.model_validate({"cursor": "abc123"})
+    assert m2.cursor == "abc123"
