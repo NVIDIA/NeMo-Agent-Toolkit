@@ -177,7 +177,7 @@ CUDA_VISIBLE_DEVICES=1 vllm serve --port 8001 --runner pooling --convert embed -
 ```
 
 :::{note}
-The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#embedding) documentation.
+The `--pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/v0.16.0/models/supported_models.html#embedding) documentation.
 :::
 
 
