@@ -30,14 +30,15 @@ import logging
 import uuid
 from typing import Any
 
+from pydantic import BaseModel
+from pydantic import ConfigDict
+from pydantic import Field
+
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TraceMetadata
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
 
 logger = logging.getLogger(__name__)
 
@@ -136,7 +137,7 @@ class ATIFTrajectory(BaseModel):
 
 def _epoch_to_iso(epoch: float) -> str:
     """Convert a Unix epoch timestamp to an ISO 8601 string."""
-    return datetime.datetime.fromtimestamp(epoch, tz=datetime.timezone.utc).isoformat()
+    return datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC).isoformat()
 
 
 def _extract_tool_definitions(step: IntermediateStep) -> list[dict[str, Any]] | None:
