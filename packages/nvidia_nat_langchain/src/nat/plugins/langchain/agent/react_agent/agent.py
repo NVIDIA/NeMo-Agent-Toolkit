@@ -35,8 +35,6 @@ from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.utils.io.model_processing import remove_r1_think_tags
-
 from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 from nat.plugins.langchain.agent.base import INPUT_SCHEMA_MESSAGE
@@ -49,6 +47,7 @@ from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputPar
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
 from nat.plugins.langchain.agent.react_agent.prompt import SYSTEM_PROMPT
 from nat.plugins.langchain.agent.react_agent.prompt import USER_PROMPT
+from nat.utils.io.model_processing import remove_r1_think_tags
 
 if typing.TYPE_CHECKING:
     from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
@@ -280,11 +279,12 @@ class ReActAgentGraph(DualNodeAgent):
                     # Reasoning models may answer directly without ReAct format.
                     # Accept as final answer if: missing_action, has content, and no "Thought:" prefix.
                     content_str = str(output_message.content).strip()
-                    if (ex.missing_action
-                            and content_str
+                    if (ex.missing_action and content_str
                             and not re.match(r'\s*thought\s*:', content_str, re.IGNORECASE)):
-                        logger.info("%s Agent produced direct answer without ReAct format, "
-                                    "accepting as final answer", AGENT_LOG_PREFIX)
+                        logger.info(
+                            "%s Agent produced direct answer without ReAct format, "
+                            "accepting as final answer",
+                            AGENT_LOG_PREFIX)
                         state.messages += [AIMessage(content=content_str)]
                         state.final_answer = content_str
                         return state
@@ -319,11 +319,11 @@ class ReActAgentGraph(DualNodeAgent):
                         working_state.append(output_message)
                         working_state.append(HumanMessage(content=str(ex.observation)))
                     else:
-                        working_state.append(HumanMessage(
-                            content=str(ex.observation) +
-                            " If the available tools cannot answer the question, you MUST respond with:\n"
-                            "Thought: <your reasoning>\n"
-                            "Final Answer: <your best answer or explanation>"))
+                        working_state.append(
+                            HumanMessage(content=str(ex.observation) +
+                                         " If the available tools cannot answer the question, you MUST respond with:\n"
+                                         "Thought: <your reasoning>\n"
+                                         "Final Answer: <your best answer or explanation>"))
         except Exception as ex:
             logger.error("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
             raise
