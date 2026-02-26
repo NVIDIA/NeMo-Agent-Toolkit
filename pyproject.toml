@@ -221,6 +221,7 @@ managed = true
 # Packages
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
 nvidia-nat-adk = { path = "packages/nvidia_nat_adk", editable = true }
+nvidia-nat-agent-memory-server = { workspace = true }
 nvidia-nat-agno = { path = "packages/nvidia_nat_agno", editable = true }
 nvidia-nat-app = { path = "packages/nvidia_nat_app", editable = true }
 nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
