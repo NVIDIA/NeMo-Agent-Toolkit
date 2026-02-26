@@ -14,6 +14,7 @@
 # limitations under the License.
 # pylint: disable=unused-argument, not-async-context-manager
 
+import os
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -87,9 +88,11 @@ class TestOpenAILlamaIndex:
     def oa_cfg_responses(self):
         return OpenAIModelConfig(model_name="gpt-4o", api_type=APITypeEnum.RESPONSES, temperature=0.1)
 
+    @pytest.mark.usefixtures("restore_environ")
     @patch("llama_index.llms.openai.OpenAI")
     async def test_chat_completion_branch(self, mock_openai, oa_cfg_chat, mock_builder):
         """CHAT_COMPLETION should create an OpenAI client, omitting base_url when None."""
+        os.environ.pop("OPENAI_BASE_URL", None)  # Ensure env var doesn't interfere with test
         async with openai_llama_index(oa_cfg_chat, mock_builder) as llm:
             mock_openai.assert_called_once()
             kwargs = mock_openai.call_args.kwargs

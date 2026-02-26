@@ -15,8 +15,10 @@
 
 import asyncio
 import logging
+import re
 import select
 import sys
+import unicodedata
 
 import click
 from colorama import Fore
@@ -31,6 +33,30 @@ from nat.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontE
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
+
+_RE_UNICODE_WHITESPACE = re.compile(r'[\u00a0\u2000-\u200a\u202f\u205f\u3000]')
+_RE_ZERO_WIDTH = re.compile(r'[\u200b-\u200d\u2060\ufeff]')
+_RE_UNICODE_DASHES = re.compile(r'[\u2010-\u2015\ufe58\ufe63\uff0d]')
+_RE_SINGLE_QUOTES = re.compile(r'[\u2018\u2019\u201a\u201b]')
+_RE_DOUBLE_QUOTES = re.compile(r'[\u201c\u201d\u201e\u201f]')
+
+
+def _normalize_unicode(text: str) -> str:
+    """Replace common Unicode whitespace and punctuation with ASCII equivalents for clean console display."""
+    text = _RE_UNICODE_WHITESPACE.sub(' ', text)
+    text = _RE_ZERO_WIDTH.sub('', text)
+    text = _RE_UNICODE_DASHES.sub('-', text)
+    text = _RE_SINGLE_QUOTES.sub("'", text)
+    text = _RE_DOUBLE_QUOTES.sub('"', text)
+    text = text.replace('\u2026', '...')
+    return unicodedata.normalize('NFKC', text)
+
+
+def _format_output(runner_outputs) -> str:
+    """Format workflow outputs as human-readable text with normalized Unicode."""
+    if isinstance(runner_outputs, list):
+        return "\n".join(_normalize_unicode(str(item)) for item in runner_outputs)
+    return _normalize_unicode(str(runner_outputs))
 
 
 async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
@@ -125,10 +151,12 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         prefix = f"{line}\n{Fore.GREEN}Workflow Result:\n"
         suffix = f"{Fore.RESET}\n{line}"
 
-        logger.info(f"{prefix}%s{suffix}", runner_outputs)
+        display_output = _format_output(runner_outputs)
+
+        logger.info(f"{prefix}%s{suffix}", display_output)
 
         # (handler is a stream handler) => (level > INFO)
         effective_level_too_high = all(
             type(h) is not logging.StreamHandler or h.level > logging.INFO for h in logging.getLogger().handlers)
         if effective_level_too_high:
-            print(f"{prefix}{runner_outputs}{suffix}")
+            print(f"{prefix}{display_output}{suffix}")
