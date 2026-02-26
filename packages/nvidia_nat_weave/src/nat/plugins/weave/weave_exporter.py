@@ -300,6 +300,14 @@ class WeaveExporter(SpanExporter[Span, Span]):
             if usage_info.seconds_between_calls:
                 outputs["seconds_between_calls"] = usage_info.seconds_between_calls
 
+        # For the root call, set user_email in the summary attribute so the feedback endpoint can retrieve
+        # it for user attribution.  Unlike the attributes property which is read-only during execution,
+        # summary is mutable during execution (see https://docs.wandb.ai/weave/guides/tracking/tracing).
+        root_call_id = self._context_state.observability_trace_id.get()
+        if root_call_id and call.id == root_call_id:
+            if user_email := getattr(self._context_state.metadata.get(), 'user_email', None):
+                call.summary["user_email"] = user_email
+
         # Finish the call with outputs
         self._gc.finish_call(call, outputs)
 

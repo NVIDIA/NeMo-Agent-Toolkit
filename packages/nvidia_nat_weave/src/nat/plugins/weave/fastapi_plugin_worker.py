@@ -25,6 +25,7 @@ from pydantic import model_validator
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.plugins.weave.weave_exporter import WeaveExporter
 from nat.runtime.session import SessionManager
 from nat.utils.type_utils import override
 
@@ -92,7 +93,7 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
         # Find Weave telemetry exporter configuration
         weave_config = None
         for exporter_config in builder._telemetry_exporters.values():
-            if exporter_config.config.__class__.__name__ == 'WeaveTelemetryExporter':
+            if isinstance(exporter_config.instance, WeaveExporter):
                 weave_config = exporter_config.config
                 break
 
@@ -122,14 +123,15 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
 
                         client = weave.init(weave_project)
                         call = client.get_call(observability_trace_id)
+                        user_id = (call.summary or {}).get("user_email") or "anonymous"
 
                         feedback_added = []
                         if reaction_type:
-                            call.feedback.add_reaction(reaction_type)
+                            call.feedback.add_reaction(reaction_type, user_id)
                             feedback_added.append(f"reaction '{reaction_type}'")
 
                         if comment:
-                            call.feedback.add_note(comment)
+                            call.feedback.add_note(comment, user_id)
                             feedback_added.append("comment")
 
                         return feedback_added
