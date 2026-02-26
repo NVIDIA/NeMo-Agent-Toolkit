@@ -48,6 +48,7 @@ from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputPar
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
 from nat.plugins.langchain.agent.react_agent.prompt import SYSTEM_PROMPT
 from nat.plugins.langchain.agent.react_agent.prompt import USER_PROMPT
+from nat.utils.io.model_processing import remove_r1_think_tags
 
 if typing.TYPE_CHECKING:
     from nat.plugins.langchain.agent.react_agent.register import ReActAgentWorkflowConfig
@@ -219,6 +220,17 @@ class ReActAgentGraph(DualNodeAgent):
                     output_message = await self._stream_llm(self.agent, {
                         "question": question, "chat_history": chat_history
                     })  # type: ignore
+                    if isinstance(output_message.content, str):
+                        raw_content = output_message.content
+                        output_message.content = remove_r1_think_tags(raw_content)
+                        if not output_message.content.strip():
+                            think_match = re.search(r'<think>(.*?)</think>', raw_content, re.DOTALL)
+                            if think_match:
+                                output_message.content = think_match.group(1).strip()
+                        if not output_message.content.strip():
+                            reasoning = output_message.additional_kwargs.get('reasoning_content', '')
+                            if reasoning:
+                                output_message.content = reasoning
 
                     if self.detailed_logs:
                         logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message.content)
@@ -242,6 +254,17 @@ class ReActAgentGraph(DualNodeAgent):
                         self.agent, {
                             "question": question, "agent_scratchpad": agent_scratchpad, "chat_history": chat_history
                         })  # type: ignore
+                    if isinstance(output_message.content, str):
+                        raw_content = output_message.content
+                        output_message.content = remove_r1_think_tags(raw_content)
+                        if not output_message.content.strip():
+                            think_match = re.search(r'<think>(.*?)</think>', raw_content, re.DOTALL)
+                            if think_match:
+                                output_message.content = think_match.group(1).strip()
+                        if not output_message.content.strip():
+                            reasoning = output_message.additional_kwargs.get('reasoning_content', '')
+                            if reasoning:
+                                output_message.content = reasoning
 
                     if self.detailed_logs:
                         logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message.content)
@@ -293,6 +316,21 @@ class ReActAgentGraph(DualNodeAgent):
                     # the agent mentioned a tool, but already has the final answer, this can happen with Llama models
                     #   - the ReAct Agent already has the answer, and is reflecting on how it obtained the answer
                     # the agent might have also missed Action or Action Input in its output
+
+                    # Reasoning models may answer directly without ReAct format.
+                    # Accept as final answer if: missing_action, has content, and doesn't look like
+                    # a ReAct prompt echo (Thought:/Question:/Previous conversation history:).
+                    content_str = str(output_message.content).strip()
+                    if (ex.missing_action and content_str and not re.match(
+                            r'\s*(thought\s*:|question\s*:|previous\s+conversation)', content_str, re.IGNORECASE)):
+                        logger.info(
+                            "%s Agent produced direct answer without ReAct format, "
+                            "accepting as final answer",
+                            AGENT_LOG_PREFIX)
+                        state.messages += [AIMessage(content=content_str)]
+                        state.final_answer = content_str
+                        return state
+
                     logger.debug("%s Error parsing agent output\nObservation:%s\nAgent Output:\n%s",
                                  AGENT_LOG_PREFIX,
                                  ex.observation,
@@ -321,7 +359,13 @@ class ReActAgentGraph(DualNodeAgent):
                     # when empty content is forwarded via agent_scratchpad (#1611)
                     if output_message.content and str(output_message.content).strip():
                         working_state.append(output_message)
-                    working_state.append(HumanMessage(content=str(ex.observation)))
+                        working_state.append(HumanMessage(content=str(ex.observation)))
+                    else:
+                        working_state.append(
+                            HumanMessage(content=str(ex.observation) +
+                                         " If the available tools cannot answer the question, you MUST respond with:\n"
+                                         "Thought: <your reasoning>\n"
+                                         "Final Answer: <your best answer or explanation>"))
         except Exception as ex:
             logger.error("%s Failed to call agent_node: %s", AGENT_LOG_PREFIX, ex)
             raise
