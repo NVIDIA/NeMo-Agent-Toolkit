@@ -944,7 +944,7 @@ eval:
 | Parameter | Default | Description |
 | --------- | ------- | ----------- |
 | `prompt` | *(required)* | Prebuilt `openevals` prompt name (e.g., `correctness`) or a custom f-string template. |
-| `llm_name` | *(required)* | Name of the judge LLM from the workflow's `llms:` section. |
+| `llm_name` | *(required)* | Name of the judge LLM defined in the `llms:` section of the workflow configuration. |
 | `feedback_key` | `score` | Metric name in evaluation output. |
 | `continuous` | `false` | If true, score is a float between 0 and 1. Mutually exclusive with `choices`. |
 | `choices` | `null` | Explicit list of allowed score values (e.g., `[0, 0.5, 1]`). Mutually exclusive with `continuous`. |
