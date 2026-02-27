@@ -91,7 +91,7 @@ class Mem0Editor(MemoryEditor):
         memories = []
 
         for res in search_result["results"]:
-            item_meta = res.pop("metadata", {})
+            item_meta = res.pop("metadata", None) or {}
 
             memories.append(
                 MemoryItem(conversation=res.pop("input", []),
