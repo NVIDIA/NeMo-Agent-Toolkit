@@ -73,11 +73,19 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 export ZEP_API_KEY=<YOUR_ZEP_API_KEY>
 ```
 
+If you do not have access to a Zep API key, you can use `config_mem0.yml` with a Mem0 API key instead:
+```bash
+export MEM0_API_KEY=<YOUR_MEM0_API_KEY>
+```
+
 ### Running the Example
 
 ```bash
-# Run the agent
+# Run the agent with Zep
 nat run --config examples/agents/auto_memory_wrapper/configs/config_zep.yml
+
+# Or with Mem0
+nat run --config examples/agents/auto_memory_wrapper/configs/config_mem0.yml
 ```
 
 ## Configuration Reference
@@ -208,4 +216,5 @@ workflow:
 ## Examples
 
 See `configs/` directory:
-- `config_zep.yml` - Comprehensive configuration with all parameters documented
+- `config_zep.yml` - Zep Cloud memory backend with all parameters documented
+- `config_mem0.yml` - Mem0 memory backend (alternative if Zep is unavailable)
