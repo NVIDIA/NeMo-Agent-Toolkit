@@ -57,10 +57,10 @@ variables:
   NAT_CI_MYSQL_HOST: "mysql"
   NAT_CI_OAUTH2_HOST: "oauth2-server"
   NAT_CI_OAUTH2_PORT: "5000"
-  NAT_CI_PROXIED_OPENAI_BASE_URL: ${NAT_CI_PROXIED_OPENAI_BASE_URL}
   NAT_CI_OPENSEARCH_URL: "http://opensearch:9200"
   NAT_CI_PHOENIX_URL: "http://phoenix:6006"
   NAT_CI_PISTON_URL: "http://piston:2000/api/v2"
+  NAT_CI_PROXIED_OPENAI_BASE_URL: "${NAT_CI_PROXIED_OPENAI_BASE_URL}"
   NAT_CI_REDIS_HOST: "redis"
   UV_CACHE_DIR: .uv-cache
   WORKSPACE_TMP: "${CI_PROJECT_DIR}/.tmp"
@@ -123,8 +123,6 @@ test:python_tests:
     - name: $CI_REGISTRY_IMAGE/nginx-rewrite-models
       alias: nginx-rewrite-models
       pull_policy: if-not-present
-      variables:
-        NAT_CI_PROXIED_OPENAI_BASE_URL: ${NAT_CI_PROXIED_OPENAI_BASE_URL}
 
     - name: postgres:17
       alias: postgres
