@@ -184,7 +184,7 @@ services:
     environment:
       # This needs to include the port even if it is the default port for the protocol
       # ex: "https://some-server.com:443" and "http://some-server.com:80"
-      - NAT_PROXIED_OPENAI_BASE_URL=${NAT_PROXIED_OPENAI_BASE_URL}
+      - NAT_PROXIED_OPENAI_BASE_URL
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
