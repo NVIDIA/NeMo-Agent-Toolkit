@@ -36,6 +36,10 @@ MAX_PROJECT_DEPTH = 5
 SKIP_DIRS = {"__pycache__", "node_modules"}
 
 
+class TestFailure(Exception):
+    pass
+
+
 def sh(cmd: list[str], *, env: dict[str, str] | None = None) -> int:
     return subprocess.run(cmd, check=False, cwd=REPO, env=env).returncode
 
@@ -45,9 +49,13 @@ def slug(path: Path) -> str:
     return re.sub(r"[^A-Za-z0-9._-]+", "__", rel).strip("_")
 
 
-def discover_projects(max_depth: int = MAX_PROJECT_DEPTH) -> list[Path]:
+def discover_projects(max_depth: int = MAX_PROJECT_DEPTH, examples_only: bool = False) -> list[Path]:
     projects: list[Path] = []
-    locations = [REPO / "packages", REPO / "examples"]
+    if examples_only:
+        locations = [REPO / "examples"]
+    else:
+        locations = [REPO / "packages", REPO / "examples"]
+
     for location in locations:
         if location.exists():
             curr_projects = []
@@ -116,6 +124,8 @@ def run_one(
     enable_junit: bool,
     run_slow: bool,
     run_integration: bool,
+    exitfirst: bool,
+    is_verbose: bool,
     extra_flags: list[str],
 ) -> int:
     logger = logging.getLogger("testing")
@@ -159,7 +169,13 @@ def run_one(
             return 0
 
         # 2) Run pytest in that environment.
-        cmd = ["uv", "run", "--project", str(project_dir), "--", "pytest", "-q", *extra_flags, str(project_dir)]
+        cmd = ["uv", "run", "--project", str(project_dir), "--", "pytest"]
+
+        if not is_verbose:
+            # Use -q unless verbose output was explicitly requested.
+            cmd.append("-q")
+
+        cmd.extend([*extra_flags, str(project_dir)])
         if run_slow:
             cmd.append("--run_slow")
         if run_integration:
@@ -174,6 +190,8 @@ def run_one(
             if source_dir.exists():
                 cmd.append(f"--cov={str(source_dir)}")
             cmd.append("--cov-report=")
+        if exitfirst:
+            cmd.append("--exitfirst")
 
         if rc := sh(cmd, env=env):
             logger.error(f"{display_project_dir} (test failed)")
@@ -190,10 +208,17 @@ def main(junit_xml: str | None,
          cov_xml: str | None,
          run_slow: bool,
          run_integration: bool,
+         examples_only: bool,
+         exitfirst: bool,
          jobs: int,
          project: str | None,
          extra_flags: list[str]) -> int:
-    projects = discover_projects()
+    verbose_flag_pattern = re.compile(r"--verbose|--verbosity(?:=\d+|\s\d+)|-v+")
+    has_verbose_flag = any(
+        verbose_flag_pattern.fullmatch(flag) or (
+            i + 1 < len(extra_flags) and verbose_flag_pattern.fullmatch(f"{flag} {extra_flags[i + 1]}"))
+        for i, flag in enumerate(extra_flags))
+    projects = discover_projects(examples_only=examples_only)
     if not projects:
         print("No projects found under packages/ or examples/")
         return 2
@@ -217,11 +242,11 @@ def main(junit_xml: str | None,
     with ProcessPoolExecutor(max_workers=jobs) as executor:
         ex = executor
 
-        def shutdown_executor(signum, frame):
+        def shutdown_executor(_signum, _frame, wait: bool = False):
             nonlocal ex
             if ex is not None:
                 print("Shutting down executor...")
-                ex.shutdown(wait=False, cancel_futures=True)
+                ex.shutdown(wait=wait, cancel_futures=True)
             else:
                 print("Executor not found")
 
@@ -233,12 +258,20 @@ def main(junit_xml: str | None,
                       enable_junit=junit_xml is not None,
                       run_slow=run_slow,
                       run_integration=run_integration,
+                      exitfirst=exitfirst,
+                      is_verbose=has_verbose_flag,
                       extra_flags=extra_flags) for p in projects
         ]
         try:
             for fut in as_completed(futs):
                 if fut.result() != 0:
                     failures += 1
+                    if exitfirst:
+                        raise TestFailure("Exiting on first failure as requested.")
+
+        except TestFailure:
+            print("Cancelling remaining tests...")
+            shutdown_executor(None, None, wait=True)
         finally:
             ex = None
             for p in projects:
@@ -263,6 +296,8 @@ if __name__ == "__main__":
     parser.add_argument("--cov_xml", action="store", default=None)
     parser.add_argument("--run_slow", action="store_true", default=False)
     parser.add_argument("--run_integration", action="store_true", default=False)
+    parser.add_argument("--examples_only", action="store_true", default=False)
+    parser.add_argument("-x", "--exitfirst", action="store_true", default=False, help="Exit on first test failure")
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument(
         "--project",
@@ -278,6 +313,8 @@ if __name__ == "__main__":
              cov_xml=args.cov_xml,
              run_slow=args.run_slow,
              run_integration=args.run_integration,
+             examples_only=args.examples_only,
+             exitfirst=args.exitfirst,
              jobs=args.jobs,
              project=args.project,
              extra_flags=args.extra_flags))

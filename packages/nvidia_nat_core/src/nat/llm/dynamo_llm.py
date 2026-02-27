@@ -59,6 +59,7 @@ import json
 import logging
 import threading
 import uuid
+import warnings
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -70,6 +71,7 @@ import httpx
 if TYPE_CHECKING:
     from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
+from pydantic import AliasChoices
 from pydantic import Field
 from pydantic import field_validator
 
@@ -370,6 +372,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     nvext_max_sensitivity: int = Field(
         default=1000,
         ge=1,
+        validation_alias=AliasChoices("nvext_max_sensitivity", "max_sensitivity"),
         description="Maximum latency sensitivity value used to compute request priority. "
         "Priority is the integer complement: priority = max_sensitivity - latency_sensitivity. "
         "Lower priority values indicate higher priority requests.",
@@ -486,6 +489,15 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         # for the same prefix_id (keyed by prefix_id string).
         self._call_counts: dict[str, int] = {}
         self._call_counts_lock = threading.Lock()
+
+        if cache_pin_type is not None:
+            warnings.warn(
+                f"nvext.cache_control is configured (type={cache_pin_type.value}). cache_control requires "
+                "sglang >v0.5.9 with hierarchical cache enabled. Parameters will be "
+                "sent but may be silently ignored by the backend. "
+                "See https://github.com/sgl-project/sglang/pull/18941",
+                stacklevel=2,
+            )
 
     async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
         # Get prefix ID from context (supports depth-awareness and overrides)
