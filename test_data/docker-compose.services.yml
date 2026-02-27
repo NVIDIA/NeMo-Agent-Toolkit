@@ -180,13 +180,12 @@ services:
     restart: unless-stopped
 
   nginx-rewrite-models:
-    image: openresty/openresty:alpine
+    build: ./nginx
+    image: nginx-rewrite-models
     environment:
       # This needs to include the port even if it is the default port for the protocol
       # ex: "https://some-server.com:443" and "http://some-server.com:80"
       - NAT_CI_PROXIED_OPENAI_BASE_URL
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
     ports:
       - 8088:8088

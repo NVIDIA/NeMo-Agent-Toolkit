@@ -120,7 +120,7 @@ test:python_tests:
       alias: phoenix
       pull_policy: if-not-present
 
-    - name: openresty/openresty:alpine
+    - name: $CI_REGISTRY_IMAGE/nginx-rewrite-models
       alias: nginx-rewrite-models
       pull_policy: if-not-present
       variables:
