@@ -703,7 +703,7 @@ NeMo Agent Toolkit provides the following built-in evaluator:
 - `trajectory` - An evaluator to run and evaluate the LangChain/LangGraph agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
 - `tunable_rag_evaluator` - A customizable LLM evaluator for flexible RAG workflow evaluation.
-- `langsmith` - Built-in `openevals` evaluators (e.g., exact match, `Levenshtein distance`).
+- `langsmith` - Built-in `openevals` evaluators (e.g., `exact_match`, `levenshtein_distance`).
 - `langsmith_custom` - Import any LangSmith-compatible evaluator by Python dotted path.
 - `langsmith_judge` - LLM-as-judge evaluator powered by `openevals`.
 
