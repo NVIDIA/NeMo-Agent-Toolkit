@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Use the uv Python 3.11 slim base image
+# Use image largely as-is only adding our own configuration
 FROM openresty/openresty:alpine
 
 # Expose port 8088
