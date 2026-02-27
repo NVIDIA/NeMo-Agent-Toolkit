@@ -122,7 +122,7 @@ services:
 
   local-sandbox:
     build:
-      context: ../../src/nat/tool/code_execution/local_sandbox
+      context: ../packages/nvidia_nat_core/src/nat/tool/code_execution/local_sandbox
       dockerfile: Dockerfile.sandbox
     container_name: test-local-sandbox
     ports:
@@ -179,8 +179,17 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-my_password}
     restart: unless-stopped
 
+  nginx-rewrite-models:
+    image: openresty/openresty:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+    ports:
+      - 8000:8000
+    restart: unless-stopped
+
   oauth2-server:
-    build: ../../examples/front_ends/simple_auth
+    build: ../examples/front_ends/simple_auth
     container_name: test-oauth2-server
     ports:
       - "5001:5000"
