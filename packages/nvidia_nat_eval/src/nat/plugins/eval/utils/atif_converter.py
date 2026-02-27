@@ -18,7 +18,7 @@ ATIF is a standardized JSON format for logging the complete interaction history
 of autonomous LLM agents. Reference: https://github.com/laude-institute/harbor
 
 This module provides:
-- Pydantic models mirroring ATIF v1.6
+- Conversion helpers built on shared ATIF v1.6 models
 - `IntermediateStepToATIFConverter` for batch conversion
 - `ATIFStreamConverter` for incremental / streaming conversion
 """
@@ -30,104 +30,21 @@ import logging
 import uuid
 from typing import Any
 
-from pydantic import BaseModel
-from pydantic import ConfigDict
-from pydantic import Field
-
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TraceMetadata
+from nat.data_models.atif import ATIFAgentConfig
+from nat.data_models.atif import ATIFFinalMetrics
+from nat.data_models.atif import ATIFObservation
+from nat.data_models.atif import ATIFObservationResult
+from nat.data_models.atif import ATIFStep
+from nat.data_models.atif import ATIFStepMetrics
+from nat.data_models.atif import ATIFToolCall
+from nat.data_models.atif import ATIFTrajectory
 
 logger = logging.getLogger(__name__)
-
-ATIF_VERSION = "ATIF-v1.6"
-
-# ---------------------------------------------------------------------------
-# ATIF Pydantic models
-# ---------------------------------------------------------------------------
-
-
-class ATIFToolCall(BaseModel):
-    """A single tool/function invocation by the agent."""
-
-    tool_call_id: str
-    function_name: str
-    arguments: dict[str, Any] = Field(default_factory=dict)
-
-
-class ATIFObservationResult(BaseModel):
-    """Result from a single tool call or action."""
-
-    source_call_id: str | None = None
-    content: str | None = None
-
-
-class ATIFObservation(BaseModel):
-    """Environment feedback after tool calls or system events."""
-
-    results: list[ATIFObservationResult] = Field(default_factory=list)
-
-
-class ATIFStepMetrics(BaseModel):
-    """LLM operational metrics for a single step."""
-
-    prompt_tokens: int | None = None
-    completion_tokens: int | None = None
-    cached_tokens: int | None = None
-    extra: dict[str, Any] | None = None
-
-
-class ATIFFinalMetrics(BaseModel):
-    """Aggregate metrics for an entire trajectory."""
-
-    total_prompt_tokens: int | None = None
-    total_completion_tokens: int | None = None
-    total_cached_tokens: int | None = None
-    total_steps: int | None = None
-    extra: dict[str, Any] | None = None
-
-
-class ATIFAgentConfig(BaseModel):
-    """Agent system identification and configuration."""
-
-    name: str = "nat-agent"
-    version: str = "0.0.0"
-    model_name: str | None = None
-    tool_definitions: list[dict[str, Any]] | None = None
-    extra: dict[str, Any] | None = None
-
-
-class ATIFStep(BaseModel):
-    """A single step in an ATIF trajectory."""
-
-    model_config = ConfigDict(exclude_none=True)
-
-    step_id: int
-    source: str  # "system", "user", or "agent"
-    message: str = ""
-    timestamp: str | None = None
-    model_name: str | None = None
-    reasoning_content: str | None = None
-    tool_calls: list[ATIFToolCall] | None = None
-    observation: ATIFObservation | None = None
-    metrics: ATIFStepMetrics | None = None
-    extra: dict[str, Any] | None = None
-
-
-class ATIFTrajectory(BaseModel):
-    """ATIF v1.6 trajectory — the complete interaction history of an agent run."""
-
-    model_config = ConfigDict(exclude_none=True)
-
-    schema_version: str = ATIF_VERSION
-    session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    agent: ATIFAgentConfig = Field(default_factory=ATIFAgentConfig)
-    steps: list[ATIFStep] = Field(default_factory=list)
-    notes: str | None = None
-    final_metrics: ATIFFinalMetrics | None = None
-    extra: dict[str, Any] | None = None
 
 
 # ---------------------------------------------------------------------------
