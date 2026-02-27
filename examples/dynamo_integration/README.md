@@ -120,10 +120,10 @@ cp .env.example .env
 vi .env # update the environment variables then source
 [ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
-# 4. Download the dataset (requires HuggingFace account)
+# 4. Download the dataset (requires Hugging Face account)
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
-# 5. Download the model weights (requires HuggingFace account)
+# 5. Download the model weights (requires Hugging Face account)
 mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
 hf download meta-llama/Llama-3.3-70B-Instruct --local-dir "$DYNAMO_MODEL_DIR"
 

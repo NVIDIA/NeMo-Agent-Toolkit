@@ -51,6 +51,7 @@ dependencies = ["nvidia-nat-core == {version}"]
 a2a = ["nvidia-nat-a2a == {version}"]
 adk = ["nvidia-nat-adk == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
+app = ["nvidia-nat-app == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
 core = ["nvidia-nat-core == {version}"]
 crewai = ["nvidia-nat-crewai == {version}"]
@@ -87,6 +88,7 @@ most = [
   "nvidia-nat-a2a == {version}",
   "nvidia-nat-adk == {version}",
   "nvidia-nat-agno == {version}",
+  "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
@@ -125,6 +127,7 @@ examples = [
   "nat_haystack_deep_research_agent",
   "nat_hybrid_control_flow",
   "nat_kaggle_mcp",
+  "nat_latency_sensitivity_demo",
   "nat_math_assistant_a2a",
   "nat_math_assistant_a2a_protected",
   "nat_multi_frameworks",
@@ -133,7 +136,6 @@ examples = [
   "nat_plot_charts",
   "nat_por_to_jiratickets",
   "nat_prompt_from_file",
-  "nat_profiler_agent",
   "nat_react_benchmark_agent",
   "nat_redis_example",
   "nat_retail_agent",
@@ -175,7 +177,6 @@ dev = [
   "ruff==0.15.0", # align with .pre-commit-config.yaml
   "setuptools >= 64",
   "setuptools_scm>=8",
-  "tomlkit>=0.13.2",
   "twine~=6.0",
   "uv==0.9.28", # align with .pre-commit-config.yaml
   "vale~=3.12",
@@ -218,6 +219,7 @@ conflicts = [
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
 nvidia-nat-adk = { path = "packages/nvidia_nat_adk", editable = true }
 nvidia-nat-agno = { path = "packages/nvidia_nat_agno", editable = true }
+nvidia-nat-app = { path = "packages/nvidia_nat_app", editable = true }
 nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
 nvidia-nat-core = { path = "packages/nvidia_nat_core", editable = true }
 nvidia-nat-crewai = { path = "packages/nvidia_nat_crewai", editable = true }
@@ -258,6 +260,7 @@ nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_hybrid_control_flow = { path = "examples/control_flow/hybrid_control_flow", editable = true }
 nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
+nat_latency_sensitivity_demo = { path = "examples/dynamo_integration/latency_sensitivity_demo", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
@@ -266,7 +269,6 @@ nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editab
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
 nat_prompt_from_file = { path = "examples/prompt_from_file", editable = true }
-nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
 nat_react_benchmark_agent = { path = "examples/dynamo_integration/react_benchmark_agent", editable = true }
 nat_redis_example = { path = "examples/memory/redis", editable = true }
 nat_retail_agent = { path = "examples/safety_and_security/retail_agent", editable = true }

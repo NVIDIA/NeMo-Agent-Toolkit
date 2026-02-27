@@ -24,7 +24,7 @@ NeMo Agent Toolkit supports the following embedder providers:
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
-| [HuggingFace](https://huggingface.co) | `huggingface` | Local sentence-transformers or remote Inference Endpoints (TEI) |
+| [Hugging Face](https://huggingface.co) | `huggingface` | Local sentence-transformers or remote Inference Endpoints (TEI) |
 
 ## Embedder Configuration
 
@@ -85,19 +85,19 @@ The Azure OpenAI embedder provider is defined by the {py:class}`~nat.embedder.az
 * `azure_endpoint` - The Azure OpenAI endpoint to use for the model
 * `azure_deployment` - The name of the Azure OpenAI deployment to use
 
-### HuggingFace
+### Hugging Face
 
-HuggingFace is an embedder provider that supports both local sentence-transformers models and remote TEI servers or HuggingFace Inference Endpoints. When `endpoint_url` is provided, embeddings are generated remotely. Otherwise, models are loaded and run locally.
+Hugging Face is an embedder provider that supports both local sentence-transformers models and remote TEI servers or Hugging Face Inference Endpoints. When `endpoint_url` is provided, embeddings are generated remotely. Otherwise, models are loaded and run locally.
 
-You can use the following environment variables to configure the HuggingFace embedder provider:
+You can use the following environment variables to configure the Hugging Face embedder provider:
 
-* `HF_TOKEN` - The API token to access HuggingFace Inference resources
+* `HF_TOKEN` - The API token to access Hugging Face Inference resources
 
-The HuggingFace embedder provider is defined by the {py:class}`~nat.embedder.huggingface_embedder.HuggingFaceEmbedderConfig` class.
+The Hugging Face embedder provider is defined by the {py:class}`~nat.embedder.huggingface_embedder.HuggingFaceEmbedderConfig` class.
 
-* `model_name` - The HuggingFace model identifier (for example, `BAAI/bge-large-en-v1.5`). Required for local embeddings
-* `endpoint_url` - Endpoint URL for TEI server or HuggingFace Inference Endpoint. When set, uses remote embedding
-* `api_key` - The HuggingFace API token for authentication
+* `model_name` - The Hugging Face model identifier (for example, `BAAI/bge-large-en-v1.5`). Required for local embeddings
+* `endpoint_url` - Endpoint URL for TEI server or Hugging Face Inference Endpoint. When set, uses remote embedding
+* `api_key` - The Hugging Face API token for authentication
 * `timeout` - Request timeout in seconds (default: `120.0`)
 * `device` - Device for local models: `cpu`, `cuda`, `mps`, or `auto` (default: `auto`)
 * `normalize_embeddings` - Whether to normalize embeddings to unit length (default: `true`)

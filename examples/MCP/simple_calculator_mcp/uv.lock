@@ -1792,6 +1792,7 @@ requires-dist = [
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "../../frameworks/haystack_deep_research_agent" },
     { name = "nat-hybrid-control-flow", marker = "extra == 'examples'", editable = "../../control_flow/hybrid_control_flow" },
     { name = "nat-kaggle-mcp", marker = "extra == 'examples'", editable = "../kaggle_mcp" },
+    { name = "nat-latency-sensitivity-demo", marker = "extra == 'examples'", editable = "../../dynamo_integration/latency_sensitivity_demo" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "../../A2A/math_assistant_a2a" },
     { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "../../A2A/math_assistant_a2a_protected" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "../../frameworks/multi_frameworks" },
@@ -1799,7 +1800,6 @@ requires-dist = [
     { name = "nat-per-user-workflow", marker = "extra == 'examples'", editable = "../../front_ends/per_user_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "../../custom_functions/plot_charts" },
     { name = "nat-por-to-jiratickets", marker = "extra == 'examples'", editable = "../../HITL/por_to_jiratickets" },
-    { name = "nat-profiler-agent", marker = "extra == 'examples'", editable = "../../advanced_agents/profiler_agent" },
     { name = "nat-prompt-from-file", marker = "extra == 'examples'", editable = "../../prompt_from_file" },
     { name = "nat-react-benchmark-agent", marker = "extra == 'examples'", editable = "../../dynamo_integration/react_benchmark_agent" },
     { name = "nat-redis-example", marker = "extra == 'examples'", editable = "../../memory/redis" },
@@ -1832,6 +1832,8 @@ requires-dist = [
     { name = "nvidia-nat-adk", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_adk" },
     { name = "nvidia-nat-agno", marker = "extra == 'agno'", editable = "../../../packages/nvidia_nat_agno" },
     { name = "nvidia-nat-agno", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_agno" },
+    { name = "nvidia-nat-app", marker = "extra == 'app'", editable = "../../../packages/nvidia_nat_app" },
+    { name = "nvidia-nat-app", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_app" },
     { name = "nvidia-nat-autogen", marker = "extra == 'autogen'", editable = "../../../packages/nvidia_nat_autogen" },
     { name = "nvidia-nat-autogen", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_autogen" },
     { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
@@ -1866,6 +1868,7 @@ requires-dist = [
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "../../../packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_phoenix" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'phoenix'", editable = "../../../packages/nvidia_nat_phoenix" },
+    { name = "nvidia-nat-rag", marker = "extra == 'rag'", editable = "../../../packages/nvidia_nat_rag" },
     { name = "nvidia-nat-ragaai", marker = "extra == 'ragaai'", editable = "../../../packages/nvidia_nat_ragaai" },
     { name = "nvidia-nat-redis", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_redis" },
     { name = "nvidia-nat-redis", marker = "extra == 'redis'", editable = "../../../packages/nvidia_nat_redis" },
@@ -1885,7 +1888,7 @@ requires-dist = [
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "../../../packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "../../documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "adk", "agno", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
+provides-extras = ["a2a", "adk", "agno", "app", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "rag", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1908,7 +1911,6 @@ dev = [
     { name = "sphinx-design", specifier = "~=0.6" },
     { name = "sphinx-mermaid" },
     { name = "sphinx-reredirects", specifier = "~=1.1" },
-    { name = "tomlkit", specifier = ">=0.13.2" },
     { name = "twine", specifier = "~=6.0" },
     { name = "uv", specifier = "==0.9.28" },
     { name = "vale", specifier = "~=3.12" },
@@ -1928,6 +1930,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "flask" },
     { name = "httpx" },
+    { name = "huggingface-hub" },
     { name = "jinja2" },
     { name = "jsonpath-ng" },
     { name = "nest-asyncio2" },
@@ -1968,6 +1971,7 @@ requires-dist = [
     { name = "flask", specifier = ">=3.0.0" },
     { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
     { name = "httpx", specifier = "~=0.27" },
+    { name = "huggingface-hub", specifier = ">=0.33.4,<1.0.0" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
     { name = "nest-asyncio2", specifier = "~=1.7" },

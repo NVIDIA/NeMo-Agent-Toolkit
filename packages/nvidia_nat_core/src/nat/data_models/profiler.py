@@ -49,6 +49,7 @@ class PredictionTrieConfig(BaseModel):
     w_critical: float = 0.5
     w_fanout: float = 0.3
     w_position: float = 0.2
+    w_parallel: float = 0.0
 
 
 class DynamoMetricsConfig(BaseModel):
@@ -63,7 +64,7 @@ class DynamoMetricsConfig(BaseModel):
        Token-agnostic measure of computational work saved via KV cache.
        Formula: ``KVE = cached_tokens / prompt_tokens``
        A KVE of 0.8 means 80% of prompt tokens were served from cache.
-       Affected by prefix routing hints (prefix_id, prefix_osl, prefix_iat).
+       Affected by prefix routing hints (prefix_id, nvext_prefix_osl, nvext_prefix_iat).
 
     2. **Time to First Token - TTFT** (``collect_ttft``):
        Latency from request to first token. Lower = faster initial response.

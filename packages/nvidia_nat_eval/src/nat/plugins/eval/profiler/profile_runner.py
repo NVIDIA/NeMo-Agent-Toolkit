@@ -354,6 +354,7 @@ class ProfilerRunner:
                 w_critical=trie_config.w_critical,
                 w_fanout=trie_config.w_fanout,
                 w_position=trie_config.w_position,
+                w_parallel=trie_config.w_parallel,
             ) if trie_config.auto_sensitivity else None
             trie_builder = PredictionTrieBuilder(sensitivity_config=sensitivity_config)
             for trace in all_steps:
