@@ -24,6 +24,7 @@ import pytest
 from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
+from nat.middleware.common import TargetLocation
 from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddleware
 from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
@@ -370,36 +371,25 @@ class TestOutputVerifierInvoke:
         assert not mock_llm.ainvoke.called  # Defense should not run
         assert result == 42.0
 
-    async def test_target_location_validation(self, mock_builder, middleware_context):
-        """Test target_location validation and default behavior."""
-        # Test that target_location='input' raises ValidationError
-        from pydantic import ValidationError
-        with pytest.raises(ValidationError, match="Input should be 'output'"):
-            OutputVerifierMiddlewareConfig(
-                llm_name="test_llm",
-                target_location="input",  # type: ignore[arg-type]
-                action="partial_compliance")
-
-        # Test default is 'output'
+    async def test_target_location_defaults_to_output(self):
+        """Test that target_location defaults to OUTPUT."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
-        assert config.target_location == "output"
+        assert config.target_location == TargetLocation.OUTPUT
 
-        # Test explicit 'output' works
+    async def test_target_location_input_skips_output_analysis(self, mock_builder, middleware_context):
+        """Test that setting target_location=INPUT skips output analysis entirely."""
         config = OutputVerifierMiddlewareConfig(llm_name="test_llm",
-                                                target_location="output",
+                                                target_location=TargetLocation.INPUT,
                                                 action="partial_compliance")
         middleware = OutputVerifierMiddleware(config, mock_builder)
         mock_llm = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.content = '{"threat_detected": false, "confidence": 0.9}'
-        mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         middleware._llm = mock_llm
 
         async def mock_next(_value):
             return 42.0
 
         result = await middleware.function_middleware_invoke(10.0, call_next=mock_next, context=middleware_context)
-        assert mock_llm.ainvoke.called
+        assert not mock_llm.ainvoke.called
         assert result == 42.0
 
     async def test_non_string_output_converts_to_string(self, mock_builder, middleware_context):
