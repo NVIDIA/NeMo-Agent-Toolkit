@@ -20,3 +20,4 @@ FROM openresty/openresty:alpine
 EXPOSE 8088
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
