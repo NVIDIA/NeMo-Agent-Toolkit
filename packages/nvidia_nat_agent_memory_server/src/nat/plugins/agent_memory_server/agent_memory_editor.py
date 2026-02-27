@@ -65,8 +65,6 @@ class AgentMemoryServerEditor(MemoryEditor):
                 topics=item.tags or [],
                 user_id=item.user_id,
             )
-            if item.metadata and hasattr(record, "metadata"):
-                record.metadata = item.metadata
             records.append(record)
         if records:
             await self._client.create_long_term_memory(records)
