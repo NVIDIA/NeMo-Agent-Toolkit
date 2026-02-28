@@ -16,6 +16,7 @@
 
 import pytest
 
+from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -23,7 +24,6 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.token_usage import TokenUsageBaseModel
-from nat.data_models.atif import ATIFTrajectory
 from nat.utils.atif_converter import ATIFStreamConverter
 from nat.utils.atif_converter import IntermediateStepToATIFConverter
 

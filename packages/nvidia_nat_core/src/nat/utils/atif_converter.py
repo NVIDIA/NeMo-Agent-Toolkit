@@ -201,8 +201,7 @@ class IntermediateStepToATIFConverter:
                     observation=observation,
                     metrics=pending.metrics,
                     extra=pending.extra or None,
-                )
-            )
+                ))
             step_id += 1
             pending = None
 
@@ -225,8 +224,7 @@ class IntermediateStepToATIFConverter:
                         source="user",
                         message=user_input,
                         timestamp=_epoch_to_iso(ist.event_timestamp),
-                    )
-                )
+                    ))
                 step_id += 1
                 continue
 
@@ -247,8 +245,7 @@ class IntermediateStepToATIFConverter:
                             source="agent",
                             message=final_output,
                             timestamp=_epoch_to_iso(ist.event_timestamp),
-                        )
-                    )
+                        ))
                     step_id += 1
                 continue
 
@@ -299,8 +296,7 @@ class IntermediateStepToATIFConverter:
                             timestamp=_epoch_to_iso(ist.event_timestamp),
                             tool_calls=[tc],
                             observation=ATIFObservation(results=[obs]),
-                        )
-                    )
+                        ))
                     step_id += 1
                 continue
 
@@ -312,18 +308,16 @@ class IntermediateStepToATIFConverter:
                 continue
 
             if state == IntermediateStepState.END and category not in (
-                IntermediateStepCategory.LLM,
-                IntermediateStepCategory.TOOL,
-                IntermediateStepCategory.WORKFLOW,
+                    IntermediateStepCategory.LLM,
+                    IntermediateStepCategory.TOOL,
+                    IntermediateStepCategory.WORKFLOW,
             ):
                 if pending is not None:
-                    pending.extra.setdefault("nat_events", []).append(
-                        {
-                            "type": str(event_type),
-                            "name": ist.name,
-                            "timestamp": _epoch_to_iso(ist.event_timestamp),
-                        }
-                    )
+                    pending.extra.setdefault("nat_events", []).append({
+                        "type": str(event_type),
+                        "name": ist.name,
+                        "timestamp": _epoch_to_iso(ist.event_timestamp),
+                    })
 
         _flush_pending()
 
@@ -464,18 +458,16 @@ class ATIFStreamConverter:
             return orphan_step
 
         if state == IntermediateStepState.END and category not in (
-            IntermediateStepCategory.LLM,
-            IntermediateStepCategory.TOOL,
-            IntermediateStepCategory.WORKFLOW,
+                IntermediateStepCategory.LLM,
+                IntermediateStepCategory.TOOL,
+                IntermediateStepCategory.WORKFLOW,
         ):
             if self._pending is not None:
-                self._pending.extra.setdefault("nat_events", []).append(
-                    {
-                        "type": str(event_type),
-                        "name": ist.name,
-                        "timestamp": _epoch_to_iso(ist.event_timestamp),
-                    }
-                )
+                self._pending.extra.setdefault("nat_events", []).append({
+                    "type": str(event_type),
+                    "name": ist.name,
+                    "timestamp": _epoch_to_iso(ist.event_timestamp),
+                })
 
         return None
 
