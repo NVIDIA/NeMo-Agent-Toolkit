@@ -12,7 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""ATIF v1.6 data models for trajectory interchange."""
+"""ATIF v1.6 data models for trajectory interchange.
+
+Maintenance notes:
+- Keep this module aligned with the ATIF RFC field names and optionality.
+- Prefer strict schema validation (`extra="forbid"`) to catch drift early.
+- Use explicit `extra: dict[str, Any] | None` only where the spec defines it.
+- Additive schema updates are preferred; avoid breaking existing serialized traces.
+- Avoid per-field annotation comments to reduce noise; add inline comments only
+  for semantics that are easy to misinterpret.
+"""
 
 from __future__ import annotations
 
@@ -71,6 +80,7 @@ class ATIFObservationResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    # Correlates with `tool_calls[].tool_call_id`; can be `None` for non-tool/system events.
     source_call_id: str | None = None
     content: str | list[ContentPart] | None = None
     subagent_trajectory_ref: list[SubagentTrajectoryRef] | None = None
@@ -91,6 +101,7 @@ class ATIFStepMetrics(BaseModel):
 
     prompt_tokens: int | None = None
     completion_tokens: int | None = None
+    # Cached tokens are a subset of `prompt_tokens`, not additional tokens.
     cached_tokens: int | None = None
     cost_usd: float | None = None
     prompt_token_ids: list[int] | None = None
@@ -131,6 +142,7 @@ class ATIFStep(BaseModel):
 
     step_id: int
     source: Literal["system", "user", "agent"]
+    # ATIF v1.6 supports plain text or multimodal content parts.
     message: str | list[ContentPart] = ""
     timestamp: str | None = None
     model_name: str | None = None
