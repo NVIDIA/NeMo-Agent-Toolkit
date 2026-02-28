@@ -105,7 +105,7 @@ def post_streaming_atif_endpoint(*,
                                  streaming: bool,
                                  result_type: type | None,
                                  output_type: type | None):
-    """Build a POST handler that streams ATIF-formatted steps."""
+    """Build an experimental POST handler that streams ATIF-formatted steps."""
 
     async def post_stream(request: Request, payload: Any = Body()):
         async with session_manager.session(http_connection=request) as session:
@@ -242,8 +242,10 @@ async def add_generate_route(
                 methods=[endpoint_method],
                 response_model=response_type,
                 responses={500: RESPONSE_500},
-                description="Stream workflow execution as ATIF (Agent Trajectory Interchange Format) steps.\n"
-                "Each SSE event is either an ATIF step object or a final trajectory summary.",
+                description="Stream workflow execution as ATIF "
+                "(Agent Trajectory Interchange Format) steps.\n"
+                "Each SSE event is either an ATIF step object or a final trajectory summary.\n"
+                "This endpoint is currently experimental and may change in future releases.",
             )
         case _:
             raise ValueError(f"Unsupported endpoint type: {endpoint_type}")
