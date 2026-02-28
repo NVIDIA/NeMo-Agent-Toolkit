@@ -146,7 +146,8 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
     if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
         config_dict["api_key"] = api_key
     if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
-        config_dict["base_url"] = base_url
+        # LlamaIndex's OpenAI wrapper expects "api_base" instead of "base_url"
+        config_dict["api_base"] = base_url
     if llm_config.request_timeout is not None:
         config_dict["timeout"] = llm_config.request_timeout
 
