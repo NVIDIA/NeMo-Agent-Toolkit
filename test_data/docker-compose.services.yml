@@ -122,7 +122,7 @@ services:
 
   local-sandbox:
     build:
-      context: ../../src/nat/tool/code_execution/local_sandbox
+      context: ../packages/nvidia_nat_core/src/nat/tool/code_execution/local_sandbox
       dockerfile: Dockerfile.sandbox
     container_name: test-local-sandbox
     ports:
@@ -179,8 +179,20 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-my_password}
     restart: unless-stopped
 
+  nginx-rewrite-models:
+    build: ./nginx
+    image: nginx-rewrite-models
+    environment:
+      # This needs to include the port even if it is the default port for the protocol
+      # ex: "https://some-server.com:443" and "http://some-server.com:80"
+      - NAT_CI_PROXIED_OPENAI_BASE_URL
+
+    ports:
+      - 8088:8088
+    restart: unless-stopped
+
   oauth2-server:
-    build: ../../examples/front_ends/simple_auth
+    build: ../examples/front_ends/simple_auth
     container_name: test-oauth2-server
     ports:
       - "5001:5000"
