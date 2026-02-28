@@ -23,9 +23,9 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.token_usage import TokenUsageBaseModel
-from nat.plugins.eval.utils.atif_converter import ATIFStreamConverter
-from nat.plugins.eval.utils.atif_converter import ATIFTrajectory
-from nat.plugins.eval.utils.atif_converter import IntermediateStepToATIFConverter
+from nat.data_models.atif import ATIFTrajectory
+from nat.utils.atif_converter import ATIFStreamConverter
+from nat.utils.atif_converter import IntermediateStepToATIFConverter
 
 # ---------------------------------------------------------------------------
 # Helpers

@@ -24,7 +24,7 @@ from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.intermediate_step import IntermediateStep
 
 if TYPE_CHECKING:
-    from nat.plugins.eval.utils.atif_converter import ATIFStreamConverter
+    from nat.utils.atif_converter import ATIFStreamConverter
 
 logger = logging.getLogger(__name__)
 

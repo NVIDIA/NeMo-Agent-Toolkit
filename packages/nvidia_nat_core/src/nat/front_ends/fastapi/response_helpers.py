@@ -213,7 +213,7 @@ async def generate_streaming_response_atif(payload: typing.Any,
     agent turn) or a ``ResponsePayloadOutput`` (the final workflow result).
     A ``ResponseATIFTrajectory`` summary is emitted at the very end.
     """
-    from nat.plugins.eval.utils.atif_converter import ATIFStreamConverter
+    from nat.utils.atif_converter import ATIFStreamConverter
 
     converter = ATIFStreamConverter()
 
