@@ -516,6 +516,43 @@ redirects = {
 
 if build_api_docs:
 
+    def _clean_inherited_docstring(docstring: str) -> str:
+        """Clean up inherited docstrings that use non-RST syntax.
+
+        Some base classes (e.g. LangChain) use MkDocs/Markdown conventions in
+        their docstrings.  When those docstrings are inherited by NAT classes,
+        autoapi copies them verbatim into RST pages where they cause parsing
+        errors.  This helper rewrites the raw docstring *before* RST generation
+        so the output is valid.
+        """
+        import re
+
+        # Remove MkDocs-style admonition blocks (with or without a quoted title).
+        # Match the header, an optional blank line, and all indented body lines.
+        docstring = re.sub(
+            r'^([ \t]*)!!!\s+\w+(?:\s+"[^"]*")?\s*\n(?:\1[ \t]+\S.*\n|\s*\n)*',
+            '',
+            docstring,
+            flags=re.MULTILINE,
+        )
+
+        # Unwrap continuation lines in Google-style parameter descriptions.
+        # A continuation is a more-indented, lowercase-starting line that
+        # immediately follows a ``param: description`` line and is not itself
+        # a new parameter.
+        prev: str | None = None
+        while docstring != prev:
+            prev = docstring
+            docstring = re.sub(
+                r'^([ \t]+)(\w[\w_]*:.+)\n([ \t]+)(?!\w[\w_]*:)([a-z].+)$',
+                lambda m: (m.group(1) + m.group(2).rstrip() + ' ' + m.group(4).strip()
+                           if len(m.group(3)) > len(m.group(1)) else m.group(0)),
+                docstring,
+                flags=re.MULTILINE,
+            )
+
+        return docstring
+
     def skip_pydantic_special_attrs(app: object,
                                     what: str,
                                     name: str,
@@ -528,6 +565,9 @@ if build_api_docs:
             if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
                     and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
                 obj.docstring = ""
+
+        if obj.docstring and '!!!' in obj.docstring:
+            obj.docstring = _clean_inherited_docstring(obj.docstring)
 
         return skip
 
