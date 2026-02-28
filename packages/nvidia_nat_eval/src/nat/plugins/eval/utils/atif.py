@@ -16,10 +16,13 @@
 
 from nat.data_models.atif import ATIFAgentConfig
 from nat.data_models.atif import ATIFFinalMetrics
+from nat.data_models.atif import ContentPart
+from nat.data_models.atif import ImageSource
 from nat.data_models.atif import ATIFObservation
 from nat.data_models.atif import ATIFObservationResult
 from nat.data_models.atif import ATIFStep
 from nat.data_models.atif import ATIFStepMetrics
+from nat.data_models.atif import SubagentTrajectoryRef
 from nat.data_models.atif import ATIFToolCall
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.atif import ATIF_VERSION
@@ -28,10 +31,13 @@ __all__ = [
     "ATIF_VERSION",
     "ATIFAgentConfig",
     "ATIFFinalMetrics",
+    "ContentPart",
+    "ImageSource",
     "ATIFObservation",
     "ATIFObservationResult",
     "ATIFStep",
     "ATIFStepMetrics",
+    "SubagentTrajectoryRef",
     "ATIFToolCall",
     "ATIFTrajectory",
 ]

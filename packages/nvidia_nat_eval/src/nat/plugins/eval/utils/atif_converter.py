@@ -196,13 +196,16 @@ class IntermediateStepToATIFConverter:
             A fully populated ATIFTrajectory.
         """
         if not steps:
-            return ATIFTrajectory(session_id=session_id or str(uuid.uuid4()))
+            return ATIFTrajectory(
+                session_id=session_id or str(uuid.uuid4()),
+                agent=ATIFAgentConfig(name=agent_name or "nat-agent", version="0.0.0"),
+            )
 
         sorted_steps = sorted(steps, key=lambda s: s.event_timestamp)
         atif_steps: list[ATIFStep] = []
         step_id = 1
 
-        agent_config = ATIFAgentConfig(name=agent_name or "nat-agent")
+        agent_config = ATIFAgentConfig(name=agent_name or "nat-agent", version="0.0.0")
         tool_defs_captured = False
         pending: _PendingAgentTurn | None = None
         total_prompt = 0
@@ -386,7 +389,7 @@ class ATIFStreamConverter:
 
     def __init__(self, agent_name: str = "nat-agent"):
         self._step_id: int = 1
-        self._agent_config = ATIFAgentConfig(name=agent_name)
+        self._agent_config = ATIFAgentConfig(name=agent_name, version="0.0.0")
         self._tool_defs_captured = False
         self._pending: _PendingAgentTurn | None = None
         self._emitted_steps: list[ATIFStep] = []
