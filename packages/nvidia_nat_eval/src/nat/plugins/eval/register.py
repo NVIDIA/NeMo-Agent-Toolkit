@@ -21,7 +21,6 @@ from .runtime_evaluator.register import register_avg_llm_latency_evaluator
 from .runtime_evaluator.register import register_avg_num_llm_calls_evaluator
 from .runtime_evaluator.register import register_avg_tokens_per_llm_end_evaluator
 from .runtime_evaluator.register import register_avg_workflow_runtime_evaluator
-from .swe_bench_evaluator.register import register_swe_bench_evaluator
 
 # Dataset loaders
 from .dataset_loader.register import register_csv_dataset_loader

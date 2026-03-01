@@ -37,6 +37,7 @@ As part of dependency reduction, evaluator ownership is being moved out of `nvid
 - `tunable_rag_evaluator` moved to `nvidia-nat-langchain`.
 - `ragas` evaluator moved to `nvidia-nat-ragas`.
 - `nvidia-nat-eval` no longer includes a direct `ragas` dependency.
+- `swe_bench` evaluator has been removed (no replacement package in this release).
 
 This is a breaking change:
 - `nvidia-nat-eval` no longer owns these built-in evaluator implementations.
@@ -49,6 +50,7 @@ To migrate:
 - Install the RAGAS evaluator package when using `_type: ragas`:
   - `pip install nvidia-nat-ragas`
 - Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`).
+- Remove any `_type: swe_bench` evaluator entries from evaluation configs.
 - If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
 
 ### v1.5.0
