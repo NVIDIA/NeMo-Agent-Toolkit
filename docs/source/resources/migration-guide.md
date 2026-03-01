@@ -27,6 +27,27 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.6.0
+
+#### Evaluator Package Split (Breaking)
+
+As part of dependency reduction, evaluator ownership is being moved out of `nvidia-nat-eval` and into framework-specific packages.
+
+Current phase (Phase 0):
+- `trajectory` evaluator moved to `nvidia-nat-langchain`.
+- `tunable_rag_evaluator` moved to `nvidia-nat-langchain`.
+
+This is a breaking change:
+- `nvidia-nat-eval` no longer owns these built-in evaluator implementations.
+- `nvidia-nat-langchain` now imports evaluator base contracts from `nvidia-nat-eval`.
+- If `nvidia-nat-langchain` is installed without `nvidia-nat-eval`, LangChain evaluator registration imports can fail.
+
+To migrate:
+- Install both packages when using these evaluators:
+  - `pip install nvidia-nat-eval nvidia-nat-langchain`
+- Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`).
+- If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
+
 ### v1.5.0
 
 #### Removing Old Aliases and Transitional Packages
