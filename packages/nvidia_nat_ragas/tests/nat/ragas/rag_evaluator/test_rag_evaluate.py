@@ -38,7 +38,7 @@ if typing.TYPE_CHECKING:
     from ragas.llms import LangchainLLMWrapper
     from ragas.metrics import Metric
 
-    from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
+    from nat.plugins.ragas.rag_evaluator.evaluate import RAGEvaluator
 
 
 class ExampleModel(BaseModel):
@@ -68,7 +68,7 @@ def ragas_metrics() -> "Sequence[Metric]":
 
 @pytest.fixture
 def rag_evaluator(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
-    from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
+    from nat.plugins.ragas.rag_evaluator.evaluate import RAGEvaluator
     return RAGEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
 
 
@@ -80,7 +80,7 @@ def metric_name() -> str:
 @pytest.fixture
 def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
     """RAGEvaluator configured to extract a specific field (`content`) from BaseModel or dict input objects."""
-    from nat.plugins.eval.rag_evaluator.evaluate import RAGEvaluator
+    from nat.plugins.ragas.rag_evaluator.evaluate import RAGEvaluator
     return RAGEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, input_obj_field="content")
 
 
@@ -199,7 +199,7 @@ def test_ragas_to_eval_output_nan_handling(rag_evaluator, rag_eval_input, metric
 
     # fmt: off
     test_cases = [
-        # (scores list, expected per‑item scores list (preserving NaN/None), expected average (using 0.0 for NaN/None))
+        # (scores list, expected per-item scores list (preserving NaN/None), expected average (using 0.0 for NaN/None))
         ([{metric_name: float("nan")}],            [float("nan")],           0.0),
         ([{metric_name: None}],                   [None],                   0.0),
         ([{metric_name: float("nan")},
@@ -240,7 +240,7 @@ async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_l
     Test evaluate function to verify the following functions are called
     1. rag_evaluator.eval_input_to_ragas
     2. ragas.evaluate
-    3. nat.plugins.eval.evaluator.rag_evaluator.ragas_to_eval_output
+    3. nat.plugins.ragas.rag_evaluator.ragas_to_eval_output
 
     Only limited coverage is possible via unit tests as most of the functionality is
     implemented within the ragas framework. The simple example's end-to-end test covers functional

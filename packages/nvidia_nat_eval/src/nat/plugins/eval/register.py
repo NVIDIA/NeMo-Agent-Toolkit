@@ -16,7 +16,6 @@
 # flake8: noqa
 
 # Import evaluators which need to be automatically registered here
-from .rag_evaluator.register import register_ragas_evaluator
 from .red_teaming_evaluator.register import register_red_teaming_evaluator
 from .runtime_evaluator.register import register_avg_llm_latency_evaluator
 from .runtime_evaluator.register import register_avg_num_llm_calls_evaluator

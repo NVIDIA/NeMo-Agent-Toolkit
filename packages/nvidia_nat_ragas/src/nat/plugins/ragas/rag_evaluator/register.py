@@ -78,12 +78,12 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
 
     @property
     def metric_config(self) -> RagasMetricConfig:
-        """Returns the metric configuration (or a default if only a string is provided)."""
+        """Returns metric configuration with defaults."""
         if isinstance(self.metric, str):
-            return RagasMetricConfig()  # Default config when only a metric name is given
+            return RagasMetricConfig()
         if isinstance(self.metric, dict) and self.metric:
             return next(iter(self.metric.values()))
-        return RagasMetricConfig()  # Default config when an invalid type is provided
+        return RagasMetricConfig()
 
 
 @register_evaluator(config_type=RagasEvaluatorConfig)
@@ -91,9 +91,7 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
     from ragas.metrics import Metric
 
     def get_ragas_metric(metric_name: str) -> Metric | None:
-        """
-        Fetch callable for RAGAS metrics
-        """
+        """Fetch callable for RAGAS metric by name."""
         try:
             import ragas.metrics as ragas_metrics
 
@@ -108,18 +106,15 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             return None
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
-        '''Run the RAGAS evaluation and return the average scores and evaluation results dataframe'''
-        if not _evaluator:
+        """Run RAGAS evaluation and return NAT eval output."""
+        if not evaluator:
             logger.warning("No evaluator found for RAGAS metrics.")
-            # return empty results if no evaluator is found
             return EvalOutput(average_score=0.0, eval_output_items=[])
-
-        return await _evaluator.evaluate(eval_input)
+        return await evaluator.evaluate(eval_input)
 
     from .evaluate import RAGEvaluator
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
-
     if config.do_auto_retry:
         llm = patch_with_retry(
             llm,
@@ -128,23 +123,17 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             retry_on_messages=config.retry_on_errors,
         )
 
-    # Get RAGAS metric callable from the metric config and create a list of metric-callables
     metrics = []
-    # currently only one metric is supported
-    metric_name = config.metric_name  # Extracts the metric name
-    metric_config = config.metric_config  # Extracts the config (handles str/dict cases)
-
-    # Skip if `skip` is True
+    metric_name = config.metric_name
+    metric_config = config.metric_config
     if not metric_config.skip:
         metric_callable = get_ragas_metric(metric_name)
         if metric_callable:
             kwargs = metric_config.kwargs or {}
             metrics.append(metric_callable(**kwargs))
 
-    # Create the RAG evaluator
-    _evaluator = RAGEvaluator(evaluator_llm=llm,
-                              metrics=metrics,
-                              max_concurrency=builder.get_max_concurrency(),
-                              input_obj_field=config.input_obj_field) if metrics else None
-
+    evaluator = RAGEvaluator(evaluator_llm=llm,
+                             metrics=metrics,
+                             max_concurrency=builder.get_max_concurrency(),
+                             input_obj_field=config.input_obj_field) if metrics else None
     yield EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
