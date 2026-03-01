@@ -22,7 +22,7 @@ from langchain_core.language_models import BaseChatModel
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
-from nat.plugins.eval.tunable_rag_evaluator.evaluate import TunableRagEvaluator
+from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluator
 
 
 @pytest.fixture
