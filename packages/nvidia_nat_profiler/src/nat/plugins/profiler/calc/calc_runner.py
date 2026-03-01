@@ -23,6 +23,8 @@ from pathlib import Path
 from pydantic import ValidationError
 
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
+from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
 from nat.plugins.profiler.calc.calculations import LinearFitResult
 from nat.plugins.profiler.calc.calculations import calc_gpu_estimate_based_on_slope
 from nat.plugins.profiler.calc.calculations import calc_gpu_estimate_for_single_concurrency
@@ -37,8 +39,6 @@ from nat.plugins.profiler.calc.data_models import GPUEstimates
 from nat.plugins.profiler.calc.data_models import SizingMetricPerItem
 from nat.plugins.profiler.calc.data_models import SizingMetrics
 from nat.plugins.profiler.calc.data_models import SizingMetricsAlerts
-from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
-from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
 
 logger = logging.getLogger(__name__)
 
