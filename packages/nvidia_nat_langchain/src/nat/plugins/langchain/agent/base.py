@@ -100,11 +100,21 @@ class BaseAgent(ABC):
         AIMessage
             The LLM response
         """
-        output_message = []
+        content_parts = []
+        reasoning_parts = []
         async for event in runnable.astream(inputs, config=self._runnable_config):
-            output_message.append(event.content)
+            content_parts.append(event.content)
+            extra = getattr(event, 'additional_kwargs', None)
+            if isinstance(extra, dict):
+                reasoning = extra.get('reasoning_content', '')
+                if reasoning:
+                    reasoning_parts.append(reasoning)
 
-        return AIMessage(content="".join(output_message))
+        additional_kwargs: dict[str, Any] = {}
+        if reasoning_parts:
+            additional_kwargs['reasoning_content'] = "".join(reasoning_parts)
+
+        return AIMessage(content="".join(content_parts), additional_kwargs=additional_kwargs)
 
     async def _call_llm(self, llm: Runnable, inputs: dict[str, Any]) -> AIMessage:
         """

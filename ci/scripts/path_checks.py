@@ -41,10 +41,6 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/advanced_agents/alert_triage_agent/data/",
     ),
     (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability",
-    ),
-    (
         r"^examples/config_inheritance/README.md",
         r"^examples/getting_started/simple_calculator",
     ),

@@ -77,7 +77,7 @@ class OutputVerificationResult(BaseModel):
         confidence: Confidence score (0.0-1.0) in the threat detection.
         reason: Explanation for the detection result.
         correct_answer: The correct output value if threat detected, otherwise None.
-        content_type: Type of content analyzed ('input' or 'output').
+        content_type: TargetLocation indicating what was analyzed (input or output).
         should_refuse: Whether the content should be refused based on threshold.
         error: Whether an error occurred during verification.
     """
