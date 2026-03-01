@@ -30,17 +30,18 @@ from pathlib import Path
 import httpx
 from pydantic import ValidationError
 
+from nat.data_models.skill import Skill
 from nat.data_models.workspace import ActionRequest
 from nat.data_models.workspace import ActionResult
 from nat.data_models.workspace import ActionStatus
 from nat.data_models.workspace import WorkspaceBaseConfig
 from nat.guardrails.workspace import WorkspaceGuardrail
 from nat.guardrails.workspace import WorkspaceGuardrailViolation
+from nat.workspace.types import SkillSummary
 from nat.workspace.types import TypeSchema
 from nat.workspace.types import WorkspaceActionSchema
 from nat.workspace.types import WorkspaceBase
 from nat.workspace.types import WorkspaceManagerBase
-from nat.workspace.types import WorkspaceSkillSchema
 
 
 def normalize_base_url(url: str) -> str:
@@ -163,8 +164,8 @@ class WorkspaceApiClient:
         )
 
     @staticmethod
-    def _parse_skill_schema(raw: dict[str, typing.Any]) -> WorkspaceSkillSchema:
-        return WorkspaceSkillSchema(name=str(raw.get("name", "")), description=str(raw.get("description", "")))
+    def _parse_skill_summary(raw: dict[str, typing.Any]) -> SkillSummary:
+        return SkillSummary(name=str(raw.get("name", "")), description=str(raw.get("description", "")))
 
     async def get_actions(self) -> list[WorkspaceActionSchema]:
         """Return action schemas from the workspace API."""
@@ -179,23 +180,37 @@ class WorkspaceApiClient:
         except (httpx.HTTPStatusError, ValueError) as exc:
             raise RuntimeError("Workspace action discovery returned invalid data.") from exc
 
-    async def get_skills(self) -> list[WorkspaceSkillSchema]:
-        """Return skill schemas from the workspace API."""
+    async def get_skills(self) -> list[SkillSummary]:
+        """Return skill summaries from the workspace API."""
         try:
             response = await self._http_client.get(self._url("skills"))
             response.raise_for_status()
             payload = response.json()
             items = self._extract_list(payload, "skills")
-            return [self._parse_skill_schema(item) for item in items]
+            return [self._parse_skill_summary(item) for item in items]
         except httpx.RequestError as exc:
             raise RuntimeError("Workspace skill discovery request failed.") from exc
         except (httpx.HTTPStatusError, ValueError) as exc:
             raise RuntimeError("Workspace skill discovery returned invalid data.") from exc
 
-    async def create_skill(self, skill_name: str, skill_description: str) -> ActionResult:
+    async def read_skill(self, skill_name: str) -> Skill | None:
+        """Return a single skill by name from the workspace API."""
+        try:
+            response = await self._http_client.get(self._url(f"skills/{skill_name}"))
+        except httpx.RequestError as exc:
+            raise RuntimeError(f"Workspace read_skill request failed for {skill_name!r}.") from exc
+        if response.status_code == 404:
+            return None
+        try:
+            response.raise_for_status()
+            return Skill.from_portable_dict(response.json())
+        except (httpx.HTTPStatusError, ValueError) as exc:
+            raise RuntimeError(f"Workspace read_skill returned invalid data for {skill_name!r}.") from exc
+
+    async def create_skill(self, skill: Skill) -> ActionResult:
         """Create a skill via the workspace API."""
         action_id = uuid.uuid4()
-        payload = {"name": skill_name, "description": skill_description}
+        payload = skill.to_portable_dict()
         try:
             response = await self._http_client.post(self._url("skills/new"), json=payload)
         except httpx.RequestError as exc:
@@ -203,7 +218,7 @@ class WorkspaceApiClient:
                 action_id=action_id,
                 status=ActionStatus.FAILURE,
                 output=None,
-                error_message=f"Failed to create skill {skill_name}: {exc}",
+                error_message=f"Failed to create skill {skill.name}: {exc}",
             )
 
         if response.status_code in {200, 201}:
@@ -211,7 +226,7 @@ class WorkspaceApiClient:
                 action_id=action_id,
                 status=ActionStatus.SUCCESS,
                 output={
-                    "status": "created", "name": skill_name
+                    "status": "created", "name": skill.name
                 },
                 error_message=None,
             )
@@ -220,13 +235,13 @@ class WorkspaceApiClient:
                 action_id=action_id,
                 status=ActionStatus.FAILURE,
                 output=None,
-                error_message=f"Skill {skill_name} already exists",
+                error_message=f"Skill {skill.name} already exists",
             )
         return _new_action_result(
             action_id=action_id,
             status=ActionStatus.FAILURE,
             output=None,
-            error_message=f"Failed to create skill {skill_name}: {response.status_code} {response.text}",
+            error_message=f"Failed to create skill {skill.name}: {response.status_code} {response.text}",
         )
 
     async def execute_action(self, action_request: ActionRequest) -> ActionResult:
@@ -688,13 +703,17 @@ class ApiWorkspace(WorkspaceBase):
         """Return action schemas from the workspace API."""
         return await self._api_client.get_actions()
 
-    async def get_skills(self) -> list[WorkspaceSkillSchema]:
-        """Return skill schemas from the workspace API."""
+    async def get_skills(self) -> list[SkillSummary]:
+        """Return skill summaries from the workspace API."""
         return await self._api_client.get_skills()
 
-    async def create_skill(self, skill_name: str, skill_description: str) -> ActionResult:
+    async def read_skill(self, skill_name: str) -> Skill | None:
+        """Return a single skill by name from the workspace API."""
+        return await self._api_client.read_skill(skill_name)
+
+    async def create_skill(self, skill: Skill) -> ActionResult:
         """Create a skill using the workspace API."""
-        return await self._api_client.create_skill(skill_name=skill_name, skill_description=skill_description)
+        return await self._api_client.create_skill(skill=skill)
 
     async def upload_file(self, file_path: Path, destination_path: Path) -> ActionResult:
         """Upload a file using the workspace API."""

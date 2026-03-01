@@ -40,10 +40,10 @@ from nat.sdk.llm.message import TokenUsage
 from nat.sdk.llm.message import ToolCall
 from nat.sdk.tool.result import ToolResult
 from nat.sdk.tool.tool import Tool
+from nat.workspace.types import SkillSummary
 from nat.workspace.types import TypeSchema
 from nat.workspace.types import WorkspaceActionSchema
 from nat.workspace.types import WorkspaceBase
-from nat.workspace.types import WorkspaceSkillSchema
 
 # ---------------------------------------------------------------------------
 # UsageStats
@@ -183,10 +183,13 @@ class MockWorkspace(WorkspaceBase):
             ),
         ]
 
-    async def get_skills(self) -> list[WorkspaceSkillSchema]:
+    async def get_skills(self) -> list[SkillSummary]:
         return []
 
-    async def create_skill(self, skill_name: str, skill_description: str) -> ActionResult:
+    async def read_skill(self, skill_name: str) -> Skill | None:
+        return None
+
+    async def create_skill(self, skill: Skill) -> ActionResult:
         return ActionResult(status=ActionStatus.SUCCESS, output="created")
 
     async def execute_action(
@@ -814,3 +817,396 @@ class TestConversationRunnerExtensions:
         assert messages[0].content == "Be helpful"
         assert messages[1].role == "user"
         assert messages[1].content == "Hello"
+
+
+# ---------------------------------------------------------------------------
+# Conversation — skill activation (read_skill tool)
+# ---------------------------------------------------------------------------
+
+
+class TestConversationSkillActivation:
+    """Tests for the read_skill tool and skill lifecycle."""
+
+    async def test_read_skill_tool_injected_when_skills_present(self) -> None:
+        """read_skill is auto-injected when the agent has skills."""
+        client = FakeLLMClient([_text_response("ok")])
+        skill = Skill(name="code-review", description="Review code changes")
+        agent = Agent(skills=[skill])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        assert "read_skill" in conv.tools
+
+    async def test_read_skill_tool_absent_when_no_skills(self) -> None:
+        """read_skill is NOT injected when the agent has no skills."""
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        assert "read_skill" not in conv.tools
+
+    async def test_read_skill_unknown_name_returns_error(self) -> None:
+        """Calling read_skill with an unknown name returns an error string."""
+        client = FakeLLMClient([_text_response("ok")])
+        skill = Skill(name="code-review", description="Review code changes")
+        agent = Agent(skills=[skill])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        tool = conv.tools["read_skill"]
+        result = await tool(skill_name="nonexistent")
+        assert result.error is None  # no exception, just a string output
+        assert "not found" in result.output
+
+    async def test_read_skill_activates_skill(self) -> None:
+        """Calling read_skill on a valid skill marks it as activated."""
+        client = FakeLLMClient([_text_response("ok")])
+        skill = Skill(name="code-review", description="Review code changes", content="Do X then Y.")
+        agent = Agent(skills=[skill])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        tool = conv.tools["read_skill"]
+        result = await tool(skill_name="code-review")
+
+        assert "code-review" in conv.state.activated_skills
+        assert "activated" in result.output
+
+    async def test_read_skill_emits_system_prompt_event(self) -> None:
+        """Calling read_skill emits a SystemPromptEvent containing the full skills section."""
+        collected: list[Event] = []
+        client = FakeLLMClient([_text_response("ok")])
+        skill = Skill(name="code-review", description="Review code", content="My instructions.")
+        agent = Agent(skills=[skill])
+        conv = Conversation(agent=agent, client=client, on_event=collected.append)
+        await conv.initialize()
+
+        tool = conv.tools["read_skill"]
+        await tool(skill_name="code-review")
+
+        # The emitted event carries the full <available_skills> section, which
+        # includes <content> for the now-activated skill.
+        skill_events = [e for e in collected if isinstance(e, SystemPromptEvent) and "My instructions" in e.content]
+        assert len(skill_events) == 1
+        assert "<available_skills>" in skill_events[0].content
+        assert "My instructions" in skill_events[0].content
+
+    async def test_read_skill_no_duplicate_activation(self) -> None:
+        """Calling read_skill twice for the same skill does not duplicate activated_skills."""
+        client = FakeLLMClient([_text_response("ok")])
+        skill = Skill(name="code-review", description="Review code")
+        agent = Agent(skills=[skill])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        tool = conv.tools["read_skill"]
+        await tool(skill_name="code-review")
+        await tool(skill_name="code-review")
+
+        assert conv.state.activated_skills.count("code-review") == 1
+
+    async def test_allowed_tools_filtering(self) -> None:
+        """After activating a skill with allowed_tools, runner receives filtered tools."""
+
+        async def _search(q: str = "") -> ToolResult:
+            return ToolResult(output="results")
+
+        async def _write(content: str = "") -> ToolResult:
+            return ToolResult(output="written")
+
+        search_tool = Tool(name="search", description="Search", execute=_search)
+        write_tool = Tool(name="write_file", description="Write", execute=_write)
+
+        # Skill restricts to only 'search'
+        skill = Skill(name="research", description="Research skill", allowed_tools=["search"])
+
+        client = FakeLLMClient([_text_response("done")])
+        agent = Agent(tools=[search_tool, write_tool], skills=[skill])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        # Activate the skill
+        tool = conv.tools["read_skill"]
+        await tool(skill_name="research")
+
+        # _effective_tools should filter to only search + read_skill
+        effective = conv._effective_tools()
+        assert "search" in effective
+        assert "read_skill" in effective
+        assert "write_file" not in effective
+
+    async def test_no_allowed_tools_restriction_returns_all(self) -> None:
+        """Skill with no allowed_tools restriction keeps all tools available."""
+
+        async def _search(q: str = "") -> ToolResult:
+            return ToolResult(output="results")
+
+        search_tool = Tool(name="search", description="Search", execute=_search)
+        # Skill with no allowed_tools restriction
+        skill = Skill(name="general", description="General skill")
+
+        client = FakeLLMClient([_text_response("done")])
+        agent = Agent(tools=[search_tool], skills=[skill])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        await conv.tools["read_skill"](skill_name="general")
+
+        effective = conv._effective_tools()
+        assert "search" in effective
+        assert "read_skill" in effective
+
+
+# ---------------------------------------------------------------------------
+# Conversation — workspace skill sync
+# ---------------------------------------------------------------------------
+
+
+class MockWorkspaceWithSkills(MockWorkspace):
+    """MockWorkspace that returns skills from get_skills()."""
+
+    def __init__(self, skill_names: list[str], **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._skill_names = skill_names
+
+    async def get_skills(self) -> list[SkillSummary]:
+        return [SkillSummary(name=n, description=f"Skill {n}") for n in self._skill_names]
+
+    async def read_skill(self, skill_name: str) -> Skill | None:
+        return None
+
+
+class TestConversationWorkspaceSkillSync:
+
+    async def test_workspace_skills_appear_in_skills(self) -> None:
+        """Skills returned by workspace.get_skills() are added to _skills."""
+        client = FakeLLMClient([_text_response("ok")])
+        ws = MockWorkspaceWithSkills(skill_names=["ws-skill"])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client, workspace=ws)
+        await conv.initialize()
+
+        assert "ws-skill" in conv.skills
+
+    async def test_local_skills_take_precedence_over_workspace(self) -> None:
+        """Local skills (agent.skills) are not overwritten by workspace stubs."""
+        client = FakeLLMClient([_text_response("ok")])
+        ws = MockWorkspaceWithSkills(skill_names=["code-review"])
+        local_skill = Skill(name="code-review", description="Local version", content="Local content.")
+        agent = Agent(skills=[local_skill])
+        conv = Conversation(agent=agent, client=client, workspace=ws)
+        await conv.initialize()
+
+        # Local skill should remain, content unchanged
+        assert conv.skills["code-review"].content == "Local content."
+
+    async def test_workspace_skills_trigger_read_skill_tool(self) -> None:
+        """read_skill is injected when workspace skills are discovered."""
+        client = FakeLLMClient([_text_response("ok")])
+        ws = MockWorkspaceWithSkills(skill_names=["ws-skill"])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client, workspace=ws)
+        await conv.initialize()
+
+        assert "read_skill" in conv.tools
+
+
+# ---------------------------------------------------------------------------
+# Conversation — close()
+# ---------------------------------------------------------------------------
+
+
+class TestConversationClose:
+
+    async def test_close_sets_completed_status(self) -> None:
+        """close() marks the conversation as COMPLETED."""
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client)
+        await conv.close()
+
+        assert conv.state.status == ConversationStatus.COMPLETED
+
+    async def test_context_manager_calls_close(self) -> None:
+        """Exiting the async context manager sets status to COMPLETED."""
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()
+        async with Conversation(agent=agent, client=client) as conv:
+            pass
+
+        assert conv.state.status == ConversationStatus.COMPLETED
+
+
+# ---------------------------------------------------------------------------
+# Conversation — runtime skill mutations (add / remove / update)
+# ---------------------------------------------------------------------------
+
+
+class TestConversationSkillMutations:
+    """Tests that add_skill / remove_skill / update_skill keep the LLM context fresh."""
+
+    # -- add_skill --
+    async def test_add_skill_appears_in_skills(self) -> None:
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        new_skill = Skill(name="new-skill", description="Newly added")
+        conv.add_skill(new_skill)
+
+        assert "new-skill" in conv.skills
+
+    async def test_add_skill_emits_system_prompt_update(self) -> None:
+        collected: list[Event] = []
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client, on_event=collected.append)
+        await conv.initialize()
+
+        new_skill = Skill(name="new-skill", description="Newly added")
+        conv.add_skill(new_skill)
+
+        update_events = [e for e in collected if isinstance(e, SystemPromptEvent) and "new-skill" in e.content]
+        assert len(update_events) == 1
+        assert "<available_skills>" in update_events[0].content
+
+    async def test_add_skill_after_init_injects_read_skill_tool(self) -> None:
+        """read_skill is added to tools when the first skill is added post-init."""
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()  # no skills initially
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        assert "read_skill" not in conv.tools
+
+        conv.add_skill(Skill(name="late-skill", description="Added late"))
+
+        assert "read_skill" in conv.tools
+
+    async def test_add_skill_before_init_no_event(self) -> None:
+        """add_skill before initialize() registers the skill but emits no event yet."""
+        collected: list[Event] = []
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client, on_event=collected.append)
+
+        conv.add_skill(Skill(name="early-skill", description="Added early"))
+
+        assert "early-skill" in conv.skills
+        assert not any(isinstance(e, SystemPromptEvent) for e in collected)
+
+    async def test_add_skill_before_init_appears_in_initial_prompt(self) -> None:
+        """A skill added before initialize() shows up in the initial system prompt."""
+        collected: list[Event] = []
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client, on_event=collected.append)
+
+        conv.add_skill(Skill(name="pre-skill", description="Added before init"))
+        await conv.initialize()
+
+        init_events = [e for e in collected if isinstance(e, SystemPromptEvent)]
+        assert len(init_events) == 1
+        assert "pre-skill" in init_events[0].content
+
+    # -- remove_skill --
+
+    async def test_remove_skill_not_in_skills(self) -> None:
+        client = FakeLLMClient([_text_response("ok")])
+        skill = Skill(name="old-skill", description="Will be removed")
+        agent = Agent(skills=[skill])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        conv.remove_skill("old-skill")
+
+        assert "old-skill" not in conv.skills
+
+    async def test_remove_skill_emits_system_prompt_update(self) -> None:
+        collected: list[Event] = []
+        client = FakeLLMClient([_text_response("ok")])
+        skill_a = Skill(name="skill-a", description="Keep this")
+        skill_b = Skill(name="skill-b", description="Remove this")
+        agent = Agent(skills=[skill_a, skill_b])
+        conv = Conversation(agent=agent, client=client, on_event=collected.append)
+        await conv.initialize()
+
+        conv.remove_skill("skill-b")
+
+        # The update event should list only the remaining skill
+        update_events = [
+            e for e in collected
+            if isinstance(e, SystemPromptEvent) and "skill-a" in e.content and "skill-b" not in e.content
+        ]
+        assert len(update_events) == 1
+
+    async def test_remove_last_skill_drops_read_skill_tool(self) -> None:
+        client = FakeLLMClient([_text_response("ok")])
+        skill = Skill(name="solo-skill", description="Only skill")
+        agent = Agent(skills=[skill])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        assert "read_skill" in conv.tools
+        conv.remove_skill("solo-skill")
+        assert "read_skill" not in conv.tools
+
+    async def test_remove_nonexistent_skill_is_noop(self) -> None:
+        """Removing a skill that doesn't exist does not raise."""
+        client = FakeLLMClient([_text_response("ok")])
+        agent = Agent()
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        conv.remove_skill("phantom-skill")  # should not raise
+
+    # -- update_skill --
+
+    async def test_update_skill_replaces_definition(self) -> None:
+        client = FakeLLMClient([_text_response("ok")])
+        original = Skill(name="my-skill", description="Original", content="Old body.")
+        agent = Agent(skills=[original])
+        conv = Conversation(agent=agent, client=client)
+        await conv.initialize()
+
+        updated = Skill(name="my-skill", description="Updated", content="New body.")
+        conv.update_skill(updated)
+
+        assert conv.skills["my-skill"].description == "Updated"
+        assert conv.skills["my-skill"].content == "New body."
+
+    async def test_update_skill_emits_system_prompt_update(self) -> None:
+        collected: list[Event] = []
+        client = FakeLLMClient([_text_response("ok")])
+        original = Skill(name="my-skill", description="Original")
+        agent = Agent(skills=[original])
+        conv = Conversation(agent=agent, client=client, on_event=collected.append)
+        await conv.initialize()
+
+        conv.update_skill(Skill(name="my-skill", description="Updated description"))
+
+        update_events = [
+            e for e in collected if isinstance(e, SystemPromptEvent) and "Updated description" in e.content
+        ]
+        assert len(update_events) == 1
+
+    async def test_update_activated_skill_emits_new_body(self) -> None:
+        """Updating an already-activated skill emits a SystemPromptEvent with new body."""
+        collected: list[Event] = []
+        client = FakeLLMClient([_text_response("ok")])
+        original = Skill(name="my-skill", description="Skill", content="Old body.")
+        agent = Agent(skills=[original])
+        conv = Conversation(agent=agent, client=client, on_event=collected.append)
+        await conv.initialize()
+
+        # Activate the skill
+        await conv.tools["read_skill"](skill_name="my-skill")
+
+        # Now update with new content
+        updated = Skill(name="my-skill", description="Skill", content="New body.")
+        conv.update_skill(updated)
+
+        update_events = [e for e in collected if isinstance(e, SystemPromptEvent) and "New body." in e.content]
+        assert len(update_events) >= 1

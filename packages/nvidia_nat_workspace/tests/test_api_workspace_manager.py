@@ -24,6 +24,7 @@ import pytest
 from pydantic import Field
 
 import nat.plugins.workspace.client as api_client_module
+from nat.data_models.skill import Skill
 from nat.data_models.workspace import ActionRequest
 from nat.data_models.workspace import ActionResult
 from nat.data_models.workspace import ActionStatus
@@ -37,6 +38,7 @@ from nat.plugins.workspace.client import WorkspaceApiClient
 from nat.plugins.workspace.server import WorkspaceApiServerHandle
 from nat.plugins.workspace.server import start_workspace_api_server
 from nat.plugins.workspace.server import stop_workspace_api_server
+from nat.workspace.types import SkillSummary
 
 
 class TestWorkspaceConfig(WorkspaceBaseConfig, name="test"):
@@ -299,11 +301,15 @@ async def test_api_workspace_manager_e2e_single_session(
     assert isinstance(action_result.output, dict)
     assert action_result.output["stdout"].strip() == "hello"
 
-    create_result = await workspace.create_skill("alpha", "Skill for API workspace tests.")
+    create_result = await workspace.create_skill(Skill(name="alpha", description="Skill for API workspace tests."))
     assert isinstance(create_result, ActionResult)
     assert create_result.status is ActionStatus.SUCCESS
     skills = await workspace.get_skills()
+    assert all(isinstance(s, SkillSummary) for s in skills)
     assert any(skill.name == "alpha" for skill in skills)
+    full_skill = await workspace.read_skill("alpha")
+    assert full_skill is not None
+    assert full_skill.description == "Skill for API workspace tests."
 
     upload_dir = tmp_path / "upload"
     upload_dir.mkdir()

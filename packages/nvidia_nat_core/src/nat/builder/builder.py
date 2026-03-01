@@ -61,6 +61,7 @@ from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
+from nat.guardrails.workspace import WorkspaceGuardrail
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
@@ -253,6 +254,19 @@ class Builder(ABC):
 
         Returns:
             The workspace manager if configured, otherwise None
+        """
+        pass
+
+    @abstractmethod
+    async def get_workspace_guardrails(self) -> list[WorkspaceGuardrail]:
+        """Get instantiated workspace guardrail instances from the workspace config.
+
+        Implementations should resolve ``WorkspaceBaseConfig.workspace_guardrails``
+        refs to live :class:`~nat.guardrails.workspace.WorkspaceGuardrail` instances.
+
+        Returns:
+            List of workspace guardrail instances configured for the active workspace.
+            Returns an empty list if no workspace or no guardrails are configured.
         """
         pass
 

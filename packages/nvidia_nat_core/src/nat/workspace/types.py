@@ -19,6 +19,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
+from nat.data_models.skill import Skill
 from nat.data_models.workspace import ActionContext
 from nat.data_models.workspace import ActionResult
 from nat.data_models.workspace import WorkspaceBaseConfig
@@ -39,7 +40,7 @@ class WorkspaceActionSchema:
 
 
 @dataclass
-class WorkspaceSkillSchema:
+class SkillSummary:
     name: str
     description: str
 
@@ -51,11 +52,15 @@ class WorkspaceBase(ABC):
         pass
 
     @abstractmethod
-    async def get_skills(self) -> list[WorkspaceSkillSchema]:
+    async def get_skills(self) -> list[SkillSummary]:
         pass
 
     @abstractmethod
-    async def create_skill(self, skill_name: str, skill_description: str) -> ActionResult:
+    async def create_skill(self, skill: Skill) -> ActionResult:
+        pass
+
+    @abstractmethod
+    async def read_skill(self, skill_name: str) -> Skill | None:
         pass
 
     @abstractmethod

@@ -46,13 +46,13 @@ from pydantic import Field
 from pydantic import ValidationError
 
 from nat.cli.type_registry import GlobalTypeRegistry
+from nat.data_models.skill import Skill
 from nat.data_models.workspace import ActionRequest
 from nat.data_models.workspace import ActionResult
 from nat.data_models.workspace import ActionStatus
 from nat.workspace.types import ActionContext
 from nat.workspace.types import WorkspaceAction
 from nat.workspace.types import WorkspaceActionSchema
-from nat.workspace.types import WorkspaceSkillSchema
 
 SESSION_HEADER = "X-Workspace-Session"
 
@@ -72,10 +72,16 @@ class WorkspaceApiServerHandle:
 
 
 class SkillCreateRequest(BaseModel):
-    """Request payload for creating a skill."""
+    """Request payload for creating a skill (portable dict format)."""
 
     name: str = Field(description="Skill name.")
     description: str = Field(description="Skill description.")
+    license: str | None = Field(default=None, description="License identifier.")
+    compatibility: str | None = Field(default=None, description="Compatibility info.")
+    allowed_tools: list[str] = Field(default_factory=list, description="Allowed tools.")
+    metadata: dict[str, str] = Field(default_factory=dict, description="Metadata key-value pairs.")
+    content: str = Field(default="", description="Skill body / instructions.")
+    resources: dict[str, str] = Field(default_factory=dict, description="Base64-encoded resource files.")
 
 
 @dataclass
@@ -83,7 +89,7 @@ class SessionState:
     """In-memory state for a workspace session."""
 
     root: Path
-    skills: dict[str, str] = field(default_factory=dict)
+    skills: dict[str, Skill] = field(default_factory=dict)
 
 
 class SessionStore:
@@ -177,13 +183,6 @@ def _action_schema_payload(schema: WorkspaceActionSchema) -> dict[str, object]:
     }
 
 
-def _skill_schema_payload(schema: WorkspaceSkillSchema) -> dict[str, object]:
-    return {
-        "name": schema.name,
-        "description": schema.description,
-    }
-
-
 def _action_request_from_payload(action_name: str, payload: object) -> ActionRequest:
     if payload is None:
         payload = {}
@@ -243,19 +242,28 @@ def create_workspace_app(root_path: Path) -> FastAPI:
     @app.get("/api/skills")
     async def list_skills(request: Request) -> JSONResponse:
         session = store.get_session(_require_session_id(request))
-        payload = [
-            _skill_schema_payload(WorkspaceSkillSchema(name=name, description=description))
-            for name, description in session.skills.items()
-        ]
+        payload = [{"name": s.name, "description": s.description} for s in session.skills.values()]
         return JSONResponse({"skills": payload})
+
+    @app.get("/api/skills/{skill_name}")
+    async def get_skill(skill_name: str, request: Request) -> JSONResponse:
+        session = store.get_session(_require_session_id(request))
+        skill = session.skills.get(skill_name)
+        if skill is None:
+            raise HTTPException(status_code=404, detail="Skill not found.")
+        return JSONResponse(skill.to_portable_dict())
 
     @app.post("/api/skills/new")
     async def create_skill(request: Request, payload: SkillCreateRequest) -> JSONResponse:
         session = store.get_session(_require_session_id(request))
         if payload.name in session.skills:
             raise HTTPException(status_code=409, detail="Skill already exists.")
-        session.skills[payload.name] = payload.description
-        return JSONResponse({"status": "created", "name": payload.name})
+        try:
+            skill = Skill.from_portable_dict(payload.model_dump())
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid skill data: {exc}") from exc
+        session.skills[skill.name] = skill
+        return JSONResponse({"status": "created", "name": skill.name})
 
     @app.post("/api/actions/{action_name}/execute")
     async def execute_action(action_name: str, request: Request) -> JSONResponse:

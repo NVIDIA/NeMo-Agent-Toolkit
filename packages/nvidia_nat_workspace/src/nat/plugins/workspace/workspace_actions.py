@@ -102,6 +102,11 @@ async def build_workspace_actions(config: WorkspaceActionsConfig, builder: Build
                            "to be configured in the workflow.")
 
     async with workspace_manager as workspace:
+        # Wire guardrails from config → live instances
+        guardrails = await builder.get_workspace_guardrails()
+        for guardrail in guardrails:
+            workspace.add_workspace_guardrail(guardrail)
+
         action_schemas = await workspace.get_actions()
 
         group = FunctionGroup(config=config)
