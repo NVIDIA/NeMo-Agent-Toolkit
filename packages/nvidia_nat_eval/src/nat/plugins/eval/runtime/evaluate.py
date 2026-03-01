@@ -17,7 +17,7 @@ import asyncio
 import json
 import logging
 import shutil
-import warnings
+from contextlib import nullcontext
 from datetime import UTC
 from datetime import datetime
 from pathlib import Path
@@ -45,7 +45,6 @@ from nat.data_models.evaluator import EvalOutput
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
-from nat.plugins.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
@@ -77,22 +76,6 @@ class EvaluationRun:
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
-
-        # Create evaluation trace context
-        try:
-            from nat.plugins.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
-            with warnings.catch_warnings():
-                # Ignore deprecation warnings being triggered by weave. https://github.com/wandb/weave/issues/3666
-                warnings.filterwarnings("ignore",
-                                        category=DeprecationWarning,
-                                        message=r"`sentry_sdk\.Hub` is deprecated")
-
-                self.eval_trace_context = WeaveEvalTraceContext()
-        except Exception:
-            from nat.plugins.eval.utils.eval_trace_ctx import EvalTraceContext
-            self.eval_trace_context = EvalTraceContext()
-
-        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration(self.eval_trace_context)
         # Metadata
         self.eval_input: EvalInput | None = None
         self.workflow_interrupted: bool = False
@@ -269,9 +252,9 @@ class EvaluationRun:
                         item.output_obj = output
                         item.trajectory = self.intermediate_step_adapter.validate_intermediate_steps(intermediate_steps)
                         usage_stats_item = self._compute_usage_stats(item)
-
-                        self.weave_eval.log_prediction(item, output)
-                        await self.weave_eval.log_usage_stats(item, usage_stats_item)
+                        if self.callback_manager:
+                            self.callback_manager.on_prediction(item=item, output=output)
+                            await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
             finally:
                 if root_span_token is not None:
                     ctx_state._root_span_id.reset(root_span_token)
@@ -298,8 +281,9 @@ class EvaluationRun:
         await handler.run_workflow_remote(self.eval_input)
         for item in self.eval_input.eval_input_items:
             usage_stats_item = self._compute_usage_stats(item)
-            self.weave_eval.log_prediction(item, item.output_obj)
-            await self.weave_eval.log_usage_stats(item, usage_stats_item)
+            if self.callback_manager:
+                self.callback_manager.on_prediction(item=item, output=item.output_obj)
+                await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
 
     async def profile_workflow(self) -> ProfilerResults:
         """
@@ -505,16 +489,18 @@ class EvaluationRun:
                    "You can re-execute evaluation for incomplete results by running "
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
-
-        self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
+        if self.callback_manager:
+            self.callback_manager.on_eval_summary(usage_stats=self.usage_stats,
+                                                  evaluation_results=self.evaluation_results,
+                                                  profiler_results=profiler_results)
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
         try:
             eval_output = await evaluator.evaluate_fn(self.eval_input)
             self.evaluation_results.append((evaluator_name, eval_output))
-
-            await self.weave_eval.alog_score(eval_output, evaluator_name)
+            if self.callback_manager:
+                await self.callback_manager.a_on_evaluator_score(eval_output=eval_output, evaluator_name=evaluator_name)
         except Exception as e:
             logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e)
 
@@ -532,8 +518,8 @@ class EvaluationRun:
             logger.error("An error occurred while running evaluators: %s", e)
             raise
         finally:
-            # Finish prediction loggers in Weave
-            await self.weave_eval.afinish_loggers()
+            if self.callback_manager:
+                await self.callback_manager.a_on_export_flush()
 
     def apply_overrides(self):
         from nat.cli.cli_utils.config_override import load_and_override_config
@@ -682,6 +668,15 @@ class EvaluationRun:
                                                         items=self.eval_input.eval_input_items)
             except Exception:
                 logger.warning("Failed to fire on_dataset_loaded callback", exc_info=True)
+
+        if self.callback_manager:
+            try:
+                self.callback_manager.on_eval_started(workflow_alias=workflow_alias,
+                                                      eval_input=self.eval_input,
+                                                      config=config,
+                                                      job_id=job_id)
+            except Exception:
+                logger.warning("Failed to initialize eval export callbacks", exc_info=True)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
             return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
@@ -712,10 +707,8 @@ class EvaluationRun:
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
-            # Initialize Weave integration
-            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config, job_id=job_id)
-
-            with self.eval_trace_context.evaluation_context():
+            eval_context = self.callback_manager.evaluation_context() if self.callback_manager else nullcontext()
+            with eval_context:
                 # Run workflow
                 local_session_manager: SessionManager | None = None
                 try:

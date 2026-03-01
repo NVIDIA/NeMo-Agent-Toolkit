@@ -27,6 +27,16 @@ from nat.plugins.eval.runtime.evaluate import EvaluationRun
 logger = logging.getLogger(__name__)
 
 
+def _get_missing_eval_callback_install_hint(exporter_config) -> str | None:
+    """Return install guidance for exporter configs that support eval callbacks."""
+    class_name = type(exporter_config).__name__
+    install_hints = {
+        "WeaveTelemetryExporter": "pip install nvidia-nat-weave",
+        "LangsmithTelemetryExporter": "pip install nvidia-nat-langchain",
+    }
+    return install_hints.get(class_name)
+
+
 @click.group(name=__name__, invoke_without_command=True, help="Evaluate a workflow with the specified dataset.")
 @click.option(
     "--config_file",
@@ -176,6 +186,12 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
             try:
                 registered = registry.get_eval_callback(type(exporter_config))
             except KeyError:
+                install_hint = _get_missing_eval_callback_install_hint(exporter_config)
+                if install_hint:
+                    logger.warning("No eval export callback is registered for tracing exporter '%s'. "
+                                   "Continuing without eval metric export for this provider. Install with: %s",
+                                   type(exporter_config).__name__,
+                                   install_hint)
                 continue
             cb = registered.factory_fn(exporter_config)
             manager.register(cb)

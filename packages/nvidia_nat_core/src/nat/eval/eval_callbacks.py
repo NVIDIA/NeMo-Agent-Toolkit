@@ -16,6 +16,8 @@
 from __future__ import annotations
 
 import logging
+from contextlib import ExitStack
+from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
@@ -103,8 +105,39 @@ class EvalCallback(Protocol):
     def on_eval_complete(self, result: EvalResult) -> None:
         ...
 
+    # Optional hooks for provider-specific eval metric exporting.
+    # Implementations may provide any subset of these methods.
+    def on_eval_started(self, *, workflow_alias: str, eval_input: Any, config: Any, job_id: str | None = None) -> None:
+        ...
+
+    def on_prediction(self, *, item: Any, output: Any) -> None:
+        ...
+
+    async def a_on_usage_stats(self, *, item: Any, usage_stats_item: Any) -> None:
+        ...
+
+    async def a_on_evaluator_score(self, *, eval_output: Any, evaluator_name: str) -> None:
+        ...
+
+    async def a_on_export_flush(self) -> None:
+        ...
+
+    def on_eval_summary(self, *, usage_stats: Any, evaluation_results: Any, profiler_results: Any) -> None:
+        ...
+
+    def evaluation_context(self):
+        ...
+
 
 class EvalCallbackManager:
+    """
+    Dispatches eval lifecycle callbacks to registered integrations.
+
+    Maintainer note:
+    Keep this callback surface stable for provider plugins. If we later adopt
+    an internal event-subscriber bus (typed events, async fan-out, retries),
+    it can be introduced behind this manager as a near-term design evolution.
+    """
 
     def __init__(self) -> None:
         self._callbacks: list[EvalCallback] = []
@@ -130,6 +163,79 @@ class EvalCallbackManager:
                 cb.on_dataset_loaded(dataset_name=dataset_name, items=items)
             except Exception:
                 logger.exception("EvalCallback %s.on_dataset_loaded failed", type(cb).__name__)
+
+    def on_eval_started(self, *, workflow_alias: str, eval_input: Any, config: Any, job_id: str | None = None) -> None:
+        for cb in self._callbacks:
+            fn = getattr(cb, "on_eval_started", None)
+            if not fn:
+                continue
+            try:
+                fn(workflow_alias=workflow_alias, eval_input=eval_input, config=config, job_id=job_id)
+            except Exception:
+                logger.exception("EvalCallback %s.on_eval_started failed", type(cb).__name__)
+
+    def on_prediction(self, *, item: Any, output: Any) -> None:
+        for cb in self._callbacks:
+            fn = getattr(cb, "on_prediction", None)
+            if not fn:
+                continue
+            try:
+                fn(item=item, output=output)
+            except Exception:
+                logger.exception("EvalCallback %s.on_prediction failed", type(cb).__name__)
+
+    async def a_on_usage_stats(self, *, item: Any, usage_stats_item: Any) -> None:
+        for cb in self._callbacks:
+            fn = getattr(cb, "a_on_usage_stats", None)
+            if not fn:
+                continue
+            try:
+                await fn(item=item, usage_stats_item=usage_stats_item)
+            except Exception:
+                logger.exception("EvalCallback %s.a_on_usage_stats failed", type(cb).__name__)
+
+    async def a_on_evaluator_score(self, *, eval_output: Any, evaluator_name: str) -> None:
+        for cb in self._callbacks:
+            fn = getattr(cb, "a_on_evaluator_score", None)
+            if not fn:
+                continue
+            try:
+                await fn(eval_output=eval_output, evaluator_name=evaluator_name)
+            except Exception:
+                logger.exception("EvalCallback %s.a_on_evaluator_score failed", type(cb).__name__)
+
+    async def a_on_export_flush(self) -> None:
+        for cb in self._callbacks:
+            fn = getattr(cb, "a_on_export_flush", None)
+            if not fn:
+                continue
+            try:
+                await fn()
+            except Exception:
+                logger.exception("EvalCallback %s.a_on_export_flush failed", type(cb).__name__)
+
+    def on_eval_summary(self, *, usage_stats: Any, evaluation_results: Any, profiler_results: Any) -> None:
+        for cb in self._callbacks:
+            fn = getattr(cb, "on_eval_summary", None)
+            if not fn:
+                continue
+            try:
+                fn(usage_stats=usage_stats, evaluation_results=evaluation_results, profiler_results=profiler_results)
+            except Exception:
+                logger.exception("EvalCallback %s.on_eval_summary failed", type(cb).__name__)
+
+    @contextmanager
+    def evaluation_context(self):
+        with ExitStack() as stack:
+            for cb in self._callbacks:
+                fn = getattr(cb, "evaluation_context", None)
+                if not fn:
+                    continue
+                try:
+                    stack.enter_context(fn())
+                except Exception:
+                    logger.exception("EvalCallback %s.evaluation_context setup failed", type(cb).__name__)
+            yield
 
     def on_eval_complete(self, result: EvalResult) -> None:
         for cb in self._callbacks:
