@@ -54,8 +54,12 @@ class TunableRagEvaluatorConfig(EvaluatorBaseConfig, name="tunable_rag_evaluator
     )
 
 
-def evaluation_prompt(judge_llm_prompt: str, question: str, answer_description: str, generated_answer: str,
-                      format_instructions: str, default_scoring: bool) -> str:
+def evaluation_prompt(judge_llm_prompt: str,
+                      question: str,
+                      answer_description: str,
+                      generated_answer: str,
+                      format_instructions: str,
+                      default_scoring: bool) -> str:
     """Generate a prompt for the judge LLM."""
     default_scoring_instructions = (
         "The coverage score is a measure of how well the generated answer covers the critical aspects mentioned in the "
@@ -70,26 +74,21 @@ def evaluation_prompt(judge_llm_prompt: str, question: str, answer_description: 
         "to the question. A low relevance score indicates that the generated answer is not relevant to the question. "
         "A middle relevance score indicates that the generated answer is somewhat relevant to the question. A high "
         "relevance score indicates that the generated answer is exactly relevant to the question. The reasoning is a "
-        "1-2 sentence explanation for the scoring."
-    )
+        "1-2 sentence explanation for the scoring.")
 
-    default_eval_prompt = (
-        "You are an intelligent assistant that responds strictly in JSON format. "
-        f"Judge based on the following scoring rubric: {default_scoring_instructions}"
-        f"{judge_llm_prompt}\n"
-        f"{format_instructions}\n"
-        f"Here is the user's query: {question}"
-        f"Here is the description of the expected answer: {answer_description}"
-        f"Here is the generated answer: {generated_answer}"
-    )
+    default_eval_prompt = ("You are an intelligent assistant that responds strictly in JSON format. "
+                           f"Judge based on the following scoring rubric: {default_scoring_instructions}"
+                           f"{judge_llm_prompt}\n"
+                           f"{format_instructions}\n"
+                           f"Here is the user's query: {question}"
+                           f"Here is the description of the expected answer: {answer_description}"
+                           f"Here is the generated answer: {generated_answer}")
 
-    eval_prompt = (
-        f"You are an intelligent assistant that responds strictly in JSON format. {judge_llm_prompt}\n"
-        f"{format_instructions}\n"
-        f"Here is the user's query: {question}"
-        f"Here is the description of the expected answer: {answer_description}"
-        f"Here is the generated answer: {generated_answer}"
-    )
+    eval_prompt = (f"You are an intelligent assistant that responds strictly in JSON format. {judge_llm_prompt}\n"
+                   f"{format_instructions}\n"
+                   f"Here is the user's query: {question}"
+                   f"Here is the description of the expected answer: {answer_description}"
+                   f"Here is the generated answer: {generated_answer}")
     return eval_prompt if not default_scoring else default_eval_prompt
 
 
@@ -122,8 +121,13 @@ def runnable_with_retries(original_fn: Callable, llm_retry_control_params: dict 
 class TunableRagEvaluator(BaseEvaluator):
     """Tunable RAG evaluator with customizable judge prompt."""
 
-    def __init__(self, llm: BaseChatModel, judge_llm_prompt: str, llm_retry_control_params: dict | None,
-                 max_concurrency: int, default_scoring: bool, default_score_weights: dict):
+    def __init__(self,
+                 llm: BaseChatModel,
+                 judge_llm_prompt: str,
+                 llm_retry_control_params: dict | None,
+                 max_concurrency: int,
+                 default_scoring: bool,
+                 default_score_weights: dict):
         super().__init__(max_concurrency=max_concurrency)
         self.llm = llm
         self.judge_llm_prompt = judge_llm_prompt
@@ -186,10 +190,8 @@ class TunableRagEvaluator(BaseEvaluator):
                 except KeyError as e:
                     logger.exception("Missing required keys in default scoring response: %s",
                                      ", ".join(str(arg) for arg in e.args))
-                    reasoning = (
-                        "Error in evaluator from parsing judge LLM response. "
-                        f"Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
-                    )
+                    reasoning = ("Error in evaluator from parsing judge LLM response. "
+                                 f"Missing required key(s): {', '.join(str(arg) for arg in e.args)}")
 
                 coverage_weight = self.default_score_weights.get("coverage", 1 / 3)
                 correctness_weight = self.default_score_weights.get("correctness", 1 / 3)
@@ -216,10 +218,8 @@ class TunableRagEvaluator(BaseEvaluator):
                 except KeyError as e:
                     logger.error("Missing required keys in custom scoring response: %s",
                                  ", ".join(str(arg) for arg in e.args))
-                    reasoning = (
-                        "Error in evaluator from parsing judge LLM response. "
-                        f"Missing required key(s): {', '.join(str(arg) for arg in e.args)}"
-                    )
+                    reasoning = ("Error in evaluator from parsing judge LLM response. "
+                                 f"Missing required key(s): {', '.join(str(arg) for arg in e.args)}")
                     raise
         except (KeyError, ValueError) as e:
             logger.exception("Error parsing judge LLM response: %s", e)

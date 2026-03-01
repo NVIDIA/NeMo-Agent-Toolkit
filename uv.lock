@@ -7124,7 +7124,6 @@ dependencies = [
     { name = "datasets" },
     { name = "nvidia-nat-core" },
     { name = "openpyxl" },
-    { name = "ragas" },
 ]
 
 [package.optional-dependencies]
@@ -7143,7 +7142,6 @@ requires-dist = [
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "openpyxl", specifier = "~=3.1" },
     { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
-    { name = "ragas", specifier = "~=0.2.14" },
     { name = "scikit-learn", marker = "extra == 'profiling'", specifier = "~=1.6" },
 ]
 provides-extras = ["profiling", "test"]
@@ -7183,6 +7181,7 @@ dependencies = [
     { name = "langchain-tavily" },
     { name = "langgraph" },
     { name = "nvidia-nat-core" },
+    { name = "nvidia-nat-eval" },
     { name = "nvidia-nat-opentelemetry" },
     { name = "openevals" },
 ]
@@ -7202,6 +7201,7 @@ requires-dist = [
     { name = "langchain-tavily", specifier = ">=0.2.16,<1.0.0" },
     { name = "langgraph", specifier = ">=1.0.5,<2.0.0" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-eval", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-opentelemetry", editable = "packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
@@ -10315,29 +10315,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f7/e3/d370e3ecabcaf60f7ea8e30a5793990c4dc3782d7196ff3bf6e3dc722d6f/ragaai_catalyst-2.2.7.tar.gz", hash = "sha256:de7e024a111b2e4247767308a0efc1599b874f98792e503cadfda66146d9a027", size = 40901603, upload-time = "2025-11-26T09:38:48.16Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b6/2f/ecce53efba5696591b615476904ab0bd847d154a0a878c061eb8e461b0a9/ragaai_catalyst-2.2.7-py3-none-any.whl", hash = "sha256:bc9b42504ea2b9d88a48c07a0164fc367b52a6e6c828712137a6682013d12a74", size = 436462, upload-time = "2025-11-26T09:37:36.372Z" },
-]
-
-[[package]]
-name = "ragas"
-version = "0.2.15"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "appdirs" },
-    { name = "datasets" },
-    { name = "diskcache" },
-    { name = "langchain" },
-    { name = "langchain-community" },
-    { name = "langchain-core" },
-    { name = "langchain-openai" },
-    { name = "nest-asyncio" },
-    { name = "numpy" },
-    { name = "openai" },
-    { name = "pydantic" },
-    { name = "tiktoken" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/6c/0f/04fddfa94744b1c3d8901aed8832a6b4193cc8e4886881f1bb88ff055350/ragas-0.2.15.tar.gz", hash = "sha256:2d0cd77b315a9c9c02ceb0a19ca8a48e82e1d02416587a2944ea51e6e327cd7b", size = 40867766, upload-time = "2025-04-24T16:39:28.734Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f2/9b/a5641da8aab06e069885a9ffa1b4897878f14c5b9807a9e3c5f1f532a6a9/ragas-0.2.15-py3-none-any.whl", hash = "sha256:298cd3d1fe3bd21ca4d31023a55079740d7bdd27a8c915bb371cec3c50cde608", size = 190947, upload-time = "2025-04-24T16:39:25.841Z" },
 ]
 
 [[package]]

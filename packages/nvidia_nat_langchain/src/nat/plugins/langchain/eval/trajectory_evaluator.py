@@ -79,8 +79,8 @@ class TrajectoryEvaluator(BaseEvaluator):
 
         try:
             eval_result = await self.traj_eval_chain.aevaluate_agent_trajectory(input=question,
-                                                                                 agent_trajectory=agent_trajectory,
-                                                                                 prediction=generated_answer)
+                                                                                agent_trajectory=agent_trajectory,
+                                                                                prediction=generated_answer)
         except Exception as e:
             logger.exception("Error evaluating trajectory for question: %s, Error: %s", question, e)
             return EvalOutputItem(id=item.id, score=0.0, reasoning={}, error=str(e))
