@@ -120,7 +120,7 @@ class EvaluationRun:
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
         # get the prompt and completion tokens from the intermediate steps
-        from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+        from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
         steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
         usage_stats_per_llm = {}
         total_tokens = 0
@@ -310,7 +310,7 @@ class EvaluationRun:
             logger.info("Profiler is not enabled. Skipping profiling.")
             return ProfilerResults()
 
-        from nat.plugins.eval.profiler.profile_runner import ProfilerRunner
+        from nat.plugins.profiler.profile_runner import ProfilerRunner
 
         all_stats = []
         for input_item in self.eval_input.eval_input_items:

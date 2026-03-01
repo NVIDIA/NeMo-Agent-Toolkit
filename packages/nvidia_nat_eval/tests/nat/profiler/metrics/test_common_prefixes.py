@@ -21,8 +21,8 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
-from nat.plugins.eval.profiler.inference_optimization.prompt_caching import get_common_prefixes
-from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.plugins.profiler.inference_optimization.prompt_caching import get_common_prefixes
+from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 ###############################################################################
 # Fixtures
@@ -73,8 +73,8 @@ def test_get_common_prefixes_minimal(minimal_valid_df):
     """
     Basic run with minimal valid data => expect some prefix info for each llm_name.
     """
-    from nat.plugins.eval.profiler.inference_optimization.data_models import CommonPrefixesOutput
-    from nat.plugins.eval.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
+    from nat.plugins.profiler.inference_optimization.data_models import CommonPrefixesOutput
+    from nat.plugins.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
 
     result = get_common_prefixes(minimal_valid_df)
     assert isinstance(result, CommonPrefixesOutput)

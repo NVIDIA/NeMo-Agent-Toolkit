@@ -170,8 +170,8 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 #### Integration Components
 
-- **{py:class}`nat.plugins.eval.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
-- **{py:class}`~nat.plugins.eval.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
+- **{py:class}`nat.plugins.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
+- **{py:class}`~nat.plugins.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 

@@ -23,12 +23,12 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 
 # yapf: disable
-from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import (
+from nat.plugins.profiler.inference_optimization.bottleneck_analysis.simple_stack_analysis import (
     profile_workflow_bottlenecks,
 )
 
 # yapf: enable
-from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 ##########################################################
 # Fixtures
@@ -99,7 +99,7 @@ def test_profile_workflow_bottlenecks_incomplete_pairs(minimal_valid_df):
     If we have partial data for a particular UUID with no matching END => skip or partial coverage.
     We'll mutate minimal_valid_df so that one operation has only START, no END.
     """
-    from nat.plugins.eval.profiler.inference_optimization.data_models import SimpleBottleneckReport
+    from nat.plugins.profiler.inference_optimization.data_models import SimpleBottleneckReport
 
     # We'll remove the LLM_END row => so the LLM calls are partial
     # minimal_valid_df has row with event_type LLM_END => remove it
@@ -117,8 +117,8 @@ def test_profile_workflow_bottlenecks_normal(minimal_valid_df):
     Normal usage with a minimal valid df => expect a valid SimpleBottleneckReport
     with stats for LLM and tool operations.
     """
-    from nat.plugins.eval.profiler.inference_optimization.data_models import SimpleBottleneckReport
-    from nat.plugins.eval.profiler.inference_optimization.data_models import SimpleOperationStats
+    from nat.plugins.profiler.inference_optimization.data_models import SimpleBottleneckReport
+    from nat.plugins.profiler.inference_optimization.data_models import SimpleOperationStats
 
     result = profile_workflow_bottlenecks(minimal_valid_df)
     assert isinstance(result, SimpleBottleneckReport)

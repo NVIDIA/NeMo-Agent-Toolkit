@@ -23,12 +23,12 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 
 # yapf: disable
-from nat.plugins.eval.profiler.inference_optimization.experimental.concurrency_spike_analysis import (
+from nat.plugins.profiler.inference_optimization.experimental.concurrency_spike_analysis import (
     concurrency_spike_analysis,
 )
 
 # yapf: enable
-from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 ###############################################################################
 # Fixtures
@@ -121,7 +121,7 @@ def test_concurrency_spike_analysis_minimal(minimal_valid_df):
     Normal run with minimal_valid_df => expect a valid ConcurrencyAnalysisResult with
     concurrency distribution, some spikes or none, correlation stats, average latency, etc.
     """
-    from nat.plugins.eval.profiler.inference_optimization.data_models import ConcurrencyAnalysisResult
+    from nat.plugins.profiler.inference_optimization.data_models import ConcurrencyAnalysisResult
 
     result = concurrency_spike_analysis(minimal_valid_df)
     assert isinstance(result, ConcurrencyAnalysisResult), "Must return a ConcurrencyAnalysisResult"
@@ -152,7 +152,7 @@ def test_concurrency_spike_analysis_spike_threshold(minimal_valid_df):
     Provide a custom concurrency_spike_threshold => check if that influences the spike intervals.
     For instance, set threshold=1 => we might see intervals for concurrency >=1
     """
-    from nat.plugins.eval.profiler.inference_optimization.data_models import ConcurrencyAnalysisResult
+    from nat.plugins.profiler.inference_optimization.data_models import ConcurrencyAnalysisResult
 
     # concurrency_spike_threshold=1 => every call with concurrency >=1 is a spike
     result = concurrency_spike_analysis(minimal_valid_df, concurrency_spike_threshold=1)

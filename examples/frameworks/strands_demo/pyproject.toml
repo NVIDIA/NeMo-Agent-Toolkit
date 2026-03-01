@@ -34,7 +34,8 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[eval,langchain,profiling,strands,test] == {version}",
+  "nvidia-nat[eval,langchain,strands,test] == {version}",
+  "nvidia-nat-profiler == {version}",
 ]
 
 [project.entry-points.'nat.components']
@@ -42,3 +43,4 @@ nat_strands_demo = "nat_strands_demo.register"
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
+nvidia-nat-profiler = { path = "../../../packages/nvidia_nat_profiler", editable = true }

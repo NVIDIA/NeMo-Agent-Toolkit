@@ -19,9 +19,9 @@ from pathlib import Path
 import click
 from tabulate import tabulate
 
-from nat.plugins.eval.profiler.calc.calc_runner import CalcRunner
-from nat.plugins.eval.profiler.calc.data_models import CalcRunnerConfig
-from nat.plugins.eval.profiler.calc.data_models import CalcRunnerOutput
+from nat.plugins.profiler.calc.calc_runner import CalcRunner
+from nat.plugins.profiler.calc.data_models import CalcRunnerConfig
+from nat.plugins.profiler.calc.data_models import CalcRunnerOutput
 
 
 @click.command("calc", help="Estimate GPU count and plot metrics for a workflow")

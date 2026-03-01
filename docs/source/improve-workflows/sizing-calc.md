@@ -204,7 +204,7 @@ Sample output:
 }
 ```
 
-The output is truncated for brevity. For more information, refer to the {py:class}`~nat.plugins.eval.profiler.calc.data_models.CalcRunnerOutput` Pydantic model.
+The output is truncated for brevity. For more information, refer to the {py:class}`~nat.plugins.profiler.calc.data_models.CalcRunnerOutput` Pydantic model.
 
 ### Using a Remote Workflow
 By default, the calculator runs the workflow locally to gather metrics. You can use the `--endpoint` and `--endpoint_timeout` command line parameters to use a remote workflow for gathering metrics.
@@ -350,9 +350,9 @@ In addition to the command line interface, the sizing calculator can be used pro
 **Sample code:**
 ```python
 import asyncio
-from nat.plugins.eval.profiler.calc.calc_runner import CalcRunner
-from nat.plugins.eval.profiler.calc.data_models import CalcRunnerConfig
-from nat.plugins.eval.profiler.calc.data_models import CalcRunnerOutput
+from nat.plugins.profiler.calc.calc_runner import CalcRunner
+from nat.plugins.profiler.calc.data_models import CalcRunnerConfig
+from nat.plugins.profiler.calc.data_models import CalcRunnerOutput
 
 async def run_calc():
     runner_config = CalcRunnerConfig(
@@ -374,6 +374,6 @@ async def run_calc():
 asyncio.run(run_calc())
 ```
 
-{py:class}`~nat.plugins.eval.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
-{py:class}`~nat.plugins.eval.profiler.calc.data_models.CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
-For more information, refer to the [calculator data models](../../../packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/calc/data_models.py).
+{py:class}`~nat.plugins.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
+{py:class}`~nat.plugins.profiler.calc.data_models.CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
+For more information, refer to the [calculator data models](../../../packages/nvidia_nat_profiler/src/nat/plugins/profiler/calc/data_models.py).

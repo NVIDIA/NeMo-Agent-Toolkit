@@ -66,6 +66,7 @@ nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
 openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
 opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
+profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
 ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
@@ -82,7 +83,7 @@ zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
 pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
-profiling = [ "nvidia-nat-eval[profiling] == {version}" ]
+profiling = [ "nvidia-nat-profiler == {version}" ]
 
 most = [
   "nvidia-nat-a2a == {version}",
@@ -93,7 +94,7 @@ most = [
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
-  "nvidia-nat-eval[profiling] == {version}",
+  "nvidia-nat-eval == {version}",
   "nvidia-nat-fastmcp == {version}",
   "nvidia-nat-langchain == {version}",
   "nvidia-nat-llama-index == {version}",
@@ -103,6 +104,7 @@ most = [
   "nvidia-nat-nemo-customizer == {version}",
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
+  "nvidia-nat-profiler == {version}",
   "nvidia-nat-ragas == {version}",
   "nvidia-nat-redis == {version}",
   "nvidia-nat-s3 == {version}",
@@ -234,6 +236,7 @@ nvidia-nat-nemo-customizer = { path = "packages/nvidia_nat_nemo_customizer", edi
 nvidia-nat-openpipe-art = { path = "packages/nvidia_nat_openpipe_art", editable = true }
 nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
+nvidia-nat-profiler = { path = "packages/nvidia_nat_profiler", editable = true }
 nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragaai = { path = "packages/nvidia_nat_ragaai", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }

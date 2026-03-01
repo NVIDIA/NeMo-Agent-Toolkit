@@ -34,10 +34,12 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[eval,langchain,profiling,test] == {version}",
+  "nvidia-nat[eval,langchain,test] == {version}",
+  "nvidia-nat-profiler == {version}",
   "nat_simple_web_query",
 ]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
+nvidia-nat-profiler = { path = "../../../packages/nvidia_nat_profiler", editable = true }
 nat_simple_web_query = { path = "../../getting_started/simple_web_query", editable = true }

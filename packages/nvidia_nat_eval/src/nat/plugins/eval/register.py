@@ -17,10 +17,6 @@
 
 # Import evaluators which need to be automatically registered here
 from .red_teaming_evaluator.register import register_red_teaming_evaluator
-from .runtime_evaluator.register import register_avg_llm_latency_evaluator
-from .runtime_evaluator.register import register_avg_num_llm_calls_evaluator
-from .runtime_evaluator.register import register_avg_tokens_per_llm_end_evaluator
-from .runtime_evaluator.register import register_avg_workflow_runtime_evaluator
 
 # Dataset loaders
 from .dataset_loader.register import register_csv_dataset_loader

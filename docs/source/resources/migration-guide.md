@@ -36,6 +36,11 @@ As part of dependency reduction, evaluator ownership is being moved out of `nvid
 - `trajectory` evaluator moved to `nvidia-nat-langchain`.
 - `tunable_rag_evaluator` moved to `nvidia-nat-langchain`.
 - `ragas` evaluator moved to `nvidia-nat-ragas`.
+- Performance evaluators moved to `nvidia-nat-profiler`:
+  - `avg_llm_latency`
+  - `avg_workflow_runtime`
+  - `avg_num_llm_calls`
+  - `avg_tokens_per_llm_end`
 - `nvidia-nat-eval` no longer includes a direct `ragas` dependency.
 - `swe_bench` evaluator has been removed (no replacement package in this release).
 
@@ -49,7 +54,9 @@ To migrate:
   - `pip install nvidia-nat-eval nvidia-nat-langchain`
 - Install the RAGAS evaluator package when using `_type: ragas`:
   - `pip install nvidia-nat-ragas`
-- Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`).
+- Install the profiler package when using performance evaluators or profiling workflows:
+  - `pip install nvidia-nat-profiler`
+- Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`, `avg_llm_latency`, `avg_workflow_runtime`, `avg_num_llm_calls`, `avg_tokens_per_llm_end`).
 - Remove any `_type: swe_bench` evaluator entries from evaluation configs.
 - If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
 
@@ -83,7 +90,7 @@ To migrate:
   - `pip install nvidia-nat-eval`
 - Install profiling support when needed:
   - `pip install "nvidia-nat[profiling]"`
-  - `pip install "nvidia-nat-eval[profiling]"`
+  - `pip install "nvidia-nat-profiler"`
 - Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
 - Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
 
@@ -91,14 +98,14 @@ To migrate:
 
 For users migrating existing integrations, the primary import change is:
 - `nat.eval.*` -> `nat.plugins.eval.*`
-- `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
+- `nat.profiler.*` -> `nat.plugins.profiler.*`
 - `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
 - `nat.eval.runtime_event_subscriber.pull_intermediate` -> `nat.builder.runtime_event_subscriber.pull_intermediate`
 
 For evaluation data models, prefer canonical core paths:
 - `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
 - `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
-- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.eval.profiler.callbacks.token_usage_base_model`)
+- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.profiler.callbacks.token_usage_base_model`)
 
 Internal module reorganization inside `nat.plugins.eval` is implementation detail and may change between releases.
 

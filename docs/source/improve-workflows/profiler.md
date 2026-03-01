@@ -115,7 +115,7 @@ It supports all kinds of functions:
 Just decorate your custom function with `@track_function` and provide any optional metadata if needed:
 
 ```python
-from nat.plugins.eval.profiler.decorators.function_tracking import track_function
+from nat.plugins.profiler.decorators.function_tracking import track_function
 
 @track_function(metadata={"action": "compute", "source": "custom_function"})
 def my_custom_function(a, b):
@@ -295,7 +295,7 @@ This means you can profile once, then deploy with intelligent per-call routing â
 For cases where you have domain knowledge the profiler cannot observe (e.g., a call feeds a real-time UI), you can manually annotate functions:
 
 ```python
-from nat.plugins.eval.profiler.decorators.latency import latency_sensitive
+from nat.plugins.profiler.decorators.latency import latency_sensitive
 
 @latency_sensitive(5)
 async def user_facing_response():

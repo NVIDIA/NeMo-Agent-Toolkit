@@ -18,7 +18,7 @@ import asyncio
 import pytest
 
 from nat.builder.context import Context
-from nat.plugins.eval.profiler.decorators.latency import latency_sensitive
+from nat.plugins.profiler.decorators.latency import latency_sensitive
 
 
 class TestLatencySensitiveValidation:

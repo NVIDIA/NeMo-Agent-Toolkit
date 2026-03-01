@@ -19,12 +19,12 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.plugins.eval.profiler.calc.calc_runner import CalcRunner
-from nat.plugins.eval.profiler.calc.data_models import CalcRunnerConfig
-from nat.plugins.eval.profiler.calc.data_models import CalcRunnerOutput
-from nat.plugins.eval.profiler.calc.data_models import SizingMetricPerItem
-from nat.plugins.eval.profiler.calc.data_models import SizingMetrics
-from nat.plugins.eval.profiler.calc.data_models import SizingMetricsAlerts
+from nat.plugins.profiler.calc.calc_runner import CalcRunner
+from nat.plugins.profiler.calc.data_models import CalcRunnerConfig
+from nat.plugins.profiler.calc.data_models import CalcRunnerOutput
+from nat.plugins.profiler.calc.data_models import SizingMetricPerItem
+from nat.plugins.profiler.calc.data_models import SizingMetrics
+from nat.plugins.profiler.calc.data_models import SizingMetricsAlerts
 
 
 def make_sizing_metrics(latency, runtime, interrupted=False):
@@ -61,7 +61,7 @@ def make_config(
 
 @pytest.fixture(autouse=True)
 def patch_write_output():
-    with patch("nat.plugins.eval.profiler.calc.calc_runner.CalcRunner.write_output", return_value=None):
+    with patch("nat.plugins.profiler.calc.calc_runner.CalcRunner.write_output", return_value=None):
         yield
 
 
@@ -95,7 +95,7 @@ async def test_calc_runner(latencies, runtimes):
                             workflow_interrupted=True)
     }
 
-    with patch("nat.plugins.eval.profiler.calc.calc_runner.MultiEvaluationRunner") as mock_runner:
+    with patch("nat.plugins.profiler.calc.calc_runner.MultiEvaluationRunner") as mock_runner:
         mock_instance = mock_runner.return_value
         mock_instance.run_all = AsyncMock(return_value=evaluation_run_outputs)
         output = await runner.run_online()

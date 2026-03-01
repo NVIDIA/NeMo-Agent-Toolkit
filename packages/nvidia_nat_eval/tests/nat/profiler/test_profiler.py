@@ -25,8 +25,8 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.profiler import ProfilerConfig
-from nat.plugins.eval.profiler.data_frame_row import DataFrameRow
-from nat.plugins.eval.profiler.profile_runner import ProfilerRunner
+from nat.plugins.profiler.data_frame_row import DataFrameRow
+from nat.plugins.profiler.profile_runner import ProfilerRunner
 
 
 @pytest.fixture(name="minimal_eval_config")

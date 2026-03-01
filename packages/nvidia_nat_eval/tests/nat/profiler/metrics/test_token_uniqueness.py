@@ -23,12 +23,12 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 
 # yapf: disable
-from nat.plugins.eval.profiler.inference_optimization.token_uniqueness import (
+from nat.plugins.profiler.inference_optimization.token_uniqueness import (
     compute_inter_query_token_uniqueness_by_llm,
 )
 
 # yapf: enable
-from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @pytest.fixture(name="minimal_valid_df")
@@ -110,7 +110,7 @@ def test_compute_inter_query_token_uniqueness_by_llm_no_llm_start(minimal_valid_
     If we have no LLM_START events => empty root in LLMUniquenessMetricsByLLM.
     We'll remove the LLM_START row from the fixture to simulate that.
     """
-    from nat.plugins.eval.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
+    from nat.plugins.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
 
     df_test = minimal_valid_df.copy()
     # remove the row that has LLM_START
@@ -127,7 +127,7 @@ def test_compute_inter_query_token_uniqueness_by_llm_minimal(minimal_valid_df):
     Minimal data with 1 LLM_START => no consecutive LLM calls => no new words counts => might be empty
     or zero. Ensure it doesn't crash.
     """
-    from nat.plugins.eval.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
+    from nat.plugins.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
 
     # We'll add text to that single LLM_START row
     df_test = minimal_valid_df.copy()
@@ -148,8 +148,8 @@ def test_compute_inter_query_token_uniqueness_by_llm_two_consecutive_llm_calls()
     We'll build a custom df with 2 consecutive LLM_START calls for the same llm_name => ensure new words are computed.
     """
 
-    from nat.plugins.eval.profiler.inference_optimization.data_models import LLMUniquenessMetrics
-    from nat.plugins.eval.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
+    from nat.plugins.profiler.inference_optimization.data_models import LLMUniquenessMetrics
+    from nat.plugins.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
 
     events = [[
         IntermediateStep(parent_id="root",
@@ -191,7 +191,7 @@ def test_compute_inter_query_token_uniqueness_by_llm_multiple_examples(minimal_v
     """
     If we have multiple examples with multiple LLM calls, ensure we gather all new_words_count in each llm_name group.
     """
-    from nat.plugins.eval.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
+    from nat.plugins.profiler.inference_optimization.data_models import LLMUniquenessMetricsByLLM
 
     new_events = [[
         IntermediateStep(parent_id="root",

@@ -21,7 +21,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from nat.data_models.evaluate_runtime import InferenceMetricsModel
-from nat.plugins.eval.profiler.profile_runner import ProfilerRunner
+from nat.plugins.profiler.profile_runner import ProfilerRunner
 
 # ---------------------------------------------------------------------------
 # helpers

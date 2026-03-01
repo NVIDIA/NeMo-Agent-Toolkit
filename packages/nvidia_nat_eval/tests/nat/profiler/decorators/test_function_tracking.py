@@ -24,8 +24,8 @@ from pydantic import BaseModel
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TraceMetadata
-from nat.plugins.eval.profiler.decorators.function_tracking import track_function
-from nat.plugins.eval.profiler.decorators.function_tracking import track_unregistered_function
+from nat.plugins.profiler.decorators.function_tracking import track_function
+from nat.plugins.profiler.decorators.function_tracking import track_unregistered_function
 from nat.utils.reactive.subject import Subject
 
 
@@ -219,7 +219,7 @@ class TestTrackUnregisteredFunction:
     @pytest.fixture
     def mock_context(self):
         """Mock Context and its push_active_function method."""
-        with patch('nat.plugins.eval.profiler.decorators.function_tracking.Context') as mock_context_class:
+        with patch('nat.plugins.profiler.decorators.function_tracking.Context') as mock_context_class:
             mock_context_instance = Mock()
             mock_manager = Mock()
             mock_context_instance.push_active_function.return_value.__enter__ = Mock(return_value=mock_manager)

@@ -61,11 +61,6 @@ dependencies = [
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
-profiling = [
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
-]
 test = [
   "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",

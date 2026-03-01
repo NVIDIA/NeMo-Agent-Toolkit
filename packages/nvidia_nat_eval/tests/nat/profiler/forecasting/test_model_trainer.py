@@ -15,12 +15,12 @@
 
 import pytest
 
-from nat.plugins.eval.profiler.forecasting.model_trainer import ModelTrainer
-from nat.plugins.eval.profiler.forecasting.model_trainer import create_model
-from nat.plugins.eval.profiler.forecasting.models import ForecastingBaseModel
-from nat.plugins.eval.profiler.forecasting.models import LinearModel
-from nat.plugins.eval.profiler.forecasting.models import RandomForestModel
-from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.plugins.profiler.forecasting.model_trainer import ModelTrainer
+from nat.plugins.profiler.forecasting.model_trainer import create_model
+from nat.plugins.profiler.forecasting.models import ForecastingBaseModel
+from nat.plugins.profiler.forecasting.models import LinearModel
+from nat.plugins.profiler.forecasting.models import RandomForestModel
+from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @pytest.mark.parametrize("model_type, expected_model_class", [

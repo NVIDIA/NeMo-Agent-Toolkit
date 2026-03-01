@@ -22,31 +22,31 @@ from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEv
 from nat.data_models.invocation_node import InvocationNode
 
 # yapf: disable
-from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
+from nat.plugins.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
     analyze_calls_and_build_result,
 )
-from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
+from nat.plugins.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
     build_call_tree_for_example,
 )
-from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
+from nat.plugins.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
     build_call_tree_per_example,
 )
-from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
+from nat.plugins.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
     compute_time_based_concurrency,
 )
-from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
+from nat.plugins.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
     find_midpoint_concurrency,
 )
-from nat.plugins.eval.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
+from nat.plugins.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
     multi_example_call_profiling,
 )
 
 # yapf: enable
-from nat.plugins.eval.profiler.inference_optimization.data_models import CallNode
-from nat.plugins.eval.profiler.inference_optimization.data_models import ConcurrencyDistribution
-from nat.plugins.eval.profiler.inference_optimization.data_models import NestedCallProfilingResult
-from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
-from nat.plugins.eval.profiler.utils import create_standardized_dataframe
+from nat.plugins.profiler.inference_optimization.data_models import CallNode
+from nat.plugins.profiler.inference_optimization.data_models import ConcurrencyDistribution
+from nat.plugins.profiler.inference_optimization.data_models import NestedCallProfilingResult
+from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+from nat.plugins.profiler.utils import create_standardized_dataframe
 
 #############################################################
 # Test Data Setup

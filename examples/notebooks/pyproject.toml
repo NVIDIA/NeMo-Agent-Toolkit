@@ -33,7 +33,8 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[langchain,llama-index,mcp,profiling,test] == {version}",
+  "nvidia-nat[langchain,llama-index,mcp,test] == {version}",
+  "nvidia-nat-profiler == {version}",
   "nat_alert_triage_agent",
   "nat_simple_calculator",
   "ipython~=8.31",
@@ -44,5 +45,6 @@ dependencies = [
 
 [tool.uv.sources]
 nvidia-nat = { path = "../..", editable = true }
+nvidia-nat-profiler = { path = "../../packages/nvidia_nat_profiler", editable = true }
 nat_alert_triage_agent = { path = "../advanced_agents/alert_triage_agent", editable = true }
 nat_simple_calculator = { path = "../getting_started/simple_calculator", editable = true }

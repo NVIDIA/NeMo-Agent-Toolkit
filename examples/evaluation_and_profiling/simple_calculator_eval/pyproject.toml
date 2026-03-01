@@ -35,9 +35,11 @@ classifiers = ["Programming Language :: Python"]
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
   "nvidia-nat[eval,langchain,test] == {version}",
+  "nvidia-nat-profiler == {version}",
   "nat_simple_calculator",
 ]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
+nvidia-nat-profiler = { path = "../../../packages/nvidia_nat_profiler", editable = true }
 nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
