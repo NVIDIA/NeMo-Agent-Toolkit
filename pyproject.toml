@@ -160,7 +160,6 @@ examples = [
   "nat_simple_web_query",
   "nat_simple_web_query_eval",
   "nat_strands_demo",
-  "nat_swe_bench",
   "nat_user_report",
   "text_file_ingest",
 ]
@@ -293,7 +292,6 @@ nat_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
 nat_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }
 nat_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_web_query_eval", editable = true }
 nat_strands_demo = { path = "examples/frameworks/strands_demo", editable = true }
-nat_swe_bench = { path = "examples/evaluation_and_profiling/swe_bench", editable = true }
 nat_user_report = { path = "examples/object_store/user_report", editable = true }
 text_file_ingest = { path = "examples/documentation_guides/workflows/text_file_ingest", editable = true }
 
