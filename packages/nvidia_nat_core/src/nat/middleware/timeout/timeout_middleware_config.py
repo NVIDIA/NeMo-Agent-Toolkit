@@ -12,12 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Configuration for timeout middleware."""
 
-# flake8: noqa
+from __future__ import annotations
 
-from nat.middleware.cache import register as register_cache
-from nat.middleware.defense import register as register_defense
-from nat.middleware.dynamic import register as register_dynamic
-from nat.middleware.logging import register as register_logging
-from nat.middleware.red_teaming import register as register_red_teaming
-from nat.middleware.timeout import register as register_timeout
+from pydantic import Field
+
+from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
+
+
+class TimeoutMiddlewareConfig(DynamicMiddlewareConfig, name="timeout"):
+    """Configuration for timeout middleware.
+    """
+
+    timeout: float = Field(
+        description="Timeout in seconds for all calls intercepted by this middleware instance.",
+        gt=0,
+    )
+
+    timeout_message: str | None = Field(
+        default=None,
+        description="Additional message appended to the TimeoutError raised on expiry.",
+    )
