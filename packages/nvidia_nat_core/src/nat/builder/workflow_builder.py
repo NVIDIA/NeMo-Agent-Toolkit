@@ -1338,9 +1338,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             middleware_info = self._registry.get_middleware(type(config))
 
-            with ChildBuilder.use(config, self) as inner_builder:
-                middleware_instance = await self._get_exit_stack().enter_async_context(
-                    middleware_info.build_fn(config, inner_builder))
+            middleware_instance = await self._get_exit_stack().enter_async_context(
+                middleware_info.build_fn(config, self))
 
             self._middleware[name] = ConfiguredMiddleware(config=config, instance=middleware_instance)
 
