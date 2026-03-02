@@ -30,25 +30,19 @@ If you are installing from source, install the evaluation extra from the NeMo Ag
 uv pip install -e '.[eval]'
 ```
 
-If you are installing from a package, install either the `eval` extra or the standalone package:
-```bash
-uv pip install "nvidia-nat[eval]"
-```
-
+If you are installing from a package:
 ```bash
 uv pip install nvidia-nat-eval
 ```
 
-If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install profiling dependencies as well:
-
+If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install the profiler package as well:
 ```bash
-uv pip install -e '.[eval,profiling]'
+uv pip install -e ".[profiler]
 ```
 
 For package installs, use:
-
 ```bash
-uv pip install "nvidia-nat[eval,profiling]"
+uv pip install nvidia-nat-profiler
 ```
 
 

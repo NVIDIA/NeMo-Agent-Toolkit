@@ -60,6 +60,18 @@ To migrate:
 - Remove any `_type: swe_bench` evaluator entries from evaluation configs.
 - If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
 
+#### Eval Exporter Callback Split
+
+Eval metric exporting now uses generic eval-callback hooks owned by `nvidia-nat-eval`, while provider-specific implementations live in provider packages.
+
+- Weave eval metric export callback now lives in `nvidia-nat-weave`.
+- `nvidia-nat-eval` no longer hard-couples directly to Weave internals for eval metric publishing.
+- If a telemetry exporter is configured but its eval callback provider package is missing, NAT now logs a warning and continues evaluation without exporter publishing.
+
+To migrate:
+- Install the matching provider package for configured telemetry exporters (for Weave: `pip install nvidia-nat-weave`).
+- Keep existing telemetry exporter config names unchanged (for example `_type: weave`).
+
 ### v1.5.0
 
 #### Removing Old Aliases and Transitional Packages
@@ -78,7 +90,7 @@ NVIDIA NeMo Agent Toolkit 1.2 changed the name and API. Compatibility aliases an
 - All prior meta-packages have been removed.
   - `nvidia-nat-all` (no replacement, though `nvidia-nat[most]` extra does exist)
   - `nvidia-nat-ingestion` (no replacement; examples directly use dependencies)
-  - `nvidia-nat-profiling` (use `nvidia-nat[profiling]`)
+  - `nvidia-nat-profiling` (use `nvidia-nat-profiler`)
 
 #### Evaluation Package Split
 
@@ -89,7 +101,6 @@ To migrate:
   - `pip install "nvidia-nat[eval]"`
   - `pip install nvidia-nat-eval`
 - Install profiling support when needed:
-  - `pip install "nvidia-nat[profiling]"`
   - `pip install "nvidia-nat-profiler"`
 - Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
 - Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.

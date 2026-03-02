@@ -35,10 +35,13 @@ def test_weave_eval_callback_noops_without_weave_runtime():
     with callback.evaluation_context():
         pass
 
-    callback.on_eval_started(workflow_alias="wf", eval_input=SimpleNamespace(eval_input_items=[]), config=SimpleNamespace())
+    callback.on_eval_started(workflow_alias="wf",
+                             eval_input=SimpleNamespace(eval_input_items=[]),
+                             config=SimpleNamespace())
     callback.on_prediction(item=SimpleNamespace(id="1"), output={"text": "ok"})
-    asyncio.run(callback.a_on_usage_stats(item=SimpleNamespace(id="1"), usage_stats_item=SimpleNamespace(runtime=1.0,
-                                                                                                        total_tokens=5)))
+    asyncio.run(
+        callback.a_on_usage_stats(item=SimpleNamespace(id="1"),
+                                  usage_stats_item=SimpleNamespace(runtime=1.0, total_tokens=5)))
     asyncio.run(callback.a_on_evaluator_score(eval_output=SimpleNamespace(eval_output_items=[]), evaluator_name="acc"))
     asyncio.run(callback.a_on_export_flush())
     callback.on_eval_summary(usage_stats=SimpleNamespace(total_runtime=1.0),

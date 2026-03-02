@@ -76,7 +76,12 @@ class WeaveEvaluationCallback:
     def _weave_dataset(eval_input: EvalInput) -> list[dict[str, Any]]:
         return [item.full_dataset_entry for item in eval_input.eval_input_items]
 
-    def on_eval_started(self, *, workflow_alias: str, eval_input: EvalInput, config: Any, job_id: str | None = None) -> None:
+    def on_eval_started(self,
+                        *,
+                        workflow_alias: str,
+                        eval_input: EvalInput,
+                        config: Any,
+                        job_id: str | None = None) -> None:
         if not self.client and not self._initialize_client():
             return
 
@@ -113,7 +118,8 @@ class WeaveEvaluationCallback:
     def on_prediction(self, *, item: EvalInputItem, output: Any) -> None:
         if not self.eval_logger:
             return
-        self.pred_loggers[item.id] = self.eval_logger.log_prediction(inputs=self._prediction_inputs(item), output=output)
+        self.pred_loggers[item.id] = self.eval_logger.log_prediction(inputs=self._prediction_inputs(item),
+                                                                     output=output)
 
     async def a_on_usage_stats(self, *, item: EvalInputItem, usage_stats_item: UsageStatsItem) -> None:
         if not self.eval_logger or item.id not in self.pred_loggers:

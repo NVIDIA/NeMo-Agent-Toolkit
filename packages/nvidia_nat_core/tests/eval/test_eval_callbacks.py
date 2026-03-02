@@ -96,6 +96,7 @@ class TestEvalCallbackManager:
         cb.a_on_export_flush.assert_awaited_once()
 
     def test_evaluation_context_optional(self):
+
         class _DummyContext:
 
             def __init__(self):

@@ -54,6 +54,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
 - `nvidia-nat[vanna]` or `nvidia-nat-vanna` - [Vanna](https://vanna.ai/) text-to-SQL with Databricks support
+- `nvidia-nat-profiler` - Profiling and performance analysis components used by evaluation and sizing workflows
 - `nvidia-nat[weave]` or `nvidia-nat-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
 - `nvidia-nat[zep-cloud]` or `nvidia-nat-zep-cloud` - [Zep](https://www.getzep.com/)
 
@@ -63,7 +64,6 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[gunicorn]` - Support for launching `nat serve` with an alternative server; requires additional configuration file changes
 - `nvidia-nat[most]` - Extra containing all Framework integrations except for: `nvidia-nat-ragaai`, `nvidia-nat-openpipe-art`
 - `nvidia-nat[pii-defense]` - Additional dependencies for `nat red-team` evaluation
-- `nvidia-nat[profiling]` - Additional dependencies needed for [profiling](../improve-workflows/profiler.md)
 
 ## Supported Platforms
 
@@ -165,9 +165,9 @@ Installing from source is required to run any examples provided in the repositor
     Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
 
-    In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for [evaluation](../improve-workflows/evaluate.md) and profiling workflows using `nat eval`. To install the `eval` package and the additional profiler dependencies, run the following:
+    In addition to plugins, install the profiler package when you plan to run profiling workflows with `nat eval`:
     ```bash
-    uv pip install -e '.[eval,profiling]'
+    uv pip install -e '.[profiler]'
     ```
 
 6. Verify that you've installed the NeMo Agent Toolkit library.
