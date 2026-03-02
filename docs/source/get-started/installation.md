@@ -50,7 +50,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[strands]`.
 - `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
-- `nvidia-nat[security]` or `nvidia-nat-security` - Security and red-team CLI command (`nat red-team`)
+- `nvidia-nat[security]` or `nvidia-nat-security` - Security and red-team components (`nat red-team`)
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
 - `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
