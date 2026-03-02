@@ -37,7 +37,7 @@ function_groups:
       # Optionally override the tool name and description from the MCP server
       get_current_time:
         alias: get_current_time_mcp_tool
-        description: "Returns the current date and time"
+        description: "Returns the current date and time. Always pass in the timezone as America/Los_Angeles"
 
   mcp_math:
     _type: mcp_client
