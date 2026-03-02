@@ -72,6 +72,20 @@ To migrate:
 - Install the matching provider package for configured telemetry exporters (for Weave: `pip install nvidia-nat-weave`).
 - Keep existing telemetry exporter config names unchanged (for example `_type: weave`).
 
+#### Eval CLI Command Package Split
+
+CLI command ownership is now aligned to package domains:
+
+- `nat eval` is provided by `nvidia-nat-eval`.
+- `nat sizing` is provided by `nvidia-nat-profiler`.
+- `nat red-team` is provided by `nvidia-nat-security`.
+
+To migrate:
+- Install command-specific packages as needed:
+  - `pip install nvidia-nat-eval`
+  - `pip install nvidia-nat-profiler`
+  - `pip install nvidia-nat-security`
+
 ### v1.5.0
 
 #### Removing Old Aliases and Transitional Packages

@@ -15,9 +15,6 @@
 
 # flake8: noqa
 
-# Import evaluators which need to be automatically registered here
-from .red_teaming_evaluator.register import register_red_teaming_evaluator
-
 # Dataset loaders
 from .dataset_loader.register import register_csv_dataset_loader
 from .dataset_loader.register import register_custom_dataset_loader

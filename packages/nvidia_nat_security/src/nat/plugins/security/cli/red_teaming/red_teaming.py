@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,9 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 from pathlib import Path
 
 import click
-
-logger = logging.getLogger(__name__)
 
 
 @click.group(name=__name__, invoke_without_command=True, help="Run red teaming evaluation with multiple scenarios.")
@@ -98,16 +95,14 @@ def process_red_team_eval(
     override: tuple[tuple[str, str], ...],
 ):
     """Process the red team eval command and execute the evaluation."""
-    from nat.plugins.eval.runners.red_teaming_runner import RedTeamingRunner
+    from nat.plugins.security.eval.runners.red_teaming_runner import RedTeamingRunner
     from nat.runtime.loader import load_config
 
     from .red_teaming_utils import load_red_teaming_config
 
-    # Must have at least one of these
     if red_team_config is None and config_file is None:
         raise click.ClickException("Either --red_team_config or --config_file must be provided.")
 
-    # Load configs
     rt_config = None
     if red_team_config is not None:
         rt_config = load_red_teaming_config(red_team_config)
@@ -120,7 +115,6 @@ def process_red_team_eval(
         assert config_file is not None
         base_workflow_config = load_config(config_file)
 
-    # Create and run the runner
     runner = RedTeamingRunner(
         config=rt_config,
         base_workflow_config=base_workflow_config,

@@ -125,17 +125,13 @@ def calc_command(ctx,
                  endpoint,
                  endpoint_timeout):
     """Estimate GPU count and plot metrics for a workflow profile."""
-    # Only use CLI concurrencies, with default
     concurrencies_list = [int(x) for x in concurrencies.split(",") if x.strip()]
 
-    # Dont allow a concurrency of 0
     if 0 in concurrencies_list:
         click.echo("Concurrency of 0 is not allowed.")
         return
 
-    # Check if the parameters are valid in online and offline mode
     if offline_mode:
-        # In offline mode target test parameters are needed to estimate the GPU count
         if target_llm_latency == 0 and target_workflow_runtime == 0:
             click.echo("Both --target_llm_latency and --target_workflow_runtime are 0. "
                        "Cannot estimate the GPU count.")
@@ -164,7 +160,6 @@ def calc_command(ctx,
         if target_users <= 0:
             click.echo("Target users is 0. Tests will be run but the GPU count will not be estimated.")
 
-    # Build CalcRunnerConfig
     runner_config = CalcRunnerConfig(
         config_file=config_file,
         concurrencies=concurrencies_list,
@@ -187,26 +182,21 @@ def calc_command(ctx,
 
     def print_results(results: CalcRunnerOutput):
 
-        # Print header with target numbers
         click.echo(f"Targets: LLM Latency ≤ {runner_config.target_llm_latency_p95}s, "
                    f"Workflow Runtime ≤ {runner_config.target_workflow_runtime_p95}s, "
                    f"Users = {runner_config.target_users}")
         click.echo(f"Test parameters: GPUs = {runner_config.test_gpu_count}")
 
-        # Check if there are any GPU estimates to determine if we should show GPU estimate columns
         has_llm_latency_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_llm_latency is not None
                                             for data in results.calc_data.values())
         has_wf_runtime_gpu_estimates = any(data.gpu_estimates.gpu_estimate_by_wf_runtime is not None
                                            for data in results.calc_data.values())
 
-        # Check if there are any interrupted workflows or outliers to determine if we should show the alerts column
         has_alerts = any(data.sizing_metrics.alerts.workflow_interrupted or data.alerts.outlier_llm_latency
                          or data.alerts.outlier_workflow_runtime for data in results.calc_data.values())
 
-        # Print per concurrency results as a table
         click.echo("Per concurrency results:")
 
-        # Show alerts legend if there are any alerts
         if has_alerts:
             click.echo("Alerts!: W = Workflow interrupted, L = LLM latency outlier, R = Workflow runtime outlier")
 
@@ -219,7 +209,6 @@ def calc_command(ctx,
 
             row = []
 
-            # Only include alerts column if there are any interrupted workflows (first column)
             if has_alerts:
                 alerts = []
                 if sizing_metrics_alerts.workflow_interrupted:
@@ -229,7 +218,6 @@ def calc_command(ctx,
                 if calc_alerts.outlier_workflow_runtime:
                     alerts.append("R")
 
-                # Show ! followed by all alert characters
                 if alerts:
                     row.append(f"!{''.join(alerts)}")
                 else:
@@ -242,7 +230,6 @@ def calc_command(ctx,
                 metrics.total_runtime,
             ])
 
-            # Only include GPU estimate columns if there are actual estimates of that type
             if has_llm_latency_gpu_estimates:
                 row.append(gpu_estimates_per_concurrency.gpu_estimate_by_llm_latency)
             if has_wf_runtime_gpu_estimates:
@@ -251,19 +238,14 @@ def calc_command(ctx,
             table.append(row)
 
         headers = []
-
-        # Only include alerts header if there are any alerts (first column)
         if has_alerts:
             headers.append("Alerts")
-
         headers.extend([
             "Concurrency",
             "p95 LLM Latency",
             "p95 WF Runtime",
             "Total Runtime",
         ])
-
-        # Only include GPU estimate headers if there are actual estimates of that type
         if has_llm_latency_gpu_estimates:
             headers.append("GPUs (LLM Latency, Rough)")
         if has_wf_runtime_gpu_estimates:
@@ -271,7 +253,6 @@ def calc_command(ctx,
 
         click.echo(tabulate(table, headers=headers, tablefmt="github"))
 
-        # Display slope-based GPU estimates if they are available
         if results.gpu_estimates.gpu_estimate_by_llm_latency is not None or \
                 results.gpu_estimates.gpu_estimate_by_wf_runtime is not None:
             click.echo("")

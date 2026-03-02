@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,8 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Eval CLI command exports."""
 
-from nat.plugins.eval.cli.evaluate import eval_command
+from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
+from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingScenario
+from nat.plugins.security.eval.runners.red_teaming_runner.runner import RedTeamingRunner
 
-__all__ = ["eval_command"]
+__all__ = [
+    "RedTeamingRunnerConfig",
+    "RedTeamingScenario",
+    "RedTeamingRunner",
+]

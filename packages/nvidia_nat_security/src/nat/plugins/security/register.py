@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,12 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.plugins.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
-from nat.plugins.eval.runners.red_teaming_runner.config import RedTeamingScenario
-from nat.plugins.eval.runners.red_teaming_runner.runner import RedTeamingRunner
+# flake8: noqa
 
-__all__ = [
-    "RedTeamingRunnerConfig",
-    "RedTeamingScenario",
-    "RedTeamingRunner",
-]
+from .eval.red_teaming_evaluator.register import register_red_teaming_evaluator

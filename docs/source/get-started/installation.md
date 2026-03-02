@@ -38,7 +38,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
-- `nvidia-nat[eval]` or `nvidia-nat-eval` - Evaluation and profiling CLI commands (`nat eval`, `nat red-team`, `nat sizing`)
+- `nvidia-nat[eval]` or `nvidia-nat-eval` - Evaluation CLI command (`nat eval`)
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/), [LangGraph](https://www.langchain.com/langgraph)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mcp]` or `nvidia-nat-mcp` - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
@@ -50,6 +50,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[strands]`.
 - `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
+- `nvidia-nat[security]` or `nvidia-nat-security` - Security and red-team CLI command (`nat red-team`)
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
 - `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
@@ -63,7 +64,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[async_endpoints]` - Support for asynchronous endpoints when launching `nat serve`
 - `nvidia-nat[gunicorn]` - Support for launching `nat serve` with an alternative server; requires additional configuration file changes
 - `nvidia-nat[most]` - Extra containing all Framework integrations except for: `nvidia-nat-ragaai`, `nvidia-nat-openpipe-art`
-- `nvidia-nat[pii-defense]` - Additional dependencies for `nat red-team` evaluation
+- `nvidia-nat[pii-defense]` - Additional dependencies for red-teaming defenses/middleware
 
 ## Supported Platforms
 

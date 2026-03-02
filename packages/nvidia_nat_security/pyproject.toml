@@ -30,12 +30,12 @@ root = "../.."
 
 
 [project]
-name = "nvidia-nat-profiler"
+name = "nvidia-nat-security"
 dynamic = ["version", "dependencies", "optional-dependencies"]
 requires-python = ">=3.11,<3.14"
-description = "Subpackage for profiling and performance evaluators in NVIDIA NeMo Agent Toolkit"
+description = "Subpackage for security and red-team interfaces in NVIDIA NeMo Agent Toolkit"
 readme = "src/nat/meta/pypi.md"
-keywords = ["ai", "agents", "evaluation", "profiling"]
+keywords = ["ai", "agents", "evaluation", "security", "red-team"]
 license = { text = "Apache-2.0" }
 authors = [{ name = "NVIDIA Corporation" }]
 maintainers = [{ name = "NVIDIA Corporation" }]
@@ -57,9 +57,6 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -78,7 +75,7 @@ nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']
-nat_profiler = "nat.plugins.profiler.register"
+nat_security = "nat.plugins.security.register"
 
 [project.entry-points.'nat.cli']
-sizing = "nat.plugins.profiler.cli.commands:sizing_command"
+red-team = "nat.plugins.security.cli.commands:red_team_command"

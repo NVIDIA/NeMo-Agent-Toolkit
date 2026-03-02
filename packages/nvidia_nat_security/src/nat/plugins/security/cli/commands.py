@@ -12,8 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Eval CLI command exports."""
+"""Security CLI command exports."""
 
-from nat.plugins.eval.cli.evaluate import eval_command
+from nat.plugins.security.cli.red_teaming.red_teaming import red_team_command
 
-__all__ = ["eval_command"]
+__all__ = ["red_team_command"]
