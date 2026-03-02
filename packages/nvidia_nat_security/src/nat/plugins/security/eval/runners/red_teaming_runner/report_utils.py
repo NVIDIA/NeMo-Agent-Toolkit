@@ -75,9 +75,7 @@ def generate_and_save_report(
     html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
     report_html = (
         "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Red Teaming Evaluation Results</title></head><body>"
-        f"<h1>Red Teaming Evaluation Results for run: {output_dir.name}</h1>{html}</body></html>"
-    )
+        f"<h1>Red Teaming Evaluation Results for run: {output_dir.name}</h1>{html}</body></html>")
     report_path.write_text(report_html, encoding="utf-8")
     logger.debug("Saved red-team report: %s", report_path)
     return report_path
-

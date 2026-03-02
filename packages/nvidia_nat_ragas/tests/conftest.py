@@ -59,11 +59,8 @@ def rag_eval_input_fixture(
                 "answer": expected_output,
                 "generated_answer": generated_output,
             },
-        )
-        for index, (user_input, expected_output, generated_output) in enumerate(
-            zip(rag_user_inputs, rag_expected_outputs, rag_generated_outputs)
-        )
+        ) for index, (user_input, expected_output,
+                      generated_output) in enumerate(zip(rag_user_inputs, rag_expected_outputs, rag_generated_outputs))
     ]
 
     return EvalInput(eval_input_items=eval_items)
-
