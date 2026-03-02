@@ -84,9 +84,9 @@ async def test_trajectory_evaluate_success(trajectory_evaluator, rag_eval_input)
 
         assert isinstance(eval_output, EvalOutput)
         assert len(eval_output.eval_output_items) == 2
-        assert eval_output.average_score == expected_average
-        assert eval_output.eval_output_items[0].score == 0.9
-        assert eval_output.eval_output_items[1].score == 0.8
+        assert eval_output.average_score == pytest.approx(expected_average)
+        assert eval_output.eval_output_items[0].score == pytest.approx(0.9)
+        assert eval_output.eval_output_items[1].score == pytest.approx(0.8)
         assert eval_output.eval_output_items[0].reasoning["reasoning"] == "result-1"
         assert eval_output.eval_output_items[1].reasoning["reasoning"] == "result-2"
         assert eval_output.eval_output_items[0].reasoning["trajectory"] == []
@@ -109,12 +109,12 @@ async def test_trajectory_evaluate_failure(trajectory_evaluator, rag_eval_input)
 
         assert isinstance(eval_output, EvalOutput)
         assert len(eval_output.eval_output_items) == 2
-        assert eval_output.average_score == 0.4
+        assert eval_output.average_score == pytest.approx(0.4)
 
         failed_item = next(item for item in eval_output.eval_output_items if item.error is not None)
         successful_item = next(item for item in eval_output.eval_output_items if item.error is None)
 
-        assert failed_item.score == 0.0
+        assert failed_item.score == pytest.approx(0.0)
         assert error_message in failed_item.error
-        assert successful_item.score == 0.8
+        assert successful_item.score == pytest.approx(0.8)
         assert successful_item.reasoning["reasoning"] == "LGTM"
