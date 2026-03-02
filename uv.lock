@@ -1019,36 +1019,6 @@ wheels = [
 ]
 
 [[package]]
-name = "cbor2"
-version = "5.8.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d9/8e/8b4fdde28e42ffcd741a37f4ffa9fb59cd4fe01625b544dfcfd9ccb54f01/cbor2-5.8.0.tar.gz", hash = "sha256:b19c35fcae9688ac01ef75bad5db27300c2537eb4ee00ed07e05d8456a0d4931", size = 107825, upload-time = "2025-12-30T18:44:22.455Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/4b/623435ef9b98e86b6956a41863d39ff4fe4d67983948b5834f55499681dd/cbor2-5.8.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:18ac191640093e6c7fbcb174c006ffec4106c3d8ab788e70272c1c4d933cbe11", size = 69875, upload-time = "2025-12-30T18:43:35.888Z" },
-    { url = "https://files.pythonhosted.org/packages/58/17/f664201080b2a7d0f57c16c8e9e5922013b92f202e294863ec7e75b7ff7f/cbor2-5.8.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:fddee9103a17d7bed5753f0c7fc6663faa506eb953e50d8287804eccf7b048e6", size = 268316, upload-time = "2025-12-30T18:43:37.161Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/e1/072745b4ff01afe9df2cd627f8fc51a1acedb5d3d1253765625d2929db91/cbor2-5.8.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8d2ea26fad620aba5e88d7541be8b10c5034a55db9a23809b7cb49f36803f05b", size = 258874, upload-time = "2025-12-30T18:43:38.878Z" },
-    { url = "https://files.pythonhosted.org/packages/a7/10/61c262b886d22b62c56e8aac6d10fa06d0953c997879ab882a31a624952b/cbor2-5.8.0-cp311-cp311-musllinux_1_2_aarch64.whl", hash = "sha256:de68b4b310b072b082d317adc4c5e6910173a6d9455412e6183d72c778d1f54c", size = 261971, upload-time = "2025-12-30T18:43:40.401Z" },
-    { url = "https://files.pythonhosted.org/packages/7e/42/b7862f5e64364b10ad120ea53e87ec7e891fb268cb99c572348e647cf7e9/cbor2-5.8.0-cp311-cp311-musllinux_1_2_x86_64.whl", hash = "sha256:418d2cf0e03e90160fa1474c05a40fe228bbb4a92d1628bdbbd13a48527cb34d", size = 254151, upload-time = "2025-12-30T18:43:41.938Z" },
-    { url = "https://files.pythonhosted.org/packages/16/6a/8d3636cf75466c18615e7cfac0d345ee3c030f6c79535faed0c2c02b1839/cbor2-5.8.0-cp311-cp311-win_amd64.whl", hash = "sha256:453200ffa1c285ea46ab5745736a015526d41f22da09cb45594624581d959770", size = 69169, upload-time = "2025-12-30T18:43:43.424Z" },
-    { url = "https://files.pythonhosted.org/packages/9b/88/79b205bf869558b39a11de70750cb13679b27ba5654a43bed3f2aee7d1b4/cbor2-5.8.0-cp311-cp311-win_arm64.whl", hash = "sha256:f6615412fca973a8b472b3efc4dab01df71cc13f15d8b2c0a1cffac44500f12d", size = 64955, upload-time = "2025-12-30T18:43:44.7Z" },
-    { url = "https://files.pythonhosted.org/packages/2f/4f/3a16e3e8fd7e5fd86751a4f1aad218a8d19a96e75ec3989c3e95a8fe1d8f/cbor2-5.8.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:4b3f91fa699a5ce22470e973601c62dd9d55dc3ca20ee446516ac075fcab27c9", size = 70270, upload-time = "2025-12-30T18:43:46.005Z" },
-    { url = "https://files.pythonhosted.org/packages/38/81/0d0cf0796fe8081492a61c45278f03def21a929535a492dd97c8438f5dbe/cbor2-5.8.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:518c118a5e00001854adb51f3164e647aa99b6a9877d2a733a28cb5c0a4d6857", size = 286242, upload-time = "2025-12-30T18:43:47.026Z" },
-    { url = "https://files.pythonhosted.org/packages/7b/a9/fdab6c10190cfb8d639e01f2b168f2406fc847a2a6bc00e7de78c3381d0a/cbor2-5.8.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:cff2a1999e49cd51c23d1b6786a012127fd8f722c5946e82bd7ab3eb307443f3", size = 285412, upload-time = "2025-12-30T18:43:48.563Z" },
-    { url = "https://files.pythonhosted.org/packages/31/59/746a8e630996217a3afd523f583fcf7e3d16640d63f9a03f0f4e4f74b5b1/cbor2-5.8.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:4c4492160212374973cdc14e46f0565f2462721ef922b40f7ea11e7d613dfb2a", size = 278041, upload-time = "2025-12-30T18:43:49.92Z" },
-    { url = "https://files.pythonhosted.org/packages/0f/a3/f3bbeb6dedd45c6e0cddd627ea790dea295eaf82c83f0e2159b733365ebd/cbor2-5.8.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:546c7c7c4c6bcdc54a59242e0e82cea8f332b17b4465ae628718fef1fce401ca", size = 278185, upload-time = "2025-12-30T18:43:51.192Z" },
-    { url = "https://files.pythonhosted.org/packages/67/e5/9013d6b857ceb6cdb2851ffb5a887f53f2bab934a528c9d6fa73d9989d84/cbor2-5.8.0-cp312-cp312-win_amd64.whl", hash = "sha256:074f0fa7535dd7fdee247c2c99f679d94f3aa058ccb1ccf4126cc72d6d89cbae", size = 69817, upload-time = "2025-12-30T18:43:52.352Z" },
-    { url = "https://files.pythonhosted.org/packages/a8/ab/7aa94ba3d44ecbc3a97bdb2fb6a8298063fe2e0b611e539a6fe41e36da20/cbor2-5.8.0-cp312-cp312-win_arm64.whl", hash = "sha256:f95fed480b2a0d843f294d2a1ef4cc0f6a83c7922927f9f558e1f5a8dc54b7ca", size = 64923, upload-time = "2025-12-30T18:43:53.719Z" },
-    { url = "https://files.pythonhosted.org/packages/a6/0d/5a3f20bafaefeb2c1903d961416f051c0950f0d09e7297a3aa6941596b29/cbor2-5.8.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:6d8d104480845e2f28c6165b4c961bbe58d08cb5638f368375cfcae051c28015", size = 70332, upload-time = "2025-12-30T18:43:54.694Z" },
-    { url = "https://files.pythonhosted.org/packages/57/66/177a3f089e69db69c987453ab4934086408c3338551e4984734597be9f80/cbor2-5.8.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:43efee947e5ab67d406d6e0dc61b5dee9d2f5e89ae176f90677a3741a20ca2e7", size = 285985, upload-time = "2025-12-30T18:43:55.733Z" },
-    { url = "https://files.pythonhosted.org/packages/b7/8e/9e17b8e4ed80a2ce97e2dfa5915c169dbb31599409ddb830f514b57f96cc/cbor2-5.8.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:be7ae582f50be539e09c134966d0fd63723fc4789b8dff1f6c2e3f24ae3eaf32", size = 285173, upload-time = "2025-12-30T18:43:57.321Z" },
-    { url = "https://files.pythonhosted.org/packages/cc/33/9f92e107d78f88ac22723ac15d0259d220ba98c1d855e51796317f4c4114/cbor2-5.8.0-cp313-cp313-musllinux_1_2_aarch64.whl", hash = "sha256:50f5c709561a71ea7970b4cd2bf9eda4eccacc0aac212577080fdfe64183e7f5", size = 278395, upload-time = "2025-12-30T18:43:58.497Z" },
-    { url = "https://files.pythonhosted.org/packages/2f/3f/46b80050a4a35ce5cf7903693864a9fdea7213567dc8faa6e25cb375c182/cbor2-5.8.0-cp313-cp313-musllinux_1_2_x86_64.whl", hash = "sha256:a6790ecc73aa93e76d2d9076fc42bf91a9e69f2295e5fa702e776dbe986465bd", size = 278330, upload-time = "2025-12-30T18:43:59.656Z" },
-    { url = "https://files.pythonhosted.org/packages/eb/d2/d41f8c04c783a4d204e364be2d38043d4f732a3bed6f4c732e321cf34c7b/cbor2-5.8.0-cp313-cp313-win_amd64.whl", hash = "sha256:c114af8099fa65a19a514db87ce7a06e942d8fea2730afd49be39f8e16e7f5e0", size = 69841, upload-time = "2025-12-30T18:44:01.159Z" },
-    { url = "https://files.pythonhosted.org/packages/1b/8c/0397a82f6e67665009951453c83058e4c77ba54b9a9017ede56d6870306c/cbor2-5.8.0-cp313-cp313-win_arm64.whl", hash = "sha256:ab3ba00494ad8669a459b12a558448d309c271fa4f89b116ad496ee35db38fea", size = 64982, upload-time = "2025-12-30T18:44:02.138Z" },
-    { url = "https://files.pythonhosted.org/packages/d6/4f/101071f880b4da05771128c0b89f41e334cff044dee05fb013c8f4be661c/cbor2-5.8.0-py3-none-any.whl", hash = "sha256:3727d80f539567b03a7aa11890e57798c67092c38df9e6c23abb059e0f65069c", size = 24374, upload-time = "2025-12-30T18:44:21.476Z" },
-]
-
-[[package]]
 name = "certifi"
 version = "2026.1.4"
 source = { registry = "https://pypi.org/simple" }
@@ -1951,20 +1921,6 @@ wheels = [
 ]
 
 [[package]]
-name = "docker"
-version = "7.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "requests" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834, upload-time = "2024-05-23T11:13:57.216Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/26/57c6fb270950d476074c087527a558ccb6f4436657314bfb6cdf484114c4/docker-7.1.0-py3-none-any.whl", hash = "sha256:c96b93b7f0a746f9e77d325bcfb87422a3d8bd4f03136ae8a85b37f1898d5fc0", size = 147774, upload-time = "2024-05-23T11:13:55.01Z" },
-]
-
-[[package]]
 name = "docopt"
 version = "0.6.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2108,15 +2064,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/48/47/75f6bea02e797abff1bca968d5997793898032d9923c1935ae2efdece642/fastapi-0.129.0.tar.gz", hash = "sha256:61315cebd2e65df5f97ec298c888f9de30430dd0612d59d6480beafbc10655af", size = 375450, upload-time = "2026-02-12T13:54:52.541Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/dd/d0ee25348ac58245ee9f90b6f3cbb666bf01f69be7e0911f9851bddbda16/fastapi-0.129.0-py3-none-any.whl", hash = "sha256:b4946880e48f462692b31c083be0432275cbfb6e2274566b1be91479cc1a84ec", size = 102950, upload-time = "2026-02-12T13:54:54.528Z" },
-]
-
-[[package]]
-name = "fastcore"
-version = "1.12.15"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b8/12/fec2fb9131b8d726f4b148f5365a098d9b408e215472085220fab7b9ec7a/fastcore-1.12.15.tar.gz", hash = "sha256:1de1106e2d2fc0369a5054f85152321740676b876cb67d15492801cd29b12e86", size = 92410, upload-time = "2026-02-20T04:59:37.615Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/6f/ae/94bfb935ee72078f1f9772f946418bbc859bbedd4befb212d643d749d918/fastcore-1.12.15-py3-none-any.whl", hash = "sha256:4fc9462093ed3eaff990cf81b956d2bd760fa0e1ac02e5129900f48b484ab4d9", size = 96629, upload-time = "2026-02-20T04:59:35.77Z" },
 ]
 
 [[package]]
@@ -2381,19 +2328,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/16/04/8543131a1186a4020a1aeaa0b88b72fb70f44a975a5d321603002d547c93/galileo_core-3.95.1.tar.gz", hash = "sha256:7e8d7cc69ac8e5e00a1e9fc2e4105fc7fdd35e91f42cef7d04ab80f386988f89", size = 64276, upload-time = "2026-02-19T17:10:49.08Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/97/e1/af3af240577ad753f76deeb9531246f0d9834ccef9edcf631516277569dc/galileo_core-3.95.1-py3-none-any.whl", hash = "sha256:c1b1920a18ad833424994af68e98ab7de8ad0f802ee814417d80c227996f42eb", size = 106570, upload-time = "2026-02-19T17:10:47.698Z" },
-]
-
-[[package]]
-name = "ghapi"
-version = "1.0.10"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "fastcore" },
-    { name = "packaging" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/97/b8/aa96c699dbdf99f1f9d2cceba7f75280d4ed3cfe873de2cb220fcde29567/ghapi-1.0.10.tar.gz", hash = "sha256:3a4d35e2da90a861c9b257f2ae509a8c103fd46ca5b3ed6bab8e72c9a519386c", size = 74732, upload-time = "2026-01-20T03:45:23.399Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f4/23/68c1fef6552274f5cecda56667c473bb1eefb62f385f4515df44546c3f50/ghapi-1.0.10-py3-none-any.whl", hash = "sha256:3feeda6b174dbe9320912956b0e0e2b306d85245ca9dd961fe8d3ea9b157d01d", size = 71542, upload-time = "2026-01-20T03:45:21.459Z" },
 ]
 
 [[package]]
@@ -3218,19 +3152,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8a/cd/89ce482a931b543b92cdd9b2888805518c4620e0094409acb8c81dd4610a/grpcio_status-1.78.0.tar.gz", hash = "sha256:a34cfd28101bfea84b5aa0f936b4b423019e9213882907166af6b3bddc59e189", size = 13808, upload-time = "2026-02-06T10:01:48.034Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/83/8a/1241ec22c41028bddd4a052ae9369267b4475265ad0ce7140974548dc3fa/grpcio_status-1.78.0-py3-none-any.whl", hash = "sha256:b492b693d4bf27b47a6c32590701724f1d3b9444b36491878fb71f6208857f34", size = 14523, upload-time = "2026-02-06T10:01:32.584Z" },
-]
-
-[[package]]
-name = "grpclib"
-version = "0.4.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "h2" },
-    { name = "multidict" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/28/5a2c299ec82a876a252c5919aa895a6f1d1d35c96417c5ce4a4660dc3a80/grpclib-0.4.9.tar.gz", hash = "sha256:cc589c330fa81004c6400a52a566407574498cb5b055fa927013361e21466c46", size = 84798, upload-time = "2025-12-14T22:23:14.349Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/90/b0cbbd9efcc82816c58f31a34963071aa19fb792a212a5d9caf8e0fc3097/grpclib-0.4.9-py3-none-any.whl", hash = "sha256:7762ec1c8ed94dfad597475152dd35cbd11aecaaca2f243e29702435ca24cf0e", size = 77063, upload-time = "2025-12-14T22:23:13.224Z" },
 ]
 
 [[package]]
@@ -5354,32 +5275,6 @@ wheels = [
 ]
 
 [[package]]
-name = "modal"
-version = "1.3.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "aiohttp" },
-    { name = "cbor2" },
-    { name = "certifi" },
-    { name = "click" },
-    { name = "grpclib" },
-    { name = "protobuf", version = "5.29.6", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-autogen' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "protobuf", version = "6.33.5", source = { registry = "https://pypi.org/simple" }, marker = "(extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra != 'extra-10-nvidia-nat-most') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "rich" },
-    { name = "synchronicity" },
-    { name = "toml" },
-    { name = "typer" },
-    { name = "types-certifi" },
-    { name = "types-toml" },
-    { name = "typing-extensions" },
-    { name = "watchfiles" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a7/af/ba0e202391df212156497cccd89a4ede5a3f4c35af9dadcb58ed3c2e7f92/modal-1.3.3.tar.gz", hash = "sha256:082678664817425dda59190fdfc6330903ebcaf721a36c8f8c1e6c2a2524a5f6", size = 671199, upload-time = "2026-02-12T16:08:46.105Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/cd/29/d3c8624c2a9cf79e951062e2f7497496ae001d7ab600276cd726cb5c76c1/modal-1.3.3-py3-none-any.whl", hash = "sha256:aacd6d2f0b2ebe442abd25d81810dd5df504c092d787b35a7a37165a3d8a0f5f", size = 770209, upload-time = "2026-02-12T16:08:44.157Z" },
-]
-
-[[package]]
 name = "more-itertools"
 version = "10.8.0"
 source = { registry = "https://pypi.org/simple" }
@@ -5781,6 +5676,7 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "networkx" },
     { name = "nvidia-nat", extra = ["eval", "langchain", "phoenix", "test"] },
+    { name = "nvidia-nat-profiler" },
     { name = "openinference-instrumentation-langchain" },
 ]
 
@@ -5789,6 +5685,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = "~=4.13" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "nvidia-nat", extras = ["eval", "langchain", "phoenix", "test"], editable = "." },
+    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
     { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
 ]
 
@@ -5913,7 +5810,8 @@ dependencies = [
     { name = "nat-alert-triage-agent" },
     { name = "nat-simple-calculator" },
     { name = "nbclient" },
-    { name = "nvidia-nat", extra = ["langchain", "llama-index", "mcp", "profiling", "test"] },
+    { name = "nvidia-nat", extra = ["langchain", "llama-index", "mcp", "test"] },
+    { name = "nvidia-nat-profiler" },
     { name = "python-dotenv", extra = ["cli"] },
 ]
 
@@ -5924,7 +5822,8 @@ requires-dist = [
     { name = "nat-alert-triage-agent", editable = "examples/advanced_agents/alert_triage_agent" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nbclient", specifier = "~=0.10" },
-    { name = "nvidia-nat", extras = ["langchain", "llama-index", "mcp", "profiling", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["langchain", "llama-index", "mcp", "test"], editable = "." },
+    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
     { name = "python-dotenv", extras = ["cli"], specifier = "~=1.1.1" },
 ]
 
@@ -5982,11 +5881,15 @@ requires-dist = [
 name = "nat-react-benchmark-agent"
 source = { editable = "examples/dynamo_integration/react_benchmark_agent" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["eval", "langchain", "profiling", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-profiler" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "profiling", "test"], editable = "." }]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
+]
 
 [[package]]
 name = "nat-redis-example"
@@ -6117,12 +6020,14 @@ source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval"
 dependencies = [
     { name = "nat-simple-calculator" },
     { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-profiler" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
 ]
 
 [[package]]
@@ -6258,38 +6163,30 @@ name = "nat-simple-web-query-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_web_query_eval" }
 dependencies = [
     { name = "nat-simple-web-query" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "profiling", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-profiler" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-web-query", editable = "examples/getting_started/simple_web_query" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "profiling", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
 ]
 
 [[package]]
 name = "nat-strands-demo"
 source = { editable = "examples/frameworks/strands_demo" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["eval", "langchain", "profiling", "test"] },
-    { name = "nvidia-nat", extra = ["strands"], marker = "extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai')" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "profiling", "strands", "test"], editable = "." }]
-
-[[package]]
-name = "nat-swe-bench"
-source = { editable = "examples/evaluation_and_profiling/swe_bench" }
-dependencies = [
     { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
-    { name = "swebench" },
+    { name = "nvidia-nat", extra = ["strands"], marker = "extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai')" },
+    { name = "nvidia-nat-profiler" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
-    { name = "swebench", specifier = "==3.0.3" },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "strands", "test"], editable = "." },
+    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
 ]
 
 [[package]]
@@ -6621,7 +6518,6 @@ examples = [
     { name = "nat-simple-web-query" },
     { name = "nat-simple-web-query-eval" },
     { name = "nat-strands-demo" },
-    { name = "nat-swe-bench" },
     { name = "nat-user-report" },
     { name = "text-file-ingest" },
 ]
@@ -6652,7 +6548,7 @@ most = [
     { name = "nvidia-nat-core", extra = ["async-endpoints", "gunicorn", "pii-defense"], marker = "extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "nvidia-nat-crewai" },
     { name = "nvidia-nat-data-flywheel" },
-    { name = "nvidia-nat-eval", extra = ["profiling"], marker = "extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
+    { name = "nvidia-nat-eval" },
     { name = "nvidia-nat-fastmcp" },
     { name = "nvidia-nat-langchain" },
     { name = "nvidia-nat-llama-index" },
@@ -6662,8 +6558,11 @@ most = [
     { name = "nvidia-nat-nemo-customizer" },
     { name = "nvidia-nat-opentelemetry" },
     { name = "nvidia-nat-phoenix" },
+    { name = "nvidia-nat-profiler" },
+    { name = "nvidia-nat-ragas" },
     { name = "nvidia-nat-redis" },
     { name = "nvidia-nat-s3" },
+    { name = "nvidia-nat-security" },
     { name = "nvidia-nat-semantic-kernel" },
     { name = "nvidia-nat-strands" },
     { name = "nvidia-nat-test" },
@@ -6689,8 +6588,11 @@ phoenix = [
 pii-defense = [
     { name = "nvidia-nat-core", extra = ["pii-defense"] },
 ]
+profiler = [
+    { name = "nvidia-nat-profiler" },
+]
 profiling = [
-    { name = "nvidia-nat-eval", extra = ["profiling"] },
+    { name = "nvidia-nat-profiler" },
 ]
 rag = [
     { name = "nvidia-nat-rag" },
@@ -6703,6 +6605,9 @@ redis = [
 ]
 s3 = [
     { name = "nvidia-nat-s3" },
+]
+security = [
+    { name = "nvidia-nat-security" },
 ]
 semantic-kernel = [
     { name = "nvidia-nat-semantic-kernel" },
@@ -6799,7 +6704,6 @@ requires-dist = [
     { name = "nat-simple-web-query", marker = "extra == 'examples'", editable = "examples/getting_started/simple_web_query" },
     { name = "nat-simple-web-query-eval", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/simple_web_query_eval" },
     { name = "nat-strands-demo", marker = "extra == 'examples'", editable = "examples/frameworks/strands_demo" },
-    { name = "nat-swe-bench", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/swe_bench" },
     { name = "nat-user-report", marker = "extra == 'examples'", editable = "examples/object_store/user_report" },
     { name = "nvidia-nat-a2a", marker = "extra == 'a2a'", editable = "packages/nvidia_nat_a2a" },
     { name = "nvidia-nat-a2a", marker = "extra == 'most'", editable = "packages/nvidia_nat_a2a" },
@@ -6822,8 +6726,7 @@ requires-dist = [
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'most'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-eval", marker = "extra == 'eval'", editable = "packages/nvidia_nat_eval" },
-    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'most'", editable = "packages/nvidia_nat_eval" },
-    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'profiling'", editable = "packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-eval", marker = "extra == 'most'", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'fastmcp'", editable = "packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'most'", editable = "packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
@@ -6843,12 +6746,18 @@ requires-dist = [
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'most'", editable = "packages/nvidia_nat_phoenix" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'phoenix'", editable = "packages/nvidia_nat_phoenix" },
+    { name = "nvidia-nat-profiler", marker = "extra == 'most'", editable = "packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat-profiler", marker = "extra == 'profiler'", editable = "packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat-profiler", marker = "extra == 'profiling'", editable = "packages/nvidia_nat_profiler" },
     { name = "nvidia-nat-rag", marker = "extra == 'rag'", editable = "packages/nvidia_nat_rag" },
     { name = "nvidia-nat-ragaai", marker = "extra == 'ragaai'", editable = "packages/nvidia_nat_ragaai" },
+    { name = "nvidia-nat-ragas", marker = "extra == 'most'", editable = "packages/nvidia_nat_ragas" },
     { name = "nvidia-nat-redis", marker = "extra == 'most'", editable = "packages/nvidia_nat_redis" },
     { name = "nvidia-nat-redis", marker = "extra == 'redis'", editable = "packages/nvidia_nat_redis" },
     { name = "nvidia-nat-s3", marker = "extra == 'most'", editable = "packages/nvidia_nat_s3" },
     { name = "nvidia-nat-s3", marker = "extra == 's3'", editable = "packages/nvidia_nat_s3" },
+    { name = "nvidia-nat-security", marker = "extra == 'most'", editable = "packages/nvidia_nat_security" },
+    { name = "nvidia-nat-security", marker = "extra == 'security'", editable = "packages/nvidia_nat_security" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'most'", editable = "packages/nvidia_nat_semantic_kernel" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "packages/nvidia_nat_semantic_kernel" },
     { name = "nvidia-nat-strands", marker = "extra == 'most'", editable = "packages/nvidia_nat_strands" },
@@ -6863,7 +6772,7 @@ requires-dist = [
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "examples/documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "adk", "agno", "app", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "rag", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
+provides-extras = ["a2a", "adk", "agno", "app", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -7126,25 +7035,15 @@ dependencies = [
     { name = "openpyxl" },
 ]
 
-[package.optional-dependencies]
-profiling = [
-    { name = "matplotlib" },
-    { name = "prefixspan" },
-    { name = "scikit-learn" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "datasets", specifier = "~=4.4" },
-    { name = "matplotlib", marker = "extra == 'profiling'", specifier = "~=3.9" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "openpyxl", specifier = "~=3.1" },
-    { name = "prefixspan", marker = "extra == 'profiling'", specifier = "~=0.5.2" },
-    { name = "scikit-learn", marker = "extra == 'profiling'", specifier = "~=1.6" },
 ]
-provides-extras = ["profiling", "test"]
+provides-extras = ["test"]
 
 [[package]]
 name = "nvidia-nat-fastmcp"
@@ -7377,6 +7276,28 @@ requires-dist = [
 provides-extras = ["test"]
 
 [[package]]
+name = "nvidia-nat-profiler"
+source = { editable = "packages/nvidia_nat_profiler" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "nvidia-nat-core" },
+    { name = "nvidia-nat-eval" },
+    { name = "prefixspan" },
+    { name = "scikit-learn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "matplotlib", specifier = "~=3.9" },
+    { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-eval", editable = "packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
+    { name = "prefixspan", specifier = "~=0.5.2" },
+    { name = "scikit-learn", specifier = "~=1.6" },
+]
+provides-extras = ["test"]
+
+[[package]]
 name = "nvidia-nat-rag"
 source = { editable = "packages/nvidia_nat_rag" }
 dependencies = [
@@ -7422,6 +7343,24 @@ requires-dist = [
 provides-extras = ["test"]
 
 [[package]]
+name = "nvidia-nat-ragas"
+source = { editable = "packages/nvidia_nat_ragas" }
+dependencies = [
+    { name = "nvidia-nat-core" },
+    { name = "nvidia-nat-eval" },
+    { name = "ragas" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-eval", editable = "packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
+    { name = "ragas", specifier = "~=0.2.14" },
+]
+provides-extras = ["test"]
+
+[[package]]
 name = "nvidia-nat-redis"
 source = { editable = "packages/nvidia_nat_redis" }
 dependencies = [
@@ -7449,6 +7388,22 @@ dependencies = [
 requires-dist = [
     { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
+]
+provides-extras = ["test"]
+
+[[package]]
+name = "nvidia-nat-security"
+source = { editable = "packages/nvidia_nat_security" }
+dependencies = [
+    { name = "nvidia-nat-core" },
+    { name = "nvidia-nat-eval" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-eval", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
 ]
 provides-extras = ["test"]
@@ -10318,6 +10273,29 @@ wheels = [
 ]
 
 [[package]]
+name = "ragas"
+version = "0.2.15"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "appdirs" },
+    { name = "datasets" },
+    { name = "diskcache" },
+    { name = "langchain" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+    { name = "langchain-openai" },
+    { name = "nest-asyncio" },
+    { name = "numpy" },
+    { name = "openai" },
+    { name = "pydantic" },
+    { name = "tiktoken" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/6c/0f/04fddfa94744b1c3d8901aed8832a6b4193cc8e4886881f1bb88ff055350/ragas-0.2.15.tar.gz", hash = "sha256:2d0cd77b315a9c9c02ceb0a19ca8a48e82e1d02416587a2944ea51e6e327cd7b", size = 40867766, upload-time = "2025-04-24T16:39:28.734Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f2/9b/a5641da8aab06e069885a9ffa1b4897878f14c5b9807a9e3c5f1f532a6a9/ragas-0.2.15-py3-none-any.whl", hash = "sha256:298cd3d1fe3bd21ca4d31023a55079740d7bdd27a8c915bb371cec3c50cde608", size = 190947, upload-time = "2025-04-24T16:39:25.841Z" },
+]
+
+[[package]]
 name = "readme-renderer"
 version = "44.0"
 source = { registry = "https://pypi.org/simple" }
@@ -11533,32 +11511,6 @@ wheels = [
 ]
 
 [[package]]
-name = "swebench"
-version = "3.0.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "chardet" },
-    { name = "datasets" },
-    { name = "docker" },
-    { name = "ghapi" },
-    { name = "gitpython" },
-    { name = "modal" },
-    { name = "pre-commit" },
-    { name = "python-dotenv" },
-    { name = "requests" },
-    { name = "rich" },
-    { name = "tenacity", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "tenacity", version = "9.1.4", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or extra != 'extra-10-nvidia-nat-ragaai' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "tqdm" },
-    { name = "unidiff" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/74/e3/e3c86e6261af3b061dd266b6ddc9ee482ed96e30eb4eaaa161267e55c5e5/swebench-3.0.3.tar.gz", hash = "sha256:d1ce1b3b51a0b597a9a3b90b8f3dab55734b3254b81dc0482670c93832d32c0d", size = 105834, upload-time = "2025-01-17T17:57:43.299Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/47/cc43b65039d1e180cb5e60a261ae56fc70dec9c489d4bac92bbb2be2f589/swebench-3.0.3-py3-none-any.whl", hash = "sha256:7805ec685fcddc22ba5925590de0b7f8179be0ee6eba8bea09cfb891875d8fcf", size = 123423, upload-time = "2025-01-17T17:57:40.657Z" },
-]
-
-[[package]]
 name = "sympy"
 version = "1.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -11568,18 +11520,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/83/d3/803453b36afefb7c2bb238361cd4ae6125a569b4db67cd9e79846ba2d68c/sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517", size = 7793921, upload-time = "2025-04-27T18:05:01.611Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5", size = 6299353, upload-time = "2025-04-27T18:04:59.103Z" },
-]
-
-[[package]]
-name = "synchronicity"
-version = "0.11.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/a3/26/8874d34755691994266d4a844ba8d53d10c2690ec67f246ca4d6b6f34cbb/synchronicity-0.11.1.tar.gz", hash = "sha256:3628df9ab34bd7be89b729104114841c62612c5d5ec43b76f4b7b243185ec1a8", size = 58131, upload-time = "2025-12-19T18:28:42.291Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/3f/b9/71153db12f4ad029cfe9b7fbf9792ef3fc9ade4485d31a13470b52954e62/synchronicity-0.11.1-py3-none-any.whl", hash = "sha256:53959c7f8b9b852fb5ea4d3d290a47a04310ede483a4cf0f8452cb4b5fa09db2", size = 40399, upload-time = "2025-12-19T18:28:40.972Z" },
 ]
 
 [[package]]
@@ -11827,15 +11767,6 @@ wheels = [
 ]
 
 [[package]]
-name = "toml"
-version = "0.10.2"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/be/ba/1f744cdc819428fc6b5084ec34d9b30660f6f9daaf70eead706e3203ec3c/toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f", size = 22253, upload-time = "2020-11-01T01:40:22.204Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b", size = 16588, upload-time = "2020-11-01T01:40:20.672Z" },
-]
-
-[[package]]
 name = "tomli"
 version = "2.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -12016,24 +11947,6 @@ wheels = [
 ]
 
 [[package]]
-name = "types-certifi"
-version = "2021.10.8.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/52/68/943c3aeaf14624712a0357c4a67814dba5cea36d194f5c764dad7959a00c/types-certifi-2021.10.8.3.tar.gz", hash = "sha256:72cf7798d165bc0b76e1c10dd1ea3097c7063c42c21d664523b928e88b554a4f", size = 2095, upload-time = "2022-06-09T15:19:05.244Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b5/63/2463d89481e811f007b0e1cd0a91e52e141b47f9de724d20db7b861dcfec/types_certifi-2021.10.8.3-py3-none-any.whl", hash = "sha256:b2d1e325e69f71f7c78e5943d410e650b4707bb0ef32e4ddf3da37f54176e88a", size = 2136, upload-time = "2022-06-09T15:19:03.127Z" },
-]
-
-[[package]]
-name = "types-toml"
-version = "0.10.8.20240310"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/86/47/3e4c75042792bff8e90d7991aa5c51812cc668828cc6cce711e97f63a607/types-toml-0.10.8.20240310.tar.gz", hash = "sha256:3d41501302972436a6b8b239c850b26689657e25281b48ff0ec06345b8830331", size = 4392, upload-time = "2024-03-10T02:18:37.518Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/a2/d32ab58c0b216912638b140ab2170ee4b8644067c293b170e19fba340ccc/types_toml-0.10.8.20240310-py3-none-any.whl", hash = "sha256:627b47775d25fa29977d9c70dc0cbab3f314f32c8d8d0c012f2ef5de7aaec05d", size = 4777, upload-time = "2024-03-10T02:18:36.568Z" },
-]
-
-[[package]]
 name = "typing-extensions"
 version = "4.15.0"
 source = { registry = "https://pypi.org/simple" }
@@ -12086,15 +11999,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/8b/2e/c14812d3d4d9cd1773c6be938f89e5735a1f11a9f184ac3639b93cef35d5/tzlocal-5.3.1.tar.gz", hash = "sha256:cceffc7edecefea1f595541dbd6e990cb1ea3d19bf01b2809f362a03dd7921fd", size = 30761, upload-time = "2025-03-05T21:17:41.549Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c2/14/e2a54fabd4f08cd7af1c07030603c3356b74da07f7cc056e600436edfa17/tzlocal-5.3.1-py3-none-any.whl", hash = "sha256:eb1a66c3ef5847adf7a834f1be0800581b683b5608e74f86ecbcef8ab91bb85d", size = 18026, upload-time = "2025-03-05T21:17:39.857Z" },
-]
-
-[[package]]
-name = "unidiff"
-version = "0.7.5"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a3/48/81be0ac96e423a877754153699731ef439fd7b80b4c8b5425c94ed079ebd/unidiff-0.7.5.tar.gz", hash = "sha256:2e5f0162052248946b9f0970a40e9e124236bf86c82b70821143a6fc1dea2574", size = 20931, upload-time = "2023-03-10T01:05:39.185Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/54/57c411a6e8f7bd7848c8b66e4dcaffa586bf4c02e63f2280db0327a4e6eb/unidiff-0.7.5-py2.py3-none-any.whl", hash = "sha256:c93bf2265cc1ba2a520e415ab05da587370bc2a3ae9e0414329f54f0c2fc09e8", size = 14386, upload-time = "2023-03-10T01:05:36.594Z" },
 ]
 
 [[package]]
