@@ -33,6 +33,7 @@ class CurrentTimeToolConfig(FunctionBaseConfig, name="current_datetime"):
     """
     pass
 
+
 class CurrentTimeZoneToolConfig(FunctionBaseConfig, name="current_timezone"):
     """
     Simple tool which returns the name of the current timezone.
@@ -51,6 +52,7 @@ def _get_timezone_from_headers(headers: Headers | None) -> zoneinfo.ZoneInfo | N
 
     return None
 
+
 def _get_system_timezone(fallback_tz: str = "Etc/UTC") -> zoneinfo.ZoneInfo:
     # Use the system's local timezone. Avoid requiring external deps.
     import tzlocal
@@ -66,12 +68,13 @@ def _get_system_timezone(fallback_tz: str = "Etc/UTC") -> zoneinfo.ZoneInfo:
 
     return local_tz
 
+
 def _get_timezone_obj(headers: Headers | None) -> zoneinfo.ZoneInfo:
     timezone_obj = None
     timezone_header_obj = _get_timezone_from_headers(headers)
     if timezone_header_obj:
         timezone_obj = timezone_header_obj
-    
+
     if timezone_obj is None:
         # Only if a timezone is not in the header, we will determine default timezone based on global settings
         fallback_tz = GlobalSettings.get().fallback_timezone
@@ -107,6 +110,7 @@ async def current_datetime(_config: CurrentTimeToolConfig, _builder: Builder):
     yield FunctionInfo.from_fn(
         _get_current_time,
         description="Returns the current date and time in human readable format with timezone information.")
+
 
 @register_function(config_type=CurrentTimeZoneToolConfig)
 async def current_timezone(_config: CurrentTimeZoneToolConfig, _builder: Builder):
