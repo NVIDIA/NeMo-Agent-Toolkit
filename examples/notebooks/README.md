@@ -42,7 +42,7 @@ To open these notebooks in a Google Colab environment, you can click the followi
 If you want to run these notebooks locally, you can clone the repository and open the notebooks in a Jupyter Lab environment. To install the necessary dependencies, you can run the following command:
 
 ```bash
-uv venv --seed .venv
+uv venv -p 3.13 --seed .venv
 source .venv/bin/activate
 uv pip install jupyterlab
 ```

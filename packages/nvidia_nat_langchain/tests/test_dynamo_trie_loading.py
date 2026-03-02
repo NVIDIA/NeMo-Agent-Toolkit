@@ -64,10 +64,10 @@ def test_dynamo_config_with_valid_trie_path(trie_file):
         base_url="http://localhost:8000/v1",
         model_name="test-model",
         api_key="test-key",
-        prediction_trie_path=trie_file,
+        nvext_prediction_trie_path=trie_file,
     )
 
-    assert config.prediction_trie_path == trie_file
+    assert config.nvext_prediction_trie_path == trie_file
 
 
 def test_dynamo_config_with_nonexistent_trie_path():
@@ -76,11 +76,11 @@ def test_dynamo_config_with_nonexistent_trie_path():
         base_url="http://localhost:8000/v1",
         model_name="test-model",
         api_key="test-key",
-        prediction_trie_path="/nonexistent/path/trie.json",
+        nvext_prediction_trie_path="/nonexistent/path/trie.json",
     )
 
     # Config creation should succeed; error happens at runtime
-    assert config.prediction_trie_path == "/nonexistent/path/trie.json"
+    assert config.nvext_prediction_trie_path == "/nonexistent/path/trie.json"
 
 
 @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
@@ -95,8 +95,9 @@ async def test_dynamo_langchain_loads_trie_and_passes_to_client(mock_chat, mock_
         base_url="http://localhost:8000/v1",
         model_name="test-model",
         api_key="test-key",
-        prefix_template="test-{uuid}",
-        prediction_trie_path=trie_file,
+        enable_nvext_hints=True,
+        nvext_prefix_id_template="test-{uuid}",
+        nvext_prediction_trie_path=trie_file,
     )
 
     async with dynamo_langchain(config, mock_builder):
@@ -121,8 +122,9 @@ async def test_dynamo_langchain_handles_nonexistent_trie_gracefully(mock_chat, m
         base_url="http://localhost:8000/v1",
         model_name="test-model",
         api_key="test-key",
-        prefix_template="test-{uuid}",
-        prediction_trie_path="/nonexistent/path/trie.json",
+        enable_nvext_hints=True,
+        nvext_prefix_id_template="test-{uuid}",
+        nvext_prediction_trie_path="/nonexistent/path/trie.json",
     )
 
     # Should not raise an exception
@@ -147,7 +149,8 @@ async def test_dynamo_langchain_no_trie_path_means_no_lookup(mock_chat, mock_cre
         base_url="http://localhost:8000/v1",
         model_name="test-model",
         api_key="test-key",
-        prefix_template="test-{uuid}",  # prediction_trie_path is None by default
+        enable_nvext_hints=True,
+        nvext_prefix_id_template="test-{uuid}",  # nvext_prediction_trie_path is None by default
     )
 
     async with dynamo_langchain(config, mock_builder):
@@ -175,8 +178,9 @@ async def test_dynamo_langchain_handles_invalid_trie_file_gracefully(mock_chat, 
             base_url="http://localhost:8000/v1",
             model_name="test-model",
             api_key="test-key",
-            prefix_template="test-{uuid}",
-            prediction_trie_path=invalid_trie_path,
+            enable_nvext_hints=True,
+            nvext_prefix_id_template="test-{uuid}",
+            nvext_prediction_trie_path=invalid_trie_path,
         )
 
         # Should not raise an exception

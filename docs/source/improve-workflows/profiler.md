@@ -162,6 +162,8 @@ eval:
         w_critical: 0.5
         w_fanout: 0.3
         w_position: 0.2
+        # Penalty for LLM calls that run in parallel with longer siblings (default 0.0)
+        w_parallel: 0.0
 
   evaluators:
     accuracy:
@@ -233,6 +235,8 @@ When `auto_sensitivity` is enabled (the default), the profiler automatically det
 
 **User-facing position** (`w_position`, default 0.2): First and last calls in a workflow get boosted sensitivity because they directly affect perceived latency (time-to-first-activity and time-to-final-answer).
 
+**Parallel sibling slack** (`w_parallel`, default 0.0): When an LLM call runs concurrently with a longer sibling task (e.g., a database query or tool call), the LLM call is not on the critical path — the parent waits for the slowest child. The profiler detects this by grouping spans under the same parent and computing how much "slack" the LLM call has relative to its longest overlapping sibling. A call entirely shadowed by a 5x longer sibling gets a slack ratio near 1.0, while a call that is itself the longest sibling gets 0.0. This signal is subtracted from the composite score, reducing sensitivity for calls that have room to be slower without affecting overall latency. Set `w_parallel` to a positive value (e.g., 0.2–0.3) to enable this signal.
+
 These signals are normalized to [0, 1], combined with the configured weights, and mapped to an integer scale from 1 to `sensitivity_scale`. The result is stored alongside each prediction in the `trie`.
 
 #### Override behavior
@@ -260,6 +264,7 @@ profiler:
     w_critical: 0.5            # Weight for critical path signal
     w_fanout: 0.3              # Weight for fan-out signal
     w_position: 0.2            # Weight for position signal
+    w_parallel: 0.0            # Penalty for parallel sibling slack (0.0 = disabled)
 ```
 
 After running `nat eval`, the profiler writes `prediction_trie.json` to your output directory.

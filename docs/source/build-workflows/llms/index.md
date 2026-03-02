@@ -29,8 +29,8 @@ NVIDIA NeMo Agent Toolkit supports the following LLM providers:
 | [AWS Bedrock](https://aws.amazon.com/bedrock/) | `aws_bedrock` | AWS Bedrock API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
 | [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
-| [HuggingFace](https://huggingface.co) | `huggingface` | HuggingFace API |
-| [HuggingFace Inference](https://huggingface.co/docs/api-inference) | `huggingface_inference` | HuggingFace Inference API, Endpoints, and TGI |
+| [Hugging Face](https://huggingface.co) | `huggingface` | Hugging Face API |
+| [Hugging Face Inference](https://huggingface.co/docs/api-inference) | `huggingface_inference` | Hugging Face Inference API, Endpoints, and TGI |
 
 
 ## LLM Configuration
@@ -156,14 +156,14 @@ The LiteLLM LLM provider is defined by the {py:class}`~nat.llm.litellm_llm.LiteL
 * `top_p` - The top-p value to use for the model
 * `max_retries` - The maximum number of retries for the request
 
-### HuggingFace
+### Hugging Face
 
-HuggingFace is a general-purpose LLM provider that can be used with any model supported by the HuggingFace API.
-See the [HuggingFace documentation](https://huggingface.co/docs) for more information.
+Hugging Face is a general-purpose LLM provider that can be used with any model supported by the Hugging Face API.
+See the [Hugging Face documentation](https://huggingface.co/docs) for more information.
 
-The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_llm.HuggingFaceConfig` class.
+The Hugging Face LLM provider is defined by the {py:class}`~nat.llm.huggingface_llm.HuggingFaceConfig` class.
 
-* `model_name` - The HuggingFace model name or path (for example, `Qwen/Qwen3Guard-Gen-0.6B`)
+* `model_name` - The Hugging Face model name or path (for example, `Qwen/Qwen3Guard-Gen-0.6B`)
 * `device` - Device for model execution: `cpu`, `cuda`, `cuda:0`, or `auto` (default: `auto`)
 * `dtype` - Torch data type: `float16`, `bfloat16`, `float32`, or `auto` (default: `auto`)
 * `max_new_tokens` - Maximum number of new tokens to generate (default: `128`)
@@ -171,24 +171,24 @@ The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_l
 * `trust_remote_code` - Whether to trust remote code when loading the model (default: `false`)
 
 :::{note}
-HuggingFace is a built-in NeMo Agent Toolkit LLM provider, but requires extra dependencies to run. They can be installed with:
+Hugging Face is a built-in NeMo Agent Toolkit LLM provider, but requires extra dependencies to run. They can be installed with:
 ```
 pip install "transformers[torch,accelerate]~=4.57"
 ```
 :::
 
-### HuggingFace Inference
+### Hugging Face Inference
 
-HuggingFace Inference is an LLM provider for remote model inference via the HuggingFace Serverless Inference API, Dedicated Inference Endpoints, or self-hosted TGI servers.
+Hugging Face Inference is an LLM provider for remote model inference via the Hugging Face Serverless Inference API, Dedicated Inference Endpoints, or self-hosted TGI servers.
 
-You can use the following environment variables to configure the HuggingFace Inference LLM provider:
+You can use the following environment variables to configure the Hugging Face Inference LLM provider:
 
-* `HF_TOKEN` - The API token to access HuggingFace Inference resources
+* `HF_TOKEN` - The API token to access Hugging Face Inference resources
 
-The HuggingFace Inference LLM provider is defined by the {py:class}`~nat.llm.huggingface_inference_llm.HuggingFaceInferenceLLMConfig` class.
+The Hugging Face Inference LLM provider is defined by the {py:class}`~nat.llm.huggingface_inference_llm.HuggingFaceInferenceLLMConfig` class.
 
-* `model_name` - The HuggingFace model identifier (for example, `meta-llama/Llama-3.2-8B-Instruct`)
-* `api_key` - The HuggingFace API token for authentication
+* `model_name` - The Hugging Face model identifier (for example, `meta-llama/Llama-3.2-8B-Instruct`)
+* `api_key` - The Hugging Face API token for authentication
 * `endpoint_url` - Custom endpoint URL for Inference Endpoints or self-hosted TGI servers. If not provided, uses Serverless API
 * `max_new_tokens` - Maximum number of new tokens to generate (default: `512`)
 * `temperature` - Sampling temperature (default: `0.7`)

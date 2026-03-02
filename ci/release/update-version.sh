@@ -54,7 +54,7 @@ function sed_runner() {
 # Currently only the pypi.md file for the nvidia-nat package contains links to documentation
 # Replace this with a `find ./ -name "pypi.md"` if this is needed for the other pypi.md files
 if [[ -z "${SKIP_MD_UPDATE}" ]]; then
-   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" src/nat/meta/pypi.md
+   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" packages/nvidia_nat_core/src/nat/meta/pypi.md
 fi
 
 mapfile -t NAT_NOTEBOOKS < <(find ./examples/notebooks -name "*.ipynb" | sort)
@@ -72,27 +72,6 @@ fi
 
 # Change directory to the repo root
 pushd "${PROJECT_ROOT}" &> /dev/null
-
-# Update the dependencies that the examples and packages depend on nvidia-nat, we are explicitly specifying the
-# `examples` and `packages` directories in order to avoid accidentally updating toml files of third-party packages in
-# the `.venv` directory, and updating the root pyproject.toml file. The sort is not really needed, but it makes the
-# output deterministic and easier to read.
-NAT_PACKAGE_TOMLS=($(find ./packages -name "pyproject.toml" | sort ))
-NAT_EXAMPLE_TOMLS=($(find ./examples -name "pyproject.toml" | sort ))
-
-for TOML_FILE in ${NAT_EXAMPLE_TOMLS[@]}; do
-    ${CUR_DIR}/update_toml_dep.py \
-      --toml-file-path=${TOML_FILE} \
-      --new-version="${NAT_VERSION}" \
-      --version-match="${VERSION_MATCH}"
-done
-
-for TOML_FILE in "${NAT_PACKAGE_TOMLS[@]}"; do
-    ${CUR_DIR}/update_toml_dep.py \
-      --toml-file-path=${TOML_FILE} \
-      --new-version="${NAT_VERSION}" \
-      --version-match="${VERSION_MATCH}"
-done
 
 # Update the documentation versions1.json file
 if [[ -z "${SKIP_MD_UPDATE}" ]]; then

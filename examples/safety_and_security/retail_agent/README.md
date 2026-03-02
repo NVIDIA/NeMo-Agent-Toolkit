@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# NeMo Agent Safety and Security Engine (NASSE)
+# NeMo Agent Toolkit Safety and Security
 
 **Complexity:** 🛑 Advanced
 
@@ -24,14 +24,14 @@ limitations under the License.
 ---
 
 ## Table of Contents
-- [NeMo Agent Safety and Security Engine (NASSE)](#nemo-agent-safety-and-security-engine-nasse)
+- [NeMo Agent Toolkit Safety and Security](#nemo-agent-toolkit-safety-and-security)
   - [Demonstrated Through Retail Agent Example](#demonstrated-through-retail-agent-example)
 - [Table of Contents](#table-of-contents)
 - [Introduction](#introduction)
-- [Why We Need a Safety and Security Framework](#why-we-need-a-safety-and-security-framework)
+- [Why We Need Safety and Security](#why-we-need-safety-and-security)
   - [The Problem](#the-problem)
   - [The Solution](#the-solution)
-  - [How NASSE Works](#how-nasse-works)
+  - [How It Works](#how-it-works)
     - [Red Teaming Flow](#red-teaming-flow)
     - [Defense Flow](#defense-flow)
   - [Scenario Overview: Attack and Defense](#scenario-overview-attack-and-defense)
@@ -56,11 +56,11 @@ limitations under the License.
 
 ## Introduction
 
-This guide demonstrates the NeMo Agent Safety and Security Engine (NASSE). NASSE is a framework designed to integrate robust safety and security measures directly into the lifecycle of AI agents. It evaluates an agent's end-to-end security posture: first identifying vulnerabilities through attack simulations, then measuring how effectively defenses mitigate those risks. Through an example Retail Agent, we will show how to proactively identify, mitigate, and report potential risks associated with agent deployment.
+This guide demonstrates how to integrate robust safety and security measures directly into the lifecycle of AI agents using NeMo Agent Toolkit. It evaluates the end-to-end security posture of an agent: first identifying vulnerabilities through attack simulations, then measuring how effectively defenses mitigate those risks. Through an example Retail Agent, we will show how to proactively identify, mitigate, and report potential risks associated with agent deployment.
 
 ---
 
-## Why We Need a Safety and Security Framework
+## Why We Need Safety and Security
 
 ### The Problem
 
@@ -77,18 +77,18 @@ Consider a Retail Agent whose primary function is to assist customers with produ
 
 ### The Solution
 
-NASSE addresses these vulnerabilities through a two-phase approach:
+NeMo Agent Toolkit addresses these vulnerabilities through a two-phase approach:
 
 1. **Risk Discovery (Red Teaming)**: Systematically test the agent against known attack patterns to identify vulnerabilities before deployment
 2. **Risk Mitigation (Defense Middleware)**: Deploy targeted defenses that intercept and neutralize attacks in real-time
 
-### How NASSE Works
+### How It Works
 
 The following diagrams illustrate how attacks are injected, evaluated, and mitigated:
 
 #### Red Teaming Flow
 
-The red teaming middleware can inject attacks into workflow components. After each workflow run, the Red Teaming evaluator scores the agent's behavior to determine attack success.
+The red teaming middleware can inject attacks into workflow components. After each workflow run, the Red Teaming evaluator scores agent behavior to determine attack success.
 
 ![Red teaming flow](./assets/red-teaming-flow.svg)
 
@@ -128,7 +128,7 @@ Each scenario below explains the normal workflow behavior, the attack vector, an
 
 ## Key Features Overview
 
-NASSE provides four core components that work together to assess and improve agent security:
+NeMo Agent Toolkit provides four core components that work together to assess and improve agent security:
 
 ### How the Red Teaming Components Work Together
 
@@ -198,7 +198,7 @@ Dataset fields:
 
 ### RedTeamingMiddleware
 
-The `RedTeamingMiddleware` intercepts the agent's workflow to inject adversarial content at specific points. This simulates real-world attacks without modifying actual databases or data sources.
+The `RedTeamingMiddleware` intercepts the agent workflow to inject adversarial content at specific points. This simulates real-world attacks without modifying actual databases or data sources.
 
 **How Scenarios Use RedTeamingMiddleware:**
 
@@ -295,7 +295,7 @@ For the full defense configuration, see [`configs/config-with-defenses.yml`](con
 
 ## Retail Agent Example
 
-This section demonstrates NASSE using a realistic retail customer service agent.
+This section demonstrates the NeMo Agent Toolkit Safety and Security capabilities using a realistic retail customer service agent.
 
 > ⚠️ **Content Warning**: Some red teaming scenarios test the system for content safety. These scenarios contain references to self-harm and content that some may find offensive or disturbing. This is intentional for evaluating agent robustness.
 >
@@ -386,7 +386,7 @@ Results can vary across runs because LLM outputs are non-deterministic. Running 
 
 ## Red Teaming the Retail Agent with Defenses
 
-Install HuggingFace support for local guard models:
+Install Hugging Face support for local guard models:
 
 ```bash
 uv pip install 'transformers[torch,accelerate]~=4.57'

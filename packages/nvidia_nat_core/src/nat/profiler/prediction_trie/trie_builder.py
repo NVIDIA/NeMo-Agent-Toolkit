@@ -27,6 +27,17 @@ from nat.profiler.prediction_trie.metrics_accumulator import MetricsAccumulator
 
 
 @dataclass
+class _SiblingSpan:
+    """A paired START/END span used for parallel sibling overlap detection."""
+
+    uuid: str
+    parent_id: str
+    start_time: float
+    end_time: float
+    is_llm: bool
+
+
+@dataclass
 class SensitivityConfig:
     """Configuration for auto-sensitivity scoring."""
 
@@ -34,6 +45,7 @@ class SensitivityConfig:
     w_critical: float = 0.5
     w_fanout: float = 0.3
     w_position: float = 0.2
+    w_parallel: float = 0.0
 
 
 @dataclass
@@ -47,7 +59,10 @@ class LLMCallContext:
     output_tokens: int
     call_duration_s: float = 0.0
     workflow_duration_s: float = 0.0
+    parallel_slack_ratio: float = 0.0
     sensitivity_score: float = 0.0
+    span_start_time: float = 0.0
+    span_end_time: float = 0.0
 
 
 @dataclass
@@ -97,6 +112,11 @@ class PredictionTrieBuilder:
         # Find all LLM_START events for interarrival time calculation
         llm_starts = [s for s in sorted_steps if s.event_type == IntermediateStepType.LLM_START]
 
+        # Build sibling map only when w_parallel > 0
+        sibling_map: dict[str, list[_SiblingSpan]] = {}
+        if self._sensitivity_config is not None and self._sensitivity_config.w_parallel > 0:
+            sibling_map = self._build_sibling_map(steps)
+
         # Track call index per parent function
         call_counts: dict[str, int] = defaultdict(int)
         contexts: list[LLMCallContext] = []
@@ -131,6 +151,22 @@ class PredictionTrieBuilder:
             span_start = end_step.span_event_timestamp
             call_duration_s = (end_step.event_timestamp - span_start) if span_start is not None else 0.0
 
+            # Parallel slack ratio
+            # Look up siblings at the function level: use the function ancestry's parent_id
+            # (the grandparent of the LLM call) so that sibling *functions* running in parallel
+            # under the same orchestrator are compared, not just spans under the same function.
+            parallel_slack = 0.0
+            if sibling_map and span_start is not None:
+                function_parent_id = end_step.function_ancestry.parent_id
+                siblings = sibling_map.get(function_parent_id, []) if function_parent_id else []
+                if not siblings:
+                    siblings = sibling_map.get(end_step.parent_id, [])
+                if siblings:
+                    parallel_slack = self._compute_parallel_slack(end_step.UUID,
+                                                                  span_start,
+                                                                  end_step.event_timestamp,
+                                                                  siblings)
+
             contexts.append(
                 LLMCallContext(
                     path=path,
@@ -140,41 +176,218 @@ class PredictionTrieBuilder:
                     output_tokens=output_tokens,
                     call_duration_s=call_duration_s,
                     workflow_duration_s=workflow_duration_s,
+                    parallel_slack_ratio=parallel_slack,
+                    span_start_time=span_start if span_start is not None else 0.0,
+                    span_end_time=end_step.event_timestamp,
                 ))
 
         return contexts
 
     def _compute_sensitivity_scores(self, contexts: list[LLMCallContext]) -> None:
-        """Compute composite sensitivity scores for each call in the trace."""
+        """Compute composite sensitivity scores for each call in the trace.
+
+        Parallel siblings are detected via temporal overlap and assigned the
+        same logical position so that the U-shaped position signal and fan-out
+        signal treat them as a single workflow step rather than spreading them
+        across sequential indices.
+
+        After computing raw weighted scores, the values are min-max normalized
+        across all calls in the trace so the full 0–1 range is used.  This
+        ensures the most-sensitive call in a trace maps to the top of the scale
+        and the least-sensitive call maps to the bottom.
+        """
         if not contexts:
             return
 
-        total_calls = len(contexts)
-        max_remaining = max(c.remaining_calls for c in contexts)
         cfg = self._sensitivity_config
 
+        # --- Compute logical positions that collapse parallel siblings ---
+        #
+        # Calls that overlap in time are parallel siblings and should share
+        # the same logical position.  We use a greedy sweep: any call whose
+        # start time is before the current group's latest end time belongs
+        # to the same parallel group.
+        logical_positions = self._compute_logical_positions(contexts)
+        num_logical_steps = max(logical_positions) + 1 if logical_positions else 1
+
+        # Remaining calls should also reflect logical steps, not raw index.
+        # For each call, remaining = (num_logical_steps - 1) - logical_pos.
+        max_logical_remaining = num_logical_steps - 1
+
+        # Count how many calls share each logical position.  A group of size > 1
+        # is a parallel group.  Members get a parallel-group penalty that
+        # reflects "this work is shared / parallelizable."
+        from collections import Counter
+        group_sizes = Counter(logical_positions)
+
+        raw_scores: list[float] = []
         for i, ctx in enumerate(contexts):
+            lpos = logical_positions[i]
+
             # Signal 1: Critical path weight
             if ctx.workflow_duration_s > 0:
                 critical_path_weight = min(ctx.call_duration_s / ctx.workflow_duration_s, 1.0)
             else:
                 critical_path_weight = 1.0
 
-            # Signal 2: Fan-out score
-            if max_remaining > 0:
-                fanout_score = ctx.remaining_calls / max_remaining
+            # Signal 2: Fan-out score (based on logical remaining steps)
+            logical_remaining = max_logical_remaining - lpos
+            if max_logical_remaining > 0:
+                fanout_score = logical_remaining / max_logical_remaining
             else:
                 fanout_score = 0.0
 
-            # Signal 3: Position score (U-shaped)
-            if total_calls > 1:
-                normalized_pos = i / (total_calls - 1)
+            # Signal 3: Position score (U-shaped, based on logical position)
+            if num_logical_steps > 1:
+                normalized_pos = lpos / (num_logical_steps - 1)
                 position_score = max(1.0 - normalized_pos, normalized_pos)
             else:
                 position_score = 1.0
 
-            ctx.sensitivity_score = (cfg.w_critical * critical_path_weight + cfg.w_fanout * fanout_score +
-                                     cfg.w_position * position_score)
+            # Parallel penalty: combines per-call slack ratio with a group
+            # membership penalty.  Any call in a parallel group of size N > 1
+            # gets a base penalty of (N-1)/N (e.g. 0.75 for a group of 4).
+            # This is averaged with the individual slack ratio so that the
+            # longest sibling (slack=0) still gets penalized for being in a
+            # parallel group, while shorter siblings get penalized more.
+            parallel_penalty = ctx.parallel_slack_ratio
+            gs = group_sizes[lpos]
+            if gs > 1:
+                group_penalty = (gs - 1) / gs
+                parallel_penalty = (parallel_penalty + group_penalty) / 2.0
+
+            score = (cfg.w_critical * critical_path_weight + cfg.w_fanout * fanout_score +
+                     cfg.w_position * position_score - cfg.w_parallel * parallel_penalty)
+            raw_scores.append(score)
+
+        # Min-max normalize across the trace so scores span the full 0–1 range
+        min_score = min(raw_scores)
+        max_score = max(raw_scores)
+        score_range = max_score - min_score
+
+        for ctx, raw in zip(contexts, raw_scores):
+            if score_range > 0:
+                ctx.sensitivity_score = (raw - min_score) / score_range
+            else:
+                ctx.sensitivity_score = 0.5
+
+    @staticmethod
+    def _compute_logical_positions(contexts: list[LLMCallContext]) -> list[int]:
+        """Assign a logical position to each call, collapsing parallel siblings.
+
+        Uses standard interval-merging: contexts are sorted by span start time,
+        and any call whose start is before the current group's *latest* end time
+        joins the group (capturing transitive overlaps).  The resulting group
+        indices are then mapped back to the original LLM_END ordering.
+
+        All calls in a parallel group share the same logical position index,
+        so the U-shaped position signal and fan-out signal treat them as
+        occupying a single workflow step.
+        """
+        if not contexts:
+            return []
+
+        n = len(contexts)
+
+        # Sort indices by span start time for interval merging.
+        sorted_indices = sorted(range(n), key=lambda i: contexts[i].span_start_time)
+
+        # Merge overlapping intervals using max end time to capture transitive overlaps.
+        group_assignments: list[int] = [0] * n
+        current_group = 0
+        group_max_end = contexts[sorted_indices[0]].span_end_time
+
+        group_assignments[sorted_indices[0]] = current_group
+        for k in range(1, n):
+            idx = sorted_indices[k]
+            if contexts[idx].span_start_time < group_max_end:
+                # Overlaps with current group (possibly transitively).
+                group_assignments[idx] = current_group
+                group_max_end = max(group_max_end, contexts[idx].span_end_time)
+            else:
+                # No overlap → new sequential step.
+                current_group += 1
+                group_assignments[idx] = current_group
+                group_max_end = contexts[idx].span_end_time
+
+        return group_assignments
+
+    @staticmethod
+    def _build_sibling_map(steps: list[IntermediateStep]) -> dict[str, list[_SiblingSpan]]:
+        """Pair START/END events by UUID, then group by parent_id.
+
+        Only considers LLM, TOOL, FUNCTION, and SPAN event types.
+        Returns a mapping from parent_id to all completed sibling spans under that parent.
+        """
+        _PAIRED_TYPES = {
+            IntermediateStepType.LLM_START,
+            IntermediateStepType.LLM_END,
+            IntermediateStepType.TOOL_START,
+            IntermediateStepType.TOOL_END,
+            IntermediateStepType.FUNCTION_START,
+            IntermediateStepType.FUNCTION_END,
+            IntermediateStepType.SPAN_START,
+            IntermediateStepType.SPAN_END,
+        }
+        _LLM_TYPES = {IntermediateStepType.LLM_START, IntermediateStepType.LLM_END}
+
+        # Collect start/end timestamps keyed by UUID
+        starts: dict[str, tuple[float, str, bool]] = {}  # uuid -> (timestamp, parent_id, is_llm)
+        ends: dict[str, float] = {}  # uuid -> timestamp
+
+        for step in steps:
+            if step.event_type not in _PAIRED_TYPES:
+                continue
+            uuid = step.UUID
+            is_start = step.event_type.value.endswith("_START")
+            if is_start:
+                starts[uuid] = (step.event_timestamp, step.parent_id, step.event_type in _LLM_TYPES)
+            else:
+                ends[uuid] = step.event_timestamp
+
+        # Build completed spans grouped by parent_id
+        sibling_map: dict[str, list[_SiblingSpan]] = defaultdict(list)
+        for uuid, (start_time, parent_id, is_llm) in starts.items():
+            if uuid in ends:
+                sibling_map[parent_id].append(
+                    _SiblingSpan(
+                        uuid=uuid,
+                        parent_id=parent_id,
+                        start_time=start_time,
+                        end_time=ends[uuid],
+                        is_llm=is_llm,
+                    ))
+
+        return dict(sibling_map)
+
+    @staticmethod
+    def _compute_parallel_slack(llm_uuid: str, llm_start: float, llm_end: float, siblings: list[_SiblingSpan]) -> float:
+        """Compute the parallel slack ratio for an LLM call relative to its siblings.
+
+        slack = max(0, 1 - llm_duration / max_overlapping_sibling_duration)
+
+        Returns 0.0 when the LLM call is the longest overlapping sibling, and
+        approaches 1.0 when a much longer sibling runs in parallel.
+        """
+        llm_duration = llm_end - llm_start
+        if llm_duration <= 0:
+            return 0.0
+
+        max_sibling_duration = 0.0
+        for sib in siblings:
+            if sib.uuid == llm_uuid:
+                continue
+            # Check for temporal overlap
+            overlap_start = max(llm_start, sib.start_time)
+            overlap_end = min(llm_end, sib.end_time)
+            if overlap_start < overlap_end:
+                sibling_duration = sib.end_time - sib.start_time
+                max_sibling_duration = max(max_sibling_duration, sibling_duration)
+
+        if max_sibling_duration <= 0:
+            return 0.0
+
+        return max(0.0, 1.0 - llm_duration / max_sibling_duration)
 
     def _build_path(self, step: IntermediateStep) -> list[str]:
         """Build the function path from ancestry."""

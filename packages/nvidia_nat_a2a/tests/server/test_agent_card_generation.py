@@ -14,6 +14,9 @@
 # limitations under the License.
 
 from nat.builder.function import FunctionGroup
+from nat.data_models.config import Config
+from nat.data_models.config import GeneralConfig
+from nat.plugins.a2a.server.front_end_config import A2AFrontEndConfig
 from nat.plugins.a2a.server.front_end_plugin_worker import A2AFrontEndPluginWorker
 
 
@@ -104,6 +107,22 @@ class TestAgentCardGeneration:
 
         # URL should be formatted as http://host:port/
         assert agent_card.url == "http://localhost:10000/"
+
+    async def test_agent_card_url_uses_public_base_url_when_configured(self, mock_workflow_with_functions):
+        """Test agent card URL uses public base URL override when configured."""
+        config = Config(general=GeneralConfig(front_end=A2AFrontEndConfig(
+            name="Test Agent",
+            description="Test agent for unit tests",
+            host="0.0.0.0",
+            port=10000,
+            public_base_url="https://agents.example.com/calculator",
+            version="1.0.0",
+        )))
+        worker = A2AFrontEndPluginWorker(config)
+        agent_card = await worker.create_agent_card(mock_workflow_with_functions)
+
+        # URL should be normalized with trailing slash
+        assert agent_card.url == "https://agents.example.com/calculator/"
 
     async def test_agent_card_capabilities_from_config(self, mock_workflow_with_functions, a2a_server_config):
         """Test agent card capabilities from configuration.
