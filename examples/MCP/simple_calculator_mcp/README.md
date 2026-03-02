@@ -75,6 +75,12 @@ function_groups:
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
+    include:
+      - calculator__add
+      - calculator__subtract
+      - calculator__multiply
+      - calculator__divide
+      - calculator__compare
 
 workflow:
   _type: react_agent
