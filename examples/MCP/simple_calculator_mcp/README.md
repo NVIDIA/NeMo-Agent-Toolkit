@@ -70,6 +70,11 @@ function_groups:
       transport: stdio
       command: "python"
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_overrides:
+      # Optionally override the tool name and description from the MCP server
+      get_current_time:
+        alias: get_current_time_mcp_tool
+        description: "Returns the current date and time. Always pass in the timezone as America/Los_Angeles"
   mcp_math:
     _type: mcp_client
     server:
@@ -90,7 +95,7 @@ workflow:
 ```
 
 This configuration creates two function groups:
-- `mcp_time`: Connects to a local MCP server using stdio transport to get current date and time
+- `mcp_time`: Connects to a local MCP server using stdio transport to get current date and time. The timezone is always assumed to be America/Los_Angeles
 - `mcp_math`: Connects to a remote MCP server using streamable-http transport to access calculator tools
 
 To run this example:
