@@ -20,6 +20,10 @@
         },
         {
             "pattern": "^https://milvus\\.io"
+        },
+        {
+            "pattern": "^https://docs\\.litellm\\.ai",
+            "comment": "TODO: Remove once LiteLLM docs are reachable. Site returns 402 to automated requests."
         }
     ]
 }
