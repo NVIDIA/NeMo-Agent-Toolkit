@@ -124,9 +124,7 @@ async def current_timezone(_config: CurrentTimeZoneToolConfig, _builder: Builder
 
         headers: Headers | None = nat_context.metadata.headers
 
-        timezone_obj = _get_timezone_from_headers(headers)
-        if timezone_obj is None:
-            timezone_obj = _get_system_timezone()
+        timezone_obj = _get_timezone_obj(headers)
 
         return f"The time zone is {timezone_obj}"
 
