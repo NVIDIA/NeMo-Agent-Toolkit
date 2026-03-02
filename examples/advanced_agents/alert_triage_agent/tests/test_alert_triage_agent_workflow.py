@@ -52,14 +52,11 @@ async def test_full_workflow(root_repo_dir: Path):
     assert "root cause category" in result.lower()
 
     # Check that the expected label appears in the result
-    assert input_data["label"] in result.lower(), (
-        f"Expected label '{input_data['label']}' not found in result. "
-        f"Got: {result[:500]}"
-    )
+    expected_label = input_data["label"].lower()
+    assert expected_label in result.lower(), (f"Expected label '{input_data['label']}' not found in result. "
+                                              f"Got: {result[:500]}")
 
     # Check that the agent produced a triage report, not just a bare categorizer output.
     # A bare categorizer output is ~100 chars; a real report is much longer.
-    assert len(result) > 200, (
-        f"Result too short ({len(result)} chars), agent likely returned an empty report. "
-        f"Got: {result[:500]}"
-    )
+    assert len(result) > 200, (f"Result too short ({len(result)} chars), agent likely returned an empty report. "
+                               f"Got: {result[:500]}")
