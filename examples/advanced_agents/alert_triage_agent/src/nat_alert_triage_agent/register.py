@@ -138,6 +138,12 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
         output = await agent_executor.ainvoke({"messages": [HumanMessage(content=input_message)]})
         result = output["messages"][-1].content
 
+        if not result or not result.strip():
+            utils.logger.warning("Agent returned empty triage report for input: %s", input_message[:200])
+            result = ("The agent was unable to generate a triage report for this alert. "
+                      "This may indicate the LLM model is insufficient for the task complexity. "
+                      "Consider using a larger model (e.g. meta/llama-3.3-70b-instruct).\n\n")
+
         # Determine and append root cause category
         root_cause = await categorizer_tool.arun(result)
         return result + root_cause
