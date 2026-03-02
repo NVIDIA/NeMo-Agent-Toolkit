@@ -82,10 +82,10 @@ export MEM0_API_KEY=<YOUR_MEM0_API_KEY>
 
 ```bash
 # Run the agent with Zep
-nat run --config examples/agents/auto_memory_wrapper/configs/config_zep.yml
+nat run --config_file examples/agents/auto_memory_wrapper/configs/config_zep.yml
 
 # Or with Mem0
-nat run --config examples/agents/auto_memory_wrapper/configs/config_mem0.yml
+nat run --config_file examples/agents/auto_memory_wrapper/configs/config_mem0.yml
 ```
 
 ## Configuration Reference
@@ -179,7 +179,7 @@ curl -X POST http://localhost:8000/chat \
 Omit both `user_manager` and `X-User-ID` header to use `"default_user"`:
 
 ```bash
-nat run --config examples/agents/auto_memory_wrapper/configs/config_zep.yml
+nat run --config_file examples/agents/auto_memory_wrapper/configs/config_zep.yml
 ```
 
 ## Advanced Example
