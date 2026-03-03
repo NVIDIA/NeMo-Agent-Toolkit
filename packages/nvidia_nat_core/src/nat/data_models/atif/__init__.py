@@ -54,20 +54,7 @@ ATIFToolCall = ToolCall
 ATIFTrajectory = Trajectory
 
 __all__ = [
-    # Harbor-aligned names
     "ATIF_VERSION",
-    "Agent",
-    "ContentPart",
-    "FinalMetrics",
-    "ImageSource",
-    "Metrics",
-    "Observation",
-    "ObservationResult",
-    "Step",
-    "SubagentTrajectoryRef",
-    "ToolCall",
-    "Trajectory",
-    # Backward-compatible aliases
     "ATIFAgentConfig",
     "ATIFContentPart",
     "ATIFFinalMetrics",
@@ -79,4 +66,15 @@ __all__ = [
     "ATIFSubagentTrajectoryRef",
     "ATIFToolCall",
     "ATIFTrajectory",
+    "Agent",
+    "ContentPart",
+    "FinalMetrics",
+    "ImageSource",
+    "Metrics",
+    "Observation",
+    "ObservationResult",
+    "Step",
+    "SubagentTrajectoryRef",
+    "ToolCall",
+    "Trajectory",
 ]
