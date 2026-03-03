@@ -15,16 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Observing a Workflow with Phoenix
+# Observing a Workflow with Arize Phoenix
 
-This guide provides a step-by-step process to enable observability in a NeMo Agent Toolkit workflow using Phoenix for tracing and logging. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in a NeMo Agent Toolkit workflow using Arize Phoenix for tracing and logging. By the end of this guide, you will have:
 - Configured telemetry in your workflow.
 - Started the Phoenix server locally.
 - Ability to view traces in the Phoenix UI.
 
 ### Step 1: Install the Phoenix Subpackage and Phoenix Server
 
-Install the phoenix dependencies to enable tracing capabilities with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+Install the Phoenix dependencies to enable tracing capabilities with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool
