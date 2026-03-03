@@ -56,6 +56,7 @@ To migrate:
   - `pip install nvidia-nat-ragas`
 - Install the profiler package when using performance evaluators or profiling workflows:
   - `pip install nvidia-nat-profiler`
+  - Note: the previous package/group name `nvidia-nat-profiling` is now `nvidia-nat-profiler`.
 - Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`, `avg_llm_latency`, `avg_workflow_runtime`, `avg_num_llm_calls`, `avg_tokens_per_llm_end`).
 - Remove any `_type: swe_bench` evaluator entries from evaluation configurations.
 - If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
