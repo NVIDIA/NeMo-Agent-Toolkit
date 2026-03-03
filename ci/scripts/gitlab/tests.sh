@@ -47,9 +47,7 @@ python ${GITLAB_SCRIPT_DIR}/../run_tests.py ${PYTEST_ARGS} --junit_xml=${REPORT_
 PYTEST_RESULTS=$?
 
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
-       # Since this dependency is specific to only this script, we will just install it here
-       rapids-logger "Installing slack-sdk"
-       uv pip install "slack-sdk~=3.36"
+       install_slack_sdk
 
        rapids-logger "Reporting test results"
        ${GITLAB_SCRIPT_DIR}/report_test_results.py ${REPORT_NAME} ${COV_REPORT_NAME}
