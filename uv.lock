@@ -5585,6 +5585,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-profiler" },
     { name = "pandas" },
 ]
 
@@ -5595,6 +5596,7 @@ requires-dist = [
     { name = "langchain-core" },
     { name = "langgraph", specifier = ">=0.0.10" },
     { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
 
@@ -5677,6 +5679,7 @@ dependencies = [
     { name = "networkx" },
     { name = "nvidia-nat", extra = ["eval", "langchain", "phoenix", "test"] },
     { name = "nvidia-nat-profiler" },
+    { name = "nvidia-nat-ragas" },
     { name = "openinference-instrumentation-langchain" },
 ]
 
@@ -5686,6 +5689,7 @@ requires-dist = [
     { name = "networkx", specifier = "~=3.4" },
     { name = "nvidia-nat", extras = ["eval", "langchain", "phoenix", "test"], editable = "." },
     { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat-ragas", editable = "packages/nvidia_nat_ragas" },
     { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
 ]
 
@@ -5812,6 +5816,7 @@ dependencies = [
     { name = "nbclient" },
     { name = "nvidia-nat", extra = ["langchain", "llama-index", "mcp", "test"] },
     { name = "nvidia-nat-profiler" },
+    { name = "nvidia-nat-ragas" },
     { name = "python-dotenv", extra = ["cli"] },
 ]
 
@@ -5824,6 +5829,7 @@ requires-dist = [
     { name = "nbclient", specifier = "~=0.10" },
     { name = "nvidia-nat", extras = ["langchain", "llama-index", "mcp", "test"], editable = "." },
     { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat-ragas", editable = "packages/nvidia_nat_ragas" },
     { name = "python-dotenv", extras = ["cli"], specifier = "~=1.1.1" },
 ]
 
@@ -6165,6 +6171,7 @@ dependencies = [
     { name = "nat-simple-web-query" },
     { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
     { name = "nvidia-nat-profiler" },
+    { name = "nvidia-nat-ragas" },
 ]
 
 [package.metadata]
@@ -6172,6 +6179,7 @@ requires-dist = [
     { name = "nat-simple-web-query", editable = "examples/getting_started/simple_web_query" },
     { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
     { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat-ragas", editable = "packages/nvidia_nat_ragas" },
 ]
 
 [[package]]
