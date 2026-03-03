@@ -42,6 +42,7 @@ from nat.data_models.evaluate_runtime import UsageStatsLLM
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
+from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
@@ -102,22 +103,22 @@ class EvaluationRun:
 
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
-        # get the prompt and completion tokens from the intermediate steps
-        from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
-        steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
         usage_stats_per_llm = {}
         total_tokens = 0
-        for step in steps:
-            if step.event_type == "LLM_END":
-                llm_name = step.llm_name
+        for step in item.trajectory:
+            if step.event_type == IntermediateStepType.LLM_END:
+                llm_name = step.name or step.function_ancestry.function_name or "unknown"
                 if llm_name not in usage_stats_per_llm:
                     usage_stats_per_llm[llm_name] = UsageStatsLLM()
-                usage_stats_per_llm[llm_name].prompt_tokens += step.token_usage.prompt_tokens
-                usage_stats_per_llm[llm_name].completion_tokens += step.token_usage.completion_tokens
-                usage_stats_per_llm[llm_name].total_tokens += step.token_usage.total_tokens
-                usage_stats_per_llm[llm_name].reasoning_tokens += step.token_usage.reasoning_tokens
-                usage_stats_per_llm[llm_name].cached_tokens += step.token_usage.cached_tokens
-                total_tokens += step.token_usage.total_tokens
+
+                token_usage = step.usage_info.token_usage if step.usage_info else None
+                if token_usage is not None:
+                    usage_stats_per_llm[llm_name].prompt_tokens += token_usage.prompt_tokens
+                    usage_stats_per_llm[llm_name].completion_tokens += token_usage.completion_tokens
+                    usage_stats_per_llm[llm_name].total_tokens += token_usage.total_tokens
+                    usage_stats_per_llm[llm_name].reasoning_tokens += token_usage.reasoning_tokens
+                    usage_stats_per_llm[llm_name].cached_tokens += token_usage.cached_tokens
+                    total_tokens += token_usage.total_tokens
 
         # find min and max event timestamps
         if item.trajectory:
@@ -132,10 +133,10 @@ class EvaluationRun:
         # find llm latency by calculating p95 of all llm calls
         llm_latencies = []
         previous_llm_start_time = None
-        for step in steps:
-            if step.event_type == "LLM_START":
+        for step in item.trajectory:
+            if step.event_type == IntermediateStepType.LLM_START:
                 previous_llm_start_time = step.event_timestamp
-            elif step.event_type == "LLM_END" and previous_llm_start_time is not None:
+            elif step.event_type == IntermediateStepType.LLM_END and previous_llm_start_time is not None:
                 llm_latencies.append(step.event_timestamp - previous_llm_start_time)
                 previous_llm_start_time = None
 
