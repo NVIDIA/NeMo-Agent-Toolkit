@@ -16,6 +16,7 @@
 import asyncio
 import json
 import logging
+from collections.abc import AsyncIterator
 from time import perf_counter
 from typing import Any
 
@@ -41,7 +42,7 @@ class ParallelExecutorConfig(FunctionBaseConfig, name="parallel_executor"):
 
 
 @register_function(config_type=ParallelExecutorConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
-async def parallel_execution(config: ParallelExecutorConfig, builder: Builder):
+async def parallel_execution(config: ParallelExecutorConfig, builder: Builder) -> AsyncIterator[FunctionInfo]:
     """
     Create a parallel executor for fan-out/fan-in tool execution.
 
@@ -77,7 +78,7 @@ async def parallel_execution(config: ParallelExecutorConfig, builder: Builder):
                 logger.info("%s -> start branch=%s", log_prefix, tool_name)
             try:
                 result = await tool.ainvoke(input_message)
-            except BaseException as exc:
+            except Exception as exc:
                 if config.detailed_logs:
                     logger.exception(
                         "%s <- failed branch=%s duration=%.3fs",
@@ -109,7 +110,7 @@ async def parallel_execution(config: ParallelExecutorConfig, builder: Builder):
         merged: dict[str, str] = {}
         error_count = 0
         for name, result in zip(tool_names, results):
-            if isinstance(result, BaseException):
+            if isinstance(result, Exception):
                 merged[name] = f"ERROR: {result}"
                 error_count += 1
             else:
