@@ -76,6 +76,29 @@ class TestReWOONatServe:
 
 
 # ---------------------------------------------------------------------------
+# Tool Calling responses API agent test
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("openai_api_key")
+async def test_tool_calling_responses_api(agents_dir: Path, question: str, answer: str):
+    await run_workflow(config_file=agents_dir / "tool_calling/configs/config-responses-api.yml",
+                       question=question,
+                       expected_answer=answer)
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("openai_api_key")
+async def test_nat_run_tool_calling_responses_api(tool_calling_responses_api_nat_client, question: str, answer: str):
+        resp = await tool_calling_responses_api_nat_client.post("/generate",
+                                           json={"input_message": question})
+        resp.raise_for_status()
+        response_text = _extract_serve_response_text(resp.json())
+        _assert_expected_answer(response_text, answer)
+
+
+# ---------------------------------------------------------------------------
 # Other agent tests -- fixture parametrized by config (class-scoped)
 # ---------------------------------------------------------------------------
 
