@@ -51,10 +51,8 @@ class Step(BaseModel):
     )
     model_name: str | None = Field(
         default=None,
-        description=(
-            "The specific LLM model used for this turn. Omission implies the model "
-            "defined in the root-level agent config."
-        ),
+        description=("The specific LLM model used for this turn. Omission implies the model "
+                     "defined in the root-level agent config."),
     )
     reasoning_effort: str | float | None = Field(
         default=None,
@@ -64,10 +62,8 @@ class Step(BaseModel):
     # explicitly passing a message.  Harbor upstream requires this field.
     message: str | list[ContentPart] = Field(
         default="",
-        description=(
-            "The dialogue message. String for text-only content, or array of "
-            "ContentPart for multimodal content (ATIF v1.6+)."
-        ),
+        description=("The dialogue message. String for text-only content, or array of "
+                     "ContentPart for multimodal content (ATIF v1.6+)."),
     )
     reasoning_content: str | None = Field(
         default=None,
@@ -87,11 +83,9 @@ class Step(BaseModel):
     )
     is_copied_context: bool | None = Field(
         default=None,
-        description=(
-            "Indicates whether this step was copied from a previous trajectory "
-            "for context (e.g., during continuation after summarization). "
-            "Steps marked as copied context should not be included in training data."
-        ),
+        description=("Indicates whether this step was copied from a previous trajectory "
+                     "for context (e.g., during continuation after summarization). "
+                     "Steps marked as copied context should not be included in training data."),
     )
     extra: dict[str, Any] | None = Field(
         default=None,
@@ -124,8 +118,6 @@ class Step(BaseModel):
             ]
             for field in agent_only_fields:
                 if getattr(self, field) is not None:
-                    raise ValueError(
-                        f"Field '{field}' is only applicable when source is 'agent', "
-                        f"but source is '{self.source}'"
-                    )
+                    raise ValueError(f"Field '{field}' is only applicable when source is 'agent', "
+                                     f"but source is '{self.source}'")
         return self

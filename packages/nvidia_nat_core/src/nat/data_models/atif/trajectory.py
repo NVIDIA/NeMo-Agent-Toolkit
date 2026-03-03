@@ -93,10 +93,8 @@ class Trajectory(BaseModel):
         for i, step in enumerate(self.steps):
             expected_step_id = i + 1
             if step.step_id != expected_step_id:
-                raise ValueError(
-                    f"steps[{i}].step_id: expected {expected_step_id} "
-                    f"(sequential from 1), got {step.step_id}"
-                )
+                raise ValueError(f"steps[{i}].step_id: expected {expected_step_id} "
+                                 f"(sequential from 1), got {step.step_id}")
         return self
 
     @model_validator(mode="after")
@@ -110,11 +108,9 @@ class Trajectory(BaseModel):
                 tool_call_ids = {tc.tool_call_id for tc in step.tool_calls}
             for result in step.observation.results:
                 if result.source_call_id is not None and result.source_call_id not in tool_call_ids:
-                    raise ValueError(
-                        f"Observation result references source_call_id "
-                        f"'{result.source_call_id}' which is not found in "
-                        f"step {step.step_id}'s tool_calls"
-                    )
+                    raise ValueError(f"Observation result references source_call_id "
+                                     f"'{result.source_call_id}' which is not found in "
+                                     f"step {step.step_id}'s tool_calls")
         return self
 
     def has_multimodal_content(self) -> bool:

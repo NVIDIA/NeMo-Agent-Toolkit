@@ -30,18 +30,14 @@ class ObservationResult(BaseModel):
 
     source_call_id: str | None = Field(
         default=None,
-        description=(
-            "The tool_call_id from the tool_calls array that this result corresponds to. "
-            "If null or omitted, the result comes from an action that doesn't use the "
-            "standard tool calling format."
-        ),
+        description=("The tool_call_id from the tool_calls array that this result corresponds to. "
+                     "If null or omitted, the result comes from an action that doesn't use the "
+                     "standard tool calling format."),
     )
     content: str | list[ContentPart] | None = Field(
         default=None,
-        description=(
-            "The output or result from the tool execution. String for text-only "
-            "content, or array of ContentPart for multimodal content (ATIF v1.6+)."
-        ),
+        description=("The output or result from the tool execution. String for text-only "
+                     "content, or array of ContentPart for multimodal content (ATIF v1.6+)."),
     )
     subagent_trajectory_ref: list[SubagentTrajectoryRef] | None = Field(
         default=None,

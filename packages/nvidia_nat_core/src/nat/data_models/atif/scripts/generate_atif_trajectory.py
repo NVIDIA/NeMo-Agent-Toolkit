@@ -93,9 +93,7 @@ async def run_and_capture_atif(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Run a NAT workflow and export the ATIF trajectory as JSON.",
-    )
+    parser = argparse.ArgumentParser(description="Run a NAT workflow and export the ATIF trajectory as JSON.", )
     parser.add_argument(
         "--config",
         type=str,
