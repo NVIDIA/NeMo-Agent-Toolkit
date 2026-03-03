@@ -30,7 +30,14 @@ These features enable developers to test their workflows locally and integrate o
 
 The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras.
 
-If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands:
+If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
 # Install specific telemetry extras
@@ -42,7 +49,10 @@ uv pip install -e '.[weave]'
 uv pip install -e '.[ragaai]'
 ```
 
-If you have not installed the NeMo Agent Toolkit from source, you can install package extras with the following commands:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 # Install specific telemetry extras
@@ -53,6 +63,11 @@ uv pip install "nvidia-nat[weave]"
 # Note: conflicts with nvidia-nat[strands] and nvidia-nat[adk]
 uv pip install "nvidia-nat[ragaai]"
 ```
+
+:::
+
+::::
+
 
 ## Available Tracing Exporters
 

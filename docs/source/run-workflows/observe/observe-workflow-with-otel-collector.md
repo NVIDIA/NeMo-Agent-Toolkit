@@ -69,15 +69,31 @@ In this guide, you will learn how to:
 
 ### Install the OpenTelemetry Subpackage
 
-If you installed the NeMo Agent Toolkit from source, you can install package extras with the following command:
+If you installed the NeMo Agent Toolkit from source, you can install package extras with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e '.[opentelemetry]'
+uv pip install -e ".[opentelemetry]"
 ```
 
-If you have not installed the NeMo Agent Toolkit from source, you can install package extras with the following command:
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
-uv pip install nvidia-nat[opentelemetry]
+uv pip install "nvidia-nat[opentelemetry]"
 ```
+
+:::
+
+::::
 
 
 ### Modify Workflow Configuration

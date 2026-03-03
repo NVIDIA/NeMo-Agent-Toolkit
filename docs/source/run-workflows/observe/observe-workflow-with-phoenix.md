@@ -24,16 +24,32 @@ This guide provides a step-by-step process to enable observability in a NeMo Age
 
 ### Step 1: Install the Phoenix Subpackage and Phoenix Server
 
-Install the phoenix dependencies to enable tracing capabilities:
+Install the phoenix dependencies to enable tracing capabilities with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
-uv pip install -e '.[phoenix]'
+uv pip install -e ".[phoenix]"
 ```
 
-Then install the Phoenix server:
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
-uv pip install arize-phoenix
+uv pip install "nvidia-nat[phoenix]"
 ```
+
+:::
+
+::::
+
 
 ### Step 2: Start the Phoenix Server
 

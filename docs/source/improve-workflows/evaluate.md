@@ -33,7 +33,7 @@ In addition to the base `nvidia-nat` package, you need to install the evaluation
 :sync: source
 
 ```bash
-uv pip install -e '.[eval]'
+uv pip install -e ".[eval]"
 ```
 
 :::
