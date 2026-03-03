@@ -1,0 +1,109 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Prometheus Recording Rules for SGLang Metric Aliases
+# =====================================================
+#
+# SGLang metrics have different names than vLLM metrics.
+# These recording rules create sglang: prefixed metrics with names that match
+# what the Grafana dashboard expects, enabling a single parameterized
+# dashboard to work with both backends.
+#
+# Dashboard variable: ${backend} = "sglang" or "vllm"
+# Dashboard queries: ${backend}:metric_name
+#
+# Metric Mapping:
+#   Dashboard Query                | SGLang Source Metric(s)
+#   -------------------------------|--------------------------------------------------
+#   sglang:cache_hit_efficiency    | rate(cached_tokens_total) / rate(prompt_tokens_total)
+#   sglang:gen_throughput   | sglang:gen_throughput  (direct, already correct name)
+#   sglang:token_usage      | sglang:token_usage     (direct, already correct name)
+#   sglang:num_running_reqs | sglang:num_running_reqs (direct, already correct name)
+#   sglang:num_queue_reqs   | sglang:num_queue_reqs  (direct, already correct name)
+#   sglang:num_used_tokens  | sglang:num_used_tokens  (direct, already correct name)
+#
+# Most SGLang metrics already use the exact names the dashboard expects.
+# The only alias that requires a recording rule is cache_hit_efficiency, because
+# the native sglang:cache_hit_rate Gauge is a per-batch instantaneous value
+# (computed as hit_tokens / total_tokens for each prefill batch) and cannot
+# be meaningfully aggregated across workers or smoothed over time.
+# The name cache_hit_efficiency is also chosen to avoid colliding with the
+# native sglang:cache_hit_rate Gauge that SGLang already exposes.
+#
+# =============================================================================
+# The cache_hit_rate rule is derived from two per-request Counter metrics
+# defined in SGLang's Prometheus metrics collector.py:
+#
+#   Image: nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.9.0
+#   Path:  /sgl-workspace/sglang/python/sglang/srt/metrics/collector.py
+#
+# Two Counter metrics are used:
+#
+#   1. sglang:prompt_tokens_total (Counter)
+#      - "Number of prefill tokens processed."
+#      - Incremented once per finished request with the total prompt token count.
+#      - collector.py ~line 1307: self.prompt_tokens_total.inc(prompt_tokens)
+#
+#   2. sglang:cached_tokens_total (Counter)
+#      - "Number of cached prompt tokens."
+#      - Incremented once per finished request with the number of tokens served
+#        from the prefix cache (cached_tokens > 0 guard applied).
+#      - collector.py ~line 1309-1310: if cached_tokens > 0: inc(cached_tokens)
+#
+# The cache hit rate is therefore:
+#   hit_rate = cached_tokens / prompt_tokens
+#            = fraction of prompt tokens served from prefix cache
+#
+# This gives a true per-request weighted metric (each request contributes
+# proportionally to its prompt size) rather than a per-batch average, and
+# it can be summed across multiple worker instances.
+#
+# Comparison with the native sglang:cache_hit_rate Gauge:
+#   - The Gauge is computed per prefill batch as:
+#       hit_tokens / (hit_tokens + input_tokens)
+#     where hit_tokens and input_tokens are batch totals (not per-request).
+#   - It is updated on every prefill batch, not on request completion.
+#   - It cannot be aggregated across workers with sum() (averages would be
+#     unweighted by request volume).
+#   - It goes stale between batches and shows 0 when idle.
+#   - The Counter-based approach below matches the vLLM alias methodology
+#     exactly and is preferred for consistency and correctness.
+#
+# Note: SGLang also exposes a per-batch cache_hit_rate in the scheduler log
+# (scheduler_metrics_mixin.py ~line 227) but this is NOT the same metric.
+# =============================================================================
+
+groups:
+  - name: sglang_metric_aliases
+    interval: 2s
+    rules:
+      # Cache hit rate: per-request weighted metric derived from Counters.
+      #
+      # Formula: cached_tokens / prompt_tokens
+      #   = fraction of prompt tokens served from prefix cache
+      #
+      # NOTE: This mirrors the vLLM alias formula exactly:
+      #   (prompt - computed) / prompt = cached / prompt
+      # The numerator is cached_tokens directly (not prompt - computed),
+      # since SGLang tracks cached tokens as a separate Counter.
+      #
+      # Idle behavior: when traffic stops, both rates go to 0.
+      # cached(0) / clamp_min(prompt(0), 1e-6) = 0 (correctly shows 0%).
+      #
+      # IMPORTANT: Both numerator and denominator MUST use the same rate window.
+      # With scrape_interval=2s, rate() needs at least [4s] to have 2 data
+      # points. Using [10s] provides a stable estimate with ~5 samples.
+      #
+      # Source metrics (both per-finished-request Counters):
+      #   - sglang:cached_tokens_total  (tokens served from prefix cache)
+      #   - sglang:prompt_tokens_total  (total prompt tokens processed)
+      #
+      # See file header for full source documentation.
+      - record: "sglang:cache_hit_efficiency"
+        expr: |
+          (
+            sum by (instance, model_name) (rate(sglang:cached_tokens_total[10s]))
+            /
+            clamp_min(sum by (instance, model_name) (rate(sglang:prompt_tokens_total[10s])), 1e-6)
+          )
+

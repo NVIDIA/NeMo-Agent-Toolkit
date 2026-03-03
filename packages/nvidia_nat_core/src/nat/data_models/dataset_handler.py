@@ -21,9 +21,7 @@ from pathlib import Path
 import pandas as pd
 from pydantic import BaseModel
 from pydantic import ConfigDict
-from pydantic import Discriminator
 from pydantic import FilePath
-from pydantic import Tag
 
 from nat.data_models.common import BaseModelRegistryTag
 from nat.data_models.common import SerializableSecretStr
@@ -172,12 +170,4 @@ class EvalDatasetCustomConfig(EvalDatasetBaseConfig, name="custom"):
         return custom_function
 
 
-# Union model with discriminator
-EvalDatasetConfig = typing.Annotated[
-    typing.Annotated[EvalDatasetJsonConfig, Tag(EvalDatasetJsonConfig.static_type())]
-    | typing.Annotated[EvalDatasetCsvConfig, Tag(EvalDatasetCsvConfig.static_type())]
-    | typing.Annotated[EvalDatasetXlsConfig, Tag(EvalDatasetXlsConfig.static_type())]
-    | typing.Annotated[EvalDatasetParquetConfig, Tag(EvalDatasetParquetConfig.static_type())]
-    | typing.Annotated[EvalDatasetJsonlConfig, Tag(EvalDatasetJsonlConfig.static_type())]
-    | typing.Annotated[EvalDatasetCustomConfig, Tag(EvalDatasetCustomConfig.static_type())],
-    Discriminator(TypedBaseModel.discriminator)]
+EvalDatasetBaseConfigT = typing.TypeVar("EvalDatasetBaseConfigT", bound=EvalDatasetBaseConfig)

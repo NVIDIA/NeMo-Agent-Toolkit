@@ -161,15 +161,23 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
     from strands.models.openai import OpenAIModel
 
     params = llm_config.model_dump(
-        exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking"},
+        exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking", "request_timeout"},
         by_alias=True,
-        exclude_none=True)
+        exclude_none=True,
+        exclude_unset=True)
+
+    api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
+    base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
+
+    client_args: dict[str, Any] = {
+        "api_key": api_key,
+        "base_url": base_url,
+    }
+    if llm_config.request_timeout is not None:
+        client_args["timeout"] = llm_config.request_timeout
 
     client = OpenAIModel(
-        client_args={
-            "api_key": get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY"),
-            "base_url": llm_config.base_url,
-        },
+        client_args=client_args,
         model_id=llm_config.model_name,
         params=params,
     )
@@ -260,7 +268,8 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     params = llm_config.model_dump(
         exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking"},
         by_alias=True,
-        exclude_none=True)
+        exclude_none=True,
+        exclude_unset=True)
 
     # Determine base_url
     base_url = llm_config.base_url or "https://integrate.api.nvidia.com/v1"
@@ -329,6 +338,7 @@ async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) 
         },
         by_alias=True,
         exclude_none=True,
+        exclude_unset=True,
     )
 
     region = None if llm_config.region_name in (None, "None") else llm_config.region_name

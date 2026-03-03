@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from collections.abc import AsyncGenerator
 
 from pydantic import Field
 
@@ -52,8 +53,10 @@ class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
+    from langchain_core.messages import AIMessageChunk
     from langchain_core.messages import trim_messages
     from langchain_core.messages.base import BaseMessage
+    from langgraph.errors import GraphRecursionError
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
@@ -117,13 +120,63 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             state = ToolCallAgentGraphState(**state)
             output_message = state.messages[-1]
             return str(output_message.content)
+        except GraphRecursionError:
+            logger.warning(
+                "%s Tool Calling Agent reached its maximum iteration limit (%d) without producing a final answer. "
+                "This typically means the LLM kept calling tools instead of returning a response.",
+                AGENT_LOG_PREFIX,
+                config.max_iterations)
+            return (f"The tool calling agent could not produce a final answer within {config.max_iterations} "
+                    "iterations. The agent repeatedly called tools without converging on a response.")
         except Exception as ex:
             logger.error("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             raise
 
-    try:
-        yield FunctionInfo.from_fn(_response_fn, description=config.description)
-    except GeneratorExit:
-        logger.exception("%s Workflow exited early!", AGENT_LOG_PREFIX)
-    finally:
-        logger.debug("%s Cleaning up react_agent workflow.", AGENT_LOG_PREFIX)
+    async def _stream_fn(chat_request_or_message: ChatRequestOrMessage) -> AsyncGenerator[str]:
+        """
+        Streaming workflow entry function for the Tool Calling Agent.
+
+        Uses graph.astream with stream_mode="messages" to yield token-level content chunks from the LLM,
+        enabling real-time SSE streaming over the OpenAI-compatible /v1/chat/completions endpoint.
+
+        Args:
+            chat_request_or_message (ChatRequestOrMessage): The input message to process
+
+        Yields:
+            str: Individual content chunks from the agent's response
+        """
+        try:
+            message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
+
+            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in message.messages],
+                                                        max_tokens=config.max_history,
+                                                        strategy="last",
+                                                        token_counter=len,
+                                                        start_on="human",
+                                                        include_system=True)
+            state = ToolCallAgentGraphState(messages=messages)
+
+            # stream the Tool Calling Agent Graph token-by-token using LangGraph message streaming
+            async for msg, metadata in graph.astream(
+                    state,
+                    config={'recursion_limit': (config.max_iterations + 1) * 2},
+                    stream_mode="messages"):
+                if not isinstance(msg, AIMessageChunk):
+                    continue
+                # only yield content tokens from the agent node, skip tool call metadata
+                if metadata.get("langgraph_node") == "agent":
+                    if msg.content and not msg.tool_call_chunks:
+                        yield msg.content
+        except GraphRecursionError:
+            logger.warning(
+                "%s Tool Calling Agent reached its maximum iteration limit (%d) without producing a final answer. "
+                "This typically means the LLM kept calling tools instead of returning a response.",
+                AGENT_LOG_PREFIX,
+                config.max_iterations)
+            yield (f"The tool calling agent could not produce a final answer within {config.max_iterations} "
+                   "iterations. The agent repeatedly called tools without converging on a response.")
+        except Exception as ex:
+            logger.error("%s Tool Calling Agent streaming failed with exception: %s", AGENT_LOG_PREFIX, ex)
+            raise
+
+    yield FunctionInfo.create(single_fn=_response_fn, stream_fn=_stream_fn, description=config.description)

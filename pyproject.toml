@@ -51,9 +51,11 @@ dependencies = ["nvidia-nat-core == {version}"]
 a2a = ["nvidia-nat-a2a == {version}"]
 adk = ["nvidia-nat-adk == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
+app = ["nvidia-nat-app == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
 core = ["nvidia-nat-core == {version}"]
 crewai = ["nvidia-nat-crewai == {version}"]
+eval = ["nvidia-nat-eval == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
 fastmcp = ["nvidia-nat-fastmcp == {version}"]
 langchain = ["nvidia-nat-langchain == {version}"]
@@ -64,6 +66,7 @@ nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
 openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
 opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
+rag = ["nvidia-nat-rag == {version}"]
 ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
@@ -79,25 +82,27 @@ zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
 pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
-profiling = [ "nvidia-nat-core[profiling] == {version}" ]
+profiling = [ "nvidia-nat-eval[profiling] == {version}" ]
 
 most = [
   "nvidia-nat-a2a == {version}",
   "nvidia-nat-adk == {version}",
   "nvidia-nat-agno == {version}",
+  "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
-  "nvidia-nat-core[async_endpoints,gunicorn,pii-defense,profiling] == {version}",
+  "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
+  "nvidia-nat-eval[profiling] == {version}",
   "nvidia-nat-fastmcp == {version}",
   "nvidia-nat-langchain == {version}",
   "nvidia-nat-llama-index == {version}",
   "nvidia-nat-mcp == {version}",
   "nvidia-nat-mem0ai == {version}",
+  "nvidia-nat-mysql == {version}",
   "nvidia-nat-nemo-customizer == {version}",
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
-  "nvidia-nat-mysql == {version}",
   "nvidia-nat-redis == {version}",
   "nvidia-nat-s3 == {version}",
   "nvidia-nat-semantic-kernel == {version}",
@@ -122,6 +127,7 @@ examples = [
   "nat_haystack_deep_research_agent",
   "nat_hybrid_control_flow",
   "nat_kaggle_mcp",
+  "nat_latency_sensitivity_demo",
   "nat_math_assistant_a2a",
   "nat_math_assistant_a2a_protected",
   "nat_multi_frameworks",
@@ -129,7 +135,7 @@ examples = [
   "nat_per_user_workflow",
   "nat_plot_charts",
   "nat_por_to_jiratickets",
-  "nat_profiler_agent",
+  "nat_prompt_from_file",
   "nat_react_benchmark_agent",
   "nat_redis_example",
   "nat_retail_agent",
@@ -171,7 +177,6 @@ dev = [
   "ruff==0.15.0", # align with .pre-commit-config.yaml
   "setuptools >= 64",
   "setuptools_scm>=8",
-  "tomlkit>=0.13.2",
   "twine~=6.0",
   "uv==0.9.28", # align with .pre-commit-config.yaml
   "vale~=3.12",
@@ -204,6 +209,9 @@ conflicts = [
     [{ extra = "adk" }, { extra = "ragaai" }],
     [{ extra = "strands" }, { extra = "ragaai" }],
     [{ extra = "most" }, { extra = "ragaai" }],
+    # rag<>autogen have incompatible protobuf versions
+    [{ extra = "rag" }, { extra = "autogen" }],
+    [{ extra = "rag" }, { extra = "most" }],
 ]
 
 [tool.uv.sources]
@@ -211,10 +219,12 @@ conflicts = [
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
 nvidia-nat-adk = { path = "packages/nvidia_nat_adk", editable = true }
 nvidia-nat-agno = { path = "packages/nvidia_nat_agno", editable = true }
+nvidia-nat-app = { path = "packages/nvidia_nat_app", editable = true }
 nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
 nvidia-nat-core = { path = "packages/nvidia_nat_core", editable = true }
 nvidia-nat-crewai = { path = "packages/nvidia_nat_crewai", editable = true }
 nvidia-nat-data-flywheel = { path = "packages/nvidia_nat_data_flywheel", editable = true }
+nvidia-nat-eval = { path = "packages/nvidia_nat_eval", editable = true }
 nvidia-nat-fastmcp = { path = "packages/nvidia_nat_fastmcp", editable = true }
 nvidia-nat-langchain = { path = "packages/nvidia_nat_langchain", editable = true }
 nvidia-nat-llama-index = { path = "packages/nvidia_nat_llama_index", editable = true }
@@ -224,6 +234,7 @@ nvidia-nat-nemo-customizer = { path = "packages/nvidia_nat_nemo_customizer", edi
 nvidia-nat-openpipe-art = { path = "packages/nvidia_nat_openpipe_art", editable = true }
 nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
+nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragaai = { path = "packages/nvidia_nat_ragaai", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
@@ -249,6 +260,7 @@ nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_
 nat_haystack_deep_research_agent = { path = "examples/frameworks/haystack_deep_research_agent", editable = true }
 nat_hybrid_control_flow = { path = "examples/control_flow/hybrid_control_flow", editable = true }
 nat_kaggle_mcp = { path = "examples/MCP/kaggle_mcp", editable = true }
+nat_latency_sensitivity_demo = { path = "examples/dynamo_integration/latency_sensitivity_demo", editable = true }
 nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = true }
 nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
@@ -256,7 +268,7 @@ nat_notebooks = { path = "examples/notebooks", editable = true }
 nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
-nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
+nat_prompt_from_file = { path = "examples/prompt_from_file", editable = true }
 nat_react_benchmark_agent = { path = "examples/dynamo_integration/react_benchmark_agent", editable = true }
 nat_redis_example = { path = "examples/memory/redis", editable = true }
 nat_retail_agent = { path = "examples/safety_and_security/retail_agent", editable = true }

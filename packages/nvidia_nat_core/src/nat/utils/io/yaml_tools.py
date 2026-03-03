@@ -25,6 +25,93 @@ from nat.utils.type_utils import StrPath
 
 logger = logging.getLogger(__name__)
 
+# Prefix for file protocol references to indicate content should be loaded from a file
+FILE_PROTOCOL_PREFIX = "file://"
+
+# Allowed file extensions for file references (security: prevent loading code files)
+ALLOWED_FILE_EXTENSIONS = frozenset({".txt", ".md", ".j2", ".jinja2", ".jinja", ".prompt", ".tpl", ".template"})
+
+
+def _load_file_content(file_path: StrPath) -> str:
+    """
+    Load content from a file.
+
+    Args:
+        file_path: Path to the file to load.
+
+    Returns:
+        The file content as a string.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+    """
+    path = Path(file_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Referenced file not found: {file_path}")
+
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def _validate_file_extension(file_path: Path) -> None:
+    """
+    Validate that a referenced file has an allowed extension.
+
+    Args:
+        file_path: Path to the file.
+
+    Raises:
+        ValueError: If the file extension is not in the allowed list.
+    """
+    ext = file_path.suffix.lower()
+    if ext not in ALLOWED_FILE_EXTENSIONS:
+        allowed = ", ".join(sorted(ALLOWED_FILE_EXTENSIONS))
+        raise ValueError(f"Unsupported file extension '{ext}' for file reference: {file_path}. "
+                         f"Allowed extensions: {allowed}")
+
+
+def _resolve_file_references(config: dict, base_path: Path) -> dict:
+    """
+    Recursively resolve file:// references in configuration fields.
+
+    Resolves any string value starting with "file://" by loading
+    the referenced file's contents as a string.
+
+    Args:
+        config: The configuration dictionary to process.
+        base_path: The base path for resolving relative file paths.
+
+    Returns:
+        A new dictionary with file:// references resolved to file contents.
+    """
+    result = {}
+
+    for key, value in config.items():
+        if isinstance(value, dict):
+            # Recursively process nested dictionaries
+            result[key] = _resolve_file_references(value, base_path)
+        elif isinstance(value, str) and value.startswith(FILE_PROTOCOL_PREFIX):
+            # Load file content for any string field with file:// prefix
+            file_path_str = value[len(FILE_PROTOCOL_PREFIX):]
+
+            # Resolve relative paths from base_path
+            resolved_path = Path(file_path_str)
+            if not resolved_path.is_absolute():
+                resolved_path = base_path / file_path_str
+
+            # Resolve symlinks to validate the actual file extension
+            resolved_path = resolved_path.resolve()
+
+            # Validate file extension before loading
+            _validate_file_extension(resolved_path)
+
+            result[key] = _load_file_content(resolved_path)
+        else:
+            # Keep other values unchanged
+            result[key] = value
+
+    return result
+
 
 def _interpolate_variables(value: str | int | float | bool | None) -> str | int | float | bool | None:
     """
@@ -102,7 +189,8 @@ def yaml_load(config_path: StrPath, _visited: set[Path] | None = None) -> dict:
     with open(config_path_obj, encoding="utf-8") as stream:
         config_str = stream.read()
 
-    config = yaml_loads(config_str)
+    base_path = config_path_obj.parent
+    config = yaml_loads(config_str, base_path)
 
     # Check if config specifies a base for inheritance
     if "base" in config:
@@ -114,7 +202,7 @@ def yaml_load(config_path: StrPath, _visited: set[Path] | None = None) -> dict:
 
         # Resolve base path relative to current config
         if not Path(base_path_str).is_absolute():
-            base_path = config_path_obj.parent / base_path_str
+            base_path = base_path / base_path_str
         else:
             base_path = Path(base_path_str)
 
@@ -133,7 +221,7 @@ def yaml_load(config_path: StrPath, _visited: set[Path] | None = None) -> dict:
     return config
 
 
-def yaml_loads(config: str) -> dict:
+def yaml_loads(config: str, base_path: Path) -> dict:
     """
     Load a YAML string and interpolate variables in the format
     ${VAR:-default_value}.
@@ -159,6 +247,8 @@ def yaml_loads(config: str) -> dict:
         raise ValueError(f"Error loading YAML: {e}") from e
 
     assert isinstance(config_data, dict)
+
+    config_data = _resolve_file_references(config_data, base_path)
 
     return config_data
 

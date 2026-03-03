@@ -35,6 +35,7 @@ from pydantic import model_validator
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.builder import EvalBuilder
+from nat.builder.dataset_loader import DatasetLoaderInfo
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.front_end import FrontEndBase
@@ -49,6 +50,8 @@ from nat.data_models.authentication import AuthProviderBaseConfigT
 from nat.data_models.common import TypedBaseModelT
 from nat.data_models.component import ComponentEnum
 from nat.data_models.config import Config
+from nat.data_models.dataset_handler import EvalDatasetBaseConfig
+from nat.data_models.dataset_handler import EvalDatasetBaseConfigT
 from nat.data_models.discovery_metadata import DiscoveryMetadata
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfigT
@@ -97,6 +100,7 @@ from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
 logger = logging.getLogger(__name__)
 
 AuthProviderBuildCallableT = Callable[[AuthProviderBaseConfigT, Builder], AsyncIterator[AuthProviderBase]]
+DatasetLoaderBuildCallableT = Callable[[EvalDatasetBaseConfigT, EvalBuilder], AsyncIterator[DatasetLoaderInfo]]
 EmbedderClientBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[typing.Any]]
 EmbedderProviderBuildCallableT = Callable[[EmbedderBaseConfigT, Builder], AsyncIterator[EmbedderProviderInfo]]
 EvaluatorBuildCallableT = Callable[[EvaluatorBaseConfigT, EvalBuilder], AsyncIterator[EvaluatorInfo]]
@@ -121,6 +125,8 @@ ToolWrapperBuildCallableT = Callable[[str, Function, Builder], typing.Any]
 
 AuthProviderRegisteredCallableT = Callable[[AuthProviderBaseConfigT, Builder],
                                            AbstractAsyncContextManager[AuthProviderBase]]
+DatasetLoaderRegisteredCallableT = Callable[[EvalDatasetBaseConfigT, EvalBuilder],
+                                            AbstractAsyncContextManager[DatasetLoaderInfo]]
 EmbedderClientRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 EmbedderProviderRegisteredCallableT = Callable[[EmbedderBaseConfigT, Builder],
                                                AbstractAsyncContextManager[EmbedderProviderInfo]]
@@ -187,6 +193,22 @@ class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
 class RegisteredTelemetryExporter(RegisteredInfo[TelemetryExporterBaseConfig]):
 
     build_fn: TeleExporterRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredEvalCallback(BaseModel):
+    """Registered factory for creating eval callbacks tied to a telemetry exporter config type."""
+
+    model_config = ConfigDict(frozen=True)
+    config_type: type[TelemetryExporterBaseConfig]
+    factory_fn: Callable[..., typing.Any] = Field(repr=False)
+
+
+class RegisteredOptimizerCallback(BaseModel):
+    """Registered factory for creating optimizer callbacks tied to a telemetry exporter config type."""
+
+    model_config = ConfigDict(frozen=True)
+    config_type: type[TelemetryExporterBaseConfig]
+    factory_fn: Callable[..., typing.Any] = Field(repr=False)
 
 
 class RegisteredLoggingMethod(RegisteredInfo[LoggingBaseConfig]):
@@ -346,6 +368,12 @@ class RegisteredEvaluatorInfo(RegisteredInfo[EvaluatorBaseConfig]):
     build_fn: EvaluatorRegisteredCallableT = Field(repr=False)
 
 
+class RegisteredDatasetLoaderInfo(RegisteredInfo[EvalDatasetBaseConfig]):
+    """Represents a registered Dataset Loader, e.g. json, csv, parquet, etc."""
+
+    build_fn: DatasetLoaderRegisteredCallableT = Field(repr=False)
+
+
 class RegisteredMemoryInfo(RegisteredInfo[MemoryBaseConfig]):
     """
     Represents a registered Memory object which adheres to the memory interface.
@@ -452,6 +480,9 @@ class TypeRegistry:
         # Evaluators
         self._registered_evaluator_infos: dict[type[EvaluatorBaseConfig], RegisteredEvaluatorInfo] = {}
 
+        # Dataset Loaders
+        self._registered_dataset_loader_infos: dict[type[EvalDatasetBaseConfig], RegisteredDatasetLoaderInfo] = {}
+
         # Memory
         self._registered_memory_infos: dict[type[MemoryBaseConfig], RegisteredMemoryInfo] = {}
 
@@ -484,6 +515,12 @@ class TypeRegistry:
 
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
+
+        # Eval Callbacks (keyed by telemetry exporter config type)
+        self._registered_eval_callbacks: dict[type[TelemetryExporterBaseConfig], RegisteredEvalCallback] = {}
+
+        # Optimizer Callbacks (keyed by telemetry exporter config type)
+        self._registered_optimizer_callbacks: dict[type[TelemetryExporterBaseConfig], RegisteredOptimizerCallback] = {}
 
         self._registration_changed_hooks: list[Callable[[], None]] = []
         self._registration_changed_hooks_active: bool = True
@@ -538,6 +575,37 @@ class TypeRegistry:
     def get_registered_telemetry_exporters(self) -> list[RegisteredInfo[TelemetryExporterBaseConfig]]:
 
         return list(self._registered_telemetry_exporters.values())
+
+    def register_eval_callback(self, registration: RegisteredEvalCallback):
+
+        if (registration.config_type in self._registered_eval_callbacks):
+            raise ValueError(f"An eval callback with the same config type `{registration.config_type}` has already "
+                             "been registered.")
+
+        self._registered_eval_callbacks[registration.config_type] = registration
+
+    def get_eval_callback(self, config_type: type[TelemetryExporterBaseConfig]) -> RegisteredEvalCallback:
+
+        try:
+            return self._registered_eval_callbacks[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered eval callback for config `{config_type}`.") from err
+
+    def register_optimizer_callback(self, registration: RegisteredOptimizerCallback):
+
+        if (registration.config_type in self._registered_optimizer_callbacks):
+            raise ValueError(
+                f"An optimizer callback with the same config type `{registration.config_type}` has already "
+                "been registered.")
+
+        self._registered_optimizer_callbacks[registration.config_type] = registration
+
+    def get_optimizer_callback(self, config_type: type[TelemetryExporterBaseConfig]) -> RegisteredOptimizerCallback:
+
+        try:
+            return self._registered_optimizer_callbacks[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered optimizer callback for config `{config_type}`.") from err
 
     def register_logging_method(self, registration: RegisteredLoggingMethod):
 
@@ -889,6 +957,28 @@ class TypeRegistry:
 
         return list(self._registered_evaluator_infos.values())
 
+    def register_dataset_loader(self, info: RegisteredDatasetLoaderInfo):
+
+        if (info.config_type in self._registered_dataset_loader_infos):
+            raise ValueError(
+                f"A Dataset Loader with the same config type `{info.config_type}` has already been registered.")
+
+        self._registered_dataset_loader_infos[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_dataset_loader(self, config_type: type[EvalDatasetBaseConfig]) -> RegisteredDatasetLoaderInfo:
+
+        try:
+            return self._registered_dataset_loader_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered Dataset Loader for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_dataset_loader_infos.keys())}") from err
+
+    def get_registered_dataset_loaders(self) -> list[RegisteredInfo[EvalDatasetBaseConfig]]:
+
+        return list(self._registered_dataset_loader_infos.values())
+
     def register_memory(self, info: RegisteredMemoryInfo):
 
         if (info.config_type in self._registered_memory_infos):
@@ -1101,6 +1191,9 @@ class TypeRegistry:
         if component_type == ComponentEnum.EVALUATOR:
             return self._registered_evaluator_infos
 
+        if component_type == ComponentEnum.DATASET_LOADER:
+            return self._registered_dataset_loader_infos
+
         if component_type == ComponentEnum.MEMORY:
             return self._registered_memory_infos
 
@@ -1170,6 +1263,9 @@ class TypeRegistry:
         if component_type == ComponentEnum.EVALUATOR:
             return [i.static_type() for i in self._registered_evaluator_infos]
 
+        if component_type == ComponentEnum.DATASET_LOADER:
+            return [i.static_type() for i in self._registered_dataset_loader_infos]
+
         if component_type == ComponentEnum.MEMORY:
             return [i.static_type() for i in self._registered_memory_infos]
 
@@ -1223,6 +1319,9 @@ class TypeRegistry:
 
         if issubclass(cls, EmbedderBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_embedder_providers())
+
+        if issubclass(cls, EvalDatasetBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_dataset_loaders())
 
         if issubclass(cls, EvaluatorBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_evaluators())

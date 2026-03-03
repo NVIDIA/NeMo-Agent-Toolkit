@@ -51,6 +51,7 @@ class OpenAIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMix
                                            le=1.0,
                                            description="Top-p for distribution sampling.",
                                            space=SearchSpace(high=1.0, low=0.5, step=0.1))
+    request_timeout: float | None = Field(default=None, gt=0.0, description="HTTP request timeout in seconds.")
 
 
 @register_llm_provider(config_type=OpenAIModelConfig)

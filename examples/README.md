@@ -54,7 +54,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
 - **[Platform Integrations](#platform-integrations)**
   - [Dynamo Integration](#dynamo-integration)
   - [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
-  - [Safety and Security](#safety-and-security)
+  - [NeMo Agent Toolkit Safety and Security](#nemo-agent-toolkit-safety-and-security)
 - [Documentation Guide Files](#documentation-guide-files)
   - [Locally Hosted LLMs](#locally-hosted-llms)
   - [Workflow Artifacts](#workflow-artifacts)
@@ -102,7 +102,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Advanced Agents
 - **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/README.md)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases. **[🛑 Advanced]**
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/README.md)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization **[🟨 Intermediate]**
-- **[`profiler_agent`](advanced_agents/profiler_agent/README.md)**: Performance profiling agent for analyzing NeMo Agent Toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis **[🟨 Intermediate]**
 - **[`vulnerability_analysis_blueprint`](advanced_agents/vulnerability_analysis_blueprint/README.md)**: Blueprint documentation for vulnerability analysis agents **[🛑 Advanced]**
 
 ### Configuration
@@ -188,8 +187,8 @@ _See the [Dynamo Integration README](dynamo_integration/README.md) for additiona
 ### Retrieval Augmented Generation (RAG)
 - **[`simple_rag`](RAG/simple_rag/README.md)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform **[🛑 Advanced]**
 
-### Safety and Security
-- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Outlines the features of the Safety and Security Engine (NASSE) included in NVIDIA NeMo Agent Toolkit and demonstrates its capabilities by assessing and improving the safety and security posture of an example Retail Agent **[🛑 Advanced]**
+### NeMo Agent Toolkit Safety and Security
+- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Demonstrates the NeMo Agent Toolkit Safety and Security capabilities by assessing and improving the security posture of an example Retail Agent **[🛑 Advanced]**
 
 ## Documentation Guide Files
 

@@ -21,6 +21,9 @@ requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependenc
 git_describe_command = "git describe --long --first-parent"
 root = "../../.."
 
+[tool.setuptools.packages.find]
+exclude = ["configs*", "notebook*", "tests*"]
+
 [project]
 name = "nat_simple_rag"
 dynamic = ["version", "dependencies"]

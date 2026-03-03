@@ -21,7 +21,7 @@ app:
   input: "Can you provide me with the most read content about LangSmith?"
 
 endpoint:
-  generate: "/generate"
-  chat: "/chat"
-  generate_stream: "/generate/stream"
-  chat_stream: "/chat/stream"
+  generate: "/v1/workflow"
+  chat: "/v1/chat"
+  generate_stream: "/v1/workflow/stream"
+  chat_stream: "/v1/chat/stream"

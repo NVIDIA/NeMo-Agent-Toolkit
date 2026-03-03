@@ -38,6 +38,8 @@ repos:
       - { id: uv-lock, name: "uv-lock-core", args: [--project, packages/nvidia_nat_core], files: "packages/nvidia_nat_core/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-crewai", args: [--project, packages/nvidia_nat_crewai], files: "packages/nvidia_nat_crewai/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-data_flywheel", args: [--project, packages/nvidia_nat_data_flywheel], files: "packages/nvidia_nat_data_flywheel/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-eval", args: [--project, packages/nvidia_nat_eval], files: "packages/nvidia_nat_eval/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-fastmcp", args: [--project, packages/nvidia_nat_fastmcp], files: "packages/nvidia_nat_fastmcp/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-langchain", args: [--project, packages/nvidia_nat_langchain], files: "packages/nvidia_nat_langchain/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-llama_index", args: [--project, packages/nvidia_nat_llama_index], files: "packages/nvidia_nat_llama_index/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-mcp", args: [--project, packages/nvidia_nat_mcp], files: "packages/nvidia_nat_mcp/pyproject.toml" }
@@ -47,6 +49,7 @@ repos:
       - { id: uv-lock, name: "uv-lock-openpipe_art", args: [--project, packages/nvidia_nat_openpipe_art], files: "packages/nvidia_nat_openpipe_art/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-opentelemetry", args: [--project, packages/nvidia_nat_opentelemetry], files: "packages/nvidia_nat_opentelemetry/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-phoenix", args: [--project, packages/nvidia_nat_phoenix], files: "packages/nvidia_nat_phoenix/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-rag", args: [--project, packages/nvidia_nat_rag], files: "packages/nvidia_nat_rag/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-ragaai", args: [--project, packages/nvidia_nat_ragaai], files: "packages/nvidia_nat_ragaai/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-redis", args: [--project, packages/nvidia_nat_redis], files: "packages/nvidia_nat_redis/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-s3", args: [--project, packages/nvidia_nat_s3], files: "packages/nvidia_nat_s3/pyproject.toml" }
@@ -62,14 +65,15 @@ repos:
         name: Clear Jupyter Notebook Output Cells
         entry: ci/scripts/clear_notebook_output_cells.sh
         files: "\\.ipynb$"
-        language: unsupported_script
+        language: python
+        additional_dependencies: ["nbconvert"]
 
   - repo: https://github.com/tcort/markdown-link-check
     rev: v3.14.2
     hooks:
       - id: markdown-link-check
         args: ["-q", "--config", "ci/markdown-link-check-config.json"]
-        exclude: "^src/nat/meta/pypi\\.md$"
+        exclude: "^(src/nat/meta/pypi\\.md|CHANGELOG\\.md)$"
 
 default_language_version:
   python: python3

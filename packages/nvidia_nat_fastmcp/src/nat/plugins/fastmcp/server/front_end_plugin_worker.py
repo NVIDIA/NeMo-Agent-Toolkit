@@ -15,6 +15,7 @@
 """FastMCP front end worker implementation."""
 
 import logging
+import os
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import Mapping
@@ -318,10 +319,10 @@ class FastMCPFrontEndPluginWorker(FastMCPFrontEndPluginWorkerBase):
                 base_url=base_url,
                 resource_name=self.front_end_config.name,
             )
-
+        if self.front_end_config.debug:
+            os.environ["FASTMCP_DEBUG"] = "1"
         return FastMCP(
             name=self.front_end_config.name,
-            debug=self.front_end_config.debug,
             auth=auth_provider,
         )
 

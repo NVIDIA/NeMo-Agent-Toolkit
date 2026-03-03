@@ -37,9 +37,10 @@ from typing import cast
 from jsonpath_ng import parse
 from pydantic import BaseModel
 
-from nat.middleware.function_middleware import CallNext
+from nat.middleware.common import TargetLocation
 from nat.middleware.function_middleware import FunctionMiddleware
-from nat.middleware.function_middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationContext
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
         attack_payload: str,
         target_function_or_group: str | None = None,
         payload_placement: Literal["replace", "append_start", "append_middle", "append_end"] = "append_end",
-        target_location: Literal["input", "output"] = "input",
+        target_location: TargetLocation | str,
         target_field: str | None = None,
         target_field_resolution_strategy: Literal["random", "first", "last", "all", "error"] = "error",
         call_limit: int | None = None,
@@ -105,7 +106,7 @@ class RedTeamingMiddleware(FunctionMiddleware):
         self._attack_payload = attack_payload
         self._target_function_or_group = target_function_or_group
         self._payload_placement = payload_placement
-        self._target_location = target_location
+        self._target_location: TargetLocation = TargetLocation(target_location)
         self._target_field = target_field
         self._target_field_resolution_strategy = target_field_resolution_strategy
         self._call_count: int = 0  # Count the number of times the middleware has applied a payload
@@ -304,43 +305,51 @@ class RedTeamingMiddleware(FunctionMiddleware):
             logger.error("Failed to apply red team attack to function %s: %s", context.name, e, exc_info=True)
             raise
 
-    async def function_middleware_invoke(self,
-                                         *args: Any,
-                                         call_next: CallNext,
-                                         context: FunctionMiddlewareContext,
-                                         **kwargs: Any) -> Any:
-        """Invoke middleware for single-output functions.
+    async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Inject attack payload into function input before execution.
 
         Args:
-            args: Positional arguments passed to the function (first arg is typically the input value).
-            call_next: Callable to invoke next middleware/function.
-            context: Metadata about the function being wrapped.
-            kwargs: Keyword arguments passed to the function.
+            context: Invocation context with function metadata and args.
 
         Returns:
-            The output value (potentially modified if attacking output).
+            Modified context if input was attacked, None to pass through.
         """
-        value = args[0] if args else None
+        if self._target_location != TargetLocation.INPUT:
+            return None
 
         # Check if we should attack this function
-        if not self._should_apply_payload(context.name):
-            logger.debug("Skipping function %s (not targeted)", context.name)
-            return await call_next(value, *args[1:], **kwargs)
+        func_ctx: FunctionMiddlewareContext = context.function_context
+        if not self._should_apply_payload(func_ctx.name):
+            logger.debug("Skipping function %s (not targeted)", func_ctx.name)
+            return None
 
-        if self._target_location == "input":
-            # Attack the input before calling the function
-            modified_input = self._apply_payload_to_function_value_with_exception(value, context)
-            # Call next with modified input
-            return await call_next(modified_input, *args[1:], **kwargs)
+        # Attack the input before calling the function
+        value = context.modified_args[0] if context.modified_args else None
+        modified_input = self._apply_payload_to_function_value_with_exception(value, func_ctx)
+        context.modified_args = (modified_input, ) + context.modified_args[1:]
+        return context
 
-        elif self._target_location == "output":  # target_location == "output"
-            # Call function first, then attack the output
-            output = await call_next(value, *args[1:], **kwargs)
-            modified_output = self._apply_payload_to_function_value_with_exception(output, context)
-            return modified_output
-        else:
-            raise ValueError(f"Unknown target_location: {self._target_location}. "
-                             "Attack payloads can only be applied to function input or output.")
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Inject attack payload into function output after execution.
+
+        Args:
+            context: Invocation context with function metadata and output.
+
+        Returns:
+            Modified context if output was attacked, None to pass through.
+        """
+        if self._target_location != TargetLocation.OUTPUT:
+            return None
+
+        # Check if we should attack this function
+        func_ctx: FunctionMiddlewareContext = context.function_context
+        if not self._should_apply_payload(func_ctx.name):
+            logger.debug("Skipping function %s (not targeted)", func_ctx.name)
+            return None
+
+        # Attack the output after function execution
+        context.output = self._apply_payload_to_function_value_with_exception(context.output, func_ctx)
+        return context
 
 
 __all__ = ["RedTeamingMiddleware"]

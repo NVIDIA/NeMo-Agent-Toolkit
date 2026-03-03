@@ -17,7 +17,7 @@ import pytest
 from pydantic import BaseModel
 
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.profiler.parameter_optimization.optimizer_runtime import optimize_config
+from nat.parameter_optimization.optimizer_runtime import optimize_config
 
 
 class _DummyInner(BaseModel):
@@ -42,7 +42,7 @@ async def test_optimize_config_returns_input_when_no_space(monkeypatch):
     cfg = _DummyConfig()
 
     # Force walk_optimizables to empty mapping
-    from nat.profiler.parameter_optimization import optimizer_runtime as rt
+    from nat.parameter_optimization import optimizer_runtime as rt
 
     monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {}, raising=True)
     # Also bypass load_config by passing BaseModel directly
@@ -59,7 +59,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     cfg.optimizer.numeric.enabled = True
     cfg.optimizer.prompt.enabled = True
 
-    from nat.profiler.parameter_optimization import optimizer_runtime as rt
+    from nat.parameter_optimization import optimizer_runtime as rt
 
     # Provide a small non-empty space
     monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {"x": object()}, raising=True)
@@ -69,7 +69,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     def _fake_optimize_parameters(**kwargs):  # noqa: ANN001, ARG001
         del kwargs
         calls["numeric"] += 1
-        return cfg
+        return cfg, {}, 0
 
     async def _fake_optimize_prompts(**kwargs):  # noqa: ANN001, ARG001
         del kwargs

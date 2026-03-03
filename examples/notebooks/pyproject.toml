@@ -38,6 +38,7 @@ dependencies = [
   "nat_simple_calculator",
   "ipython~=8.31",
   "ipykernel",
+  "nbclient~=0.10",
   "python-dotenv[cli]~=1.1.1",
 ]
 

@@ -128,6 +128,15 @@ class HumanPromptBase(BaseModel):
     Base interaction model to derive from
     """
     text: str = Field(description="Text prompt that will be displayed to the user.")
+    timeout: int | None = Field(
+        default=None,
+        description="Timeout in seconds for the prompt. None means no timeout.",
+        gt=0,
+    )
+    error: str | None = Field(
+        default="This prompt is no longer available.",
+        description="Error message to display on the prompt if the timeout expires.",
+    )
 
 
 class HumanPromptText(HumanPromptBase):
@@ -135,7 +144,7 @@ class HumanPromptText(HumanPromptBase):
     Represents a text interaction.
     """
     input_type: typing.Literal[HumanPromptModelType.TEXT] = HumanPromptModelType.TEXT
-    placeholder: str | None = Field(description="The placeholder for the text.")
+    placeholder: str | None = Field(default=None, description="The placeholder for the text.")
     required: bool = Field(default=True, description="Whether the interaction is required.")
 
 

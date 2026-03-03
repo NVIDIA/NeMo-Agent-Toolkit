@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import datetime
 import json
 import os
 import re
-from collections.abc import Mapping
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import httpx
@@ -65,8 +67,11 @@ from nat.data_models.interactive import HumanResponseCheckbox
 from nat.data_models.interactive import HumanResponseDropdown
 from nat.data_models.interactive import HumanResponseRadio
 from nat.data_models.interactive import HumanResponseText
+from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.interactive import MultipleChoiceOption
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.front_ends.fastapi.message_handler import UserInteraction
+from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.front_ends.fastapi.message_validator import MessageValidator
 from nat.runtime.session import SessionManager
 from nat.test.functions import EchoFunctionConfig
@@ -306,9 +311,12 @@ observability_trace_message = {
 }
 
 
-@pytest.fixture(name="config")
-def server_config(
-    restore_environ, file_path: str = __file__.replace("test_unified_api_server.py", "server_config.yml")) -> BaseModel:
+@pytest.fixture(name="config",
+                params=["server_config.yml", "legacy_server_config.yml"],
+                ids=["modern_endpoints", "legacy_endpoints"])
+def server_config(restore_environ, request: pytest.FixtureRequest) -> BaseModel:
+    config_file = request.param
+    file_path = __file__.replace("test_unified_api_server.py", config_file)
     data = None
     with open(file_path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
@@ -338,12 +346,47 @@ async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
     assert response.status_code == 200
 
 
+async def test_generate_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the workflow raises, non-streaming generate returns 422 with Error JSON body."""
+    with patch("nat.front_ends.fastapi.routes.common_utils.generate_single_response") as mock_common_single, patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_single_response") as mock_interactive_single:
+        for mock_gen in (mock_common_single, mock_interactive_single):
+            mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+        input_message = {"message": "hello"}
+        response = await client.post(f"{config.endpoint.generate}", json=input_message)
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "workflow_error"
+    assert "No human prompt callback" in body["message"]
+    # NotImplementedError is returned for legacy endpoints
+    # ExecutionFailed is returned for modern endpoints
+    assert body["details"] in {"NotImplementedError", "ExecutionFailed"}
+
+
 @pytest.mark.integration
 async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Config):
     """Tests generate stream endpoint to verify it responds successfully."""
     input_message = {"message": f"{config.app.input}"}
     response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
     assert response.status_code == 200
+
+
+async def test_generate_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the streaming workflow raises, generate stream contains an Error chunk with code workflow_error."""
+
+    async def raising_gen(*args, **kwargs):
+        if False:
+            yield
+        raise NotImplementedError("No human prompt callback was registered.")
+
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen), patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_streaming_response", new=raising_gen):
+        input_message = {"message": "hello"}
+        response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
+    assert response.status_code == 200
+    assert "workflow_error" in response.text
+    data_match: re.Match[str] | None = re.search(r'"code"\s*:\s*"workflow_error"', response.text)
+    assert data_match is not None
 
 
 @pytest.mark.integration
@@ -354,6 +397,39 @@ async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
     assert response.status_code == 200
     validated_response = ChatResponse(**response.json())
     assert isinstance(validated_response, ChatResponse)
+
+
+async def test_chat_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the workflow raises, non-streaming chat returns 422 with Error JSON body."""
+    with patch("nat.front_ends.fastapi.routes.common_utils.generate_single_response") as mock_common_single, patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_single_response") as mock_interactive_single:
+        for mock_gen in (mock_common_single, mock_interactive_single):
+            mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+        input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
+        response = await client.post(f"{config.endpoint.chat}", json=input_message)
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "workflow_error"
+    assert "No human prompt callback" in body["message"]
+    assert body["details"] in {"NotImplementedError", "ExecutionFailed"}
+
+
+async def test_chat_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the streaming workflow raises, the stream contains an Error chunk with code workflow_error."""
+
+    async def raising_gen(*args, **kwargs):
+        if False:
+            yield
+        raise NotImplementedError("No human prompt callback was registered.")
+
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen), patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_streaming_response", new=raising_gen):
+        input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
+        response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
+    assert response.status_code == 200
+    assert "workflow_error" in response.text
+    data_match: re.Match[str] | None = re.search(r'"code"\s*:\s*"workflow_error"', response.text)
+    assert data_match is not None
 
 
 @pytest.mark.integration
@@ -404,43 +480,116 @@ async def test_chat_stream_endpoint_observability_trace_id_integration(client: h
 
 
 @pytest.mark.integration
-async def test_user_attributes_from_http_request(client: httpx.AsyncClient, config: Config):
-    """Tests setting user attributes from HTTP request."""
-    input_message = {"message": f"{config.app.input}"}
-    headers = {"Header-Test": "application/json"}
-    query_params = {"param1": "value1"}
+async def test_metadata_from_http_request_populates_all_request_attributes(client: httpx.AsyncClient,
+                                                                           config: Config) -> None:
+    captured: list = []
 
-    # Capture the metadata that gets set during the request
-    actual_headers: list[Mapping[str, str] | None] = [None]
-    actual_query_params: list[Mapping[str, str] | None] = [None]
+    original = SessionManager.set_metadata_from_http_request
 
-    # Store reference to original method before patching
-    original_method = SessionManager.set_metadata_from_http_request
+    async def capture_metadata(self, request):
+        result = await original(self, request)
+        meta = Context.get().metadata
+        captured.append({
+            "method": meta.method,
+            "url_path": meta.url_path,
+            "url_scheme": meta.url_scheme,
+            "url_port": meta.url_port,
+            "client_host": meta.client_host,
+            "client_port": meta.client_port,
+            "headers": meta.headers,
+            "query_params": meta.query_params,
+            "path_params": meta.path_params,
+            "cookies": meta.cookies,
+            "payload": meta.payload,
+        })
+        return result
 
-    def mock_set_metadata_from_http_request(self, request):
-        """Mock the metadata setting to capture what would be set."""
-        original_method(self, request)
-        actual_headers[0] = Context.get().metadata.headers
-        actual_query_params[0] = Context.get().metadata.query_params
-
-    # Patch the method to capture metadata
-    with patch("nat.runtime.session.SessionManager.set_metadata_from_http_request",
-               mock_set_metadata_from_http_request):
+    with patch(
+            "nat.runtime.session.SessionManager.set_metadata_from_http_request",
+            capture_metadata,
+    ):
         response = await client.post(
-            f"{config.endpoint.generate}",
-            json=input_message,
-            headers=headers,
-            params=query_params,
+            f"{config.endpoint.generate}?tenant_id=abc&env=test",
+            json={"message": config.app.input},
+            headers={
+                "x-custom": "custom-value", "cookie": "session=xyz123; foo=bar"
+            },
         )
 
     assert response.status_code == 200
+    assert len(captured) == 1
+    meta = captured[0]
+    assert meta["method"] == "POST"
+    assert config.endpoint.generate in meta["url_path"]
+    assert meta["url_scheme"] == "http"
+    assert meta["url_port"] == 8000
+    assert meta["client_host"] is not None
+    assert meta["client_port"] is not None
+    assert meta["headers"] is not None
+    assert meta["headers"].get("x-custom") == "custom-value"
+    assert meta["query_params"] is not None
+    assert meta["query_params"].get("tenant_id") == "abc"
+    assert meta["query_params"].get("env") == "test"
+    assert meta["path_params"] is not None
+    assert meta["cookies"] is not None
+    assert meta["cookies"].get("session") == "xyz123"
+    assert meta["cookies"].get("foo") == "bar"
+    assert meta["payload"] is not None
 
-    # Verify the metadata was captured correctly
-    assert actual_headers[0] is not None
-    assert actual_query_params[0] is not None
 
-    assert actual_headers[0]["header-test"] == headers["Header-Test"]
-    assert actual_query_params[0]["param1"] == query_params["param1"]
+def test_metadata_from_websocket_populates_all_request_attributes() -> None:
+    """Unit test: set_metadata_from_websocket populates context metadata from a mock websocket."""
+    from unittest.mock import MagicMock
+
+    from nat.builder.context import ContextState
+    from nat.runtime.session import SessionManager
+    from nat.runtime.user_metadata import RequestAttributes
+
+    # Reset the ContextVar so we start with a fresh RequestAttributes,
+    # avoiding stale state from previous tests sharing the session-scoped event loop.
+    ContextState.get()._metadata.set(RequestAttributes())
+
+    mock_config = MagicMock()
+    mock_config.workflow = EchoFunctionConfig()
+    mock_builder = MagicMock()
+    sm = SessionManager(config=mock_config, shared_builder=mock_builder, entry_function=None)
+
+    mock_ws = MagicMock()
+    mock_ws.url.path = "/websocket"
+    mock_ws.url.port = 443
+    mock_ws.url.scheme = "ws"
+    mock_ws.headers = {"x-custom": "custom-value"}
+    mock_ws.query_params = {"tenant_id": "abc", "env": "test"}
+    mock_ws.path_params = {}
+    mock_ws.client = ("192.168.1.1", 12345)
+    mock_ws.cookies = {"session": "xyz123", "foo": "bar"}
+    mock_ws.scope = {"headers": []}
+
+    sm.set_metadata_from_websocket(
+        mock_ws,
+        user_message_id="msg-1",
+        conversation_id="conv-1",
+        pre_parsed_cookies={
+            "session": "xyz123", "foo": "bar"
+        },
+    )
+
+    meta = ContextState.get().metadata.get()
+    assert meta.url_path == "/websocket"
+    assert meta.url_scheme == "ws"
+    assert meta.url_port == 443
+    assert meta.client_host == "192.168.1.1"
+    assert meta.client_port == 12345
+    assert meta.headers is not None
+    assert meta.headers.get("x-custom") == "custom-value"
+    assert meta.query_params is not None
+    assert meta.query_params.get("tenant_id") == "abc"
+    assert meta.query_params.get("env") == "test"
+    assert meta.path_params is not None
+    assert meta.cookies is not None
+    assert meta.payload is None
+    assert meta.cookies.get("session") == "xyz123"
+    assert meta.cookies.get("foo") == "bar"
 
 
 async def test_valid_user_message():
@@ -584,6 +733,22 @@ async def test_resolve_error_message_type_by_invalid_input_data():
 
     message_type = await message_validator.resolve_message_type_by_data(TEST())
     assert message_type == WebSocketMessageType.ERROR_MESSAGE
+
+
+async def test_resolve_error_message_type_by_error_data():
+    """Resolve WebSocketMessageType.ERROR_MESSAGE when data_model is Error."""
+    message_validator = MessageValidator()
+    err = Error(code=ErrorTypes.WORKFLOW_ERROR, message="msg", details="detail")
+    message_type = await message_validator.resolve_message_type_by_data(err)
+    assert message_type == WebSocketMessageType.ERROR_MESSAGE
+
+
+async def test_convert_data_to_message_content_returns_error_unchanged():
+    """convert_data_to_message_content returns Error instance as-is."""
+    message_validator = MessageValidator()
+    err = Error(code=ErrorTypes.WORKFLOW_ERROR, message="msg", details="detail")
+    content = await message_validator.convert_data_to_message_content(err)
+    assert content is err
 
 
 async def test_nat_response_to_websocket_message():
@@ -828,3 +993,69 @@ async def test_invalid_openai_chat_request_fields():
 
     with pytest.raises(ValidationError):
         ChatRequest(messages=None)
+
+
+async def test_hitl_callback_timeout_raises_when_no_response():
+    """When prompt has timeout and the response future is never completed, TimeoutError is raised."""
+    mock_socket = AsyncMock()
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+    handler.create_websocket_message = AsyncMock()
+    handler._message_validator = MagicMock()
+
+    prompt_content = HumanPromptText(text="Confirm?", required=True, placeholder="y", timeout=1)
+    prompt = InteractionPrompt(id="id", status="in_progress", timestamp="2025-01-01T00:00:00Z", content=prompt_content)
+
+    def make_user_interaction(**kwargs):
+        return UserInteraction.model_construct(**kwargs)
+
+    with patch("nat.front_ends.fastapi.message_handler.UserInteraction", side_effect=make_user_interaction):
+        with patch.object(WebSocketMessageHandler, "_HITL_TIMEOUT_GRACE_PERIOD_SECONDS", 0):
+            with pytest.raises(TimeoutError, match=r"HITL prompt timed out after 1s waiting for human response"):
+                await handler.human_interaction_callback(prompt)
+
+
+async def test_restore_execution_state_sends_prompt_with_remaining_timeout():
+    """On reconnect, re-sent prompt has timeout set to max(0, original_timeout - elapsed)."""
+    mock_socket = AsyncMock()
+    mock_socket.query_params = {"conversation_id": "conv1"}
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+    handler.create_websocket_message = AsyncMock()
+    handler._conversation_id = "conv1"
+
+    future: asyncio.Future = asyncio.get_running_loop().create_future()
+    prompt_content = HumanPromptText(text="Confirm?", required=True, placeholder="y", timeout=10)
+    disconnected_mock = MagicMock()
+    disconnected_mock._user_interaction = UserInteraction.model_construct(
+        future=future,
+        prompt_content=prompt_content,
+        started_at=0.0,
+    )
+    disconnected_mock._message_parent_id = "parent"
+    disconnected_mock._workflow_schema_type = "chat"
+    disconnected_mock._running_workflow_task = None
+    disconnected_mock._socket = mock_socket
+    mock_worker.get_conversation_handler.return_value = disconnected_mock
+
+    with patch("nat.front_ends.fastapi.message_handler.time.monotonic", return_value=3.0):
+        await handler._restore_execution_state()
+
+    handler.create_websocket_message.assert_called_once()
+    call_kwargs = handler.create_websocket_message.call_args[1]
+    sent_content = call_kwargs["data_model"]
+    assert sent_content.timeout == 7

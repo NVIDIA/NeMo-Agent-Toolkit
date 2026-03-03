@@ -32,35 +32,35 @@ Will allow for features such as offline-replay or simulation of workflow runs wi
 
 ## Prerequisites
 
-The NeMo Agent Toolkit profiler requires additional dependencies not installed by default.
+The NeMo Agent Toolkit profiler is provided by the evaluation package, and some profiler features rely on additional profiling dependencies such as `scikit-learn`.
 
-Install these dependencies by running the following command from the root directory of the NeMo Agent Toolkit repository:
+For source installs from the NeMo Agent Toolkit repository root, install both evaluation and profiling support:
 ```bash
-uv pip install -e ".[profiling]"
+uv pip install -e ".[eval,profiling]"
 ```
 
-If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
+For package installs, install both extras:
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval,profiling]"
 ```
 
 ## Current Profiler Architecture
 The NeMo Agent Toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
-- `packages/nvidia_nat_core/src/nat/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- `packages/nvidia_nat_core/src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent Toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent Toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
 LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 
 ### Profiler Runner
 
-- `packages/nvidia_nat_core/src/nat/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent Toolkit [Eval](./evaluate.md) module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent Toolkit [Eval](./evaluate.md) module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
 
-- Under `packages/nvidia_nat_core/src/nat/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
+- Under `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).
 base_model.py, linear_model.py, and random_forest_regressor.py define the abstract base and specific scikit-learn wrappers.
 
-- Under `packages/nvidia_nat_core/src/nat/profiler/inference_optimization` we have several metrics that can be computed out evaluation traces of your workflow including workflow latency, commonly used prompt prefixes for caching, identifying workflow bottlenecks, and concurrency analysis.
+- Under `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/inference_optimization` we have several metrics that can be computed out evaluation traces of your workflow including workflow latency, commonly used prompt prefixes for caching, identifying workflow bottlenecks, and concurrency analysis.
 
 ### CLI Integrations
 Native integrations with `nat eval` to allow for running of the profiler through a unified evaluation interface. Configurability is exposed through a workflow YAML configuration file consistent with evaluation configurations.
@@ -115,7 +115,7 @@ It supports all kinds of functions:
 Just decorate your custom function with `@track_function` and provide any optional metadata if needed:
 
 ```python
-from nat.profiler.decorators.function_tracking import track_function
+from nat.plugins.eval.profiler.decorators.function_tracking import track_function
 
 @track_function(metadata={"action": "compute", "source": "custom_function"})
 def my_custom_function(a, b):
@@ -152,6 +152,18 @@ eval:
       concurrency_spike_analysis:
         enable: true
         spike_threshold: 7
+      # Build a prediction trie for Dynamo routing hints
+      prediction_trie:
+        enable: true
+        # Auto-compute latency sensitivity per LLM call position
+        auto_sensitivity: true
+        sensitivity_scale: 5
+        # Weights for the three scoring signals (must sum to 1.0)
+        w_critical: 0.5
+        w_fanout: 0.3
+        w_position: 0.2
+        # Penalty for LLM calls that run in parallel with longer siblings (default 0.0)
+        w_parallel: 0.0
 
   evaluators:
     accuracy:
@@ -179,6 +191,7 @@ Please also note the `output_dir` parameter which specifies the directory where 
 - `prompt_caching_prefixes`: Identify common prompt prefixes. This is helpful for identifying if you have commonly repeated prompts that can be pre-populated in KV caches
 - `bottleneck_analysis`: Analyze workflow performance measures such as bottlenecks, latency, and concurrency spikes. This can be set to `simple_stack` for a simpler analysis. Nested stack will provide a more detailed analysis identifying nested bottlenecks like tool calls inside other tools calls.
 - `concurrency_spike_analysis`: Analyze concurrency spikes. This will identify if there are any spikes in the number of concurrent tool calls. At a `spike_threshold` of 7, the profiler will identify any spikes where the number of concurrent running functions is greater than or equal to 7. Those are surfaced to the user in a dedicated section of the workflow profiling report.
+- `prediction_trie`: Build a prediction trie from execution traces for `Dynamo` routing hint injection at runtime. See the [Prediction Trie](#prediction-trie-and-dynamo-routing-hints) section below for details.
 
 ### Step 3: Running the Profiler
 
@@ -194,7 +207,103 @@ This will, based on the above configuration, produce the following files in the 
 - `inference_optimization.json`: This file contains the computed workflow-specific metrics. This includes 90%, 95%, and 99% confidence intervals for latency, throughput, and workflow runtime.
 - `standardized_data_all.csv`: This file contains the standardized usage data including prompt tokens, completion tokens, LLM input, framework, and other metadata.
 - You'll also find a JSON file and text report of any advanced or experimental techniques you ran including concurrency analysis, bottleneck analysis, or PrefixSpan.
+- `prediction_trie.json`: When `prediction_trie.enable` is set to `true`, this file contains the prediction trie — a hierarchical model of your workflow's LLM call patterns. See below for details.
 
+
+## Prediction Trie and Dynamo Routing Hints
+
+The prediction trie is a hierarchical data structure built from profiling traces that captures per-LLM-call-position statistics for your workflow. When deployed with a `Dynamo` LLM backend, these statistics are injected as routing hints to optimize `KV` cache management and request scheduling.
+
+### What the Prediction Trie Captures
+
+During profiling, the `trie` builder processes all LLM call events and, for each unique position in your workflow's call graph (identified by `function path` and `call index`), accumulates:
+
+- **Remaining calls**: How many more LLM calls are expected after this one in the workflow.
+- **`Interarrival` time**: Expected time in milliseconds until the next LLM call.
+- **Output tokens**: Expected output token count for this call (with `p50`, `p90`, `p95` percentiles).
+- **Latency sensitivity** (when `auto_sensitivity` is enabled): An auto-computed score indicating how latency-critical this particular call is.
+
+Each metric is aggregated across all profiled traces, producing robust percentile-based predictions.
+
+### Auto Latency Sensitivity
+
+When `auto_sensitivity` is enabled (the default), the profiler automatically determines which LLM calls in your workflow are most latency-critical using three composite signals:
+
+**Critical path weight** (`w_critical`, default 0.5): What fraction of the workflow's total wall-clock time does this call consume? Calls that dominate overall latency score highest.
+
+**Downstream fan-out** (`w_fanout`, default 0.3): How many subsequent LLM calls depend on this call completing? A planning call that gates 5 downstream tool calls scores higher than a leaf call with no dependents.
+
+**User-facing position** (`w_position`, default 0.2): First and last calls in a workflow get boosted sensitivity because they directly affect perceived latency (time-to-first-activity and time-to-final-answer).
+
+**Parallel sibling slack** (`w_parallel`, default 0.0): When an LLM call runs concurrently with a longer sibling task (e.g., a database query or tool call), the LLM call is not on the critical path — the parent waits for the slowest child. The profiler detects this by grouping spans under the same parent and computing how much "slack" the LLM call has relative to its longest overlapping sibling. A call entirely shadowed by a 5x longer sibling gets a slack ratio near 1.0, while a call that is itself the longest sibling gets 0.0. This signal is subtracted from the composite score, reducing sensitivity for calls that have room to be slower without affecting overall latency. Set `w_parallel` to a positive value (e.g., 0.2–0.3) to enable this signal.
+
+These signals are normalized to [0, 1], combined with the configured weights, and mapped to an integer scale from 1 to `sensitivity_scale`. The result is stored alongside each prediction in the `trie`.
+
+#### Override behavior
+
+Auto-computed sensitivity only applies when no manual `@latency_sensitive` decorator is active. If a developer explicitly annotates a function, the manual value always takes precedence:
+
+| Scenario | Effective sensitivity |
+|----------|----------------------|
+| No decorator, no `trie` prediction | Default (2) |
+| No decorator, `trie` says 4 | Auto (4) |
+| `@latency_sensitive(5)`, `trie` says 3 | Manual (5) |
+| `@latency_sensitive(1)`, `trie` says 4 | Manual (1) |
+
+### Enabling the Prediction Trie
+
+Add the `prediction_trie` section to your profiler config:
+
+```yaml
+profiler:
+  prediction_trie:
+    enable: true
+    # Auto latency sensitivity (enabled by default)
+    auto_sensitivity: true
+    sensitivity_scale: 5       # Integer range [1, N] for sensitivity scores
+    w_critical: 0.5            # Weight for critical path signal
+    w_fanout: 0.3              # Weight for fan-out signal
+    w_position: 0.2            # Weight for position signal
+    w_parallel: 0.0            # Penalty for parallel sibling slack (0.0 = disabled)
+```
+
+After running `nat eval`, the profiler writes `prediction_trie.json` to your output directory.
+
+### Using the Prediction Trie at Runtime
+
+To use the `trie` for `Dynamo` routing, set the `prediction_trie_path` on your `Dynamo` LLM config:
+
+```yaml
+llms:
+  my_dynamo_llm:
+    _type: dynamo
+    model: my-model
+    base_url: http://dynamo-endpoint:8000/v1
+    prediction_trie_path: ./.tmp/eval/output/prediction_trie.json
+```
+
+At runtime, the `Dynamo` transport automatically:
+1. Looks up the current `function path` and `call index` in the `trie`.
+2. Overrides static routing hints (`output tokens`, `interarrival time`, `remaining calls`) with per-call-position predictions from profiler data.
+3. If the prediction includes an auto-computed `latency_sensitivity` and no manual `@latency_sensitive` decorator is active, uses the auto value for priority computation.
+4. Injects all hints into `nvext.agent_hints` in the request body for the `Dynamo` backend.
+
+This means you can profile once, then deploy with intelligent per-call routing — no manual annotation required.
+
+### Manual Latency Sensitivity
+
+For cases where you have domain knowledge the profiler cannot observe (e.g., a call feeds a real-time UI), you can manually annotate functions:
+
+```python
+from nat.plugins.eval.profiler.decorators.latency import latency_sensitive
+
+@latency_sensitive(5)
+async def user_facing_response():
+    """This call directly produces output the user sees."""
+    return await llm.generate(prompt)
+```
+
+Manual annotations always override auto-computed values when both are present.
 
 
 ## Walkthrough of Profiling a Workflow

@@ -73,27 +73,6 @@ fi
 # Change directory to the repo root
 pushd "${PROJECT_ROOT}" &> /dev/null
 
-# Update the dependencies that the examples and packages depend on nvidia-nat, we are explicitly specifying the
-# `examples` and `packages` directories in order to avoid accidentally updating toml files of third-party packages in
-# the `.venv` directory, and updating the root pyproject.toml file. The sort is not really needed, but it makes the
-# output deterministic and easier to read.
-NAT_PACKAGE_TOMLS=($(find ./packages -name "pyproject.toml" | sort ))
-NAT_EXAMPLE_TOMLS=($(find ./examples -name "pyproject.toml" | sort ))
-
-for TOML_FILE in ${NAT_EXAMPLE_TOMLS[@]}; do
-    ${CUR_DIR}/update_toml_dep.py \
-      --toml-file-path=${TOML_FILE} \
-      --new-version="${NAT_VERSION}" \
-      --version-match="${VERSION_MATCH}"
-done
-
-for TOML_FILE in "${NAT_PACKAGE_TOMLS[@]}"; do
-    ${CUR_DIR}/update_toml_dep.py \
-      --toml-file-path=${TOML_FILE} \
-      --new-version="${NAT_VERSION}" \
-      --version-match="${VERSION_MATCH}"
-done
-
 # Update the documentation versions1.json file
 if [[ -z "${SKIP_MD_UPDATE}" ]]; then
    ${CUR_DIR}/update_doc_versions1.py \

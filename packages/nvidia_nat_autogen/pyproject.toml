@@ -56,7 +56,7 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "autogen-agentchat~=0.7",
   "autogen-core~=0.7",
-  "autogen-ext[anthropic]~=0.7",
+  "autogen-ext[anthropic,openai]~=0.7",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]

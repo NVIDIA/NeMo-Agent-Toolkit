@@ -79,6 +79,13 @@ This example shows how to have a simple chat that uses a Redis memory backend fo
 
 An embeddings model is used to create embeddings for queries and for stored memories. Uses HNSW and L2 distance metric.
 
+### Set Up API Keys
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+```
+
 ### Create Memory
 
 Here we will add a memory for the workflow to use in following invocations. The memory tool will automatically determine the intent as to whether or not an input should be stored as a "fact" or if the input should be used to query the memory.

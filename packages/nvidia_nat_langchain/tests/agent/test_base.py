@@ -24,7 +24,6 @@ from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.runtime import DEFAULT_RUNTIME
 
 from nat.plugins.langchain.agent.base import BaseAgent
 
@@ -41,6 +40,7 @@ class MockBaseAgent(BaseAgent):
         self.callbacks = []
         self.detailed_logs = detailed_logs
         self.log_response_max_chars = log_response_max_chars
+        self._runnable_config = RunnableConfig()
 
     async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         """Mock implementation."""
@@ -70,16 +70,14 @@ class TestStreamLLM:
         mock_event2 = Mock()
         mock_event2.content = "world!"
 
-        async def mock_astream(inputs, config=None):
+        async def mock_astream(inputs, **kwargs):
             for event in [mock_event1, mock_event2]:
                 yield event
 
         mock_runnable.astream = mock_astream
 
         inputs = {"messages": [HumanMessage(content="test")]}
-        config = RunnableConfig(callbacks=[], configurable={"__pregel_runtime": DEFAULT_RUNTIME})
-
-        result = await base_agent._stream_llm(mock_runnable, inputs, config)
+        result = await base_agent._stream_llm(mock_runnable, inputs)
 
         assert isinstance(result, AIMessage)
         assert result.content == "Hello world!"
@@ -88,7 +86,7 @@ class TestStreamLLM:
         """Test that streaming errors are propagated to the automatic retry system."""
         mock_runnable = Mock()
 
-        async def mock_astream(inputs, config=None):
+        async def mock_astream(inputs, **kwargs):
             raise Exception("Network error")
             yield  # Never executed but makes this an async generator
 
@@ -106,7 +104,7 @@ class TestStreamLLM:
         mock_event = Mock()
         mock_event.content = ""
 
-        async def mock_astream(inputs, config=None):
+        async def mock_astream(inputs, **kwargs):
             yield mock_event
 
         mock_runnable.astream = mock_astream
@@ -133,7 +131,7 @@ class TestCallLLM:
 
         assert isinstance(result, AIMessage)
         assert result.content == "Response content"
-        base_agent.llm.ainvoke.assert_called_once_with(inputs, config=None)
+        base_agent.llm.ainvoke.assert_called_once_with(inputs, config=base_agent._runnable_config)
 
     async def test_llm_call_error_propagation(self, base_agent):
         """Test that LLM call errors are propagated to the automatic retry system."""
@@ -167,28 +165,25 @@ class TestCallTool:
         """Test successful tool call."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
-        config = RunnableConfig(callbacks=[], configurable={"__pregel_runtime": DEFAULT_RUNTIME})
-
         tool.ainvoke = AsyncMock(return_value="Tool response")
 
-        result = await base_agent._call_tool(tool, tool_input, config)
+        result = await base_agent._call_tool(tool, tool_input)
 
         assert isinstance(result, ToolMessage)
         assert result.content == "Tool response"
         assert result.name == tool.name
         assert result.tool_call_id == tool.name
-        tool.ainvoke.assert_called_once_with(tool_input, config=config)
+        tool.ainvoke.assert_called_once_with(tool_input, config=base_agent._runnable_config)
 
     async def test_tool_call_with_retries_success_on_second_attempt(self, base_agent):
         """Test that tool call succeeds on second attempt with retry logic."""
         tool = base_agent.tools[0]  # Tool A
         tool_input = {"query": "test"}
-        config = RunnableConfig(callbacks=[], configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
         tool.ainvoke = AsyncMock(side_effect=[Exception("Network error"), "Tool response"])
 
         with patch('asyncio.sleep', new_callable=AsyncMock) as mock_sleep:
-            result = await base_agent._call_tool(tool, tool_input, config, max_retries=2)
+            result = await base_agent._call_tool(tool, tool_input, max_retries=2)
 
         assert isinstance(result, ToolMessage)
         assert result.content == "Tool response"

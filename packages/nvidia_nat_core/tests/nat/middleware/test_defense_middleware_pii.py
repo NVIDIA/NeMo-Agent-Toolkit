@@ -23,6 +23,7 @@ import pytest
 from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
+from nat.middleware.common import TargetLocation
 from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddleware
 from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
@@ -400,24 +401,16 @@ class TestPIIDefenseInvoke:
         assert not mock_analyzer.analyze.called  # Defense should not run
         assert result == "content"
 
-    async def test_target_location_validation(self, mock_builder, middleware_context):
-        """Test target_location validation and default behavior."""
-        # Test that target_location='input' raises ValidationError
-        from pydantic import ValidationError
-        with pytest.raises(ValidationError, match="Input should be 'output'"):
-            PIIDefenseMiddlewareConfig(
-                target_location="input",  # type: ignore[arg-type]
-                action="partial_compliance")
-
-        # Test default is 'output'
+    async def test_target_location_defaults_to_output(self):
+        """Test that target_location defaults to OUTPUT."""
         config = PIIDefenseMiddlewareConfig(action="partial_compliance")
-        assert config.target_location == "output"
+        assert config.target_location == TargetLocation.OUTPUT
 
-        # Test explicit 'output' works
-        config = PIIDefenseMiddlewareConfig(target_location="output", action="partial_compliance")
+    async def test_target_location_input_skips_output_analysis(self, mock_builder, middleware_context):
+        """Test that setting target_location=INPUT skips output analysis entirely."""
+        config = PIIDefenseMiddlewareConfig(target_location=TargetLocation.INPUT, action="partial_compliance")
         middleware = PIIDefenseMiddleware(config, mock_builder)
         mock_analyzer = MagicMock()
-        mock_analyzer.analyze.return_value = []
         middleware._analyzer = mock_analyzer
         middleware._anonymizer = MagicMock()
 
@@ -425,7 +418,7 @@ class TestPIIDefenseInvoke:
             return "content"
 
         result = await middleware.function_middleware_invoke({}, call_next=mock_next, context=middleware_context)
-        assert mock_analyzer.analyze.called
+        assert not mock_analyzer.analyze.called
         assert result == "content"
 
     async def test_non_string_output_converts_to_string(self, mock_builder, middleware_context):
@@ -516,7 +509,7 @@ class TestPIIDefenseStreaming:
             yield "Contact "
             yield "john.doe@example.com"
 
-        with pytest.raises(ValueError, match="PII detected in output"):
+        with pytest.raises(ValueError, match="PII detected in function output"):
             async for _ in middleware.function_middleware_stream({}, call_next=mock_stream, context=middleware_context):
                 pass
 

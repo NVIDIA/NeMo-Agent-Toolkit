@@ -33,11 +33,6 @@ limitations under the License.
   - [Optimization Configuration](#optimization-configuration)
   - [Run the Optimizer](#run-the-optimizer)
   - [Outputs](#outputs)
-- [Deployment-Oriented Setup](#deployment-oriented-setup)
-  - [Build the Docker Image](#build-the-docker-image)
-  - [Run the Docker Container](#run-the-docker-container)
-  - [Test the API](#test-the-api)
-  - [Expected API Output](#expected-api-output)
 
 
 ## Key Features
@@ -277,44 +272,3 @@ Results are written to the path specified by `optimizer.output_path`. Expect art
 For a detailed guide on interpreting the output of the optimization process, including the 
 Pareto visualizations, refer to the [Optimizer Output Analysis](../../../docs/source/improve-workflows/optimizer.md#understanding-the-output) section in the 
 NeMo Agent Toolkit documentation.
-
----
-
-## Deployment-Oriented Setup
-
-For a production deployment, use Docker:
-
-### Build the Docker Image
-
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent Toolkit virtual environment.
-
-From the root directory of the NeMo Agent Toolkit repository, build the Docker image:
-
-```bash
-docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t email_phishing_analyzer -f examples/evaluation_and_profiling/email_phishing_analyzer/Dockerfile .
-```
-
-### Run the Docker Container
-Deploy the container:
-
-```bash
-docker run -p 8000:8000 -e NVIDIA_API_KEY email_phishing_analyzer
-```
-
-### Test the API
-Use the following curl command to test the deployed API:
-
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/generate' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{"input_message": "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your account. Please provide your account and routing numbers so we can complete the transaction. Thank you, [Your Company]"}'
-```
-
-### Expected API Output
-The API response should look like this:
-
-```json
-{"value":"This email is likely a phishing attempt. It requests sensitive information, such as account and routing numbers, which is a common tactic used by scammers. The email also lacks specific details about the purchase, which is unusual for a refund notification. Additionally, the greeting is impersonal, which suggests a lack of personalization. It is recommended to be cautious when responding to such emails and to verify the authenticity of the email before providing any sensitive information."}
-```
