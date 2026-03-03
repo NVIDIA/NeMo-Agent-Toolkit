@@ -76,12 +76,14 @@ async def _build_nat_client(config_path: Path):
         else:
             os.environ["NAT_CONFIG_FILE"] = old_val
 
+
 @pytest.fixture(name="rewoo_nat_client", scope="class")
 async def fixture_rewoo_nat_client(agents_dir: Path):
     """Build the ReWOO ASGI client once, share across all tests in the class."""
     config_path = agents_dir / "rewoo/configs/config.yml"
     async for client in _build_nat_client(config_path):
         yield client
+
 
 @pytest.fixture(name="tool_calling_responses_api_nat_client", scope="module")
 async def fixture_tool_calling_responses_api_nat_client(agents_dir: Path):

@@ -91,11 +91,10 @@ async def test_tool_calling_responses_api(agents_dir: Path, question: str, answe
 @pytest.mark.integration
 @pytest.mark.usefixtures("openai_api_key")
 async def test_nat_run_tool_calling_responses_api(tool_calling_responses_api_nat_client, question: str, answer: str):
-        resp = await tool_calling_responses_api_nat_client.post("/generate",
-                                           json={"input_message": question})
-        resp.raise_for_status()
-        response_text = _extract_serve_response_text(resp.json())
-        _assert_expected_answer(response_text, answer)
+    resp = await tool_calling_responses_api_nat_client.post("/generate", json={"input_message": question})
+    resp.raise_for_status()
+    response_text = _extract_serve_response_text(resp.json())
+    _assert_expected_answer(response_text, answer)
 
 
 # ---------------------------------------------------------------------------
