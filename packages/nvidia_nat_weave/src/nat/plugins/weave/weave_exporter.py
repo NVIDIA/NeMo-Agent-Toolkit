@@ -32,6 +32,9 @@ from weave.trace.weave_client import Call
 
 logger = logging.getLogger(__name__)
 
+# Fields written to Weave call summary for user attribution, in resolution priority order.
+USER_ATTRIBUTION_FIELDS: tuple[str, ...] = ("user_name", "user_email", "user_id")
+
 # Use LogFilter to filter out specific message patterns
 presidio_filter = LogFilter([
     "nlp_engine not provided",
@@ -300,18 +303,15 @@ class WeaveExporter(SpanExporter[Span, Span]):
             if usage_info.seconds_between_calls:
                 outputs["seconds_between_calls"] = usage_info.seconds_between_calls
 
-        # For the root call, set user in the summary attribute so the feedback endpoint can retrieve
-        # it for user attribution.  Unlike the attributes property which is read-only during execution,
-        # summary is mutable during execution (see https://docs.wandb.ai/weave/guides/tracking/tracing).
+        # For the root call, store available user identifying fields in the summary attribute so the feedback
+        # endpoint can resolve the best available identifier for user attribution (note: attributes property
+        # is read-only during execution while summary is mutable, see https://docs.wandb.ai/weave/guides/tracking/tracing).
         root_call_id = self._context_state.observability_trace_id.get()
         if root_call_id and call.id == root_call_id:
             metadata = self._context_state.metadata.get()
-            user = next(
-                (v for f in ('user_name', 'user_email', 'user_id') if (v := getattr(metadata, f, None))),
-                None,
-            )
-            if user:
-                call.summary["user"] = user
+            for field in USER_ATTRIBUTION_FIELDS:
+                if value := getattr(metadata, field, None):
+                    call.summary[field] = value
 
         # Finish the call with outputs
         self._gc.finish_call(call, outputs)

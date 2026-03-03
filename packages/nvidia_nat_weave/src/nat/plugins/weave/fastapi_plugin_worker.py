@@ -25,6 +25,7 @@ from pydantic import model_validator
 
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.plugins.weave.weave_exporter import USER_ATTRIBUTION_FIELDS
 from nat.plugins.weave.weave_exporter import WeaveExporter
 from nat.runtime.session import SessionManager
 from nat.utils.type_utils import override
@@ -123,7 +124,11 @@ class WeaveFastAPIPluginWorker(FastApiFrontEndPluginWorker):
 
                         client = weave.init(weave_project)
                         call = client.get_call(observability_trace_id)
-                        user = (call.summary or {}).get("user") or "anonymous"
+                        summary = call.summary or {}
+                        user = next(
+                            (v for f in USER_ATTRIBUTION_FIELDS if (v := summary.get(f))),
+                            "anonymous",
+                        )
 
                         feedback_added = []
                         if reaction_type:
