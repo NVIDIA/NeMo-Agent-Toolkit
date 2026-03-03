@@ -57,7 +57,7 @@ To migrate:
 - Install the profiler package when using performance evaluators or profiling workflows:
   - `pip install nvidia-nat-profiler`
 - Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`, `avg_llm_latency`, `avg_workflow_runtime`, `avg_num_llm_calls`, `avg_tokens_per_llm_end`).
-- Remove any `_type: swe_bench` evaluator entries from evaluation configs.
+- Remove any `_type: swe_bench` evaluator entries from evaluation configurations.
 - If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
 
 #### Eval Exporter Callback Split
@@ -66,7 +66,7 @@ Eval metric exporting now uses generic eval-callback hooks owned by `nvidia-nat-
 
 - Weave eval metric export callback now lives in `nvidia-nat-weave`.
 - `nvidia-nat-eval` no longer hard-couples directly to Weave internals for eval metric publishing.
-- If a telemetry exporter is configured but its eval callback provider package is missing, NAT now logs a warning and continues evaluation without exporter publishing.
+- If a telemetry exporter is configured but its eval callback provider package is missing, `nvidia-nat-eval` now logs a warning and continues evaluation without exporter publishing.
 
 To migrate:
 - Install the matching provider package for configured telemetry exporters (for Weave: `pip install nvidia-nat-weave`).
