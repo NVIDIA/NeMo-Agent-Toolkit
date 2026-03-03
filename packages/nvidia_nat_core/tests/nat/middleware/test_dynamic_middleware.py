@@ -500,3 +500,28 @@ def test_unregister_component_method_raises_error_if_not_registered():
 
     with pytest.raises(ValueError, match=r"'fake__method' is not registered"):
         middleware.unregister(fake_registered)
+
+
+# ==================== WorkflowBuilder Integration Tests ====================
+
+
+async def test_dynamic_middleware_patches_workflow_builder():
+    """DynamicFunctionMiddleware patches persist on the builder used by the workflow."""
+    from nat.builder.builder import Builder
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.cli.register_workflow import register_middleware
+
+    class _PatchTestConfig(DynamicMiddlewareConfig, name="_patch_regression_test"):
+        pass
+
+    @register_middleware(config_type=_PatchTestConfig)
+    async def _patch_test_middleware(config: _PatchTestConfig, builder: Builder):
+        yield DynamicFunctionMiddleware(config=config, builder=builder)
+
+    config = _PatchTestConfig(register_llms=True)
+
+    async with WorkflowBuilder() as builder:
+        middleware = await builder.add_middleware("patch_test", config)
+
+        assert isinstance(middleware, DynamicFunctionMiddleware)
+        assert builder.get_llm == middleware._discover_and_register_llm

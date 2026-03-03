@@ -136,7 +136,6 @@ examples = [
   "nat_plot_charts",
   "nat_por_to_jiratickets",
   "nat_prompt_from_file",
-  "nat_profiler_agent",
   "nat_react_benchmark_agent",
   "nat_redis_example",
   "nat_retail_agent",
@@ -270,7 +269,6 @@ nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editab
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
 nat_prompt_from_file = { path = "examples/prompt_from_file", editable = true }
-nat_profiler_agent = { path = "examples/advanced_agents/profiler_agent", editable = true }
 nat_react_benchmark_agent = { path = "examples/dynamo_integration/react_benchmark_agent", editable = true }
 nat_redis_example = { path = "examples/memory/redis", editable = true }
 nat_retail_agent = { path = "examples/safety_and_security/retail_agent", editable = true }

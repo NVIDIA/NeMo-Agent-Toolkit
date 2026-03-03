@@ -17,6 +17,7 @@ import logging
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import HttpUrl
 from pydantic import model_validator
 
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
@@ -54,6 +55,12 @@ class A2AFrontEndConfig(FrontEndBaseConfig, name="a2a"):
         description="Port to bind the server to (default: 10000)",
         ge=0,
         le=65535,
+    )
+    public_base_url: HttpUrl | None = Field(
+        default=None,
+        description="Public base URL advertised in the Agent Card for external discovery. "
+        "Use this for deployments behind ingress, gateways, or proxies. "
+        "If not set, defaults to http://{host}:{port}/.",
     )
     version: str = Field(
         default="1.0.0",
