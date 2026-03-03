@@ -140,6 +140,7 @@ def check_model(model: str, api_key: str) -> tuple[int, str]:
 
 
 def main() -> int:
+    """Parse CLI args, discover NIM models from configs, and health-check each one."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--examples-dir",
