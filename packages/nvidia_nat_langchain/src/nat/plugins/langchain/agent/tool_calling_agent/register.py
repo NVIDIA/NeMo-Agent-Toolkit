@@ -56,6 +56,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
     from langchain_core.messages import AIMessageChunk
     from langchain_core.messages import trim_messages
     from langchain_core.messages.base import BaseMessage
+    from langgraph.errors import GraphRecursionError
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
@@ -119,6 +120,14 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             state = ToolCallAgentGraphState(**state)
             output_message = state.messages[-1]
             return str(output_message.content)
+        except GraphRecursionError:
+            logger.warning(
+                "%s Tool Calling Agent reached its maximum iteration limit (%d) without producing a final answer. "
+                "This typically means the LLM kept calling tools instead of returning a response.",
+                AGENT_LOG_PREFIX,
+                config.max_iterations)
+            return (f"The tool calling agent could not produce a final answer within {config.max_iterations} "
+                    "iterations. The agent repeatedly called tools without converging on a response.")
         except Exception as ex:
             logger.error("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             raise
@@ -158,6 +167,14 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                 if metadata.get("langgraph_node") == "agent":
                     if msg.content and not msg.tool_call_chunks:
                         yield msg.content
+        except GraphRecursionError:
+            logger.warning(
+                "%s Tool Calling Agent reached its maximum iteration limit (%d) without producing a final answer. "
+                "This typically means the LLM kept calling tools instead of returning a response.",
+                AGENT_LOG_PREFIX,
+                config.max_iterations)
+            yield (f"The tool calling agent could not produce a final answer within {config.max_iterations} "
+                   "iterations. The agent repeatedly called tools without converging on a response.")
         except Exception as ex:
             logger.error("%s Tool Calling Agent streaming failed with exception: %s", AGENT_LOG_PREFIX, ex)
             raise

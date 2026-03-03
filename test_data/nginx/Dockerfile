@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,27 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Use image largely as-is only adding our own configuration
+FROM openresty/openresty:alpine
 
-function_groups:
-  calculator:
-    _type: calculator
+# Expose port 8088
+EXPOSE 8088
 
-functions:
-  current_datetime:
-    _type: current_datetime
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-llms:
-  nim_llm:
-    _type: nim
-    model_name: nvidia/nemotron-3-nano-30b-a3b
-    temperature: 0.0
-    max_tokens: 1024
-    chat_template_kwargs:
-      enable_thinking: false
-
-workflow:
-  _type: react_agent
-  tool_names: [calculator, current_datetime]
-  llm_name: nim_llm
-  verbose: true
-  parse_agent_response_max_retries: 3
