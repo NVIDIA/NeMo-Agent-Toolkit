@@ -281,10 +281,25 @@ class ChoiceMessage(BaseModel):
     role: UserMessageContentRoleType | None = None
 
 
+class ChoiceDeltaToolCallFunction(BaseModel):
+    """Function details within a streamed tool call delta (OpenAI-compatible)."""
+    name: str | None = None
+    arguments: str | None = None
+
+
+class ChoiceDeltaToolCall(BaseModel):
+    """Tool call delta for streaming responses (OpenAI-compatible)."""
+    index: int
+    id: str | None = None
+    type: str | None = None
+    function: ChoiceDeltaToolCallFunction | None = None
+
+
 class ChoiceDelta(BaseModel):
     """Delta object for streaming responses (OpenAI-compatible)"""
     content: str | None = None
     role: UserMessageContentRoleType | None = None
+    tool_calls: list[ChoiceDeltaToolCall] | None = None
 
 
 class ChoiceBase(BaseModel):
