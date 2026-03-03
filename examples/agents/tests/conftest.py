@@ -63,10 +63,7 @@ async def fixture_rewoo_session_manager(agents_dir: Path):
         yield session_manager
 
 
-@pytest.fixture(name="rewoo_nat_client", scope="class")
-async def fixture_rewoo_nat_client(agents_dir: Path):
-    """Build the ReWOO ASGI client once, share across all tests in the class."""
-    config_path = agents_dir / "rewoo/configs/config.yml"
+async def _build_nat_client(config_path: Path):
     config = load_config(config_path)
     old_val = os.environ.get("NAT_CONFIG_FILE")
     os.environ["NAT_CONFIG_FILE"] = str(config_path.absolute())
@@ -78,6 +75,22 @@ async def fixture_rewoo_nat_client(agents_dir: Path):
             os.environ.pop("NAT_CONFIG_FILE", None)
         else:
             os.environ["NAT_CONFIG_FILE"] = old_val
+
+
+@pytest.fixture(name="rewoo_nat_client", scope="class")
+async def fixture_rewoo_nat_client(agents_dir: Path):
+    """Build the ReWOO ASGI client once, share across all tests in the class."""
+    config_path = agents_dir / "rewoo/configs/config.yml"
+    async for client in _build_nat_client(config_path):
+        yield client
+
+
+@pytest.fixture(name="tool_calling_responses_api_nat_client", scope="module")
+async def fixture_tool_calling_responses_api_nat_client(agents_dir: Path):
+    """Build the Tool Calling Responses API ASGI client once, share across all tests in the class."""
+    config_path = agents_dir / "tool_calling/configs/config-responses-api.yml"
+    async for client in _build_nat_client(config_path):
+        yield client
 
 
 @pytest.fixture(name="agent_session_manager", scope="class", params=AGENT_CONFIGS, ids=AGENT_IDS)
@@ -91,14 +104,5 @@ async def fixture_agent_session_manager(request: pytest.FixtureRequest, agents_d
 async def fixture_agent_nat_client(request: pytest.FixtureRequest, agents_dir: Path):
     """Build each agent ASGI client once per config, share across all tests in the class."""
     config_path = agents_dir / request.param
-    config = load_config(config_path)
-    old_val = os.environ.get("NAT_CONFIG_FILE")
-    os.environ["NAT_CONFIG_FILE"] = str(config_path.absolute())
-    try:
-        async with build_nat_client(config) as client:
-            yield client
-    finally:
-        if old_val is None:
-            os.environ.pop("NAT_CONFIG_FILE", None)
-        else:
-            os.environ["NAT_CONFIG_FILE"] = old_val
+    async for client in _build_nat_client(config_path):
+        yield client
