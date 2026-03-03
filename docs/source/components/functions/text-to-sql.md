@@ -32,17 +32,32 @@ The NVIDIA NeMo Agent Toolkit provides text-to-SQL capabilities through the `tex
 
 The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent Toolkit. If you have not yet installed the NeMo Agent Toolkit, refer to the [Installation](../../get-started/installation.md) guide.
 
-If you have performed a source code checkout, you can install this with the following command:
+If you have performed a source code checkout, you can install this with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
 uv pip install -e '.[vanna]'
 ```
 
-If you have installed the NeMo Agent Toolkit from a package, you can install this with the following command:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 uv pip install "nvidia-nat[vanna]"
 ```
+
+:::
+
+::::
+
 
 ## Quick Start
 

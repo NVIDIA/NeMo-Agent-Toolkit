@@ -19,19 +19,32 @@ limitations under the License.
 Configure the NVIDIA NeMo Agent Toolkit ReAct [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a function.
 
 ## Requirements
-The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
+The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
 
-- If you have performed a source code checkout:
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
 uv pip install -e '.[langchain]'
 ```
 
-- If you have installed the NeMo Agent Toolkit from a package:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
 ```
+
+:::
+
+::::
+
 
 ## Configuration
 
