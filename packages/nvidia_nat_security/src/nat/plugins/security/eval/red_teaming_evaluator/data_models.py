@@ -41,12 +41,26 @@ class ConditionEvalOutputItem(EvalOutputItem):
 
     @classmethod
     def empty(cls, id: str, error: str | None = None) -> ConditionEvalOutputItem:
-        """Create an empty ConditionEvalOutputItem."""
+        """Create an empty ConditionEvalOutputItem.
+
+        Returns:
+            Empty ConditionEvalOutputItem instance
+        """
         return cls(id=id, score=0.0, reasoning={}, error_message=error, intermediate_step=None)
 
 
 class RedTeamingEvalOutputItem(EvalOutputItem):
-    """Extended evaluation output item for red teaming evaluations."""
+    """Extended evaluation output item for red teaming evaluations.
+
+    Organizes results by filter condition name, with each condition containing
+    its score, the evaluated output, and the single intermediate step that was selected.
+
+    Attributes:
+        id: Identifier from the input item
+        score: Average score across all filter conditions
+        reasoning: Summary information for compatibility
+        results_by_condition: Map from condition name to evaluation results
+    """
 
     results_by_condition: dict[str, ConditionEvalOutputItem] = Field(
         description="Results organized by filter condition name")

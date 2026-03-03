@@ -19,7 +19,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 from typing import Any
-from typing import cast
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -90,16 +89,21 @@ def plot_score_boxplot(
         x_label = x
 
     # Parse box_color to create fill color with opacity
+    # Parse box_color to create fill color with opacity
     if box_color.startswith("rgb(") and not box_color.startswith("rgba("):
         box_fill_color = box_color.replace("rgb(", "rgba(").replace(")", f", {box_fill_opacity})")
     else:
-        box_fill_color = box_color
+        box_fill_color = box_color  # Use as-is if already rgba or different format
 
+    # Use go.Box directly for explicit control over data
     fig = go.Figure()
 
+    # Get unique x values
     unique_x_values = df[x].unique()
     n_categories = len(unique_x_values)
 
+    # Calculate box width dynamically based on number of categories
+    # Wider boxes for fewer categories, narrower for more
     box_width = max(0.2, min(0.67, 1.5 / n_categories))
     half_width = box_width / 2
     means: list[tuple[int, float, str]] = []  # (x_position, mean_value, label)
@@ -107,9 +111,11 @@ def plot_score_boxplot(
     for i, x_val in enumerate(unique_x_values):
         mask = df[x] == x_val
         subset = df.loc[mask]
-        y_values = subset[y].tolist()
+        y_values = subset[y].tolist()  # Explicitly convert to list
+        # Use index (uid) for hover text
         hover_text = subset.index.tolist()
 
+        # Calculate mean for this group
         mean_val = sum(y_values) / len(y_values) if y_values else 0
         means.append((i, mean_val, str(x_val)))
 
@@ -128,7 +134,9 @@ def plot_score_boxplot(
                 hovertemplate="uid: %{text}<br>score: %{y}<extra></extra>",
             ))
 
+    # Add mean lines and annotations for each box
     for x_pos, mean_val, _label in means:
+        # Add dotted horizontal line at the mean (spanning exact box width)
         fig.add_shape(
             type="line",
             x0=x_pos - half_width,
@@ -137,6 +145,7 @@ def plot_score_boxplot(
             y1=mean_val,
             line=dict(color="red", width=2, dash="dot"),
         )
+        # Add mean label annotation right next to the box (at left edge)
         fig.add_annotation(
             x=x_pos - half_width,
             y=mean_val,
@@ -145,7 +154,7 @@ def plot_score_boxplot(
             font=dict(size=12, color="red", weight="bold"),
             xanchor="right",
             yanchor="middle",
-            xshift=-5,
+            xshift=-5,  # Small gap from the box edge
         )
 
     fig.update_layout(
@@ -169,7 +178,24 @@ def plot_success_rate_bar(
     y_label: str = "Attack Success Rate (%)",
     bar_color: str = "rgb(55, 126, 184)",
 ) -> go.Figure:
-    """Create a bar chart showing attack success rate (percentage of scores above threshold)."""
+    """Create a bar chart showing attack success rate (percentage of scores above threshold).
+
+    Args:
+        df: DataFrame containing the data.
+        x: Column name for x-axis (grouping variable).
+        y: Column name for the score values.
+        threshold: Score threshold to consider as "success" (default 0.5).
+        title: Plot title. Defaults to "Attack Success Rate by {x}".
+        x_label: X-axis label. Defaults to the column name.
+        y_label: Y-axis label.
+        bar_color: Color for the bars.
+
+    Returns:
+        The Plotly Figure object.
+
+    Raises:
+        ValueError: If required columns are missing from the DataFrame.
+    """
     _validate_columns(df, [x, y], "plot_success_rate_bar")
 
     if title is None:
@@ -177,6 +203,7 @@ def plot_success_rate_bar(
     if x_label is None:
         x_label = x
 
+    # Calculate success rate for each group
     unique_x_values = df[x].unique()
     x_labels = []
     success_rates = []
@@ -209,7 +236,7 @@ def plot_success_rate_bar(
         title=title,
         xaxis_title=x_label,
         yaxis_title=y_label,
-        yaxis_range=[-10, 125],
+        yaxis_range=[-10, 125],  # Leave room for labels above bars
         showlegend=False,
     )
 
@@ -217,11 +244,24 @@ def plot_success_rate_bar(
 
 
 def generate_standard_plots(df: pd.DataFrame) -> list[tuple[str, str, go.Figure | None]]:
-    """Generate standard plots for red teaming results, grouped by category."""
+    """Generate standard plots for red teaming results, grouped by category.
+
+    Args:
+        df: DataFrame with columns: scenario_id, condition_name, tags, scenario_group, score.
+
+    Returns:
+        List of tuples (filename, title, figure) for each plot.
+        Section headers have figure=None and are rendered as section titles.
+
+    Raises:
+        ValueError: If required columns are missing from the DataFrame.
+    """
+    # Validate required columns upfront
     _validate_columns(df, ["scenario_id", "score", "condition_name"], "generate_standard_plots")
 
     plots: list[tuple[str, str, go.Figure | None]] = []
 
+    # ==================== RESULTS BY SCENARIO ID ====================
     plots.append(("_section", "Results by group: Scenario ID", None))
 
     fig_scenario = plot_score_boxplot(
@@ -242,6 +282,7 @@ def generate_standard_plots(df: pd.DataFrame) -> list[tuple[str, str, go.Figure 
     )
     plots.append(("scenario_id_success_rate", "Attack Success Rate", fig_scenario_bar))
 
+    # ==================== RESULTS BY SCENARIO GROUP ====================
     if "scenario_group" in df.columns:
         plots.append(("_section", "Results by group: Scenario Group", None))
 
@@ -263,6 +304,7 @@ def generate_standard_plots(df: pd.DataFrame) -> list[tuple[str, str, go.Figure 
         )
         plots.append(("scenario_group_success_rate", "Attack Success Rate", fig_group_bar))
 
+    # ==================== RESULTS BY CONDITION ====================
     plots.append(("_section", "Results by group: Output Filtering Condition", None))
 
     fig_condition = plot_score_boxplot(
@@ -283,6 +325,7 @@ def generate_standard_plots(df: pd.DataFrame) -> list[tuple[str, str, go.Figure 
     )
     plots.append(("condition_name_success_rate", "Attack Success Rate", fig_condition_bar))
 
+    # ==================== RESULTS BY TAGS ====================
     if "tags" in df.columns:
         df_tags = df.explode("tags")
         df_tags = df_tags.dropna(subset=["tags"])
@@ -311,18 +354,43 @@ def generate_standard_plots(df: pd.DataFrame) -> list[tuple[str, str, go.Figure 
 
 
 def _get_risk_color(value: float, max_value: float = 1.0) -> str:
-    """Get a color that transitions from low to high risk based on value."""
+    """Get a color that transitions from low to high risk based on value.
+
+    The color transitions and opacity increases as risk increases:
+    - Opacity: 0.3 (at 0) -> 1.0 (at max)
+    - Color: muted -> intense red
+
+    Args:
+        value: The risk value (0 to max_value).
+        max_value: The maximum value (1.0 for scores, 100.0 for percentages).
+
+    Returns:
+        RGBA color string.
+    """
+    # Normalize to 0-1 range
     normalized = min(max(value / max_value, 0.0), 1.0)
+
+    # Interpolate color
     normalized = normalized if normalized >= 0.5 else normalized**2
     r = int(30 + (255 - 30) * normalized)
     g = int(10 + (0 - 10) * normalized)
     b = int(10 + (0 - 10) * normalized)
+
+    # Interpolate opacity from 0.5 to 1.0
     opacity = 0.3 + 0.7 * normalized
+
     return f"rgba({r}, {g}, {b}, {opacity})"
 
 
 def _render_summary_html(summary: dict[str, Any] | None) -> str:
-    """Render the summary section as HTML."""
+    """Render the summary section as HTML.
+
+    Args:
+        summary: The summary dictionary from _compute_result_summary.
+
+    Returns:
+        HTML string for the summary section.
+    """
     if not summary:
         return ""
 
@@ -335,9 +403,11 @@ def _render_summary_html(summary: dict[str, Any] | None) -> str:
     evaluation_failures = summary.get("evaluation_failures", 0)
     per_scenario = summary.get("per_scenario_summary", {})
 
+    # Get dynamic colors based on risk values
     score_color = _get_risk_color(overall_score, 1.0)
     asr_color = _get_risk_color(attack_success_rate, 1.0)
 
+    # Build per-scenario rows with ASR as first data column
     scenario_rows = ""
     for scenario_id, stats in per_scenario.items():
         scenario_asr = stats.get("attack_success_rate", 0.0)
@@ -414,9 +484,20 @@ def save_combined_html(
     page_title: str = "Red Teaming Evaluation Results",
     summary: dict[str, Any] | None = None,
 ) -> Path:
-    """Save all plots in a single interactive HTML document."""
+    """Save all plots in a single interactive HTML document.
+
+    Args:
+        plots: List of (filename, title, figure) tuples.
+        output_path: Path for the combined HTML file.
+        page_title: Title for the HTML page.
+        summary: Optional summary dictionary to display at the top of the report.
+
+    Returns:
+        Path to the saved HTML file.
+    """
     html_parts: list[str] = []
 
+    # HTML header with styling
     html_parts.append(f"""<!DOCTYPE html>
 <html>
 <head>
@@ -527,14 +608,18 @@ def save_combined_html(
     <h1>{page_title}</h1>
 """)
 
+    # Add summary section at the top
     html_parts.append(_render_summary_html(summary))
 
+    # Add each plot with its title (or section header)
     for _filename, title, fig in plots:
         if fig is None:
+            # This is a section header
             html_parts.append(f"""
     <h2 class="section-header">{title}</h2>
 """)
         else:
+            # This is a regular plot
             plot_html = pio.to_html(fig, full_html=False, include_plotlyjs=False)
             html_parts.append(f"""
     <h3 class="plot-title">{title}</h3>
@@ -543,11 +628,13 @@ def save_combined_html(
     </div>
 """)
 
+    # HTML footer
     html_parts.append("""
 </body>
 </html>
 """)
 
+    # Write combined HTML
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("".join(html_parts), encoding="utf-8")
     logger.debug("Saved combined HTML: %s", output_path)
@@ -560,18 +647,34 @@ def generate_and_save_report(
     output_dir: Path,
     summary: dict[str, Any] | None = None,
 ) -> Path | None:
-    """Generate and save all plots from flat results."""
+    """Generate and save all plots from flat results.
+
+    This is the main entry point for plotting. It:
+    1. Converts flat results to a DataFrame
+    2. Generates standard plots (by scenario, group, condition, tags)
+    3. Saves a combined HTML report with all plots and summary
+
+    Args:
+        flat_results: List of flat result dictionaries from _build_flat_results.
+        output_dir: Base output directory. Plots are saved in a 'graphs' subfolder.
+        summary: Optional summary dictionary to display at the top of the report.
+
+    Returns:
+        Path to the combined HTML report.
+    """
     report_path = output_dir / "report.html"
     is_df_empty = isinstance(flat_results, pd.DataFrame) and flat_results.empty
     if is_df_empty or (isinstance(flat_results, list) and not flat_results):
         logger.warning("No results to plot")
         return None
 
+    # Convert to DataFrame
     if isinstance(flat_results, pd.DataFrame):
         df = flat_results
     else:
         df = pd.DataFrame(flat_results)
 
+    # Drop rows with error_message (failed evaluations)
     if "error_message" in df.columns:
         error_count = int(df["error_message"].notna().sum())
         if error_count > 0:
@@ -582,15 +685,18 @@ def generate_and_save_report(
         logger.warning("No valid results to plot after filtering errors")
         return None
 
+    # Set uid as index for hover text identification
     if "uid" in df.columns:
-        df = cast(pd.DataFrame, df.set_index("uid"))
+        df = df.set_index("uid")
 
-    plots = generate_standard_plots(cast(pd.DataFrame, df))
+    # Generate plots
+    plots = generate_standard_plots(df)
 
     if not plots:
         logger.warning("No plots generated")
         return None
 
+    # Save combined HTML report
     report_path = save_combined_html(
         plots,
         report_path,

@@ -25,6 +25,19 @@ from nat.plugins.security.eval.red_teaming_evaluator.filter_conditions import In
 
 @pytest.fixture(name="create_intermediate_step")
 def fixture_create_intermediate_step():
+    """
+    Factory fixture to create an IntermediateStep with customizable parameters.
+
+    Args:
+        event_type: The type of event (IntermediateStepType)
+        name: The name of the step (e.g., tool or function name)
+        parent_id: Parent ID (defaults to "root")
+        function_name: Function name for invocation node (defaults to name or "test_function")
+        function_id: Function ID for invocation node (defaults to "test-function-id")
+
+    Returns:
+        A function that creates IntermediateStep objects
+    """
 
     def _create_step(
         event_type: IntermediateStepType,
@@ -35,6 +48,7 @@ def fixture_create_intermediate_step():
         input_data: str | None = None,
         output_data: str | None = None,
     ) -> IntermediateStep:
+        """Create an IntermediateStep with the specified parameters."""
         payload = IntermediateStepPayload(
             event_type=event_type,
             name=name,
@@ -54,6 +68,19 @@ def fixture_create_intermediate_step():
 
 @pytest.fixture(name="sample_trajectory")
 def fixture_sample_trajectory(create_intermediate_step):
+    """
+    Fixture that creates a sample trajectory with various event types and names.
+
+    Contains:
+    - LLM_START (name: "llm_model")
+    - LLM_END (name: "llm_model")
+    - TOOL_START (name: "calculator")
+    - TOOL_END (name: "calculator")
+    - TOOL_START (name: "search_tool")
+    - TOOL_END (name: "search_tool")
+    - FUNCTION_START (name: "process_data")
+    - FUNCTION_END (name: "process_data")
+    """
     return [
         create_intermediate_step(IntermediateStepType.LLM_START, name="llm_model"),
         create_intermediate_step(IntermediateStepType.LLM_END, name="llm_model"),
@@ -68,6 +95,9 @@ def fixture_sample_trajectory(create_intermediate_step):
 
 @pytest.fixture(name="trajectory_with_none_names")
 def fixture_trajectory_with_none_names(create_intermediate_step):
+    """
+    Fixture that creates a trajectory with some steps having None names.
+    """
     return [
         create_intermediate_step(IntermediateStepType.LLM_START, name=None),
         create_intermediate_step(IntermediateStepType.LLM_END, name="llm_model"),
@@ -77,87 +107,138 @@ def fixture_trajectory_with_none_names(create_intermediate_step):
 
 
 class TestIntermediateStepsFilterCondition:
+    """Test suite for IntermediateStepsFilterCondition."""
 
     def test_filter_by_event_type_enum(self, sample_trajectory):
+        """Test filtering by event_type using enum value."""
         filter_condition = IntermediateStepsFilterCondition(
             name="test_filter",
             event_type=IntermediateStepType.TOOL_END,
         )
+
         filtered = filter_condition.filter_trajectory(sample_trajectory)
-        assert len(filtered) == 2
+
+        assert len(filtered) == 2, "Should return 2 TOOL_END steps"
         assert all(step.event_type == IntermediateStepType.TOOL_END for step in filtered)
+        assert all(step.payload.name in ["calculator", "search_tool"] for step in filtered)
 
     def test_filter_by_event_type_string(self, sample_trajectory):
-        filter_condition = IntermediateStepsFilterCondition(name="test_filter", event_type="TOOL_END")
+        """Test filtering by event_type using string value."""
+        filter_condition = IntermediateStepsFilterCondition(
+            name="test_filter",
+            event_type="TOOL_END",
+        )
+
         filtered = filter_condition.filter_trajectory(sample_trajectory)
-        assert len(filtered) == 2
+
+        assert len(filtered) == 2, "Should return 2 TOOL_END steps"
         assert all(step.event_type == IntermediateStepType.TOOL_END for step in filtered)
 
     def test_filter_by_payload_name(self, sample_trajectory):
-        filter_condition = IntermediateStepsFilterCondition(name="test_filter", payload_name="calculator")
+        """Test filtering by payload.name."""
+        filter_condition = IntermediateStepsFilterCondition(
+            name="test_filter",
+            payload_name="calculator",
+        )
+
         filtered = filter_condition.filter_trajectory(sample_trajectory)
-        assert len(filtered) == 2
+
+        assert len(filtered) == 2, "Should return 2 calculator steps (START and END)"
         assert all(step.payload.name == "calculator" for step in filtered)
+        assert all(step.event_type in [IntermediateStepType.TOOL_START, IntermediateStepType.TOOL_END]
+                   for step in filtered)
 
     def test_filter_by_event_type_and_payload_name(self, sample_trajectory):
+        """Test filtering by both event_type and payload_name."""
         filter_condition = IntermediateStepsFilterCondition(
             name="test_filter",
             event_type=IntermediateStepType.TOOL_END,
             payload_name="calculator",
         )
+
         filtered = filter_condition.filter_trajectory(sample_trajectory)
-        assert len(filtered) == 1
+
+        assert len(filtered) == 1, "Should return 1 calculator TOOL_END step"
         assert filtered[0].event_type == IntermediateStepType.TOOL_END
         assert filtered[0].payload.name == "calculator"
 
     def test_filter_no_conditions(self, sample_trajectory):
+        """Test that filtering with no conditions returns all steps."""
         filter_condition = IntermediateStepsFilterCondition(name="test_filter")
+
         filtered = filter_condition.filter_trajectory(sample_trajectory)
-        assert len(filtered) == len(sample_trajectory)
+
+        assert len(filtered) == len(sample_trajectory), "Should return all steps"
+        assert filtered == sample_trajectory, "Should return steps in original order"
 
     def test_filter_empty_trajectory(self):
+        """Test filtering an empty trajectory."""
         filter_condition = IntermediateStepsFilterCondition(
             name="test_filter",
             event_type=IntermediateStepType.TOOL_END,
         )
+
         filtered = filter_condition.filter_trajectory([])
-        assert len(filtered) == 0
+
+        assert len(filtered) == 0, "Should return empty list"
 
     def test_filter_no_matches(self, sample_trajectory):
+        """Test filtering when no steps match the conditions."""
         filter_condition = IntermediateStepsFilterCondition(
             name="test_filter",
             event_type=IntermediateStepType.TOOL_END,
             payload_name="nonexistent_tool",
         )
+
         filtered = filter_condition.filter_trajectory(sample_trajectory)
-        assert len(filtered) == 0
+
+        assert len(filtered) == 0, "Should return empty list when no matches"
 
     def test_filter_payload_name_with_none_values(self, trajectory_with_none_names):
-        filter_condition = IntermediateStepsFilterCondition(name="test_filter", payload_name="calculator")
+        """Test filtering by payload_name when some steps have None names."""
+        filter_condition = IntermediateStepsFilterCondition(
+            name="test_filter",
+            payload_name="calculator",
+        )
+
         filtered = filter_condition.filter_trajectory(trajectory_with_none_names)
-        assert len(filtered) == 1
+
+        assert len(filtered) == 1, "Should return 1 calculator step"
         assert filtered[0].payload.name == "calculator"
+        assert filtered[0].event_type == IntermediateStepType.TOOL_END
 
     def test_filter_multiple_tools_same_event_type(self, sample_trajectory):
+        """Test filtering multiple tools with the same event type."""
         filter_condition = IntermediateStepsFilterCondition(
             name="test_filter",
             event_type=IntermediateStepType.TOOL_START,
         )
+
         filtered = filter_condition.filter_trajectory(sample_trajectory)
-        assert len(filtered) == 2
+
+        assert len(filtered) == 2, "Should return 2 TOOL_START steps"
+        assert all(step.event_type == IntermediateStepType.TOOL_START for step in filtered)
+        assert set(step.payload.name for step in filtered) == {"calculator", "search_tool"}
 
     def test_filter_preserves_order(self, sample_trajectory):
+        """Test that filtering preserves the original order of steps."""
         filter_condition = IntermediateStepsFilterCondition(
             name="test_filter",
             event_type=IntermediateStepType.TOOL_END,
         )
+
         filtered = filter_condition.filter_trajectory(sample_trajectory)
+
+        # Check that order is preserved (calculator comes before search_tool in original)
         assert filtered[0].payload.name == "calculator"
         assert filtered[1].payload.name == "search_tool"
 
     def test_filter_condition_name_field(self):
+        """Test that the name field is properly set."""
         filter_condition = IntermediateStepsFilterCondition(
             name="my_custom_filter",
             event_type=IntermediateStepType.LLM_END,
         )
+
         assert filter_condition.name == "my_custom_filter"
+        assert filter_condition.event_type == IntermediateStepType.LLM_END

@@ -31,16 +31,23 @@ from langchain_core.outputs import ChatResult
 
 
 class FakeJudgeLLM(BaseChatModel):
-    """A deterministic mock LLM judge that evaluates outputs by pattern."""
+    """
+    A deterministic mock LLM judge that evaluates outputs based on pattern matching.
+    Returns scores based on the presence of specific patterns in the output.
+    """
 
+    # Define patterns and their scores as class attributes. Can be overridden in the constructor.
     patterns: dict[str, float] = {}
 
     def _evaluate_output(self, messages: list[BaseMessage]) -> AIMessage:
+        """Extract and evaluate output from messages."""
+        # Extract the prompt from messages
         prompt = ""
         for msg in messages:
             if hasattr(msg, "content"):
                 prompt += str(msg.content)
 
+        # Extract the generated output from the prompt
         generated_output = ""
         if "**System Output:**" in prompt:
             output_section = prompt.split("**System Output:**")[1]
@@ -49,17 +56,26 @@ class FakeJudgeLLM(BaseChatModel):
             else:
                 generated_output = output_section.strip()
 
+        # Check for patterns (case-insensitive)
         generated_output_lower = generated_output.lower()
         max_score = 0.0
         matched_pattern = None
-        for pattern, score in self.patterns.items():
-            if pattern in generated_output_lower and score > max_score:
-                max_score = score
-                matched_pattern = pattern
 
+        for pattern, score in self.patterns.items():
+            if pattern in generated_output_lower:
+                if score > max_score:
+                    max_score = score
+                    matched_pattern = pattern
+
+        # If no pattern matched, default to 0.0
         matched_pattern = "no pattern detected" if not matched_pattern else matched_pattern
+
+        # Generate reasoning
         reasoning = f"Pattern '{matched_pattern}' detected in output. Score: {max_score}"
+
+        # Return JSON response matching the expected format
         response_json = {"score": max_score, "reasoning": reasoning}
+
         return AIMessage(content=json.dumps(response_json))
 
     async def _agenerate(
@@ -69,6 +85,7 @@ class FakeJudgeLLM(BaseChatModel):
         run_manager: AsyncCallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
+        """Async generate method required by BaseChatModel."""
         response = self._evaluate_output(messages)
         generation = ChatGeneration(message=response)
         return ChatResult(generations=[generation])
@@ -80,6 +97,7 @@ class FakeJudgeLLM(BaseChatModel):
         run_manager: CallbackManagerForLLMRun | None = None,
         **kwargs: Any,
     ) -> ChatResult:
+        """Sync generate method required by BaseChatModel."""
         response = self._evaluate_output(messages)
         generation = ChatGeneration(message=response)
         return ChatResult(generations=[generation])
@@ -89,4 +107,6 @@ class FakeJudgeLLM(BaseChatModel):
         return "fake-judge-llm"
 
 
+# Rebuild the model to ensure Pydantic can properly validate it
+# This is needed because BaseChatModel has forward references that need to be resolved
 FakeJudgeLLM.model_rebuild()

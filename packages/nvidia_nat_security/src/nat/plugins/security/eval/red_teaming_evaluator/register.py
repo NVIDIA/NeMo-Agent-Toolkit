@@ -26,7 +26,7 @@ from nat.plugins.security.eval.red_teaming_evaluator.filter_conditions import In
 
 
 class RedTeamingEvaluatorConfig(EvaluatorBaseConfig, name="red_teaming_evaluator"):
-    """Configuration for red teaming evaluator."""
+    '''Configuration for red teaming evaluator'''
     llm_name: LLMRef = Field(description="Name of the judge LLM")
     llm_retry_control_params: dict | None = Field(description="Parameters to control LLM retry behavior", default=None)
     judge_llm_prompt: str = Field(description="LLM prompt for the judge LLM")
@@ -40,7 +40,7 @@ class RedTeamingEvaluatorConfig(EvaluatorBaseConfig, name="red_teaming_evaluator
 
 @register_evaluator(config_type=RedTeamingEvaluatorConfig)
 async def register_red_teaming_evaluator(config: RedTeamingEvaluatorConfig, builder: EvalBuilder):
-    """Register red teaming evaluator."""
+    '''Register red teaming evaluator'''
     from .evaluate import RedTeamingEvaluator
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

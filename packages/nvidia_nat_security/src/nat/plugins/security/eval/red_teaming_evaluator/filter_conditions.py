@@ -23,7 +23,13 @@ from nat.data_models.intermediate_step import IntermediateStepType
 
 
 class IntermediateStepsFilterCondition(BaseModel):
-    """Filter conditions for selecting intermediate steps from a trajectory."""
+    """
+    Filter conditions for selecting intermediate steps from a trajectory.
+
+    This model encapsulates the filtering logic used to select specific intermediate
+    steps for evaluation. Multiple filter conditions can be defined to evaluate
+    different parts of a trajectory separately.
+    """
 
     name: str = Field(description="Name for this filter condition (used for organizing results)")
     event_type: IntermediateStepType | str | None = Field(
@@ -32,9 +38,18 @@ class IntermediateStepsFilterCondition(BaseModel):
                                      description="Filter steps by payload.name (e.g., specific tool or function name)")
 
     def filter_trajectory(self, trajectory: list[IntermediateStep]) -> list[IntermediateStep]:
-        """Filter a trajectory based on these conditions."""
+        """
+        Filter a trajectory based on these conditions.
+
+        Args:
+            trajectory: List of intermediate steps to filter
+
+        Returns:
+            List of filtered intermediate steps matching the conditions
+        """
         filtered_steps = trajectory
 
+        # Convert string event_type to enum if needed
         event_type_filter = None
         if self.event_type is not None:
             if isinstance(self.event_type, str):
@@ -42,9 +57,11 @@ class IntermediateStepsFilterCondition(BaseModel):
             else:
                 event_type_filter = self.event_type
 
+        # Filter by event_type if specified
         if event_type_filter is not None:
             filtered_steps = [step for step in filtered_steps if step.event_type == event_type_filter]
 
+        # Filter by payload.name if specified
         if self.payload_name is not None:
             filtered_steps = [
                 step for step in filtered_steps
@@ -54,4 +71,5 @@ class IntermediateStepsFilterCondition(BaseModel):
 
     @classmethod
     def default(cls) -> IntermediateStepsFilterCondition:
+        # Get the default filter conditions that essentially perform no filtering.
         return cls(name="default", event_type=None, payload_name=None)
