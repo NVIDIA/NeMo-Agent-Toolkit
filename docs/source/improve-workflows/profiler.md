@@ -34,7 +34,7 @@ Will allow for features such as offline-replay or simulation of workflow runs wi
 
 The NeMo Agent Toolkit profiler is provided by the evaluation package, and some profiler features rely on additional profiling dependencies such as `scikit-learn`.
 
-For source installs from the NeMo Agent Toolkit repository root, install both evaluation and profiling support with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+Install both evaluation and profiling support with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool
