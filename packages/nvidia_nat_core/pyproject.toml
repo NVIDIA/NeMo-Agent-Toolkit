@@ -68,6 +68,7 @@ dependencies = [
   "PyYAML~=6.0",
   "rich~=14.0",
   "tabulate~=0.9",
+  "tzlocal~=5.3",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
   # transitive dependencies
