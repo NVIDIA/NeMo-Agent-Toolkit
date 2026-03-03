@@ -33,7 +33,7 @@ from weave.trace.weave_client import Call
 logger = logging.getLogger(__name__)
 
 # Fields written to Weave call summary for user attribution, in resolution priority order.
-USER_ATTRIBUTION_FIELDS: tuple[str, ...] = ("user_name", "user_email", "user_id")
+USER_ATTRIBUTION_FIELDS: tuple[str, ...] = ("trace_user_name", "trace_user_email", "trace_user_id")
 
 # Use LogFilter to filter out specific message patterns
 presidio_filter = LogFilter([
