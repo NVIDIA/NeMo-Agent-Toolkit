@@ -22,6 +22,7 @@ from typing import Any
 from typing import Literal
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import field_validator
 from pydantic import model_validator
@@ -97,7 +98,7 @@ class Step(BaseModel):
         description="Custom step-level metadata",
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")
 
     @field_validator("timestamp")
     @classmethod

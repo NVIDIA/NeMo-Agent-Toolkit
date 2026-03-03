@@ -22,6 +22,7 @@ from typing import Any
 from typing import Literal
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
 
@@ -80,7 +81,7 @@ class Trajectory(BaseModel):
         description="Custom root-level metadata",
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")
 
     def to_json_dict(self, exclude_none: bool = True) -> dict[str, Any]:
         """Export trajectory to a dictionary suitable for JSON serialization."""

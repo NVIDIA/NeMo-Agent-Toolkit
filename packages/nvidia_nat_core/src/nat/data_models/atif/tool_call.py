@@ -20,6 +20,7 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 
 
@@ -39,4 +40,4 @@ class ToolCall(BaseModel):
         description="Arguments passed to the function (can be empty dict)",
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")

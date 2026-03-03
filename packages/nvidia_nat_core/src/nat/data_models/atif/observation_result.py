@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 
 from nat.data_models.atif.content import ContentPart
@@ -47,4 +48,4 @@ class ObservationResult(BaseModel):
         description="Array of references to delegated subagent trajectories",
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")

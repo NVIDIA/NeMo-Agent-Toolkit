@@ -20,6 +20,7 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 
 
@@ -39,4 +40,4 @@ class SubagentTrajectoryRef(BaseModel):
         description="Custom metadata about the subagent execution",
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")

@@ -20,6 +20,7 @@ from __future__ import annotations
 from typing import Literal
 
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
 
@@ -36,7 +37,7 @@ class ImageSource(BaseModel):
         description="Location of the image. Can be a relative or absolute file path, or a URL.",
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")
 
 
 class ContentPart(BaseModel):
@@ -59,7 +60,7 @@ class ContentPart(BaseModel):
         description="Image source (file reference). Required when type='image'.",
     )
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def validate_content_type(self) -> ContentPart:
