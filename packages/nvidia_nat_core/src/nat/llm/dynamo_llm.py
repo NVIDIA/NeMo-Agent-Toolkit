@@ -349,6 +349,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
     nvext_prediction_trie_path: str | None = Field(
         default=None,
+        validation_alias=AliasChoices("nvext_prediction_trie_path", "prediction_trie_path"),
         description="Path to prediction_trie.json file. When set, predictions are "
         "looked up and used to override nvext.agent_hints for each LLM call.",
     )
