@@ -33,6 +33,13 @@ from nat.data_models.function import FunctionBaseConfig
 logger = logging.getLogger(__name__)
 
 
+class UnknownParallelToolError(ValueError):
+    """Raised when a configured branch tool cannot be resolved."""
+
+    def __init__(self, tool_name: str) -> None:
+        super().__init__(f"Parallel executor: unknown tool '{tool_name}'")
+
+
 class ParallelExecutorConfig(FunctionBaseConfig, name="parallel_executor"):
     """Configuration for parallel execution of a list of functions."""
 
@@ -101,7 +108,7 @@ async def parallel_execution(config: ParallelExecutorConfig, builder: Builder) -
             tool_name = str(tool_name_ref)
             tool = tools_dict.get(tool_name)
             if tool is None:
-                raise ValueError(f"Parallel executor: unknown tool '{tool_name}'")
+                raise UnknownParallelToolError(tool_name)
             tasks.append(_invoke_tool(tool_name, tool))
             tool_names.append(tool_name)
 
