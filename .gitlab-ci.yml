@@ -98,8 +98,11 @@ check:model_health:
   timeout: 10 minutes
   allow_failure: true
   script:
-    - uv pip install --system pyyaml
-    - python ci/scripts/model_health_check.py --verbose
+    - ./ci/scripts/gitlab/model_health_check.sh
+  artifacts:
+    when: always
+    paths:
+      - model_health_results.json
   rules:
     - if: $CI_CRON_NIGHTLY == "1"
       when: always

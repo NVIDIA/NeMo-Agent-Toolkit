@@ -15,10 +15,18 @@
 # limitations under the License.
 """Check that NIM model endpoints referenced in example configs are reachable.
 
-Scans config*.yml files under examples/ for LLM blocks with _type: nim,
-extracts the model_name values (including optimizer search_space entries),
-and makes a minimal inference call to each unique model. Reports any models
-that return non-200 responses.
+Scans config*.yml files under examples/ for LLM and embedder blocks with
+_type: nim, extracts model references (including optimizer search_space),
+and checks each model in two passes:
+
+  1. Catalog check  -- models missing from /v1/models have been removed.
+     Applies to both LLMs and embedders.
+  2. Inference check -- LLMs present in the catalog but returning non-200
+     on a minimal /v1/chat/completions call are temporarily down.
+     Embedders in the catalog are marked OK without an inference call.
+
+Reports removed and down models separately so the team can tell whether a
+config needs a model swap (removed) or just needs to wait (down).
 """
 
 import argparse
@@ -26,6 +34,7 @@ import json
 import os
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -36,22 +45,29 @@ except ImportError:
     print("ERROR: pyyaml is required. Install with: pip install pyyaml", file=sys.stderr)
     sys.exit(1)
 
-REPO = Path(__file__).resolve().parents[2]
-NIM_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
+try:
+    from gitutils import GitWrapper
+    _FALLBACK_REPO = GitWrapper.get_repo_dir()
+except Exception:
+    _FALLBACK_REPO = str(Path(__file__).resolve().parents[2])
+
+REPO = Path(os.environ.get('PROJECT_ROOT', _FALLBACK_REPO))
+NIM_API_BASE = "https://integrate.api.nvidia.com/v1"
 REQUEST_TIMEOUT = 30
+INTER_REQUEST_DELAY = 1.0
 
 
-def find_nim_models(examples_dir: Path) -> dict[str, list[str]]:
-    """Scan example configs for model_name values under _type: nim LLMs.
+def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
+    """Scan example configs for NIM model references in both llms and embedders.
 
     NIMModelConfig accepts both ``model_name`` and ``model`` as the field name
-    (via pydantic AliasChoices), so we check both. Embedders also use _type: nim
-    but hit the /v1/embeddings endpoint, not /v1/chat/completions, so we only
-    scan the ``llms`` section here.
+    (via pydantic AliasChoices), so we check both. LLMs and embedders are
+    returned separately because they use different endpoints for inference.
 
-    Returns a dict mapping model name to list of config file paths that reference it.
+    Returns (llm_models, embedder_models), each mapping model name to config paths.
     """
-    models: dict[str, list[str]] = {}
+    llm_models: dict[str, list[str]] = {}
+    embedder_models: dict[str, list[str]] = {}
 
     for config_path in sorted(examples_dir.rglob("config*.yml")):
         with open(config_path, encoding="utf-8") as f:
@@ -68,35 +84,61 @@ def find_nim_models(examples_dir: Path) -> dict[str, list[str]]:
         if not isinstance(cfg, dict):
             continue
 
-        llms = cfg.get("llms")
-        if not isinstance(llms, dict):
-            continue
-
         try:
             rel = str(config_path.relative_to(REPO))
         except ValueError:
             rel = str(config_path)
 
-        for _llm_name, block in llms.items():
-            if not isinstance(block, dict):
+        for section_key, target in (("llms", llm_models), ("embedders", embedder_models)):
+            section = cfg.get(section_key)
+            if not isinstance(section, dict):
                 continue
-            if block.get("_type") != "nim":
-                continue
 
-            model = block.get("model_name") or block.get("model")
-            if model:
-                models.setdefault(model, []).append(rel)
+            for _name, block in section.items():
+                if not isinstance(block, dict):
+                    continue
+                if block.get("_type") != "nim":
+                    continue
 
-            search_space = block.get("search_space", {})
-            if isinstance(search_space, dict):
-                for key in ("model_name", "model"):
-                    space_entry = search_space.get(key, {})
-                    if isinstance(space_entry, dict):
-                        for val in space_entry.get("values", []):
-                            if isinstance(val, str):
-                                models.setdefault(val, []).append(rel)
+                model = block.get("model_name") or block.get("model")
+                if model:
+                    target.setdefault(model, []).append(rel)
 
-    return models
+                search_space = block.get("search_space", {})
+                if isinstance(search_space, dict):
+                    for key in ("model_name", "model"):
+                        space_entry = search_space.get(key, {})
+                        if isinstance(space_entry, dict):
+                            for val in space_entry.get("values", []):
+                                if isinstance(val, str):
+                                    target.setdefault(val, []).append(rel)
+
+    return llm_models, embedder_models
+
+
+def get_catalog_models(api_key: str) -> set[str]:
+    """Fetch the set of model IDs currently listed in the NIM catalog.
+
+    Calls GET /v1/models and returns the ``id`` field of each entry.
+    Returns an empty set on any network or parsing failure so the caller
+    can fall back to inference-only checks.
+    """
+    req = urllib.request.Request(
+        f"{NIM_API_BASE}/models",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Accept": "application/json",
+        },
+    )
+    ctx = ssl.create_default_context()
+
+    try:
+        with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT, context=ctx) as resp:
+            body = json.loads(resp.read().decode())
+            return {m["id"] for m in body.get("data", []) if isinstance(m, dict) and "id" in m}
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError, KeyError) as e:
+        print(f"  WARNING: could not fetch /v1/models catalog: {e}", file=sys.stderr)
+        return set()
 
 
 def check_model(model: str, api_key: str) -> tuple[int, str]:
@@ -114,7 +156,7 @@ def check_model(model: str, api_key: str) -> tuple[int, str]:
     }).encode()
 
     req = urllib.request.Request(
-        NIM_API_URL,
+        f"{NIM_API_BASE}/chat/completions",
         data=payload,
         headers={
             "Authorization": f"Bearer {api_key}",
@@ -158,6 +200,12 @@ def main() -> int:
         action="store_true",
         help="Show which config files reference each model",
     )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        default=None,
+        help="Write structured results to a JSON file for downstream reporting",
+    )
     args = parser.parse_args()
 
     api_key = os.environ.get("NVIDIA_API_KEY", "")
@@ -170,53 +218,131 @@ def main() -> int:
         print(f"ERROR: {args.examples_dir} is not a directory", file=sys.stderr)
         return 1
 
-    models = find_nim_models(args.examples_dir)
+    llm_models, embedder_models = find_nim_models(args.examples_dir)
 
-    if not models:
+    # Merge into a single lookup for config file references
+    all_configs: dict[str, list[str]] = {}
+    for m, files in llm_models.items():
+        all_configs.setdefault(m, []).extend(files)
+    for m, files in embedder_models.items():
+        all_configs.setdefault(m, []).extend(files)
+
+    if not all_configs:
         print("No NIM models found in config files")
         return 0
 
-    print(f"Found {len(models)} unique NIM model(s) across example configs\n")
+    print(f"Found {len(llm_models)} LLM(s) and {len(embedder_models)} embedder(s) "
+          f"({len(all_configs)} unique model(s)) across example configs\n")
 
     if args.dry_run:
-        for model, files in sorted(models.items()):
-            print(f"  {model}")
-            if args.verbose:
-                for f in sorted(set(files)):
-                    print(f"    - {f}")
+        for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
+            if not section:
+                continue
+            print(f"  {label}:")
+            for model, files in sorted(section.items()):
+                print(f"    {model}")
+                if args.verbose:
+                    for f in sorted(set(files)):
+                        print(f"      - {f}")
         return 0
 
-    failures: list[tuple[str, int, str, list[str]]] = []
+    # -- Pass 1: catalog check for ALL models (LLMs + embedders) -------------
+    print("Pass 1: checking /v1/models catalog...")
+    catalog = get_catalog_models(api_key)
 
-    for model, files in sorted(models.items()):
+    all_model_names = set(all_configs.keys())
+
+    if catalog:
+        removed = sorted(all_model_names - catalog)
+        catalog_ok = all_model_names & catalog
+
+        for model in removed:
+            mtype = "embedder" if model in embedder_models else "llm"
+            print(f"  REMOVED  {model}  ({mtype})")
+    else:
+        print("  WARNING: catalog unavailable, falling back to inference-only checks")
+        removed = []
+        catalog_ok = all_model_names
+
+    # Embedders that are in the catalog are OK (no inference call needed)
+    embedder_ok = sorted(set(embedder_models.keys()) & catalog_ok)
+    for model in embedder_ok:
+        print(f"  OK      {model}  (embedder)")
+
+    print()
+
+    # -- Pass 2: inference check on LLMs still in catalog --------------------
+    llm_to_test = sorted(set(llm_models.keys()) & catalog_ok)
+    if llm_to_test:
+        print("Pass 2: inference check on catalog-listed LLMs...")
+    down: list[tuple[str, int, str]] = []
+
+    for i, model in enumerate(llm_to_test):
+        if i > 0:
+            time.sleep(INTER_REQUEST_DELAY)
+
         status, detail = check_model(model, api_key)
         if status in (401, 403):
             print(f"\n  ERROR: API key is invalid or expired (HTTP {status}): {detail}", file=sys.stderr)
             return 1
         if status == 200:
-            print(f"  OK    {model}")
-            if args.verbose:
-                for f in sorted(set(files)):
-                    print(f"    - {f}")
+            print(f"  OK      {model}")
         else:
             label = f"HTTP {status}" if status > 0 else "ERROR"
-            print(f"  FAIL  {model} -> {label}: {detail}")
-            failures.append((model, status, detail, files))
+            print(f"  DOWN    {model} -> {label}: {detail}")
+            down.append((model, status, detail))
 
     print()
 
-    if failures:
-        print(f"{len(failures)} model(s) unreachable:\n")
-        for model, status, _detail, files in failures:
-            label = f"HTTP {status}" if status > 0 else "ERROR"
-            print(f"  {model} ({label})")
-            for f in sorted(set(files)):
+    # -- Summary -------------------------------------------------------------
+    has_failures = bool(removed) or bool(down)
+
+    if removed:
+        print(f"{len(removed)} model(s) REMOVED from catalog (need config update):\n")
+        for model in removed:
+            print(f"  {model}")
+            for f in sorted(set(all_configs[model])):
                 print(f"    - {f}")
             print()
-        return 1
 
-    print(f"All {len(models)} model(s) are reachable.")
-    return 0
+    if down:
+        print(f"{len(down)} model(s) DOWN (in catalog but unreachable):\n")
+        for model, status, _detail in down:
+            label = f"HTTP {status}" if status > 0 else "ERROR"
+            print(f"  {model} ({label})")
+            for f in sorted(set(all_configs[model])):
+                print(f"    - {f}")
+            print()
+
+    if not has_failures:
+        print(f"All {len(all_configs)} model(s) are reachable.")
+
+    if args.output_json:
+        down_models = {m for m, _s, _d in down}
+        report = {
+            "removed": [{
+                "model": m,
+                "type": "embedder" if m in embedder_models else "llm",
+                "configs": sorted(set(all_configs[m])),
+            } for m in removed],
+            "down": [{
+                "model": m,
+                "type": "llm",
+                "status": s,
+                "detail": d,
+                "configs": sorted(set(all_configs[m])),
+            } for m, s, d in down],
+            "ok": [{
+                "model": m,
+                "type": "embedder" if m in embedder_models else "llm",
+                "configs": sorted(set(all_configs[m])),
+            } for m in sorted(all_model_names) if m not in removed and m not in down_models],
+        }
+        with open(args.output_json, "w", encoding="utf-8") as jf:
+            json.dump(report, jf, indent=2)
+        print(f"Results written to {args.output_json}")
+
+    return 1 if has_failures else 0
 
 
 if __name__ == "__main__":
