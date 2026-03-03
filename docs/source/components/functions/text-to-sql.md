@@ -32,7 +32,7 @@ The NVIDIA NeMo Agent Toolkit provides text-to-SQL capabilities through the `tex
 
 The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent Toolkit. If you have not yet installed the NeMo Agent Toolkit, refer to the [Installation](../../get-started/installation.md) guide.
 
-If you have performed a source code checkout, you can install this with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+If you have performed a source code checkout, you can install this with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool

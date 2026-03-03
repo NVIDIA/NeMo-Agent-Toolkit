@@ -30,7 +30,7 @@ These features enable developers to test their workflows locally and integrate o
 
 The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras.
 
-If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool

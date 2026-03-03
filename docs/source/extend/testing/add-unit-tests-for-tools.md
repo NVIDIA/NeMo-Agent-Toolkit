@@ -23,7 +23,7 @@ Use `nat.test.ToolTestRunner` to test [tools](../../build-workflows/functions-an
 
 The `nvidia-nat-test` package must be installed to use the `ToolTestRunner`.
 
-If you are working with a checkout of the NeMo Agent Toolkit repository, you can install it with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+If you are working with a checkout of the NeMo Agent Toolkit repository, you can install it with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool

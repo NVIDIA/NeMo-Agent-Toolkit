@@ -26,7 +26,7 @@ Availability requirements:
 - `async_endpoints` support (for Dask-backed async job endpoints)
 - `nvidia-nat-eval` support (provides evaluation runtime)
 
-Install both of these features with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+Install both of these features with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool

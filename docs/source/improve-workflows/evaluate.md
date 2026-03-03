@@ -23,7 +23,7 @@ NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. I
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`. Install the evaluation extra package with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`. Install the evaluation extra package with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool
@@ -403,7 +403,7 @@ The contents of the file have been `snipped` for brevity.
 You can visualize the evaluation results using the Weights and Biases (W&B) Weave dashboard.
 
 ### Step 1: Install the Weave plugin
-To install the Weave plugin, with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+To install the Weave plugin, with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool
@@ -888,7 +888,7 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/
 
 #### LangSmith Evaluators
 
-NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [OpenEvals](https://github.com/langchain-ai/openevals) to provide three evaluator types. To use these evaluators, install the LangChain integration package with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [OpenEvals](https://github.com/langchain-ai/openevals) to provide three evaluator types. To use these evaluators, install the LangChain integration package with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool

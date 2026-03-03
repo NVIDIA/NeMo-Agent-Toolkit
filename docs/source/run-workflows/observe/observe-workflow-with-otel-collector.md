@@ -69,7 +69,7 @@ In this guide, you will learn how to:
 
 ### Install the OpenTelemetry Subpackage
 
-If you installed the NeMo Agent Toolkit from source, you can install package extras with one of the following commands, depending if you installed the NeMo Agent Toolkit from source or from a package.
+If you installed the NeMo Agent Toolkit from source, you can install package extras with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
 ::::{tab-set}
 :sync-group: install-tool
