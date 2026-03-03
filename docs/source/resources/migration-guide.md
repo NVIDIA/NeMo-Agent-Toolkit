@@ -115,7 +115,8 @@ To migrate:
   - `pip install "nvidia-nat[eval]"`
   - `pip install nvidia-nat-eval`
 - Install profiling support when needed:
-  - `pip install "nvidia-nat-profiler"`
+  - `pip install "nvidia-nat[profiling]"`
+  - `pip install "nvidia-nat-eval[profiling]"`
 - Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
 - Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
 
@@ -123,14 +124,14 @@ To migrate:
 
 For users migrating existing integrations, the primary import change is:
 - `nat.eval.*` -> `nat.plugins.eval.*`
-- `nat.profiler.*` -> `nat.plugins.profiler.*`
+- `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
 - `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
 - `nat.eval.runtime_event_subscriber.pull_intermediate` -> `nat.builder.runtime_event_subscriber.pull_intermediate`
 
 For evaluation data models, prefer canonical core paths:
 - `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
 - `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
-- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.profiler.callbacks.token_usage_base_model`)
+- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.eval.profiler.callbacks.token_usage_base_model`)
 
 Internal module reorganization inside `nat.plugins.eval` is implementation detail and may change between releases.
 
