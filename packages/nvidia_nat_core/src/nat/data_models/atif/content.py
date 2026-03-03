@@ -1,6 +1,4 @@
-# Derived from the Harbor project (https://github.com/harbor-framework/harbor).
-# Licensed under the Apache License, Version 2.0.
-#
+# SPDX-FileCopyrightText: Copyright (c) 2025, Harbor Framework Contributors (https://github.com/harbor-framework/harbor)
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
