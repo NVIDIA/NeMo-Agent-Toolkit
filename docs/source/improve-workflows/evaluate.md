@@ -455,7 +455,7 @@ When the user configures the corresponding telemetry exporter in their workflow 
 
 ### Built-in Implementation
 
-LangSmith implements this callback pattern to create structured experiments in the LangSmith Datasets & Experiments UI. See the [LangSmith integration guide](../run-workflows/observe/observe.md?provider=LangSmith#provider-integration-guides){.external} for details on what LangSmith tracks during evaluation.
+LangSmith implements this callback pattern to create structured experiments in the LangSmith Datasets & Experiments UI. See the [LangSmith integration guide](../run-workflows/observe/observe-workflow-with-langsmith.md){.external} for details on what LangSmith tracks during evaluation.
 
 Other observability providers can implement the same `EvalCallback` protocol to add their own experiment tracking during evaluation.
 
