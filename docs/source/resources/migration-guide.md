@@ -104,7 +104,7 @@ NVIDIA NeMo Agent Toolkit 1.2 changed the name and API. Compatibility aliases an
 - All prior meta-packages have been removed.
   - `nvidia-nat-all` (no replacement, though `nvidia-nat[most]` extra does exist)
   - `nvidia-nat-ingestion` (no replacement; examples directly use dependencies)
-  - `nvidia-nat-profiling` (use `nvidia-nat-profiler`)
+  - `nvidia-nat-profiling` (use `nvidia-nat[profiling]`)
 
 #### Evaluation Package Split
 
