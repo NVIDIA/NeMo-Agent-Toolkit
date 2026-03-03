@@ -149,7 +149,7 @@ class TestNvidiaRAGIntegration:
     """Integration tests for NvidiaRAG with live services."""
 
     @pytest.fixture(name="create_collection")
-    def fixture_create_collection(self):
+    def fixture_create_collection(self, milvus_uri: str):
         """Factory to create Milvus collections with specific embedding models."""
         from langchain_core.documents import Document
         from langchain_milvus import Milvus
@@ -164,7 +164,7 @@ class TestNvidiaRAGIntegration:
             model_name = EMBEDDER_CONFIGS[embedder_ref].model_name
             sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", model_name)
             collection_name = f"test_{sanitized}"
-            client = MilvusClient(uri="http://localhost:19530")
+            client = MilvusClient(uri=milvus_uri)
             if client.has_collection(collection_name):
                 client.drop_collection(collection_name)
 
@@ -173,14 +173,14 @@ class TestNvidiaRAGIntegration:
                 documents=[Document(page_content="Test document", metadata={"source": "test"})],
                 embedding=embeddings,
                 collection_name=collection_name,
-                connection_args={"uri": "http://localhost:19530"},
+                connection_args={"uri": milvus_uri},
             )
             created.append(collection_name)
             return collection_name
 
         yield _create
 
-        client = MilvusClient(uri="http://localhost:19530")
+        client = MilvusClient(uri=milvus_uri)
         for name in created:
             if client.has_collection(name):
                 client.drop_collection(name)
@@ -199,6 +199,7 @@ class TestNvidiaRAGIntegration:
         self,
         mock_builder: MagicMock,
         create_collection,
+        milvus_uri: str,
         llm_ref: str,
         embedder_ref: str,
         retriever_ref: str,
@@ -217,7 +218,7 @@ class TestNvidiaRAGIntegration:
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
-        rag_config.vector_store.url = "http://localhost:19530"
+        rag_config.vector_store.url = milvus_uri
         rag_config.vector_store.default_collection_name = collection_name
 
         rag = NvidiaRAG(config=rag_config)
@@ -238,6 +239,7 @@ class TestNvidiaRAGIntegration:
     async def test_generate(
         self,
         mock_builder: MagicMock,
+        milvus_uri: str,
         llm_ref: str,
         embedder_ref: str,
         retriever_ref: str,
@@ -254,7 +256,7 @@ class TestNvidiaRAGIntegration:
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
-        rag_config.vector_store.url = "http://localhost:19530"
+        rag_config.vector_store.url = milvus_uri
 
         rag = NvidiaRAG(config=rag_config)
         messages = [{"role": "user", "content": "What is RAG?"}]
@@ -275,6 +277,7 @@ class TestNvidiaRAGIntegration:
     async def test_health(
         self,
         mock_builder: MagicMock,
+        milvus_uri: str,
         llm_ref: str,
         embedder_ref: str,
         retriever_ref: str,
@@ -291,7 +294,7 @@ class TestNvidiaRAGIntegration:
         rag_config.llm.server_url = llm_config.base_url
         rag_config.embeddings.model_name = embedder_config.model_name
         rag_config.embeddings.server_url = embedder_config.base_url
-        rag_config.vector_store.url = "http://localhost:19530"
+        rag_config.vector_store.url = milvus_uri
 
         rag = NvidiaRAG(config=rag_config)
         result = await rag.health()
