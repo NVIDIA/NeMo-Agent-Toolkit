@@ -54,7 +54,7 @@ def find_nim_models(examples_dir: Path) -> dict[str, list[str]]:
     models: dict[str, list[str]] = {}
 
     for config_path in sorted(examples_dir.rglob("config*.yml")):
-        with open(config_path) as f:
+        with open(config_path, encoding="utf-8") as f:
             try:
                 cfg = yaml.safe_load(f)
             except yaml.YAMLError as exc:
@@ -72,7 +72,10 @@ def find_nim_models(examples_dir: Path) -> dict[str, list[str]]:
         if not isinstance(llms, dict):
             continue
 
-        rel = str(config_path.relative_to(REPO))
+        try:
+            rel = str(config_path.relative_to(REPO))
+        except ValueError:
+            rel = str(config_path)
 
         for _llm_name, block in llms.items():
             if not isinstance(block, dict):
@@ -129,7 +132,7 @@ def check_model(model: str, api_key: str) -> tuple[int, str]:
         try:
             body = json.loads(e.read().decode())
             detail = body.get("detail", str(body))
-        except Exception:
+        except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError):
             detail = str(e)
         return e.code, detail
     except (urllib.error.URLError, TimeoutError, OSError) as e:
@@ -203,7 +206,7 @@ def main() -> int:
 
     if failures:
         print(f"{len(failures)} model(s) unreachable:\n")
-        for model, status, detail, files in failures:
+        for model, status, _detail, files in failures:
             label = f"HTTP {status}" if status > 0 else "ERROR"
             print(f"  {model} ({label})")
             for f in sorted(set(files)):
