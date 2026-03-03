@@ -2660,6 +2660,7 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-profiler" },
     { name = "pandas" },
 ]
 
@@ -2670,6 +2671,7 @@ requires-dist = [
     { name = "langchain-core" },
     { name = "langgraph", specifier = ">=0.0.10" },
     { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "../../" },
+    { name = "nvidia-nat-profiler", editable = "../../packages/nvidia_nat_profiler" },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
 

@@ -1648,7 +1648,6 @@ requires-dist = [
     { name = "nat-simple-web-query", marker = "extra == 'examples'", editable = "../../getting_started/simple_web_query" },
     { name = "nat-simple-web-query-eval", marker = "extra == 'examples'", editable = "../../evaluation_and_profiling/simple_web_query_eval" },
     { name = "nat-strands-demo", marker = "extra == 'examples'", editable = "../strands_demo" },
-    { name = "nat-swe-bench", marker = "extra == 'examples'", editable = "../../evaluation_and_profiling/swe_bench" },
     { name = "nat-user-report", marker = "extra == 'examples'", editable = "../../object_store/user_report" },
     { name = "nvidia-nat-a2a", marker = "extra == 'a2a'", editable = "../../../packages/nvidia_nat_a2a" },
     { name = "nvidia-nat-a2a", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_a2a" },
@@ -1671,8 +1670,7 @@ requires-dist = [
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "../../../packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-eval", marker = "extra == 'eval'", editable = "../../../packages/nvidia_nat_eval" },
-    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_eval" },
-    { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'profiling'", editable = "../../../packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-eval", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_eval" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'fastmcp'", editable = "../../../packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "../../../packages/nvidia_nat_langchain" },
@@ -1692,12 +1690,18 @@ requires-dist = [
     { name = "nvidia-nat-opentelemetry", marker = "extra == 'opentelemetry'", editable = "../../../packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_phoenix" },
     { name = "nvidia-nat-phoenix", marker = "extra == 'phoenix'", editable = "../../../packages/nvidia_nat_phoenix" },
+    { name = "nvidia-nat-profiler", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat-profiler", marker = "extra == 'profiler'", editable = "../../../packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat-profiler", marker = "extra == 'profiling'", editable = "../../../packages/nvidia_nat_profiler" },
     { name = "nvidia-nat-rag", marker = "extra == 'rag'", editable = "../../../packages/nvidia_nat_rag" },
     { name = "nvidia-nat-ragaai", marker = "extra == 'ragaai'", editable = "../../../packages/nvidia_nat_ragaai" },
+    { name = "nvidia-nat-ragas", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_ragas" },
     { name = "nvidia-nat-redis", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_redis" },
     { name = "nvidia-nat-redis", marker = "extra == 'redis'", editable = "../../../packages/nvidia_nat_redis" },
     { name = "nvidia-nat-s3", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_s3" },
     { name = "nvidia-nat-s3", marker = "extra == 's3'", editable = "../../../packages/nvidia_nat_s3" },
+    { name = "nvidia-nat-security", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_security" },
+    { name = "nvidia-nat-security", marker = "extra == 'security'", editable = "../../../packages/nvidia_nat_security" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_semantic_kernel" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "../../../packages/nvidia_nat_semantic_kernel" },
     { name = "nvidia-nat-strands", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_strands" },
@@ -1712,7 +1716,7 @@ requires-dist = [
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "../../../packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "../../documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "adk", "agno", "app", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "rag", "ragaai", "mysql", "redis", "s3", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
+provides-extras = ["a2a", "adk", "agno", "app", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
