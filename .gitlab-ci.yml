@@ -93,6 +93,20 @@ check:style:
     paths:
       - .cache/pre-commit
 
+check:model_health:
+  stage: check
+  timeout: 10 minutes
+  allow_failure: true
+  script:
+    - ./ci/scripts/gitlab/model_health_check.sh
+  artifacts:
+    when: always
+    paths:
+      - model_health_results.json
+  rules:
+    - if: $CI_CRON_NIGHTLY == "1"
+      when: always
+
 test:python_tests:
   stage: test
   timeout: 2 hours
