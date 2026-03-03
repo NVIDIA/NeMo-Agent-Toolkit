@@ -18,9 +18,12 @@ import typing
 
 from langchain_core.callbacks.base import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import SystemMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.messages.base import BaseMessage
+from langchain_core.messages.utils import convert_to_openai_messages
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
@@ -38,6 +41,29 @@ if typing.TYPE_CHECKING:
     from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _chunk_to_message(chunk: "AIMessageChunk") -> AIMessage:
+    """Convert an accumulated AIMessageChunk into an AIMessage.
+
+    When streaming chunks are accumulated via ``+``, the result has ``tool_calls``
+    but ``additional_kwargs["tool_calls"]`` (the OpenAI wire format) is left empty.
+    LLM providers read the wire format when the message is sent back in conversation
+    history, so we reconstruct it here using ``convert_to_openai_messages``.
+    """
+    additional_kwargs = dict(chunk.additional_kwargs)
+    if chunk.tool_calls and not additional_kwargs.get("tool_calls"):
+        openai_msg = convert_to_openai_messages([chunk])[0]
+        if "tool_calls" in openai_msg:
+            additional_kwargs["tool_calls"] = openai_msg["tool_calls"]
+
+    return AIMessage(
+        content=chunk.content,
+        additional_kwargs=additional_kwargs,
+        response_metadata=chunk.response_metadata,
+        id=chunk.id,
+        usage_metadata=chunk.usage_metadata,
+    )
 
 
 class ToolCallAgentGraphState(BaseModel):
@@ -105,6 +131,10 @@ class ToolCallAgentGraph(DualNodeAgent):
                 response = chunk if response is None else response + chunk
             if response is None:
                 raise RuntimeError('No response received from agent')
+
+            if isinstance(response, AIMessageChunk):
+                response = _chunk_to_message(response)
+
             if self.detailed_logs:
                 agent_input = "\n".join(str(message.content) for message in state.messages)
                 logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, response)
