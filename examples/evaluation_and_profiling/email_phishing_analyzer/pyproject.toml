@@ -36,6 +36,7 @@ classifiers = ["Programming Language :: Python"]
 dependencies = [
   "nvidia-nat[eval,langchain,phoenix,test] == {version}",
   "nvidia-nat-profiler == {version}",
+  "nvidia-nat-ragas == {version}",
   "beautifulsoup4~=4.13",
   "networkx~=3.4",
   "openinference-instrumentation-langchain==0.1.29",
@@ -44,6 +45,7 @@ dependencies = [
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 nvidia-nat-profiler = { path = "../../../packages/nvidia_nat_profiler", editable = true }
+nvidia-nat-ragas = { path = "../../../packages/nvidia_nat_ragas", editable = true }
 
 [project.entry-points.'nat.components']
 nat_email_phishing_analyzer = "nat_email_phishing_analyzer.register"
