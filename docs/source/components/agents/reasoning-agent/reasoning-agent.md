@@ -29,7 +29,7 @@ The reasoning agent requires the `nvidia-nat[langchain]` plugin, which can be in
 :sync: source
 
 ```bash
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
 :::

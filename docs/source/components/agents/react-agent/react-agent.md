@@ -29,7 +29,7 @@ The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be instal
 :sync: source
 
 ```bash
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
 :::

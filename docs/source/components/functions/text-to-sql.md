@@ -42,7 +42,7 @@ If you have performed a source code checkout, you can install this with one of t
 :sync: source
 
 ```bash
-uv pip install -e '.[vanna]'
+uv pip install -e ".[vanna]"
 ```
 
 :::

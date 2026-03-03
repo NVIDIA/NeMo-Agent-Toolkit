@@ -29,7 +29,7 @@ The router agent requires the `nvidia-nat[langchain]` plugin to be installed, wh
 :sync: source
 
 ```bash
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
 :::

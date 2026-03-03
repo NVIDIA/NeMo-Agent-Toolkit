@@ -29,7 +29,7 @@ The tool calling agent requires the `nvidia-nat[langchain]` plugin, which can be
 :sync: source
 
 ```bash
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
 :::

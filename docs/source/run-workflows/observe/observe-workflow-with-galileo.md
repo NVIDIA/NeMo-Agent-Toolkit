@@ -53,7 +53,7 @@ export GALILEO_API_KEY=<your_api_key>
 ## Step 5: Install the OpenTelemetry Subpackage
 
 ```bash
-uv pip install '.[opentelemetry]'
+uv pip install ".[opentelemetry]"
 ```
 
 ## Step 6: Modify Workflow Configuration

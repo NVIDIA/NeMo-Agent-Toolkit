@@ -41,12 +41,12 @@ If you have already installed the NeMo Agent Toolkit from source, you can instal
 
 ```bash
 # Install specific telemetry extras
-uv pip install -e '.[data-flywheel]'
-uv pip install -e '.[opentelemetry]'
-uv pip install -e '.[phoenix]'
-uv pip install -e '.[weave]'
+uv pip install -e ".[data-flywheel]"
+uv pip install -e ".[opentelemetry]"
+uv pip install -e ".[phoenix]"
+uv pip install -e ".[weave]"
 # Note: conflicts with .[strands] and .[adk]
-uv pip install -e '.[ragaai]'
+uv pip install -e ".[ragaai]"
 ```
 
 :::

@@ -29,7 +29,7 @@ The ReWOO agent requires the `nvidia-nat[langchain]` plugin to be installed, whi
 :sync: source
 
 ```bash
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
 :::

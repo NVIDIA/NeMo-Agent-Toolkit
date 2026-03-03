@@ -45,7 +45,7 @@ export CATALYST_ENDPOINT=https://catalyst.raga.ai/api
 ### Step 5: Install the RagAI Subpackage
 
 ```bash
-uv pip install -e '.[ragaai]'
+uv pip install -e ".[ragaai]"
 ```
 
 ### Step 6: Modify Workflow Configuration

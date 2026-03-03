@@ -39,7 +39,7 @@ export LANGSMITH_API_KEY=<your-langsmith-api-key>
 Install the LangSmith dependencies to enable tracing capabilities:
 
 ```bash
-uv pip install -e '.[langsmith]'
+uv pip install -e ".[langsmith]"
 ```
 
 ### Step 2: Modify Workflow Configuration

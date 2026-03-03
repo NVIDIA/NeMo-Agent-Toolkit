@@ -60,7 +60,7 @@ If you plan to run profiling via `nat eval` (for example, when `eval.general.pro
 :sync: source
 
 ```bash
-uv pip install -e '.[eval,profiling]'
+uv pip install -e ".[eval,profiling]"
 ```
 
 :::
@@ -413,7 +413,7 @@ To install the Weave plugin, with one of the following commands, depending if yo
 :sync: source
 
 ```bash
-uv pip install -e '.[weave]'
+uv pip install -e ".[weave]"
 ```
 
 :::
@@ -898,7 +898,7 @@ NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/
 :sync: source
 
 ```bash
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
 :::

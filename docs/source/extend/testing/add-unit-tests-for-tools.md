@@ -33,7 +33,7 @@ If you are working with a checkout of the NeMo Agent Toolkit repository, you can
 :sync: source
 
 ```bash
-uv pip install -e '.[test]'
+uv pip install -e ".[test]"
 ```
 
 :::

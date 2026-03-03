@@ -38,7 +38,7 @@ export WANDB_API_KEY=<your_api_key>
 To install the Weave plugin, run the following:
 
 ```bash
-uv pip install -e '.[weave]'
+uv pip install -e ".[weave]"
 ```
 
 ### Step 2: Install the Workflow
