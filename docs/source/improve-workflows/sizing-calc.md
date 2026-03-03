@@ -374,6 +374,6 @@ async def run_calc():
 asyncio.run(run_calc())
 ```
 
-{py:class}`~nat.plugins.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
+{py:class}`~nat.plugins.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over calculator behavior.
 {py:class}`~nat.plugins.profiler.calc.data_models.CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
 For more information, refer to the [calculator data models](../../../packages/nvidia_nat_profiler/src/nat/plugins/profiler/calc/data_models.py).

@@ -37,7 +37,7 @@ uv pip install nvidia-nat-eval
 
 If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install the profiler package as well:
 ```bash
-uv pip install -e ".[profiler]
+uv pip install -e ".[profiler]"
 ```
 
 For package installs, use:
