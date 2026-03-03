@@ -264,10 +264,14 @@ def main() -> int:
         removed = []
         catalog_ok = all_model_names
 
-    # Embedders that are in the catalog are OK (no inference call needed)
-    embedder_ok = sorted(set(embedder_models.keys()) & catalog_ok)
-    for model in embedder_ok:
-        print(f"  OK      {model}  (embedder)")
+    # Embedders can only be considered OK when catalog data is available
+    embedder_ok: list[str] = []
+    if catalog:
+        embedder_ok = sorted(set(embedder_models.keys()) & catalog_ok)
+        for model in embedder_ok:
+            print(f"  OK      {model}  (embedder)")
+    elif embedder_models:
+        print("  WARNING: embedder status unknown (catalog check failed)")
 
     print()
 
