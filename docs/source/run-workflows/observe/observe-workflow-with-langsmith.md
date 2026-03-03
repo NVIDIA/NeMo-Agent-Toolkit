@@ -34,7 +34,7 @@ Set your API key as an environment variable:
 export LANGSMITH_API_KEY=<your-langsmith-api-key>
 ```
 
-### Step 1: Install the LangSmith Subpackage
+## Step 1: Install the LangSmith Subpackage
 
 Install the LangSmith dependencies to enable tracing capabilities:
 
@@ -42,7 +42,7 @@ Install the LangSmith dependencies to enable tracing capabilities:
 uv pip install -e ".[langsmith]"
 ```
 
-### Step 2: Modify Workflow Configuration
+## Step 2: Modify Workflow Configuration
 
 Update your workflow configuration file to include the telemetry settings.
 
@@ -59,7 +59,7 @@ general:
 
 This setup enables tracing through LangSmith, with traces grouped into the `default` project.
 
-### Step 3: Run Your Workflow
+## Step 3: Run Your Workflow
 
 From the root directory of the NeMo Agent Toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
 
@@ -75,7 +75,7 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 
 As the workflow runs, telemetry data will start showing up in LangSmith.
 
-### Step 4: View Traces in LangSmith
+## Step 4: View Traces in LangSmith
 
 - Open your browser and navigate to [LangSmith](https://smith.langchain.com/).
 - Locate your workflow traces under your project name in the Projects section.

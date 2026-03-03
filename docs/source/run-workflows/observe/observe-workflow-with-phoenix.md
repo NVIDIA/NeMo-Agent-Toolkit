@@ -22,7 +22,7 @@ This guide provides a step-by-step process to enable observability in a NeMo Age
 - Started the Phoenix server locally.
 - Ability to view traces in the Phoenix UI.
 
-### Step 1: Install the Phoenix Subpackage and Phoenix Server
+## Step 1: Install the Phoenix Subpackage and Phoenix Server
 
 Install the Phoenix dependencies to enable tracing capabilities with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
@@ -51,7 +51,7 @@ uv pip install "nvidia-nat[phoenix]"
 ::::
 
 
-### Step 2: Start the Phoenix Server
+## Step 2: Start the Phoenix Server
 
 Run the following command to start Phoenix server locally:
 ```bash
@@ -59,7 +59,7 @@ phoenix serve
 ```
 Phoenix should now be accessible at `http://0.0.0.0:6006`.
 
-### Step 3: Modify Workflow Configuration
+## Step 3: Modify Workflow Configuration
 
 Update your workflow configuration file to include the telemetry settings.
 
@@ -75,7 +75,7 @@ general:
 ```
 This setup enables tracing through Phoenix at `http://localhost:6006/v1/traces`, with traces grouped into the `simple_calculator` project.
 
-### Step 4: Run Your Workflow
+## Step 4: Run Your Workflow
 
 From the root directory of the NeMo Agent Toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
 
@@ -89,7 +89,7 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 ```
 As the workflow runs, telemetry data will start showing up in Phoenix.
 
-### Step 5: View Traces Data in Phoenix
+## Step 5: View Traces Data in Phoenix
 
 - Open your browser and navigate to `http://0.0.0.0:6006`.
 - Locate your workflow traces under your project name in projects.
