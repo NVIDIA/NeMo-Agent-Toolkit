@@ -702,6 +702,10 @@ NeMo Agent Toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate workflows using the public Ragas API.
 - `trajectory` - An evaluator to run and evaluate the LangChain/LangGraph agent trajectory.
 - `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
+- `tunable_rag_evaluator` - A customizable LLM evaluator for flexible RAG workflow evaluation.
+- `langsmith` - Built-in `openevals` evaluators (e.g., `exact_match`, `levenshtein_distance`).
+- `langsmith_custom` - Import any LangSmith-compatible evaluator by Python dotted path.
+- `langsmith_judge` - LLM-as-judge evaluator powered by `openevals`.
 
 #### Ragas Evaluator
 [Ragas](https://docs.ragas.io/) is an open-source evaluation framework that enables end-to-end
@@ -835,6 +839,131 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 ```bash
 nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
+
+#### LangSmith Evaluators
+
+NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [OpenEvals](https://github.com/langchain-ai/openevals) to provide three evaluator types. To use these evaluators, install the LangChain integration package:
+
+If you have performed a source code checkout:
+
+```bash
+uv pip install -e '.[langchain]'
+```
+
+If you have installed the NeMo Agent Toolkit from a package:
+
+```bash
+uv pip install "nvidia-nat[langchain]"
+```
+
+##### Built-in `openevals` Evaluator
+
+Uses a built-in `openevals` evaluator selected by short name. Available evaluators: `exact_match`, `levenshtein_distance`.
+
+**Example:**
+```yaml
+eval:
+  evaluators:
+    exact:
+      _type: langsmith
+      evaluator: exact_match
+```
+
+To pass additional dataset fields to the evaluator (beyond the standard inputs/outputs/reference_outputs), use `extra_fields`. Keys are the `kwarg` names passed to the evaluator; values are the field names looked up in the dataset entry:
+
+```yaml
+eval:
+  general:
+    dataset:
+      pass_full_entry: true
+  evaluators:
+    match_with_context:
+      _type: langsmith
+      evaluator: exact_match
+      extra_fields:
+        context: retrieved_context
+```
+
+:::{note}
+`extra_fields` requires `pass_full_entry: true` in the dataset configuration so that the full dataset entry is available to the evaluator.
+:::
+
+##### Custom Evaluator
+
+Imports any LangSmith-compatible evaluator by Python dotted path. The calling convention is auto-detected:
+
+- **RunEvaluator class** — subclasses of `langsmith.evaluation.evaluator.RunEvaluator`
+- **`(run, example)` function** — receives synthetic LangSmith `Run` and `Example` objects
+- **`(inputs, outputs, reference_outputs)` function** — `openevals`-style keyword arguments
+
+**Example:**
+```yaml
+eval:
+  evaluators:
+    my_evaluator:
+      _type: langsmith_custom
+      evaluator: my_package.evaluators.my_function
+```
+
+`extra_fields` is supported for evaluators using the `(inputs, outputs, reference_outputs)` convention.
+
+##### LLM-as-Judge Evaluator
+
+Uses `openevals` `create_llm_as_judge` to score workflow outputs with a judge LLM. Supports prebuilt prompts from `openevals` (e.g., `correctness`, `hallucination`) and custom prompt templates.
+
+**Important:** The judge LLM must support structured output (JSON schema mode). Models that do not support structured output will produce parsing errors.
+
+**Example with a prebuilt prompt:**
+```yaml
+eval:
+  evaluators:
+    correctness:
+      _type: langsmith_judge
+      prompt: correctness
+      llm_name: judge_llm
+      feedback_key: correctness
+```
+
+**Example with a custom prompt and scoring options:**
+```yaml
+eval:
+  evaluators:
+    custom_judge:
+      _type: langsmith_judge
+      prompt: >
+        You are evaluating whether the answer addresses the user's question.
+        Inputs: {inputs}
+        Outputs: {outputs}
+        Reference: {reference_outputs}
+      llm_name: judge_llm
+      feedback_key: relevance
+      continuous: true
+      use_reasoning: true
+```
+
+| Parameter | Default | Description |
+| --------- | ------- | ----------- |
+| `prompt` | *(required)* | Prebuilt `openevals` prompt name (e.g., `correctness`) or a custom f-string template. |
+| `llm_name` | *(required)* | Name of the judge LLM defined in the `llms:` section of the workflow configuration. |
+| `feedback_key` | `score` | Metric name in evaluation output. |
+| `continuous` | `false` | If true, score is a float between 0 and 1. Mutually exclusive with `choices`. |
+| `choices` | `null` | Explicit list of allowed score values (e.g., `[0, 0.5, 1]`). Mutually exclusive with `continuous`. |
+| `use_reasoning` | `true` | Whether the judge provides chain-of-thought reasoning. |
+| `system` | `null` | Optional system message added to the beginning of the prompt. |
+| `few_shot_examples` | `null` | List of few-shot examples to calibrate the judge. Each entry should have `inputs`, `outputs`, `score`, and optionally `reasoning`. |
+| `output_schema` | `null` | Python dotted path to a TypedDict or Pydantic model for custom structured output. |
+| `score_field` | `score` | Dot-notation path to the score in custom `output_schema` results. Only used when `output_schema` is set. |
+| `judge_kwargs` | `null` | Additional keyword arguments forwarded to `create_llm_as_judge`. Must not overlap with typed fields. |
+| `extra_fields` | `null` | Maps evaluator arguments to dataset field names (requires `pass_full_entry: true`). |
+
+The `langsmith_judge` evaluator also inherits retry configuration from `RetryMixin`:
+
+| Parameter | Default | Description |
+| --------- | ------- | ----------- |
+| `do_auto_retry` | `true` | Automatically retry on transient errors. |
+| `num_retries` | `5` | Number of retry attempts. |
+| `retry_on_status_codes` | `[429, 500, 502, 503, 504]` | HTTP status codes that trigger retry. |
+| `retry_on_errors` | `["Too Many Requests", "429"]` | Error messages that trigger retry. |
 
 ### Adding Custom Evaluators
 You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.

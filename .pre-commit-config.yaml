@@ -73,7 +73,7 @@ repos:
     hooks:
       - id: markdown-link-check
         args: ["-q", "--config", "ci/markdown-link-check-config.json"]
-        exclude: "^src/nat/meta/pypi\\.md$"
+        exclude: "^(src/nat/meta/pypi\\.md|CHANGELOG\\.md)$"
 
 default_language_version:
   python: python3
