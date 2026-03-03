@@ -61,9 +61,7 @@ llms:
     temperature: 0.0
     max_tokens: 8192
     max_sensitivity: 5
-
-    # Dynamo nvext hints configuration
-    enable_nvext_hints: false
+    enable_nvext_hints: true
     nvext_prefix_id_template: "latency-demo-{uuid}"
 
     # Static fallback values (used if trie lookup fails)
@@ -72,7 +70,7 @@ llms:
     nvext_prefix_iat: MEDIUM
 
     # UPDATE THIS PATH to your profiled prediction trie
-    prediction_trie_path: ./examples/dynamo_integration/latency_sensitivity_demo/outputs/profile/prediction_trie.json
+    nvext_prediction_trie_path: ./examples/dynamo_integration/latency_sensitivity_demo/outputs/profile/prediction_trie.json
 
 workflow:
   _type: latency_sensitivity_demo
