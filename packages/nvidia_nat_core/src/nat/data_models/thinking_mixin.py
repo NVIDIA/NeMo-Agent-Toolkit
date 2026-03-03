@@ -21,7 +21,7 @@ from pydantic import Field
 from nat.data_models.gated_field_mixin import GatedFieldMixin
 
 # Currently the control logic for thinking is only implemented for Nemotron models
-_NEMOTRON_REGEX = re.compile(r"^nvidia/(llama|nvidia).*nemotron", re.IGNORECASE)
+_NEMOTRON_REGEX = re.compile(r"^nvidia/.*nemotron", re.IGNORECASE)
 # The keys are the fields that are used to determine if the model supports thinking
 _MODEL_KEYS = ("model_name", "model", "azure_deployment")
 

@@ -250,7 +250,7 @@ class TestStrandsAgentE2ENIM:
 
         # Enable thinking mixin with Nemotron model that supports thinking
         # Note: Thinking uses additional tokens, so we need a higher max_tokens
-        llm_config = NIMModelConfig(model_name="nvidia/nvidia-nemotron-nano-9b-v2",
+        llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-nano-30b-a3b",
                                     temperature=0.0,
                                     max_tokens=1024,
                                     thinking=True)
@@ -281,7 +281,7 @@ class TestStrandsAgentE2ENIM:
 
         # Enable thinking mixin with Nemotron model that supports thinking
         # Note: Thinking uses additional tokens, so we need a higher max_tokens
-        llm_config = NIMModelConfig(model_name="nvidia/nvidia-nemotron-nano-9b-v2",
+        llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-nano-30b-a3b",
                                     temperature=0.0,
                                     max_tokens=1024,
                                     thinking=True)
