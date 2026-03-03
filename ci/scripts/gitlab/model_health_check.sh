@@ -30,17 +30,15 @@ python ${SCRIPT_DIR}/model_health_check.py --output-json "${HEALTH_JSON}"
 HEALTH_RESULT=$?
 set -e
 
-if [ -f "${HEALTH_JSON}" ]; then
-    install_slack_sdk
+set +e
+install_slack_sdk
+rapids-logger "Reporting model health results to Slack"
+${GITLAB_SCRIPT_DIR}/report_test_results.py --model-health-json "${HEALTH_JSON}"
+REPORT_RESULT=$?
+set -e
 
-    rapids-logger "Reporting model health results to Slack"
-    ${GITLAB_SCRIPT_DIR}/report_test_results.py --model-health-json "${HEALTH_JSON}"
-    REPORT_RESULT=$?
-    if [ ${REPORT_RESULT} -ne 0 ]; then
-        rapids-logger "Failed to report model health results to Slack"
-    fi
-else
-    rapids-logger "No JSON results file found, skipping Slack report"
+if [ ${REPORT_RESULT} -ne 0 ]; then
+    rapids-logger "Failed to report model health results to Slack"
 fi
 
 exit ${HEALTH_RESULT}
