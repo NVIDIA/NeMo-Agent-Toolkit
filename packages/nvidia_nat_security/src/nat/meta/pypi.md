@@ -19,6 +19,6 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Security Subpackage
 
-Subpackage for security and red-team command interfaces in NeMo Agent Toolkit.
+Subpackage for security and red-team interfaces in NeMo Agent Toolkit.
 
 For more information about the NVIDIA NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

@@ -46,7 +46,15 @@ logger = logging.getLogger(__name__)
 
 
 class RedTeamingRunner:
-    """Runner for executing red teaming evaluations across multiple scenarios."""
+    """Runner for executing red teaming evaluations across multiple scenarios.
+
+    This runner encapsulates all the logic for:
+
+    * Generating workflow configurations for each scenario
+    * Setting up output directories
+    * Saving configuration files
+    * Running evaluations via MultiEvaluationRunner
+    """
 
     def __init__(
             self,
@@ -59,6 +67,7 @@ class RedTeamingRunner:
             reps: int = 1,
             overrides: tuple[tuple[str, str], ...] = (),
     ):
+        """Initialize the RedTeamingRunner."""
         self.config = config
         self.base_workflow_config = base_workflow_config
         self.dataset_path = dataset_path
@@ -72,6 +81,7 @@ class RedTeamingRunner:
         self._base_output_dir: Path | None = None
 
     async def run(self) -> dict[str, EvaluationRunOutput]:
+        """Run the red teaming evaluation across all scenarios."""
         generated_workflow_configs = self.generate_workflow_configs()
         generated_workflow_configs = self._apply_overrides_to_all(generated_workflow_configs)
         base_output_dir = self.setup_output_directory(generated_workflow_configs)
@@ -93,6 +103,7 @@ class RedTeamingRunner:
         return results
 
     def generate_workflow_configs(self) -> dict[str, Config]:
+        """Generate workflow configurations for each scenario."""
         if self.config is None:
             self._validate_base_config_for_direct_use(self.base_workflow_config)
             return {"single_scenario": self.base_workflow_config}
@@ -142,6 +153,7 @@ class RedTeamingRunner:
         return generated_workflow_configs
 
     def setup_output_directory(self, generated_workflow_configs: dict[str, Config]) -> Path:
+        """Set up the base output directory for this red teaming run."""
         first_scenario_workflow_config = next(iter(generated_workflow_configs.values()))
         base_output_dir = first_scenario_workflow_config.eval.general.output_dir
 
@@ -165,6 +177,7 @@ class RedTeamingRunner:
         base_output_dir: Path,
         generated_workflow_configs: dict[str, Config],
     ) -> None:
+        """Persist base, red-team, and scenario workflow configs."""
         with open(base_output_dir / "base_workflow_config.yml", 'w', encoding='utf-8') as f:
             yaml.safe_dump(self.base_workflow_config.model_dump(mode='json'), f, default_flow_style=False)
 
@@ -182,6 +195,7 @@ class RedTeamingRunner:
         self,
         generated_workflow_configs: dict[str, Config],
     ) -> dict[str, Config]:
+        """Apply CLI-style override tuples to each generated scenario config."""
         if not self.overrides:
             return generated_workflow_configs
 
@@ -198,6 +212,7 @@ class RedTeamingRunner:
         base_output_dir: Path,
         scenario_configs: dict[str, Config],
     ) -> dict[str, EvaluationRunConfig]:
+        """Build per-scenario EvaluationRunConfig objects for MultiEvaluationRunner."""
         eval_configs: dict[str, EvaluationRunConfig] = {}
 
         for scenario_id, scenario_config in scenario_configs.items():
@@ -224,6 +239,7 @@ class RedTeamingRunner:
         return eval_configs
 
     def _validate_base_config_for_direct_use(self, base_workflow_config: Config) -> None:
+        """Validate the base config can be used directly as a red teaming workflow."""
         errors: list[str] = []
 
         has_red_teaming_middleware = False
@@ -268,6 +284,7 @@ class RedTeamingRunner:
         logger.info("Workflow config validated for red teaming")
 
     def _warn_about_other_evaluators(self, base_workflow_config: Config) -> None:
+        """Warn when base workflow defines evaluators other than red teaming."""
         if base_workflow_config.eval and base_workflow_config.eval.evaluators:
             other_evaluators = list(base_workflow_config.eval.evaluators.keys())
             if other_evaluators:
@@ -283,6 +300,7 @@ class RedTeamingRunner:
         base_workflow_config: Config,
         dataset_path: str | None,
     ) -> None:
+        """Ensure dataset is provided via CLI, red-team config, or workflow config."""
         if dataset_path:
             return
         if self.config and self.config.general and self.config.general.dataset:
@@ -301,6 +319,7 @@ class RedTeamingRunner:
         base_workflow_config_dict: dict[str, typing.Any],
         general: EvalGeneralConfig,
     ) -> None:
+        """Merge red-team general eval settings into the scenario workflow config."""
         if "eval" not in base_workflow_config_dict:
             base_workflow_config_dict["eval"] = {}
         if "general" not in base_workflow_config_dict["eval"]:
@@ -325,6 +344,7 @@ class RedTeamingRunner:
         base_workflow_config_dict: dict[str, typing.Any],
         middleware_name: str,
     ) -> None:
+        """Attach scenario middleware to functions, function groups, and workflow."""
         if "functions" in base_workflow_config_dict:
             for func_config in base_workflow_config_dict["functions"].values():
                 if "middleware" not in func_config:
@@ -350,6 +370,7 @@ class RedTeamingRunner:
         base_workflow_config_dict: dict[str, typing.Any],
         scenario: RedTeamingScenario,
     ) -> None:
+        """Inject the scenario's red teaming evaluator config into eval.evaluators."""
         if self.config is None:
             return
 
@@ -368,6 +389,7 @@ class RedTeamingRunner:
         logger.debug("Added complete evaluator config for scenario")
 
     def _update_config_value(self, scenario_config_dict: dict[str, typing.Any], path: str, value: typing.Any) -> None:
+        """Update a nested config value by dot-path."""
         parts = path.split('.')
         current = scenario_config_dict
         for part in parts[:-1]:
@@ -375,6 +397,7 @@ class RedTeamingRunner:
         current[parts[-1]] = value
 
     def _find_red_teaming_evaluator_results(self, results: dict[str, EvaluationRunOutput]) -> dict[str, EvalOutput]:
+        """Extract red teaming evaluator outputs from per-scenario run results."""
         red_teaming_evaluator_results = {}
         for scenario_id, result in results.items():
             for evaluator_results in result.evaluation_results:
@@ -384,6 +407,7 @@ class RedTeamingRunner:
         return red_teaming_evaluator_results
 
     def _compute_result_summary(self, df: pd.DataFrame) -> dict[str, typing.Any]:
+        """Compute aggregate and per-scenario red teaming summary metrics."""
         if df.empty:
             return {
                 'overall_score': 0.0,
@@ -452,6 +476,7 @@ class RedTeamingRunner:
                              output_dir: Path,
                              results_file: Path | None = None,
                              report_path: Path | None = None) -> None:
+        """Log a formatted summary table for red teaming outcomes."""
         per_scenario = summary.get('per_scenario_summary', {})
         overall_score = summary.get('overall_score', 0.0)
         attack_success_rate = summary.get('attack_success_rate', 0.0)
@@ -515,6 +540,7 @@ class RedTeamingRunner:
         logger.info("\n".join(lines))
 
     def _build_flat_results(self, results: dict[str, EvaluationRunOutput]) -> list[dict[str, typing.Any]]:
+        """Flatten nested evaluation outputs into a tabular list of records."""
         flat_results = []
         evaluator_results = self._find_red_teaming_evaluator_results(results)
 
@@ -559,6 +585,7 @@ class RedTeamingRunner:
         return flat_results
 
     def _save_flat_results(self, flat_results: list[dict[str, typing.Any]], output_dir: Path) -> Path:
+        """Write flattened results to JSONL and return the output path."""
         output_file = output_dir / "evaluation_results.jsonl"
         with open(output_file, 'w', encoding='utf-8') as f:
             for record in flat_results:

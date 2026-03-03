@@ -12,7 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Red teaming runner configuration models."""
+"""Red teaming runner configuration models.
+
+This module provides configuration models for red teaming evaluation workflows.
+The RedTeamingRunnerConfig encapsulates all settings needed to run red teaming
+evaluations across multiple scenarios without requiring modifications to the
+base workflow.
+"""
 
 from __future__ import annotations
 
@@ -36,7 +42,12 @@ logger = logging.getLogger(__name__)
 
 
 class _RedTeamingScenarioRaw(BaseModel):
-    """Private: Scenario with dict evaluator for parsing _extends."""
+    """Private: Scenario with dict evaluator for parsing _extends.
+
+    This type is only used during YAML/JSON parsing when evaluators
+    contain _extends references. After validation, all scenarios are
+    converted to RedTeamingScenario with proper evaluator configs.
+    """
 
     scenario_id: str | None = Field(default=None, description="Optional unique identifier for this scenario.")
     middleware: RedTeamingMiddlewareConfig | None = Field(default=None,
@@ -49,7 +60,19 @@ class _RedTeamingScenarioRaw(BaseModel):
 
 
 class RedTeamingScenario(BaseModel):
-    """A single red teaming scenario configuration."""
+    """A single red teaming scenario configuration.
+
+    Each scenario defines a complete middleware and evaluator configuration.
+    The evaluator can use _extends to inherit from evaluator_defaults.
+
+    Attributes:
+        scenario_id: Optional unique identifier. If not provided, the dict key
+            from ``RedTeamingRunnerConfig.scenarios`` is used.
+        middleware: Full middleware configuration to apply. Set to None for
+            baseline scenarios (no middleware modification).
+        evaluator: Complete evaluator configuration. Can inherit from
+            ``evaluator_defaults`` using ``_extends`` in YAML/JSON.
+    """
 
     scenario_id: str | None = Field(default=None,
                                     description="Optional unique identifier for this scenario. "
@@ -68,7 +91,10 @@ class RedTeamingScenario(BaseModel):
 
 
 class RedTeamingRunnerConfig(BaseModel):
-    """Top-level configuration for red teaming evaluation."""
+    """Top-level configuration for red teaming evaluation.
+
+    Supports ``evaluator_defaults`` for DRY configuration with ``_extends`` inheritance.
+    """
 
     base_workflow: Path | None = Field(default=None,
                                        description="Optional path to the base workflow configuration file. "
@@ -91,6 +117,15 @@ class RedTeamingRunnerConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_and_resolve_scenarios(self) -> RedTeamingRunnerConfig:
+        """Validate scenarios and resolve _extends inheritance.
+
+        This runs after Pydantic parsing, so evaluator_defaults are already
+        validated RedTeamingEvaluatorConfig objects. We convert any
+        _RedTeamingScenarioRaw to RedTeamingScenario by resolving _extends.
+
+        Returns:
+            The validated configuration with all scenarios as RedTeamingScenario
+        """
         converted_scenarios: dict[str, RedTeamingScenario] = {}
 
         for scenario_key, scenario in self.scenarios.items():
@@ -136,6 +171,16 @@ class RedTeamingRunnerConfig(BaseModel):
 
     @classmethod
     def rebuild_annotations(cls) -> bool:
+        """Rebuild field annotations with discriminated unions.
+
+        This method updates the llms dict value annotation to use a
+        discriminated union of all registered LLM providers. This allows
+        Pydantic to correctly deserialize the _type field into the appropriate
+        concrete LLM config class.
+
+        Returns:
+            True if the model was rebuilt, False otherwise.
+        """
         type_registry = GlobalTypeRegistry.get()
         LLMAnnotation = typing.Annotated[type_registry.compute_annotation(LLMBaseConfig),
                                          Discriminator(TypedBaseModel.discriminator)]
