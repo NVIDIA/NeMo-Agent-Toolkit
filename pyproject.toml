@@ -84,7 +84,6 @@ zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
 pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
-profiling = [ "nvidia-nat-profiler == {version}" ]
 
 most = [
   "nvidia-nat-a2a == {version}",
