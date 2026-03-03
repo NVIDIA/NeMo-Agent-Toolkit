@@ -47,20 +47,30 @@ The NeMo Agent Toolkit provides a built-in [`sequential_executor`](../../../pack
 
 The workflow combines sequential and parallel execution:
 
-```text
-User Request
-   |
-   v
-parallel_analysis (parallel_executor)
-   |---> topic_agent (chat_completion)
-   |---> urgency_agent (chat_completion)
-   |---> risk_agent (chat_completion)
-   |
-   v
-final_synthesis_agent (chat_completion)
-   |
-   v
-Final Report
+```mermaid
+flowchart LR
+    Q0["query"] --> PAR["parallel_analysis<br/>(parallel_executor)<br/>Fan-out to branch agents"]
+    PAR --> Q1["query"]
+    PAR --> Q2["query"]
+    PAR --> Q3["query"]
+    Q1 --> B1["topic_agent<br/>(chat_completion)"]
+    Q2 --> B2["urgency_agent<br/>(chat_completion)"]
+    Q3 --> B3["risk_agent<br/>(chat_completion)"]
+    B1 --> SYN["final_synthesis_agent<br/>(chat_completion)"]
+    B2 --> SYN
+    B3 --> SYN
+    SYN --> OUT["Final Report"]
+
+    style PAR fill:#d9eaf7,stroke:#2f73c9,stroke-width:3px,color:#111111
+    style B1 fill:#f0ecf6,stroke:#6f42c1,stroke-width:2px,color:#111111
+    style B2 fill:#edf5ed,stroke:#2e7d32,stroke-width:2px,color:#111111
+    style B3 fill:#f8f0e3,stroke:#e67e22,stroke-width:2px,color:#111111
+    style SYN fill:#d9eaf7,stroke:#2f73c9,stroke-width:2px,color:#111111
+    style OUT fill:#f7f7f7,stroke:#666666,stroke-width:2px,color:#111111
+    style Q0 fill:#666a73,stroke:#666a73,color:#ffffff
+    style Q1 fill:#666a73,stroke:#666a73,color:#ffffff
+    style Q2 fill:#666a73,stroke:#666a73,color:#ffffff
+    style Q3 fill:#666a73,stroke:#666a73,color:#ffffff
 ```
 
 This structure shows how the sequential executor can call a custom parallel stage and then continue to a synthesis stage.
