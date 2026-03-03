@@ -20,8 +20,7 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
-rapids-logger "Installing pyyaml"
-uv pip install --system "pyyaml~=6.0"
+create_env
 
 rapids-logger "Running NIM model health check"
 python ${SCRIPT_DIR}/model_health_check.py \
