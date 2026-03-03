@@ -65,5 +65,10 @@ function is_current_commit_release_tagged() {
     echo ${is_tagged}
 }
 
+function install_slack_sdk() {
+    rapids-logger "Installing slack-sdk"
+    uv pip install "slack-sdk~=3.36"
+}
+
 rapids-logger "Environment Variables"
 printenv | sort
