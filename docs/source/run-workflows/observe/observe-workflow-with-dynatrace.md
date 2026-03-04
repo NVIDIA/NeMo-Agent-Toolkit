@@ -92,7 +92,7 @@ Once running, the collector endpoint is: `http://localhost:4318`.
 
 ```bash
 # Install specific telemetry extras required for Dynatrace
-uv pip install -e '.[opentelemetry]'
+uv pip install -e ".[opentelemetry]"
 ```
 
 ## Step 6: Modify NeMo Agent Toolkit Workflow Configuration

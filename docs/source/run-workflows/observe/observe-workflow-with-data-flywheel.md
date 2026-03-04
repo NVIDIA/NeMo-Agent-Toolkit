@@ -42,7 +42,7 @@ Before using the Data Flywheel integration, ensure you have:
 To install the Data Flywheel plugin, run the following:
 
 ```bash
-uv pip install -e '.[data-flywheel]'
+uv pip install -e ".[data-flywheel]"
 ```
 
 ## Step 3: Modify Workflow Configuration

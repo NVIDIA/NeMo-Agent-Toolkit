@@ -34,15 +34,31 @@ Will allow for features such as offline-replay or simulation of workflow runs wi
 
 The NeMo Agent Toolkit profiler is provided by `nvidia-nat-profiler`.
 
-For source installs from the NeMo Agent Toolkit repository root:
+Install both evaluation and profiling support with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
 uv pip install -e ".[profiler]"
 ```
 
-For package installs:
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
 uv pip install "nvidia-nat[profiler]"
 ```
+
+:::
+
+::::
 
 ## Current Profiler Architecture
 The NeMo Agent Toolkit Profiler can be broken into the following components:
