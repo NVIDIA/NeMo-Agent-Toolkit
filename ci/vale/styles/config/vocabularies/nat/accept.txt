@@ -110,7 +110,8 @@ Loghub
 Mem0
 [Mm]iddleware
 Milvus
-MiniMax
+# Minimax the algorithm, not the MiniMax model
+Minimax
 [Mm]itigation(s?)
 [Mm]ixin(s?)
 MLflow
