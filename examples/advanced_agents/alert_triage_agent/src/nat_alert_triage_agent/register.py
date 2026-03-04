@@ -24,7 +24,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.plugins.eval.profiler.decorators.function_tracking import track_function
+from nat.plugins.profiler.decorators.function_tracking import track_function
 from nat.data_models.optimizable import OptimizableMixin
 
 # flake8: noqa

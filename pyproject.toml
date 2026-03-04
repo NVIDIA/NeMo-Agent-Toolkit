@@ -66,11 +66,13 @@ nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
 openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
 opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
+profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
 ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
 s3 = ["nvidia-nat-s3 == {version}"]
+security = ["nvidia-nat-security == {version}"]
 semantic-kernel = ["nvidia-nat-semantic-kernel == {version}"]
 strands = ["nvidia-nat-strands == {version}"]
 test = ["nvidia-nat-test == {version}"]
@@ -82,7 +84,6 @@ zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
 async_endpoints = [ "nvidia-nat-core[async_endpoints] == {version}" ]
 gunicorn = [ "nvidia-nat-core[gunicorn] == {version}" ]
 pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
-profiling = [ "nvidia-nat-eval[profiling] == {version}" ]
 
 most = [
   "nvidia-nat-a2a == {version}",
@@ -93,7 +94,7 @@ most = [
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
-  "nvidia-nat-eval[profiling] == {version}",
+  "nvidia-nat-eval == {version}",
   "nvidia-nat-fastmcp == {version}",
   "nvidia-nat-langchain == {version}",
   "nvidia-nat-llama-index == {version}",
@@ -103,8 +104,11 @@ most = [
   "nvidia-nat-nemo-customizer == {version}",
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
+  "nvidia-nat-profiler == {version}",
+  "nvidia-nat-ragas == {version}",
   "nvidia-nat-redis == {version}",
   "nvidia-nat-s3 == {version}",
+  "nvidia-nat-security == {version}",
   "nvidia-nat-semantic-kernel == {version}",
   "nvidia-nat-strands == {version}",
   "nvidia-nat-test == {version}",
@@ -159,7 +163,6 @@ examples = [
   "nat_simple_web_query",
   "nat_simple_web_query_eval",
   "nat_strands_demo",
-  "nat_swe_bench",
   "nat_user_report",
   "text_file_ingest",
 ]
@@ -234,11 +237,14 @@ nvidia-nat-nemo-customizer = { path = "packages/nvidia_nat_nemo_customizer", edi
 nvidia-nat-openpipe-art = { path = "packages/nvidia_nat_openpipe_art", editable = true }
 nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
+nvidia-nat-profiler = { path = "packages/nvidia_nat_profiler", editable = true }
 nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
+nvidia-nat-ragas = { path = "packages/nvidia_nat_ragas", editable = true }
 nvidia-nat-ragaai = { path = "packages/nvidia_nat_ragaai", editable = true }
 nvidia-nat-mysql = { path = "packages/nvidia_nat_mysql", editable = true }
 nvidia-nat-redis = { path = "packages/nvidia_nat_redis", editable = true }
 nvidia-nat-s3 = { path = "packages/nvidia_nat_s3", editable = true }
+nvidia-nat-security = { path = "packages/nvidia_nat_security", editable = true }
 nvidia-nat-semantic-kernel = { path = "packages/nvidia_nat_semantic_kernel", editable = true }
 nvidia-nat-strands = { path = "packages/nvidia_nat_strands", editable = true }
 nvidia-nat-test = { path = "packages/nvidia_nat_test", editable = true }
@@ -292,7 +298,6 @@ nat_simple_rag = { path = "examples/RAG/simple_rag", editable = true }
 nat_simple_web_query = { path = "examples/getting_started/simple_web_query", editable = true }
 nat_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_web_query_eval", editable = true }
 nat_strands_demo = { path = "examples/frameworks/strands_demo", editable = true }
-nat_swe_bench = { path = "examples/evaluation_and_profiling/swe_bench", editable = true }
 nat_user_report = { path = "examples/object_store/user_report", editable = true }
 text_file_ingest = { path = "examples/documentation_guides/workflows/text_file_ingest", editable = true }
 
