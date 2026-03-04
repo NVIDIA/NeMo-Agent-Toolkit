@@ -14,14 +14,18 @@
 # limitations under the License.
 
 import asyncio
+import json
 import logging
 import shutil
 from contextlib import nullcontext
+from datetime import UTC
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from uuid import uuid4
 
+import yaml
 from pydantic import BaseModel
 from tqdm import tqdm
 
@@ -772,8 +776,6 @@ class EvaluationRun:
                    "You can re-execute evaluation for incomplete results by running "
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
-
-        self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
 
         # Retrieve file paths written by FileEvalCallback (if registered)
         file_exporter = self.get_file_exporter()
