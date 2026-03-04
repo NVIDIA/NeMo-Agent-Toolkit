@@ -15,8 +15,11 @@
 llms:
   openpipe_llm:
     _type: openai
-    # Model name should be the same as the trainer adapter config base_model
-    model_name: Qwen/Qwen2.5-3B-Instruct
+    # With LoRA finetuning (default): model_name must match backend.name
+    # so that inference routes to the latest LoRA checkpoint, not the base model.
+    # With full-weight training: model_name must match backend.base_model
+    # as updated weights are loaded directly into vLLM under the base model name.
+    model_name: tic_tac_toe_training_run
     base_url: http://localhost:8000/v1
     api_key: default
     temperature: 0.4
