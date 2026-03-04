@@ -65,10 +65,6 @@ class FileEvalCallback:
         self._write_workflow_output(result, output_dir)
         self._write_evaluator_outputs(result, output_dir)
 
-    # ------------------------------------------------------------------
-    # Private helpers – logic extracted from EvaluationRun
-    # ------------------------------------------------------------------
-
     def _write_configuration(self, result: EvalResult, output_dir: Path) -> None:
         """Save original config, effective config, and run metadata."""
         run_config = result.run_config
