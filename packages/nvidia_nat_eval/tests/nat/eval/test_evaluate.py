@@ -15,15 +15,12 @@
 
 import asyncio
 import inspect
-import json
 import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
-from unittest.mock import mock_open
 from unittest.mock import patch
 from uuid import UUID
 from uuid import uuid4
@@ -565,191 +562,7 @@ async def test_run_evaluators_partial_failure(evaluation_run, mock_evaluator, ev
         "Error message should indicate evaluator failure"
 
 
-# Batch-3: Tests for running eval and writing results
-def test_write_output(evaluation_run, default_eval_config, eval_input, eval_output, generated_answer):
-    """Test writing the workflow and evaluation results."""
-    # Mock dataset handler to get the formatted workflow results
-    for eval_input_item in eval_input.eval_input_items:
-        eval_input_item.output_obj = generated_answer
-
-    mock_dataset_handler = MagicMock()
-    workflow_output = json.dumps([item.model_dump() for item in eval_input.eval_input_items])
-    mock_dataset_handler.publish_eval_input.return_value = workflow_output
-
-    # Mock evaluation results
-    evaluator_name = "MockEvaluator"
-    evaluation_run.evaluation_results = [(evaluator_name, eval_output)]
-
-    # Mock eval_config output directory
-    evaluation_run.eval_config = default_eval_config
-    output_dir = default_eval_config.general.output_dir
-
-    # Workflow output must be written to workflow_output.json
-    workflow_output_path = output_dir / "workflow_output.json"
-
-    # Evaluator results must be written to {evaluator_name}_output.json
-    evaluator_output_path = output_dir / f"{evaluator_name}_output.json"
-
-    # Create a mock ProfilerResults object
-    mock_profiler_results = ProfilerResults()
-
-    # Patch file operations and logging. It is important to keep logs frozen to match user expectations.
-    with patch("builtins.open", mock_open()) as mock_file, \
-         patch("pathlib.Path.mkdir") as mock_mkdir, \
-         patch("nat.plugins.eval.runtime.evaluate.logger.info") as mock_logger:
-
-        # Run the actual function
-        evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
-
-        # Ensure directories are created
-        mock_mkdir.assert_called()
-
-        # Ensure the workflow output is written
-        mock_file.assert_any_call(workflow_output_path, "w", encoding="utf-8")
-        mock_file().write.assert_any_call(workflow_output)
-
-        # Ensure the evaluator output is written
-        mock_file.assert_any_call(evaluator_output_path, "w", encoding="utf-8")
-        eval_output_dict = eval_output.model_dump_json(indent=2)
-        mock_file().write.assert_any_call(eval_output_dict)
-
-        # Ensure log format has not changed
-        mock_logger.assert_any_call("Workflow output written to %s", workflow_output_path)
-        mock_logger.assert_any_call("Evaluation results written to %s", evaluator_output_path)
-
-
-def test_write_output_handles_none_output(evaluation_run, eval_input):
-    """This test ensures that write_output does not access .output without a None check."""
-    # Setup minimal eval_config with output = None
-    evaluation_run.eval_config = SimpleNamespace(
-        general=SimpleNamespace(output=None, output_dir=Path(".tmp/nat/examples/mock/")))
-    evaluation_run.eval_input = eval_input
-    # Mock dataset handler
-    mock_dataset_handler = MagicMock()
-    mock_dataset_handler.publish_eval_input.return_value = "[]"
-    # Create a mock ProfilerResults object
-    mock_profiler_results = ProfilerResults()
-    # Patch file operations and logging
-    with patch("builtins.open", mock_open()), \
-         patch("pathlib.Path.mkdir"), \
-         patch("nat.plugins.eval.runtime.evaluate.logger.info"):
-        # Should not raise AttributeError
-        try:
-            evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
-        except AttributeError:
-            pytest.fail("write_output should not access .output without a None check")
-
-
-@pytest.mark.filterwarnings("ignore:.*Pydantic serializer warnings.*:UserWarning")
-def test_write_configuration_with_path_config(evaluation_run, default_eval_config, tmp_path):
-    """Test that write_configuration correctly saves config files when config_file is a Path."""
-    # Create a temporary config file
-    config_file = tmp_path / "test_config.yml"
-    config_file.write_text("""workflow:
-  type: test
-eval:
-  general:
-    max_concurrency: 1
-""")
-    # Setup evaluation run
-    evaluation_run.config.config_file = config_file
-    evaluation_run.config.override = (("eval.general.max_concurrency", "5"), )
-    evaluation_run.eval_config = default_eval_config
-    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
-
-    # Create a mock effective config
-    mock_effective_config = Config()
-    mock_effective_config.eval = default_eval_config
-    evaluation_run.effective_config = mock_effective_config
-
-    # Run the function
-    with patch("nat.plugins.eval.runtime.evaluate.logger.info") as mock_logger:
-        evaluation_run.write_configuration()
-
-    # Verify that all three files were created
-    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
-    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
-    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
-
-    assert config_original_file.exists(), "config_original.yml should be created"
-    assert config_effective_file.exists(), "config_effective.yml should be created"
-    assert config_metadata_file.exists(), "config_metadata.json should be created"
-
-    # Verify metadata content
-    with open(config_metadata_file, encoding="utf-8") as f:
-        metadata = json.load(f)
-    assert metadata["config_file"] == str(config_file)
-    assert metadata["config_file_type"] == "Path"
-    assert len(metadata["overrides"]) == 1
-    assert metadata["overrides"][0]["path"] == "eval.general.max_concurrency"
-    assert metadata["overrides"][0]["value"] == "5"
-
-    # Verify logging
-    assert mock_logger.call_count >= 3, "Should log for all three config files"
-
-
-@pytest.mark.filterwarnings("ignore:.*Pydantic serializer warnings.*:UserWarning")
-def test_write_configuration_with_basemodel_config(evaluation_run, default_eval_config, tmp_path):
-    """Test that write_configuration correctly saves config files when config_file is a BaseModel."""
-    # Setup evaluation run with BaseModel config
-    mock_config = Config()
-    mock_config.eval = default_eval_config
-    evaluation_run.config.config_file = mock_config
-    evaluation_run.config.override = ()  # No overrides
-    evaluation_run.eval_config = default_eval_config
-    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
-    evaluation_run.effective_config = mock_config
-
-    # Run the function
-    with patch("nat.plugins.eval.runtime.evaluate.logger.info"):
-        evaluation_run.write_configuration()
-
-    # Verify that all three files were created
-    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
-    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
-    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
-
-    assert config_original_file.exists(), "config_original.yml should be created"
-    assert config_effective_file.exists(), "config_effective.yml should be created"
-    assert config_metadata_file.exists(), "config_metadata.json should be created"
-
-    # Verify metadata content
-    with open(config_metadata_file, encoding="utf-8") as f:
-        metadata = json.load(f)
-    assert metadata["config_file_type"] == "BaseModel"
-    assert len(metadata["overrides"]) == 0, "Should have no overrides"
-
-
-def test_write_configuration_handles_missing_effective_config(evaluation_run, default_eval_config, tmp_path):
-    """Test that write_configuration handles gracefully when effective_config is None."""
-    # Create a temporary config file
-    config_file = tmp_path / "test_config.yml"
-    config_file.write_text("workflow:\n  type: test\n")
-
-    # Setup evaluation run with None effective_config
-    evaluation_run.config.config_file = config_file
-    evaluation_run.eval_config = default_eval_config
-    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
-    evaluation_run.effective_config = None  # This is the key test condition
-
-    # Run the function - it should not crash
-    with patch("nat.plugins.eval.runtime.evaluate.logger.info"), \
-         patch("nat.plugins.eval.runtime.evaluate.logger.warning") as mock_warning:
-        evaluation_run.write_configuration()
-
-    # Verify warning was logged
-    mock_warning.assert_any_call("Effective config not available, skipping config_effective.yml")
-
-    # Verify that original and metadata files were created but not effective
-    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
-    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
-    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
-
-    assert config_original_file.exists(), "config_original.yml should be created"
-    assert not config_effective_file.exists(), "config_effective.yml should NOT be created when there are no overrides"
-    assert config_metadata_file.exists(), "config_metadata.json should be created"
-
-
+# Batch-3: Tests for running eval via run_and_evaluate
 @pytest.mark.parametrize("skip_workflow", [True, False])
 async def test_run_and_evaluate(evaluation_run, default_eval_config, session_manager, mock_evaluator, skip_workflow):
     """
@@ -758,7 +571,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     2. runs workflow
     3. evaluates
     4. profiles
-    5. writes output.
+    5. fires _on_eval_complete callback.
     """
     evaluation_run.config.skip_workflow = skip_workflow
     # Patch load_config to return an Config instance with eval_config set
@@ -785,7 +598,6 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     mock_uploader.run_custom_scripts = MagicMock()
     mock_uploader.upload_directory = AsyncMock()
 
-    # check if run_custom_scripts and upload_directory are called
     # Patch functions and classes. Goal here is simply to ensure calls are made to the right functions.
     with patch("nat.runtime.loader.load_config", mock_load_config), \
          patch("nat.plugins.eval.runtime.builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
@@ -798,7 +610,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
          patch.object(evaluation_run, "profile_workflow",
                       AsyncMock(return_value=ProfilerResults())) as mock_profile_workflow, \
-         patch.object(evaluation_run, "write_output", MagicMock()) as mock_write_output:
+         patch.object(evaluation_run, "_on_eval_complete", MagicMock()) as mock_on_eval_complete:
 
         # Run the function
         await evaluation_run.run_and_evaluate(session_manager=session_manager)
@@ -822,8 +634,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
         # Ensure profiling is executed
         mock_profile_workflow.assert_called_once()
 
-        # Ensure output is written with both dataset_handler and profiler_results
-        mock_write_output.assert_called_once_with(mock_dataset_handler, mock_profile_workflow.return_value)
+        # Ensure _on_eval_complete is called with the dataset handler
+        mock_on_eval_complete.assert_called_once_with(mock_dataset_handler)
 
         # Ensure custom scripts are run and directory is uploaded
         mock_uploader.run_custom_scripts.assert_called_once()

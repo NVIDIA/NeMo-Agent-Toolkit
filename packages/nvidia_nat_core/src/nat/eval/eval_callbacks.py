@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from dataclasses import field
+from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Protocol
@@ -44,9 +46,22 @@ class EvalResultItem:
 
 @dataclass
 class EvalResult:
-    """Full result of a single evaluation run."""
+    """Full result of a single evaluation run.
+
+    The ``metric_scores`` and ``items`` fields are always populated.
+    The remaining fields are optional context that exporters (e.g.
+    ``FileEvalCallback``) can use to persist richer output without
+    breaking callbacks that only inspect scores.
+    """
+
     metric_scores: dict[str, float]  # evaluator_name -> average score
     items: list[EvalResultItem]  # per-item breakdown
+
+    evaluation_outputs: list[tuple[str, Any]] = field(default_factory=list)
+    workflow_output_json: str | None = None
+    run_config: Any | None = None
+    effective_config: Any | None = None
+    output_dir: Path | None = None
 
 
 def build_eval_result(
@@ -56,6 +71,10 @@ def build_eval_result(
     metric_scores: dict[str, float],
     usage_stats: Any | None = None,
     item_span_ids: dict[str, int] | None = None,
+    workflow_output_json: str | None = None,
+    run_config: Any | None = None,
+    effective_config: Any | None = None,
+    output_dir: Path | None = None,
 ) -> EvalResult:
     """Build an EvalResult from raw evaluation data.
 
@@ -92,7 +111,15 @@ def build_eval_result(
                 runtime=usage_item.runtime if usage_item else None,
                 root_span_id=(item_span_ids.get(str(input_item.id)) if item_span_ids else None),
             ))
-    return EvalResult(metric_scores=metric_scores, items=cb_items)
+    return EvalResult(
+        metric_scores=metric_scores,
+        items=cb_items,
+        evaluation_outputs=evaluation_results,
+        workflow_output_json=workflow_output_json,
+        run_config=run_config,
+        effective_config=effective_config,
+        output_dir=output_dir,
+    )
 
 
 class EvalCallback(Protocol):

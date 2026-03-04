@@ -14,18 +14,14 @@
 # limitations under the License.
 
 import asyncio
-import json
 import logging
 import shutil
 import warnings
-from datetime import UTC
-from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from uuid import uuid4
 
-import yaml
 from pydantic import BaseModel
 from tqdm import tqdm
 
@@ -49,7 +45,7 @@ from nat.plugins.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
-    from nat.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 
 logger = logging.getLogger(__name__)
 
@@ -67,11 +63,12 @@ class EvaluationRun:
         """
         Initialize an EvaluationRun with configuration.
         """
+        from nat.eval.eval_callbacks import EvalCallbackManager
         from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
 
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
-        self.callback_manager = callback_manager
+        self.callback_manager: EvalCallbackManager = callback_manager or EvalCallbackManager()
         self.eval_config: EvalConfig | None = None
         self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
@@ -379,134 +376,13 @@ class EvaluationRun:
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e)
 
-    def write_configuration(self) -> None:
-        """Save the configuration used for this evaluation run to the output directory.
-
-        This saves three files:
-        1. config_original.yml - The original configuration file
-        2. config_effective.yml - The configuration with all overrides applied
-        3. config_metadata.json - Metadata about the evaluation run and overrides
-        """
-        output_dir = self.eval_config.general.output_dir
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        try:
-            # 1. Save original configuration
-            config_original_file = output_dir / "config_original.yml"
-            if isinstance(self.config.config_file, Path):
-                # Copy original file if it exists
-                if self.config.config_file.exists():
-                    shutil.copy2(self.config.config_file, config_original_file)
-                    self.config_original_file = config_original_file
-                    logger.info("Original config file copied to %s", config_original_file)
-                else:
-                    logger.warning("Original config file not found at %s", self.config.config_file)
-            elif isinstance(self.config.config_file, BaseModel):
-                # Serialize programmatic config, using mode='json' to handle special types like timedelta
-                config_dict = self.config.config_file.model_dump(mode='json')
-                with open(config_original_file, "w", encoding="utf-8") as f:
-                    yaml.safe_dump(config_dict, f, default_flow_style=False, sort_keys=False)
-                self.config_original_file = config_original_file
-                logger.info("Programmatic config saved to %s", config_original_file)
-
-            # 2. Save effective configuration (with overrides applied)
-            config_effective_file = output_dir / "config_effective.yml"
-            if self.effective_config is not None:
-                effective_config_dict = self.effective_config.model_dump(mode='json') if self.effective_config else {}
-                with open(config_effective_file, "w", encoding="utf-8") as f:
-                    yaml.safe_dump(effective_config_dict, f, default_flow_style=False, sort_keys=False)
-                self.config_effective_file = config_effective_file
-                logger.info("Effective config (with overrides) saved to %s", config_effective_file)
-            else:
-                logger.warning("Effective config not available, skipping config_effective.yml")
-
-            # 3. Save metadata about the run
-            config_metadata_file = output_dir / "config_metadata.json"
-            metadata = {
-                "config_file":
-                    str(self.config.config_file),
-                "config_file_type":
-                    "Path" if isinstance(self.config.config_file, Path) else "BaseModel",
-                "overrides": [{
-                    "path": path, "value": value
-                } for path, value in self.config.override] if self.config.override else [],
-                "dataset":
-                    self.config.dataset,
-                "result_json_path":
-                    self.config.result_json_path,
-                "skip_workflow":
-                    self.config.skip_workflow,
-                "skip_completed_entries":
-                    self.config.skip_completed_entries,
-                "reps":
-                    self.config.reps,
-                "endpoint":
-                    self.config.endpoint,
-                "endpoint_timeout":
-                    self.config.endpoint_timeout,
-                "adjust_dataset_size":
-                    self.config.adjust_dataset_size,
-                "num_passes":
-                    self.config.num_passes,
-                "export_timeout":
-                    self.config.export_timeout,
-                "user_id":
-                    self.config.user_id,
-                "timestamp":
-                    datetime.now(tz=UTC).isoformat(),
-            }
-
-            with open(config_metadata_file, "w", encoding="utf-8") as f:
-                json.dump(metadata, f, indent=2)
-            self.config_metadata_file = config_metadata_file
-            logger.info("Configuration metadata saved to %s", config_metadata_file)
-
-        except Exception:
-            logger.exception("Failed to write configuration files")
-            # Don't raise - this is not critical enough to fail the entire evaluation
-
-    def write_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
-        workflow_output_file = self.eval_config.general.output_dir / "workflow_output.json"
-        workflow_output_file.parent.mkdir(parents=True, exist_ok=True)
-
-        # Write the configuration files (original, effective, and metadata)
-        self.write_configuration()
-
-        # Write the workflow output to a file (this can be used for re-running the evaluation)
-
-        step_filter = self.eval_config.general.output.workflow_output_step_filter \
-            if self.eval_config.general.output else None
-        workflow_output = dataset_handler.publish_eval_input(self.eval_input, step_filter)
-        with open(workflow_output_file, "w", encoding="utf-8") as f:
-            # set indent to 2 for pretty printing
-            f.write(workflow_output)
-        self.workflow_output_file = workflow_output_file
-        logger.info("Workflow output written to %s", workflow_output_file)
-
-        # Write the output of each evaluator to a separate json file
-        for evaluator_name, eval_output in self.evaluation_results:
-            output_file = self.eval_config.general.output_dir / f"{evaluator_name}_output.json"
-            output_file.parent.mkdir(parents=True, exist_ok=True)
-            # create json content using the evaluation results
-            output = eval_output.model_dump_json(indent=2)
-            with open(output_file, "w", encoding="utf-8") as f:
-                f.write(output)
-            self.evaluator_output_files.append(output_file)
-            logger.info("Evaluation results written to %s", output_file)
-
-    def publish_output(self, dataset_handler: DatasetHandler, profiler_results: ProfilerResults):
-        """Publish the output"""
-        if self.config.write_output:
-            self.write_output(dataset_handler, profiler_results)
-
-        if self.workflow_interrupted:
-            # Issue a warning if the workflow was not completed on all datasets
-            msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
-                   "You can re-execute evaluation for incomplete results by running "
-                   "`eval` with the --skip_completed_entries flag.")
-            logger.warning(msg)
-
-        self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
+    def get_file_exporter(self) -> "FileEvalCallback | None":
+        """Return the registered ``FileEvalCallback``, if any."""
+        from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+        for cb in self.callback_manager._callbacks:
+            if isinstance(cb, FileEvalCallback):
+                return cb
+        return None
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
@@ -586,12 +462,19 @@ class EvaluationRun:
         except Exception as e:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
-    def _on_eval_complete(self) -> None:
+    def _on_eval_complete(self, dataset_handler: DatasetHandler | None = None) -> None:
         """Build an EvalResult from collected data and fire the on_eval_complete callback."""
-        if not (self.callback_manager and self.evaluation_results):
+        if not self.evaluation_results:
             return
         try:
             from nat.eval.eval_callbacks import build_eval_result
+
+            workflow_output_json: str | None = None
+            if dataset_handler is not None and self.eval_input is not None:
+                step_filter = (self.eval_config.general.output.workflow_output_step_filter
+                               if self.eval_config and self.eval_config.general.output else None)
+                workflow_output_json = dataset_handler.publish_eval_input(self.eval_input, step_filter)
+
             scores = {name: output.average_score for name, output in self.evaluation_results}
             result = build_eval_result(
                 eval_input_items=self.eval_input.eval_input_items,
@@ -599,6 +482,10 @@ class EvaluationRun:
                 metric_scores=scores,
                 usage_stats=self.usage_stats,
                 item_span_ids=self._item_span_ids,
+                workflow_output_json=workflow_output_json,
+                run_config=self.config,
+                effective_config=self.effective_config,
+                output_dir=(self.eval_config.general.output_dir if self.eval_config else None),
             )
             self.callback_manager.on_eval_complete(result)
         except Exception:
@@ -674,7 +561,7 @@ class EvaluationRun:
                                          adjust_dataset_size=self.config.adjust_dataset_size,
                                          custom_pre_eval_process_function=custom_pre_eval_process_function)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
-        if self.callback_manager and self.eval_input.eval_input_items:
+        if self.eval_input.eval_input_items:
             try:
                 file_path = getattr(dataset_config, 'file_path', 'nat-eval-dataset')
                 dataset_name = Path(file_path).stem if file_path else 'nat-eval-dataset'
@@ -740,8 +627,6 @@ class EvaluationRun:
                     # Wait for all trace export tasks to complete (local workflows only)
                     if session_manager and not self.config.endpoint:
                         await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
-
-                    self._on_eval_complete()
                 finally:
                     if local_session_manager is not None:
                         await local_session_manager.shutdown()
@@ -757,8 +642,25 @@ class EvaluationRun:
         else:
             self.usage_stats.total_runtime = 0.0
 
-        # Publish the results
-        self.publish_output(dataset_handler, profiler_results)
+        # Fire eval-complete callbacks (including FileEvalCallback for file export)
+        self._on_eval_complete(dataset_handler)
+
+        if self.workflow_interrupted:
+            msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
+                   "You can re-execute evaluation for incomplete results by running "
+                   "`eval` with the --skip_completed_entries flag.")
+            logger.warning(msg)
+
+        self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
+
+        # Retrieve file paths written by FileEvalCallback (if registered)
+        file_exporter = self.get_file_exporter()
+        if file_exporter is not None:
+            self.workflow_output_file = file_exporter.workflow_output_file
+            self.evaluator_output_files = file_exporter.evaluator_output_files
+            self.config_original_file = file_exporter.config_original_file
+            self.config_effective_file = file_exporter.config_effective_file
+            self.config_metadata_file = file_exporter.config_metadata_file
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
