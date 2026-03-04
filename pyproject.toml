@@ -136,6 +136,7 @@ examples = [
   "nat_math_assistant_a2a_protected",
   "nat_multi_frameworks",
   "nat_notebooks",
+  "nat_parallel_executor",
   "nat_per_user_workflow",
   "nat_plot_charts",
   "nat_por_to_jiratickets",
@@ -271,6 +272,7 @@ nat_math_assistant_a2a = { path = "examples/A2A/math_assistant_a2a", editable = 
 nat_math_assistant_a2a_protected = { path = "examples/A2A/math_assistant_a2a_protected", editable = true }
 nat_multi_frameworks = { path = "examples/frameworks/multi_frameworks", editable = true }
 nat_notebooks = { path = "examples/notebooks", editable = true }
+nat_parallel_executor = { path = "examples/control_flow/parallel_executor", editable = true }
 nat_per_user_workflow = { path = "examples/front_ends/per_user_workflow", editable = true }
 nat_plot_charts = { path = "examples/custom_functions/plot_charts", editable = true }
 nat_por_to_jiratickets = { path = "examples/HITL/por_to_jiratickets", editable = true }
