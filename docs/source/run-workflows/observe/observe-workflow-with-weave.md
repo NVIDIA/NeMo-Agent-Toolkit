@@ -155,6 +155,24 @@ general:
 
 The `WeaveFastAPIPluginWorker` registers the `/feedback` endpoint when Weave telemetry is configured. For more details on the feedback API, see the [API Server Endpoints](../../reference/rest-api/api-server-endpoints.md#feedback-endpoint) documentation.
 
+## User Attribution
+
+To associate traces and feedback with a specific user, set one or more of the following fields on the NeMo Agent Toolkit context metadata from within your authentication callback: `trace_user_name`, `trace_user_email`, or `trace_user_id`. These `trace_`-prefixed fields are an explicit opt-in, so general identity fields set on the metadata for other purposes will not affect Weave attribution.
+
+Any fields that are set will be written to the Weave call summary. When a user submits feedback through the `/feedback` endpoint, the first available value is used in priority order (`trace_user_name` → `trace_user_email` → `trace_user_id`), falling back to `anonymous`. 
+
+The following example shows how to set these fields from within an authentication callback:
+
+```python
+from nat.runtime.context import Context
+
+def my_auth_callback(request):
+    user_info = authenticate(request)  # returns user data from your identity provider
+    context = Context.get()
+    context.metadata.trace_user_name = user_info.get("name")
+    context.metadata.trace_user_email = user_info.get("email")
+```
+
 ## Resources
 
 - Learn more about tracing [here](https://weave-docs.wandb.ai/guides/tracking/tracing).
