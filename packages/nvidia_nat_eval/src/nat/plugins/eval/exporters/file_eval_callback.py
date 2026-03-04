@@ -118,23 +118,37 @@ class FileEvalCallback:
     def _build_run_metadata(run_config: Any) -> dict[str, Any]:
         """Assemble the metadata dict from an ``EvaluationRunConfig``."""
         return {
-            "config_file": str(run_config.config_file),
-            "config_file_type": "Path" if isinstance(run_config.config_file, Path) else "BaseModel",
+            "config_file":
+                str(run_config.config_file),
+            "config_file_type":
+                "Path" if isinstance(run_config.config_file, Path) else "BaseModel",
             "overrides": [{
                 "path": path, "value": value
             } for path, value in run_config.override] if run_config.override else [],
-            "dataset": run_config.dataset,
-            "result_json_path": run_config.result_json_path,
-            "skip_workflow": run_config.skip_workflow,
-            "skip_completed_entries": run_config.skip_completed_entries,
-            "reps": run_config.reps,
-            "endpoint": run_config.endpoint,
-            "endpoint_timeout": run_config.endpoint_timeout,
-            "adjust_dataset_size": run_config.adjust_dataset_size,
-            "num_passes": run_config.num_passes,
-            "export_timeout": run_config.export_timeout,
-            "user_id": run_config.user_id,
-            "timestamp": datetime.now(tz=UTC).isoformat(),
+            "dataset":
+                run_config.dataset,
+            "result_json_path":
+                run_config.result_json_path,
+            "skip_workflow":
+                run_config.skip_workflow,
+            "skip_completed_entries":
+                run_config.skip_completed_entries,
+            "reps":
+                run_config.reps,
+            "endpoint":
+                run_config.endpoint,
+            "endpoint_timeout":
+                run_config.endpoint_timeout,
+            "adjust_dataset_size":
+                run_config.adjust_dataset_size,
+            "num_passes":
+                run_config.num_passes,
+            "export_timeout":
+                run_config.export_timeout,
+            "user_id":
+                run_config.user_id,
+            "timestamp":
+                datetime.now(tz=UTC).isoformat(),
         }
 
     def _write_workflow_output(self, result: EvalResult, output_dir: Path) -> None:
