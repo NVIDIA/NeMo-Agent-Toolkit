@@ -4,7 +4,6 @@
 
 [Aa]gentic
 [Aa]gno
-AIQ
 [Aa]llowlist
 [Aa]nonymize(d?)
 API(s?)
@@ -12,7 +11,7 @@ Arize
 ART
 arXiv
 [Aa]sync
-[Aa]nthropic('s)?
+Anthropic
 Authlib
 [Aa]utoencoder
 [Bb]ackdoor(s?)
@@ -20,7 +19,7 @@ Authlib
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
-[Bb]rev
+Brev
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
@@ -69,7 +68,7 @@ etcd
 Faiss
 [Ff]inetunable
 [Ff]inetune(d?)
-[Ff]inetune(r|rs|ing)
+[Ff]inetune(r|rs)
 [Ff]inetuning
 Gantt
 [Gg]eneratable
@@ -93,7 +92,6 @@ Jira
 jsonlines
 [Kk]aggle
 [Kk]eycloak
-kv
 KV
 LangChain
 Langfuse
@@ -112,7 +110,7 @@ Loghub
 Mem0
 [Mm]iddleware
 Milvus
-Minimax
+MiniMax
 [Mm]itigation(s?)
 [Mm]ixin(s?)
 MLflow
@@ -208,4 +206,4 @@ vLLM
 [Ww]eb[Ss]ocket
 XGBoost
 Zep
-zsh
+Zsh
