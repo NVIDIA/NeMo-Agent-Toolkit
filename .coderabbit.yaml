@@ -131,6 +131,13 @@ reviews:
       instructions: >-
         This directory contains the core functionality of the toolkit. Changes should prioritize backward compatibility.
 
+    - path: "packages/nvidia_nat_core/src/nat/eval/**/*"
+      instructions: >-
+        - This is a deprecated compatibility shim area and should not grow.
+        - Flag any PR that adds new files under this path as a blocking issue.
+        - New evaluation code should be added under `packages/nvidia_nat_eval/src/nat/plugins/eval/` instead.
+        - Changes in this path should be limited to compatibility-only fixes that are explicitly justified in PR notes.
+
     - path: "packages/**/*"
       instructions: >-
         - This directory contains packages for the toolkit, each should contain a `pyproject.toml` file.

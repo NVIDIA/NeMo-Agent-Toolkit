@@ -587,7 +587,7 @@ class EvaluationRun:
         if not self.evaluation_results:
             return
         try:
-            from nat.eval.eval_callbacks import build_eval_result
+            from nat.plugins.eval.eval_callbacks import build_eval_result
 
             workflow_output_json: str | None = None
             if dataset_handler is not None and self.eval_input is not None:
