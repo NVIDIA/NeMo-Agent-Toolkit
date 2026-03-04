@@ -507,6 +507,33 @@ async def test_run_single_evaluator_success(evaluation_run, mock_evaluator, eval
     assert result.average_score == average_score, f"Expected average score to be {average_score}"
 
 
+async def test_run_single_evaluator_atif_lane(evaluation_run, eval_output):
+    """ATIF evaluators should run via evaluate_atif_fn and skip legacy evaluate_fn."""
+    atif_evaluator = AsyncMock()
+    atif_evaluator.evaluate_atif_fn = AsyncMock(return_value=eval_output)
+    atif_evaluator.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+
+    await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
+
+    atif_evaluator.evaluate_atif_fn.assert_awaited_once()
+    atif_evaluator.evaluate_fn.assert_not_called()
+    assert evaluation_run.evaluation_results[-1][0] == "AtifEvaluator"
+    assert evaluation_run.evaluation_results[-1][1] == eval_output
+
+
+async def test_run_single_evaluator_atif_lane_lazy_builds_samples(evaluation_run, eval_output):
+    """ATIF lane should lazily build samples when run outside run_and_evaluate."""
+    atif_evaluator = AsyncMock()
+    atif_evaluator.evaluate_atif_fn = AsyncMock(return_value=eval_output)
+    atif_evaluator.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+
+    with patch.object(evaluation_run.atif_adapter, "build_samples", wraps=evaluation_run.atif_adapter.build_samples) as mock_build:
+        await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
+
+    mock_build.assert_called_once()
+    atif_evaluator.evaluate_atif_fn.assert_awaited_once()
+
+
 async def test_run_evaluators_success(evaluation_run, mock_evaluator, eval_output, average_score):
     """Test for running multiple evaluators successfully."""
 

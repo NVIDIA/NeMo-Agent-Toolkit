@@ -50,6 +50,8 @@ from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
     from nat.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 
 logger = logging.getLogger(__name__)
 
@@ -77,8 +79,11 @@ class EvaluationRun:
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
+        from nat.plugins.eval.runtime.atif_adapter import EvalAtifAdapter
+        self.atif_adapter = EvalAtifAdapter()
         # Metadata
         self.eval_input: EvalInput | None = None
+        self.atif_eval_samples: "AtifEvalSampleList" = []
         self.workflow_interrupted: bool = False
 
         # evaluation_results is list of tuples (evaluator_name, EvalOutput)
@@ -498,7 +503,14 @@ class EvaluationRun:
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
         try:
-            eval_output = await evaluator.evaluate_fn(self.eval_input)
+            atif_evaluate_fn = getattr(evaluator, "evaluate_atif_fn", None)
+            if callable(atif_evaluate_fn):
+                if not self.atif_eval_samples and self.eval_input is not None:
+                    # Lazy-populate when run_single_evaluator is called outside run_and_evaluate.
+                    self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+                eval_output = await atif_evaluate_fn(self.atif_eval_samples)
+            else:
+                eval_output = await evaluator.evaluate_fn(self.eval_input)
             self.evaluation_results.append((evaluator_name, eval_output))
             if self.callback_manager:
                 await self.callback_manager.a_on_evaluator_score(eval_output=eval_output, evaluator_name=evaluator_name)
@@ -726,6 +738,9 @@ class EvaluationRun:
 
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
+                    # Build and cache ATIF trajectories once per eval item for
+                    # ATIF-native evaluators and future dual-lane runtime dispatch.
+                    self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
 
                     # Evaluate
                     evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
