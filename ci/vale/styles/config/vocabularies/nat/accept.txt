@@ -196,6 +196,7 @@ triages
 [Uu]nittest(s?)
 [Uu]nprocessable
 [Uu]nregister(ing|ed|s)?
+[Uu]nsloth
 [Uu]ntrusted
 [Uu]ploader
 [Uu]psert
