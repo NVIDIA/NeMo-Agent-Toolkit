@@ -47,6 +47,41 @@ class ExampleModel(BaseModel):
 
 
 @pytest.fixture
+def atif_samples(rag_user_inputs, rag_expected_outputs, rag_generated_outputs):
+    """ATIF-native samples for testing RAG ATIF evaluator path."""
+    from nat.data_models.atif import ATIFAgentConfig
+    from nat.data_models.atif import ATIFObservation
+    from nat.data_models.atif import ATIFObservationResult
+    from nat.data_models.atif import ATIFStep
+    from nat.data_models.atif import ATIFTrajectory
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+
+    samples = []
+    for index, (user_input, expected_output, generated_output) in enumerate(
+            zip(rag_user_inputs, rag_expected_outputs, rag_generated_outputs)):
+        trajectory = ATIFTrajectory(
+            session_id=str(index + 1),
+            agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
+            steps=[
+                ATIFStep(step_id=1, source="user", message=user_input),
+                ATIFStep(step_id=2,
+                         source="agent",
+                         message=str(generated_output),
+                         observation=ATIFObservation(results=[ATIFObservationResult(content="retrieved context")])),
+            ],
+        )
+        samples.append(
+            AtifEvalSample(
+                item_id=index + 1,
+                trajectory=trajectory,
+                expected_output_obj=expected_output,
+                output_obj=generated_output,
+                metadata={},
+            ))
+    return samples
+
+
+@pytest.fixture
 def ragas_judge_llm() -> "LangchainLLMWrapper":
     """Fixture providing a mocked LangchainLLMWrapper."""
     from ragas.llms import LangchainLLMWrapper
@@ -308,6 +343,50 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_l
         assert isinstance(output, EvalOutput)
         assert output.average_score == 0.0
         assert output.eval_output_items == []  # No results due to failure
+
+
+def test_atif_samples_to_ragas(ragas_judge_llm, ragas_metrics, atif_samples):
+    """Test ATIF sample mapping to ragas dataset."""
+    from ragas.evaluation import EvaluationDataset
+    from ragas.evaluation import SingleTurnSample
+
+    from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
+
+    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    dataset = atif_evaluator.atif_samples_to_ragas(atif_samples)
+
+    assert isinstance(dataset, EvaluationDataset)
+    assert len(dataset.samples) == len(atif_samples)
+    for sample in dataset.samples:
+        assert isinstance(sample, SingleTurnSample)
+        assert sample.retrieved_contexts == ["retrieved context"]
+
+
+async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_samples):
+    """Test ATIF-native evaluate path for RAGAS evaluator."""
+    from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
+
+    mock_results_dataset = MagicMock()
+    dataset = "mock_dataset"
+    mock_output = "mock_output"
+    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+
+    with patch.object(atif_evaluator, "atif_samples_to_ragas", return_value=dataset) as mock_to_ragas, \
+         patch("ragas.evaluate", new_callable=MagicMock) as mock_ragas_evaluate, \
+         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate._ragas_results_to_eval_output",
+               return_value=mock_output) as mock_to_output:
+        mock_ragas_evaluate.return_value = mock_results_dataset
+        output = await atif_evaluator.evaluate(atif_samples)
+
+        mock_to_ragas.assert_called_once_with(atif_samples)
+        mock_ragas_evaluate.assert_called_once()
+        called_kwargs = mock_ragas_evaluate.call_args.kwargs
+        assert called_kwargs["dataset"] == dataset
+        assert called_kwargs["metrics"] == ragas_metrics
+        assert called_kwargs["show_progress"] is True
+        assert called_kwargs["llm"] == ragas_judge_llm
+        mock_to_output.assert_called_once()
+        assert output == mock_output
 
 
 def test_extract_input_obj_base_model_with_field(rag_evaluator_content):
