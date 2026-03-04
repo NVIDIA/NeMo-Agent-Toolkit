@@ -35,8 +35,10 @@ classifiers = ["Programming Language :: Python"]
 dependencies = [
   "nvidia-nat[langchain,test] == {version}",
   "text_file_ingest",
+  "nat_simple_web_query",
 ]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../..", editable = true }
+nat_simple_web_query = { path = "../getting_started/simple_web_query", editable = true }
 text_file_ingest = { path = "./workflows/text_file_ingest", editable = true }

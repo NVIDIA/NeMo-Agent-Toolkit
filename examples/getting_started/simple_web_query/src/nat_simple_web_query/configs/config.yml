@@ -17,7 +17,7 @@ functions:
   webpage_query:
     _type: webpage_query
     webpage_url: https://docs.smith.langchain.com
-    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
+    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool! Do not use this tool for any other questions."
     embedder_name: nv-embedqa-e5-v5
     chunk_size: 512
   current_datetime:
@@ -28,6 +28,8 @@ llms:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
+    chat_template_kwargs:
+      enable_thinking: false
 
 embedders:
   nv-embedqa-e5-v5:

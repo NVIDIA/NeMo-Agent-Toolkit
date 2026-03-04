@@ -49,7 +49,7 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 ### Software Requirements
 
 > [!WARNING]
-> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/archive/0.7.0/reference/support-matrix.html) for full details.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/getting-started/support-matrix) for full details.
 >
 > **Supported Platforms:**
 > - Ubuntu 22.04 / 24.04 (x86_64)
@@ -178,7 +178,7 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed config
 <!-- path-check-skip-begin -->
 ```bash
 cd ../../examples/dynamo_integration
-export HF_TOKEN=<your_huggingface_token>
+export HF_TOKEN=your_huggingface_token
 
 python scripts/download_agent_leaderboard_v2.py --domains banking
 ```
@@ -287,7 +287,7 @@ llms:
     temperature: 0.0
     max_tokens: 8192
     stop: ["Observation:", "\nThought:"]  # CRITICAL: Prevents observation hallucination
-    
+
     # Optional: Customize prefix headers (sent by default with "nat-dynamo-{uuid}")
     # prefix_template: "react-benchmark-{uuid}"  # Custom template
     prefix_total_requests: 10
@@ -348,13 +348,13 @@ workflow:
 eval:
   general:
     max_concurrency: 36  # Range: 1-64
-    
+
     output:
       dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/
       cleanup: false
       job_management:
         append_job_id_to_output_dir: true
-    
+
     dataset:
       _type: json
       file_path: ./examples/dynamo_integration/data/agent_leaderboard_v2_banking.json
@@ -402,7 +402,7 @@ cd /path/to/NeMo-Agent-Toolkit
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_minimal_test.yml
 ```
 
-**Runtime**: <1 minute  
+**Runtime**: <1 minute
 **Expected TSQ**: 0.3 - 0.6
 
 ### Run Full Evaluation (100 scenarios)
@@ -411,7 +411,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs/eval_config_no_rethinking_full_test.yml
 ```
 
-**Runtime**: ~30-60 minutes (depends on concurrency)  
+**Runtime**: ~30-60 minutes (depends on concurrency)
 **Expected TSQ**: 0.4 - 0.7
 
 ### Expected Output
@@ -484,13 +484,13 @@ workflow:
   verbose: true
   feedback_template: |
     PREVIOUS ATTEMPT FEEDBACK:
-    
+
     Your previous tool selection was evaluated and found to be insufficient.
-    
+
     EVALUATION: {reasoning}
     MISSING STEPS: {missing_steps}
     SUGGESTIONS: {suggestions}
-    
+
     Please try again, addressing the issues identified above.
 ```
 
@@ -806,7 +806,7 @@ workflow:
 
 **Cause**: Tools aren't being executed or tool stubs aren't configured for decision-only mode.
 
-**Fix**: 
+**Fix**:
 1. Check logs for "Tool stub executed" - if missing, tools aren't running
 2. Ensure your `function` and `function_groups` `config` files have `decision_only: true` and a `canned_response_template`:
 
@@ -926,7 +926,7 @@ nat eval --config_file examples/dynamo_integration/react_benchmark_agent/configs
 
 ```bash
 # Optimize Dynamo prefix header parameters for the Predictive KV-Aware Thompson Sampling router
-# 
+#
 # Parameters optimized:
 #   - prefix_total_requests: Expected requests per prefix (search space: 1-20, step 5)
 #   - prefix_osl: Output Sequence Length hint (LOW | MEDIUM | HIGH)

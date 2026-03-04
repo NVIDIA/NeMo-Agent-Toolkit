@@ -67,7 +67,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
-uv pip install -e .
+uv pip install -e examples/agents
 ```
 
 The `code_generation` and `wiki_search` tools are part of the `nvidia-nat[langchain]` package.  To install the package run the following command:

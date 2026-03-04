@@ -41,6 +41,14 @@ nat
 │       └── update
 ├── eval
 ├── finetune
+├── fastmcp
+│   ├── server
+│   │   ├── dev
+│   │   ├── install
+│   │   │   ├── cursor
+│   │   │   └── nat-workflow
+│   │   └── run
+│   └── serve
 ├── info
 │   ├── channels
 │   └── components
@@ -72,8 +80,10 @@ nat
 ├── sizing
 │   └── calc
 ├── start
+│   ├── a2a
 │   ├── console
 │   ├── fastapi
+│   ├── fastmcp
 │   └── mcp
 ├── uninstall
 ├── validate
@@ -429,6 +439,34 @@ nat mcp serve --config_file examples/getting_started/simple_calculator/configs/c
 
 This will start an MCP server on the default host (localhost) and port (9901), available at `http://localhost:9901/mcp`.
 
+## FastMCP
+
+The `nat fastmcp` command group provides FastMCP server commands. Use these commands when you want the FastMCP server runtime.
+
+### Server Commands
+
+Use the following commands to run or manage a FastMCP server:
+
+- `nat fastmcp server run`
+- `nat fastmcp server dev`
+- `nat fastmcp server install`
+- `nat fastmcp serve` (alias for `nat fastmcp server run`)
+
+Examples:
+
+```console
+$ nat fastmcp server run --config_file examples/getting_started/simple_calculator/configs/config.yml
+```
+
+```console
+$ nat fastmcp server dev --config_file examples/getting_started/simple_calculator/configs/config.yml \
+  --watch-path examples/getting_started/simple_calculator/src
+```
+
+```console
+$ nat fastmcp server install nat-workflow --url http://localhost:9902/mcp --name mcp_math
+```
+
 ## Run
 
 The `nat run` is an alias for the `nat start console` command and will run a NeMo Agent Toolkit workflow from a provided configuration file against inputs supplied at the
@@ -507,6 +545,8 @@ nat serve --config_file=path/to/config --host 0.0.0.0 --port 8000
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Evaluation
+The `nat eval` and `nat red-team` commands are provided by the `nvidia-nat-eval` package. Install evaluation support with `pip install "nvidia-nat[eval]"` or `pip install nvidia-nat-eval`.
+
 The `nat eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent Toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
 [Evaluating NeMo Agent Toolkit Workflows](../improve-workflows/evaluate.md) for a detailed overview of the
@@ -706,6 +746,7 @@ nat optimize --config_file configs/my_workflow_optimizer.yml
 <!-- path-check-skip-end -->
 
 ## GPU Cluster Sizing
+The `nat sizing` command group is provided by the `nvidia-nat-eval` package. Install evaluation support with `pip install "nvidia-nat[eval]"` or `pip install nvidia-nat-eval`.
 
 The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../improve-workflows/sizing-calc.md).
 

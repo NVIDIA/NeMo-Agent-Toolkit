@@ -42,7 +42,7 @@ Before using the Data Flywheel integration, ensure you have:
 To install the Data Flywheel plugin, run the following:
 
 ```bash
-uv pip install -e '.[data-flywheel]'
+uv pip install -e ".[data-flywheel]"
 ```
 
 ## Step 3: Modify Workflow Configuration
@@ -114,7 +114,7 @@ By default, each trace receives a Data Flywheel `workload_id` that maps to the p
 For fine-grained optimization, you can create custom workload scopes using the `@track_unregistered_function` decorator. This is useful when a single registered function contains multiple LLM invocations that would benefit from separate model optimizations.
 
 ```python
-from nat.profiler.decorators.function_tracking import track_unregistered_function
+from nat.plugins.eval.profiler.decorators.function_tracking import track_unregistered_function
 
 @track_unregistered_function(name="document_summarizer", metadata={"task_type": "summarization"})
 def summarize_document(document: str) -> str:

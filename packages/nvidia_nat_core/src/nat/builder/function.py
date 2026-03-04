@@ -25,7 +25,6 @@ from collections.abc import Sequence
 
 from pydantic import BaseModel
 
-from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.context import Context
 from nat.builder.function_base import FunctionBase
 from nat.builder.function_base import InputT
@@ -66,11 +65,8 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
         self.config = config
         self.description = description
-        # Use instance_name unless it's the workflow placeholder, then fall back to config.name or config.type
-        if instance_name and instance_name != WORKFLOW_COMPONENT_NAME:
-            self.instance_name = instance_name
-        else:
-            self.instance_name = config.name or config.type
+        self.instance_name = instance_name or config.type
+        self.display_name = config.name or self.instance_name
         self._context = Context.get()
         self._configured_middleware: tuple[Middleware, ...] = tuple()
         self._middlewared_single: _InvokeFnT | None = None

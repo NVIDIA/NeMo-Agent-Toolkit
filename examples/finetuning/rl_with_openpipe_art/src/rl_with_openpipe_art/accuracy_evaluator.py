@@ -17,10 +17,10 @@ from typing import override
 
 import numpy as np
 
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 
 
 class AccuracyEvaluator(BaseEvaluator):
@@ -42,6 +42,11 @@ class AccuracyEvaluator(BaseEvaluator):
         gamma_base: float = 0.8,
         delta_bonus: float = 0.95,
     ) -> float:
+        if not (0.0 < gamma_base <= 1.0):
+            raise ValueError(f"gamma_base must be in (0, 1], got {gamma_base}")
+        if not (0.0 < delta_bonus <= 1.0):
+            raise ValueError(f"delta_bonus must be in (0, 1], got {delta_bonus}")
+
         s = np.asarray(state_values, dtype=float)
         T = len(s) - 1
         assert T >= 0
@@ -51,7 +56,9 @@ class AccuracyEvaluator(BaseEvaluator):
         bonus = np.maximum(s - 1.0, 0.0)
 
         # 2) Reverse-discounted base in [0,1]
-        exponents = np.arange(T, -1, -1)  # T, T-1, ..., 0
+        #    exponents = [0, 1, ..., T] so that earlier steps (index 0) get
+        #    weight gamma^0 = 1 (largest) and later steps get gamma^T (smallest).
+        exponents = np.arange(0, T + 1)  # 0, 1, ..., T
         w = gamma_base**exponents
         w = w / w.sum()
         R_base = float(np.dot(w, base))  # in [0,1]

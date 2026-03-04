@@ -21,7 +21,7 @@ Model Context Protocol (MCP) is an open protocol developed by Anthropic that sta
 
 You can create a [workflow](./about-building-workflows.md) that uses MCP [tools](./functions-and-function-groups/functions.md#agents-and-tools) as [functions](./functions-and-function-groups/functions.md). In this case, the workflow acts as an MCP host and creates MCP clients to connect to MCP servers and use their tools as functions.
 
-This guide covers how to use a NeMo Agent Toolkit workflow as an MCP host with one or more MCP clients. For more information on how to use the NeMo Agent Toolkit as an MCP server, refer to [MCP Server](../run-workflows/mcp-server.md).
+This guide covers how to use a NeMo Agent Toolkit workflow as an MCP host with one or more MCP clients. For more information on how to use the NeMo Agent Toolkit as an MCP server, refer to [MCP Server](../run-workflows/mcp-server.md) or [FastMCP Server](../run-workflows/fastmcp-server.md).
 
 ## Installation
 
@@ -438,6 +438,29 @@ When you serve a workflow that includes an `mcp_client` function group, the NeMo
     }
   ]
 }
+```
+
+### Per-user endpoint
+Use this endpoint with per-user workflows to list tools available to a specific user.
+
+- Path: `/mcp/client/tool/list/per_user`
+- Method: `GET`
+- Query parameter: `user_id`
+
+Example:
+1. Start the MCP server if not already running:
+```bash
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
+```
+
+2. Start per-user workflow:
+```bash
+nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-per-user-mcp-client.yml
+```
+
+3. Call the endpoint:
+```bash
+curl -s "http://localhost:8000/mcp/client/tool/list/per_user?user_id=alice" | jq
 ```
 
 ## MCP Inspection via UI

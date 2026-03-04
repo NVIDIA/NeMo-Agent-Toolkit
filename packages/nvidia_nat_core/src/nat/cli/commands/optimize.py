@@ -20,7 +20,7 @@ from pathlib import Path
 import click
 
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.profiler.parameter_optimization.optimizer_runtime import optimize_config
+from nat.parameter_optimization.optimizer_runtime import optimize_config
 
 logger = logging.getLogger(__name__)
 

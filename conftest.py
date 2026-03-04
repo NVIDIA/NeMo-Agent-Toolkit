@@ -24,6 +24,7 @@
 # without an express license agreement from NVIDIA CORPORATION or
 # its affiliates is strictly prohibited.
 
+import asyncio
 import copy
 import os
 import sys
@@ -52,7 +53,7 @@ if typing.TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine
 
     from nat.data_models.intermediate_step import IntermediateStep
-    from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+    from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @pytest.fixture(name="project_dir", scope='session')
@@ -473,7 +474,7 @@ def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[li
     """
     Fixture to transform the rag_intermediate_steps fixture data into IntermediatePropertyAdaptor objects.
     """
-    from nat.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+    from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
     return [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]
             for steps in rag_intermediate_steps]
@@ -526,7 +527,7 @@ def dask_client_fixture(dask_scheduler_address: str) -> Generator["DaskClient"]:
 
 
 @pytest.fixture(name="db_engine")
-def db_engine_fixture(fail_missing: bool, tmp_path: Path) -> "AsyncEngine":
+def db_engine_fixture(fail_missing: bool, tmp_path: Path) -> Generator["AsyncEngine"]:
     """
     Fixture to provide a SQLAlchemy AsyncEngine connected to a temporary SQLite database for tests.
     """
@@ -540,7 +541,15 @@ def db_engine_fixture(fail_missing: bool, tmp_path: Path) -> "AsyncEngine":
     db_path = tmp_path / "test_db.sqlite"
     db_url = f"sqlite+aiosqlite:///{db_path}"
     db_engine = create_async_engine(db_url, echo=False, future=True)
-    return db_engine
+    try:
+        yield db_engine
+    finally:
+        # Ensure SQLite worker threads are shut down before event loop teardown.
+        dispose_loop = asyncio.new_event_loop()
+        try:
+            dispose_loop.run_until_complete(db_engine.dispose())
+        finally:
+            dispose_loop.close()
 
 
 @pytest_asyncio.fixture(name="setup_db")
@@ -548,7 +557,7 @@ async def setup_db_fixture(db_engine: "AsyncEngine"):
     """
     Fixture to create database tables before tests and drop them afterward.
     """
-    from nat.front_ends.fastapi.job_store import Base
+    from nat.front_ends.fastapi.async_jobs.job_store import Base
 
     async with db_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all, checkfirst=True)

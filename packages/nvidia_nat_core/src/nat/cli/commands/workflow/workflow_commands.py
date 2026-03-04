@@ -293,16 +293,20 @@ def create_command(workflow_name: str, install: bool, workflow_dir: str, descrip
         for template_name, output_path in files_to_render.items():
             template = env.get_template(template_name)
             content = template.render(context)
+            # Ensure content ends with a newline
+            if not content.endswith('\n'):
+                content += '\n'
             with open(output_path, 'w', encoding="utf-8") as f:
                 f.write(content)
 
-        # Create symlinks for config and data directories
-        config_dir_source = configs_dir
+        # Create symlinks for config and data directories using relative paths
         config_dir_link = new_workflow_dir / 'configs'
-        data_dir_source = data_dir
         data_dir_link = new_workflow_dir / 'data'
-        os.symlink(config_dir_source, config_dir_link)
-        os.symlink(data_dir_source, data_dir_link)
+        # Calculate relative paths from the symlink location to the target
+        config_dir_relative = os.path.relpath(configs_dir, new_workflow_dir)
+        data_dir_relative = os.path.relpath(data_dir, new_workflow_dir)
+        os.symlink(config_dir_relative, config_dir_link)
+        os.symlink(data_dir_relative, data_dir_link)
 
         if install:
             # Install the new package without changing directories

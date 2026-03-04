@@ -22,14 +22,31 @@ The NVIDIA NeMo Agent Toolkit provides a sizing calculator to estimate the GPU c
 The sizing calculator uses the [evaluation](evaluate.md) and [profiling](./profiler.md) systems in the NeMo Agent Toolkit.
 
 ## Prerequisites
-Sizing calculator uses the profiler subsystem. Ensure that it is installed by running the following command:
+Sizing calculator uses the profiler subsystem in the evaluation package. Install evaluation and profiling support with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e ".[profiling]"
+uv pip install -e ".[eval,profiling]"
 ```
-If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
+
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval,profiling]"
 ```
+
+:::
+
+::::
 
 ## Overview
 
@@ -204,7 +221,7 @@ Sample output:
 }
 ```
 
-The output is truncated for brevity. For more information, refer to the {py:class}`~nat.profiler.calc.data_models.CalcRunnerOutput` Pydantic model.
+The output is truncated for brevity. For more information, refer to the {py:class}`~nat.plugins.eval.profiler.calc.data_models.CalcRunnerOutput` Pydantic model.
 
 ### Using a Remote Workflow
 By default, the calculator runs the workflow locally to gather metrics. You can use the `--endpoint` and `--endpoint_timeout` command line parameters to use a remote workflow for gathering metrics.
@@ -350,9 +367,9 @@ In addition to the command line interface, the sizing calculator can be used pro
 **Sample code:**
 ```python
 import asyncio
-from nat.profiler.calc.calc_runner import CalcRunner
-from nat.profiler.calc.data_models import CalcRunnerConfig
-from nat.profiler.calc.data_models import CalcRunnerOutput
+from nat.plugins.eval.profiler.calc.calc_runner import CalcRunner
+from nat.plugins.eval.profiler.calc.data_models import CalcRunnerConfig
+from nat.plugins.eval.profiler.calc.data_models import CalcRunnerOutput
 
 async def run_calc():
     runner_config = CalcRunnerConfig(
@@ -374,6 +391,6 @@ async def run_calc():
 asyncio.run(run_calc())
 ```
 
-{py:class}`~nat.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
-{py:class}`~nat.profiler.calc.data_models.CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
-For more information, refer to the [calculator data models](../../../packages/nvidia_nat_core/src/nat/profiler/calc/data_models.py).
+{py:class}`~nat.plugins.eval.profiler.calc.data_models.CalcRunnerConfig` is a Pydantic model that contains the configuration for the calculator. It provides fine-grained control over the calculator's behavior.
+{py:class}`~nat.plugins.eval.profiler.calc.data_models.CalcRunnerOutput` is a Pydantic model that contains the per-concurrency metrics and the GPU count estimates.
+For more information, refer to the [calculator data models](../../../packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/calc/data_models.py).

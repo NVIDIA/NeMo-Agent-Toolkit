@@ -25,10 +25,10 @@ from pydantic import Field
 from pydantic import field_validator
 
 from nat.data_models.component_ref import ObjectStoreRef
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.step_adaptor import StepAdaptorConfig
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +178,17 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
                          "OpenAI Chat Completions API specification exactly."),
         )
 
+        legacy_path: str | None = Field(
+            default=None,
+            description=("Path for the legacy workflow. If None, no legacy workflow endpoint is created."),
+        )
+
+        legacy_openai_api_path: str | None = Field(
+            default=None,
+            description=("Path for the legacy OpenAI API compatible endpoint. If None, no legacy OpenAI API compatible "
+                         "endpoint is created."),
+        )
+
     class Endpoint(EndpointBase):
         function_name: str = Field(description="The name of the function to call for this endpoint")
 
@@ -225,7 +236,7 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
         description=(
             "Maximum number of Dask workers to create for running async jobs, the name of this parameter is "
             "misleading as the actual number of concurrent async jobs is: "
-            "`max_running_async_jobs * dask_threads_per_worker` ."
+            "`max_running_async_jobs * dask_threads_per_worker`. "
             "This parameter is only used when scheduler_address is `None` and a Dask local cluster is created."),
         ge=1)
     dask_workers: typing.Literal["threads", "processes"] = Field(
@@ -255,10 +266,12 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
 
     workflow: typing.Annotated[EndpointBase, Field(description="Endpoint for the default workflow.")] = EndpointBase(
         method="POST",
-        path="/generate",
+        path="/v1/workflow",
         websocket_path="/websocket",
-        openai_api_path="/chat",
+        openai_api_path="/v1/chat",
         openai_api_v1_path="/v1/chat/completions",
+        legacy_path="/generate",
+        legacy_openai_api_path="/chat",
         description="Executes the default NAT workflow from the loaded configuration ",
     )
 
@@ -305,3 +318,12 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             "Object store reference for the FastAPI app. If present, static files can be uploaded via a POST "
             "request to '/static' and files will be served from the object store. The files will be served from the "
             "object store at '/static/{file_name}'."))
+
+    disable_legacy_routes: bool = Field(
+        default=False,
+        description="Disable the legacy routes for the FastAPI app. If True, the legacy routes are disabled.")
+
+    enable_interactive_extensions: bool = Field(
+        default=False,
+        description=("Enable the interactive extensions for OpenAI API compatible endpoints." +
+                     " If True, the interactive extensions are enabled."))

@@ -26,6 +26,9 @@ rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
 create_env
 
+# Set the version for the wheels based on GIT_TAG / SCM
+set_versions
+
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
 

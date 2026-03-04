@@ -690,3 +690,12 @@ async def test_astream_primitive_type_conversion_failure():
         with pytest.raises(ValueError, match="Cannot convert type .* to .* No match found"):
             async for output in fn_obj.astream("test", to_type=dict):
                 pass  # The exception should be raised during the first iteration
+
+
+async def test_workflow_instance_name_equals_constant():
+    """Guardrail: Ensures workflow instance_name equals WORKFLOW_COMPONENT_NAME."""
+    from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
+
+    async with WorkflowBuilder() as builder:
+        workflow_fn = await builder.set_workflow(config=LambdaFnConfig())
+        assert workflow_fn.instance_name == WORKFLOW_COMPONENT_NAME

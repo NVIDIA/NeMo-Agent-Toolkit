@@ -21,6 +21,21 @@ Model Context Protocol (MCP) is an open protocol developed by Anthropic that sta
 
 This guide will cover how to use NeMo Agent Toolkit as an MCP Server to publish [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) using MCP. For more information on how to use NeMo Agent Toolkit as an MCP Host with one or more MCP Clients, refer to [MCP Client](../build-workflows/mcp-client.md).
 
+## Decision
+
+NeMo Agent Toolkit supports two MCP server runtimes. Both publish the workflow and its tools as MCP tools. Choose the runtime that matches your deployment stack:
+
+- Use `nat mcp serve` for the [MCP SDK server runtime](https://github.com/modelcontextprotocol/python-sdk).
+- Use `nat fastmcp server run` for the [FastMCP server runtime](https://github.com/jlowin/fastmcp). For MCP servers using the FastMCP server runtime, see [NeMo Agent Toolkit as a FastMCP Server](./fastmcp-server.md).
+
+## Installation
+
+Install the `nvidia-nat-mcp` package:
+
+```bash
+uv pip install nvidia-nat-mcp
+```
+
 ## MCP Server Usage
 
 The `nat mcp serve` command can be used to start an MCP server that publishes the [functions](../build-workflows/functions-and-function-groups/functions.md) from your [workflow](../build-workflows/about-building-workflows.md) as MCP tools.

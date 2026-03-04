@@ -91,6 +91,7 @@ def _deserialize_node(data: dict[str, Any]) -> PredictionTrieNode:
             remaining_calls=PredictionMetrics(**v["remaining_calls"]),
             interarrival_ms=PredictionMetrics(**v["interarrival_ms"]),
             output_tokens=PredictionMetrics(**v["output_tokens"]),
+            latency_sensitivity=v.get("latency_sensitivity"),
         )
 
     predictions_any_index = None
@@ -100,6 +101,7 @@ def _deserialize_node(data: dict[str, Any]) -> PredictionTrieNode:
             remaining_calls=PredictionMetrics(**v["remaining_calls"]),
             interarrival_ms=PredictionMetrics(**v["interarrival_ms"]),
             output_tokens=PredictionMetrics(**v["output_tokens"]),
+            latency_sensitivity=v.get("latency_sensitivity"),
         )
 
     children: dict[str, PredictionTrieNode] = {}

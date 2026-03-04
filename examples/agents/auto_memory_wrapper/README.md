@@ -56,14 +56,36 @@ workflow:
   llm_name: nim_llm
 ```
 
+### Install this Workflow
+
+From the root directory of the NeMo Agent Toolkit repository, run the following commands:
+
+```bash
+uv pip install -e examples/agents
+```
+
+### Set Up API Keys
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+
+# Set Zep credentials
+export ZEP_API_KEY=<YOUR_ZEP_API_KEY>
+```
+
+If you do not have access to a Zep API key, you can use `config_mem0.yml` with a Mem0 API key instead:
+```bash
+export MEM0_API_KEY=<YOUR_MEM0_API_KEY>
+```
+
 ### Running the Example
 
 ```bash
-# Set Zep credentials
-export ZEP_API_KEY="your_api_key"
+# Run the agent with Zep
+nat run --config_file examples/agents/auto_memory_wrapper/configs/config_zep.yml
 
-# Run the agent
-nat run --config examples/agents/auto_memory_wrapper/configs/config_zep.yml
+# Or with Mem0
+nat run --config_file examples/agents/auto_memory_wrapper/configs/config_mem0.yml
 ```
 
 ## Configuration Reference
@@ -157,7 +179,7 @@ curl -X POST http://localhost:8000/chat \
 Omit both `user_manager` and `X-User-ID` header to use `"default_user"`:
 
 ```bash
-nat run --config examples/agents/auto_memory_wrapper/configs/config_zep.yml
+nat run --config_file examples/agents/auto_memory_wrapper/configs/config_zep.yml
 ```
 
 ## Advanced Example
@@ -194,4 +216,5 @@ workflow:
 ## Examples
 
 See `configs/` directory:
-- `config_zep.yml` - Comprehensive configuration with all parameters documented
+- `config_zep.yml` - Zep Cloud memory backend with all parameters documented
+- `config_mem0.yml` - Mem0 memory backend (alternative if Zep is unavailable)

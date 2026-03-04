@@ -63,6 +63,10 @@ The `config-mcp-client.yml` example demonstrates how to use the `mcp_client` fun
 
 `examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml`:
 ```yaml
+functions:
+  current_timezone:
+    _type: current_timezone
+
 function_groups:
   mcp_time:
     _type: mcp_client
@@ -70,21 +74,40 @@ function_groups:
       transport: stdio
       command: "python"
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_overrides:
+      get_current_time:
+        alias: get_current_time_mcp_tool
+        description: "Returns the current date and time. REQUIRED: You must call the current_timezone tool first and pass its result as the timezone argument. Do not use your own or an assumed timezone; only use the value returned by current_timezone."
+
   mcp_math:
     _type: mcp_client
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
+    include:
+      - calculator__add
+      - calculator__subtract
+      - calculator__multiply
+      - calculator__divide
+      - calculator__compare
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
 
 workflow:
   _type: react_agent
   tool_names:
+    - current_timezone
     - mcp_time
     - mcp_math
 ```
 
 This configuration creates two function groups:
-- `mcp_time`: Connects to a local MCP server using stdio transport to get current date and time
+- `mcp_time`: Connects to a local MCP server using stdio transport to get current date and time. The timezone is always assumed to be America/Los_Angeles
 - `mcp_math`: Connects to a remote MCP server using streamable-http transport to access calculator tools
 
 To run this example:
@@ -98,4 +121,60 @@ This starts an MCP server on port 9901 with endpoint `/mcp` and uses `streamable
 2. Run the workflow:
 ```bash
 nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
+```
+
+# Per-user workflow
+The `config-per-user-mcp-client.yml` example demonstrates how to use the `per_user_mcp_client` function group with a per-user workflow.
+Per-user workflows are useful when:
+1. You need to lazy instantiate MCP sessions for each user on first input.
+2. Need complete isolation of workflow instances for each user.
+
+`examples/MCP/simple_calculator_mcp/configs/config-per-user-mcp-client.yml`:
+```yaml
+function_groups:
+  mcp_math:
+    _type: per_user_mcp_client
+    server:
+      transport: streamable-http
+      url: "http://localhost:9901/mcp"
+    include:
+      - calculator__add
+      - calculator__subtract
+      - calculator__multiply
+      - calculator__divide
+```
+
+To run this example:
+
+1. Start the remote MCP server:
+```bash
+nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml
+```
+
+2. Run the workflow:
+```bash
+nat serve --config_file examples/MCP/simple_calculator_mcp/configs/config-per-user-mcp-client.yml
+```
+
+3. Send a message to the workflow for users "Alice" and "Hatter":
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=alice" \
+  -d '{"messages": [{"role": "user", "content": "Is the product of 2 * 4 greater than the current hour of the day?"}]}'
+```
+```bash
+curl -X POST http://localhost:8000/generate \
+  -H "Content-Type: application/json" \
+  -H "Cookie: nat-session=Hatter" \
+  -d '{"messages": [{"role": "user", "content": "Is the product of 2 * 4 greater than the current hour of the day?"}]}'
+```
+
+4. You can also list the tools available to each user:
+```bash
+curl -s "http://localhost:8000/mcp/client/tool/list/per_user?user_id=alice" | jq
+```
+
+```bash
+curl -s "http://localhost:8000/mcp/client/tool/list/per_user?user_id=Hatter" | jq
 ```

@@ -18,38 +18,32 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
-## Release 1.3.1
+## Release 1.4.1
 ### Summary
-This is a minor release with documentation updates, bug fixes, and non-breaking improvements.
+This is a patch release with a critical bug fix for Python 3.11 users and documentation updates for `nat serve` CLI flags.
 
-### New Features
-This release adds support for the Claude Sonnet 4.5 model and adds support for arbitrary JSON body types in custom routes.
+### 🐛 Bug Fixes
+* fix(serve): ensure a single event loop for python 3.11 by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1558
 
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/CHANGELOG.md) for a complete list of changes.
+### 📚 Documentation
+* Document new `nat serve` CLI flags by @dagardner-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1562
 
-## Release 1.3.0
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/CHANGELOG.md) for the complete list of changes.
+
+## Release 1.4.0
 ### Summary
-This release introduces support for Google Agent Development Kit (ADK), adds control-flow agents, function groups, hyperparameter agent optimizer, LLM provider improvements, MCP server improvements, and Python 3.13 support. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
+This release introduces initial support for several frameworks and integrations including A2A, AWS Strands, Amazon Bedrock AgentCore, Microsoft AutoGen, and NVIDIA Dynamo. In addition to new framework and integrations, an automatic agent wrapper for LangGraph Agents enables users to bring their own agent. Per-user functions enable deferred instantiation which provides per-user stateful functions, per-user resources, and other useful features. The toolkit continues to offer backwards compatibility, making the transition seamless for existing users.
 
-### New Features
-The following are the key features and improvements in this release:
-* [ADK Support](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/reference/frameworks-overview.md): Supports Google Agent Development Kit (ADK). Adds tool calling, core observability, and LLM integration in this release.
-* [Control-Flow Agents](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/about/index.md): [Sequential Executor](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/about/sequential-executor.md) (Linear Agent) and [Router Agent](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/about/router-agent.md) now control flow patterns of tool calls and sub-agents.
-* [Function Groups](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/function-groups.md): Packages multiple related functions together so they share configuration, context, and resources.
-* [Hyperparameter Agent Optimizer](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/reference/optimizer.md): Automates hyperparameter tuning and prompt engineering for workflows.
-* [Introductory Notebook Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/examples/notebooks/README.md): Reorganizes getting started notebooks and adds Open in Colab links.
-* [LLM Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/llms/index.md)
-  - Adds LiteLLM Provider
-  - Supports GPT-5 (`/chat/completions` endpoint only)
-  - Adds Nemotron thinking configuration
-* [MCP Improvements](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/docs/source/workflows/mcp/index.md)
-  - Supports `streamable-http` - `sse` is no longer the default transport type.
-  - Supports initial authorization - Enables connecting to MCP servers that require authentication.
-  - Supports multiple MCP tools from a single configuration - Pulls in entire tool sets published by MCP servers or filters them based on user configuration.
-  - Enhances CLI utilities for MCP servers and clients - Improves the `nat mcp` sub-command for querying, calling, and listing tools.
-* Python 3.13 support
+- [**LangGraph Agent Automatic Wrapper:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/examples/frameworks/auto_wrapper/langchain_deep_research/README.md) Easily onboard existing LangGraph agents to NeMo Agent Toolkit. Use the automatic wrapper to access NeMo Agent Toolkit advanced features with very little modification of LangGraph agents.
+- [**Automatic Reinforcement Learning (RL):**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/improve-workflows/finetuning/index.md) Improve your agent quality by fine-tuning open LLMs to better understand your agent's workflows, tools, and prompts. Perform GRPO with [OpenPipe ART](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/improve-workflows/finetuning/rl_with_openpipe.md) or DPO with [NeMo Customizer](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/improve-workflows/finetuning/dpo_with_nemo_customizer.md) using NeMo Agent Toolkit built-in evaluation system as a verifier.
+- [**Initial NVIDIA Dynamo Integration:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/examples/dynamo_integration/README.md) Accelerate end-to-end deployment of agentic workflows with initial Dynamo support. Utilize the new agent-aware router to improve worker latency by predicting future agent behavior.
+- [**A2A Support:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/components/integrations/a2a.md) Build teams of distributed agents using the A2A protocol.
+- [**Safety and Security Engine:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/examples/safety_and_security/retail_agent/README.md) Strengthen safety and security workflows by simulating scenario-based attacks, profiling risk, running guardrail-ready evaluations, and applying defenses with red teaming. Validate defenses, profile risk, monitor behavior, and harden agents across any framework.
+- [**Amazon Bedrock AgentCore and Strands Agents Support:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/components/integrations/frameworks.md#strands) Build agents using Strands Agents framework and deploy them securely on Amazon Bedrock AgentCore runtime.
+- [**Microsoft AutoGen Support:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/components/integrations/frameworks.md#autogen) Build agents using the Microsoft AutoGen framework.
+- [**Per-User Functions:**](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/docs/source/extend/custom-components/custom-functions/per-user-functions.md) Use per-user functions for deferred instantiation, enabling per-user stateful functions, per-user resources, and other features.
 
-Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.3/CHANGELOG.md) for a complete list of changes.
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.4/CHANGELOG.md) for a complete list of changes.
 
 ## Known Issues
 - Refer to [https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) for an up to date list of current issues.

@@ -13,16 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
+import json
+
 import pytest
 from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import ToolNode
 
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import ChatResponseChunkChoice
+from nat.data_models.api_server import ChoiceDelta
+from nat.data_models.api_server import ChoiceDeltaToolCall
+from nat.data_models.api_server import ChoiceDeltaToolCallFunction
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
+from nat.plugins.langchain.agent.tool_calling_agent.agent import _chunk_to_message
 from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
 from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 
@@ -305,3 +315,131 @@ async def test_graph_with_return_direct(mock_tool_graph_with_return_direct):
     last_message = response.messages[-1]
     assert isinstance(last_message, ToolMessage)
     assert last_message.name == 'Tool A'
+
+
+async def test_graph_astream_yields_message_chunks(mock_tool_graph):
+    """Test that graph.astream with stream_mode='messages' yields message chunks from the agent node.
+
+    This validates the streaming path used by _stream_fn in register.py. With a real LLM the chunks
+    will be AIMessageChunk; the mock LLM produces AIMessage which LangGraph may wrap differently,
+    so we accept any BaseMessage subclass from the agent node.
+    """
+    from langchain_core.messages import BaseMessage
+
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='please, mock tool call!')])
+    agent_messages = []
+    async for msg, metadata in mock_tool_graph.astream(
+            mock_state, config={'recursion_limit': 5}, stream_mode="messages"):
+        if isinstance(msg, BaseMessage) and metadata.get("langgraph_node") == "agent":
+            agent_messages.append(msg)
+
+    assert len(agent_messages) > 0, "Expected at least one message from the agent node via stream_mode='messages'"
+    combined_content = "".join(m.content for m in agent_messages if m.content)
+    assert len(combined_content) > 0, "Expected non-empty content from streamed agent messages"
+
+
+def test_tool_call_chunk_serialization():
+    """Test that ChatResponseChunk with tool_calls in ChoiceDelta serializes to OpenAI-compatible SSE format."""
+    chunk = ChatResponseChunk(
+        id="test-chunk-id",
+        choices=[
+            ChatResponseChunkChoice(
+                index=0,
+                delta=ChoiceDelta(tool_calls=[
+                    ChoiceDeltaToolCall(index=0,
+                                        id="call_abc123",
+                                        type="function",
+                                        function=ChoiceDeltaToolCallFunction(
+                                            name="test_tool",
+                                            arguments="",
+                                        ))
+                ]),
+                finish_reason=None,
+            )
+        ],
+        created=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
+    )
+
+    sse_data = chunk.get_stream_data()
+    assert sse_data.startswith("data: ")
+    assert sse_data.endswith("\n\n")
+
+    payload = json.loads(sse_data[len("data: "):])
+    assert payload["id"] == "test-chunk-id"
+    assert len(payload["choices"]) == 1
+
+    delta = payload["choices"][0]["delta"]
+    assert "tool_calls" in delta
+    assert len(delta["tool_calls"]) == 1
+
+    tc = delta["tool_calls"][0]
+    assert tc["index"] == 0
+    assert tc["id"] == "call_abc123"
+    assert tc["type"] == "function"
+    assert tc["function"]["name"] == "test_tool"
+    assert tc["function"]["arguments"] == ""
+
+
+def test_tool_call_chunk_arguments_streaming():
+    """Test that incremental tool call argument chunks serialize correctly (no id/type on follow-up chunks)."""
+    chunk = ChatResponseChunk(
+        id="test-chunk-id",
+        choices=[
+            ChatResponseChunkChoice(
+                index=0,
+                delta=ChoiceDelta(tool_calls=[
+                    ChoiceDeltaToolCall(index=0,
+                                        id=None,
+                                        type=None,
+                                        function=ChoiceDeltaToolCallFunction(
+                                            name=None,
+                                            arguments='{"author":',
+                                        ))
+                ]),
+                finish_reason=None,
+            )
+        ],
+        created=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
+    )
+
+    payload = json.loads(chunk.model_dump_json())
+    tc = payload["choices"][0]["delta"]["tool_calls"][0]
+    assert tc["index"] == 0
+    assert tc["id"] is None
+    assert tc["type"] is None
+    assert tc["function"]["arguments"] == '{"author":'
+
+
+def test_content_chunk_has_no_tool_calls():
+    """Test that a content-only ChatResponseChunk does not include tool_calls in the delta."""
+    chunk = ChatResponseChunk.create_streaming_chunk("Hello world", id_="test-id")
+    payload = json.loads(chunk.model_dump_json())
+    delta = payload["choices"][0]["delta"]
+    assert delta["content"] == "Hello world"
+    assert delta.get("tool_calls") is None
+
+
+def test_chunk_to_message_rehydrates_empty_tool_calls():
+    """Test that _chunk_to_message rehydrates when additional_kwargs["tool_calls"] is an empty list."""
+    chunk = AIMessageChunk(
+        content="",
+        tool_call_chunks=[{
+            "name": "test_tool",
+            "args": '{"query": "hello"}',
+            "id": "call_abc123",
+            "index": 0,
+            "type": "tool_call_chunk",
+        }],
+        additional_kwargs={"tool_calls": []},
+    )
+
+    assert chunk.tool_calls, "Chunk should have parsed tool_calls"
+    assert not chunk.additional_kwargs.get("tool_calls"), "Wire format tool_calls should be empty"
+
+    msg = _chunk_to_message(chunk)
+
+    assert isinstance(msg, AIMessage)
+    assert len(msg.additional_kwargs["tool_calls"]) == 1
+    tc = msg.additional_kwargs["tool_calls"][0]
+    assert tc["function"]["name"] == "test_tool"
+    assert json.loads(tc["function"]["arguments"]) == {"query": "hello"}

@@ -1,0 +1,98 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# <!-- path-check-skip-file -->
+
+# =============================================================================
+# RUN WITH PREDICTION TRIE - Latency Sensitivity Demo (Dynamo LLM)
+# =============================================================================
+# Purpose: Use profiled prediction trie for dynamic Dynamo header injection
+#
+# Prerequisites:
+#   1. Run profiling first to build the prediction trie:
+#      nat eval --reps 8 --config_file .../configs/config_profile.yml
+#
+#   2. Update prediction_trie_path below to point to the generated trie
+#
+# Usage:
+#   nat eval --reps 8 --config_file .../configs/config_with_trie.yml
+# =============================================================================
+
+functions:
+  classify_query:
+    _type: classify_query
+    llm: dynamo_llm
+  research_context:
+    _type: research_context
+    llm: dynamo_llm
+  lookup_policy:
+    _type: lookup_policy
+    llm: dynamo_llm
+  check_compliance:
+    _type: check_compliance
+    llm: dynamo_llm
+  analyze_sentiment:
+    _type: analyze_sentiment
+    llm: dynamo_llm
+  draft_response:
+    _type: draft_response
+    llm: dynamo_llm
+  review_response:
+    _type: review_response
+    llm: dynamo_llm
+
+llms:
+  dynamo_llm:
+    _type: dynamo
+    model_name: nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
+    base_url: http://localhost:8099/v1
+    api_key: dummy
+    temperature: 0.0
+    max_tokens: 8192
+    max_sensitivity: 5
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "latency-demo-{uuid}"
+
+    # Static fallback values (used if trie lookup fails)
+    nvext_prefix_total_requests: 7
+    nvext_prefix_osl: MEDIUM
+    nvext_prefix_iat: MEDIUM
+
+    # UPDATE THIS PATH to your profiled prediction trie
+    nvext_prediction_trie_path: ./examples/dynamo_integration/latency_sensitivity_demo/outputs/profile/prediction_trie.json
+
+workflow:
+  _type: latency_sensitivity_demo
+  classify_fn: classify_query
+  research_fn: research_context
+  policy_fn: lookup_policy
+  compliance_fn: check_compliance
+  sentiment_fn: analyze_sentiment
+  draft_fn: draft_response
+  review_fn: review_response
+
+eval:
+  general:
+    max_concurrency: 16
+    output:
+      dir: ./examples/dynamo_integration/latency_sensitivity_demo/outputs/with_trie/
+      cleanup: false
+      job_management:
+        append_job_id_to_output_dir: false
+    dataset:
+      _type: json
+      file_path: ./examples/dynamo_integration/latency_sensitivity_demo/src/latency_sensitivity_demo/data/customer_queries.json
+    profiler:
+      compute_llm_metrics: true
+      csv_exclude_io_text: true

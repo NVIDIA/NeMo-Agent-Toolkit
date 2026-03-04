@@ -78,19 +78,20 @@ llms:
   dynamo_llm:
     _type: dynamo
     model_name: llama-3.3-70b
-    base_url: http://localhost:8099/v1
+    base_url: http://localhost:8000/v1
     api_key: dummy
     # _type: nim
     # model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
     max_tokens: 2048
     stop: ["Observation:", "\nThought:"]  # CRITICAL: Prevent LLM from hallucinating observations
-    # Dynamic prefix headers - automatically generates unique prefix ID per request
-    # Note: Setting prefix_template enables dynamic prefix headers
-    prefix_template: "react-benchmark-{uuid}"
-    prefix_total_requests: 10  # 1 for independent questions, higher for conversations
-    prefix_osl: MEDIUM  # Output Sequence Length: LOW | MEDIUM | HIGH
-    prefix_iat: MEDIUM  # Inter-Arrival Time: LOW | MEDIUM | HIGH
+    # Nvext agent hints - automatically generates unique prefix ID per request
+    # Note: Setting enable_nvext_hints enables nvext agent hints
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "react-benchmark-{uuid}"
+    nvext_prefix_total_requests: 10  # 1 for independent questions, higher for conversations
+    nvext_prefix_osl: MEDIUM  # Output Sequence Length: LOW | MEDIUM | HIGH
+    nvext_prefix_iat: MEDIUM  # Inter-Arrival Time: LOW | MEDIUM | HIGH
     # NOTE: Optimizer fields temporarily removed due to NAT type resolution bug
     # optimizable_params:
     #   - temperature
@@ -103,7 +104,7 @@ llms:
   eval_llm:
     _type: dynamo
     model_name: llama-3.3-70b
-    base_url: http://localhost:8099/v1
+    base_url: http://localhost:8000/v1
     api_key: dummy
     # _type: nim
     # model_name: meta/llama-3.3-70b-instruct

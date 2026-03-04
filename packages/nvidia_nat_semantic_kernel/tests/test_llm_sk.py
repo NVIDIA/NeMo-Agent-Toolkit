@@ -30,6 +30,7 @@ from nat.plugins.semantic_kernel.llm import openai_semantic_kernel
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.usefixtures("set_test_api_keys")
 class TestOpenAISemanticKernel:
     """Tests for the openai_semantic_kernel wrapper."""
 

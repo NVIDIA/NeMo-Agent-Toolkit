@@ -38,6 +38,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
+from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.finetuning import DPOItem
 from nat.data_models.finetuning import OpenAIMessage
 from nat.data_models.finetuning import Trajectory
@@ -47,8 +49,6 @@ from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TTCEventData
-from nat.eval.config import EvaluationRunOutput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 
 from .config import DPOTrajectoryBuilderConfig

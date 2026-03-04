@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
 import re
@@ -144,7 +145,14 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
                 span_ctx = SpanContext(trace_id=parent_span.context.trace_id)
         # No parent: adopt workflow trace id if available to keep all spans in the same trace
         if span_ctx is None and workflow_trace_id:
-            span_ctx = SpanContext(trace_id=workflow_trace_id)
+            # Check for a pre-generated root span_id (set by eval loop for eager trace linking).
+            # Use it once for the root span, then clear so child spans get fresh random IDs.
+            pre_generated_span_id = self._context_state._root_span_id.get()
+            if pre_generated_span_id is not None:
+                span_ctx = SpanContext(trace_id=workflow_trace_id, span_id=pre_generated_span_id)
+                self._context_state._root_span_id.set(None)
+            else:
+                span_ctx = SpanContext(trace_id=workflow_trace_id)
 
         # Extract start/end times from the step
         # By convention, `span_event_timestamp` is the time we started, `event_timestamp` is the time we ended.
@@ -152,11 +160,12 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         s_ts = event.payload.span_event_timestamp or event.payload.event_timestamp
         start_ns = ns_timestamp(s_ts)
 
-        # Optional: embed the LLM/tool name if present
-        if event.payload.name:
-            sub_span_name = f"{event.payload.name}"
-        else:
-            sub_span_name = f"{event.payload.event_type}"
+        # Use display_name from trace metadata for observability if set, otherwise fall back to name, then event type
+        display_name = None
+        if (event.payload.metadata and hasattr(event.payload.metadata, 'provided_metadata')
+                and event.payload.metadata.provided_metadata):
+            display_name = event.payload.metadata.provided_metadata.get("display_name")
+        sub_span_name = display_name or event.payload.name or f"{event.payload.event_type}"
 
         # Prefer parent/context trace id for attribute, else workflow trace id
         _attr_trace_id = None
@@ -220,7 +229,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
                 sub_span.set_attribute(SpanAttributes.INPUT_VALUE.value, serialized_input)
                 sub_span.set_attribute(SpanAttributes.INPUT_MIME_TYPE.value,
                                        MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
-                sub_span.set_attribute("input.value_obj", self._to_dict(event.payload.data.input))
+                sub_span.set_attribute("input.value_obj", self._to_json_string(event.payload.data.input))
 
         # Add metadata to the metadata stack
         start_metadata = event.payload.metadata or {}
@@ -290,7 +299,7 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
             sub_span.set_attribute(SpanAttributes.OUTPUT_VALUE.value, serialized_output)
             sub_span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE.value,
                                    MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value)
-            sub_span.set_attribute("output.value_obj", self._to_dict(event.payload.data.output))
+            sub_span.set_attribute("output.value_obj", self._to_json_string(event.payload.data.output))
 
         # Merge metadata from start event with end event metadata
         start_metadata = self._metadata_stack.pop(event.UUID)  # type: ignore
@@ -322,20 +331,54 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
         # Export the span with processing pipeline
         self._create_export_task(self._export_with_processing(sub_span))  # type: ignore
 
-    def _to_dict(self, data: typing.Any) -> dict[str, typing.Any] | typing.Any:
-        """Transform serialized payload into a structured dict for span attributes."""
+    def _to_json_string(self, data: typing.Any) -> str:
+        """Transform payload into a JSON string for span attributes.
 
-        if hasattr(data, 'model_dump'):
-            result = data.model_dump(exclude_none=True)
-        elif isinstance(data, dict):
-            result = {k: v for k, v in data.items() if v is not None}
-        else:
-            return data
+        Converts the input data to a JSON string representation that is always
+        compatible with OTLP span attribute encoding. Raw dicts and nested structures
+        can contain types (None, custom objects) that OTLP cannot encode, so the
+        result is serialized to a JSON string for safety.
 
-        if 'value' in result and result['value'] is not None:
-            return result['value']
+        The normalization process:
+        1. Recursively processes nested structures (dicts, lists, tuples)
+        2. Converts Pydantic models via model_dump(mode='json', exclude_none=True)
+        3. Filters out None values from dicts
+        4. Extracts 'value' key if present in dict and not None
+        5. Falls back to str() for non-serializable objects
 
-        return result
+        Returns:
+            A valid JSON string representation of the data.
+        """
+
+        def _normalize(obj: typing.Any) -> typing.Any:
+            """Recursively normalize objects for JSON serialization."""
+            # Pydantic models: dump with JSON mode and recursively normalize
+            if hasattr(obj, 'model_dump'):
+                dumped = obj.model_dump(mode='json', exclude_none=True)
+                return _normalize(dumped)
+
+            # Dicts: drop None values, normalize values, optionally extract 'value' key
+            if isinstance(obj, dict):
+                normalized = {k: _normalize(v) for k, v in obj.items() if v is not None}
+                # Extract 'value' key if present and not None
+                if 'value' in normalized and normalized['value'] is not None:
+                    return _normalize(normalized['value'])
+                return normalized
+
+            # Lists/tuples: normalize each element
+            if isinstance(obj, (list, tuple)):
+                return [_normalize(item) for item in obj]
+
+            # Primitives and other objects: return as-is (json.dumps will handle via default=str)
+            return obj
+
+        try:
+            normalized = _normalize(data)
+            return json.dumps(normalized, default=str)
+        except Exception as e:
+            # Last-resort fallback: str() representation wrapped in JSON
+            logger.debug("Span attribute serialization failed, using str fallback: %s", e)
+            return json.dumps(str(data))
 
     @override
     async def _cleanup(self):

@@ -38,7 +38,7 @@ This example provides a skeleton workflow which can be used to implement predict
 
 - **SWE-bench Dataset Integration:** Demonstrates how to use NeMo Agent Toolkit with Software Engineering benchmark datasets including SWE-bench_Lite and SWE-bench_Verified for systematic code problem solving evaluation.
 - **Docker-based Evaluation Environment:** Shows containerized evaluation setup ensuring consistent and isolated environments for running code modifications and testing solutions against benchmark problems.
-- **Multi-Dataset Support:** Supports multiple SWE-bench dataset formats including JSON and Parquet files from HuggingFace datasets, with both local and remote dataset loading capabilities.
+- **Multi-Dataset Support:** Supports multiple SWE-bench dataset formats including JSON and Parquet files from Hugging Face datasets, with both local and remote dataset loading capabilities.
 - **Configurable Problem Filtering:** Provides filtering mechanisms to limit dataset entries for focused evaluation and testing, enabling iterative development and debugging of solutions.
 - **Pydantic Model Integration:** Uses structured `SWEBenchInput` data models for type-safe processing of software engineering problems with clear input/output specifications.
 
@@ -78,11 +78,11 @@ The configuration file specified above contains configurations for the NeMo Agen
 
 
 ## Datasets
-This workflow requires the `swe_bench` dataset as a Parquet file loaded directly from HuggingFace. The following public datasets are available:
+This workflow requires the `swe_bench` dataset as a Parquet file loaded directly from Hugging Face. The following public datasets are available:
 - [SWE-bench_Lite](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Lite) - Lightweight version for faster testing
 - [SWE-bench_Verified](https://huggingface.co/datasets/princeton-nlp/SWE-bench_Verified) - Verified subset with high-quality instances
 
-You can use these datasets by specifying the HuggingFace URL in the configuration file:
+You can use these datasets by specifying the Hugging Face URL in the configuration file:
 ```yaml
 eval:
   general:
@@ -198,7 +198,7 @@ nat eval --config_file examples/evaluation_and_profiling/swe_bench/configs/confi
 ```
 Expected output:
 ```console
-2025-07-31 19:39:37,616 - nat.eval.evaluate - INFO - Starting evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
+2025-07-31 19:39:37,616 - nat.plugins.eval.runtime.evaluate - INFO - Starting evaluation run with config file: examples/evaluation_and_profiling/swe_bench/configs/config_gold.yml
 2025-07-31 19:39:38,764 - nat.runtime.loader - WARNING - Loading module 'nat_profiler_agent.register' from entry point 'nat_profiler_agent' took a long time (1084.733009 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:39,160 - nat.runtime.loader - WARNING - Loading module 'nat_multi_frameworks.register' from entry point 'nat_multi_frameworks' took a long time (226.987600 ms). Ensure all imports are inside your registered functions.
 2025-07-31 19:39:41,135 - nat.runtime.loader - WARNING - Loading module 'nat.experimental.inference_time_scaling.register' from entry point 'nat_inference_time_scaling' took a long time (266.962051 ms). Ensure all imports are inside your registered functions.
@@ -215,9 +215,9 @@ Running workflow:   0%|                                                         
 
 <snipped for brevity>
 
-2025-07-31 19:39:46,347 - nat.eval.swe_bench_evaluator.evaluate - INFO - Workflow input written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_input.json
-2025-07-31 19:39:46,352 - nat.eval.swe_bench_evaluator.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_output.json
-2025-07-31 19:39:46,364 - nat.eval.swe_bench_evaluator.evaluate - INFO - Starting swe_bench run nat_1
+2025-07-31 19:39:46,347 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - Workflow input written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_input.json
+2025-07-31 19:39:46,352 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/nat_workflow_output.json
+2025-07-31 19:39:46,364 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - Starting swe_bench run nat_1
 Running 2 unevaluated instances...
 Base image sweb.base.py.arm64:latest already exists, skipping build.
 Base images built successfully.
@@ -238,9 +238,9 @@ Instances with errors: 0
 Unstopped containers: 0
 Unremoved images: 0
 Report written to nv_predictor.nat_1.json
-2025-07-31 19:40:44,591 - nat.eval.swe_bench_evaluator.evaluate - INFO - Completed swe_bench run nat_1
-2025-07-31 19:40:44,592 - nat.eval.swe_bench_evaluator.evaluate - INFO - SWE_bench report and logs written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_reports directory
-2025-07-31 19:40:44,596 - nat.eval.evaluate - INFO - Profiler is not enabled. Skipping profiling.
-2025-07-31 19:40:44,600 - nat.eval.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/workflow_output.json
-2025-07-31 19:40:44,602 - nat.eval.evaluate - INFO - Evaluation results written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_output.json
+2025-07-31 19:40:44,591 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - Completed swe_bench run nat_1
+2025-07-31 19:40:44,592 - nat.plugins.eval.swe_bench_evaluator.evaluate - INFO - SWE_bench report and logs written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_reports directory
+2025-07-31 19:40:44,596 - nat.plugins.eval.runtime.evaluate - INFO - Profiler is not enabled. Skipping profiling.
+2025-07-31 19:40:44,600 - nat.plugins.eval.runtime.evaluate - INFO - Workflow output written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/workflow_output.json
+2025-07-31 19:40:44,602 - nat.plugins.eval.runtime.evaluate - INFO - Evaluation results written to .tmp/nat/examples/evaluation_and_profiling/swe_bench/gold/swe_bench_output.json
 ```

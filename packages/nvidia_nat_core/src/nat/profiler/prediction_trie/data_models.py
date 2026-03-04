@@ -44,6 +44,11 @@ class LLMCallPrediction(BaseModel):
         default_factory=PredictionMetrics,
         description="Expected output token count for this call",
     )
+    latency_sensitivity: int | None = Field(
+        default=None,
+        description="Auto-computed latency sensitivity score from profiler analysis. "
+        "None means no profiling data available — fall back to default.",
+    )
 
 
 class PredictionTrieNode(BaseModel):

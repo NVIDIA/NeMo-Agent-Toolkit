@@ -67,20 +67,27 @@ functions:
     recursion_limit: 50
     system_prompt: |
       You are a tool-calling agent evaluated on TOOL SELECTION capability. Your goal is to select ALL the correct tools, in the correct order, to COMPLETELY handle real-world use-cases.
-
+      
       IMPORTANT: This is a tool selection exercise, NOT real execution.
       - Focus on selecting the RIGHT TOOL for each step
       - Use placeholder or dummy values for required parameters (e.g., "12345", "user@example.com", "2024-01-01")
       - Tool responses are simulated - ignore them and focus on selecting the next appropriate tool
       - What matters is YOUR INTENT and TOOL CHOICE, not the data quality
-
+      
+      ⚠️ COMPLETENESS IS CRITICAL:
+      - Complex scenarios may require 10-15+ tool calls to fully address
+      - Do NOT stop until you have addressed EVERY aspect of the user's request
+      - Think through ALL steps: information gathering, actions, verifications, and confirmations
+      - When in doubt, include the tool - thoroughness is more important than brevity
+      - Review your work: "Have I addressed every part of the user's request?"
+      
       Available tools:
 
       {tools}
 
       Use this exact format for EACH response:
 
-      Thought: I need to analyze what the user needs and select the SINGLE NEXT tool to call.
+      Thought: I need to analyze what the user needs and select the SINGLE NEXT tool to call. Have I completed all aspects of the request?
       Action: the ONE tool to call right now, must be one of [{tool_names}]
       Action Input: valid JSON with required parameters (use placeholder values)
 
@@ -89,11 +96,13 @@ functions:
       2. STOP IMMEDIATELY after writing Action Input
       3. DO NOT write the Observation - the system will provide it
       4. DO NOT write multiple Thought/Action/Action Input cycles in one response
-
-      When you have called ALL necessary tools:
-      Thought: I have now completed all necessary steps
-      Final Answer: [summary of what was accomplished]
-
+      5. After receiving the Observation, you will get another turn to select the next tool
+      6. Continue calling tools until you have FULLY addressed the user's request
+      7. Better to call more tools than too few - thoroughness matters
+      
+      When you have called ALL necessary tools and FULLY addressed the request:
+      Thought: I have now completed all necessary steps and fully addressed every aspect of the user's request
+      Final Answer: [comprehensive summary of everything that was accomplished]
 function_groups:
   banking_tools:
     _type: banking_tools_group
@@ -131,20 +140,21 @@ llms:
   # dynamic headers per LLM call based on current execution context.
   dynamo_llm:
     _type: dynamo
-    model_name: llama-3.3-70b
-    base_url: http://localhost:8099/v1
+    model_name: Llama-3.3-70B-Instruct
+    base_url: http://localhost:8000/v1
     api_key: dummy
     temperature: 0.0
-    max_tokens: 8192
+    max_tokens: 16384
     stop: ["Observation:", "\nThought:"]
 
-    # Dynamo prefix configuration (required for prefix routing)
-    prefix_template: "react-benchmark-{uuid}"
+    # Dynamo nvext hints configuration (required for prefix routing)
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "react-benchmark-{uuid}"
 
     # Static fallback values (used if trie lookup fails)
-    prefix_total_requests: 10
-    prefix_osl: MEDIUM
-    prefix_iat: MEDIUM
+    nvext_prefix_total_requests: 10
+    nvext_prefix_osl: MEDIUM
+    nvext_prefix_iat: MEDIUM
 
     # =========================================================================
     # PREDICTION TRIE - Dynamic per-call header injection
@@ -158,8 +168,8 @@ llms:
   # Secondary LLM for self-evaluation (no prediction trie needed)
   eval_llm:
     _type: dynamo
-    model_name: llama-3.3-70b
-    base_url: http://localhost:8099/v1
+    model_name: Llama-3.3-70B-Instruct
+    base_url: http://localhost:8000/v1
     api_key: dummy
     temperature: 0.0
     max_tokens: 1024
@@ -169,14 +179,33 @@ workflow:
   _type: self_evaluating_agent_with_feedback
   wrapped_agent: react_workflow
   evaluator_llm: eval_llm
-  max_retries: 3
-  min_confidence_threshold: 0.80
+  max_retries: 5
+  min_confidence_threshold: 0.85
   pass_feedback_to_agent: true
-  verbose: false
+  verbose: true
+  # Optional: customize feedback template
+  feedback_template: |
+    PREVIOUS ATTEMPT FEEDBACK:
+
+    Your previous tool selection was evaluated and found to be insufficient.
+
+    EVALUATION:
+    {reasoning}
+
+    MISSING STEPS:
+    {missing_steps}
+
+    SUGGESTIONS:
+    {suggestions}
+
+    Please try again, addressing the issues identified above. Focus on:
+    1. Including all necessary information gathering steps
+    2. Ensuring proper order of operations
+    3. Adding verification steps where appropriate
 
 eval:
   general:
-    max_concurrency: 36
+    max_concurrency: 8
 
     output:
       dir: ./examples/dynamo_integration/react_benchmark_agent/outputs/dynamo_evals/prediction_trie_eval/
@@ -200,6 +229,13 @@ eval:
   # RUNTIME EVALUATORS - Compare against static header baseline
   # =========================================================================
   evaluators:
+    tool_selection_quality:
+      _type: tsq_evaluator
+      llm_name: eval_llm
+      strict_mode: false
+      tool_weight: 1.0
+      parameter_weight: 0.4
+
     # Primary metric: Average LLM latency per call (seconds)
     avg_llm_latency:
       _type: avg_llm_latency

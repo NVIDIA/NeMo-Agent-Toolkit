@@ -93,6 +93,7 @@ class FileLoggingMethod(LoggingBaseConfig, name="file"):
 
     path: str = Field(description="The file path to save the logging output.")
     level: str = Field(description="The logging level of file logger.")
+    mode: FileMode = Field(default=FileMode.APPEND, description="The file write mode.")
 
 
 @register_logging_method(config_type=FileLoggingMethod)
@@ -101,7 +102,8 @@ async def file_logging_method(config: FileLoggingMethod, builder: Builder):
     Build and return a FileHandler for file-based logging.
     """
     level = getattr(logging, config.level.upper(), logging.INFO)
-    handler = logging.FileHandler(filename=config.path, mode="a", encoding="utf-8")
+    mode = "w" if config.mode == FileMode.OVERWRITE else "a"
+    handler = logging.FileHandler(filename=config.path, mode=mode, encoding="utf-8")
     handler.setLevel(level)
 
     # Set formatter to match the default CLI format

@@ -18,7 +18,7 @@ import datetime
 import typing
 import uuid
 from abc import abstractmethod
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -37,7 +37,7 @@ from nat.utils.type_converter import GlobalTypeConverter
 FINISH_REASONS = frozenset({'stop', 'length', 'tool_calls', 'content_filter', 'function_call'})
 
 
-class UserMessageContentRoleType(str, Enum):
+class UserMessageContentRoleType(StrEnum):
     """
     Enum representing chat message roles in API requests and responses.
     """
@@ -48,7 +48,7 @@ class UserMessageContentRoleType(str, Enum):
 
 class Request(BaseModel):
     """
-    Request is a data model that represents HTTP request attributes.
+    Request is a data model that represents HTTP request and WebSocket attributes.
     """
     model_config = ConfigDict(extra="forbid")
 
@@ -65,9 +65,11 @@ class Request(BaseModel):
     client_port: int | None = Field(default=None, description="Client port number from which the request originated.")
     cookies: dict[str, str] | None = Field(
         default=None, description="Cookies sent with the request, stored in a dictionary-like object.")
+    payload: dict[str, typing.Any] | None = Field(default=None,
+                                                  description="Request payload from the incoming request.")
 
 
-class ChatContentType(str, Enum):
+class ChatContentType(StrEnum):
     """
     ChatContentType is an Enum that represents the type of Chat content.
     """
@@ -279,10 +281,25 @@ class ChoiceMessage(BaseModel):
     role: UserMessageContentRoleType | None = None
 
 
+class ChoiceDeltaToolCallFunction(BaseModel):
+    """Function details within a streamed tool call delta (OpenAI-compatible)."""
+    name: str | None = None
+    arguments: str | None = None
+
+
+class ChoiceDeltaToolCall(BaseModel):
+    """Tool call delta for streaming responses (OpenAI-compatible)."""
+    index: int
+    id: str | None = None
+    type: str | None = None
+    function: ChoiceDeltaToolCallFunction | None = None
+
+
 class ChoiceDelta(BaseModel):
     """Delta object for streaming responses (OpenAI-compatible)"""
     content: str | None = None
     role: UserMessageContentRoleType | None = None
+    tool_calls: list[ChoiceDeltaToolCall] | None = None
 
 
 class ChoiceBase(BaseModel):
@@ -417,7 +434,8 @@ class ChatResponseChunk(ResponseBaseModelOutput):
                     id_: str | None = None,
                     created: datetime.datetime | None = None,
                     model: str | None = None,
-                    object_: str | None = None) -> "ChatResponseChunk":
+                    object_: str | None = None,
+                    finish_reason: str | None = None) -> "ChatResponseChunk":
 
         if id_ is None:
             id_ = str(uuid.uuid4())
@@ -428,13 +446,15 @@ class ChatResponseChunk(ResponseBaseModelOutput):
         if object_ is None:
             object_ = "chat.completion.chunk"
 
+        final_finish_reason = finish_reason if finish_reason in FINISH_REASONS else None
+
         return ChatResponseChunk(id=id_,
                                  choices=[
                                      ChatResponseChunkChoice(index=0,
                                                              delta=ChoiceDelta(
                                                                  content=data,
                                                                  role=UserMessageContentRoleType.ASSISTANT),
-                                                             finish_reason="stop")
+                                                             finish_reason=final_finish_reason)
                                  ],
                                  created=created,
                                  model=model,
@@ -518,6 +538,36 @@ class ResponsePayloadOutput(BaseModel, ResponseSerializable):
         return f"data: {self.payload}\n\n"
 
 
+class ResponseATIFStep(BaseModel, ResponseSerializable):
+    """An ATIF step emitted during streaming on the ``/v1/workflow/atif`` endpoint."""
+
+    step_id: int
+    source: str
+    message: str = ""
+    timestamp: str | None = None
+    model_name: str | None = None
+    reasoning_content: str | None = None
+    tool_calls: list[dict[str, typing.Any]] | None = None
+    observation: dict[str, typing.Any] | None = None
+    metrics: dict[str, typing.Any] | None = None
+    extra: dict[str, typing.Any] | None = None
+
+    def get_stream_data(self) -> str:
+        return f"data: {self.model_dump_json(exclude_none=True)}\n\n"
+
+
+class ResponseATIFTrajectory(BaseModel, ResponseSerializable):
+    """Final ATIF trajectory summary emitted at the end of an ATIF stream."""
+
+    schema_version: str
+    session_id: str
+    agent: dict[str, typing.Any]
+    final_metrics: dict[str, typing.Any] | None = None
+
+    def get_stream_data(self) -> str:
+        return f"data: {self.model_dump_json(exclude_none=True)}\n\n"
+
+
 class GenerateResponse(BaseModel):
     # Allow extra fields in the model_config to support derived models
     model_config = ConfigDict(extra="allow")
@@ -528,7 +578,7 @@ class GenerateResponse(BaseModel):
     value: str | None = "default"
 
 
-class WebSocketMessageType(str, Enum):
+class WebSocketMessageType(StrEnum):
     """
     WebSocketMessageType is an Enum that represents WebSocket Message types.
     """
@@ -541,7 +591,7 @@ class WebSocketMessageType(str, Enum):
     ERROR_MESSAGE = "error_message"
 
 
-class WorkflowSchemaType(str, Enum):
+class WorkflowSchemaType(StrEnum):
     """
     WorkflowSchemaType is an Enum that represents Workkflow response types.
     """
@@ -551,7 +601,7 @@ class WorkflowSchemaType(str, Enum):
     CHAT = "chat"
 
 
-class WebSocketMessageStatus(str, Enum):
+class WebSocketMessageStatus(StrEnum):
     """
     WebSocketMessageStatus is an Enum that represents the status of a WebSocket message.
     """
@@ -578,8 +628,9 @@ class User(BaseModel):
     email: str = "default"
 
 
-class ErrorTypes(str, Enum):
+class ErrorTypes(StrEnum):
     UNKNOWN_ERROR = "unknown_error"
+    WORKFLOW_ERROR = "workflow_error"
     INVALID_MESSAGE = "invalid_message"
     INVALID_MESSAGE_TYPE = "invalid_message_type"
     INVALID_USER_MESSAGE_CONTENT = "invalid_user_message_content"

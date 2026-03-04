@@ -14,11 +14,33 @@
 # limitations under the License.
 
 from enum import Enum
+from functools import cache
 from typing import Any
 
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
+
+
+@cache
+def _get_or_create_enum(name: str, values: frozenset[str]) -> type[Enum]:
+    """
+    Get a cached enum class or create a new one.
+
+    This function ensures that enums with the same name and values always return
+    the same class object. This is critical for Pydantic validation, which checks
+    enum instances by class identity.
+
+    Uses cache to automatically cache enum classes by their name and values.
+
+    Args:
+        name: The name for the enum class
+        values: Frozenset of enum values (frozenset is hashable for caching)
+
+    Returns:
+        An Enum class (cached or newly created)
+    """
+    return Enum(name, {item: item for item in values})
 
 
 def truncate_session_id(session_id: str, max_length: int = 10) -> str:
@@ -95,7 +117,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
 
             if non_null_vals:
                 enum_name = f"{name.capitalize()}Enum"
-                enum_type: Any = Enum(enum_name, {item: item for item in non_null_vals})
+                enum_type: Any = _get_or_create_enum(enum_name, frozenset(non_null_vals))
                 # If enum had null, make it a union with None
                 return enum_type | None if has_null else enum_type
             elif has_null:
@@ -197,6 +219,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
 
         # Determine the default value based on whether the field is required
         default_value = field_properties.get("default")
+        has_explicit_null_default = "default" in field_properties and default_value is None
 
         if field_name in required_fields:
             # Field is required - use explicit default if provided, otherwise use ... to enforce presence
@@ -210,6 +233,10 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
             # Field is optional - use explicit default if provided, otherwise None
             if default_value is None:
                 default_value = None
+            # MCP schemas sometimes set default to null without declaring null in the type.
+            # Treat explicit null defaults as nullable for validation compatibility.
+            if has_explicit_null_default and not has_null:
+                field_type = field_type | None
             # Make the type optional if no default was provided and not already nullable
             if "default" not in field_properties and not has_null:
                 field_type = field_type | None

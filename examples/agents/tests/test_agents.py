@@ -13,83 +13,117 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import re
 from pathlib import Path
 
 import pytest
 
 from nat.test.utils import run_workflow
-from nat.test.utils import serve_workflow
 
 
-@pytest.fixture(name="agents_dir", scope="session")
-def agents_dir_fixture(examples_dir: Path) -> Path:
-    return examples_dir / "agents"
+def _extract_serve_response_text(response_json: dict) -> str:
+    """Extract the answer text from a nat serve response payload.
+
+    Handles both simple string responses and OpenAI-style chat completion responses.
+    """
+    response_value = response_json.get('value', {})
+    if isinstance(response_value, str):
+        return response_value
+    combined = []
+    for choice in response_value.get('choices', []):
+        combined.append(choice.get('message', {}).get('content', ''))
+    return "\n".join(combined)
 
 
-@pytest.fixture(name="question", scope="module")
-def question_fixture() -> str:
-    return "What are LLMs"
+def _assert_expected_answer(result: str, expected_answer: str) -> None:
+    """Assert that the expected answer appears in the result, normalizing whitespace and case."""
+    normalized = ' '.join(result.split())
+    assert expected_answer.lower() in normalized.lower(), f"Expected '{expected_answer}' in '{result}'"
 
 
-@pytest.fixture(name="answer", scope="module")
-def answer_fixture() -> str:
-    return "large language model"
+# ---------------------------------------------------------------------------
+# ReWOO agent tests -- one workflow build shared across all 5 questions
+# ---------------------------------------------------------------------------
 
 
-@pytest.fixture(name="rewoo_data", scope="module")
-def rewoo_data_fixture(agents_dir: Path) -> list[dict]:
-    data_path = agents_dir / "data/rewoo.json"
-    assert data_path.exists(), f"Data file {data_path} does not exist"
-    with open(data_path, encoding="utf-8") as f:
-        return json.load(f)
-
-
-@pytest.fixture(name="rewoo_question")
-def rewoo_question_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict]) -> str:
-    return rewoo_data[request.param]["question"]
-
-
-@pytest.fixture(name="rewoo_answer")
-def rewoo_answer_fixture(request: pytest.FixtureRequest, rewoo_data: list[dict]) -> str:
-    return rewoo_data[request.param]["answer"].lower()
-
-
-@pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
 @pytest.mark.integration
-@pytest.mark.parametrize("use_rest_api", [False, True], ids=["nat_run", "nat_serve"])
-@pytest.mark.parametrize("rewoo_question, rewoo_answer", [(i, i) for i in range(5)],
-                         ids=[f"qa_{i+1}" for i in range(5)],
-                         indirect=True)
-async def test_rewoo_full_workflow(agents_dir: Path, use_rest_api: bool, rewoo_question: str, rewoo_answer: str):
-    config_file = agents_dir / "rewoo/configs/config.yml"
-    if use_rest_api:
-        await serve_workflow(config_path=config_file, question=rewoo_question, expected_answer=rewoo_answer)
-    else:
-        await run_workflow(config_file=config_file, question=rewoo_question, expected_answer=rewoo_answer)
+@pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
+class TestReWOONatRun:
+
+    @pytest.mark.parametrize("qa_idx", range(5), ids=[f"qa_{i+1}" for i in range(5)])
+    async def test_question(self, rewoo_session_manager, rewoo_data: list[dict], qa_idx: int):
+        qa = rewoo_data[qa_idx]
+        async with rewoo_session_manager.session() as session:
+            async with session.run(qa["question"]) as runner:
+                result = await runner.result(to_type=str)
+                _assert_expected_answer(result, qa["answer"])
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key", "tavily_api_key")
+class TestReWOONatServe:
+
+    @pytest.mark.parametrize("qa_idx", range(5), ids=[f"qa_{i+1}" for i in range(5)])
+    async def test_question(self, rewoo_nat_client, rewoo_data: list[dict], qa_idx: int):
+        qa = rewoo_data[qa_idx]
+        resp = await rewoo_nat_client.post("/generate",
+                                           json={"messages": [{
+                                               "role": "user", "content": qa["question"]
+                                           }]})
+        resp.raise_for_status()
+        response_text = _extract_serve_response_text(resp.json())
+        _assert_expected_answer(response_text, qa["answer"])
+
+
+# ---------------------------------------------------------------------------
+# Tool Calling responses API agent test
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("openai_api_key")
+async def test_tool_calling_responses_api(agents_dir: Path, question: str, answer: str):
+    await run_workflow(config_file=agents_dir / "tool_calling/configs/config-responses-api.yml",
+                       question=question,
+                       expected_answer=answer)
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("openai_api_key")
+async def test_nat_run_tool_calling_responses_api(tool_calling_responses_api_nat_client, question: str, answer: str):
+    resp = await tool_calling_responses_api_nat_client.post("/generate", json={"input_message": question})
+    resp.raise_for_status()
+    response_text = _extract_serve_response_text(resp.json())
+    _assert_expected_answer(response_text, answer)
+
+
+# ---------------------------------------------------------------------------
+# Other agent tests -- fixture parametrized by config (class-scoped)
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-@pytest.mark.parametrize("use_rest_api", [False, True], ids=["nat_run", "nat_serve"])
-@pytest.mark.parametrize(
-    "config_file",
-    [
-        # These are all expected to be relative to the agents_dir
-        "mixture_of_agents/configs/config.yml",
-        "react/configs/config.yml",
-        "react/configs/config-reasoning.yml",
-        "tool_calling/configs/config.yml",
-        "tool_calling/configs/config-reasoning.yml",
-    ],
-    ids=["mixture_of_agents", "react", "react-reasoning", "tool_calling", "tool_calling-reasoning"])
-async def test_agent_full_workflow(agents_dir: Path, config_file: str, use_rest_api: bool, question: str, answer: str):
-    if use_rest_api:
-        await serve_workflow(config_path=agents_dir / config_file, question=question, expected_answer=answer)
-    else:
-        await run_workflow(config_file=agents_dir / config_file, question=question, expected_answer=answer)
+class TestAgentNatRun:
+
+    async def test_question(self, agent_session_manager, question: str, answer: str):
+        async with agent_session_manager.session() as session:
+            async with session.run(question) as runner:
+                result = await runner.result(to_type=str)
+                _assert_expected_answer(result, answer)
+
+
+@pytest.mark.slow
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+class TestAgentNatServe:
+
+    async def test_question(self, agent_nat_client, question: str, answer: str):
+        resp = await agent_nat_client.post("/generate", json={"messages": [{"role": "user", "content": question}]})
+        resp.raise_for_status()
+        response_text = _extract_serve_response_text(resp.json())
+        _assert_expected_answer(response_text, answer)
 
 
 # Code examples from `docs/source/resources/running-tests.md`

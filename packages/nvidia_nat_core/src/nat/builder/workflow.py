@@ -117,7 +117,7 @@ class Workflow(FunctionBase[InputT, StreamingOutputT, SingleOutputT]):
 
         async with self.run(message) as runner:
 
-            from nat.eval.runtime_event_subscriber import pull_intermediate
+            from nat.builder.runtime_event_subscriber import pull_intermediate
 
             # Start the intermediate stream
             pull_done, intermediate_steps = pull_intermediate()
