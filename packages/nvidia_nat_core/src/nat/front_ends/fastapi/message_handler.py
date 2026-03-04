@@ -250,18 +250,28 @@ class WebSocketMessageHandler:
                     if self._conversation_id:
                         self._worker.remove_conversation_handler(self._conversation_id)
 
+                if self._workflow_schema_type is None:
+                    raise RuntimeError("Workflow schema type is not initialized")
                 self._running_workflow_task = asyncio.create_task(
                     self._run_workflow(payload=message_content,
                                        user_message_id=self._message_parent_id,
                                        conversation_id=self._conversation_id,
                                        result_type=self._schema_output_mapping[self._workflow_schema_type],
-                                       output_type=self._schema_output_mapping[
-                                           self._workflow_schema_type])).add_done_callback(_done_callback)
+                                       output_type=self._schema_output_mapping[self._workflow_schema_type]))
+                self._running_workflow_task.add_done_callback(_done_callback)
 
         except ValueError as e:
             logger.exception("User message content not found: %s", str(e))
             await self.create_websocket_message(data_model=Error(code=ErrorTypes.INVALID_USER_MESSAGE_CONTENT,
                                                                  message="User message content could not be found",
+                                                                 details=str(e)),
+                                                message_type=WebSocketMessageType.ERROR_MESSAGE,
+                                                status=WebSocketMessageStatus.IN_PROGRESS)
+
+        except RuntimeError as e:
+            logger.exception("Internal workflow initialization error: %s", str(e))
+            await self.create_websocket_message(data_model=Error(code=ErrorTypes.WORKFLOW_ERROR,
+                                                                 message=type(e).__name__,
                                                                  details=str(e)),
                                                 message_type=WebSocketMessageType.ERROR_MESSAGE,
                                                 status=WebSocketMessageStatus.IN_PROGRESS)
