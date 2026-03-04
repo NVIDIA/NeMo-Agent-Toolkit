@@ -38,7 +38,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
-- `nvidia-nat[eval]` or `nvidia-nat-eval` - Evaluation and profiling CLI commands (`nat eval`, `nat red-team`, `nat sizing`)
+- `nvidia-nat[eval]` or `nvidia-nat-eval` - Evaluation orchestration package
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/), [LangGraph](https://www.langchain.com/langgraph)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mcp]` or `nvidia-nat-mcp` - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
@@ -50,20 +50,22 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[strands]`.
 - `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
+- `nvidia-nat[security]` or `nvidia-nat-security` - Security and red-team components (`nat red-team`)
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
 - `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
 - `nvidia-nat[vanna]` or `nvidia-nat-vanna` - [Vanna](https://vanna.ai/) text-to-SQL with Databricks support
+- `nvidia-nat[profiler]` or `nvidia-nat-profiler` - Profiling and performance analysis components used by evaluation and sizing workflows
 - `nvidia-nat[weave]` or `nvidia-nat-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)
 - `nvidia-nat[zep-cloud]` or `nvidia-nat-zep-cloud` - [Zep](https://www.getzep.com/)
 
 ## Other Extras
 
+
 - `nvidia-nat[async_endpoints]` - Support for asynchronous endpoints when launching `nat serve`
 - `nvidia-nat[gunicorn]` - Support for launching `nat serve` with an alternative server; requires additional configuration file changes
 - `nvidia-nat[most]` - Extra containing all Framework integrations except for: `nvidia-nat-ragaai`, `nvidia-nat-openpipe-art`
-- `nvidia-nat[pii-defense]` - Additional dependencies for `nat red-team` evaluation
-- `nvidia-nat[profiling]` - Additional dependencies needed for [profiling](../improve-workflows/profiler.md)
+- `nvidia-nat[pii-defense]` - Additional dependencies for red-teaming defenses and middleware
 
 ## Supported Platforms
 
@@ -165,9 +167,9 @@ Installing from source is required to run any examples provided in the repositor
     Many of the example workflows require plugins, and following the documented steps in one of these examples will in turn install the necessary plugins. For example following the steps in the `examples/getting_started/simple_web_query/README.md` guide will install the `nvidia-nat-langchain` plugin if you haven't already done so.
     :::
 
-    In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for [evaluation](../improve-workflows/evaluate.md) and profiling workflows using `nat eval`. To install the `eval` package and the additional profiler dependencies, run the following:
+    In addition to plugins, install the profiler package when you plan to run profiling workflows with `nat eval`:
     ```bash
-    uv pip install -e ".[eval,profiling]"
+    uv pip install -e ".[profiler]"
     ```
 
 6. Verify that you've installed the NeMo Agent Toolkit library.

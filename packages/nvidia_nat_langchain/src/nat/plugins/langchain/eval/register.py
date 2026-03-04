@@ -18,3 +18,5 @@
 from .langsmith_custom_evaluator import register_langsmith_custom_evaluator
 from .langsmith_evaluator import register_langsmith_evaluator
 from .langsmith_judge import register_langsmith_judge
+from .trajectory_evaluator import register_trajectory_evaluator
+from .tunable_rag_evaluator import register_tunable_rag_evaluator

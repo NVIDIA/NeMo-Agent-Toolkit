@@ -709,7 +709,7 @@ When the user configures the corresponding telemetry exporter in their workflow 
 
 ### Built-in Implementation
 
-LangSmith implements this callback pattern with per-trial experiment projects, feedback scores, parameter metadata, and prompt repo version tracking. See the [LangSmith integration guide](../run-workflows/observe/observe.md?provider=LangSmith#provider-integration-guides){.external} for details on what LangSmith tracks during optimization.
+LangSmith implements this callback pattern with per-trial experiment projects, feedback scores, parameter metadata, and prompt repo version tracking. See the [LangSmith integration guide](../run-workflows/observe/observe-workflow-with-langsmith.md){.external} for details on what LangSmith tracks during optimization.
 
 Other observability providers can implement the same `OptimizerCallback` protocol to add their own trial tracking during optimization.
 

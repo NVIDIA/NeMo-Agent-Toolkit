@@ -170,7 +170,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`email_phishing_analyzer`](evaluation_and_profiling/email_phishing_analyzer/README.md)**: Evaluation and profiling configurations for the email phishing analyzer example **[🟨 Intermediate]**
 - **[`simple_calculator_eval`](evaluation_and_profiling/simple_calculator_eval/README.md)**: Evaluation and profiling configurations based on the basic simple calculator example **[🟨 Intermediate]**
 - **[`simple_web_query_eval`](evaluation_and_profiling/simple_web_query_eval/README.md)**: Evaluation and profiling configurations based on the basic simple web query example **[🟨 Intermediate]**
-- **[`swe_bench`](evaluation_and_profiling/swe_bench/README.md)**: Software engineering benchmark system for evaluating AI models on real-world coding tasks **[🛑 Advanced]**
 
 ### Finetuning
 - **[`dpo_tic_tac_toe`](finetuning/dpo_tic_tac_toe/README.md)**: Demonstrates how to use the NeMo Agent Toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer **[🛑 Advanced]**

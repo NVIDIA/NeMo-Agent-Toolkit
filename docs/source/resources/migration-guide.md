@@ -27,6 +27,66 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.6.0
+
+#### Evaluator Package Split (Breaking)
+
+As part of dependency reduction, evaluator ownership is being moved out of `nvidia-nat-eval` and into framework-specific packages.
+
+- `trajectory` evaluator moved to `nvidia-nat-langchain`.
+- `tunable_rag_evaluator` moved to `nvidia-nat-langchain`.
+- `ragas` evaluator moved to `nvidia-nat-ragas`.
+- Performance evaluators moved to `nvidia-nat-profiler`:
+  - `avg_llm_latency`
+  - `avg_workflow_runtime`
+  - `avg_num_llm_calls`
+  - `avg_tokens_per_llm_end`
+- `nvidia-nat-eval` no longer includes a direct `ragas` dependency.
+- `swe_bench` evaluator has been removed (no replacement package in this release).
+
+This is a breaking change:
+- `nvidia-nat-eval` no longer owns these built-in evaluator implementations.
+- `nvidia-nat-langchain` now imports evaluator base contracts from `nvidia-nat-eval`.
+- If `nvidia-nat-langchain` is installed without `nvidia-nat-eval`, LangChain evaluator registration imports can fail.
+
+To migrate:
+- Install both packages when using these evaluators:
+  - `pip install nvidia-nat-eval nvidia-nat-langchain`
+- Install the RAGAS evaluator package when using `_type: ragas`:
+  - `pip install nvidia-nat-ragas`
+- Install the profiler package when using performance evaluators or profiling workflows:
+  - `pip install nvidia-nat-profiler`
+  - Note: the previous dependency group name `nvidia-nat-profiling` is now `nvidia-nat-profiler`.
+- Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`, `avg_llm_latency`, `avg_workflow_runtime`, `avg_num_llm_calls`, `avg_tokens_per_llm_end`).
+- Remove any `_type: swe_bench` evaluator entries from evaluation configurations.
+- If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
+
+#### Eval Exporter Callback Split
+
+Eval metric exporting now uses generic eval-callback hooks owned by `nvidia-nat-eval`, while provider-specific implementations live in provider packages.
+
+- Weave eval metric export callback now lives in `nvidia-nat-weave`.
+- `nvidia-nat-eval` no longer hard-couples directly to Weave internals for eval metric publishing.
+- If a telemetry exporter is configured but its eval callback provider package is missing, `nvidia-nat-eval` now logs a warning and continues evaluation without exporter publishing.
+
+To migrate:
+- Install the matching provider package for configured telemetry exporters (for Weave: `pip install nvidia-nat-weave`).
+- Keep existing telemetry exporter config names unchanged (for example `_type: weave`).
+
+#### Eval CLI Command Package Split
+
+CLI command ownership is now aligned to package domains:
+
+- `nat eval` is provided by `nvidia-nat-eval`.
+- `nat sizing` is provided by `nvidia-nat-profiler`.
+- `nat red-team` is provided by `nvidia-nat-security`.
+
+To migrate:
+- Install command-specific packages as needed:
+  - `pip install nvidia-nat-eval`
+  - `pip install nvidia-nat-profiler`
+  - `pip install nvidia-nat-security`
+
 ### v1.5.0
 
 #### Removing Old Aliases and Transitional Packages
