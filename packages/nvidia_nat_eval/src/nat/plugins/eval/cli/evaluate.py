@@ -170,7 +170,7 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
     """Build callback manager from registered eval callbacks matching the tracing config."""
     try:
         from nat.cli.type_registry import GlobalTypeRegistry
-        from nat.eval.eval_callbacks import EvalCallbackManager
+        from nat.plugins.eval.eval_callbacks import EvalCallbackManager
         from nat.observability.utils.tracing_utils import get_tracing_configs
         from nat.runtime.loader import load_config as _load_cfg
 

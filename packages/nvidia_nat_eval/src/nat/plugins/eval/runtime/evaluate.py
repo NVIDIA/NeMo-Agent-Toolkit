@@ -49,7 +49,7 @@ from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
-    from nat.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 
 logger = logging.getLogger(__name__)
 
@@ -578,7 +578,7 @@ class EvaluationRun:
         if not (self.callback_manager and self.evaluation_results):
             return
         try:
-            from nat.eval.eval_callbacks import build_eval_result
+            from nat.plugins.eval.eval_callbacks import build_eval_result
             scores = {name: output.average_score for name, output in self.evaluation_results}
             result = build_eval_result(
                 eval_input_items=self.eval_input.eval_input_items,
