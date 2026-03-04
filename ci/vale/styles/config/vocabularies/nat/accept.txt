@@ -4,6 +4,8 @@
 
 [Aa]gentic
 [Aa]gno
+# Allow AIQ for AIQ Blueprint
+AIQ
 [Aa]llowlist
 [Aa]nonymize(d?)
 API(s?)
