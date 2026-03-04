@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates how to compose a built-in parallel fan-out/fan-in stage inside a sequential workflow in the NVIDIA NeMo Agent Toolkit. The workflow runs three LLM analysis branches in parallel (`topic_agent`, `urgency_agent`, and `risk_agent`) and then synthesizes the appended branch outputs into a final recommendation.
+This example demonstrates how to compose a built-in parallel fan-out and fan-in stage inside a sequential workflow in the NVIDIA NeMo Agent Toolkit. The workflow runs three LLM analysis branches in parallel (`topic_agent`, `urgency_agent`, and `risk_agent`) and then synthesizes the appended branch outputs into a final recommendation.
 
 The NeMo Agent Toolkit provides built-in [`parallel_executor`](../../../packages/nvidia_nat_langchain/src/nat/plugins/langchain/control_flow/parallel_executor.py) and [`sequential_executor`](../../../packages/nvidia_nat_langchain/src/nat/plugins/langchain/control_flow/sequential_executor.py) tools. This example uses `parallel_executor` as one stage in a sequential chain.
 
@@ -87,7 +87,7 @@ This example uses the same LLM setup as the hybrid control flow example:
 
 ### Required Configuration Options
 
-- **`parallel_analysis._type`**: Set to `parallel_executor` for fan-out/fan-in execution.
+- **`parallel_analysis._type`**: Set to `parallel_executor` for fan-out and fan-in execution.
 - **`parallel_analysis.tool_list`**: Branch functions to run concurrently.
 - **`chat_completion.llm_name`**: LLM used by each branch and final synthesis stage.
 - **`workflow._type`**: Set to `sequential_executor` to execute stages in order.

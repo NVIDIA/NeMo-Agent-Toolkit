@@ -110,7 +110,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Control Flow
 - **[`router_agent`](control_flow/router_agent/README.md)**: Configurable Router Agent that analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on request content **[🟢 Beginner]**
 - **[`sequential_executor`](control_flow/sequential_executor/README.md)**: Linear tool execution pipeline that chains multiple functions together where each function's output becomes the input for the next function, with optional type compatibility checking and error handling **[🟢 Beginner]**
-- **[`parallel_executor`](control_flow/parallel_executor/README.md)**: Sequential workflow with a custom parallel fan-out/fan-in stage that executes independent branches concurrently and merges outputs with partial failure handling **[🟢 Beginner]**
+- **[`parallel_executor`](control_flow/parallel_executor/README.md)**: Sequential workflow with a custom parallel fan-out and fan-in stage that executes independent branches concurrently and merges outputs with partial failure handling **[🟢 Beginner]**
 - **[`hybrid_control_flow`](control_flow/hybrid_control_flow/README.md)**: Demonstrates how to compose router agent and sequential executor control flow patterns together, showing routing to sequential executors, calling router agents from sequential executors, and routing to nested router agents **[🟢 Beginner]**
 
 ### Custom Functions

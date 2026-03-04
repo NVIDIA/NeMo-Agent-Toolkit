@@ -78,6 +78,9 @@ functions:
     tool_list: [topic_agent, urgency_agent, risk_agent]
     detailed_logs: true
     return_error_on_exception: true
+  final_synthesis_agent:
+    _type: chat_completion
+    llm_name: nim_llm
 
 workflow:
   _type: sequential_executor
