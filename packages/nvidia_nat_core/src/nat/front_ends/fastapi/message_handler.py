@@ -257,8 +257,7 @@ class WebSocketMessageHandler:
                                        user_message_id=self._message_parent_id,
                                        conversation_id=self._conversation_id,
                                        result_type=self._schema_output_mapping[self._workflow_schema_type],
-                                       output_type=self._schema_output_mapping[
-                                           self._workflow_schema_type]))
+                                       output_type=self._schema_output_mapping[self._workflow_schema_type]))
                 self._running_workflow_task.add_done_callback(_done_callback)
 
         except ValueError as e:
