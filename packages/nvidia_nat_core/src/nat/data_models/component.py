@@ -45,6 +45,8 @@ class ComponentEnum(StrEnum):
     TRAINER = "trainer"
     TRAJECTORY_BUILDER = "trajectory_builder"
     TRAINER_ADAPTER = "trainer_adapter"
+    WORKSPACE_GUARDRAIL = "workspace_guardrail"
+    WORKSPACE = "workspace"
     UNDEFINED = "undefined"
 
 
@@ -63,3 +65,4 @@ class ComponentGroup(StrEnum):
     TRAINERS = "trainers"
     TRAINER_ADAPTERS = "trainer_adapters"
     TRAJECTORY_BUILDERS = "trajectory_builders"
+    WORKSPACE_GUARDRAILS = "workspace_guardrails"

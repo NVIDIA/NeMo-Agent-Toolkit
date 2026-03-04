@@ -87,15 +87,21 @@ from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterConfigT
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
+from nat.data_models.workspace import WorkspaceBaseConfig
+from nat.data_models.workspace import WorkspaceBaseConfigT
+from nat.data_models.workspace_guardrail import WorkspaceGuardrailBaseConfig
+from nat.data_models.workspace_guardrail import WorkspaceGuardrailBaseConfigT
 from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
+from nat.guardrails.workspace import WorkspaceGuardrail
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.registry_handlers.registry_handler_base import AbstractRegistryHandler
+from nat.workspace.types import WorkspaceActionSchema
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +128,8 @@ RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncI
 RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[RetrieverProviderInfo]]
 TelemetryExporterBuildCallableT = Callable[[TelemetryExporterConfigT, Builder], AsyncIterator[BaseExporter]]
 ToolWrapperBuildCallableT = Callable[[str, Function, Builder], typing.Any]
+WorkspaceBuildCallableT = Callable[[WorkspaceBaseConfigT], AsyncIterator[typing.Any]]
+WorkspaceGuardrailBuildCallableT = Callable[[WorkspaceGuardrailBaseConfigT, Builder], AsyncIterator[WorkspaceGuardrail]]
 
 AuthProviderRegisteredCallableT = Callable[[AuthProviderBaseConfigT, Builder],
                                            AbstractAsyncContextManager[AuthProviderBase]]
@@ -153,6 +161,9 @@ RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], A
 RetrieverProviderRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder],
                                                 AbstractAsyncContextManager[RetrieverProviderInfo]]
 TeleExporterRegisteredCallableT = Callable[[TelemetryExporterConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
+WorkspaceRegisteredCallableT = Callable[[WorkspaceBaseConfigT], AbstractAsyncContextManager[typing.Any]]
+WorkspaceGuardrailRegisteredCallableT = Callable[[WorkspaceGuardrailBaseConfigT, Builder],
+                                                 AbstractAsyncContextManager[WorkspaceGuardrail]]
 
 
 class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
@@ -251,6 +262,14 @@ class RegisteredFrontEndInfo(RegisteredInfo[FrontEndBaseConfig]):
     build_fn: FrontEndRegisteredCallableT = Field(repr=False)
 
 
+class RegisteredWorkspaceInfo(RegisteredInfo[WorkspaceBaseConfig]):
+    """
+    Represents a registered workspace configuration.
+    """
+
+    build_fn: WorkspaceRegisteredCallableT = Field(repr=False)
+
+
 class RegisteredFunctionInfo(RegisteredInfo[FunctionBaseConfig]):
     """
     Represents a registered function. Functions are the building blocks of the workflow with predefined inputs, outputs,
@@ -312,6 +331,23 @@ class RegisteredMiddlewareInfo(RegisteredInfo[MiddlewareBaseConfig]):
     """
 
     build_fn: MiddlewareRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredWorkspaceGuardrailInfo(RegisteredInfo[WorkspaceGuardrailBaseConfig]):
+    """Represents registered workspace guardrails."""
+
+    build_fn: WorkspaceGuardrailRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredWorkspaceActionInfo(BaseModel):
+    """Represents a registered workspace action."""
+
+    model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
+
+    name: str
+    action_cls: type[typing.Any] = Field(repr=False)
+    action_schema: WorkspaceActionSchema
+    discovery_metadata: DiscoveryMetadata = DiscoveryMetadata()
 
 
 class RegisteredLLMProviderInfo(RegisteredInfo[LLMBaseConfig]):
@@ -452,6 +488,9 @@ class TypeRegistry:
         # Front Ends
         self._registered_front_end_infos: dict[type[FrontEndBaseConfig], RegisteredFrontEndInfo] = {}
 
+        # Workspaces
+        self._registered_workspace_infos: dict[type[WorkspaceBaseConfig], RegisteredWorkspaceInfo] = {}
+
         # Functions
         self._registered_functions: dict[type[FunctionBaseConfig], RegisteredFunctionInfo] = {}
 
@@ -460,6 +499,13 @@ class TypeRegistry:
 
         # Middleware
         self._registered_middleware: dict[type[MiddlewareBaseConfig], RegisteredMiddlewareInfo] = {}
+
+        # Workspace guardrails
+        self._registered_workspace_guardrails: dict[type[WorkspaceGuardrailBaseConfig],
+                                                    RegisteredWorkspaceGuardrailInfo] = {}
+
+        # Workspace actions
+        self._registered_workspace_actions: dict[str, RegisteredWorkspaceActionInfo] = {}
 
         # LLMs
         self._registered_llm_provider_infos: dict[type[LLMBaseConfig], RegisteredLLMProviderInfo] = {}
@@ -709,6 +755,28 @@ class TypeRegistry:
 
         return list(self._registered_front_end_infos.values())
 
+    def register_workspace(self, registration: RegisteredWorkspaceInfo):
+
+        if (registration.config_type in self._registered_workspace_infos):
+            raise ValueError(f"A workspace with the same config type `{registration.config_type}` has already been "
+                             "registered.")
+
+        self._registered_workspace_infos[registration.config_type] = registration
+
+        self._registration_changed()
+
+    def get_workspace(self, config_type: type[WorkspaceBaseConfig]) -> RegisteredWorkspaceInfo:
+
+        try:
+            return self._registered_workspace_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered workspace for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_workspace_infos.keys())}") from err
+
+    def get_registered_workspaces(self) -> list[RegisteredInfo[WorkspaceBaseConfig]]:
+
+        return list(self._registered_workspace_infos.values())
+
     def register_function(self, registration: RegisteredFunctionInfo):
 
         if (registration.config_type in self._registered_functions):
@@ -817,6 +885,82 @@ class TypeRegistry:
             list[RegisteredInfo[MiddlewareBaseConfig]]: List of all registered middleware
         """
         return list(self._registered_middleware.values())
+
+    def register_workspace_guardrail(self, registration: RegisteredWorkspaceGuardrailInfo):
+        """Register workspace guardrails with the type registry.
+
+        Args:
+            registration: The workspace guardrail registration information
+
+        Raises:
+            ValueError: If a workspace guardrail with the same config type is already registered
+        """
+        if registration.config_type in self._registered_workspace_guardrails:
+            raise ValueError(
+                f"Workspace guardrail with the same config type `{registration.config_type}` has already been "
+                "registered.")
+
+        self._registered_workspace_guardrails[registration.config_type] = registration
+        self._registration_changed()
+
+    def get_workspace_guardrail(
+        self,
+        config_type: type[WorkspaceGuardrailBaseConfig],
+    ) -> RegisteredWorkspaceGuardrailInfo:
+        """Get registered workspace guardrail by its config type."""
+        try:
+            return self._registered_workspace_guardrails[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find registered workspace guardrail for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_workspace_guardrails.keys())}") from err
+
+    def get_registered_workspace_guardrails(self) -> list[RegisteredInfo[WorkspaceGuardrailBaseConfig]]:
+        """Get all registered workspace guardrails."""
+        return list(self._registered_workspace_guardrails.values())
+
+    def register_workspace_action(self, registration: RegisteredWorkspaceActionInfo) -> None:
+        """Register a workspace action.
+
+        Args:
+            registration: The workspace action registration information.
+
+        Raises:
+            ValueError: If an action with the same name is already registered or the schema name mismatches.
+        """
+        if registration.name in self._registered_workspace_actions:
+            raise ValueError(f"A workspace action with the same name `{registration.name}` has already been "
+                             "registered.")
+        if registration.action_schema.name != registration.name:
+            raise ValueError("Workspace action schema name does not match the registered action name.")
+
+        self._registered_workspace_actions[registration.name] = registration
+        self._registration_changed()
+
+    def get_workspace_action(self, action_name: str) -> RegisteredWorkspaceActionInfo:
+        """Get a registered workspace action by name.
+
+        Args:
+            action_name: The name of the registered workspace action.
+
+        Returns:
+            RegisteredWorkspaceActionInfo: The registered action information.
+
+        Raises:
+            KeyError: If the action is not registered.
+        """
+        try:
+            return self._registered_workspace_actions[action_name]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered workspace action `{action_name}`. "
+                           f"Registered actions: {set(self._registered_workspace_actions.keys())}") from err
+
+    def get_registered_workspace_actions(self) -> list[RegisteredWorkspaceActionInfo]:
+        """Get all registered workspace actions.
+
+        Returns:
+            list[RegisteredWorkspaceActionInfo]: List of all registered workspace actions.
+        """
+        return list(self._registered_workspace_actions.values())
 
     def register_llm_provider(self, info: RegisteredLLMProviderInfo):
 
@@ -1146,6 +1290,9 @@ class TypeRegistry:
         if component_type == ComponentEnum.FRONT_END:
             return self._registered_front_end_infos
 
+        if component_type == ComponentEnum.WORKSPACE:
+            return self._registered_workspace_infos
+
         if component_type == ComponentEnum.AUTHENTICATION_PROVIDER:
             return self._registered_auth_provider_infos
 
@@ -1218,6 +1365,9 @@ class TypeRegistry:
         if component_type == ComponentEnum.MIDDLEWARE:
             return self._registered_middleware
 
+        if component_type == ComponentEnum.WORKSPACE_GUARDRAIL:
+            return self._registered_workspace_guardrails
+
         if component_type == ComponentEnum.TRAINER:
             return self._registered_trainer_infos
 
@@ -1236,6 +1386,12 @@ class TypeRegistry:
 
         if component_type == ComponentEnum.FUNCTION_GROUP:
             return [i.static_type() for i in self._registered_function_groups]
+
+        if component_type == ComponentEnum.WORKSPACE:
+            return [i.static_type() for i in self._registered_workspace_infos]
+
+        if component_type == ComponentEnum.WORKSPACE_GUARDRAIL:
+            return [i.static_type() for i in self._registered_workspace_guardrails]
 
         if component_type == ComponentEnum.TOOL_WRAPPER:
             return list(self._registered_tool_wrappers)
@@ -1328,6 +1484,12 @@ class TypeRegistry:
 
         if issubclass(cls, FrontEndBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_front_ends())
+
+        if issubclass(cls, WorkspaceBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_workspaces())
+
+        if issubclass(cls, WorkspaceGuardrailBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_workspace_guardrails())
 
         if issubclass(cls, FunctionBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_functions())

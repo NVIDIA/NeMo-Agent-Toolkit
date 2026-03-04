@@ -190,6 +190,17 @@ class MiddlewareRef(ComponentRef):
         return ComponentGroup.MIDDLEWARE
 
 
+class WorkspaceGuardrailRef(ComponentRef):
+    """
+    A reference to a workspace guardrail in a NAT configuration object.
+    """
+
+    @property
+    @override
+    def component_group(self):
+        return ComponentGroup.WORKSPACE_GUARDRAILS
+
+
 class TrainerRef(ComponentRef):
     """
     A reference to a trainer in a NAT configuration object.

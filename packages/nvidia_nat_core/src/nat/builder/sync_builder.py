@@ -50,6 +50,7 @@ from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.data_models.workspace import WorkspaceBaseConfig
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.finetuning.interfaces.finetuning_runner import Trainer
@@ -59,6 +60,7 @@ from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
+from nat.workspace.types import WorkspaceManagerBase
 
 if typing.TYPE_CHECKING:
     from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
@@ -179,6 +181,22 @@ class SyncBuilder:
             The configuration for the workflow function
         """
         return self._builder.get_workflow_config()
+
+    def get_workspace_config(self) -> WorkspaceBaseConfig | None:
+        """Get the workspace configuration.
+
+        Returns:
+            The workspace configuration if configured, otherwise None
+        """
+        return self._builder.get_workspace_config()
+
+    def get_workspace_manager(self) -> WorkspaceManagerBase | None:
+        """Get the workspace manager.
+
+        Returns:
+            The workspace manager if configured, otherwise None
+        """
+        return self._loop.run_until_complete(self._builder.get_workspace_manager())
 
     def get_tools(self,
                   tool_names: Sequence[str | FunctionRef | FunctionGroupRef],

@@ -25,3 +25,4 @@ class LLMFrameworkEnum(StrEnum):
     ADK = "adk"
     STRANDS = "strands"
     AUTOGEN = "autogen"
+    RUNTIME = "runtime"

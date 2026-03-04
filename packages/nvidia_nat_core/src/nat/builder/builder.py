@@ -54,16 +54,19 @@ from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.data_models.workspace import WorkspaceBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
 from nat.finetuning.interfaces.finetuning_runner import Trainer
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
+from nat.guardrails.workspace import WorkspaceGuardrail
 from nat.memory.interfaces import MemoryEditor
 from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.retriever.interface import Retriever
+from nat.workspace.types import WorkspaceManagerBase
 
 if typing.TYPE_CHECKING:
     from nat.builder.sync_builder import SyncBuilder
@@ -233,6 +236,37 @@ class Builder(ABC):
 
         Returns:
             The configuration for the workflow function
+        """
+        pass
+
+    @abstractmethod
+    def get_workspace_config(self) -> WorkspaceBaseConfig | None:
+        """Get the workspace configuration.
+
+        Returns:
+            The workspace configuration if configured, otherwise None
+        """
+        pass
+
+    @abstractmethod
+    async def get_workspace_manager(self) -> WorkspaceManagerBase | None:
+        """Get the workspace manager.
+
+        Returns:
+            The workspace manager if configured, otherwise None
+        """
+        pass
+
+    @abstractmethod
+    async def get_workspace_guardrails(self) -> list[WorkspaceGuardrail]:
+        """Get instantiated workspace guardrail instances from the workspace config.
+
+        Implementations should resolve ``WorkspaceBaseConfig.workspace_guardrails``
+        refs to live :class:`~nat.guardrails.workspace.WorkspaceGuardrail` instances.
+
+        Returns:
+            List of workspace guardrail instances configured for the active workspace.
+            Returns an empty list if no workspace or no guardrails are configured.
         """
         pass
 

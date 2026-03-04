@@ -78,6 +78,7 @@ from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.data_models.workspace import WorkspaceBaseConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.experimental.test_time_compute.models.stage_enums import PipelineTypeEnum
 from nat.experimental.test_time_compute.models.stage_enums import StageTypeEnum
@@ -91,6 +92,7 @@ from nat.middleware.middleware import Middleware
 from nat.object_store.interfaces import ObjectStore
 from nat.observability.exporter.base_exporter import BaseExporter
 from nat.utils.type_utils import override
+from nat.workspace.types import WorkspaceManagerBase
 
 try:
     from nat.plugins.eval.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
@@ -351,6 +353,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         self._trainers: dict[str, ConfiguredTrainer] = {}
         self._trainer_adapters: dict[str, ConfiguredTrainerAdapter] = {}
         self._trajectory_builders: dict[str, ConfiguredTrajectoryBuilder] = {}
+        self._workspace_config: WorkspaceBaseConfig | None = None
+        self._workspace_manager: WorkspaceManagerBase | None = None
 
         self._context_state = ContextState.get()
 
@@ -444,8 +448,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
 
         await self._exit_stack.__aexit__(*exc_details)
 
-    @override
     @property
+    @override
     def sync_builder(self) -> SyncBuilder:
         return SyncBuilder(self)
 
@@ -781,6 +785,22 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError("No workflow set")
 
         return self._workflow.config
+
+    @override
+    def get_workspace_config(self) -> WorkspaceBaseConfig | None:
+        return self._workspace_config
+
+    @override
+    async def get_workspace_manager(self) -> WorkspaceManagerBase | None:
+        if self._workspace_config is None:
+            return None
+
+        if self._workspace_manager is None:
+            workspace_info = self._registry.get_workspace(type(self._workspace_config))
+            self._workspace_manager = await self._get_exit_stack().enter_async_context(
+                workspace_info.build_fn(self._workspace_config))
+
+        return self._workspace_manager
 
     @override
     def get_function_dependencies(self, fn_name: str | FunctionRef) -> FunctionDependencies:
@@ -1418,6 +1438,9 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             skip_workflow (bool): If True, skips the workflow instantiation step. Defaults to False.
 
         """
+        self._workspace_config = config.workspace
+        self._workspace_manager = None
+
         # Generate the build sequence
         build_sequence = build_dependency_sequence(config)
 
