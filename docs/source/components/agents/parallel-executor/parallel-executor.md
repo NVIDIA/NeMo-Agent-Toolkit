@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Configure the Parallel Executor
+# Configure the NVIDIA NeMo Agent Toolkit Parallel Executor
 Configure the NVIDIA NeMo Agent Toolkit parallel executor as a [workflow](../../../build-workflows/about-building-workflows.md) or a [function](../../../build-workflows/functions-and-function-groups/functions.md). The parallel executor fans out a shared input to all configured tools, executes branches concurrently, and then fans in branch outputs as appended text blocks.
 
 ## Requirements
