@@ -35,11 +35,32 @@ export WANDB_API_KEY=<your_api_key>
 
 ## Step 1: Install the Weave plugin
 
-To install the Weave plugin, run the following:
+To install the Weave plugin, run one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
 uv pip install -e ".[weave]"
 ```
+
+:::
+
+:::{tab-item} package
+:sync: package
+
+```bash
+uv pip install "nvidia-nat[weave]"
+```
+
+:::
+
+::::
+
 
 ## Step 2: Install the Workflow
 
