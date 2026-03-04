@@ -422,3 +422,39 @@ def test_extract_input_obj_base_model_without_field(rag_evaluator, rag_evaluator
     assert extracted_with_field == "json hello"
     assert extracted_default != extracted_with_field
     assert '"content":"json hello"' in extracted_default  # basic sanity check on JSON output
+
+
+async def test_register_ragas_evaluator_atif_lane_disabled_by_default():
+    """Ensure RAGAS ATIF lane is opt-in while stabilizing."""
+    from nat.plugins.ragas.rag_evaluator.register import RagasEvaluatorConfig
+    from nat.plugins.ragas.rag_evaluator.register import register_ragas_evaluator
+
+    builder = MagicMock()
+    builder.get_llm = AsyncMock(return_value=MagicMock())
+    builder.get_max_concurrency = MagicMock(return_value=1)
+
+    config = RagasEvaluatorConfig(llm_name="judge", metric={"AnswerAccuracy": {"skip": True}})
+    async with register_ragas_evaluator(config=config, builder=builder) as evaluator_info:
+        assert hasattr(evaluator_info, "evaluate_fn")
+        assert not hasattr(evaluator_info, "evaluate_atif_fn")
+
+    builder.get_llm.assert_awaited_once()
+
+
+async def test_register_ragas_evaluator_atif_lane_enabled():
+    """Ensure RAGAS ATIF lane can be explicitly enabled by config."""
+    from nat.plugins.ragas.rag_evaluator.register import RagasEvaluatorConfig
+    from nat.plugins.ragas.rag_evaluator.register import register_ragas_evaluator
+
+    builder = MagicMock()
+    builder.get_llm = AsyncMock(return_value=MagicMock())
+    builder.get_max_concurrency = MagicMock(return_value=1)
+
+    config = RagasEvaluatorConfig(llm_name="judge",
+                                  metric={"AnswerAccuracy": {"skip": True}},
+                                  enable_atif_evaluator=True)
+    async with register_ragas_evaluator(config=config, builder=builder) as evaluator_info:
+        assert hasattr(evaluator_info, "evaluate_fn")
+        assert callable(getattr(evaluator_info, "evaluate_atif_fn", None))
+
+    builder.get_llm.assert_awaited_once()
