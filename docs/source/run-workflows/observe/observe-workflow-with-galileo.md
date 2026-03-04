@@ -44,7 +44,7 @@ You will need the following values:
 - `logstream` (log-stream name)
 
 
-### Step 4: Configure Your Environment
+## Step 4: Configure Your Environment
 Set the following environment variables in your terminal
 ```bash
 export GALILEO_API_KEY=<your_api_key>
@@ -53,7 +53,7 @@ export GALILEO_API_KEY=<your_api_key>
 ## Step 5: Install the OpenTelemetry Subpackage
 
 ```bash
-uv pip install '.[opentelemetry]'
+uv pip install ".[opentelemetry]"
 ```
 
 ## Step 6: Modify Workflow Configuration

@@ -53,7 +53,7 @@ export DBNL_PROJECT_ID=<your_project_id>
 
 ```bash
 # Install specific telemetry extras required for DBNL
-uv pip install -e '.[opentelemetry]'
+uv pip install -e ".[opentelemetry]"
 ```
 
 ## Step 5: Modify NeMo Agent Toolkit Workflow Configuration
