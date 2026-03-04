@@ -23,33 +23,58 @@ NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. I
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`.
+In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`. Install the evaluation extra package with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
-If you are installing from source, install the evaluation extra from the NeMo Agent Toolkit repository root:
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e '.[eval]'
+uv pip install -e ".[eval]"
 ```
 
-If you are installing from a package, install either the `eval` extra or the standalone package:
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
 uv pip install "nvidia-nat[eval]"
 ```
 
-```bash
-uv pip install nvidia-nat-eval
-```
+:::
+
+::::
+
 
 If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install profiling dependencies as well:
 
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e '.[eval,profiling]'
+uv pip install -e ".[eval,profiling]"
 ```
 
-For package installs, use:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 uv pip install "nvidia-nat[eval,profiling]"
 ```
+
+:::
+
+::::
 
 
 ## Evaluating a Workflow
@@ -378,10 +403,31 @@ The contents of the file have been `snipped` for brevity.
 You can visualize the evaluation results using the Weights and Biases (W&B) Weave dashboard.
 
 ### Step 1: Install the Weave plugin
-To install the Weave plugin, run:
+To install the Weave plugin, with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e '.[weave]'
+uv pip install -e ".[weave]"
 ```
+
+:::
+
+:::{tab-item} package
+:sync: package
+
+```bash
+uv pip install "nvidia-nat[weave]"
+```
+
+:::
+
+::::
 
 ### Step 2: Enable logging to Weave in the configuration file
 Edit your evaluation config, for example:
@@ -842,19 +888,32 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/
 
 #### LangSmith Evaluators
 
-NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [OpenEvals](https://github.com/langchain-ai/openevals) to provide three evaluator types. To use these evaluators, install the LangChain integration package:
+NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [OpenEvals](https://github.com/langchain-ai/openevals) to provide three evaluator types. To use these evaluators, install the LangChain integration package with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
-If you have performed a source code checkout:
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
-If you have installed the NeMo Agent Toolkit from a package:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
 ```
+
+:::
+
+::::
+
 
 ##### Built-in `openevals` Evaluator
 
