@@ -38,6 +38,3 @@ dependencies = [
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
-
-[project.entry-points.'nat.components']
-nat_parallel_executor = "nat_parallel_executor.register"

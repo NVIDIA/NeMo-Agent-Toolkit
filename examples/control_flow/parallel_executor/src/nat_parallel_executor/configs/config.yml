@@ -59,15 +59,20 @@ functions:
     tool_list: [topic_agent, urgency_agent, risk_agent]
     description: "Run topic, urgency, and risk analyses in parallel"
     detailed_logs: true
+    return_error_on_exception: false
 
   final_synthesis_agent:
     _type: chat_completion
     llm_name: nim_llm
     system_prompt: |
       You are the final synthesis stage.
-      INPUT is a JSON object with keys "topic_agent", "urgency_agent", and "risk_agent".
-      Each value is a JSON string from that branch, or an error string prefixed with "ERROR:".
-      Parse the input robustly.
+      INPUT is plain text composed of branch blocks appended one below the other.
+      Each block is in this format:
+      <branch_name>:
+      <branch_output>
+
+      Branch outputs are usually JSON strings and may occasionally be an error payload.
+      Parse each branch output robustly before synthesizing.
       Output EXACTLY this plain-text format:
       === PARALLEL ANALYSIS REPORT ===
       Topic: <value>

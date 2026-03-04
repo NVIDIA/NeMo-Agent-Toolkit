@@ -19,9 +19,9 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates how to compose a custom parallel fan-out/fan-in stage inside a sequential workflow in the NVIDIA NeMo Agent Toolkit. The workflow runs three LLM analysis branches in parallel (`topic_agent`, `urgency_agent`, and `risk_agent`) and then synthesizes the merged branch outputs into a final recommendation.
+This example demonstrates how to compose a built-in parallel fan-out/fan-in stage inside a sequential workflow in the NVIDIA NeMo Agent Toolkit. The workflow runs three LLM analysis branches in parallel (`topic_agent`, `urgency_agent`, and `risk_agent`) and then synthesizes the appended branch outputs into a final recommendation.
 
-The NeMo Agent Toolkit provides a built-in [`sequential_executor`](../../../packages/nvidia_nat_langchain/src/nat/plugins/langchain/control_flow/sequential_executor.py) tool. In this example, a custom `parallel_executor` function is added and used as one stage in that sequential chain.
+The NeMo Agent Toolkit provides built-in [`parallel_executor`](../../../packages/nvidia_nat_langchain/src/nat/plugins/langchain/control_flow/parallel_executor.py) and [`sequential_executor`](../../../packages/nvidia_nat_langchain/src/nat/plugins/langchain/control_flow/sequential_executor.py) tools. This example uses `parallel_executor` as one stage in a sequential chain.
 
 ## Table of Contents
 
@@ -39,9 +39,9 @@ The NeMo Agent Toolkit provides a built-in [`sequential_executor`](../../../pack
 
 ## Key Features
 
-- **Sequential + Parallel orchestration**: Runs independent branch analyses concurrently and resumes linear execution with merged outputs.
+- **Sequential + Parallel orchestration**: Runs independent branch analyses concurrently and resumes linear execution with appended branch outputs.
 - **LLM-powered branch analysis**: Uses `chat_completion` tools for topic, urgency, and risk analysis.
-- **Minimal custom Python**: Keeps custom code focused on reusable parallel fan-out/fan-in orchestration logic.
+- **Built-in control flow**: Uses core `parallel_executor` and `sequential_executor` components without custom orchestration code.
 
 ## Graph Structure
 
@@ -73,7 +73,7 @@ flowchart LR
     style Q3 fill:#666a73,stroke:#666a73,color:#ffffff
 ```
 
-This structure shows how the sequential executor can call a custom parallel stage and then continue to a synthesis stage.
+This structure shows how the sequential executor can call a parallel stage and then continue to a synthesis stage.
 
 ## Configuration
 
@@ -95,8 +95,9 @@ This example uses the same LLM setup as the hybrid control flow example:
 
 ### Optional Configuration Options
 
-- **`parallel_analysis.description`**: Description of the custom parallel stage.
+- **`parallel_analysis.description`**: Description of the parallel stage.
 - **`parallel_analysis.detailed_logs`**: Enable informational logs for fan-out, per-branch execution, and fan-in summary.
+- **`parallel_analysis.return_error_on_exception`**: If `true`, append branch error text in the fan-in output instead of raising.
 - **`workflow.raise_type_incompatibility`**: Whether sequential executor raises on type mismatch (default in this example: `false`).
 
 ### Example Configuration
@@ -124,6 +125,7 @@ functions:
     _type: parallel_executor
     tool_list: [topic_agent, urgency_agent, risk_agent]
     detailed_logs: true
+    return_error_on_exception: false
 
   final_synthesis_agent:
     _type: chat_completion

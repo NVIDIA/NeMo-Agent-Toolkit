@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from pathlib import Path
+
 import pytest
 
 
@@ -38,11 +40,10 @@ import pytest
 @pytest.mark.usefixtures("nvidia_api_key")
 @pytest.mark.integration
 async def test_parallel_executor_workflow(question: str, expected_elements: list[str]) -> None:
-    from nat.test.utils import locate_example_config
     from nat.test.utils import run_workflow
-    from nat_parallel_executor.register import ParallelExecutorConfig
 
-    config_file = locate_example_config(ParallelExecutorConfig)
+    config_file = Path(__file__).resolve().parents[1] / "configs" / "config.yml"
+    assert config_file.exists(), f"Expected config file not found: {config_file}"
     result = await run_workflow(
         config_file=config_file,
         question=question,
