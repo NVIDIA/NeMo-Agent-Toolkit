@@ -5584,8 +5584,7 @@ dependencies = [
     { name = "flask" },
     { name = "langchain-core" },
     { name = "langgraph" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
-    { name = "nvidia-nat-profiler" },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
     { name = "pandas" },
 ]
 
@@ -5595,8 +5594,7 @@ requires-dist = [
     { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-core" },
     { name = "langgraph", specifier = ">=0.0.10" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
-    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "test"], editable = "." },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
 
@@ -5677,9 +5675,7 @@ source = { editable = "examples/evaluation_and_profiling/email_phishing_analyzer
 dependencies = [
     { name = "beautifulsoup4" },
     { name = "networkx" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "phoenix", "test"] },
-    { name = "nvidia-nat-profiler" },
-    { name = "nvidia-nat-ragas" },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "phoenix", "profiler", "test"] },
     { name = "openinference-instrumentation-langchain" },
 ]
 
@@ -5687,9 +5683,7 @@ dependencies = [
 requires-dist = [
     { name = "beautifulsoup4", specifier = "~=4.13" },
     { name = "networkx", specifier = "~=3.4" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "phoenix", "test"], editable = "." },
-    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
-    { name = "nvidia-nat-ragas", editable = "packages/nvidia_nat_ragas" },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "phoenix", "profiler", "ragas", "test"], editable = "." },
     { name = "openinference-instrumentation-langchain", specifier = "==0.1.29" },
 ]
 
@@ -5814,9 +5808,7 @@ dependencies = [
     { name = "nat-alert-triage-agent" },
     { name = "nat-simple-calculator" },
     { name = "nbclient" },
-    { name = "nvidia-nat", extra = ["langchain", "llama-index", "mcp", "test"] },
-    { name = "nvidia-nat-profiler" },
-    { name = "nvidia-nat-ragas" },
+    { name = "nvidia-nat", extra = ["langchain", "llama-index", "mcp", "profiler", "test"] },
     { name = "python-dotenv", extra = ["cli"] },
 ]
 
@@ -5827,9 +5819,7 @@ requires-dist = [
     { name = "nat-alert-triage-agent", editable = "examples/advanced_agents/alert_triage_agent" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
     { name = "nbclient", specifier = "~=0.10" },
-    { name = "nvidia-nat", extras = ["langchain", "llama-index", "mcp", "test"], editable = "." },
-    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
-    { name = "nvidia-nat-ragas", editable = "packages/nvidia_nat_ragas" },
+    { name = "nvidia-nat", extras = ["langchain", "llama-index", "mcp", "profiler", "ragas", "test"], editable = "." },
     { name = "python-dotenv", extras = ["cli"], specifier = "~=1.1.1" },
 ]
 
@@ -5887,15 +5877,11 @@ requires-dist = [
 name = "nat-react-benchmark-agent"
 source = { editable = "examples/dynamo_integration/react_benchmark_agent" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
-    { name = "nvidia-nat-profiler" },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
-    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
-]
+requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "test"], editable = "." }]
 
 [[package]]
 name = "nat-redis-example"
@@ -6025,15 +6011,13 @@ name = "nat-simple-calculator-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
 dependencies = [
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
-    { name = "nvidia-nat-profiler" },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
-    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "test"], editable = "." },
 ]
 
 [[package]]
@@ -6169,33 +6153,25 @@ name = "nat-simple-web-query-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_web_query_eval" }
 dependencies = [
     { name = "nat-simple-web-query" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
-    { name = "nvidia-nat-profiler" },
-    { name = "nvidia-nat-ragas" },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-web-query", editable = "examples/getting_started/simple_web_query" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
-    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
-    { name = "nvidia-nat-ragas", editable = "packages/nvidia_nat_ragas" },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "ragas", "test"], editable = "." },
 ]
 
 [[package]]
 name = "nat-strands-demo"
 source = { editable = "examples/frameworks/strands_demo" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
     { name = "nvidia-nat", extra = ["strands"], marker = "extra == 'extra-10-nvidia-nat-strands' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai')" },
-    { name = "nvidia-nat-profiler" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat", extras = ["eval", "langchain", "strands", "test"], editable = "." },
-    { name = "nvidia-nat-profiler", editable = "packages/nvidia_nat_profiler" },
-]
+requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "strands", "test"], editable = "." }]
 
 [[package]]
 name = "nat-user-report"
@@ -6599,9 +6575,6 @@ pii-defense = [
 profiler = [
     { name = "nvidia-nat-profiler" },
 ]
-profiling = [
-    { name = "nvidia-nat-profiler" },
-]
 rag = [
     { name = "nvidia-nat-rag" },
 ]
@@ -6756,7 +6729,6 @@ requires-dist = [
     { name = "nvidia-nat-phoenix", marker = "extra == 'phoenix'", editable = "packages/nvidia_nat_phoenix" },
     { name = "nvidia-nat-profiler", marker = "extra == 'most'", editable = "packages/nvidia_nat_profiler" },
     { name = "nvidia-nat-profiler", marker = "extra == 'profiler'", editable = "packages/nvidia_nat_profiler" },
-    { name = "nvidia-nat-profiler", marker = "extra == 'profiling'", editable = "packages/nvidia_nat_profiler" },
     { name = "nvidia-nat-rag", marker = "extra == 'rag'", editable = "packages/nvidia_nat_rag" },
     { name = "nvidia-nat-ragaai", marker = "extra == 'ragaai'", editable = "packages/nvidia_nat_ragaai" },
     { name = "nvidia-nat-ragas", marker = "extra == 'most'", editable = "packages/nvidia_nat_ragas" },
@@ -6780,7 +6752,7 @@ requires-dist = [
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "examples/documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "adk", "agno", "app", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "profiling", "most", "examples"]
+provides-extras = ["a2a", "adk", "agno", "app", "autogen", "core", "crewai", "eval", "data-flywheel", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
