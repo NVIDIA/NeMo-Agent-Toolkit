@@ -134,7 +134,7 @@ test:python_tests:
       alias: phoenix
       pull_policy: if-not-present
 
-    - name: $CI_REGISTRY_IMAGE/nginx-rewrite-models
+    - name: $CI_REGISTRY_IMAGE/nginx-rewrite-models:20260303
       alias: nginx-rewrite-models
       pull_policy: if-not-present
 
