@@ -50,6 +50,10 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
         default=None,
         description="The field in the input object that contains the content to evaluate.",
     )
+    enable_atif_evaluator: bool = Field(
+        default=False,
+        description="Enable ATIF-native RAGAS evaluator lane. Disabled by default until rollout stabilization.",
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -147,8 +151,10 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
                              input_obj_field=config.input_obj_field) if metrics else None
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=llm,
                                       metrics=metrics,
-                                      max_concurrency=builder.get_max_concurrency()) if metrics else None
+                                      max_concurrency=builder.get_max_concurrency()) if (metrics and
+                                                                                          config.enable_atif_evaluator) else None
 
     evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
-    evaluator_info.evaluate_atif_fn = evaluate_atif_fn
+    if config.enable_atif_evaluator:
+        evaluator_info.evaluate_atif_fn = evaluate_atif_fn
     yield evaluator_info
