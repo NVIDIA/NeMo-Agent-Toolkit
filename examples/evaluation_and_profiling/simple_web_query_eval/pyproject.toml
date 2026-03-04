@@ -40,6 +40,4 @@ dependencies = [
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
-nvidia-nat-profiler = { path = "../../../packages/nvidia_nat_profiler", editable = true }
-nvidia-nat-ragas = { path = "../../../packages/nvidia_nat_ragas", editable = true }
 nat_simple_web_query = { path = "../../getting_started/simple_web_query", editable = true }

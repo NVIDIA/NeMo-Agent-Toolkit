@@ -42,8 +42,6 @@ dependencies = [
 
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
-nvidia-nat-profiler = { path = "../../../packages/nvidia_nat_profiler", editable = true }
-nvidia-nat-ragas = { path = "../../../packages/nvidia_nat_ragas", editable = true }
 
 [project.entry-points.'nat.components']
 nat_email_phishing_analyzer = "nat_email_phishing_analyzer.register"
