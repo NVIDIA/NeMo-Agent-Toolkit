@@ -272,7 +272,7 @@ class LangSmithOptimizationCallback:
 
         # Phase 2: Fallback to substring matching for remaining items.
         if fallback_items:
-            from nat.eval.eval_callbacks import EvalResult
+            from nat.plugins.eval.eval_callbacks import EvalResult
             max_retries, retry_delay = self._estimate_retry_budget(len(fallback_items))
             matched = _match_and_link_otel_runs(
                 client=self._client,
