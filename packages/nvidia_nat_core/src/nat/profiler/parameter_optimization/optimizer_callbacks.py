@@ -22,7 +22,7 @@ from typing import Any
 from typing import Protocol
 
 if TYPE_CHECKING:
-    from nat.eval.evaluator.evaluator_model import EvalInputItem
+    from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 
 logger = logging.getLogger(__name__)
 

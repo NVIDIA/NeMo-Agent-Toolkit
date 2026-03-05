@@ -44,12 +44,13 @@ from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
+from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
-    from nat.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ class EvaluationRun:
 
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
-        self.callback_manager = callback_manager
+        self.callback_manager: EvalCallbackManager = callback_manager or EvalCallbackManager()
         self.eval_config: EvalConfig | None = None
         self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
@@ -364,6 +365,14 @@ class EvaluationRun:
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e)
 
+    def get_file_exporter(self) -> "FileEvalCallback | None":
+        """Return the registered ``FileEvalCallback``, if any."""
+        from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+        for cb in self.callback_manager._callbacks:
+            if isinstance(cb, FileEvalCallback):
+                return cb
+        return None
+
     def write_configuration(self) -> None:
         """Save the configuration used for this evaluation run to the output directory.
 
@@ -573,12 +582,19 @@ class EvaluationRun:
         except Exception as e:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
-    def _on_eval_complete(self) -> None:
+    def _on_eval_complete(self, dataset_handler: DatasetHandler | None = None) -> None:
         """Build an EvalResult from collected data and fire the on_eval_complete callback."""
-        if not (self.callback_manager and self.evaluation_results):
+        if not self.evaluation_results:
             return
         try:
-            from nat.eval.eval_callbacks import build_eval_result
+            from nat.plugins.eval.eval_callbacks import build_eval_result
+
+            workflow_output_json: str | None = None
+            if dataset_handler is not None and self.eval_input is not None:
+                step_filter = (self.eval_config.general.output.workflow_output_step_filter
+                               if self.eval_config and self.eval_config.general.output else None)
+                workflow_output_json = dataset_handler.publish_eval_input(self.eval_input, step_filter)
+
             scores = {name: output.average_score for name, output in self.evaluation_results}
             result = build_eval_result(
                 eval_input_items=self.eval_input.eval_input_items,
@@ -586,6 +602,10 @@ class EvaluationRun:
                 metric_scores=scores,
                 usage_stats=self.usage_stats,
                 item_span_ids=self._item_span_ids,
+                workflow_output_json=workflow_output_json,
+                run_config=self.config,
+                effective_config=self.effective_config,
+                output_dir=(self.eval_config.general.output_dir if self.eval_config else None),
             )
             self.callback_manager.on_eval_complete(result)
         except Exception:
@@ -661,7 +681,7 @@ class EvaluationRun:
                                          adjust_dataset_size=self.config.adjust_dataset_size,
                                          custom_pre_eval_process_function=custom_pre_eval_process_function)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
-        if self.callback_manager and self.eval_input.eval_input_items:
+        if self.eval_input.eval_input_items:
             try:
                 file_path = getattr(dataset_config, 'file_path', 'nat-eval-dataset')
                 dataset_name = Path(file_path).stem if file_path else 'nat-eval-dataset'
@@ -734,8 +754,6 @@ class EvaluationRun:
                     # Wait for all trace export tasks to complete (local workflows only)
                     if session_manager and not self.config.endpoint:
                         await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
-
-                    self._on_eval_complete()
                 finally:
                     if local_session_manager is not None:
                         await local_session_manager.shutdown()
@@ -751,8 +769,23 @@ class EvaluationRun:
         else:
             self.usage_stats.total_runtime = 0.0
 
-        # Publish the results
-        self.publish_output(dataset_handler, profiler_results)
+        # Fire eval-complete callbacks (including FileEvalCallback for file export)
+        self._on_eval_complete(dataset_handler)
+
+        if self.workflow_interrupted:
+            msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
+                   "You can re-execute evaluation for incomplete results by running "
+                   "`eval` with the --skip_completed_entries flag.")
+            logger.warning(msg)
+
+        # Retrieve file paths written by FileEvalCallback (if registered)
+        file_exporter = self.get_file_exporter()
+        if file_exporter is not None:
+            self.workflow_output_file = file_exporter.workflow_output_file
+            self.evaluator_output_files = file_exporter.evaluator_output_files
+            self.config_original_file = file_exporter.config_original_file
+            self.config_effective_file = file_exporter.config_effective_file
+            self.config_metadata_file = file_exporter.config_metadata_file
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:

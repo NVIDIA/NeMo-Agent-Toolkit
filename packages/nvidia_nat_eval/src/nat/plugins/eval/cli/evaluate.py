@@ -170,8 +170,8 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
     """Build callback manager from registered eval callbacks matching the tracing config."""
     try:
         from nat.cli.type_registry import GlobalTypeRegistry
-        from nat.eval.eval_callbacks import EvalCallbackManager
         from nat.observability.utils.tracing_utils import get_tracing_configs
+        from nat.plugins.eval.eval_callbacks import EvalCallbackManager
         from nat.runtime.loader import load_config as _load_cfg
 
         loaded = _load_cfg(config.config_file) if isinstance(config.config_file, Path) else config.config_file
@@ -213,7 +213,13 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
 
 
 async def run_and_evaluate(config: EvaluationRunConfig):
-    callback_manager = _build_eval_callback_manager(config)
+    from nat.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+
+    callback_manager = _build_eval_callback_manager(config) or EvalCallbackManager()
+
+    if config.write_output:
+        callback_manager.register(FileEvalCallback())
 
     # Run evaluation
     eval_runner = EvaluationRun(config=config, callback_manager=callback_manager)
