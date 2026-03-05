@@ -21,7 +21,6 @@ traceability in LLM server logs.
 """
 
 import logging
-import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -31,13 +30,8 @@ from nat.llm.utils.constants import LLMHeaderPrefix
 
 logger = logging.getLogger(__name__)
 
-# Lazily read environment variable to disable SSL verification for LLM requests later.
-# When the value is None, the environment variable has not been read yet. When it's a boolean, it indicates whether
-# SSL verification should be disabled.
-_DISABLE_SSL_VERIFICATION = None
 
-
-def create_metadata_injection_client(timeout: float = 600.0) -> "httpx.AsyncClient":
+def create_metadata_injection_client(timeout: float = 600.0, verify_ssl: bool = True) -> "httpx.AsyncClient":
     """
     Httpx event hook that injects custom metadata as HTTP headers.
 
@@ -46,16 +40,12 @@ def create_metadata_injection_client(timeout: float = 600.0) -> "httpx.AsyncClie
 
     Args:
         timeout: HTTP request timeout in seconds
+        verify_ssl: Whether to verify SSL certificates
 
     Returns:
         An httpx.AsyncClient configured with metadata header injection
     """
     import httpx
-
-    global _DISABLE_SSL_VERIFICATION
-    if _DISABLE_SSL_VERIFICATION is None:
-        env_value = os.getenv("NAT_DISABLE_SSL_VERIFICATION", "").lower()
-        _DISABLE_SSL_VERIFICATION = (env_value in ("1", "true", "yes"))
 
     from nat.builder.context import ContextState
 
@@ -77,5 +67,5 @@ def create_metadata_injection_client(timeout: float = 600.0) -> "httpx.AsyncClie
     return httpx.AsyncClient(
         event_hooks={"request": [on_request]},
         timeout=httpx.Timeout(timeout),
-        verify=not _DISABLE_SSL_VERIFICATION
+        verify=verify_ssl
     )

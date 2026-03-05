@@ -23,15 +23,11 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
 
-if TYPE_CHECKING:
-    import httpx
-
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
 from nat.data_models.common import get_secret_value
 from nat.data_models.llm import APITypeEnum
-from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
@@ -51,12 +47,18 @@ from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
+
+if TYPE_CHECKING:
+    import httpx
+    from nat.data_models.llm import LLMBaseConfig
+
+
 logger = logging.getLogger(__name__)
 
 ModelType = TypeVar("ModelType")
 
 
-def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
+def _patch_llm_based_on_config(client: ModelType, llm_config: "LLMBaseConfig") -> ModelType:
 
     from langchain_core.language_models import LanguageModelInput
     from langchain_core.messages import BaseMessage
@@ -125,6 +127,30 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
     return client
 
 
+def _create_metadata_injection_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
+    """
+    Create an httpx.AsyncClient with event hooks to inject custom metadata as HTTP headers.
+
+    This client injects custom payload fields as X-Payload-* HTTP headers,
+    enabling end-to-end traceability in LLM server logs.
+
+    Args:
+        llm_config: The LLM configuration containing timeout and SSL verification settings
+
+    Returns:
+        An httpx.AsyncClient configured with metadata header injection
+    """
+    client_kwargs: dict = {}
+
+    if hasattr(llm_config, "verify_ssl"):
+        client_kwargs["verify_ssl"] = llm_config.verify_ssl
+
+    if llm_config.request_timeout is not None:
+        client_kwargs["timeout"] = llm_config.request_timeout
+
+    return create_metadata_injection_client(**client_kwargs)
+
+
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def aws_bedrock_langchain(llm_config: AWSBedrockModelConfig, _builder: Builder):
 
@@ -149,17 +175,12 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    client_kwargs: dict = {}
-    if llm_config.request_timeout is not None:
-        client_kwargs["timeout"] = llm_config.request_timeout
-    http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
-
     try:
         client = AzureChatOpenAI(
             http_async_client=http_async_client,  # type: ignore[call-arg]
             api_version=llm_config.api_version,  # type: ignore[call-arg]
             **llm_config.model_dump(
-                exclude={"type", "thinking", "api_type", "api_version"},
+                exclude={"type", "thinking", "api_type", "api_version", "verify_ssl"},
                 by_alias=True,
                 exclude_none=True,
                 exclude_unset=True,
@@ -199,13 +220,10 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    client_kwargs: dict = {}
-    if llm_config.request_timeout is not None:
-        client_kwargs["timeout"] = llm_config.request_timeout
-    http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
+    http_async_client: httpx.AsyncClient = _create_metadata_injection_client(llm_config)
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        exclude={"type", "thinking", "api_type", "api_key", "base_url", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
