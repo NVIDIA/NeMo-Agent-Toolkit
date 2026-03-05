@@ -70,7 +70,7 @@ def _build_optimizer_callback_manager(base_cfg):
             import csv
             import json
 
-            from nat.eval.evaluator.evaluator_model import EvalInputItem
+            from nat.plugins.eval.evaluator.evaluator_model import EvalInputItem
 
             ds_cfg = base_cfg.eval.general.dataset
             file_path = getattr(ds_cfg, 'file_path', None)

@@ -54,7 +54,7 @@ def _on_numeric_trial_end(
     """Build a TrialResult from one numeric-optimisation trial and fire on_trial_end."""
     if callback_manager is None:
         return
-    from nat.eval.eval_callbacks import build_eval_result
+    from nat.plugins.eval.eval_callbacks import build_eval_result
     from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
 
     eval_result = None
