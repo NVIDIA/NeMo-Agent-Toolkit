@@ -57,7 +57,7 @@ def _on_prompt_trial_end(
     """Build TrialResults for each individual in a GA generation and fire on_trial_end."""
     if callback_manager is None:
         return
-    from nat.eval.eval_callbacks import build_eval_result
+    from nat.plugins.eval.eval_callbacks import build_eval_result
     from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
 
     for ind in population:
