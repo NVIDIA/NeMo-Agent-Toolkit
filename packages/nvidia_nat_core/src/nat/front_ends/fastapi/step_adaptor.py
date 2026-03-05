@@ -193,10 +193,17 @@ class StepAdaptor:
             ```
             """).strip("\n").format(payload=payload, output_value=escaped_output, format_output_type=format_output_type)
 
+        thought_text = None
+        if step.event_type == IntermediateStepType.TOOL_START:
+            thought_text = f"Using tool: {step.name}"
+        elif step.event_type == IntermediateStepType.TOOL_END:
+            thought_text = f"Tool completed: {step.name}"
+
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=f"Tool: {step.name}",
                                          payload=payload,
-                                         parent_id=ancestry.function_id)
+                                         parent_id=ancestry.function_id,
+                                         thought_text=thought_text)
 
         return event
 
@@ -231,7 +238,8 @@ class StepAdaptor:
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Start: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id)
+                                             parent_id=ancestry.parent_id,
+                                             thought_text=f"Running function: {step.name}")
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
@@ -284,7 +292,8 @@ class StepAdaptor:
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Complete: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id)
+                                             parent_id=ancestry.parent_id,
+                                             thought_text=f"Function completed: {step.name}")
             return event
 
         return None

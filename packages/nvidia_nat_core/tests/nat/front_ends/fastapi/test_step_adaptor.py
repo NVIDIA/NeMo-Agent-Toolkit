@@ -173,6 +173,86 @@ def test_extract_react_thought_no_thought_returns_none(step_adaptor_default, mak
     assert result.thought_text is None
 
 
+def test_tool_start_has_thought_text(step_adaptor_default, make_intermediate_step):
+    """TOOL_START events should set thought_text indicating tool invocation."""
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.TOOL_START,
+        data_input="Tool Input Data",
+        name="calculator_tool",
+        UUID="tool-uuid-1",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Using tool: calculator_tool"
+
+
+def test_tool_end_has_thought_text(step_adaptor_default, make_intermediate_step):
+    """TOOL_END events should set thought_text indicating tool completion."""
+    uuid = "tool-uuid-2"
+    step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.TOOL_START,
+            data_input="Tool Input Data",
+            name="calculator_tool",
+            UUID=uuid,
+        ))
+
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.TOOL_END,
+            data_output="Tool Output Data",
+            name="calculator_tool",
+            UUID=uuid,
+        ))
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Tool calculator_tool completed"
+
+
+def test_function_start_has_thought_text(step_adaptor_default, make_intermediate_step):
+    """FUNCTION_START events should set thought_text indicating function execution."""
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_START,
+        data_input="Function Input Data",
+        name="process_data",
+        UUID="function-uuid-1",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Running function: process_data"
+
+
+def test_function_end_has_thought_text(step_adaptor_default, make_intermediate_step):
+    """FUNCTION_END events should set thought_text indicating function completion."""
+    uuid = "function-uuid-2"
+    step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.FUNCTION_START,
+            data_input="Function Input Data",
+            name="process_data",
+            UUID=uuid,
+        ))
+
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.FUNCTION_END,
+            data_output="Function Output Data",
+            name="process_data",
+            UUID=uuid,
+        ))
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Function process_data completed"
+
+
 def test_process_tool_in_default(step_adaptor_default, make_intermediate_step):
     """
     In DEFAULT mode, TOOL_END events should be processed.
