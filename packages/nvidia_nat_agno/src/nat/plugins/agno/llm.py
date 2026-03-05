@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import os
-from typing import TypeVar
+import typing
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -34,7 +34,10 @@ from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
-ModelType = TypeVar("ModelType")
+if typing.TYPE_CHECKING:
+    import httpx
+
+ModelType = typing.TypeVar("ModelType")
 
 
 def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
@@ -79,6 +82,16 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
     return client
 
 
+def _create_http_client(llm_config: LLMBaseConfig) -> "httpx.AsyncClient":
+    """Create an httpx.AsyncClient with event hooks to inject custom metadata as HTTP headers."""
+    import httpx
+
+    kwargs = {}
+    if hasattr(llm_config, "verify_ssl"):
+        kwargs["verify"] = llm_config.verify_ssl
+    return httpx.AsyncClient(**kwargs)
+
+
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
 async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
@@ -88,14 +101,24 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_type"},
+            exclude={
+                "api_type",
+                "model_name",
+                "thinking",
+                "type",
+                "verify_ssl",
+            },
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
         ),
+        "http_client":
+            _create_http_client(llm_config),
+        "id":
+            llm_config.model_name
     }
 
-    client = Nvidia(**config_obj, id=llm_config.model_name)
+    client = Nvidia(**config_obj)
 
     yield _patch_llm_based_on_config(client, llm_config)
 
@@ -108,11 +131,22 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
 
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_type", "api_key", "base_url", "request_timeout"},
+            exclude={
+                "api_key",
+                "api_type",
+                "base_url",
+                "model_name",
+                "request_timeout",
+                "thinking",
+                "type",
+                "verify_ssl",
+            },
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
         ),
+        "http_client":
+            _create_http_client(llm_config),
     }
 
     if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
@@ -139,11 +173,18 @@ async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     client = LiteLLM(
         **llm_config.model_dump(
-            exclude={"type", "thinking", "model_name", "api_type"},
+            exclude={
+                "api_type",
+                "model_name",
+                "thinking",
+                "type",
+                "verify_ssl",
+            },
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
         ),
+        http_client=_create_http_client(llm_config),
         id=llm_config.model_name,
     )
 
