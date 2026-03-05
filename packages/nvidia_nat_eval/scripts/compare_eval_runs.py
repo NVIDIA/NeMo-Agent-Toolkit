@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Compare two eval run output directories.
 
 This script compares common evaluator outputs from two run directories:
@@ -108,9 +107,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Compare evaluator outputs between two eval runs.")
     parser.add_argument("run_a", type=Path, help="Path to first run output directory")
     parser.add_argument("run_b", type=Path, help="Path to second run output directory")
-    parser.add_argument("--show-item-diffs",
-                        action="store_true",
-                        help="Print per-item score deltas for changed items")
+    parser.add_argument("--show-item-diffs", action="store_true", help="Print per-item score deltas for changed items")
     args = parser.parse_args()
 
     print(f"Run A: {args.run_a}")

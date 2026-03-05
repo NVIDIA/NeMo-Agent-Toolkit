@@ -389,7 +389,11 @@ async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_sa
         assert output == mock_output
 
 
-def test_rag_legacy_and_atif_dataset_parity(rag_evaluator, ragas_judge_llm, ragas_metrics, rag_eval_input, intermediate_step_adapter):
+def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
+                                            ragas_judge_llm,
+                                            ragas_metrics,
+                                            rag_eval_input,
+                                            intermediate_step_adapter):
     """Ensure legacy and ATIF lanes produce equivalent ragas input samples."""
     from nat.data_models.atif import ATIFAgentConfig
     from nat.data_models.atif import ATIFObservation
@@ -401,7 +405,8 @@ def test_rag_legacy_and_atif_dataset_parity(rag_evaluator, ragas_judge_llm, raga
 
     atif_samples = []
     for item in rag_eval_input.eval_input_items:
-        contexts = intermediate_step_adapter.get_context(item.trajectory, intermediate_step_adapter.DEFAULT_EVENT_FILTER)
+        contexts = intermediate_step_adapter.get_context(item.trajectory,
+                                                         intermediate_step_adapter.DEFAULT_EVENT_FILTER)
         trajectory = ATIFTrajectory(
             session_id=str(item.id),
             agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
@@ -410,7 +415,8 @@ def test_rag_legacy_and_atif_dataset_parity(rag_evaluator, ragas_judge_llm, raga
                 ATIFStep(step_id=2,
                          source="agent",
                          message=str(item.output_obj),
-                         observation=ATIFObservation(results=[ATIFObservationResult(content=context) for context in contexts])),
+                         observation=ATIFObservation(
+                             results=[ATIFObservationResult(content=context) for context in contexts])),
             ],
         )
         atif_samples.append(
@@ -436,7 +442,9 @@ def test_rag_legacy_and_atif_dataset_parity(rag_evaluator, ragas_judge_llm, raga
     "atif_trajectory_steps, expected_user_input, expected_contexts",
     [
         ([], "", []),
-        ([{"step_id": 1, "source": "user", "message": "question only"}], "question only", []),
+        ([{
+            "step_id": 1, "source": "user", "message": "question only"
+        }], "question only", []),
     ],
 )
 def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
@@ -453,11 +461,9 @@ def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
     trajectory = ATIFTrajectory(session_id="edge-case-1",
                                 agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
                                 steps=atif_trajectory_steps)
-    atif_samples = [AtifEvalSample(item_id=1,
-                                   trajectory=trajectory,
-                                   expected_output_obj="ref",
-                                   output_obj="resp",
-                                   metadata={})]
+    atif_samples = [
+        AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj="ref", output_obj="resp", metadata={})
+    ]
 
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
     dataset = atif_evaluator.atif_samples_to_ragas(atif_samples)
@@ -467,7 +473,11 @@ def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
     assert dataset.samples[0].retrieved_contexts == expected_contexts
 
 
-async def test_rag_legacy_and_atif_score_parity(rag_evaluator, ragas_judge_llm, ragas_metrics, rag_eval_input, intermediate_step_adapter):
+async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
+                                                ragas_judge_llm,
+                                                ragas_metrics,
+                                                rag_eval_input,
+                                                intermediate_step_adapter):
     """Ensure legacy and ATIF evaluator lanes produce parity scores on the same dataset."""
     from nat.data_models.atif import ATIFAgentConfig
     from nat.data_models.atif import ATIFObservation
@@ -500,7 +510,8 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator, ragas_judge_llm, 
 
     atif_samples = []
     for item in rag_eval_input.eval_input_items:
-        contexts = intermediate_step_adapter.get_context(item.trajectory, intermediate_step_adapter.DEFAULT_EVENT_FILTER)
+        contexts = intermediate_step_adapter.get_context(item.trajectory,
+                                                         intermediate_step_adapter.DEFAULT_EVENT_FILTER)
         trajectory = ATIFTrajectory(
             session_id=str(item.id),
             agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
@@ -509,7 +520,8 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator, ragas_judge_llm, 
                 ATIFStep(step_id=2,
                          source="agent",
                          message=str(item.output_obj),
-                         observation=ATIFObservation(results=[ATIFObservationResult(content=context) for context in contexts])),
+                         observation=ATIFObservation(
+                             results=[ATIFObservationResult(content=context) for context in contexts])),
             ],
         )
         atif_samples.append(
