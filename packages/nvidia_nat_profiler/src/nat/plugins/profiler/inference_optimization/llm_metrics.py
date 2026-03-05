@@ -16,6 +16,8 @@
 import numpy as np
 import pandas as pd
 
+import pandas as pd
+
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.profiler.utils import create_standardized_dataframe
 
@@ -26,7 +28,9 @@ class LLMMetrics:
     """
 
     @staticmethod
-    def compute_profiling_metrics(all_steps: list[list[IntermediateStep]]) -> pd.DataFrame:
+    def compute_profiling_metrics(
+        all_steps: list[list[IntermediateStep]] | pd.DataFrame,
+    ) -> pd.DataFrame:
         """
         Compute and append the following columns to the provided DataFrame:
 
@@ -71,11 +75,13 @@ class LLMMetrics:
         - The DataFrame may have additional columns such as 'llm_text_input', 'llm_text_output',
            'function_id', 'parent_function_name', 'parent_function_id', etc.
 
-        :param all_steps: All intermediate steps for each example.
+        :param all_steps: All intermediate steps for each example, or profiler DataFrame.
         :return:   The same DataFrame with the six NOVA- columns appended.
         """
-
-        df = create_standardized_dataframe(all_steps)
+        if isinstance(all_steps, pd.DataFrame):
+            df = all_steps.copy()
+        else:
+            df = create_standardized_dataframe(all_steps)
 
         if df.empty:
             return df

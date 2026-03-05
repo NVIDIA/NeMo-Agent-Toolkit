@@ -15,6 +15,11 @@
 
 import pytest
 
+from nat.data_models.atif import Agent
+from nat.data_models.atif import Metrics
+from nat.data_models.atif import Step
+from nat.data_models.atif import Trajectory
+from nat.plugins.profiler.atif_dataframe import create_dataframe_from_atif
 from nat.plugins.profiler.forecasting.model_trainer import ModelTrainer
 from nat.plugins.profiler.forecasting.model_trainer import create_model
 from nat.plugins.profiler.forecasting.models import ForecastingBaseModel
@@ -61,3 +66,44 @@ def test_model_trainer_train(model_type: str,
     mt = ModelTrainer(model_type=model_type)
     model = mt.train(rag_intermediate_property_adaptor)
     assert isinstance(model, expected_model_class)
+
+
+def test_model_trainer_train_with_dataframe():
+    """ModelTrainer.train accepts DataFrame from create_dataframe_from_atif (RandomForestModel supports it)."""
+    traj = Trajectory(
+        agent=Agent(name="test", version="0.0.0"),
+        steps=[
+            Step(
+                step_id=1,
+                source="user",
+                message="Hi",
+                timestamp="2024-01-01T12:00:00+00:00",
+            ),
+            Step(
+                step_id=2,
+                source="agent",
+                message="Hello!",
+                timestamp="2024-01-01T12:00:01+00:00",
+                model_name="gpt-4",
+                metrics=Metrics(prompt_tokens=100, completion_tokens=20),
+            ),
+            Step(
+                step_id=3,
+                source="user",
+                message="Again",
+                timestamp="2024-01-01T12:00:02+00:00",
+            ),
+            Step(
+                step_id=4,
+                source="agent",
+                message="Hi again",
+                timestamp="2024-01-01T12:00:03+00:00",
+                model_name="gpt-4",
+                metrics=Metrics(prompt_tokens=80, completion_tokens=15),
+            ),
+        ],
+    )
+    df = create_dataframe_from_atif([traj])
+    mt = ModelTrainer(model_type="randomforest")
+    model = mt.train(df)
+    assert isinstance(model, RandomForestModel)

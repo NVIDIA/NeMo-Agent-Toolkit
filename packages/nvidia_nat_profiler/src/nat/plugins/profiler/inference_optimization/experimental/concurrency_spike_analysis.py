@@ -359,7 +359,7 @@ def average_latency_by_midpoint_concurrency(roots: list[ConcurrencyCallNode]) ->
 
 
 def concurrency_spike_analysis(
-    all_steps: list[list[IntermediateStep]],
+    all_steps: list[list[IntermediateStep]] | pd.DataFrame,
     concurrency_spike_threshold: int | None = None,
 ) -> ConcurrencyAnalysisResult:
     """
@@ -371,7 +371,10 @@ def concurrency_spike_analysis(
     6) Also compute average latency by concurrency and add to report.
     7) Return a Pydantic object with everything, plus a textual report.
     """
-    df = create_standardized_dataframe(all_steps)
+    if isinstance(all_steps, pd.DataFrame):
+        df = all_steps
+    else:
+        df = create_standardized_dataframe(all_steps)
     required_cols = {
         "framework",
         "llm_name",

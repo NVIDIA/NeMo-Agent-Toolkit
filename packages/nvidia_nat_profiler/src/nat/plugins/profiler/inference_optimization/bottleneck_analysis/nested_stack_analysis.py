@@ -140,7 +140,9 @@ def build_call_tree_for_example(example_df: pd.DataFrame) -> list[CallNode]:
     return roots
 
 
-def build_call_tree_per_example(all_steps: list[list[IntermediateStep]]) -> list[CallNode]:
+def build_call_tree_per_example(
+    all_steps: list[list[IntermediateStep]] | pd.DataFrame,
+) -> list[CallNode]:
     """
     1) Group the DataFrame by example_number.
     2) For each example, build a separate stack-based call tree.
@@ -148,7 +150,10 @@ def build_call_tree_per_example(all_steps: list[list[IntermediateStep]]) -> list
 
     This ensures no cross-example nesting.
     """
-    df = create_standardized_dataframe(all_steps)
+    if isinstance(all_steps, pd.DataFrame):
+        df = all_steps
+    else:
+        df = create_standardized_dataframe(all_steps)
     required = {"example_number", "event_type", "UUID", "event_timestamp"}
     missing = required - set(df.columns)
     if missing:
@@ -439,8 +444,10 @@ def analyze_calls_and_build_result(roots: list[CallNode], output_dir: str | None
                                      textual_report=report_text)
 
 
-def multi_example_call_profiling(all_steps: list[list[IntermediateStep]],
-                                 output_dir: str | None = None) -> NestedCallProfilingResult:
+def multi_example_call_profiling(
+    all_steps: list[list[IntermediateStep]] | pd.DataFrame,
+    output_dir: str | None = None,
+) -> NestedCallProfilingResult:
     """
     The high-level function:
 

@@ -321,8 +321,9 @@ def compute_coverage_and_duration(sequences_map: dict[int, list[PrefixCallNode]]
 # --------------------------------------------------------------------------------
 
 
-def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]],
-                                     min_support: int | float = 2,
+def prefixspan_subworkflow_with_text(
+    all_steps: list[list[IntermediateStep]] | pd.DataFrame,
+    min_support: int | float = 2,
                                      top_k: int = 10,
                                      min_coverage: float = 0.0,
                                      max_text_len: int = 700,
@@ -340,7 +341,10 @@ def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]],
     :param max_text_len: how many chars of llm_text_input to incorporate in the token
     :param prefix_list: list of prefixes to filter on and exclude from pattern matching
     """
-    df = create_standardized_dataframe(all_steps)
+    if isinstance(all_steps, pd.DataFrame):
+        df = all_steps
+    else:
+        df = create_standardized_dataframe(all_steps)
     # Validate columns
     required_cols = {
         "framework",

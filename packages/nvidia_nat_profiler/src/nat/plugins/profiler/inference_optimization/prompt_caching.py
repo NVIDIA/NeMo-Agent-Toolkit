@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pandas as pd
+
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.profiler.inference_optimization.data_models import CommonPrefixesOutput
 from nat.plugins.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
@@ -107,8 +109,10 @@ def get_common_prefixes(all_steps: list[list[IntermediateStep]],
     Sorting: primarily by prefix length (descending),
              secondarily by frequency (descending).
     """
-    # Validate necessary columns
-    df = create_standardized_dataframe(all_steps)
+    if isinstance(all_steps, pd.DataFrame):
+        df = all_steps
+    else:
+        df = create_standardized_dataframe(all_steps)
 
     required_cols = {'framework', 'llm_name', 'llm_text_input'}
     if not required_cols.issubset(df.columns):

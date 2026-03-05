@@ -25,6 +25,8 @@ This module provides:
 
 from __future__ import annotations
 
+__all__ = ["IntermediateStepToATIFConverter", "ATIFStreamConverter"]
+
 import datetime
 import logging
 import uuid
@@ -45,6 +47,11 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TraceMetadata
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def _epoch_to_iso(epoch: float) -> str:
@@ -116,6 +123,19 @@ def _extract_user_input(value: Any) -> str:
     return str(value)
 
 
+def _profiling_extra_from_ist(ist: IntermediateStep) -> dict[str, Any]:
+    """Build step.extra dict for profiling metadata (function_ancestry, span_event_timestamp)."""
+    extra: dict[str, Any] = {}
+    fa = ist.function_ancestry
+    extra["function_id"] = fa.function_id or "root"
+    extra["function_name"] = fa.function_name or "root"
+    extra["parent_function_id"] = fa.parent_id or ""
+    extra["parent_function_name"] = fa.parent_name or ""
+    if ist.payload.span_event_timestamp is not None:
+        extra["span_event_timestamp"] = ist.payload.span_event_timestamp
+    return extra
+
+
 def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
     """Best-effort extraction of tool arguments as a dict."""
     if isinstance(raw_input, dict):
@@ -144,6 +164,11 @@ def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
     return {}
 
 
+# ---------------------------------------------------------------------------
+# Internal accumulator
+# ---------------------------------------------------------------------------
+
+
 class _PendingAgentTurn:
     """Accumulator for an in-progress ATIF agent turn."""
 
@@ -155,6 +180,12 @@ class _PendingAgentTurn:
         self.tool_calls: list[ATIFToolCall] = []
         self.observations: list[ATIFObservationResult] = []
         self.extra: dict[str, Any] = {}
+        self.tool_ancestry: list[dict[str, Any]] = []
+
+
+# ---------------------------------------------------------------------------
+# Batch converter
+# ---------------------------------------------------------------------------
 
 
 class IntermediateStepToATIFConverter:
@@ -190,6 +221,9 @@ class IntermediateStepToATIFConverter:
             if pending is None:
                 return
             observation = ATIFObservation(results=pending.observations) if pending.observations else None
+            extra = dict(pending.extra) if pending.extra else {}
+            if pending.tool_ancestry:
+                extra["nat_tool_ancestry"] = pending.tool_ancestry
             atif_steps.append(
                 ATIFStep(
                     step_id=step_id,
@@ -200,7 +234,7 @@ class IntermediateStepToATIFConverter:
                     tool_calls=pending.tool_calls or None,
                     observation=observation,
                     metrics=pending.metrics,
-                    extra=pending.extra or None,
+                    extra=extra or None,
                 ))
             step_id += 1
             pending = None
@@ -218,12 +252,14 @@ class IntermediateStepToATIFConverter:
                     fn_name = ist.function_ancestry.function_name
                     if fn_name and fn_name != "root":
                         agent_config.name = fn_name
+                extra = _profiling_extra_from_ist(ist)
                 atif_steps.append(
                     ATIFStep(
                         step_id=step_id,
                         source="user",
                         message=user_input,
                         timestamp=_epoch_to_iso(ist.event_timestamp),
+                        extra=extra or None,
                     ))
                 step_id += 1
                 continue
@@ -239,12 +275,14 @@ class IntermediateStepToATIFConverter:
                         last_agent_msg = str(s.message)
                         break
                 if final_output and final_output != last_agent_msg:
+                    extra = _profiling_extra_from_ist(ist)
                     atif_steps.append(
                         ATIFStep(
                             step_id=step_id,
                             source="agent",
                             message=final_output,
                             timestamp=_epoch_to_iso(ist.event_timestamp),
+                            extra=extra or None,
                         ))
                     step_id += 1
                 continue
@@ -272,6 +310,7 @@ class IntermediateStepToATIFConverter:
                     model_name=ist.name,
                     metrics=metrics,
                 )
+                pending.extra.update(_profiling_extra_from_ist(ist))
                 continue
 
             if event_type == IntermediateStepType.TOOL_END:
@@ -287,7 +326,9 @@ class IntermediateStepToATIFConverter:
                 if pending is not None:
                     pending.tool_calls.append(tc)
                     pending.observations.append(obs)
+                    pending.tool_ancestry.append(_profiling_extra_from_ist(ist))
                 else:
+                    extra = _profiling_extra_from_ist(ist)
                     atif_steps.append(
                         ATIFStep(
                             step_id=step_id,
@@ -296,6 +337,7 @@ class IntermediateStepToATIFConverter:
                             timestamp=_epoch_to_iso(ist.event_timestamp),
                             tool_calls=[tc],
                             observation=ATIFObservation(results=[obs]),
+                            extra=extra or None,
                         ))
                     step_id += 1
                 continue
@@ -339,6 +381,11 @@ class IntermediateStepToATIFConverter:
         )
 
 
+# ---------------------------------------------------------------------------
+# Stream converter
+# ---------------------------------------------------------------------------
+
+
 class ATIFStreamConverter:
     """Stateful converter that emits ATIF steps incrementally."""
 
@@ -370,11 +417,13 @@ class ATIFStreamConverter:
             fn_name = ist.function_ancestry.function_name
             if fn_name and fn_name != "root":
                 self._agent_config.name = fn_name
+            extra = _profiling_extra_from_ist(ist)
             step = ATIFStep(
                 step_id=self._step_id,
                 source="user",
                 message=user_input,
                 timestamp=_epoch_to_iso(ist.event_timestamp),
+                extra=extra or None,
             )
             self._step_id += 1
             self._emitted_steps.append(step)
@@ -394,11 +443,13 @@ class ATIFStreamConverter:
                     last_agent_msg = str(s.message)
                     break
             if final_output and final_output != last_agent_msg:
+                extra = _profiling_extra_from_ist(ist)
                 final_step = ATIFStep(
                     step_id=self._step_id,
                     source="agent",
                     message=final_output,
                     timestamp=_epoch_to_iso(ist.event_timestamp),
+                    extra=extra or None,
                 )
                 self._step_id += 1
                 self._emitted_steps.append(final_step)
@@ -428,6 +479,7 @@ class ATIFStreamConverter:
                 model_name=ist.name,
                 metrics=metrics,
             )
+            self._pending.extra.update(_profiling_extra_from_ist(ist))
             return flushed
 
         if event_type == IntermediateStepType.TOOL_END:
@@ -443,8 +495,10 @@ class ATIFStreamConverter:
             if self._pending is not None:
                 self._pending.tool_calls.append(tc)
                 self._pending.observations.append(obs)
+                self._pending.tool_ancestry.append(_profiling_extra_from_ist(ist))
                 return None
 
+            extra = _profiling_extra_from_ist(ist)
             orphan_step = ATIFStep(
                 step_id=self._step_id,
                 source="agent",
@@ -452,6 +506,7 @@ class ATIFStreamConverter:
                 timestamp=_epoch_to_iso(ist.event_timestamp),
                 tool_calls=[tc],
                 observation=ATIFObservation(results=[obs]),
+                extra=extra or None,
             )
             self._step_id += 1
             self._emitted_steps.append(orphan_step)
@@ -502,6 +557,9 @@ class ATIFStreamConverter:
             return None
         pending = self._pending
         observation = ATIFObservation(results=pending.observations) if pending.observations else None
+        extra = dict(pending.extra) if pending.extra else {}
+        if pending.tool_ancestry:
+            extra["nat_tool_ancestry"] = pending.tool_ancestry
         step = ATIFStep(
             step_id=self._step_id,
             source="agent",
@@ -511,7 +569,7 @@ class ATIFStreamConverter:
             tool_calls=pending.tool_calls or None,
             observation=observation,
             metrics=pending.metrics,
-            extra=pending.extra or None,
+            extra=extra or None,
         )
         self._step_id += 1
         self._emitted_steps.append(step)

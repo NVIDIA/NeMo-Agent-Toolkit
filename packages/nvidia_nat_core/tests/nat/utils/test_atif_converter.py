@@ -361,6 +361,161 @@ class TestBatchConverter:
         assert len(restored.steps) == len(result.steps)
         assert restored.schema_version == "ATIF-v1.6"
 
+    def test_metrics_include_reasoning_tokens(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+    ):
+        """reasoning_tokens from UsageInfo is mapped to metrics.extra."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Hi",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Hello",
+                timestamp_offset=1.0,
+                usage=UsageInfo(
+                    token_usage=TokenUsageBaseModel(
+                        prompt_tokens=10,
+                        completion_tokens=5,
+                        reasoning_tokens=100,
+                        total_tokens=115,
+                    ),
+                ),
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="Hello",
+                timestamp_offset=2.0,
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.metrics is not None
+        assert agent_step.metrics.extra is not None
+        assert agent_step.metrics.extra.get("reasoning_tokens") == 100
+
+    def test_metrics_include_cached_tokens(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+    ):
+        """cached_tokens from UsageInfo is mapped to metrics."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Hi",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Hello",
+                timestamp_offset=1.0,
+                usage=UsageInfo(
+                    token_usage=TokenUsageBaseModel(
+                        prompt_tokens=100,
+                        completion_tokens=20,
+                        cached_tokens=50,
+                        total_tokens=120,
+                    ),
+                ),
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="Hello",
+                timestamp_offset=2.0,
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.metrics is not None
+        assert agent_step.metrics.cached_tokens == 50
+        assert result.final_metrics is not None
+        assert result.final_metrics.total_cached_tokens == 50
+
+    def test_tool_call_id_and_observation_source_match(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+        simple_trajectory: list[IntermediateStep],
+    ):
+        """tool_call_id and observation source_call_id are linked correctly."""
+        result = batch_converter.convert(simple_trajectory)
+        agent_with_tools = result.steps[1]
+        assert agent_with_tools.tool_calls is not None
+        assert agent_with_tools.observation is not None
+        for tc, obs in zip(agent_with_tools.tool_calls, agent_with_tools.observation.results):
+            assert obs.source_call_id == tc.tool_call_id
+            assert tc.tool_call_id.startswith("call_")
+
+    def test_profiling_extra_populated(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+        simple_trajectory: list[IntermediateStep],
+    ):
+        """step.extra contains function_ancestry for profiling."""
+        result = batch_converter.convert(simple_trajectory)
+
+        # User step has profiling extra
+        user_step = result.steps[0]
+        assert user_step.extra is not None
+        assert user_step.extra.get("function_id") == "func-id-1"
+        assert user_step.extra.get("function_name") == "my_workflow"
+
+        # Agent step with tool call has nat_tool_ancestry (from TOOL_END)
+        agent_step = result.steps[1]
+        assert agent_step.extra is not None
+        assert agent_step.extra.get("function_id") == "func-id-1"
+        assert agent_step.extra.get("nat_tool_ancestry") is not None
+        assert len(agent_step.extra["nat_tool_ancestry"]) == 1
+        assert agent_step.extra["nat_tool_ancestry"][0]["function_id"] == "func-id-1"
+        assert agent_step.extra["nat_tool_ancestry"][0]["function_name"] == "my_workflow"
+
+    def test_agent_tool_definitions_populated(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+    ):
+        """tool_definitions from TraceMetadata.tools_schema is mapped to agent."""
+        from nat.data_models.intermediate_step import ToolDetails
+        from nat.data_models.intermediate_step import ToolParameters
+        from nat.data_models.intermediate_step import ToolSchema
+        from nat.data_models.intermediate_step import TraceMetadata
+
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Hi",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="I'll use a tool",
+                timestamp_offset=1.0,
+                usage=_make_usage(50, 10),
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="I'll use a tool",
+                timestamp_offset=2.0,
+            ),
+        ]
+        tool_schema = ToolSchema(
+            type="function",
+            function=ToolDetails(
+                name="weather",
+                description="Get weather",
+                parameters=ToolParameters(properties={}),
+            ),
+        )
+        steps[1].payload.metadata = TraceMetadata(tools_schema=[tool_schema])
+        result = batch_converter.convert(steps)
+        assert result.agent.tool_definitions is not None
+        assert len(result.agent.tool_definitions) == 1
+        assert result.agent.tool_definitions[0]["function"]["name"] == "weather"
+
 
 # ---------------------------------------------------------------------------
 # Stream converter tests

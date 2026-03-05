@@ -15,7 +15,11 @@
 
 # forecasting/model_trainer.py
 
+from __future__ import annotations
+
 import logging
+
+import pandas as pd
 
 from nat.plugins.profiler.forecasting.config import DEFAULT_MODEL_TYPE
 from nat.plugins.profiler.forecasting.models import ForecastingBaseModel
@@ -55,21 +59,19 @@ class ModelTrainer:
         self.model_type = model_type
         self._model = create_model(self.model_type)
 
-    def train(self, raw_stats: list[list[IntermediatePropertyAdaptor]]) -> ForecastingBaseModel:
+    def train(self, raw_stats: list[list[IntermediatePropertyAdaptor]] | pd.DataFrame) -> ForecastingBaseModel:
         """
         Train the model using the `raw_stats` training data.
 
         Parameters
         ----------
-        raw_stats: list[list[IntermediatePropertyAdaptor]]
-            Stats collected by the profiler.
+        raw_stats: list[list[IntermediatePropertyAdaptor]] | pd.DataFrame
+            Stats collected by the profiler, or profiler DataFrame from create_dataframe_from_atif.
 
         Returns
         -------
         ForecastingBaseModel
             A fitted model.
         """
-
         self._model.fit(raw_stats)
-
         return self._model
