@@ -646,6 +646,32 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
         mock_logger.assert_any_call("Evaluation results written to %s", evaluator_output_path)
 
 
+def test_write_output_writes_atif_workflow_output_when_enabled(evaluation_run, default_eval_config, eval_input, eval_output):
+    """Test optional ATIF workflow output export for troubleshooting."""
+    mock_dataset_handler = MagicMock()
+    mock_dataset_handler.publish_eval_input.return_value = json.dumps([item.model_dump() for item in eval_input.eval_input_items])
+
+    evaluator_name = "MockEvaluator"
+    evaluation_run.evaluation_results = [(evaluator_name, eval_output)]
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output.write_atif_workflow_output = True
+    evaluation_run.atif_eval_samples = [MagicMock(model_dump=MagicMock(return_value={"item_id": 1, "trajectory": {"steps": []}}))]
+
+    output_dir = default_eval_config.general.output_dir
+    atif_workflow_output_path = output_dir / "workflow_output_atif.json"
+    expected_atif_output = json.dumps([{"item_id": 1, "trajectory": {"steps": []}}], indent=2)
+
+    mock_profiler_results = ProfilerResults()
+    with patch("builtins.open", mock_open()) as mock_file, \
+         patch("pathlib.Path.mkdir"), \
+         patch("nat.plugins.eval.runtime.evaluate.logger.info") as mock_logger:
+        evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
+
+        mock_file.assert_any_call(atif_workflow_output_path, "w", encoding="utf-8")
+        mock_file().write.assert_any_call(expected_atif_output)
+        mock_logger.assert_any_call("ATIF workflow output written to %s", atif_workflow_output_path)
+
+
 def test_write_output_handles_none_output(evaluation_run, eval_input):
     """This test ensures that write_output does not access .output without a None check."""
     # Setup minimal eval_config with output = None

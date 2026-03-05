@@ -92,6 +92,11 @@ class EvalOutputConfig(BaseModel):
     workflow_output_step_filter: list[IntermediateStepType] | None = Field(
         default=None, description="Filter for the workflow output steps.")
 
+    write_atif_workflow_output: bool = Field(
+        default=False,
+        description="When enabled, also writes ATIF-converted workflow output to `workflow_output_atif.json` "
+        "for troubleshooting and debugging.")
+
 
 class EvalGeneralConfig(BaseModel):
     """

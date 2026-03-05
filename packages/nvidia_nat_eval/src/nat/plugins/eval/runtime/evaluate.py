@@ -472,6 +472,15 @@ class EvaluationRun:
         self.workflow_output_file = workflow_output_file
         logger.info("Workflow output written to %s", workflow_output_file)
 
+        output_config = self.eval_config.general.output
+        if output_config and output_config.write_atif_workflow_output:
+            atif_workflow_output_file = self.eval_config.general.output_dir / "workflow_output_atif.json"
+            atif_workflow_output = json.dumps([sample.model_dump(mode="json") for sample in self.atif_eval_samples],
+                                              indent=2)
+            with open(atif_workflow_output_file, "w", encoding="utf-8") as f:
+                f.write(atif_workflow_output)
+            logger.info("ATIF workflow output written to %s", atif_workflow_output_file)
+
         # Write the output of each evaluator to a separate json file
         for evaluator_name, eval_output in self.evaluation_results:
             output_file = self.eval_config.general.output_dir / f"{evaluator_name}_output.json"
