@@ -57,8 +57,8 @@ def atif_samples(rag_user_inputs, rag_expected_outputs, rag_generated_outputs):
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 
     samples = []
-    for index, (user_input, expected_output, generated_output) in enumerate(
-            zip(rag_user_inputs, rag_expected_outputs, rag_generated_outputs)):
+    for index, (user_input, expected_output,
+                generated_output) in enumerate(zip(rag_user_inputs, rag_expected_outputs, rag_generated_outputs)):
         trajectory = ATIFTrajectory(
             session_id=str(index + 1),
             agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
@@ -451,7 +451,9 @@ async def test_register_ragas_evaluator_atif_lane_enabled():
     builder.get_max_concurrency = MagicMock(return_value=1)
 
     config = RagasEvaluatorConfig(llm_name="judge",
-                                  metric={"AnswerAccuracy": {"skip": True}},
+                                  metric={"AnswerAccuracy": {
+                                      "skip": True
+                                  }},
                                   enable_atif_evaluator=True)
     async with register_ragas_evaluator(config=config, builder=builder) as evaluator_info:
         assert hasattr(evaluator_info, "evaluate_fn")

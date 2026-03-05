@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """ATIF adapter utilities for eval runtime ingress.
 
 This module provides a single-conversion adapter layer from ``EvalInputItem``
@@ -22,8 +21,8 @@ per-evaluator conversion and to keep ATIF as the canonical internal trace shape.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
-from typing import Mapping
 
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalInput
@@ -51,7 +50,9 @@ class EvalAtifAdapter:
             return ATIFTrajectory.model_validate(value)
         raise TypeError(f"Unsupported ATIF trajectory payload type: {type(value)}")
 
-    def get_trajectory(self, item: EvalInputItem, prebuilt: ATIFTrajectory | Mapping[str, Any] | None = None) -> ATIFTrajectory:
+    def get_trajectory(self,
+                       item: EvalInputItem,
+                       prebuilt: ATIFTrajectory | Mapping[str, Any] | None = None) -> ATIFTrajectory:
         """Return cached ATIF trajectory for an eval item, converting at most once."""
         key = self._cache_key(item.id)
         if key in self._cache:
@@ -72,9 +73,11 @@ class EvalAtifAdapter:
             prebuilt = None if prebuilt_trajectories is None else prebuilt_trajectories.get(self._cache_key(item.id))
             self.get_trajectory(item=item, prebuilt=prebuilt)
 
-    def build_samples(self,
-                      eval_input: EvalInput,
-                      prebuilt_trajectories: Mapping[str, ATIFTrajectory | Mapping[str, Any]] | None = None) -> AtifEvalSampleList:
+    def build_samples(
+            self,
+            eval_input: EvalInput,
+            prebuilt_trajectories: Mapping[str, ATIFTrajectory | Mapping[str, Any]] | None = None
+    ) -> AtifEvalSampleList:
         """Build ATIF-native samples for all eval input items."""
         self.ensure_cache(eval_input=eval_input, prebuilt_trajectories=prebuilt_trajectories)
         samples: AtifEvalSampleList = []

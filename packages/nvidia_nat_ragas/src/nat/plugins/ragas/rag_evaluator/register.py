@@ -124,8 +124,8 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             return EvalOutput(average_score=0.0, eval_output_items=[])
         return await atif_evaluator.evaluate(atif_samples)
 
-    from .evaluate import RAGEvaluator
     from .atif_evaluate import RAGAtifEvaluator
+    from .evaluate import RAGEvaluator
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if config.do_auto_retry:
@@ -149,10 +149,9 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
                              metrics=metrics,
                              max_concurrency=builder.get_max_concurrency(),
                              input_obj_field=config.input_obj_field) if metrics else None
-    atif_evaluator = RAGAtifEvaluator(evaluator_llm=llm,
-                                      metrics=metrics,
-                                      max_concurrency=builder.get_max_concurrency()) if (metrics and
-                                                                                          config.enable_atif_evaluator) else None
+    atif_evaluator = RAGAtifEvaluator(
+        evaluator_llm=llm, metrics=metrics,
+        max_concurrency=builder.get_max_concurrency()) if (metrics and config.enable_atif_evaluator) else None
 
     evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
     if config.enable_atif_evaluator:

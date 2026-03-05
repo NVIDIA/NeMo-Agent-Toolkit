@@ -527,7 +527,8 @@ async def test_run_single_evaluator_atif_lane_lazy_builds_samples(evaluation_run
     atif_evaluator.evaluate_atif_fn = AsyncMock(return_value=eval_output)
     atif_evaluator.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
 
-    with patch.object(evaluation_run.atif_adapter, "build_samples", wraps=evaluation_run.atif_adapter.build_samples) as mock_build:
+    with patch.object(evaluation_run.atif_adapter, "build_samples",
+                      wraps=evaluation_run.atif_adapter.build_samples) as mock_build:
         await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
 
     mock_build.assert_called_once()

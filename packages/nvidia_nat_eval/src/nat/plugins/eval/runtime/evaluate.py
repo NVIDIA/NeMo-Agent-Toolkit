@@ -50,7 +50,6 @@ from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
     from nat.eval.eval_callbacks import EvalCallbackManager
-    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 
 logger = logging.getLogger(__name__)
@@ -83,7 +82,7 @@ class EvaluationRun:
         self.atif_adapter = EvalAtifAdapter()
         # Metadata
         self.eval_input: EvalInput | None = None
-        self.atif_eval_samples: "AtifEvalSampleList" = []
+        self.atif_eval_samples: AtifEvalSampleList = []
         self.workflow_interrupted: bool = False
 
         # evaluation_results is list of tuples (evaluator_name, EvalOutput)

@@ -45,7 +45,8 @@ def _nan_to_zero(v: float | None) -> float:
     return 0.0 if v is None or (isinstance(v, float) and math.isnan(v)) else v
 
 
-def _ragas_results_to_eval_output(results_dataset: "EvaluationResult | None", ids: list[Any] | None = None) -> EvalOutput:
+def _ragas_results_to_eval_output(results_dataset: "EvaluationResult | None",
+                                  ids: list[Any] | None = None) -> EvalOutput:
     """Convert a ragas EvaluationResult to NAT EvalOutput."""
     if not results_dataset:
         logger.error("Ragas evaluation failed with no results", exc_info=True)
@@ -73,7 +74,10 @@ def _ragas_results_to_eval_output(results_dataset: "EvaluationResult | None", id
         EvalOutputItem(
             id=output_ids[i],
             score=original_scores_dict[first_metric_name][i] if first_metric_name else None,
-            reasoning={key: getattr(row, key, None) for key in ["user_input", "reference", "response", "retrieved_contexts"]},
+            reasoning={
+                key: getattr(row, key, None)
+                for key in ["user_input", "reference", "response", "retrieved_contexts"]
+            },
         ) for i, row in enumerate(df.itertuples(index=False))
     ]
     return EvalOutput(average_score=first_avg_score, eval_output_items=eval_output_items)
