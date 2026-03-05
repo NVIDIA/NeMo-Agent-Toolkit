@@ -50,7 +50,7 @@ from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
-    from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+    from nat.plugins.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 
 logger = logging.getLogger(__name__)
 
@@ -587,7 +587,7 @@ class EvaluationRun:
         if not self.evaluation_results:
             return
         try:
-            from nat.plugins.eval.eval_callbacks import build_eval_result
+            from nat.plugins.plugins.eval.eval_callbacks import build_eval_result
 
             workflow_output_json: str | None = None
             if dataset_handler is not None and self.eval_input is not None:
