@@ -27,15 +27,13 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import _create_http_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
-
-if typing.TYPE_CHECKING:
-    import httpx
 
 ModelType = typing.TypeVar("ModelType")
 
@@ -80,16 +78,6 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
                                  ]))
 
     return client
-
-
-def _create_http_client(llm_config: LLMBaseConfig) -> "httpx.AsyncClient":
-    """Create an httpx.AsyncClient with event hooks to inject custom metadata as HTTP headers."""
-    import httpx
-
-    kwargs = {}
-    if hasattr(llm_config, "verify_ssl"):
-        kwargs["verify"] = llm_config.verify_ssl
-    return httpx.AsyncClient(**kwargs)
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
