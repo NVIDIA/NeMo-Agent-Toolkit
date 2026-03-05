@@ -50,11 +50,7 @@ from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
-<<<<<<< HEAD
-    from nat.plugins.plugins.eval.exporters.file_eval_callback import FileEvalCallback
-=======
-    from nat.plugins.eval.eval_callbacks import EvalCallbackManager
->>>>>>> upstream/develop
+    from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 
 logger = logging.getLogger(__name__)
 
@@ -591,8 +587,7 @@ class EvaluationRun:
         if not self.evaluation_results:
             return
         try:
-<<<<<<< HEAD
-            from nat.plugins.plugins.eval.eval_callbacks import build_eval_result
+            from nat.plugins.eval.eval_callbacks import build_eval_result
 
             workflow_output_json: str | None = None
             if dataset_handler is not None and self.eval_input is not None:
@@ -600,9 +595,6 @@ class EvaluationRun:
                                if self.eval_config and self.eval_config.general.output else None)
                 workflow_output_json = dataset_handler.publish_eval_input(self.eval_input, step_filter)
 
-=======
-            from nat.plugins.eval.eval_callbacks import build_eval_result
->>>>>>> upstream/develop
             scores = {name: output.average_score for name, output in self.evaluation_results}
             result = build_eval_result(
                 eval_input_items=self.eval_input.eval_input_items,
