@@ -23,6 +23,7 @@ from nat.builder.llm import LLMProviderInfo
 from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.llm import SSLVerificationMixin
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
@@ -33,6 +34,7 @@ class AzureOpenAIModelConfig(
         LLMBaseConfig,
         RetryMixin,
         ThinkingMixin,
+        SSLVerificationMixin,
         name="azure_openai",
 ):
     """An Azure OpenAI LLM provider to be used with an LLM client."""
