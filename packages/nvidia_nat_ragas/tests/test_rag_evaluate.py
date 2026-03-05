@@ -389,6 +389,148 @@ async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_sa
         assert output == mock_output
 
 
+def test_rag_legacy_and_atif_dataset_parity(rag_evaluator, ragas_judge_llm, ragas_metrics, rag_eval_input, intermediate_step_adapter):
+    """Ensure legacy and ATIF lanes produce equivalent ragas input samples."""
+    from nat.data_models.atif import ATIFAgentConfig
+    from nat.data_models.atif import ATIFObservation
+    from nat.data_models.atif import ATIFObservationResult
+    from nat.data_models.atif import ATIFStep
+    from nat.data_models.atif import ATIFTrajectory
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+    from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
+
+    atif_samples = []
+    for item in rag_eval_input.eval_input_items:
+        contexts = intermediate_step_adapter.get_context(item.trajectory, intermediate_step_adapter.DEFAULT_EVENT_FILTER)
+        trajectory = ATIFTrajectory(
+            session_id=str(item.id),
+            agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
+            steps=[
+                ATIFStep(step_id=1, source="user", message=str(item.input_obj)),
+                ATIFStep(step_id=2,
+                         source="agent",
+                         message=str(item.output_obj),
+                         observation=ATIFObservation(results=[ATIFObservationResult(content=context) for context in contexts])),
+            ],
+        )
+        atif_samples.append(
+            AtifEvalSample(item_id=item.id,
+                           trajectory=trajectory,
+                           expected_output_obj=item.expected_output_obj,
+                           output_obj=item.output_obj,
+                           metadata={}))
+
+    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    legacy_dataset = rag_evaluator.eval_input_to_ragas(rag_eval_input)
+    atif_dataset = atif_evaluator.atif_samples_to_ragas(atif_samples)
+
+    assert len(legacy_dataset.samples) == len(atif_dataset.samples)
+    for legacy_sample, atif_sample in zip(legacy_dataset.samples, atif_dataset.samples):
+        assert legacy_sample.user_input == atif_sample.user_input
+        assert legacy_sample.reference == atif_sample.reference
+        assert legacy_sample.response == atif_sample.response
+        assert legacy_sample.retrieved_contexts == atif_sample.retrieved_contexts
+
+
+@pytest.mark.parametrize(
+    "atif_trajectory_steps, expected_user_input, expected_contexts",
+    [
+        ([], "", []),
+        ([{"step_id": 1, "source": "user", "message": "question only"}], "question only", []),
+    ],
+)
+def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
+                                          ragas_metrics,
+                                          atif_trajectory_steps,
+                                          expected_user_input,
+                                          expected_contexts):
+    """Ensure ATIF lane handles missing/partial trajectory content gracefully."""
+    from nat.data_models.atif import ATIFAgentConfig
+    from nat.data_models.atif import ATIFTrajectory
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+    from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
+
+    trajectory = ATIFTrajectory(session_id="edge-case-1",
+                                agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
+                                steps=atif_trajectory_steps)
+    atif_samples = [AtifEvalSample(item_id=1,
+                                   trajectory=trajectory,
+                                   expected_output_obj="ref",
+                                   output_obj="resp",
+                                   metadata={})]
+
+    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    dataset = atif_evaluator.atif_samples_to_ragas(atif_samples)
+
+    assert len(dataset.samples) == 1
+    assert dataset.samples[0].user_input == expected_user_input
+    assert dataset.samples[0].retrieved_contexts == expected_contexts
+
+
+async def test_rag_legacy_and_atif_score_parity(rag_evaluator, ragas_judge_llm, ragas_metrics, rag_eval_input, intermediate_step_adapter):
+    """Ensure legacy and ATIF evaluator lanes produce parity scores on the same dataset."""
+    from nat.data_models.atif import ATIFAgentConfig
+    from nat.data_models.atif import ATIFObservation
+    from nat.data_models.atif import ATIFObservationResult
+    from nat.data_models.atif import ATIFStep
+    from nat.data_models.atif import ATIFTrajectory
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+    from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
+
+    metric_name = "AnswerAccuracy"
+
+    def _mock_ragas_evaluate(*_args, **kwargs):
+        dataset = kwargs["dataset"]
+        rows = []
+        scores = []
+        for sample in dataset.samples:
+            score = 0.5 + (0.5 if sample.retrieved_contexts else 0.0)
+            scores.append({metric_name: score})
+            rows.append({
+                "user_input": sample.user_input,
+                "reference": sample.reference,
+                "response": sample.response,
+                "retrieved_contexts": sample.retrieved_contexts,
+                metric_name: score,
+            })
+        result = MagicMock()
+        result.scores = scores
+        result.to_pandas.return_value = pd.DataFrame(rows)
+        return result
+
+    atif_samples = []
+    for item in rag_eval_input.eval_input_items:
+        contexts = intermediate_step_adapter.get_context(item.trajectory, intermediate_step_adapter.DEFAULT_EVENT_FILTER)
+        trajectory = ATIFTrajectory(
+            session_id=str(item.id),
+            agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
+            steps=[
+                ATIFStep(step_id=1, source="user", message=str(item.input_obj)),
+                ATIFStep(step_id=2,
+                         source="agent",
+                         message=str(item.output_obj),
+                         observation=ATIFObservation(results=[ATIFObservationResult(content=context) for context in contexts])),
+            ],
+        )
+        atif_samples.append(
+            AtifEvalSample(item_id=item.id,
+                           trajectory=trajectory,
+                           expected_output_obj=item.expected_output_obj,
+                           output_obj=item.output_obj,
+                           metadata={}))
+
+    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    with patch("ragas.evaluate", side_effect=_mock_ragas_evaluate):
+        legacy_output = await rag_evaluator.evaluate(rag_eval_input)
+        atif_output = await atif_evaluator.evaluate(atif_samples)
+
+    assert legacy_output.average_score == pytest.approx(atif_output.average_score, abs=1e-9)
+    assert len(legacy_output.eval_output_items) == len(atif_output.eval_output_items)
+    for legacy_item, atif_item in zip(legacy_output.eval_output_items, atif_output.eval_output_items):
+        assert legacy_item.id == atif_item.id
+        assert legacy_item.score == pytest.approx(atif_item.score, abs=1e-9)
+
+
 def test_extract_input_obj_base_model_with_field(rag_evaluator_content):
     """Ensure extract_input_obj returns the specified field from a Pydantic BaseModel."""
     model_obj = ExampleModel(content="hello world", other="ignore me")
