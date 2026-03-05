@@ -646,16 +646,26 @@ def test_write_output(evaluation_run, default_eval_config, eval_input, eval_outp
         mock_logger.assert_any_call("Evaluation results written to %s", evaluator_output_path)
 
 
-def test_write_output_writes_atif_workflow_output_when_enabled(evaluation_run, default_eval_config, eval_input, eval_output):
+def test_write_output_writes_atif_workflow_output_when_enabled(evaluation_run,
+                                                               default_eval_config,
+                                                               eval_input,
+                                                               eval_output):
     """Test optional ATIF workflow output export for troubleshooting."""
     mock_dataset_handler = MagicMock()
-    mock_dataset_handler.publish_eval_input.return_value = json.dumps([item.model_dump() for item in eval_input.eval_input_items])
+    mock_dataset_handler.publish_eval_input.return_value = json.dumps(
+        [item.model_dump() for item in eval_input.eval_input_items])
 
     evaluator_name = "MockEvaluator"
     evaluation_run.evaluation_results = [(evaluator_name, eval_output)]
     evaluation_run.eval_config = default_eval_config
     evaluation_run.eval_config.general.output.write_atif_workflow_output = True
-    evaluation_run.atif_eval_samples = [MagicMock(model_dump=MagicMock(return_value={"item_id": 1, "trajectory": {"steps": []}}))]
+    evaluation_run.atif_eval_samples = [
+        MagicMock(model_dump=MagicMock(return_value={
+            "item_id": 1, "trajectory": {
+                "steps": []
+            }
+        }))
+    ]
 
     output_dir = default_eval_config.general.output_dir
     atif_workflow_output_path = output_dir / "workflow_output_atif.json"
