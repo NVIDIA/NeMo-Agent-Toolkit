@@ -48,6 +48,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import _create_http_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -147,10 +148,20 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
     # Extract AutoGen-compatible configuration
     config_obj = {
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_key", "base_url", "request_timeout"},
+            exclude={
+                "api_key",
+                "base_url",
+                "model_name",
+                "request_timeout",
+                "thinking",
+                "type",
+                "verify_ssl",
+            },
             by_alias=True,
             exclude_none=True,
         ),
+        "http_client":
+            _create_http_client(llm_config)
     }
 
     if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
@@ -201,12 +212,14 @@ async def azure_openai_autogen(llm_config: AzureOpenAIModelConfig,
     config_obj = {
         "api_key":
             llm_config.api_key,
-        "base_url":
-            f"{llm_config.azure_endpoint}/openai/deployments/{llm_config.azure_deployment}",
         "api_version":
             llm_config.api_version,
+        "base_url":
+            f"{llm_config.azure_endpoint}/openai/deployments/{llm_config.azure_deployment}",
+        "http_client":
+            _create_http_client(llm_config),
         **llm_config.model_dump(
-            exclude={"type", "azure_deployment", "thinking", "azure_endpoint", "api_version", "request_timeout"},
+            exclude={"api_version", "azure_deployment", "azure_endpoint", "request_timeout", "thinking", "type"},
             by_alias=True,
             exclude_none=True,
         ),
@@ -326,8 +339,10 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
 
     # Extract NIM configuration for OpenAI-compatible client
     config_obj = {
+        "http_client":
+            _create_http_client(llm_config),
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking"},
+            exclude={"model_name", "thinking", "type"},
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
@@ -386,8 +401,10 @@ async def litellm_autogen(llm_config: LiteLlmModelConfig, _builder: Builder) -> 
 
     # Extract LiteLLM configuration for OpenAI-compatible client
     config_obj = {
+        "http_client":
+            _create_http_client(llm_config),
         **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking"},
+            exclude={"model_name", "thinking", "type"},
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
