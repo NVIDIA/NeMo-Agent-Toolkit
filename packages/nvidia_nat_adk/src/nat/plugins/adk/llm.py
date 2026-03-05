@@ -25,6 +25,7 @@ from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import _handle_litellm_verify_ssl  # ADK uses litellm under the hood
 from nat.utils.responses_api import validate_no_responses_api
 
 logger = logging.getLogger(__name__)
@@ -65,7 +66,7 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
         config_dict["timeout"] = config.request_timeout
 
     config_dict["api_version"] = config.api_version
-    config_dict["ssl_verify"] = config.verify_ssl
+    _handle_litellm_verify_ssl(config.verify_ssl)
 
     yield LiteLlm(f"azure/{config.azure_deployment}", **config_dict)
 
@@ -76,13 +77,13 @@ async def litellm_adk(litellm_config: LiteLlmModelConfig, _builder: Builder):
 
     validate_no_responses_api(litellm_config, LLMFrameworkEnum.ADK)
 
-    kwargs = {"ssl_verify": litellm_config.verify_ssl}
+    _handle_litellm_verify_ssl(litellm_config.verify_ssl)
     yield LiteLlm(**litellm_config.model_dump(
         exclude={"api_type", "max_retries", "thinking", "type", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
-    ), **kwargs)
+    ))
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
@@ -114,7 +115,7 @@ async def nim_adk(config: NIMModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
-    config_dict["ssl_verify"] = config.verify_ssl
+    _handle_litellm_verify_ssl(config.verify_ssl)
 
     yield LiteLlm(f"nvidia_nim/{config.model_name}", **config_dict)
 
@@ -132,15 +133,17 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
     config_dict = config.model_dump(
-        exclude={"api_type",
-                 "base_url",
-                 "max_retries",
-                 "model",
-                 "model_name",
-                 "request_timeout",
-                 "thinking",
-                 "type",
-                 "verify_ssl"},
+        exclude={
+            "api_type",
+            "base_url",
+            "max_retries",
+            "model",
+            "model_name",
+            "request_timeout",
+            "thinking",
+            "type",
+            "verify_ssl"
+        },
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -152,7 +155,8 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
         config_dict["api_base"] = base_url
     if config.request_timeout is not None:
         config_dict["timeout"] = config.request_timeout
-    config_dict["ssl_verify"] = config.verify_ssl
+
+    _handle_litellm_verify_ssl(config.verify_ssl)
 
     yield LiteLlm(config.model_name, **config_dict)
 

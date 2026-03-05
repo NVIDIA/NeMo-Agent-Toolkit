@@ -40,3 +40,11 @@ def _create_http_client(llm_config: "LLMBaseConfig",
         client_class = httpx.Client
 
     return client_class(**kwargs)
+
+
+def _handle_litellm_verify_ssl(llm_config: "LLMBaseConfig") -> None:
+    if not getattr(llm_config, "verify_ssl", True):
+        # Currently litellm does not support disabling this on a per-LLM basis for any backend other than Bedrock and
+        # AIM Guardrail.
+        import litellm
+        litellm.ssl_verify = False
