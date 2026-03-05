@@ -45,7 +45,8 @@ class _CountingConverter:
 
     def convert(self, steps: list[IntermediateStep], *, session_id: str | None = None, agent_name: str | None = None):
         self.calls += 1
-        return ATIFTrajectory(session_id=session_id or "sid", agent=ATIFAgentConfig(name=agent_name or "nat-agent"))
+        return ATIFTrajectory(session_id=session_id or "sid",
+                              agent=ATIFAgentConfig(name=agent_name or "nat-agent", version="0.0.0"))
 
 
 def test_ensure_cache_converts_once_per_item():
@@ -64,7 +65,7 @@ def test_build_samples_uses_prebuilt_trajectory_without_conversion():
     adapter = EvalAtifAdapter(converter=converter)
     item = _make_eval_input_item("sample-a")
     eval_input = EvalInput(eval_input_items=[item])
-    prebuilt = ATIFTrajectory(session_id="sample-a", agent=ATIFAgentConfig(name="prebuilt-agent"))
+    prebuilt = ATIFTrajectory(session_id="sample-a", agent=ATIFAgentConfig(name="prebuilt-agent", version="0.0.0"))
 
     samples = adapter.build_samples(eval_input, prebuilt_trajectories={"sample-a": prebuilt})
 
