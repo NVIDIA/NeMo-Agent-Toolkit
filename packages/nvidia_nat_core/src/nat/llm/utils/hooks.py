@@ -27,11 +27,12 @@ if TYPE_CHECKING:
     import httpx
 
 from nat.llm.utils.constants import LLMHeaderPrefix
+from nat.llm.utils.http_client import _create_http_client
 
 logger = logging.getLogger(__name__)
 
 
-def create_metadata_injection_client(timeout: float = 600.0, verify_ssl: bool = True) -> "httpx.AsyncClient":
+def create_metadata_injection_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
     """
     Httpx event hook that injects custom metadata as HTTP headers.
 
@@ -39,8 +40,7 @@ def create_metadata_injection_client(timeout: float = 600.0, verify_ssl: bool = 
     enabling end-to-end traceability in LLM server logs.
 
     Args:
-        timeout: HTTP request timeout in seconds
-        verify_ssl: Whether to verify SSL certificates
+        llm_config: LLM configuration object
 
     Returns:
         An httpx.AsyncClient configured with metadata header injection
@@ -64,8 +64,4 @@ def create_metadata_injection_client(timeout: float = 600.0, verify_ssl: bool = 
         except Exception as e:
             logger.debug("Could not inject custom metadata headers, request will proceed without them: %s", e)
 
-    return httpx.AsyncClient(
-        event_hooks={"request": [on_request]},
-        timeout=httpx.Timeout(timeout),
-        verify=verify_ssl
-    )
+    return _create_http_client(llm_config=llm_config, use_async=True, event_hooks={"request": [on_request]})
