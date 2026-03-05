@@ -114,6 +114,65 @@ def test_process_llm_events_in_default(step_adaptor_default, make_intermediate_s
     assert step_adaptor_default._history[-1] is step, "Step must be appended to _history."
 
 
+def test_process_llm_start_shows_thinking_placeholder(step_adaptor_default, make_intermediate_step):
+    """LLM_START sets thought_text='Thinking...' as placeholder."""
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_START,
+            data_input="User question",
+            data_output=None,
+            UUID="llm-uuid-start",
+        ))
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Thinking..."
+
+
+def test_process_llm_end_extracts_thought_text(step_adaptor_default, make_intermediate_step):
+    """LLM_END with ReAct-style 'Thought: ...' sets thought_text on the response step."""
+    uid = "llm-uuid-thought"
+    step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_START,
+            data_input="User question",
+            data_output=None,
+            UUID=uid,
+        ))
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_END,
+            data_input=None,
+            data_output=("Thought: I need to use the calculator to add 2 and 3.\n"
+                         "Action: calculator add\n"
+                         "Action Input: {\"a\": 2, \"b\": 3}\n"),
+            UUID=uid,
+        ))
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "I need to use the calculator to add 2 and 3."
+
+
+def test_extract_react_thought_no_thought_returns_none(step_adaptor_default, make_intermediate_step):
+    """LLM_END without 'Thought:' has thought_text None."""
+    uid = "llm-uuid-no-thought"
+    step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_START,
+            data_input="Input",
+            data_output=None,
+            UUID=uid,
+        ))
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_END,
+            data_input=None,
+            data_output="Action: foo\nAction Input: bar",
+            UUID=uid,
+        ))
+    assert result is not None
+    assert result.thought_text is None
+
+
 def test_process_tool_in_default(step_adaptor_default, make_intermediate_step):
     """
     In DEFAULT mode, TOOL_END events should be processed.

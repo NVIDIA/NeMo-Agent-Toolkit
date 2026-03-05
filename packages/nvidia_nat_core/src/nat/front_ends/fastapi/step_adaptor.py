@@ -15,6 +15,7 @@
 
 import html
 import logging
+import re
 from functools import reduce
 from textwrap import dedent
 
@@ -62,6 +63,22 @@ class StepAdaptor:
             return step.event_type in config.custom_event_types
 
         return False
+
+    @staticmethod
+    def _extract_react_thought(output: str) -> str | None:
+        """Extract ReAct-style 'Thought: ...' from LLM output for thought process display."""
+        if not output or not isinstance(output, str):
+            return None
+        # Match "Thought:" (case-insensitive, optional colon) and capture until Action/Final Answer/end
+        match = re.search(
+            r"thought\s*:?\s*(.*?)(?=\s*(?:action\s*\d*\s*:|final\s+answer\s*:)|$)",
+            output,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if not match:
+            return None
+        text = match.group(1).strip()
+        return text if text else None
 
     def _handle_llm(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         input_str: str | None = None
@@ -113,10 +130,18 @@ class StepAdaptor:
             {output_value}
             """).strip("\n").format(payload=payload, output_value=escaped_output)
 
+        # Show "Thinking..." placeholder at START; END will replace with actual thought
+        thought_text = None
+        if step.event_type == IntermediateStepType.LLM_START:
+            thought_text = "Thinking..."
+        elif step.event_type == IntermediateStepType.LLM_END and output_str:
+            thought_text = self._extract_react_thought(output_str)
+
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=step.name or "",
                                          payload=payload,
-                                         parent_id=ancestry.function_id)
+                                         parent_id=ancestry.function_id,
+                                         thought_text=thought_text)
 
         return event
 
