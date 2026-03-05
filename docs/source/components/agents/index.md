@@ -32,6 +32,7 @@ Reasoning Agent <./reasoning-agent/index.md>
 ReWOO Agent <./rewoo-agent/index.md>
 Responses API and Agent <./responses-api-and-agent/index.md>
 Router Agent <./router-agent/index.md>
+Parallel Executor <./parallel-executor/index.md>
 Sequential Executor <./sequential-executor/index.md>
 Tool Calling Agent <./tool-calling-agent/index.md>
 Automatic Memory Wrapper <./auto-memory-wrapper/index.md>

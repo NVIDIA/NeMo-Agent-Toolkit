@@ -93,8 +93,8 @@ from nat.observability.exporter.base_exporter import BaseExporter
 from nat.utils.type_utils import override
 
 try:
-    from nat.plugins.eval.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
-    from nat.plugins.eval.profiler.utils import detect_llm_frameworks_in_build_fn
+    from nat.plugins.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
+    from nat.plugins.profiler.utils import detect_llm_frameworks_in_build_fn
 except ImportError:
 
     def detect_llm_frameworks_in_build_fn(registration) -> list[LLMFrameworkEnum]:
@@ -1338,9 +1338,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             middleware_info = self._registry.get_middleware(type(config))
 
-            with ChildBuilder.use(config, self) as inner_builder:
-                middleware_instance = await self._get_exit_stack().enter_async_context(
-                    middleware_info.build_fn(config, inner_builder))
+            middleware_instance = await self._get_exit_stack().enter_async_context(
+                middleware_info.build_fn(config, self))
 
             self._middleware[name] = ConfiguredMiddleware(config=config, instance=middleware_instance)
 

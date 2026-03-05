@@ -13,7 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
+import json
 import logging
+import uuid
 from collections.abc import AsyncGenerator
 
 from pydantic import Field
@@ -25,6 +28,11 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatRequestOrMessage
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import ChatResponseChunkChoice
+from nat.data_models.api_server import ChoiceDelta
+from nat.data_models.api_server import ChoiceDeltaToolCall
+from nat.data_models.api_server import ChoiceDeltaToolCallFunction
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
 from nat.utils.type_converter import GlobalTypeConverter
@@ -53,9 +61,11 @@ class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
+    from langchain_core.messages import AIMessage
     from langchain_core.messages import AIMessageChunk
     from langchain_core.messages import trim_messages
     from langchain_core.messages.base import BaseMessage
+    from langgraph.errors import GraphRecursionError
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
@@ -119,23 +129,33 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             state = ToolCallAgentGraphState(**state)
             output_message = state.messages[-1]
             return str(output_message.content)
+        except GraphRecursionError:
+            logger.warning(
+                "%s Tool Calling Agent reached its maximum iteration limit (%d) without producing a final answer. "
+                "This typically means the LLM kept calling tools instead of returning a response.",
+                AGENT_LOG_PREFIX,
+                config.max_iterations)
+            return (f"The tool calling agent could not produce a final answer within {config.max_iterations} "
+                    "iterations. The agent repeatedly called tools without converging on a response.")
         except Exception as ex:
             logger.error("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             raise
 
-    async def _stream_fn(chat_request_or_message: ChatRequestOrMessage) -> AsyncGenerator[str]:
+    async def _stream_fn(chat_request_or_message: ChatRequestOrMessage) -> AsyncGenerator[ChatResponseChunk]:
         """
         Streaming workflow entry function for the Tool Calling Agent.
 
-        Uses graph.astream with stream_mode="messages" to yield token-level content chunks from the LLM,
+        Uses graph.astream with stream_mode="messages" to yield token-level chunks from the LLM,
         enabling real-time SSE streaming over the OpenAI-compatible /v1/chat/completions endpoint.
+        Yields both content tokens and tool call chunks as ChatResponseChunk objects.
 
         Args:
             chat_request_or_message (ChatRequestOrMessage): The input message to process
 
         Yields:
-            str: Individual content chunks from the agent's response
+            ChatResponseChunk: Streaming chunks containing content deltas or tool call deltas
         """
+        chunk_id = str(uuid.uuid4())
         try:
             message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
 
@@ -147,17 +167,58 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                                                         include_system=True)
             state = ToolCallAgentGraphState(messages=messages)
 
-            # stream the Tool Calling Agent Graph token-by-token using LangGraph message streaming
             async for msg, metadata in graph.astream(
                     state,
                     config={'recursion_limit': (config.max_iterations + 1) * 2},
                     stream_mode="messages"):
-                if not isinstance(msg, AIMessageChunk):
+                if not isinstance(msg, (AIMessage, AIMessageChunk)):
                     continue
-                # only yield content tokens from the agent node, skip tool call metadata
-                if metadata.get("langgraph_node") == "agent":
-                    if msg.content and not msg.tool_call_chunks:
-                        yield msg.content
+                if metadata.get("langgraph_node") != "agent":
+                    continue
+
+                if isinstance(msg.content, str) and msg.content:
+                    yield ChatResponseChunk.create_streaming_chunk(msg.content, id_=chunk_id)
+
+                tool_calls = getattr(msg, "tool_call_chunks", None) or getattr(msg, "tool_calls", None)
+                if tool_calls:
+                    delta_tool_calls = []
+                    for i, tc in enumerate(tool_calls):
+                        idx = tc.get("index") if isinstance(tc.get("index"), int) else i
+                        args = tc.get("args", "")
+                        if isinstance(args, dict):
+                            args = json.dumps(args)
+                        delta_tool_calls.append(
+                            ChoiceDeltaToolCall(index=idx,
+                                                id=tc.get("id"),
+                                                type="function" if tc.get("id") else None,
+                                                function=ChoiceDeltaToolCallFunction(
+                                                    name=tc.get("name"),
+                                                    arguments=args,
+                                                )))
+                    yield ChatResponseChunk(
+                        id=chunk_id,
+                        choices=[
+                            ChatResponseChunkChoice(
+                                index=0,
+                                delta=ChoiceDelta(tool_calls=delta_tool_calls),
+                                finish_reason=None,
+                            )
+                        ],
+                        created=datetime.datetime.now(datetime.UTC),
+                        model="unknown-model",
+                        object="chat.completion.chunk",
+                    )
+        except GraphRecursionError:
+            logger.warning(
+                "%s Tool Calling Agent reached its maximum iteration limit (%d) without producing a final answer. "
+                "This typically means the LLM kept calling tools instead of returning a response.",
+                AGENT_LOG_PREFIX,
+                config.max_iterations)
+            yield ChatResponseChunk.create_streaming_chunk(
+                f"The tool calling agent could not produce a final answer within {config.max_iterations} "
+                "iterations. The agent repeatedly called tools without converging on a response.",
+                id_=chunk_id,
+            )
         except Exception as ex:
             logger.error("%s Tool Calling Agent streaming failed with exception: %s", AGENT_LOG_PREFIX, ex)
             raise

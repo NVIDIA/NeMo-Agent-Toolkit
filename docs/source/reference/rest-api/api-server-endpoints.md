@@ -25,10 +25,15 @@ There are currently five workflow transactions that can be initiated using HTTP 
 
 ## Default Endpoint Paths
 
-The default endpoint paths use a versioned URL scheme. Legacy paths are also registered for
-backward compatibility unless explicitly disabled.
+The default endpoint paths use a versioned URL scheme.
 
-| Endpoint | Default Path | Legacy Path |
+:::{note}
+Versioned paths are currently experimental due to the added support of HTTP Human-in-the-loop (HITL) and OAuth. They are 1:1 compatible with the legacy endpoints for workflows not relying on those behaviors.
+:::
+
+Legacy paths are registered by default for backward compatibility unless explicitly disabled.
+
+| Endpoint | Versioned Path | Legacy Path |
 |----------|-------------|-------------|
 | Generate (non-streaming) | `/v1/workflow` | `/generate` |
 | Generate (streaming) | `/v1/workflow/stream` | `/generate/stream` |
@@ -103,7 +108,7 @@ result back to the client. The transaction schema is defined by the workflow.
 ## Asynchronous Generate
 The asynchronous generate endpoint allows clients to submit a workflow to run in the background and return a response immediately with a unique identifier for the workflow. This can be used to query the status and results of the workflow at a later time. This is useful for long-running workflows, which would otherwise cause the client to time out.
 
-This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e '.[async_endpoints]'` from the root directory of the NeMo Agent Toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install "nvidia-nat[async_endpoints]"`.
+This endpoint is only available when the `async_endpoints` optional dependency extra is installed. For users installing from source, this can be done by running `uv pip install -e ".[async_endpoints]"` from the root directory of the NeMo Agent Toolkit library. Similarly, for users installing from PyPI, this can be done by running `pip install "nvidia-nat[async_endpoints]"`.
 
 Asynchronous jobs are managed using [Dask](https://docs.dask.org/en/stable/). By default, a local Dask cluster is created at start time, however you can also configure the server to connect to an existing Dask scheduler by setting the `scheduler_address` configuration parameter. The Dask scheduler is used to manage the execution of asynchronous jobs, and can be configured to run on a single machine or across a cluster of machines. Job history and metadata is stored in a SQL database using [SQLAlchemy](https://www.sqlalchemy.org/). By default, a temporary SQLite database is created at start time, however you can also configure the server to use a persistent database by setting the `db_url` configuration parameter. Refer to the [SQLAlchemy documentation](https://docs.sqlalchemy.org/en/20/core/engines.html#database-urls) for the format of the `db_url` parameter. Any database supported by [SQLAlchemy's Asynchronous I/O extension](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html) can be used. Refer to [SQLAlchemy's Dialects](https://docs.sqlalchemy.org/en/20/dialects/index.html) for a complete list (many but not all of these support Asynchronous I/O).
 
@@ -432,7 +437,7 @@ general:
 | `legacy_openai_api_path` | string or null | `/chat` | Legacy path for the chat endpoint. Set to `null` to disable |
 | `method` | string | `POST` | HTTP method for the endpoint |
 | `disable_legacy_routes` | boolean | `false` | Disable all legacy routes globally |
-| `enable_interactive_extensions` | boolean | `false` | Enable [HTTP interactive execution](./http-interactive-execution.md) on chat endpoints |
+| `enable_interactive_extensions` | boolean | `false` | Enable [HTTP interactive execution](./http-interactive-execution.md) on OpenAI Chat Completions endpoint |
 
 ### Endpoint Behavior
 

@@ -1,0 +1,87 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Prometheus + Grafana monitoring stack for Dynamo
+#
+# Usage:
+#   cd monitoring
+#   docker compose up -d
+#
+# Access:
+#   Prometheus: http://localhost:9090
+#   Grafana:    http://localhost:3000 (default: admin/admin)
+#
+# Security:
+#   Both services bind to localhost only (not accessible from other machines).
+#   Grafana requires login by default (admin/admin). To enable anonymous access
+#   for local development convenience, create a .env file or export:
+#
+#     GF_AUTH_ANONYMOUS_ENABLED=true
+#     GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+#     GF_AUTH_DISABLE_LOGIN_FORM=true
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: dynamo-prometheus
+    network_mode: host
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml.template:ro
+      - ./rules:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
+    environment:
+      - DYNAMO_HTTP_PORT=${DYNAMO_HTTP_PORT:-8000}
+      - DYNAMO_WORKER_METRICS_PORT=${DYNAMO_WORKER_METRICS_PORT:-18081}
+      - DYNAMO_ROUTER_METRICS_PORT=${DYNAMO_ROUTER_METRICS_PORT:-18090}
+      - DYNAMO_PROCESSOR_METRICS_PORT=${DYNAMO_PROCESSOR_METRICS_PORT:-18091}
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        WBASE=$${DYNAMO_WORKER_METRICS_PORT}
+        sed \
+          -e "s/__FRONTEND_PORT__/$${DYNAMO_HTTP_PORT}/g" \
+          -e "s/__WORKER_METRICS_PORT_0__/$${WBASE}/g" \
+          -e "s/__WORKER_METRICS_PORT_1__/$$((WBASE+1))/g" \
+          -e "s/__WORKER_METRICS_PORT_2__/$$((WBASE+2))/g" \
+          -e "s/__WORKER_METRICS_PORT_3__/$$((WBASE+3))/g" \
+          -e "s/__WORKER_METRICS_PORT_4__/$$((WBASE+4))/g" \
+          -e "s/__WORKER_METRICS_PORT_5__/$$((WBASE+5))/g" \
+          -e "s/__WORKER_METRICS_PORT_6__/$$((WBASE+6))/g" \
+          -e "s/__WORKER_METRICS_PORT_7__/$$((WBASE+7))/g" \
+          -e "s/__ROUTER_METRICS_PORT__/$${DYNAMO_ROUTER_METRICS_PORT}/g" \
+          -e "s/__PROCESSOR_METRICS_PORT__/$${DYNAMO_PROCESSOR_METRICS_PORT}/g" \
+          /etc/prometheus/prometheus.yml.template > /tmp/prometheus.yml
+        exec /bin/prometheus \
+          --config.file=/tmp/prometheus.yml \
+          --storage.tsdb.path=/prometheus \
+          --web.listen-address=127.0.0.1:9090 \
+          --storage.tsdb.retention.time=7d
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: dynamo-grafana
+    network_mode: host
+    environment:
+      - GF_SERVER_HTTP_PORT=3000
+      - GF_SERVER_HTTP_ADDR=127.0.0.1
+      # Authentication: secure by default, overridable via environment or .env
+      - GF_AUTH_ANONYMOUS_ENABLED=${GF_AUTH_ANONYMOUS_ENABLED:-false}
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=${GF_AUTH_ANONYMOUS_ORG_ROLE:-Viewer}
+      - GF_AUTH_DISABLE_LOGIN_FORM=${GF_AUTH_DISABLE_LOGIN_FORM:-false}
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+

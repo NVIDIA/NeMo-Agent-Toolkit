@@ -202,7 +202,7 @@ class A2AFrontEndPluginWorker:
             )
 
         # Build agent card
-        agent_url = f"http://{config.host}:{config.port}/"
+        agent_url = self._resolve_agent_url()
         agent_card = AgentCard(
             name=config.name,
             description=config.description,
@@ -223,6 +223,13 @@ class A2AFrontEndPluginWorker:
             logger.info("Security: OAuth2 authentication required")
 
         return agent_card
+
+    def _resolve_agent_url(self) -> str:
+        """Resolve public URL to advertise in the Agent Card."""
+        config = self.front_end_config
+        if config.public_base_url:
+            return f"{str(config.public_base_url).rstrip('/')}/"
+        return f"http://{config.host}:{config.port}/"
 
     def create_agent_executor(self, workflow: Workflow, builder: WorkflowBuilder) -> NATWorkflowAgentExecutor:
         """Create agent executor adapter for the workflow.

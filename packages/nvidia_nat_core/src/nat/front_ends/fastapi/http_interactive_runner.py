@@ -228,74 +228,68 @@ class HTTPInteractiveRunner:
         record = await self._store.create_execution()
 
         # Queue used by the HITL / OAuth callbacks to inject events
-        # into the stream.
+        # into the stream. Auth can be required during session acquisition
+        # (e.g. per-user builder / MCP), so we must consume the queue in the
+        # main loop while session acquisition runs in a task.
         stream_queue: asyncio.Queue[typing.Any | None] = asyncio.Queue()
 
         hitl_cb = self._build_hitl_callback(record, stream_queue=stream_queue)
         auth_cb = self._build_auth_callback(record, stream_queue=stream_queue)
 
-        try:
-            async with self._session_manager.session(
-                    http_connection=request,
-                    user_input_callback=hitl_cb,
-                    user_authentication_callback=auth_cb,
-            ) as session:
-                workflow_gen = workflow_gen_factory(session)
-
-                # Wrap the workflow generator in a task that pushes to
-                # the same queue so we can read from a single source.
-                async def _push_workflow_items():
+        async def _acquire_session_and_push_workflow() -> None:
+            try:
+                async with self._session_manager.session(
+                        http_connection=request,
+                        user_input_callback=hitl_cb,
+                        user_authentication_callback=auth_cb,
+                ) as session:
+                    workflow_gen = workflow_gen_factory(session)
                     try:
                         async for item in workflow_gen:
                             await stream_queue.put(item)
                     except Exception as exc:
-                        error_item = Error(
-                            code=ErrorTypes.WORKFLOW_ERROR,
-                            message=str(exc),
-                            details=type(exc).__name__,
-                        )
-                        await stream_queue.put(error_item)
-                    finally:
-                        # Sentinel: workflow is done
-                        await stream_queue.put(None)
+                        await stream_queue.put(
+                            Error(
+                                code=ErrorTypes.WORKFLOW_ERROR,
+                                message=str(exc),
+                                details=type(exc).__name__,
+                            ))
+            except Exception as exc:
+                logger.exception(error_log_message)
+                await stream_queue.put(
+                    Error(
+                        code=ErrorTypes.WORKFLOW_ERROR,
+                        message=str(exc),
+                        details=type(exc).__name__,
+                    ))
+            finally:
+                await stream_queue.put(None)
 
-                task = asyncio.create_task(_push_workflow_items())
+        task = asyncio.create_task(_acquire_session_and_push_workflow())
 
-                try:
-                    while True:
-                        item = await stream_queue.get()
-                        if item is None:
-                            # Workflow finished
-                            break
-                        if isinstance(item, ResponseSerializable):
-                            yield item.get_stream_data()
-                        elif isinstance(item, Error):
-                            yield f"event: error\ndata: {item.model_dump_json()}\n\n"
-                            break
-                        elif isinstance(item, str):
-                            if passthrough_str_items:
-                                yield item
-                            else:
-                                yield f"data: {item}\n\n"
-                        else:
-                            # Shouldn't happen, but be safe
-                            yield f"data: {item}\n\n"
-                finally:
-                    # Ensure we clean up
-                    task.cancel()
-                    try:
-                        await task
-                    except asyncio.CancelledError:
-                        pass
-
-        except Exception as exc:
-            logger.exception(error_log_message)
-            error_json = Error(
-                code=ErrorTypes.WORKFLOW_ERROR,
-                message=str(exc),
-                details=type(exc).__name__,
-            ).model_dump_json()
-            yield f"event: error\ndata: {error_json}\n\n"
+        try:
+            while True:
+                item = await stream_queue.get()
+                if item is None:
+                    break
+                if isinstance(item, ResponseSerializable):
+                    yield item.get_stream_data()
+                elif isinstance(item, Error):
+                    yield f"event: error\ndata: {item.model_dump_json()}\n\n"
+                    break
+                elif isinstance(item, str):
+                    if passthrough_str_items:
+                        yield item
+                    else:
+                        yield f"data: {item}\n\n"
+                else:
+                    yield f"data: {item}\n\n"
+        finally:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
 
     async def streaming_generator(
         self,

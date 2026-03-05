@@ -63,6 +63,10 @@ The `config-mcp-client.yml` example demonstrates how to use the `mcp_client` fun
 
 `examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml`:
 ```yaml
+functions:
+  current_timezone:
+    _type: current_timezone
+
 function_groups:
   mcp_time:
     _type: mcp_client
@@ -70,21 +74,40 @@ function_groups:
       transport: stdio
       command: "python"
       args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_overrides:
+      get_current_time:
+        alias: get_current_time_mcp_tool
+        description: "Returns the current date and time. REQUIRED: You must call the current_timezone tool first and pass its result as the timezone argument. Do not use your own or an assumed timezone; only use the value returned by current_timezone."
+
   mcp_math:
     _type: mcp_client
     server:
       transport: streamable-http
       url: "http://localhost:9901/mcp"
+    include:
+      - calculator__add
+      - calculator__subtract
+      - calculator__multiply
+      - calculator__divide
+      - calculator__compare
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
 
 workflow:
   _type: react_agent
   tool_names:
+    - current_timezone
     - mcp_time
     - mcp_math
 ```
 
 This configuration creates two function groups:
-- `mcp_time`: Connects to a local MCP server using stdio transport to get current date and time
+- `mcp_time`: Connects to a local MCP server using stdio transport to get current date and time. The timezone is always assumed to be America/Los_Angeles
 - `mcp_math`: Connects to a remote MCP server using streamable-http transport to access calculator tools
 
 To run this example:

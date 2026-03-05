@@ -16,5 +16,6 @@
 # flake8: noqa
 
 # Import any control flows which need to be automatically registered here
+from . import parallel_executor
 from . import sequential_executor
 from .router_agent import register

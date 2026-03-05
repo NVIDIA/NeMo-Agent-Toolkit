@@ -4,6 +4,7 @@
 
 [Aa]gentic
 [Aa]gno
+# Allow AIQ for AIQ Blueprint
 AIQ
 [Aa]llowlist
 [Aa]nonymize(d?)
@@ -12,7 +13,7 @@ Arize
 ART
 arXiv
 [Aa]sync
-[Aa]nthropic('s)?
+Anthropic
 Authlib
 [Aa]utoencoder
 [Bb]ackdoor(s?)
@@ -20,7 +21,7 @@ Authlib
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
-[Bb]rev
+Brev
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
@@ -69,7 +70,7 @@ etcd
 Faiss
 [Ff]inetunable
 [Ff]inetune(d?)
-[Ff]inetune(r|rs|ing)
+[Ff]inetune(r|rs)
 [Ff]inetuning
 Gantt
 [Gg]eneratable
@@ -85,6 +86,7 @@ Grafana
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
+[Ii]nterarrival
 [Ii]nterquartile
 isort
 Jama
@@ -92,6 +94,7 @@ Jira
 jsonlines
 [Kk]aggle
 [Kk]eycloak
+KV
 LangChain
 Langfuse
 LangGraph
@@ -109,6 +112,7 @@ Loghub
 Mem0
 [Mm]iddleware
 Milvus
+# Minimax the algorithm, not the MiniMax model
 Minimax
 [Mm]itigation(s?)
 [Mm]ixin(s?)
@@ -124,6 +128,7 @@ NIC
 NIM(s?)
 npm
 NumPy
+nvext
 NVIDIA
 OAuth
 Ollama
@@ -143,6 +148,7 @@ PDF(s?)
 [Pp]luggable
 [Pp]ostprocess
 [Pp]ostprocessing
+[Pp]refill
 [Pp]reprocess
 [Pp]retrained
 [Pp]rofiler
@@ -165,6 +171,7 @@ Qwen
 [Ss]anitiz(e|ed|ation|ing)
 [Ss]erializable
 [Ss]erverless
+SGLang
 spaCy
 SQLAlchemy
 SSE
@@ -181,6 +188,7 @@ Tavily
 [Tt]eardown
 [Tt]imestamp(s?)
 [Tt]okenization
+[Tt]oolchain
 [Tt]okenizer(s?)
 [Tt]rie(s?)
 triages
@@ -189,6 +197,7 @@ triages
 [Uu]nittest(s?)
 [Uu]nprocessable
 [Uu]nregister(ing|ed|s)?
+[Uu]nsloth
 [Uu]ntrusted
 [Uu]ploader
 [Uu]psert
@@ -196,8 +205,9 @@ URIs
 uv
 Vanna
 VectorDB
+vLLM
 [Ww]alkthrough
 [Ww]eb[Ss]ocket
 XGBoost
 Zep
-zsh
+Zsh
