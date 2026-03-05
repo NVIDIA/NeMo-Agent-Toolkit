@@ -130,11 +130,16 @@ class StepAdaptor:
             {output_value}
             """).strip("\n").format(payload=payload, output_value=escaped_output)
 
-        # Show "Thinking..." placeholder at START; END will replace with actual thought
         thought_text = None
         if step.event_type == IntermediateStepType.LLM_START:
+            # Show "Thinking..." placeholder at START
             thought_text = "Thinking..."
+        elif step.event_type == IntermediateStepType.LLM_NEW_TOKEN and output_str:
+            # Try to extract partial thought from streaming tokens
+            extracted = self._extract_react_thought(output_str)
+            thought_text = extracted if extracted else "Thinking..."
         elif step.event_type == IntermediateStepType.LLM_END and output_str:
+            # END will show complete thought
             thought_text = self._extract_react_thought(output_str)
 
         event = ResponseIntermediateStep(id=step.UUID,
