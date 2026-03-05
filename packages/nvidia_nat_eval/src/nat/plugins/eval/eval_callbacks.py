@@ -159,8 +159,11 @@ class EvalCallbackManager:
 
     def on_dataset_loaded(self, *, dataset_name: str, items: list[EvalInputItem]) -> None:
         for cb in self._callbacks:
+            fn = getattr(cb, "on_dataset_loaded", None)
+            if not fn:
+                continue
             try:
-                cb.on_dataset_loaded(dataset_name=dataset_name, items=items)
+                fn(dataset_name=dataset_name, items=items)
             except Exception:
                 logger.exception("EvalCallback %s.on_dataset_loaded failed", type(cb).__name__)
 
@@ -239,8 +242,11 @@ class EvalCallbackManager:
 
     def on_eval_complete(self, result: EvalResult) -> None:
         for cb in self._callbacks:
+            fn = getattr(cb, "on_eval_complete", None)
+            if not fn:
+                continue
             try:
-                cb.on_eval_complete(result)
+                fn(result)
             except Exception:
                 logger.exception("EvalCallback %s.on_eval_complete failed", type(cb).__name__)
 
