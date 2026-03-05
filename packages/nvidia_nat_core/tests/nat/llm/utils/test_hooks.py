@@ -20,7 +20,7 @@ import pytest
 from pytest_httpserver import HTTPServer
 
 from nat.builder.context import ContextState
-from nat.llm.utils.hooks import create_metadata_injection_client
+from nat.llm.utils.hooks import _create_metadata_injection_client
 
 
 class TestMetadataInjectionHook:
@@ -46,7 +46,7 @@ class TestMetadataInjectionHook:
 
     async def test_hook_injects_metadata_fields(self, mock_httpx_request, mock_input_message):
         """Test that the hook injects custom metadata fields as headers."""
-        client = create_metadata_injection_client()
+        client = _create_metadata_injection_client()
         hook = client.event_hooks["request"][0]
 
         context_state = ContextState.get()
@@ -67,7 +67,7 @@ class TestMetadataInjectionHook:
             "optional_field": None,
         }
 
-        client = create_metadata_injection_client()
+        client = _create_metadata_injection_client()
         hook = client.event_hooks["request"][0]
 
         context_state = ContextState.get()
@@ -82,7 +82,7 @@ class TestMetadataInjectionHook:
 
     async def test_hook_handles_missing_context(self, mock_httpx_request):
         """Test that hook handles missing context gracefully."""
-        client = create_metadata_injection_client()
+        client = _create_metadata_injection_client()
         hook = client.event_hooks["request"][0]
 
         await hook(mock_httpx_request)
@@ -94,11 +94,11 @@ class TestMetadataInjectionHook:
 
 
 class TestCreateMetadataInjectionClient:
-    """Unit tests for create_metadata_injection_client function."""
+    """Unit tests for _create_metadata_injection_client function."""
 
     async def test_creates_client_with_event_hooks(self):
         """Test that client is created with event hooks."""
-        client = create_metadata_injection_client()
+        client = _create_metadata_injection_client()
 
         assert "request" in client.event_hooks
         assert len(client.event_hooks["request"]) == 1
@@ -139,7 +139,7 @@ class TestMetadataInjectionIntegration:
             }
         })
 
-        client = create_metadata_injection_client()
+        client = _create_metadata_injection_client()
         context_state = ContextState.get()
         context_state.input_message.set(mock_input_message)
 
@@ -181,7 +181,7 @@ class TestMetadataInjectionIntegration:
             }
         })
 
-        client = create_metadata_injection_client()
+        client = _create_metadata_injection_client()
 
         response = await client.post(httpserver.url_for("/v1/chat/completions"),
                                      json={

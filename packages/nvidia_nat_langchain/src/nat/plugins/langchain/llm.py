@@ -39,7 +39,7 @@ from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.llm.utils.hooks import create_metadata_injection_client
+from nat.llm.utils.hooks import _create_metadata_injection_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -150,7 +150,7 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    http_async_client: httpx.AsyncClient = create_metadata_injection_client(llm_config)
+    http_async_client: httpx.AsyncClient = _create_metadata_injection_client(llm_config)
 
     try:
         client = AzureChatOpenAI(
@@ -197,7 +197,7 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    http_async_client: httpx.AsyncClient = create_metadata_injection_client(llm_config)
+    http_async_client: httpx.AsyncClient = _create_metadata_injection_client(llm_config)
 
     config_dict = llm_config.model_dump(
         exclude={"type", "thinking", "api_type", "api_key", "base_url", "verify_ssl"},

@@ -32,7 +32,7 @@ from nat.llm.utils.http_client import _create_http_client
 logger = logging.getLogger(__name__)
 
 
-def create_metadata_injection_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
+def _create_metadata_injection_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
     """
     Httpx event hook that injects custom metadata as HTTP headers.
 
