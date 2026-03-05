@@ -43,7 +43,7 @@ from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.eval.eval_callbacks import EvalCallbackManager
+from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
