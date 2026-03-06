@@ -15,8 +15,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
-
 from nat.data_models.atif import ATIFAgentConfig
 from nat.data_models.atif import ATIFTrajectory
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
@@ -25,7 +23,6 @@ from nat_simple_web_query.atif_only_evaluator_register import AtifCosineSimilari
 from nat_simple_web_query.atif_only_evaluator_register import register_atif_cosine_similarity_evaluator
 
 
-@pytest.mark.asyncio
 async def test_register_atif_cosine_similarity_evaluator_exposes_only_atif_lane():
     config = AtifCosineSimilarityEvaluatorConfig()
     async with register_atif_cosine_similarity_evaluator(config, MagicMock()) as evaluator_info:
@@ -33,7 +30,6 @@ async def test_register_atif_cosine_similarity_evaluator_exposes_only_atif_lane(
         assert callable(evaluator_info.evaluate_atif_fn)
 
 
-@pytest.mark.asyncio
 async def test_atif_cosine_similarity_evaluator_scores_items():
     evaluator = AtifCosineSimilarityEvaluator(normalize_case=True)
     trajectory = ATIFTrajectory(session_id="sample", agent=ATIFAgentConfig(name="test-agent", version="0.0.0"))
