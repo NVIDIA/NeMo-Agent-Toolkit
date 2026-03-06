@@ -22,6 +22,8 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.function import FunctionBaseConfig
 
+# Import custom evaluator registration for side effects.
+
 logger = logging.getLogger(__name__)
 
 
