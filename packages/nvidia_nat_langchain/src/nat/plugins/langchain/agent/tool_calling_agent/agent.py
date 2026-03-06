@@ -89,7 +89,7 @@ class ToolCallAgentGraph(DualNodeAgent):
         handle_tool_errors: bool = True,
         return_direct: list[BaseTool] | None = None,
         max_truncation_retries: int = 0,
-        truncation_token_increment: int = 1024,
+        truncation_scaling_fn: typing.Callable[[int], int] | None = None,
         max_empty_response_retries: int = 0,
     ):
         super().__init__(llm=llm,
@@ -124,7 +124,9 @@ class ToolCallAgentGraph(DualNodeAgent):
         self.return_direct = [tool.name for tool in return_direct] if return_direct else []
 
         self._max_truncation_retries: int = max_truncation_retries
-        self._truncation_token_increment: int = truncation_token_increment
+        self._truncation_retries_remaining: int = max_truncation_retries
+        self._truncation_scaling_fn: typing.Callable[[int], int] = truncation_scaling_fn or (lambda c: c + 1024)
+        self._current_max_tokens: int | None = getattr(llm, "max_tokens", None)
         self._max_empty_response_retries: int = max_empty_response_retries
 
         logger.debug("%s Initialized Tool Calling Agent Graph", AGENT_LOG_PREFIX)
@@ -143,11 +145,14 @@ class ToolCallAgentGraph(DualNodeAgent):
         """
         # Use astream so LangGraph's stream_mode="messages" can observe individual LLM tokens.
         # Config is inherited from LangGraph's context, preserving streaming callbacks.
-        response = None
+        chunks: list[AIMessageChunk] = []
         async for chunk in self.agent.astream({"messages": state.messages}):
-            response = chunk if response is None else response + chunk
-        if response is None:
+            chunks.append(chunk)
+        if not chunks:
             raise RuntimeError('No response received from agent')
+        response: AIMessageChunk = chunks[0]
+        for c in chunks[1:]:
+            response = response + c
         return response
 
     async def agent_node(self, state: ToolCallAgentGraphState):
@@ -232,13 +237,8 @@ class ToolCallAgentGraph(DualNodeAgent):
             if self._max_empty_response_retries > 0:
                 response = await self._retry_on_empty_response(state, metadata)
             else:
-                logger.error(
-                    "%s LLM returned an empty response (no content, no tool calls). "
-                    "finish_reason=%s, response_metadata=%s",
-                    AGENT_LOG_PREFIX,
-                    finish_reason,
-                    metadata,
-                )
+                raise RuntimeError(f"LLM returned an empty response (no content, no tool calls). "
+                                   f"finish_reason={finish_reason}, response_metadata={metadata}")
 
         # Invalid tool calls — LLM produced tool call JSON that could not be parsed
         if not response.tool_calls and getattr(response, "invalid_tool_calls", None):
@@ -268,39 +268,41 @@ class ToolCallAgentGraph(DualNodeAgent):
 
         Without recovery, a truncated response typically lacks valid tool calls
         or a complete answer, causing the agent to loop until it hits a
-        GraphRecursionError. Each retry adds a fixed token increment to
-        max_tokens, giving the LLM room to finish its output.
+        GraphRecursionError. Each retry increases max_tokens via the configured
+        scaling callable, giving the LLM room to finish its output.
 
         Args:
             first_response: The truncated AIMessage from the LLM.
             state: Current agent graph state.
 
         Returns:
-            The response from the successful retry, or the last truncated
-            response if all retries are exhausted.
+            The response from the successful retry.
+
+        Raises:
+            RuntimeError: If all retries are exhausted without a non-truncated response.
         """
-        configured_max: int | None = getattr(self.llm, "max_tokens", None)
-        if configured_max is not None:
-            current_tokens: int = configured_max
-        else:
+        if self._current_max_tokens is None:
             usage: UsageMetadata = self._get_token_usage(first_response)
-            current_tokens = usage.get("output_tokens", 0) or 4096
+            self._current_max_tokens = usage.get("output_tokens", 0) or 4096
 
         response: AIMessage | None = None
 
-        for attempt in range(1, self._max_truncation_retries + 1):
-            new_limit: int = current_tokens + self._truncation_token_increment
+        while self._truncation_retries_remaining > 0:
+            self._truncation_retries_remaining -= 1
+            new_limit: int = self._truncation_scaling_fn(self._current_max_tokens)
+            retries_used: int = self._max_truncation_retries - self._truncation_retries_remaining
+
             logger.warning(
-                "%s Output truncated (finish_reason=length, current_max_tokens=%s). "
-                "Retry %d/%d with max_tokens=%d (+%d)",
+                "%s Output truncated (finish_reason=length, current_max_tokens=%d). "
+                "Retry %d/%d with max_tokens=%d",
                 AGENT_LOG_PREFIX,
-                current_tokens,
-                attempt,
+                self._current_max_tokens,
+                retries_used,
                 self._max_truncation_retries,
                 new_limit,
-                self._truncation_token_increment,
             )
 
+            self._current_max_tokens = new_limit
             self.bound_llm = self.llm.bind_tools(self.tools).bind(max_tokens=new_limit)
             self.agent = self.agent.first | self.bound_llm  # type: ignore[union-attr]
 
@@ -309,16 +311,20 @@ class ToolCallAgentGraph(DualNodeAgent):
             finish_reason: str | None = metadata.get("finish_reason")
 
             if finish_reason != LLMFinishReason.LENGTH:
-                logger.info("%s Truncation retry succeeded on attempt %d with max_tokens=%d",
-                            AGENT_LOG_PREFIX,
-                            attempt,
-                            new_limit)
+                logger.info(
+                    "%s Truncation retry succeeded on attempt %d with max_tokens=%d",
+                    AGENT_LOG_PREFIX,
+                    retries_used,
+                    new_limit,
+                )
                 return response
 
-            current_tokens = new_limit
-
-        logger.warning("%s All %d truncation retries exhausted", AGENT_LOG_PREFIX, self._max_truncation_retries)
-        return response
+        usage = self._get_token_usage(response or first_response)
+        raise RuntimeError(f"LLM output still truncated after {self._max_truncation_retries} retries "
+                           f"(last max_tokens={self._current_max_tokens}). "
+                           f"output_tokens={usage.get('output_tokens', 'N/A')}, "
+                           f"input_tokens={usage.get('input_tokens', 'N/A')}, "
+                           f"total_tokens={usage.get('total_tokens', 'N/A')}")
 
     async def _retry_on_empty_response(self, state: ToolCallAgentGraphState, first_metadata: dict) -> AIMessage:
         """Retry the LLM call when it returns an empty response.
@@ -328,8 +334,10 @@ class ToolCallAgentGraph(DualNodeAgent):
             first_metadata: The response_metadata from the empty response.
 
         Returns:
-            The response from the successful retry, or the last empty
-            response if all retries are exhausted.
+            The response from the successful retry.
+
+        Raises:
+            RuntimeError: If all retries are exhausted without a non-empty response.
         """
         response: AIMessage | None = None
         for attempt in range(1, self._max_empty_response_retries + 1):
@@ -353,12 +361,8 @@ class ToolCallAgentGraph(DualNodeAgent):
 
             first_metadata = getattr(response, "response_metadata", {})
 
-        logger.warning(
-            "%s All %d empty response retries exhausted",
-            AGENT_LOG_PREFIX,
-            self._max_empty_response_retries,
-        )
-        return response
+        raise RuntimeError(f"LLM still returning empty responses after {self._max_empty_response_retries} retries. "
+                           f"response_metadata={first_metadata}")
 
     async def conditional_edge(self, state: ToolCallAgentGraphState):
         try:

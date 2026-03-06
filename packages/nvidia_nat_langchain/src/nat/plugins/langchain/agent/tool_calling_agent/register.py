@@ -18,9 +18,11 @@ import json
 import logging
 import uuid
 from collections.abc import AsyncGenerator
+from collections.abc import Callable
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import model_validator
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -47,7 +49,29 @@ class TruncationRetryConfig(BaseModel):
     max_retries: int = Field(default=0,
                              description="Number of retries when LLM output is truncated. "
                              "0 disables recovery (raises RuntimeError).")
-    token_increment: int = Field(default=1024, description="Fixed number of tokens added to max_tokens on each retry.")
+    token_increment: int | None = Field(default=None,
+                                        description="Fixed number of tokens added to max_tokens on each retry. "
+                                        "Mutually exclusive with token_scaling. Defaults to 1024 if neither is set.")
+    token_scaling: float | None = Field(default=None,
+                                        description="Multiplicative factor applied to max_tokens on each retry "
+                                        "(e.g. 1.5 = 50%% increase per retry). "
+                                        "Mutually exclusive with token_increment.")
+
+    @model_validator(mode="after")
+    def _check_scaling_strategy(self) -> "TruncationRetryConfig":
+        if self.token_increment is not None and self.token_scaling is not None:
+            raise ValueError("Set token_increment or token_scaling, not both.")
+        if self.max_retries > 0 and self.token_increment is None and self.token_scaling is None:
+            self.token_increment = 1024
+        return self
+
+    def build_scaling_fn(self) -> Callable[[int], int]:
+        """Build a callable that computes the next max_tokens from the current value."""
+        if self.token_scaling is not None:
+            factor: float = self.token_scaling
+            return lambda current: int(current * factor)
+        increment: int = self.token_increment or 1024
+        return lambda current: current + increment
 
 
 class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
@@ -112,7 +136,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         handle_tool_errors=config.handle_tool_errors,
         return_direct=return_direct_tools,
         max_truncation_retries=config.truncation_retry.max_retries,
-        truncation_token_increment=config.truncation_retry.token_increment,
+        truncation_scaling_fn=config.truncation_retry.build_scaling_fn(),
         max_empty_response_retries=config.max_empty_response_retries,
     ).build_graph()
 

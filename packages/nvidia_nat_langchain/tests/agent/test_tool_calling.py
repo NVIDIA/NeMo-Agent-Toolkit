@@ -36,6 +36,34 @@ from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGr
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
 from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
 from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
+from nat.plugins.langchain.agent.tool_calling_agent.register import TruncationRetryConfig
+
+
+def test_truncation_retry_config_rejects_both_strategies():
+    """Setting both token_increment and token_scaling must raise ValidationError."""
+    with pytest.raises(Exception, match="token_increment or token_scaling"):
+        TruncationRetryConfig(max_retries=2, token_increment=1024, token_scaling=1.5)
+
+
+def test_truncation_retry_config_defaults_to_increment_when_neither_set():
+    """max_retries > 0 with neither set defaults token_increment to 1024."""
+    config = TruncationRetryConfig(max_retries=2, token_increment=None, token_scaling=None)
+    assert config.token_increment == 1024
+    assert config.token_scaling is None
+
+
+def test_truncation_retry_config_accepts_scaling_only():
+    """Setting only token_scaling (without token_increment) must succeed."""
+    config = TruncationRetryConfig(max_retries=3, token_scaling=1.5)
+    assert config.token_scaling == 1.5
+    assert config.token_increment is None
+
+
+def test_truncation_retry_config_accepts_increment_only():
+    """Setting only token_increment (without token_scaling) must succeed."""
+    config = TruncationRetryConfig(max_retries=3, token_increment=512)
+    assert config.token_increment == 512
+    assert config.token_scaling is None
 
 
 async def test_state_schema():
@@ -456,7 +484,7 @@ async def test_validate_truncation_raises_when_disabled(error_mock_llm, mock_too
 
 async def test_validate_truncation_delegates_to_retry(error_mock_llm, mock_tool):
     """finish_reason=length with max_truncation_retries>0 delegates to _retry_on_truncation."""
-    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_token_increment=512)
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_scaling_fn=lambda c: c + 512)
     truncated = AIMessage(content="partial", response_metadata={"finish_reason": "length"})
     good = AIMessage(content="complete", response_metadata={"finish_reason": "stop"})
     state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
@@ -466,6 +494,16 @@ async def test_validate_truncation_delegates_to_retry(error_mock_llm, mock_tool)
 
     mock_retry.assert_awaited_once()
     assert result.content == "complete"
+
+
+async def test_validate_empty_response_raises_when_disabled(error_mock_llm, mock_tool):
+    """Empty response with max_empty_response_retries=0 must raise RuntimeError."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_empty_response_retries=0)
+    empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with pytest.raises(RuntimeError, match="empty response"):
+        await agent._validate_llm_response(empty, state)
 
 
 async def test_validate_empty_response_delegates_to_retry(error_mock_llm, mock_tool):
@@ -499,7 +537,7 @@ def test_get_token_usage_from_openai_response_metadata(error_mock_llm, mock_tool
 
 async def test_retry_on_truncation_succeeds(error_mock_llm, mock_tool):
     """Truncation retry succeeds when the retried LLM call finishes normally."""
-    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=3, truncation_token_increment=512)
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=3, truncation_scaling_fn=lambda c: c + 512)
     first_response = AIMessage(
         content="partial",
         response_metadata={"finish_reason": "length"},
@@ -515,11 +553,13 @@ async def test_retry_on_truncation_succeeds(error_mock_llm, mock_tool):
 
     assert result.content == "complete"
     assert result.response_metadata["finish_reason"] == "stop"
+    assert agent._current_max_tokens == 612
+    assert agent._truncation_retries_remaining == 2
 
 
 async def test_retry_on_truncation_exhausted(error_mock_llm, mock_tool):
-    """All truncation retries exhausted returns the last truncated response."""
-    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_token_increment=512)
+    """All truncation retries exhausted raises RuntimeError."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_scaling_fn=lambda c: c + 512)
     first_response = AIMessage(
         content="partial",
         response_metadata={"finish_reason": "length"},
@@ -527,19 +567,29 @@ async def test_retry_on_truncation_exhausted(error_mock_llm, mock_tool):
             "output_tokens": 100, "input_tokens": 50, "total_tokens": 150
         },
     )
-    still_truncated = AIMessage(content="partial", response_metadata={"finish_reason": "length"})
+    still_truncated = AIMessage(
+        content="partial",
+        response_metadata={"finish_reason": "length"},
+        usage_metadata={
+            "output_tokens": 200, "input_tokens": 50, "total_tokens": 250
+        },
+    )
     state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
 
     with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=still_truncated):
-        result = await agent._retry_on_truncation(first_response, state)
-
-    assert result.response_metadata["finish_reason"] == "length"
+        with pytest.raises(RuntimeError, match="LLM output still truncated after 2 retries"):
+            await agent._retry_on_truncation(first_response, state)
 
 
 async def test_retry_on_truncation_increments_from_usage(error_mock_llm, mock_tool):
     """When max_tokens is not configured, the base is taken from usage_metadata output_tokens."""
     increment: int = 256
-    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=3, truncation_token_increment=increment)
+    agent = _make_agent(
+        error_mock_llm,
+        mock_tool,
+        max_truncation_retries=3,
+        truncation_scaling_fn=lambda c: c + increment,
+    )
     assert agent.llm.max_tokens is None
     first_response = AIMessage(
         content="partial",
@@ -558,16 +608,22 @@ async def test_retry_on_truncation_increments_from_usage(error_mock_llm, mock_to
         return still_truncated
 
     with patch.object(agent, "_invoke_llm", side_effect=_capture_and_invoke):
-        await agent._retry_on_truncation(first_response, state)
+        with pytest.raises(RuntimeError, match="LLM output still truncated after 3 retries"):
+            await agent._retry_on_truncation(first_response, state)
 
-    assert observed_max_tokens == [100 + increment, 100 + 2 * increment, 100 + 3 * increment]
+    assert observed_max_tokens == [356, 612, 868]
 
 
 async def test_retry_on_truncation_increments_from_configured_max_tokens(error_mock_llm, mock_tool):
     """When max_tokens is already configured on the LLM, it is used as the base instead of usage data."""
     increment: int = 512
-    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_token_increment=increment)
-    agent.llm.max_tokens = 50
+    error_mock_llm.max_tokens = 50
+    agent = _make_agent(
+        error_mock_llm,
+        mock_tool,
+        max_truncation_retries=2,
+        truncation_scaling_fn=lambda c: c + increment,
+    )
     first_response = AIMessage(
         content="partial",
         response_metadata={"finish_reason": "length"},
@@ -585,9 +641,54 @@ async def test_retry_on_truncation_increments_from_configured_max_tokens(error_m
         return still_truncated
 
     with patch.object(agent, "_invoke_llm", side_effect=_capture_and_invoke):
-        await agent._retry_on_truncation(first_response, state)
+        with pytest.raises(RuntimeError, match="LLM output still truncated after 2 retries"):
+            await agent._retry_on_truncation(first_response, state)
 
-    assert observed_max_tokens == [50 + increment, 50 + 2 * increment]
+    assert observed_max_tokens == [562, 1074]
+
+
+async def test_retry_on_truncation_persists_across_calls(error_mock_llm, mock_tool):
+    """Retries and max_tokens carry forward across multiple truncation events."""
+    agent = _make_agent(
+        error_mock_llm,
+        mock_tool,
+        max_truncation_retries=4,
+        truncation_scaling_fn=lambda c: c + 100,
+    )
+    truncated = AIMessage(
+        content="partial",
+        response_metadata={"finish_reason": "length"},
+        usage_metadata={
+            "output_tokens": 200, "input_tokens": 50, "total_tokens": 250
+        },
+    )
+    good = AIMessage(content="ok", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=good):
+        await agent._retry_on_truncation(truncated, state)
+
+    assert agent._current_max_tokens == 300
+    assert agent._truncation_retries_remaining == 3
+
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=good):
+        await agent._retry_on_truncation(truncated, state)
+
+    assert agent._current_max_tokens == 400
+    assert agent._truncation_retries_remaining == 2
+
+    still_truncated = AIMessage(
+        content="partial",
+        response_metadata={"finish_reason": "length"},
+        usage_metadata={
+            "output_tokens": 400, "input_tokens": 50, "total_tokens": 450
+        },
+    )
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=still_truncated):
+        with pytest.raises(RuntimeError, match="LLM output still truncated after 4 retries"):
+            await agent._retry_on_truncation(truncated, state)
+
+    assert agent._truncation_retries_remaining == 0
 
 
 async def test_retry_on_empty_succeeds(error_mock_llm, mock_tool):
@@ -601,3 +702,15 @@ async def test_retry_on_empty_succeeds(error_mock_llm, mock_tool):
         result = await agent._retry_on_empty_response(state, first_meta)
 
     assert result.content == "actual answer"
+
+
+async def test_retry_on_empty_exhausted(error_mock_llm, mock_tool):
+    """All empty-response retries exhausted raises RuntimeError."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_empty_response_retries=2)
+    first_meta: dict = {"finish_reason": "stop"}
+    still_empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=still_empty):
+        with pytest.raises(RuntimeError, match="empty responses after 2 retries"):
+            await agent._retry_on_empty_response(state, first_meta)
