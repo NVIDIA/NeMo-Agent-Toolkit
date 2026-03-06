@@ -21,3 +21,12 @@ class LLMHeaderPrefix(StrEnum):
 
     PAYLOAD = "X-Payload"  # Custom metadata propagation
     DYNAMO = "x-prefix"  # Dynamo KV cache routing
+
+
+class LLMFinishReason(StrEnum):
+    """LLM finish_reason values used for response validation."""
+
+    STOP = "stop"
+    LENGTH = "length"
+    CONTENT_FILTER = "content_filter"
+    TOOL_CALLS = "tool_calls"

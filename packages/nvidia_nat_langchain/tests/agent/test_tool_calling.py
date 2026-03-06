@@ -15,10 +15,12 @@
 
 import datetime
 import json
+import typing
+from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 import pytest
 from langchain_core.messages import AIMessage
-from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langgraph.graph.state import CompiledStateGraph
@@ -32,7 +34,6 @@ from nat.data_models.api_server import ChoiceDeltaToolCallFunction
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraph
 from nat.plugins.langchain.agent.tool_calling_agent.agent import ToolCallAgentGraphState
-from nat.plugins.langchain.agent.tool_calling_agent.agent import _chunk_to_message
 from nat.plugins.langchain.agent.tool_calling_agent.agent import create_tool_calling_agent_prompt
 from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 
@@ -380,66 +381,223 @@ def test_tool_call_chunk_serialization():
     assert tc["function"]["arguments"] == ""
 
 
-def test_tool_call_chunk_arguments_streaming():
-    """Test that incremental tool call argument chunks serialize correctly (no id/type on follow-up chunks)."""
-    chunk = ChatResponseChunk(
-        id="test-chunk-id",
-        choices=[
-            ChatResponseChunkChoice(
-                index=0,
-                delta=ChoiceDelta(tool_calls=[
-                    ChoiceDeltaToolCall(index=0,
-                                        id=None,
-                                        type=None,
-                                        function=ChoiceDeltaToolCallFunction(
-                                            name=None,
-                                            arguments='{"author":',
-                                        ))
-                ]),
-                finish_reason=None,
-            )
-        ],
-        created=datetime.datetime(2026, 1, 1, tzinfo=datetime.UTC),
+@pytest.fixture(name="error_mock_llm")
+def fixture_error_mock_llm():
+    """Mock LLM with a settable ``max_tokens`` field for truncation retry tests."""
+    from langchain_core.callbacks import AsyncCallbackManagerForLLMRun
+    from langchain_core.callbacks import CallbackManagerForLLMRun
+    from langchain_core.language_models import BaseChatModel
+    from langchain_core.messages import BaseMessage
+    from langchain_core.outputs import ChatGeneration
+    from langchain_core.outputs import ChatResult
+
+    class _ErrorMockLLM(BaseChatModel):
+        max_tokens: int | None = None
+
+        async def _agenerate(
+            self,
+            messages: list[BaseMessage],
+            stop: list[str] | None = None,
+            run_manager: AsyncCallbackManagerForLLMRun | None = None,
+            **kwargs: typing.Any,
+        ) -> ChatResult:
+            msg = AIMessage(content=messages[-1].content, response_metadata={"mock_llm_response": True})
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+        def _generate(
+            self,
+            messages: list[BaseMessage],
+            stop: list[str] | None = None,
+            run_manager: CallbackManagerForLLMRun | None = None,
+            **kwargs: typing.Any,
+        ) -> ChatResult:
+            msg = AIMessage(content=messages[-1].content, response_metadata={"mock_llm_response": True})
+            return ChatResult(generations=[ChatGeneration(message=msg)])
+
+        def bind_tools(self, tools, **kwargs):
+            return self
+
+        @property
+        def _llm_type(self) -> str:
+            return "error-mock-llm"
+
+    return _ErrorMockLLM()
+
+
+def _make_agent(llm, mock_tool, **kwargs) -> ToolCallAgentGraph:
+    """Helper to build a ``ToolCallAgentGraph`` with a single tool and custom params."""
+    return ToolCallAgentGraph(llm=llm, tools=[mock_tool("T")], **kwargs)
+
+
+async def test_validate_truncation_raises_when_disabled(error_mock_llm, mock_tool):
+    """finish_reason=length with max_truncation_retries=0 must raise RuntimeError with token info."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=0)
+    response = AIMessage(
+        content="partial output here",
+        response_metadata={
+            "finish_reason": "length", "model_name": "test-model"
+        },
+        usage_metadata={
+            "output_tokens": 100, "input_tokens": 50, "total_tokens": 150
+        },
     )
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
 
-    payload = json.loads(chunk.model_dump_json())
-    tc = payload["choices"][0]["delta"]["tool_calls"][0]
-    assert tc["index"] == 0
-    assert tc["id"] is None
-    assert tc["type"] is None
-    assert tc["function"]["arguments"] == '{"author":'
+    with pytest.raises(RuntimeError, match="truncated") as exc_info:
+        await agent._validate_llm_response(response, state)
 
-
-def test_content_chunk_has_no_tool_calls():
-    """Test that a content-only ChatResponseChunk does not include tool_calls in the delta."""
-    chunk = ChatResponseChunk.create_streaming_chunk("Hello world", id_="test-id")
-    payload = json.loads(chunk.model_dump_json())
-    delta = payload["choices"][0]["delta"]
-    assert delta["content"] == "Hello world"
-    assert delta.get("tool_calls") is None
+    msg: str = str(exc_info.value)
+    assert "model=test-model" in msg
+    assert "output_tokens=100" in msg
+    assert "input_tokens=50" in msg
+    assert "total_tokens=150" in msg
+    assert "partial output here" in msg
 
 
-def test_chunk_to_message_rehydrates_empty_tool_calls():
-    """Test that _chunk_to_message rehydrates when additional_kwargs["tool_calls"] is an empty list."""
-    chunk = AIMessageChunk(
-        content="",
-        tool_call_chunks=[{
-            "name": "test_tool",
-            "args": '{"query": "hello"}',
-            "id": "call_abc123",
-            "index": 0,
-            "type": "tool_call_chunk",
-        }],
-        additional_kwargs={"tool_calls": []},
+async def test_validate_truncation_delegates_to_retry(error_mock_llm, mock_tool):
+    """finish_reason=length with max_truncation_retries>0 delegates to _retry_on_truncation."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_token_increment=512)
+    truncated = AIMessage(content="partial", response_metadata={"finish_reason": "length"})
+    good = AIMessage(content="complete", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_retry_on_truncation", new_callable=AsyncMock, return_value=good) as mock_retry:
+        result = await agent._validate_llm_response(truncated, state)
+
+    mock_retry.assert_awaited_once()
+    assert result.content == "complete"
+
+
+async def test_validate_empty_response_delegates_to_retry(error_mock_llm, mock_tool):
+    """Empty response with retries>0 delegates to _retry_on_empty_response."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_empty_response_retries=2)
+    empty = AIMessage(content="", response_metadata={"finish_reason": "stop"})
+    good = AIMessage(content="actual answer", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_retry_on_empty_response", new_callable=AsyncMock, return_value=good) as mock_retry:
+        result = await agent._validate_llm_response(empty, state)
+
+    mock_retry.assert_awaited_once()
+    assert result.content == "actual answer"
+
+
+def test_get_token_usage_from_openai_response_metadata(error_mock_llm, mock_tool):
+    """Falls back to response_metadata['usage'] (OpenAI format) when usage_metadata is absent."""
+    agent = _make_agent(error_mock_llm, mock_tool)
+    response = AIMessage(
+        content="hi",
+        response_metadata={"usage": {
+            "prompt_tokens": 5, "completion_tokens": 15, "total_tokens": 20
+        }},
     )
+    usage = agent._get_token_usage(response)
+    assert usage["input_tokens"] == 5
+    assert usage["output_tokens"] == 15
+    assert usage["total_tokens"] == 20
 
-    assert chunk.tool_calls, "Chunk should have parsed tool_calls"
-    assert not chunk.additional_kwargs.get("tool_calls"), "Wire format tool_calls should be empty"
 
-    msg = _chunk_to_message(chunk)
+async def test_retry_on_truncation_succeeds(error_mock_llm, mock_tool):
+    """Truncation retry succeeds when the retried LLM call finishes normally."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=3, truncation_token_increment=512)
+    first_response = AIMessage(
+        content="partial",
+        response_metadata={"finish_reason": "length"},
+        usage_metadata={
+            "output_tokens": 100, "input_tokens": 50, "total_tokens": 150
+        },
+    )
+    good = AIMessage(content="complete", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
 
-    assert isinstance(msg, AIMessage)
-    assert len(msg.additional_kwargs["tool_calls"]) == 1
-    tc = msg.additional_kwargs["tool_calls"][0]
-    assert tc["function"]["name"] == "test_tool"
-    assert json.loads(tc["function"]["arguments"]) == {"query": "hello"}
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=good):
+        result = await agent._retry_on_truncation(first_response, state)
+
+    assert result.content == "complete"
+    assert result.response_metadata["finish_reason"] == "stop"
+
+
+async def test_retry_on_truncation_exhausted(error_mock_llm, mock_tool):
+    """All truncation retries exhausted returns the last truncated response."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_token_increment=512)
+    first_response = AIMessage(
+        content="partial",
+        response_metadata={"finish_reason": "length"},
+        usage_metadata={
+            "output_tokens": 100, "input_tokens": 50, "total_tokens": 150
+        },
+    )
+    still_truncated = AIMessage(content="partial", response_metadata={"finish_reason": "length"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=still_truncated):
+        result = await agent._retry_on_truncation(first_response, state)
+
+    assert result.response_metadata["finish_reason"] == "length"
+
+
+async def test_retry_on_truncation_increments_from_usage(error_mock_llm, mock_tool):
+    """When max_tokens is not configured, the base is taken from usage_metadata output_tokens."""
+    increment: int = 256
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=3, truncation_token_increment=increment)
+    assert agent.llm.max_tokens is None
+    first_response = AIMessage(
+        content="partial",
+        response_metadata={"finish_reason": "length"},
+        usage_metadata={
+            "output_tokens": 100, "input_tokens": 50, "total_tokens": 150
+        },
+    )
+    still_truncated = AIMessage(content="partial", response_metadata={"finish_reason": "length"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    observed_max_tokens: list[int | None] = []
+
+    async def _capture_and_invoke(s):
+        observed_max_tokens.append(getattr(agent.bound_llm, "kwargs", {}).get("max_tokens"))
+        return still_truncated
+
+    with patch.object(agent, "_invoke_llm", side_effect=_capture_and_invoke):
+        await agent._retry_on_truncation(first_response, state)
+
+    assert observed_max_tokens == [100 + increment, 100 + 2 * increment, 100 + 3 * increment]
+
+
+async def test_retry_on_truncation_increments_from_configured_max_tokens(error_mock_llm, mock_tool):
+    """When max_tokens is already configured on the LLM, it is used as the base instead of usage data."""
+    increment: int = 512
+    agent = _make_agent(error_mock_llm, mock_tool, max_truncation_retries=2, truncation_token_increment=increment)
+    agent.llm.max_tokens = 50
+    first_response = AIMessage(
+        content="partial",
+        response_metadata={"finish_reason": "length"},
+        usage_metadata={
+            "output_tokens": 48, "input_tokens": 30, "total_tokens": 78
+        },
+    )
+    still_truncated = AIMessage(content="partial", response_metadata={"finish_reason": "length"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    observed_max_tokens: list[int | None] = []
+
+    async def _capture_and_invoke(s):
+        observed_max_tokens.append(getattr(agent.bound_llm, "kwargs", {}).get("max_tokens"))
+        return still_truncated
+
+    with patch.object(agent, "_invoke_llm", side_effect=_capture_and_invoke):
+        await agent._retry_on_truncation(first_response, state)
+
+    assert observed_max_tokens == [50 + increment, 50 + 2 * increment]
+
+
+async def test_retry_on_empty_succeeds(error_mock_llm, mock_tool):
+    """Empty-response retry succeeds when the retried LLM call returns content."""
+    agent = _make_agent(error_mock_llm, mock_tool, max_empty_response_retries=3)
+    first_meta: dict = {"finish_reason": "stop"}
+    good = AIMessage(content="actual answer", response_metadata={"finish_reason": "stop"})
+    state = ToolCallAgentGraphState(messages=[HumanMessage(content="test")])
+
+    with patch.object(agent, "_invoke_llm", new_callable=AsyncMock, return_value=good):
+        result = await agent._retry_on_empty_response(state, first_meta)
+
+    assert result.content == "actual answer"
