@@ -758,6 +758,7 @@ eval:
     evaluation_run.config.config_file = config_file
     evaluation_run.config.override = (("eval.general.max_concurrency", "5"), )
     evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.evaluators = {}
     evaluation_run.eval_config.general.output_dir = tmp_path / "output"
 
     # Create a mock effective config
@@ -796,6 +797,7 @@ def test_write_configuration_with_basemodel_config(evaluation_run, default_eval_
     """Test that write_configuration correctly saves config files when config_file is a BaseModel."""
     # Setup evaluation run with BaseModel config
     mock_config = Config()
+    default_eval_config.evaluators = {}
     mock_config.eval = default_eval_config
     evaluation_run.config.config_file = mock_config
     evaluation_run.config.override = ()  # No overrides
