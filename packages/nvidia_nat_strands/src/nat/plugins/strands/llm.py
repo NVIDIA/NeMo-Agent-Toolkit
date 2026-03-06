@@ -59,6 +59,7 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import _create_http_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -158,13 +159,26 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
+    from openai import AsyncOpenAI
+
     from strands.models.openai import OpenAIModel
 
     params = llm_config.model_dump(
-        exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking", "request_timeout"},
+        exclude={
+            "api_key",
+            "api_type",
+            "base_url",
+            "max_retries",
+            "model_name",
+            "request_timeout",
+            "thinking",
+            "type",
+            "verify_ssl",
+        },
         by_alias=True,
         exclude_none=True,
-        exclude_unset=True)
+        exclude_unset=True,
+    )
 
     api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
     base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
@@ -172,12 +186,14 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
     client_args: dict[str, Any] = {
         "api_key": api_key,
         "base_url": base_url,
+        "http_client": _create_http_client(llm_config, use_async=True),
     }
     if llm_config.request_timeout is not None:
         client_args["timeout"] = llm_config.request_timeout
 
+    oai_client = AsyncOpenAI(**client_args)
     client = OpenAIModel(
-        client_args=client_args,
+        client=oai_client,
         model_id=llm_config.model_name,
         params=params,
     )
@@ -207,6 +223,8 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
     # NIM is OpenAI compatible; use OpenAI model with NIM base_url and api_key
+    from openai import AsyncOpenAI
+
     from strands.models.openai import OpenAIModel
 
     # Create a custom OpenAI model that formats text content as strings for NIM compatibility
@@ -266,10 +284,20 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
             return formatted_messages
 
     params = llm_config.model_dump(
-        exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking"},
+        exclude={
+            "api_key",
+            "api_type",
+            "base_url",
+            "max_retries",
+            "model_name",
+            "thinking",
+            "type",
+            "verify_ssl",
+        },
         by_alias=True,
         exclude_none=True,
-        exclude_unset=True)
+        exclude_unset=True,
+    )
 
     # Determine base_url
     base_url = llm_config.base_url or "https://integrate.api.nvidia.com/v1"
@@ -280,11 +308,13 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     if llm_config.base_url and llm_config.base_url.strip() and api_key is None:
         api_key = "dummy-api-key"
 
+    oai_client = AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        http_client=_create_http_client(llm_config, use_async=True),
+    )
     client = NIMCompatibleOpenAIModel(
-        client_args={
-            "api_key": api_key,
-            "base_url": base_url,
-        },
+        client=oai_client,
         model_id=llm_config.model_name,
         params=params,
     )
@@ -326,15 +356,16 @@ async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) 
 
     params = llm_config.model_dump(
         exclude={
-            "type",
             "api_type",
-            "model_name",
-            "region_name",
             "base_url",
-            "max_retries",
-            "thinking",
             "context_size",
             "credentials_profile_name",
+            "max_retries",
+            "model_name",
+            "region_name",
+            "thinking",
+            "type",
+            "verify_ssl",
         },
         by_alias=True,
         exclude_none=True,
