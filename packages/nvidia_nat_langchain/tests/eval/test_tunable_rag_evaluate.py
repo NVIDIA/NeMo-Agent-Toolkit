@@ -19,10 +19,16 @@ from unittest.mock import MagicMock
 import pytest
 from langchain_core.language_models import BaseChatModel
 
+from nat.data_models.atif import ATIFAgentConfig
+from nat.data_models.atif import ATIFStep
+from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluatorConfig
 from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluator
+from nat.plugins.langchain.eval.tunable_rag_evaluator import register_tunable_rag_evaluator
 
 
 @pytest.fixture
@@ -157,3 +163,98 @@ async def test_evaluate_custom_scoring():
     assert len(output.eval_output_items) == 1
     assert output.eval_output_items[0].score == 0.75
     assert output.eval_output_items[0].reasoning["reasoning"] == "Fair explanation."
+
+
+@pytest.fixture(name="atif_samples")
+def fixture_atif_samples():
+    return [
+        AtifEvalSample(
+            item_id="1",
+            trajectory=ATIFTrajectory(
+                session_id="atif-1",
+                agent=ATIFAgentConfig(name="test-agent", version="0.0.0"),
+                steps=[
+                    ATIFStep(step_id=1, source="user", message="What is AI?"),
+                    ATIFStep(step_id=2, source="agent", message="AI is the simulation of human intelligence."),
+                ],
+            ),
+            expected_output_obj="AI is artificial intelligence.",
+            output_obj="AI is the simulation of human intelligence.",
+            metadata={},
+        ),
+        AtifEvalSample(
+            item_id="2",
+            trajectory=ATIFTrajectory(
+                session_id="atif-2",
+                agent=ATIFAgentConfig(name="test-agent", version="0.0.0"),
+                steps=[
+                    ATIFStep(step_id=1, source="user", message="Define ML"),
+                    ATIFStep(step_id=2, source="agent", message="ML helps machines learn."),
+                ],
+            ),
+            expected_output_obj="Machine Learning is a subset of AI.",
+            output_obj="ML helps machines learn.",
+            metadata={},
+        ),
+    ]
+
+
+async def test_evaluate_atif_success(evaluator, atif_samples):
+    evaluator.llm.ainvoke = AsyncMock(side_effect=[
+        MagicMock(content='{"coverage_score": 0.9, "correctness_score": 0.8,'
+                 '"relevance_score": 0.7, "reasoning": "ATIF sample 1"}'),
+        MagicMock(content='{"coverage_score": 0.6, "correctness_score": 0.7,'
+                 '"relevance_score": 0.8, "reasoning": "ATIF sample 2"}')
+    ])
+
+    eval_output: EvalOutput = await evaluator.evaluate_atif_fn(atif_samples)
+    assert isinstance(eval_output, EvalOutput)
+    assert len(eval_output.eval_output_items) == 2
+    assert eval_output.eval_output_items[0].score > 0
+    assert eval_output.eval_output_items[1].score > 0
+    assert eval_output.average_score > 0
+
+
+async def test_legacy_and_atif_lane_parity_with_tolerance(evaluator, rag_eval_input, atif_samples):
+    # Two legacy evaluations then two ATIF evaluations with identical per-item judge outputs.
+    evaluator.llm.ainvoke = AsyncMock(side_effect=[
+        MagicMock(content='{"coverage_score": 0.9, "correctness_score": 0.8,'
+                 '"relevance_score": 0.7, "reasoning": "shared-1"}'),
+        MagicMock(content='{"coverage_score": 0.6, "correctness_score": 0.7,'
+                 '"relevance_score": 0.8, "reasoning": "shared-2"}'),
+        MagicMock(content='{"coverage_score": 0.9, "correctness_score": 0.8,'
+                 '"relevance_score": 0.7, "reasoning": "shared-1"}'),
+        MagicMock(content='{"coverage_score": 0.6, "correctness_score": 0.7,'
+                 '"relevance_score": 0.8, "reasoning": "shared-2"}'),
+    ])
+
+    legacy_output = await evaluator.evaluate(rag_eval_input)
+    atif_output = await evaluator.evaluate_atif_fn(atif_samples)
+
+    assert legacy_output.average_score == pytest.approx(atif_output.average_score, abs=0.01)
+    assert legacy_output.eval_output_items[0].score == pytest.approx(atif_output.eval_output_items[0].score, abs=0.01)
+    assert legacy_output.eval_output_items[1].score == pytest.approx(atif_output.eval_output_items[1].score, abs=0.01)
+
+
+async def test_register_tunable_rag_evaluator_exposes_legacy_lane_by_default(mock_llm):
+    config = TunableRagEvaluatorConfig(llm_name="judge_llm", judge_llm_prompt="Score this answer.")
+    builder = MagicMock(spec=["get_llm", "get_max_concurrency"])
+    builder.get_llm = AsyncMock(return_value=mock_llm)
+    builder.get_max_concurrency.return_value = 2
+
+    async with register_tunable_rag_evaluator(config, builder) as info:
+        assert callable(info.evaluate_fn)
+        assert not callable(getattr(info, "evaluate_atif_fn", None))
+
+
+async def test_register_tunable_rag_evaluator_exposes_atif_lane_when_enabled(mock_llm):
+    config = TunableRagEvaluatorConfig(llm_name="judge_llm",
+                                       judge_llm_prompt="Score this answer.",
+                                       enable_atif_evaluator=True)
+    builder = MagicMock(spec=["get_llm", "get_max_concurrency"])
+    builder.get_llm = AsyncMock(return_value=mock_llm)
+    builder.get_max_concurrency.return_value = 2
+
+    async with register_tunable_rag_evaluator(config, builder) as info:
+        assert callable(info.evaluate_fn)
+        assert callable(getattr(info, "evaluate_atif_fn", None))

@@ -28,10 +28,15 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_evaluator
+from nat.data_models.atif import ATIFContentPart
+from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.component_ref import LLMRef
+from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 
 logger = logging.getLogger(__name__)
@@ -51,6 +56,10 @@ class TunableRagEvaluatorConfig(EvaluatorBaseConfig, name="tunable_rag_evaluator
             "relevance": 0.2,
         },
         description="Weights for different scoring components when using default scoring",
+    )
+    enable_atif_evaluator: bool = Field(
+        default=False,
+        description="Enable ATIF-native tunable RAG evaluator lane. Disabled by default during migration.",
     )
 
 
@@ -139,10 +148,7 @@ class TunableRagEvaluator(BaseEvaluator):
             "relevance": 1 / 3,
         }
 
-    async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
-        question = item.input_obj
-        answer_description = item.expected_output_obj
-        generated_answer = item.output_obj
+    async def _evaluate_item_core(self, item_id, question: str, answer_description: str, generated_answer: str) -> EvalOutputItem:
         score = 0.0
 
         default_evaluation_schema = [
@@ -246,7 +252,52 @@ class TunableRagEvaluator(BaseEvaluator):
                 "reasoning": reasoning,
             }
 
-        return EvalOutputItem(id=item.id, score=score, reasoning=reasoning_obj)
+        return EvalOutputItem(id=item_id, score=score, reasoning=reasoning_obj)
+
+    async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
+        question = str(item.input_obj) if item.input_obj is not None else ""
+        answer_description = str(item.expected_output_obj) if item.expected_output_obj is not None else ""
+        generated_answer = str(item.output_obj) if item.output_obj is not None else ""
+        return await self._evaluate_item_core(item.id, question, answer_description, generated_answer)
+
+    @staticmethod
+    def _content_part_to_text(part: ATIFContentPart) -> str:
+        if part.type == "text":
+            return part.text or ""
+        if part.type == "image":
+            return part.source.path if part.source else ""
+        return ""
+
+    @classmethod
+    def _message_to_text(cls, message: str | list[ATIFContentPart] | None) -> str:
+        if message is None:
+            return ""
+        if isinstance(message, str):
+            return message
+        return "\n".join([cls._content_part_to_text(part) for part in message if cls._content_part_to_text(part)])
+
+    @classmethod
+    def _trajectory_to_user_input(cls, trajectory: ATIFTrajectory) -> str:
+        for step in trajectory.steps:
+            if step.source == "user":
+                text = cls._message_to_text(step.message)
+                if text:
+                    return text
+        return ""
+
+    async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
+        question = self._trajectory_to_user_input(sample.trajectory)
+        answer_description = str(sample.expected_output_obj) if sample.expected_output_obj is not None else ""
+        generated_answer = str(sample.output_obj) if sample.output_obj is not None else ""
+        return await self._evaluate_item_core(sample.item_id, question, answer_description, generated_answer)
+
+    async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
+        output_items = []
+        for sample in atif_samples:
+            output_items.append(await self.evaluate_atif_item(sample))
+        numeric_scores = [item.score for item in output_items if isinstance(item.score, int | float)]
+        avg_score = round(sum(numeric_scores) / len(numeric_scores), 2) if numeric_scores else None
+        return EvalOutput(average_score=avg_score, eval_output_items=output_items)
 
 
 @register_evaluator(config_type=TunableRagEvaluatorConfig)
@@ -259,4 +310,7 @@ async def register_tunable_rag_evaluator(config: TunableRagEvaluatorConfig, buil
                                     max_concurrency=builder.get_max_concurrency(),
                                     default_scoring=config.default_scoring,
                                     default_score_weights=config.default_score_weights)
-    yield EvaluatorInfo(config=config, evaluate_fn=evaluator.evaluate, description="Tunable RAG Evaluator")
+    evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluator.evaluate, description="Tunable RAG Evaluator")
+    if config.enable_atif_evaluator:
+        evaluator_info.evaluate_atif_fn = evaluator.evaluate_atif_fn
+    yield evaluator_info
