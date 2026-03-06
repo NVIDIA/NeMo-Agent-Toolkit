@@ -224,7 +224,7 @@ class TestDynamoLangChain:
             assert "http_async_client" not in kwargs
             assert client is mock_chat.return_value
 
-    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+    @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
     async def test_creation_with_prefix_template(self,
                                                  mock_chat,
@@ -260,7 +260,7 @@ class TestDynamoLangChain:
         # Verify the httpx client was properly closed
         mock_httpx_client.aclose.assert_awaited_once()
 
-    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+    @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
     async def test_responses_api_branch(self, mock_chat, mock_create_client, dynamo_cfg_responses_api, mock_builder):
         """When APIType==RESPONSES, special flags should be added."""
@@ -279,7 +279,7 @@ class TestDynamoLangChain:
         # Verify the httpx client was properly closed
         mock_httpx_client.aclose.assert_awaited_once()
 
-    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+    @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
     async def test_excludes_dynamo_specific_fields(self,
                                                    mock_chat,

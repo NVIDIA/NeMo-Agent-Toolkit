@@ -33,7 +33,7 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
-from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks
 from nat.llm.huggingface_inference_llm import HuggingFaceInferenceLLMConfig
 from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
@@ -256,39 +256,10 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     # Initialize http_async_client to None for proper cleanup
     http_async_client = None
 
-    # Load prediction trie if configured
-    prediction_lookup: PredictionTrieLookup | None = None
-    if llm_config.nvext_prediction_trie_path:
-        try:
-            trie_path = Path(llm_config.nvext_prediction_trie_path)
-            trie = load_prediction_trie(trie_path)
-            prediction_lookup = PredictionTrieLookup(trie)
-            logger.info("Loaded prediction trie from %s", llm_config.nvext_prediction_trie_path)
-        except FileNotFoundError:
-            logger.warning("Prediction trie file not found: %s", llm_config.nvext_prediction_trie_path)
-        except Exception as e:
-            logger.warning("Failed to load prediction trie: %s", e)
-
     try:
         if llm_config.enable_nvext_hints:
-            http_async_client = create_httpx_client_with_dynamo_hooks(
-                total_requests=llm_config.nvext_prefix_total_requests,
-                osl=llm_config.nvext_prefix_osl,
-                iat=llm_config.nvext_prefix_iat,
-                timeout=llm_config.request_timeout,
-                prediction_lookup=prediction_lookup,
-                cache_pin_type=llm_config.nvext_cache_pin_type,
-                cache_control_mode=llm_config.nvext_cache_control_mode,
-                max_sensitivity=llm_config.nvext_max_sensitivity,
-            )
+            http_async_client = _create_httpx_client_with_dynamo_hooks(llm_config)
             config_dict["http_async_client"] = http_async_client
-            logger.info(
-                "Dynamo agent hints enabled: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
-                llm_config.nvext_prefix_total_requests,
-                llm_config.nvext_prefix_osl,
-                llm_config.nvext_prefix_iat,
-                "loaded" if prediction_lookup else "disabled",
-            )
 
         # Create the ChatOpenAI client
         if llm_config.api_type == APITypeEnum.RESPONSES:

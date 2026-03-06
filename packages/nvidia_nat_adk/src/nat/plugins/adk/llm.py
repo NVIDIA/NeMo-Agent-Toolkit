@@ -177,7 +177,7 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
 
     from google.adk.models.lite_llm import LiteLlm
 
-    from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+    from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks
 
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
@@ -200,36 +200,11 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
+    http_client = None
     if config.enable_nvext_hints:
-        from pathlib import Path
-
         from openai import AsyncOpenAI
 
-        from nat.profiler.prediction_trie import load_prediction_trie
-        from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
-
-        prediction_lookup: PredictionTrieLookup | None = None
-        if config.nvext_prediction_trie_path:
-            try:
-                trie_path = Path(config.nvext_prediction_trie_path)
-                trie = load_prediction_trie(trie_path)
-                prediction_lookup = PredictionTrieLookup(trie)
-                logger.info("Loaded prediction trie from %s", config.nvext_prediction_trie_path)
-            except FileNotFoundError:
-                logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
-            except Exception as e:
-                logger.exception("Failed to load prediction trie: %s", e)
-
-        http_client = create_httpx_client_with_dynamo_hooks(
-            total_requests=config.nvext_prefix_total_requests,
-            osl=config.nvext_prefix_osl,
-            iat=config.nvext_prefix_iat,
-            timeout=config.request_timeout,
-            prediction_lookup=prediction_lookup,
-            cache_pin_type=config.nvext_cache_pin_type,
-            cache_control_mode=config.nvext_cache_control_mode,
-            max_sensitivity=config.nvext_max_sensitivity,
-        )
+        http_client = _create_httpx_client_with_dynamo_hooks(config)
 
         api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
         base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
@@ -241,12 +216,8 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
         )
         config_dict["client"] = openai_client
 
-        logger.info(
-            "Dynamo agent hints enabled for ADK: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
-            config.nvext_prefix_total_requests,
-            config.nvext_prefix_osl,
-            config.nvext_prefix_iat,
-            "loaded" if prediction_lookup else "disabled",
-        )
-
-    yield LiteLlm(config.model_name, **config_dict)
+    try:
+        yield LiteLlm(config.model_name, **config_dict)
+    finally:
+        if http_client is not None:
+            await http_client.aclose()

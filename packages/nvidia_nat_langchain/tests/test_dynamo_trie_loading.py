@@ -83,7 +83,7 @@ def test_dynamo_config_with_nonexistent_trie_path():
     assert config.nvext_prediction_trie_path == "/nonexistent/path/trie.json"
 
 
-@patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+@patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
 @patch("langchain_openai.ChatOpenAI")
 async def test_dynamo_langchain_loads_trie_and_passes_to_client(mock_chat, mock_create_client, trie_file, mock_builder):
     """Test that dynamo_langchain loads trie from path and passes PredictionTrieLookup to httpx client."""
@@ -110,7 +110,7 @@ async def test_dynamo_langchain_loads_trie_and_passes_to_client(mock_chat, mock_
     mock_httpx_client.aclose.assert_awaited_once()
 
 
-@patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+@patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
 @patch("langchain_openai.ChatOpenAI")
 async def test_dynamo_langchain_handles_nonexistent_trie_gracefully(mock_chat, mock_create_client, mock_builder):
     """Test that dynamo_langchain logs warning and continues when trie file doesn't exist."""
@@ -137,7 +137,7 @@ async def test_dynamo_langchain_handles_nonexistent_trie_gracefully(mock_chat, m
     mock_httpx_client.aclose.assert_awaited_once()
 
 
-@patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+@patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
 @patch("langchain_openai.ChatOpenAI")
 async def test_dynamo_langchain_no_trie_path_means_no_lookup(mock_chat, mock_create_client, mock_builder):
     """Test that dynamo_langchain passes None when no trie path is configured."""
@@ -161,7 +161,7 @@ async def test_dynamo_langchain_no_trie_path_means_no_lookup(mock_chat, mock_cre
     mock_httpx_client.aclose.assert_awaited_once()
 
 
-@patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+@patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
 @patch("langchain_openai.ChatOpenAI")
 async def test_dynamo_langchain_handles_invalid_trie_file_gracefully(mock_chat, mock_create_client, mock_builder):
     """Test that dynamo_langchain logs warning and continues when trie file is invalid JSON."""

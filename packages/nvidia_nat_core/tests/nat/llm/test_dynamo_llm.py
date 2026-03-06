@@ -23,7 +23,7 @@ from nat.llm.dynamo_llm import CacheControlMode
 from nat.llm.dynamo_llm import CachePinType
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import DynamoPrefixContext
-from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks
 
 # ---------------------------------------------------------------------------
 # DynamoModelConfig Tests
@@ -409,11 +409,11 @@ class TestDynamoPrefixContext:
 
 
 class TestCreateHttpxClient:
-    """Tests for create_httpx_client_with_dynamo_hooks."""
+    """Tests for _create_httpx_client_with_dynamo_hooks."""
 
     def test_uses_custom_timeout(self):
         """Test that the function uses the provided timeout."""
-        client = create_httpx_client_with_dynamo_hooks(
+        client = _create_httpx_client_with_dynamo_hooks(
             total_requests=10,
             osl=512,
             iat=250,
@@ -426,7 +426,7 @@ class TestCreateHttpxClient:
 
     def test_uses_default_timeout(self):
         """Test that the function uses default timeout when not specified."""
-        client = create_httpx_client_with_dynamo_hooks(
+        client = _create_httpx_client_with_dynamo_hooks(
             total_requests=10,
             osl=512,
             iat=250,
@@ -435,10 +435,10 @@ class TestCreateHttpxClient:
         assert client.timeout.connect == 600.0
 
     def test_creates_client_with_custom_transport(self):
-        """Test that create_httpx_client_with_dynamo_hooks uses _DynamoTransport."""
+        """Test that _create_httpx_client_with_dynamo_hooks uses _DynamoTransport."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = create_httpx_client_with_dynamo_hooks(
+        client = _create_httpx_client_with_dynamo_hooks(
             total_requests=7,
             osl=2048,
             iat=50,
@@ -459,10 +459,10 @@ class TestCreateHttpxClient:
         assert client.timeout.read == 120.0
 
     def test_creates_client_with_cache_pin_type_none(self):
-        """Test that create_httpx_client_with_dynamo_hooks passes cache_pin_type=None through."""
+        """Test that _create_httpx_client_with_dynamo_hooks passes cache_pin_type=None through."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = create_httpx_client_with_dynamo_hooks(
+        client = _create_httpx_client_with_dynamo_hooks(
             total_requests=10,
             osl=512,
             iat=250,
@@ -473,10 +473,10 @@ class TestCreateHttpxClient:
         assert client._transport._cache_pin_type is None
 
     def test_creates_client_with_cache_control_mode_first_only(self):
-        """Test that create_httpx_client_with_dynamo_hooks passes cache_control_mode through."""
+        """Test that _create_httpx_client_with_dynamo_hooks passes cache_control_mode through."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = create_httpx_client_with_dynamo_hooks(
+        client = _create_httpx_client_with_dynamo_hooks(
             total_requests=10,
             osl=512,
             iat=250,
