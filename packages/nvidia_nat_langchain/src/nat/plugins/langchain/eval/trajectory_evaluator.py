@@ -40,6 +40,13 @@ logger = logging.getLogger(__name__)
 _DEFAULT_EVENT_FILTER = [IntermediateStepType.LLM_END, IntermediateStepType.TOOL_END]
 
 
+def _coerce_text(value) -> str:
+    """Best-effort coercion to text for judge-chain inputs."""
+    if value is None:
+        return ""
+    return value if isinstance(value, str) else str(value)
+
+
 class TrajectoryEvaluatorConfig(EvaluatorLLMConfig, name="trajectory"):
     """Agent trajectory evaluator configuration."""
 
@@ -105,7 +112,12 @@ def _atif_to_agent_actions(trajectory) -> list[tuple[AgentAction, str]]:
                     observation_by_call_id[result.source_call_id] = _message_to_text(result.content)
 
         for tool_call in step.tool_calls:
-            tool_input = tool_call.arguments if isinstance(tool_call.arguments, Mapping) else str(tool_call.arguments)
+            if isinstance(tool_call.arguments, dict):
+                tool_input = tool_call.arguments
+            elif isinstance(tool_call.arguments, Mapping):
+                tool_input = dict(tool_call.arguments)
+            else:
+                tool_input = str(tool_call.arguments)
             action = AgentAction(tool=tool_call.function_name, tool_input=tool_input, log=agent_message)
             tool_output = observation_by_call_id.get(tool_call.tool_call_id, "")
             agent_actions.append((action, tool_output))
@@ -135,12 +147,21 @@ class TrajectoryEvaluator(BaseEvaluator):
     async def _evaluate_with_trajectory(self, item_id, question: str, generated_answer: str,
                                         agent_trajectory: list[tuple[AgentAction, str]]) -> EvalOutputItem:
         """Run trajectory scoring for one item regardless of input lane."""
+        question_text = _coerce_text(question)
+        generated_answer_text = _coerce_text(generated_answer)
         try:
-            eval_result = await self.traj_eval_chain.aevaluate_agent_trajectory(input=question,
+            eval_result = await self.traj_eval_chain.aevaluate_agent_trajectory(input=question_text,
                                                                                 agent_trajectory=agent_trajectory,
-                                                                                prediction=generated_answer)
+                                                                                prediction=generated_answer_text)
         except Exception as e:
-            logger.exception("Error evaluating trajectory for question: %s, Error: %s", question, e)
+            # Some judge models occasionally miss the strict "Score: " suffix
+            # expected by LangChain's legacy trajectory parser.
+            if isinstance(e, ValueError) and "not enough values to unpack" in str(e):
+                logger.warning("Trajectory judge output parsing failed for question '%s': %s",
+                               question_text,
+                               e)
+            else:
+                logger.exception("Error evaluating trajectory for question: %s, Error: %s", question_text, e)
             return EvalOutputItem(id=item_id, score=0.0, reasoning={}, error=str(e))
 
         reasoning = {
