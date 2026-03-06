@@ -17,10 +17,26 @@
 from unittest.mock import MagicMock
 
 import pytest
+from pydantic import Field
 from pytest_httpserver import HTTPServer
 
 from nat.builder.context import ContextState
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.llm import SSLVerificationMixin
 from nat.llm.utils.hooks import _create_metadata_injection_client
+
+
+# TODO: need some tests for handling for request_timeout and verify_ssl
+class LLMConfig(LLMBaseConfig):
+    pass
+
+
+class LLMConfigWithTimeout(LLMBaseConfig):
+    request_timeout: float | None = Field(default=None, gt=0.0, description="HTTP request timeout in seconds.")
+
+
+class LLMConfigWithSSL(LLMConfigWithTimeout, SSLVerificationMixin):
+    pass
 
 
 class TestMetadataInjectionHook:
@@ -46,7 +62,7 @@ class TestMetadataInjectionHook:
 
     async def test_hook_injects_metadata_fields(self, mock_httpx_request, mock_input_message):
         """Test that the hook injects custom metadata fields as headers."""
-        client = _create_metadata_injection_client()
+        client = _create_metadata_injection_client(llm_config=LLMConfig())
         hook = client.event_hooks["request"][0]
 
         context_state = ContextState.get()
@@ -67,7 +83,7 @@ class TestMetadataInjectionHook:
             "optional_field": None,
         }
 
-        client = _create_metadata_injection_client()
+        client = _create_metadata_injection_client(llm_config=LLMConfig())
         hook = client.event_hooks["request"][0]
 
         context_state = ContextState.get()
@@ -82,7 +98,7 @@ class TestMetadataInjectionHook:
 
     async def test_hook_handles_missing_context(self, mock_httpx_request):
         """Test that hook handles missing context gracefully."""
-        client = _create_metadata_injection_client()
+        client = _create_metadata_injection_client(llm_config=LLMConfig())
         hook = client.event_hooks["request"][0]
 
         await hook(mock_httpx_request)
@@ -98,7 +114,7 @@ class TestCreateMetadataInjectionClient:
 
     async def test_creates_client_with_event_hooks(self):
         """Test that client is created with event hooks."""
-        client = _create_metadata_injection_client()
+        client = _create_metadata_injection_client(llm_config=LLMConfig())
 
         assert "request" in client.event_hooks
         assert len(client.event_hooks["request"]) == 1
@@ -139,7 +155,7 @@ class TestMetadataInjectionIntegration:
             }
         })
 
-        client = _create_metadata_injection_client()
+        client = _create_metadata_injection_client(llm_config=LLMConfig())
         context_state = ContextState.get()
         context_state.input_message.set(mock_input_message)
 
@@ -181,7 +197,7 @@ class TestMetadataInjectionIntegration:
             }
         })
 
-        client = _create_metadata_injection_client()
+        client = _create_metadata_injection_client(llm_config=LLMConfig())
 
         response = await client.post(httpserver.url_for("/v1/chat/completions"),
                                      json={
