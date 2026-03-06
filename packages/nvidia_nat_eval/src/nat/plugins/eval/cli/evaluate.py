@@ -213,7 +213,7 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
 
 
 async def run_and_evaluate(config: EvaluationRunConfig):
-    from nat.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.eval_callbacks import EvalCallbackManager
     from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 
     callback_manager = _build_eval_callback_manager(config) or EvalCallbackManager()

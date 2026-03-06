@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 from typing import Protocol
 
@@ -36,7 +37,7 @@ class AtifEvalSample(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="Optional evaluator metadata.")
 
 
-AtifEvalSampleList = list[AtifEvalSample]
+AtifEvalSampleList = Sequence[AtifEvalSample]
 
 
 class AtifEvaluator(Protocol):

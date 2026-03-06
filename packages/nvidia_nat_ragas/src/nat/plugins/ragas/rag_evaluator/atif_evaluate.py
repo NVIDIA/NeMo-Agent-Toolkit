@@ -19,12 +19,13 @@ from collections.abc import Sequence
 
 from tqdm import tqdm
 
-from nat.data_models.atif import ATIFContentPart
 from nat.data_models.atif import ATIFObservationResult
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalOutput
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.plugins.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+from nat.utils.atif_message_utils import message_to_text
+from nat.utils.atif_message_utils import trajectory_to_user_input
 
 from .evaluate import _ragas_results_to_eval_output
 
@@ -36,38 +37,8 @@ if typing.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _content_part_to_text(part: ATIFContentPart) -> str:
-    if part.type == "text":
-        return part.text or ""
-    if part.type == "image":
-        return part.source.path if part.source else ""
-    return ""
-
-
-def _message_to_text(message: str | list[ATIFContentPart] | None) -> str:
-    if message is None:
-        return ""
-    if isinstance(message, str):
-        return message
-    return "\n".join([_content_part_to_text(part) for part in message if _content_part_to_text(part)])
-
-
 def _observation_result_to_text(result: ATIFObservationResult) -> str:
-    content = result.content
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return "\n".join([_content_part_to_text(part) for part in content if _content_part_to_text(part)])
-    return ""
-
-
-def _trajectory_to_user_input(trajectory: ATIFTrajectory) -> str:
-    for step in trajectory.steps:
-        if step.source == "user":
-            text = _message_to_text(step.message)
-            if text:
-                return text
-    return ""
+    return message_to_text(result.content)
 
 
 def _trajectory_to_retrieved_contexts(trajectory: ATIFTrajectory) -> list[str]:
@@ -96,7 +67,7 @@ class RAGAtifEvaluator:
 
         samples = []
         for sample in atif_samples:
-            user_input = _trajectory_to_user_input(sample.trajectory)
+            user_input = trajectory_to_user_input(sample.trajectory)
             reference = sample.expected_output_obj
             response = sample.output_obj
             reference_contexts = [""]
@@ -118,17 +89,21 @@ class RAGAtifEvaluator:
 
         ragas_dataset = self.atif_samples_to_ragas(atif_samples)
         tqdm_position = TqdmPositionRegistry.claim()
-        first_metric_name = self.metrics[0].name
+        first_metric_name = self.metrics[0].name if self.metrics else "no-metrics"
         pbar = tqdm(total=len(ragas_dataset), desc=f"Evaluating Ragas {first_metric_name}", position=tqdm_position)
         try:
-            results_dataset = ragas_evaluate(dataset=ragas_dataset,
-                                             metrics=self.metrics,
-                                             show_progress=True,
-                                             llm=self.evaluator_llm,
-                                             run_config=RunConfig(max_workers=self.max_concurrency),
-                                             _pbar=pbar)
-        except Exception as e:
-            logger.exception("Error evaluating ATIF ragas metric, Error: %s", e)
+            if not self.metrics:
+                logger.warning("No RAGAS metrics configured for ATIF evaluator; returning empty metric results.")
+                results_dataset = None
+            else:
+                results_dataset = ragas_evaluate(dataset=ragas_dataset,
+                                                 metrics=self.metrics,
+                                                 show_progress=True,
+                                                 llm=self.evaluator_llm,
+                                                 run_config=RunConfig(max_workers=self.max_concurrency),
+                                                 _pbar=pbar)
+        except Exception:
+            logger.exception("Error evaluating ATIF ragas metric")
             results_dataset = None
         finally:
             pbar.close()

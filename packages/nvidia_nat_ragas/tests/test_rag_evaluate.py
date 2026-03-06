@@ -46,8 +46,8 @@ class ExampleModel(BaseModel):
     other: str
 
 
-@pytest.fixture
-def atif_samples(rag_user_inputs, rag_expected_outputs, rag_generated_outputs):
+@pytest.fixture(name="atif_samples")
+def fixture_atif_samples(rag_user_inputs, rag_expected_outputs, rag_generated_outputs):
     """ATIF-native samples for testing RAG ATIF evaluator path."""
     from nat.data_models.atif import ATIFAgentConfig
     from nat.data_models.atif import ATIFObservation

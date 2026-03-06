@@ -544,10 +544,10 @@ class EvaluationRun:
         try:
             evaluate_fn = getattr(evaluator, "evaluate_fn", None)
             if not callable(evaluate_fn):
-                raise RuntimeError("missing callable evaluate_fn and evaluate_atif_fn")
+                raise TypeError(f"Evaluator '{evaluator_name}' is missing callable evaluate_fn and evaluate_atif_fn")
             eval_result = evaluate_fn(self.eval_input)
             if not inspect.isawaitable(eval_result):
-                raise RuntimeError("evaluate_fn must be awaitable")
+                raise TypeError(f"Evaluator '{evaluator_name}' evaluate_fn must return an awaitable")
             eval_output = await eval_result
             self.evaluation_results.append((evaluator_name, eval_output))
             if self.callback_manager:
@@ -811,12 +811,16 @@ class EvaluationRun:
 
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
-                    # Build and cache ATIF trajectories once per eval item for
-                    # ATIF-native evaluators and future dual-lane runtime dispatch.
-                    self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                    needs_atif_samples = any(callable(getattr(evaluator, "evaluate_atif_fn", None))
+                                             for evaluator in evaluators.values() if evaluator is not None)
+                    if needs_atif_samples:
+                        # Build and cache ATIF trajectories only when ATIF-native evaluators are present.
+                        self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+                    else:
+                        self.atif_eval_samples = []
 
                     # Evaluate
-                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
                     await self.run_evaluators(evaluators)
 
                     # Wait for all trace export tasks to complete (local workflows only)

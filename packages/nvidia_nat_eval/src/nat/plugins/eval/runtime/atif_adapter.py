@@ -41,7 +41,8 @@ class EvalAtifAdapter:
 
     @staticmethod
     def _cache_key(item_id: Any) -> str:
-        return str(item_id)
+        item_type = type(item_id)
+        return f"{item_type.__module__}.{item_type.__qualname__}:{item_id!r}"
 
     def _coerce_trajectory(self, value: Any) -> ATIFTrajectory:
         if isinstance(value, ATIFTrajectory):
@@ -70,7 +71,12 @@ class EvalAtifAdapter:
                      prebuilt_trajectories: Mapping[str, ATIFTrajectory | Mapping[str, Any]] | None = None) -> None:
         """Populate cache for all eval items."""
         for item in eval_input.eval_input_items:
-            prebuilt = None if prebuilt_trajectories is None else prebuilt_trajectories.get(self._cache_key(item.id))
+            prebuilt = None
+            if prebuilt_trajectories is not None:
+                # Prefer type-aware cache keys but allow legacy string keys.
+                prebuilt = prebuilt_trajectories.get(self._cache_key(item.id))
+                if prebuilt is None:
+                    prebuilt = prebuilt_trajectories.get(str(item.id))
             self.get_trajectory(item=item, prebuilt=prebuilt)
 
     def build_samples(

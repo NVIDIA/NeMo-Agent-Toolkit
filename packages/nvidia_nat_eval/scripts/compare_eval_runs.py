@@ -92,6 +92,17 @@ def _discover_evaluator_files(run_a: Path, run_b: Path) -> list[str]:
 
 
 def compare_evaluator(run_a: Path, run_b: Path, file_name: str, show_item_diffs: bool) -> None:
+    """Compare a single evaluator output file across two runs.
+
+    Args:
+        run_a: Path to the first run output directory.
+        run_b: Path to the second run output directory.
+        file_name: Evaluator output JSON file name to compare.
+        show_item_diffs: Whether to print per-item score differences.
+
+    Returns:
+        None.
+    """
     path_a = run_a / file_name
     path_b = run_b / file_name
 
@@ -99,15 +110,46 @@ def compare_evaluator(run_a: Path, run_b: Path, file_name: str, show_item_diffs:
         print(f"- {file_name}: missing in one/both runs")
         return
 
-    data_a = _read_json(path_a)
-    data_b = _read_json(path_b)
+    try:
+        data_a = _read_json(path_a)
+    except (OSError, json.JSONDecodeError, ValueError) as e:
+        print(f"- {file_name}: unreadable in run_a ({path_a}): {e}")
+        return
+
+    try:
+        data_b = _read_json(path_b)
+    except (OSError, json.JSONDecodeError, ValueError) as e:
+        print(f"- {file_name}: unreadable in run_b ({path_b}): {e}")
+        return
 
     avg_a = data_a.get("average_score")
     avg_b = data_b.get("average_score")
     delta = _score_delta(avg_a, avg_b)
 
-    items_a = {str(item["id"]): item for item in data_a.get("eval_output_items", [])}
-    items_b = {str(item["id"]): item for item in data_b.get("eval_output_items", [])}
+    items_a = {}
+    skipped_a = 0
+    for item in data_a.get("eval_output_items", []):
+        if not isinstance(item, dict):
+            skipped_a += 1
+            continue
+        item_id = item.get("id")
+        if item_id is None:
+            skipped_a += 1
+            continue
+        items_a[str(item_id)] = item
+
+    items_b = {}
+    skipped_b = 0
+    for item in data_b.get("eval_output_items", []):
+        if not isinstance(item, dict):
+            skipped_b += 1
+            continue
+        item_id = item.get("id")
+        if item_id is None:
+            skipped_b += 1
+            continue
+        items_b[str(item_id)] = item
+
     all_ids = sorted(set(items_a) | set(items_b), key=lambda x: (len(x), x))
 
     changed_ids: list[str] = []
@@ -124,6 +166,8 @@ def compare_evaluator(run_a: Path, run_b: Path, file_name: str, show_item_diffs:
     else:
         print(" delta=N/A")
     print(f"  item_count run_a={len(items_a)} run_b={len(items_b)} changed_items={len(changed_ids)}")
+    if skipped_a or skipped_b:
+        print(f"  skipped_items run_a={skipped_a} run_b={skipped_b}")
 
     if show_item_diffs and changed_ids:
         for item_id in changed_ids:
@@ -133,6 +177,14 @@ def compare_evaluator(run_a: Path, run_b: Path, file_name: str, show_item_diffs:
 
 
 def main() -> int:
+    """Run the CLI to compare evaluator outputs from two run directories.
+
+    Parses positional run directory arguments and an optional per-item diff flag,
+    then compares all discovered evaluator output files.
+
+    Returns:
+        Process exit code. Returns 0 for normal CLI completion.
+    """
     parser = argparse.ArgumentParser(description="Compare evaluator outputs between two eval runs.")
     parser.add_argument("run_a", type=Path, help="Path to first run output directory")
     parser.add_argument("run_b", type=Path, help="Path to second run output directory")

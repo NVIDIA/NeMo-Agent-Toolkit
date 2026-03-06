@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 from collections.abc import Callable
 
@@ -38,6 +39,9 @@ from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.utils.atif_message_utils import content_part_to_text
+from nat.utils.atif_message_utils import message_to_text
+from nat.utils.atif_message_utils import trajectory_to_user_input
 
 logger = logging.getLogger(__name__)
 
@@ -263,28 +267,15 @@ class TunableRagEvaluator(BaseEvaluator):
 
     @staticmethod
     def _content_part_to_text(part: ATIFContentPart) -> str:
-        if part.type == "text":
-            return part.text or ""
-        if part.type == "image":
-            return part.source.path if part.source else ""
-        return ""
+        return content_part_to_text(part)
 
     @classmethod
     def _message_to_text(cls, message: str | list[ATIFContentPart] | None) -> str:
-        if message is None:
-            return ""
-        if isinstance(message, str):
-            return message
-        return "\n".join([cls._content_part_to_text(part) for part in message if cls._content_part_to_text(part)])
+        return message_to_text(message)
 
     @classmethod
     def _trajectory_to_user_input(cls, trajectory: ATIFTrajectory) -> str:
-        for step in trajectory.steps:
-            if step.source == "user":
-                text = cls._message_to_text(step.message)
-                if text:
-                    return text
-        return ""
+        return trajectory_to_user_input(trajectory)
 
     async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
         question = self._trajectory_to_user_input(sample.trajectory)
@@ -293,9 +284,11 @@ class TunableRagEvaluator(BaseEvaluator):
         return await self._evaluate_item_core(sample.item_id, question, answer_description, generated_answer)
 
     async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
-        output_items = []
-        for sample in atif_samples:
-            output_items.append(await self.evaluate_atif_item(sample))
+        async def wrapped(sample: AtifEvalSample) -> EvalOutputItem:
+            async with self.semaphore:
+                return await self.evaluate_atif_item(sample)
+
+        output_items = await asyncio.gather(*[wrapped(sample) for sample in atif_samples])
         numeric_scores = [item.score for item in output_items if isinstance(item.score, int | float)]
         avg_score = round(sum(numeric_scores) / len(numeric_scores), 2) if numeric_scores else None
         return EvalOutput(average_score=avg_score, eval_output_items=output_items)
