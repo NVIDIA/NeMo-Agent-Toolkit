@@ -662,10 +662,15 @@ class EvaluationRun:
             from nat.plugins.eval.eval_callbacks import build_eval_result
 
             workflow_output_json: str | None = None
+            atif_workflow_output_json: str | None = None
             if dataset_handler is not None and self.eval_input is not None:
                 step_filter = (self.eval_config.general.output.workflow_output_step_filter
                                if self.eval_config and self.eval_config.general.output else None)
                 workflow_output_json = dataset_handler.publish_eval_input(self.eval_input, step_filter)
+                if self.eval_config.general.output and self.eval_config.general.output.write_atif_workflow_output:
+                    atif_workflow_output_json = json.dumps([sample.model_dump(mode="json")
+                                                            for sample in self.atif_eval_samples],
+                                                           indent=2)
 
             scores = {name: output.average_score for name, output in self.evaluation_results}
             result = build_eval_result(
@@ -675,6 +680,7 @@ class EvaluationRun:
                 usage_stats=self.usage_stats,
                 item_span_ids=self._item_span_ids,
                 workflow_output_json=workflow_output_json,
+                atif_workflow_output_json=atif_workflow_output_json,
                 run_config=self.config,
                 effective_config=self.effective_config,
                 output_dir=(self.eval_config.general.output_dir if self.eval_config else None),

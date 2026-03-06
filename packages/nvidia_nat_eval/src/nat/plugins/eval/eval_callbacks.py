@@ -61,6 +61,7 @@ class EvalResult:
 
     evaluation_outputs: list[tuple[str, Any]] = field(default_factory=list)
     workflow_output_json: str | None = None
+    atif_workflow_output_json: str | None = None
     run_config: Any | None = None
     effective_config: Any | None = None
     output_dir: Path | None = None
@@ -74,6 +75,7 @@ def build_eval_result(
     usage_stats: Any | None = None,
     item_span_ids: dict[str, int] | None = None,
     workflow_output_json: str | None = None,
+    atif_workflow_output_json: str | None = None,
     run_config: Any | None = None,
     effective_config: Any | None = None,
     output_dir: Path | None = None,
@@ -118,6 +120,7 @@ def build_eval_result(
         items=cb_items,
         evaluation_outputs=evaluation_results,
         workflow_output_json=workflow_output_json,
+        atif_workflow_output_json=atif_workflow_output_json,
         run_config=run_config,
         effective_config=effective_config,
         output_dir=output_dir,

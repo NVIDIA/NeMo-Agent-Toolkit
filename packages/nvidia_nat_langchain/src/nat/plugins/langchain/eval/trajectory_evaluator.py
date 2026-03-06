@@ -86,12 +86,34 @@ def _message_to_text(message) -> str:
     if isinstance(message, str):
         return message
 
+    if isinstance(message, dict):
+        parts_iterable = message.get("parts")
+        if parts_iterable is None:
+            parts_iterable = [message]
+    else:
+        parts_iterable = message
+
     text_parts: list[str] = []
-    for part in message:
-        if part.type == "text" and part.text:
-            text_parts.append(part.text)
-        elif part.type == "image" and part.source and part.source.path:
-            text_parts.append(part.source.path)
+    for part in parts_iterable:
+        part_type = getattr(part, "type", None)
+        part_text = getattr(part, "text", None)
+        part_source = getattr(part, "source", None)
+
+        if isinstance(part, dict):
+            part_type = part.get("type", part_type)
+            part_text = part.get("text", part_text)
+            part_source = part.get("source", part_source)
+
+        if part_type == "text" and isinstance(part_text, str) and part_text:
+            text_parts.append(part_text)
+            continue
+
+        if part_type == "image":
+            source_path = getattr(part_source, "path", None)
+            if isinstance(part_source, dict):
+                source_path = part_source.get("path", source_path)
+            if isinstance(source_path, str) and source_path:
+                text_parts.append(source_path)
     return "\n".join(text_parts)
 
 
