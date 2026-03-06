@@ -67,6 +67,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
         self.description = description
         self.instance_name = instance_name or config.type
         self.display_name = config.name or self.instance_name
+        self.thought_description = config.thought_description
         self._context = Context.get()
         self._configured_middleware: tuple[Middleware, ...] = tuple()
         self._middlewared_single: _InvokeFnT | None = None
@@ -183,8 +184,9 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             If the output of the function cannot be converted to the specified type.
         """
 
-        with self._context.push_active_function(self.instance_name,
-                                                input_data=value) as manager:  # Set the current invocation context
+        metadata = {"thought_description": self.thought_description} if self.thought_description else None
+        with self._context.push_active_function(self.instance_name, input_data=value,
+                                                metadata=metadata) as manager:  # Set the current invocation context
             try:
                 converted_input: InputT = self._convert_input(value)
 
@@ -276,7 +278,8 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
             If the output of the function cannot be converted to the specified type (when `to_type` is specified).
         """
 
-        with self._context.push_active_function(self.instance_name, input_data=value) as manager:
+        metadata = {"thought_description": self.thought_description} if self.thought_description else None
+        with self._context.push_active_function(self.instance_name, input_data=value, metadata=metadata) as manager:
             try:
                 converted_input: InputT = self._convert_input(value)
 

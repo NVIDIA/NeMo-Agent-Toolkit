@@ -16,6 +16,7 @@
 import html
 import logging
 import re
+import typing
 from functools import reduce
 from textwrap import dedent
 
@@ -39,6 +40,13 @@ class StepAdaptor:
 
         self._history: list[IntermediateStep] = []
         self.config = config
+
+    def _get_thought_description(self, metadata: dict[str, typing.Any] | None, default: str, suffix: str = "") -> str:
+        """Extract thought_description from metadata if present, otherwise return default."""
+        if not metadata or "thought_description" not in metadata:
+            return default + suffix
+
+        return metadata["thought_description"] + suffix
 
     def _step_matches_filter(self, step: IntermediateStep, config: StepAdaptorConfig) -> bool:
         """
@@ -200,9 +208,11 @@ class StepAdaptor:
 
         thought_text = None
         if step.event_type == IntermediateStepType.TOOL_START:
-            thought_text = f"Using tool: {step.name}"
+            thought_text = self._get_thought_description(start_step.metadata, f"Using tool: {step.name}", "...")
         elif step.event_type == IntermediateStepType.TOOL_END:
-            thought_text = f"Tool completed: {step.name}"
+            thought_text = self._get_thought_description(start_step.metadata,
+                                                         f"Using tool: {step.name}",
+                                                         "... completed")
 
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=f"Tool: {step.name}",
@@ -244,7 +254,8 @@ class StepAdaptor:
                                              name=f"Function Start: {step.name}",
                                              payload=payload_str,
                                              parent_id=ancestry.parent_id,
-                                             thought_text=f"Running function: {step.name}")
+                                             thought_text=self._get_thought_description(
+                                                 step.metadata, f"Running function: {step.name}", "..."))
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
@@ -298,7 +309,10 @@ class StepAdaptor:
                                              name=f"Function Complete: {step.name}",
                                              payload=payload_str,
                                              parent_id=ancestry.parent_id,
-                                             thought_text=f"Function completed: {step.name}")
+                                             thought_text=self._get_thought_description(
+                                                 start_step.metadata if start_step else None,
+                                                 f"Running function: {step.name}",
+                                                 "... completed"))
             return event
 
         return None
