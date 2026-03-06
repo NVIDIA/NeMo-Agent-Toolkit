@@ -14,9 +14,11 @@
 # limitations under the License.
 
 import asyncio
+import inspect
 import json
 import logging
 import shutil
+from collections.abc import Awaitable
 from contextlib import nullcontext
 from datetime import UTC
 from datetime import datetime
@@ -45,11 +47,16 @@ from nat.data_models.evaluator import EvalOutput
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.eval_callbacks import EvalCallbackManager
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
+from nat.plugins.eval.evaluator.atif_evaluator import LegacyEvaluator
+from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
+    from nat.plugins.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
     from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 
 logger = logging.getLogger(__name__)
@@ -73,13 +80,22 @@ class EvaluationRun:
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
         self.callback_manager: EvalCallbackManager = callback_manager or EvalCallbackManager()
+        if self.config.write_output:
+            from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+            if not any(isinstance(cb, FileEvalCallback) for cb in self.callback_manager._callbacks):
+                # Keep direct `EvaluationRun(...)` behavior consistent with CLI usage.
+                self.callback_manager.register(FileEvalCallback())
         self.eval_config: EvalConfig | None = None
         self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
+        from nat.plugins.eval.runtime.atif_adapter import EvalAtifAdapter
+        self.atif_adapter = EvalAtifAdapter()
+        self.evaluation_harness = EvaluationHarness()
         # Metadata
         self.eval_input: EvalInput | None = None
+        self.atif_eval_samples: AtifEvalSampleList = []
         self.workflow_interrupted: bool = False
 
         # evaluation_results is list of tuples (evaluator_name, EvalOutput)
@@ -477,6 +493,15 @@ class EvaluationRun:
         self.workflow_output_file = workflow_output_file
         logger.info("Workflow output written to %s", workflow_output_file)
 
+        output_config = self.eval_config.general.output
+        if output_config and output_config.write_atif_workflow_output:
+            atif_workflow_output_file = self.eval_config.general.output_dir / "workflow_output_atif.json"
+            atif_workflow_output = json.dumps([sample.model_dump(mode="json") for sample in self.atif_eval_samples],
+                                              indent=2)
+            with open(atif_workflow_output_file, "w", encoding="utf-8") as f:
+                f.write(atif_workflow_output)
+            logger.info("ATIF workflow output written to %s", atif_workflow_output_file)
+
         # Write the output of each evaluator to a separate json file
         for evaluator_name, eval_output in self.evaluation_results:
             output_file = self.eval_config.general.output_dir / f"{evaluator_name}_output.json"
@@ -506,8 +531,31 @@ class EvaluationRun:
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
+        if isinstance(evaluator, AtifEvaluator):
+            if not self.atif_eval_samples and self.eval_input is not None:
+                # Lazy-populate when run_single_evaluator is called outside run_and_evaluate.
+                self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+            harness_results = await self.evaluation_harness.evaluate({evaluator_name: evaluator},
+                                                                     self.atif_eval_samples)
+            eval_output = harness_results.get(evaluator_name)
+            if eval_output is None:
+                return
+            self.evaluation_results.append((evaluator_name, eval_output))
+            if self.callback_manager:
+                await self.callback_manager.a_on_evaluator_score(eval_output=eval_output, evaluator_name=evaluator_name)
+            return
+        await self._run_single_legacy_evaluator(evaluator_name, evaluator)
+
+    async def _run_single_legacy_evaluator(self, evaluator_name: str, evaluator: Any):
+        """Run one evaluator through the legacy `evaluate_fn` lane."""
         try:
-            eval_output = await evaluator.evaluate_fn(self.eval_input)
+            evaluate_fn = getattr(evaluator, "evaluate_fn", None)
+            if not isinstance(evaluator, LegacyEvaluator):
+                raise TypeError(f"Evaluator '{evaluator_name}' is missing callable evaluate_fn and evaluate_atif_fn")
+            eval_result = evaluate_fn(self.eval_input)
+            if not inspect.isawaitable(eval_result):
+                raise TypeError(f"Evaluator '{evaluator_name}' evaluate_fn must return an awaitable")
+            eval_output = await eval_result
             self.evaluation_results.append((evaluator_name, eval_output))
             if self.callback_manager:
                 await self.callback_manager.a_on_evaluator_score(eval_output=eval_output, evaluator_name=evaluator_name)
@@ -516,14 +564,40 @@ class EvaluationRun:
 
     async def run_evaluators(self, evaluators: dict[str, Any]):
         """Run all configured evaluators asynchronously."""
-        tasks = [self.run_single_evaluator(name, evaluator) for name, evaluator in evaluators.items() if evaluator]
+        atif_evaluators: dict[str, AtifEvaluator] = {}
+        legacy_evaluators: dict[str, LegacyEvaluator] = {}
+        for name, evaluator in evaluators.items():
+            if not evaluator:
+                continue
+            if isinstance(evaluator, AtifEvaluator):
+                atif_evaluators[name] = evaluator
+            elif isinstance(evaluator, LegacyEvaluator):
+                legacy_evaluators[name] = evaluator
+            else:
+                logger.warning("Skipping evaluator %s: missing ATIF and legacy evaluator interfaces", name)
 
-        if not tasks:
+        if not atif_evaluators and not legacy_evaluators:
             logger.warning("All evaluators were empty or invalid.")
             return
 
         try:
-            await asyncio.gather(*tasks)
+            if atif_evaluators:
+                if not self.atif_eval_samples and self.eval_input is not None:
+                    # Lazy-populate for direct callers of run_evaluators.
+                    self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+                harness_results = await self.evaluation_harness.evaluate(atif_evaluators, self.atif_eval_samples)
+                for evaluator_name, eval_output in harness_results.items():
+                    self.evaluation_results.append((evaluator_name, eval_output))
+                    if self.callback_manager:
+                        await self.callback_manager.a_on_evaluator_score(eval_output=eval_output,
+                                                                         evaluator_name=evaluator_name)
+
+            if legacy_evaluators:
+                tasks: list[Awaitable[None]] = [
+                    self._run_single_legacy_evaluator(evaluator_name=name, evaluator=evaluator)
+                    for name, evaluator in legacy_evaluators.items()
+                ]
+                await asyncio.gather(*tasks)
         except Exception as e:
             logger.error("An error occurred while running evaluators: %s", e)
             raise
@@ -590,10 +664,14 @@ class EvaluationRun:
             from nat.plugins.eval.eval_callbacks import build_eval_result
 
             workflow_output_json: str | None = None
+            atif_workflow_output_json: str | None = None
             if dataset_handler is not None and self.eval_input is not None:
                 step_filter = (self.eval_config.general.output.workflow_output_step_filter
                                if self.eval_config and self.eval_config.general.output else None)
                 workflow_output_json = dataset_handler.publish_eval_input(self.eval_input, step_filter)
+                if self.eval_config.general.output and self.eval_config.general.output.write_atif_workflow_output:
+                    atif_workflow_output_json = json.dumps(
+                        [sample.model_dump(mode="json") for sample in self.atif_eval_samples], indent=2)
 
             scores = {name: output.average_score for name, output in self.evaluation_results}
             result = build_eval_result(
@@ -603,6 +681,7 @@ class EvaluationRun:
                 usage_stats=self.usage_stats,
                 item_span_ids=self._item_span_ids,
                 workflow_output_json=workflow_output_json,
+                atif_workflow_output_json=atif_workflow_output_json,
                 run_config=self.config,
                 effective_config=self.effective_config,
                 output_dir=(self.eval_config.general.output_dir if self.eval_config else None),
@@ -746,9 +825,20 @@ class EvaluationRun:
 
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
+                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                    needs_atif_samples = any(
+                        callable(getattr(evaluator, "evaluate_atif_fn", None)) for evaluator in evaluators.values()
+                        if evaluator is not None)
+                    write_atif_workflow_output = bool(self.eval_config.general.output
+                                                      and self.eval_config.general.output.write_atif_workflow_output)
+                    if needs_atif_samples or write_atif_workflow_output:
+                        # Build and cache ATIF trajectories when ATIF evaluators are present or ATIF workflow export is
+                        # explicitly requested.
+                        self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+                    else:
+                        self.atif_eval_samples = []
 
                     # Evaluate
-                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
                     await self.run_evaluators(evaluators)
 
                     # Wait for all trace export tasks to complete (local workflows only)

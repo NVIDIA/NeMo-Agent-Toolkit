@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# flake8: noqa
+from unittest.mock import MagicMock
 
-from nat.middleware.cache import register as register_cache
-from nat.middleware.defense import register as register_defense
-from nat.middleware.dynamic import register as register_dynamic
-from nat.middleware.logging import register as register_logging
-from nat.middleware.red_teaming import register as register_red_teaming
-from nat.middleware.timeout import register as register_timeout
+from nat.builder.evaluator import EvaluatorInfo
+
+
+def test_evaluator_info_allows_missing_evaluate_fn():
+    """`EvaluatorInfo` should support ATIF-only evaluators."""
+    info = EvaluatorInfo(config=MagicMock(), description="ATIF-only evaluator")
+    assert info.evaluate_fn is None

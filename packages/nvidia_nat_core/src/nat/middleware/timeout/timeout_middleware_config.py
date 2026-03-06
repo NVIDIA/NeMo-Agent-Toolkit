@@ -12,21 +12,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Configuration for timeout middleware."""
 
-from collections.abc import Callable
+from __future__ import annotations
 
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvaluatorBaseConfig
+from pydantic import Field
+
+from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
 
 
-class EvaluatorInfo:
+class TimeoutMiddlewareConfig(DynamicMiddlewareConfig, name="timeout"):
+    """Configuration for timeout middleware.
+    """
 
-    def __init__(self,
-                 *,
-                 config: EvaluatorBaseConfig,
-                 evaluate_fn: Callable[[EvalInput], EvalOutput] | None = None,
-                 description: str):
-        self.config = config
-        self.evaluate_fn = evaluate_fn
-        self.description = description
+    timeout: float = Field(
+        description="Timeout in seconds for all calls intercepted by this middleware instance.",
+        gt=0,
+    )
+
+    timeout_message: str | None = Field(
+        default=None,
+        description="Additional message appended to the TimeoutError raised on expiry.",
+    )

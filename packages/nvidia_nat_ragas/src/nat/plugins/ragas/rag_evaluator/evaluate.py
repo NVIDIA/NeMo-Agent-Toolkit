@@ -17,6 +17,7 @@ import logging
 import math
 import typing
 from collections.abc import Sequence
+from typing import Any
 
 from pydantic import BaseModel
 from tqdm import tqdm
@@ -37,6 +38,49 @@ if typing.TYPE_CHECKING:
     from ragas.metrics import Metric
 
 logger = logging.getLogger(__name__)
+
+
+def _nan_to_zero(v: float | None) -> float:
+    """Convert NaN or None to 0.0 for safe arithmetic/serialization."""
+    return 0.0 if v is None or (isinstance(v, float) and math.isnan(v)) else v
+
+
+def _ragas_results_to_eval_output(results_dataset: "EvaluationResult | None",
+                                  ids: list[Any] | None = None) -> EvalOutput:
+    """Convert a ragas EvaluationResult to NAT EvalOutput."""
+    if not results_dataset:
+        logger.error("Ragas evaluation failed with no results", exc_info=True)
+        return EvalOutput(average_score=0.0, eval_output_items=[])
+
+    scores: list[dict[str, float]] = results_dataset.scores
+    if not scores:
+        logger.warning("Ragas returned empty score list")
+        return EvalOutput(average_score=0.0, eval_output_items=[])
+
+    original_scores_dict = {metric: [score.get(metric) for score in scores] for metric in scores[0]}
+    scores_dict = {metric: [_nan_to_zero(score.get(metric)) for score in scores] for metric in scores[0]}
+    first_metric_name = next(iter(scores_dict.keys()), None)
+
+    average_scores = {metric: (sum(values) / len(values) if values else 0.0) for metric, values in scores_dict.items()}
+    first_avg_score = average_scores.get(first_metric_name, 0.0)
+    if isinstance(first_avg_score, float) and math.isnan(first_avg_score):
+        first_avg_score = 0.0
+
+    df = results_dataset.to_pandas()
+    fallback_ids = df["user_input"].tolist()
+    output_ids = ids if ids and len(ids) >= len(df) else fallback_ids
+
+    eval_output_items = [
+        EvalOutputItem(
+            id=output_ids[i],
+            score=original_scores_dict[first_metric_name][i] if first_metric_name else None,
+            reasoning={
+                key: getattr(row, key, None)
+                for key in ["user_input", "reference", "response", "retrieved_contexts"]
+            },
+        ) for i, row in enumerate(df.itertuples(index=False))
+    ]
+    return EvalOutput(average_score=first_avg_score, eval_output_items=eval_output_items)
 
 
 class RAGEvaluator:
@@ -106,59 +150,8 @@ class RAGEvaluator:
 
     def ragas_to_eval_output(self, eval_input: EvalInput, results_dataset: "EvaluationResult | None") -> EvalOutput:
         """Converts the ragas EvaluationResult to nat EvalOutput"""
-
-        if not results_dataset:
-            logger.error("Ragas evaluation failed with no results", exc_info=True)
-            return EvalOutput(average_score=0.0, eval_output_items=[])
-
-        scores: list[dict[str, float]] = results_dataset.scores
-
-        # If Ragas returned no scores, return empty output to avoid downstream errors
-        if not scores:
-            logger.warning("Ragas returned empty score list")
-            return EvalOutput(average_score=0.0, eval_output_items=[])
-
-        def _nan_to_zero(v: float | None) -> float:
-            """Convert NaN or None to 0.0 for safe arithmetic/serialization."""
-            return 0.0 if v is None or (isinstance(v, float) and math.isnan(v)) else v
-
-        # Keep original scores (preserving NaN/None) for output
-        original_scores_dict = {metric: [score.get(metric) for score in scores] for metric in scores[0]}
-
-        # Convert from list of dicts to dict of lists, coercing NaN/None to 0.0 for average calculation
-        scores_dict = {metric: [_nan_to_zero(score.get(metric)) for score in scores] for metric in scores[0]}
-        first_metric_name = list(scores_dict.keys())[0] if scores_dict else None
-
-        # Compute the average of each metric using cleaned scores (NaN/None -> 0.0)
-        average_scores = {
-            metric: (sum(values) / len(values) if values else 0.0)
-            for metric, values in scores_dict.items()
-        }
-
-        first_avg_score = average_scores.get(list(scores_dict.keys())[0], 0.0)
-        if isinstance(first_avg_score, float) and math.isnan(first_avg_score):
-            first_avg_score = 0.0
-
-        df = results_dataset.to_pandas()
-        # Get id from eval_input if df size matches number of eval_input_items
-        if len(eval_input.eval_input_items) >= len(df):
-            ids = [item.id for item in eval_input.eval_input_items]  # Extract IDs
-        else:
-            ids = df["user_input"].tolist()  # Use "user_input" as ID fallback
-
-        # Construct EvalOutputItem list using original scores (preserving NaN/None)
-        eval_output_items = [
-            EvalOutputItem(
-                id=ids[i],
-                score=original_scores_dict[first_metric_name][i] if first_metric_name else None,
-                reasoning={
-                    key:
-                        getattr(row, key, None)  # Use getattr to safely access attributes
-                    for key in ["user_input", "reference", "response", "retrieved_contexts"]
-                }) for i, row in enumerate(df.itertuples(index=False))
-        ]
-        # Return EvalOutput
-        return EvalOutput(average_score=first_avg_score, eval_output_items=eval_output_items)
+        ids = [item.id for item in eval_input.eval_input_items]
+        return _ragas_results_to_eval_output(results_dataset=results_dataset, ids=ids)
 
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
         """Run Ragas metrics evaluation on the provided EvalInput"""

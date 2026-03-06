@@ -44,6 +44,7 @@ class FileEvalCallback:
 
     def __init__(self) -> None:
         self.workflow_output_file: Path | None = None
+        self.atif_workflow_output_file: Path | None = None
         self.evaluator_output_files: list[Path] = []
         self.config_original_file: Path | None = None
         self.config_effective_file: Path | None = None
@@ -149,14 +150,21 @@ class FileEvalCallback:
 
     def _write_workflow_output(self, result: EvalResult, output_dir: Path) -> None:
         """Write the serialized workflow output JSON."""
-        if result.workflow_output_json is None:
+        if result.workflow_output_json is not None:
+            workflow_output_file = output_dir / "workflow_output.json"
+            with open(workflow_output_file, "w", encoding="utf-8") as f:
+                f.write(result.workflow_output_json)
+            self.workflow_output_file = workflow_output_file
+            logger.info("Workflow output written to %s", workflow_output_file)
+
+        if result.atif_workflow_output_json is None:
             return
 
-        workflow_output_file = output_dir / "workflow_output.json"
-        with open(workflow_output_file, "w", encoding="utf-8") as f:
-            f.write(result.workflow_output_json)
-        self.workflow_output_file = workflow_output_file
-        logger.info("Workflow output written to %s", workflow_output_file)
+        atif_workflow_output_file = output_dir / "workflow_output_atif.json"
+        with open(atif_workflow_output_file, "w", encoding="utf-8") as f:
+            f.write(result.atif_workflow_output_json)
+        self.atif_workflow_output_file = atif_workflow_output_file
+        logger.info("ATIF workflow output written to %s", atif_workflow_output_file)
 
     def _write_evaluator_outputs(self, result: EvalResult, output_dir: Path) -> None:
         """Write per-evaluator result files."""

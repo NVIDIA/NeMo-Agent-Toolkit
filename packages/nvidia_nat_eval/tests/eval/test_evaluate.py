@@ -15,12 +15,15 @@
 
 import asyncio
 import inspect
+import json
 import os
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+from unittest.mock import mock_open
 from unittest.mock import patch
 from uuid import UUID
 from uuid import uuid4
@@ -44,6 +47,7 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
+from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.runtime.session import SessionManager
 
@@ -93,6 +97,12 @@ def generated_answer():
     return "Generated answer"
 
 
+def test_evaluation_run_registers_file_callback_by_default(default_eval_run_config):
+    """`EvaluationRun` should register file output callback when write_output is enabled."""
+    eval_run = EvaluationRun(default_eval_run_config)
+    assert any(isinstance(cb, FileEvalCallback) for cb in eval_run.callback_manager._callbacks)
+
+
 @pytest.fixture
 def tool_end_intermediate_step():
     """Fixture to create a valid TOOL_END IntermediateStep."""
@@ -129,14 +139,18 @@ def eval_output(average_score):
 def mock_evaluator(eval_output):
     """Fixture to create a mock evaluator."""
 
-    async def mock_evaluate_fn(_eval_input):
-        return eval_output
+    class LegacyEvaluatorDouble:
 
-    # Create a mock evaluator
-    mock_evaluator = AsyncMock()
-    mock_evaluator.evaluate_fn = AsyncMock(side_effect=mock_evaluate_fn)
+        def __init__(self, output):
 
-    return mock_evaluator
+            async def mock_evaluate_fn(_eval_input):
+                return output
+
+            self.evaluate_fn = AsyncMock(side_effect=mock_evaluate_fn)
+            # Explicitly disable ATIF lane for legacy evaluator fixture.
+            self.evaluate_atif_fn = None
+
+    return LegacyEvaluatorDouble(eval_output)
 
 
 @pytest.fixture
@@ -504,6 +518,37 @@ async def test_run_single_evaluator_success(evaluation_run, mock_evaluator, eval
     assert result.average_score == average_score, f"Expected average score to be {average_score}"
 
 
+async def test_run_single_evaluator_atif_lane(evaluation_run, eval_output):
+    """ATIF evaluators should run via evaluate_atif_fn and skip legacy evaluate_fn."""
+    atif_evaluator = AsyncMock()
+    atif_evaluator.evaluate_atif_fn = AsyncMock(return_value=eval_output)
+    atif_evaluator.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+
+    with patch.object(evaluation_run.evaluation_harness, "evaluate",
+                      wraps=evaluation_run.evaluation_harness.evaluate) as mock_harness_evaluate:
+        await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
+
+    atif_evaluator.evaluate_atif_fn.assert_awaited_once()
+    atif_evaluator.evaluate_fn.assert_not_called()
+    mock_harness_evaluate.assert_awaited_once()
+    assert evaluation_run.evaluation_results[-1][0] == "AtifEvaluator"
+    assert evaluation_run.evaluation_results[-1][1] == eval_output
+
+
+async def test_run_single_evaluator_atif_lane_lazy_builds_samples(evaluation_run, eval_output):
+    """ATIF lane should lazily build samples when run outside run_and_evaluate."""
+    atif_evaluator = AsyncMock()
+    atif_evaluator.evaluate_atif_fn = AsyncMock(return_value=eval_output)
+    atif_evaluator.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+
+    with patch.object(evaluation_run.atif_adapter, "build_samples",
+                      wraps=evaluation_run.atif_adapter.build_samples) as mock_build:
+        await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
+
+    mock_build.assert_called_once()
+    atif_evaluator.evaluate_atif_fn.assert_awaited_once()
+
+
 async def test_run_evaluators_success(evaluation_run, mock_evaluator, eval_output, average_score):
     """Test for running multiple evaluators successfully."""
 
@@ -525,6 +570,26 @@ async def test_run_evaluators_success(evaluation_run, mock_evaluator, eval_outpu
         assert result.average_score == average_score, f"Expected average score to be {average_score}"
 
 
+async def test_run_evaluators_uses_harness_for_atif_evaluators(evaluation_run, eval_output):
+    """`run_evaluators` delegates ATIF evaluator execution to `EvaluationHarness`."""
+    atif_evaluator_1 = AsyncMock()
+    atif_evaluator_1.evaluate_atif_fn = AsyncMock(return_value=eval_output)
+    atif_evaluator_1.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+
+    atif_evaluator_2 = AsyncMock()
+    atif_evaluator_2.evaluate_atif_fn = AsyncMock(return_value=eval_output)
+    atif_evaluator_2.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+
+    with patch.object(evaluation_run.evaluation_harness, "evaluate",
+                      wraps=evaluation_run.evaluation_harness.evaluate) as mock_harness_evaluate:
+        await evaluation_run.run_evaluators({"Atif1": atif_evaluator_1, "Atif2": atif_evaluator_2})
+
+    mock_harness_evaluate.assert_awaited_once()
+    atif_evaluator_1.evaluate_fn.assert_not_called()
+    atif_evaluator_2.evaluate_fn.assert_not_called()
+    assert len(evaluation_run.evaluation_results) == 2
+
+
 async def test_run_evaluators_partial_failure(evaluation_run, mock_evaluator, eval_output, average_score):
     """
     Test run_evaluators where one evaluator fails but others succeed.
@@ -536,8 +601,13 @@ async def test_run_evaluators_partial_failure(evaluation_run, mock_evaluator, ev
     bad_evaluator_name = "BadEvaluator"
 
     # Create a failing evaluator
-    mock_failing_evaluator = AsyncMock()
-    mock_failing_evaluator.evaluate_fn.side_effect = RuntimeError("Evaluator failed")
+    class LegacyFailingEvaluatorDouble:
+
+        def __init__(self):
+            self.evaluate_fn = AsyncMock(side_effect=RuntimeError("Evaluator failed"))
+            self.evaluate_atif_fn = None
+
+    mock_failing_evaluator = LegacyFailingEvaluatorDouble()
 
     evaluators = {good_evaluator_name: mock_evaluator, bad_evaluator_name: mock_failing_evaluator}
 
@@ -560,6 +630,229 @@ async def test_run_evaluators_partial_failure(evaluation_run, mock_evaluator, ev
     logged_message = mock_logger.call_args[0][0]  # Extract the actual log message
     assert "An error occurred while running evaluator" in logged_message, \
         "Error message should indicate evaluator failure"
+
+
+# Batch-3: Tests for running eval and writing results
+def test_write_output(evaluation_run, default_eval_config, eval_input, eval_output, generated_answer):
+    """Test writing the workflow and evaluation results."""
+    # Mock dataset handler to get the formatted workflow results
+    for eval_input_item in eval_input.eval_input_items:
+        eval_input_item.output_obj = generated_answer
+
+    mock_dataset_handler = MagicMock()
+    workflow_output = json.dumps([item.model_dump() for item in eval_input.eval_input_items])
+    mock_dataset_handler.publish_eval_input.return_value = workflow_output
+
+    # Mock evaluation results
+    evaluator_name = "MockEvaluator"
+    evaluation_run.evaluation_results = [(evaluator_name, eval_output)]
+
+    # Mock eval_config output directory
+    evaluation_run.eval_config = default_eval_config
+    output_dir = default_eval_config.general.output_dir
+
+    # Workflow output must be written to workflow_output.json
+    workflow_output_path = output_dir / "workflow_output.json"
+
+    # Evaluator results must be written to {evaluator_name}_output.json
+    evaluator_output_path = output_dir / f"{evaluator_name}_output.json"
+
+    # Create a mock ProfilerResults object
+    mock_profiler_results = ProfilerResults()
+
+    # Patch file operations and logging. It is important to keep logs frozen to match user expectations.
+    with patch("builtins.open", mock_open()) as mock_file, \
+         patch("pathlib.Path.mkdir") as mock_mkdir, \
+         patch("nat.plugins.eval.runtime.evaluate.logger.info") as mock_logger:
+
+        # Run the actual function
+        evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
+
+        # Ensure directories are created
+        mock_mkdir.assert_called()
+
+        # Ensure the workflow output is written
+        mock_file.assert_any_call(workflow_output_path, "w", encoding="utf-8")
+        mock_file().write.assert_any_call(workflow_output)
+
+        # Ensure the evaluator output is written
+        mock_file.assert_any_call(evaluator_output_path, "w", encoding="utf-8")
+        eval_output_dict = eval_output.model_dump_json(indent=2)
+        mock_file().write.assert_any_call(eval_output_dict)
+
+        # Ensure log format has not changed
+        mock_logger.assert_any_call("Workflow output written to %s", workflow_output_path)
+        mock_logger.assert_any_call("Evaluation results written to %s", evaluator_output_path)
+
+
+def test_write_output_writes_atif_workflow_output_when_enabled(evaluation_run,
+                                                               default_eval_config,
+                                                               eval_input,
+                                                               eval_output):
+    """Test optional ATIF workflow output export for troubleshooting."""
+    mock_dataset_handler = MagicMock()
+    mock_dataset_handler.publish_eval_input.return_value = json.dumps(
+        [item.model_dump() for item in eval_input.eval_input_items])
+
+    evaluator_name = "MockEvaluator"
+    evaluation_run.evaluation_results = [(evaluator_name, eval_output)]
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output.write_atif_workflow_output = True
+    evaluation_run.atif_eval_samples = [
+        MagicMock(model_dump=MagicMock(return_value={
+            "item_id": 1, "trajectory": {
+                "steps": []
+            }
+        }))
+    ]
+
+    output_dir = default_eval_config.general.output_dir
+    atif_workflow_output_path = output_dir / "workflow_output_atif.json"
+    expected_atif_output = json.dumps([{"item_id": 1, "trajectory": {"steps": []}}], indent=2)
+
+    mock_profiler_results = ProfilerResults()
+    with patch("builtins.open", mock_open()) as mock_file, \
+         patch("pathlib.Path.mkdir"), \
+         patch("nat.plugins.eval.runtime.evaluate.logger.info") as mock_logger:
+        evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
+
+        mock_file.assert_any_call(atif_workflow_output_path, "w", encoding="utf-8")
+        mock_file().write.assert_any_call(expected_atif_output)
+        mock_logger.assert_any_call("ATIF workflow output written to %s", atif_workflow_output_path)
+
+
+def test_write_output_handles_none_output(evaluation_run, eval_input):
+    """This test ensures that write_output does not access .output without a None check."""
+    # Setup minimal eval_config with output = None
+    evaluation_run.eval_config = SimpleNamespace(
+        general=SimpleNamespace(output=None, output_dir=Path(".tmp/nat/examples/mock/")))
+    evaluation_run.eval_input = eval_input
+    # Mock dataset handler
+    mock_dataset_handler = MagicMock()
+    mock_dataset_handler.publish_eval_input.return_value = "[]"
+    # Create a mock ProfilerResults object
+    mock_profiler_results = ProfilerResults()
+    # Patch file operations and logging
+    with patch("builtins.open", mock_open()), \
+         patch("pathlib.Path.mkdir"), \
+         patch("nat.plugins.eval.runtime.evaluate.logger.info"):
+        # Should not raise AttributeError
+        try:
+            evaluation_run.write_output(mock_dataset_handler, mock_profiler_results)
+        except AttributeError:
+            pytest.fail("write_output should not access .output without a None check")
+
+
+@pytest.mark.filterwarnings("ignore:.*Pydantic serializer warnings.*:UserWarning")
+def test_write_configuration_with_path_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration correctly saves config files when config_file is a Path."""
+    # Create a temporary config file
+    config_file = tmp_path / "test_config.yml"
+    config_file.write_text("""workflow:
+  type: test
+eval:
+  general:
+    max_concurrency: 1
+""")
+    # Setup evaluation run
+    evaluation_run.config.config_file = config_file
+    evaluation_run.config.override = (("eval.general.max_concurrency", "5"), )
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.evaluators = {}
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+
+    # Create a mock effective config
+    mock_effective_config = Config()
+    mock_effective_config.eval = default_eval_config
+    evaluation_run.effective_config = mock_effective_config
+
+    # Run the function
+    with patch("nat.plugins.eval.runtime.evaluate.logger.info") as mock_logger:
+        evaluation_run.write_configuration()
+
+    # Verify that all three files were created
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert config_effective_file.exists(), "config_effective.yml should be created"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
+
+    # Verify metadata content
+    with open(config_metadata_file, encoding="utf-8") as f:
+        metadata = json.load(f)
+    assert metadata["config_file"] == str(config_file)
+    assert metadata["config_file_type"] == "Path"
+    assert len(metadata["overrides"]) == 1
+    assert metadata["overrides"][0]["path"] == "eval.general.max_concurrency"
+    assert metadata["overrides"][0]["value"] == "5"
+
+    # Verify logging
+    assert mock_logger.call_count >= 3, "Should log for all three config files"
+
+
+@pytest.mark.filterwarnings("ignore:.*Pydantic serializer warnings.*:UserWarning")
+def test_write_configuration_with_basemodel_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration correctly saves config files when config_file is a BaseModel."""
+    # Setup evaluation run with BaseModel config
+    mock_config = Config()
+    default_eval_config.evaluators = {}
+    mock_config.eval = default_eval_config
+    evaluation_run.config.config_file = mock_config
+    evaluation_run.config.override = ()  # No overrides
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+    evaluation_run.effective_config = mock_config
+
+    # Run the function
+    with patch("nat.plugins.eval.runtime.evaluate.logger.info"):
+        evaluation_run.write_configuration()
+
+    # Verify that all three files were created
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert config_effective_file.exists(), "config_effective.yml should be created"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
+
+    # Verify metadata content
+    with open(config_metadata_file, encoding="utf-8") as f:
+        metadata = json.load(f)
+    assert metadata["config_file_type"] == "BaseModel"
+    assert len(metadata["overrides"]) == 0, "Should have no overrides"
+
+
+def test_write_configuration_handles_missing_effective_config(evaluation_run, default_eval_config, tmp_path):
+    """Test that write_configuration handles gracefully when effective_config is None."""
+    # Create a temporary config file
+    config_file = tmp_path / "test_config.yml"
+    config_file.write_text("workflow:\n  type: test\n")
+
+    # Setup evaluation run with None effective_config
+    evaluation_run.config.config_file = config_file
+    evaluation_run.eval_config = default_eval_config
+    evaluation_run.eval_config.general.output_dir = tmp_path / "output"
+    evaluation_run.effective_config = None  # This is the key test condition
+
+    # Run the function - it should not crash
+    with patch("nat.plugins.eval.runtime.evaluate.logger.info"), \
+         patch("nat.plugins.eval.runtime.evaluate.logger.warning") as mock_warning:
+        evaluation_run.write_configuration()
+
+    # Verify warning was logged
+    mock_warning.assert_any_call("Effective config not available, skipping config_effective.yml")
+
+    # Verify that original and metadata files were created but not effective
+    config_original_file = evaluation_run.eval_config.general.output_dir / "config_original.yml"
+    config_effective_file = evaluation_run.eval_config.general.output_dir / "config_effective.yml"
+    config_metadata_file = evaluation_run.eval_config.general.output_dir / "config_metadata.json"
+
+    assert config_original_file.exists(), "config_original.yml should be created"
+    assert not config_effective_file.exists(), "config_effective.yml should NOT be created when there are no overrides"
+    assert config_metadata_file.exists(), "config_metadata.json should be created"
 
 
 # Batch-3: Tests for running eval via run_and_evaluate
