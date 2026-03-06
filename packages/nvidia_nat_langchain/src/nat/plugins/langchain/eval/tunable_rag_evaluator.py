@@ -31,8 +31,8 @@ from nat.cli.register_workflow import register_evaluator
 from nat.data_models.atif import ATIFContentPart
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.component_ref import LLMRef
-from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
@@ -148,7 +148,8 @@ class TunableRagEvaluator(BaseEvaluator):
             "relevance": 1 / 3,
         }
 
-    async def _evaluate_item_core(self, item_id, question: str, answer_description: str, generated_answer: str) -> EvalOutputItem:
+    async def _evaluate_item_core(self, item_id, question: str, answer_description: str,
+                                  generated_answer: str) -> EvalOutputItem:
         score = 0.0
 
         default_evaluation_schema = [

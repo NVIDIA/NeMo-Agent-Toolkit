@@ -26,8 +26,8 @@ from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
-from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluatorConfig
 from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluator
+from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluatorConfig
 from nat.plugins.langchain.eval.tunable_rag_evaluator import register_tunable_rag_evaluator
 
 
@@ -202,9 +202,9 @@ def fixture_atif_samples():
 async def test_evaluate_atif_success(evaluator, atif_samples):
     evaluator.llm.ainvoke = AsyncMock(side_effect=[
         MagicMock(content='{"coverage_score": 0.9, "correctness_score": 0.8,'
-                 '"relevance_score": 0.7, "reasoning": "ATIF sample 1"}'),
+                  '"relevance_score": 0.7, "reasoning": "ATIF sample 1"}'),
         MagicMock(content='{"coverage_score": 0.6, "correctness_score": 0.7,'
-                 '"relevance_score": 0.8, "reasoning": "ATIF sample 2"}')
+                  '"relevance_score": 0.8, "reasoning": "ATIF sample 2"}')
     ])
 
     eval_output: EvalOutput = await evaluator.evaluate_atif_fn(atif_samples)
@@ -219,13 +219,13 @@ async def test_legacy_and_atif_lane_parity_with_tolerance(evaluator, rag_eval_in
     # Two legacy evaluations then two ATIF evaluations with identical per-item judge outputs.
     evaluator.llm.ainvoke = AsyncMock(side_effect=[
         MagicMock(content='{"coverage_score": 0.9, "correctness_score": 0.8,'
-                 '"relevance_score": 0.7, "reasoning": "shared-1"}'),
+                  '"relevance_score": 0.7, "reasoning": "shared-1"}'),
         MagicMock(content='{"coverage_score": 0.6, "correctness_score": 0.7,'
-                 '"relevance_score": 0.8, "reasoning": "shared-2"}'),
+                  '"relevance_score": 0.8, "reasoning": "shared-2"}'),
         MagicMock(content='{"coverage_score": 0.9, "correctness_score": 0.8,'
-                 '"relevance_score": 0.7, "reasoning": "shared-1"}'),
+                  '"relevance_score": 0.7, "reasoning": "shared-1"}'),
         MagicMock(content='{"coverage_score": 0.6, "correctness_score": 0.7,'
-                 '"relevance_score": 0.8, "reasoning": "shared-2"}'),
+                  '"relevance_score": 0.8, "reasoning": "shared-2"}'),
     ])
 
     legacy_output = await evaluator.evaluate(rag_eval_input)
