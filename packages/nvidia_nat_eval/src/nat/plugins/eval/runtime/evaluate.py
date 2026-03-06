@@ -668,9 +668,8 @@ class EvaluationRun:
                                if self.eval_config and self.eval_config.general.output else None)
                 workflow_output_json = dataset_handler.publish_eval_input(self.eval_input, step_filter)
                 if self.eval_config.general.output and self.eval_config.general.output.write_atif_workflow_output:
-                    atif_workflow_output_json = json.dumps([sample.model_dump(mode="json")
-                                                            for sample in self.atif_eval_samples],
-                                                           indent=2)
+                    atif_workflow_output_json = json.dumps(
+                        [sample.model_dump(mode="json") for sample in self.atif_eval_samples], indent=2)
 
             scores = {name: output.average_score for name, output in self.evaluation_results}
             result = build_eval_result(

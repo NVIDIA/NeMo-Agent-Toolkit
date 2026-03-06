@@ -190,7 +190,7 @@ class TrajectoryEvaluator(BaseEvaluator):
             if isinstance(e, ValueError) and "not enough values to unpack" in str(e):
                 logger.warning("Trajectory judge output parsing failed [lane=%s item_id=%s]: %s", lane, item_id, e)
             else:
-                logger.exception("Error evaluating trajectory [lane=%s item_id=%s]: %s", lane, item_id, e)
+                logger.exception("Error evaluating trajectory [lane=%s item_id=%s]", lane, item_id)
             return EvalOutputItem(id=item_id, score=0.0, reasoning={}, error=str(e))
 
         reasoning = {
@@ -218,6 +218,7 @@ class TrajectoryEvaluator(BaseEvaluator):
 
     async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
         """ATIF-native evaluation lane for trajectory scoring."""
+
         async def wrapped(sample: AtifEvalSample) -> EvalOutputItem:
             async with self.semaphore:
                 return await self.evaluate_atif_item(sample)

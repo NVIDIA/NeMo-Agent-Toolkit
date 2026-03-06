@@ -113,10 +113,15 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
     # Print header with workflow status and runtime
     workflow_status = "INTERRUPTED" if eval_run_output.workflow_interrupted else "COMPLETED"
     total_runtime = eval_run_output.usage_stats.total_runtime if eval_run_output.usage_stats else 0.0
+    workflow_output_files = ["workflow_output.json"]
+    if eval_run_output.workflow_output_file:
+        atif_workflow_output = eval_run_output.workflow_output_file.parent / "workflow_output_atif.json"
+        if atif_workflow_output.exists():
+            workflow_output_files.append("workflow_output_atif.json")
 
     click.echo("")
     click.echo(click.style("=== EVALUATION SUMMARY ===", fg="bright_blue", bold=True))
-    click.echo(f"Workflow Status: {workflow_status} (workflow_output.json)")
+    click.echo(f"Workflow Status: {workflow_status} ({', '.join(workflow_output_files)})")
     click.echo(f"Total Runtime: {total_runtime:.2f}s")
 
     # Include profiler stats if available

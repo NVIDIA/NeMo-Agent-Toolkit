@@ -33,11 +33,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
 
 from nat.data_models.evaluator import EvalOutput
-from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +66,8 @@ class EvaluationHarness:
             self._logger.exception("An error occurred while running evaluator %s", evaluator_name)
             return None
 
-    async def evaluate(self, evaluators: dict[str, AtifEvaluator], atif_samples: AtifEvalSampleList) -> dict[str, EvalOutput]:
+    async def evaluate(self, evaluators: dict[str, AtifEvaluator],
+                       atif_samples: AtifEvalSampleList) -> dict[str, EvalOutput]:
         """Evaluate ATIF-native evaluators concurrently.
 
         Args:
