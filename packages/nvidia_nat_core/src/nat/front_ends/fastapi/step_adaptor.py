@@ -250,12 +250,16 @@ class StepAdaptor:
             ```
             """).strip("\n").format(input_value=escaped_input, format_input_type=format_input_type)
 
+            # Omit thought_text for top-level workflow function (parent is root)
+            thought_text = None
+            if ancestry.parent_id != "root":
+                thought_text = self._get_thought_description(step.metadata, f"Running function: {step.name}", "...")
+
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Start: {step.name}",
                                              payload=payload_str,
                                              parent_id=ancestry.parent_id,
-                                             thought_text=self._get_thought_description(
-                                                 step.metadata, f"Running function: {step.name}", "..."))
+                                             thought_text=thought_text)
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
@@ -305,14 +309,18 @@ class StepAdaptor:
                                     output_value=escaped_output,
                                     format_output_type=format_output_type)
 
+            # Omit thought_text for top-level workflow function (parent is root)
+            thought_text = None
+            if ancestry.parent_id != "root":
+                thought_text = self._get_thought_description(start_step.metadata if start_step else None,
+                                                             f"Running function: {step.name}",
+                                                             "... completed")
+
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Complete: {step.name}",
                                              payload=payload_str,
                                              parent_id=ancestry.parent_id,
-                                             thought_text=self._get_thought_description(
-                                                 start_step.metadata if start_step else None,
-                                                 f"Running function: {step.name}",
-                                                 "... completed"))
+                                             thought_text=thought_text)
             return event
 
         return None
