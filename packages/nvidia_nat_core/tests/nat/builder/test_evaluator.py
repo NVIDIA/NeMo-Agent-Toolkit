@@ -13,6 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from .eval_harness import EvaluationHarness
+from unittest.mock import MagicMock
 
-__all__ = ["EvaluationHarness"]
+from nat.builder.evaluator import EvaluatorInfo
+
+
+def test_evaluator_info_allows_missing_evaluate_fn():
+    """`EvaluatorInfo` should support ATIF-only evaluators."""
+    info = EvaluatorInfo(config=MagicMock(), description="ATIF-only evaluator")
+    assert info.evaluate_fn is None

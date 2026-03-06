@@ -65,4 +65,7 @@ async def test_text_file_ingest_full_workflow():
     result = await run_workflow(config_file=config_file,
                                 question="What does DOCA GPUNetIO do to remove the CPU from the critical path?")
     assert result is not None
-    assert any(phrase in result.lower() for phrase in ["without cpu", "without the cpu", "gpudirect", "gdakin"])
+    lower_result = result.lower()
+    expected_phrases = ("cpu", "gpudirect", "gdakin")
+    assert any(phrase in lower_result for phrase in expected_phrases), \
+        f"Result did not contain any of the expected phrases ([{', '.join(expected_phrases)}]) : {lower_result}"

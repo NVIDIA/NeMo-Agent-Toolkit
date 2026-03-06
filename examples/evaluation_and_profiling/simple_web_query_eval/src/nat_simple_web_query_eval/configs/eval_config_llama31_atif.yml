@@ -26,15 +26,15 @@ functions:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: meta/llama-3.1-8b-instruct
     temperature: 0.0
   nim_rag_eval_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: meta/llama-3.1-70b-instruct
     max_tokens: 8
   nim_trajectory_eval_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
+    model_name: meta/llama-3.1-70b-instruct
     temperature: 0.0
     max_tokens: 1024
 
@@ -53,10 +53,11 @@ workflow:
 eval:
   general:
     max_concurrency: 1
-    workflow_alias: nat-simple-llama-33-70b
+    workflow_alias: nat-simple-llama-31-8b
     output:
-      dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/llama-33-70b
+      dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/atif/llama-31-8b
       cleanup: true
+      write_atif_workflow_output: true
     dataset:
       _type: json
       file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
@@ -66,16 +67,20 @@ eval:
   evaluators:
     accuracy:
       _type: ragas
+      enable_atif_evaluator: true
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
     groundedness:
       _type: ragas
+      enable_atif_evaluator: true
       metric: ResponseGroundedness
       llm_name: nim_rag_eval_llm
     relevance:
       _type: ragas
+      enable_atif_evaluator: true
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
     trajectory_accuracy:
       _type: trajectory
+      enable_atif_evaluator: true
       llm_name: nim_trajectory_eval_llm

@@ -22,7 +22,10 @@ from nat.data_models.evaluator import EvaluatorBaseConfig
 
 class EvaluatorInfo:
 
-    def __init__(self, *, config: EvaluatorBaseConfig, evaluate_fn: Callable[[EvalInput], EvalOutput],
+    def __init__(self,
+                 *,
+                 config: EvaluatorBaseConfig,
+                 evaluate_fn: Callable[[EvalInput], EvalOutput] | None = None,
                  description: str):
         self.config = config
         self.evaluate_fn = evaluate_fn

@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 functions:
   webpage_query:
     _type: webpage_query
@@ -53,29 +52,31 @@ workflow:
 eval:
   general:
     max_concurrency: 1
-    workflow_alias: nat-simple-llama-33-70b
     output:
-      dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/llama-33-70b
+      dir: ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/atif/llama-33-70b
       cleanup: true
+      write_atif_workflow_output: true
     dataset:
       _type: json
       file_path: examples/evaluation_and_profiling/simple_web_query_eval/data/langsmith.json
-    profiler:
-      base_metrics: true
-
   evaluators:
+    # RAGAS evaluators now run through the ATIF-native evaluator lane.
     accuracy:
       _type: ragas
+      enable_atif_evaluator: true
       metric: AnswerAccuracy
       llm_name: nim_rag_eval_llm
     groundedness:
       _type: ragas
+      enable_atif_evaluator: true
       metric: ResponseGroundedness
       llm_name: nim_rag_eval_llm
     relevance:
       _type: ragas
+      enable_atif_evaluator: true
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
     trajectory_accuracy:
       _type: trajectory
+      enable_atif_evaluator: true
       llm_name: nim_trajectory_eval_llm
