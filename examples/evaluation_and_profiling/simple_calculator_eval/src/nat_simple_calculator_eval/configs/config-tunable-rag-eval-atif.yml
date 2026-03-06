@@ -48,7 +48,9 @@ workflow:
 eval:
   general:
     max_concurrency: 1
-    output_dir: .tmp/nat/examples/getting_started/simple_calculator/atif
+    output:
+      dir: .tmp/nat/examples/getting_started/simple_calculator/atif
+      write_atif_workflow_output: true
     dataset:
       _type: json
       file_path: examples/getting_started/simple_calculator/data/simple_calculator.json
