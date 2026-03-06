@@ -62,9 +62,9 @@ class EvaluationHarness:
         try:
             eval_output = await atif_evaluate_fn(atif_samples)
             return evaluator_name, eval_output
-        except Exception as e:
+        except Exception:
             # Best-effort policy: log per-evaluator failure and continue.
-            self._logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e)
+            self._logger.exception("An error occurred while running evaluator %s", evaluator_name)
             return None
 
     async def evaluate(self, evaluators: dict[str, Any], atif_samples: AtifEvalSampleList) -> dict[str, EvalOutput]:

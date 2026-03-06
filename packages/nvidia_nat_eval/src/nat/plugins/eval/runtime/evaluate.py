@@ -821,8 +821,11 @@ class EvaluationRun:
                     needs_atif_samples = any(
                         callable(getattr(evaluator, "evaluate_atif_fn", None)) for evaluator in evaluators.values()
                         if evaluator is not None)
-                    if needs_atif_samples:
-                        # Build and cache ATIF trajectories only when ATIF-native evaluators are present.
+                    write_atif_workflow_output = bool(self.eval_config.general.output
+                                                      and self.eval_config.general.output.write_atif_workflow_output)
+                    if needs_atif_samples or write_atif_workflow_output:
+                        # Build and cache ATIF trajectories when ATIF evaluators are present or ATIF workflow export is
+                        # explicitly requested.
                         self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
                     else:
                         self.atif_eval_samples = []

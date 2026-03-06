@@ -165,17 +165,9 @@ class TrajectoryEvaluator(BaseEvaluator):
             # Some judge models occasionally miss the strict "Score: " suffix
             # expected by LangChain's legacy trajectory parser.
             if isinstance(e, ValueError) and "not enough values to unpack" in str(e):
-                logger.warning("Trajectory judge output parsing failed [lane=%s item_id=%s question=%r]: %s",
-                               lane,
-                               item_id,
-                               question_text,
-                               e)
+                logger.warning("Trajectory judge output parsing failed [lane=%s item_id=%s]: %s", lane, item_id, e)
             else:
-                logger.exception("Error evaluating trajectory [lane=%s item_id=%s question=%r]: %s",
-                                 lane,
-                                 item_id,
-                                 question_text,
-                                 e)
+                logger.exception("Error evaluating trajectory [lane=%s item_id=%s]: %s", lane, item_id, e)
             return EvalOutputItem(id=item_id, score=0.0, reasoning={}, error=str(e))
 
         reasoning = {
