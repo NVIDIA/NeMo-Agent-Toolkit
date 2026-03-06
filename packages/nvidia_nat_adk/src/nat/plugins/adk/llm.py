@@ -176,6 +176,7 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     import os
 
     from google.adk.models.lite_llm import LiteLlm
+    from openai import AsyncOpenAI
 
     from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks
 
@@ -200,21 +201,17 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
-    http_client = None
-    if config.enable_nvext_hints:
-        from openai import AsyncOpenAI
+    http_client = _create_httpx_client_with_dynamo_hooks(config)
 
-        http_client = _create_httpx_client_with_dynamo_hooks(config)
+    api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
+    base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
 
-        api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
-        base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
-
-        openai_client = AsyncOpenAI(
-            api_key=api_key,
-            base_url=base_url,
-            http_client=http_client,
-        )
-        config_dict["client"] = openai_client
+    openai_client = AsyncOpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        http_client=http_client,
+    )
+    config_dict["client"] = openai_client
 
     try:
         yield LiteLlm(config.model_name, **config_dict)

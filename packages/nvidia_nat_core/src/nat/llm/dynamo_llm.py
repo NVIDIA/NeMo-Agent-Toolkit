@@ -727,43 +727,47 @@ def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "httpx.
     import httpx
 
     from nat.llm.utils.httpx_utils import _create_http_client
-    from nat.profiler.prediction_trie import load_prediction_trie
-    from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
-    prediction_lookup: PredictionTrieLookup | None = None
-    if config.nvext_prediction_trie_path:
-        try:
-            trie_path = Path(config.nvext_prediction_trie_path)
-            trie = load_prediction_trie(trie_path)
-            prediction_lookup = PredictionTrieLookup(trie)
-            logger.info("Loaded prediction trie from %s", config.nvext_prediction_trie_path)
-        except FileNotFoundError:
-            logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
-        except Exception as e:
-            logger.exception("Failed to load prediction trie: %s", e)
+    http_client_kwargs = {}
+    if config.enable_nvext_hints:
+        from nat.profiler.prediction_trie import load_prediction_trie
+        from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
-    # Create base transport and wrap with custom transport
-    base_transport = httpx.AsyncHTTPTransport()
-    dynamo_transport = _DynamoTransport(
-        transport=base_transport,
-        total_requests=config.nvext_prefix_total_requests,
-        osl=config.nvext_prefix_osl,
-        iat=config.nvext_prefix_iat,
-        prediction_lookup=prediction_lookup,
-        cache_pin_type=config.nvext_cache_pin_type,
-        cache_control_mode=config.nvext_cache_control_mode,
-        max_sensitivity=config.nvext_max_sensitivity,
-    )
+        prediction_lookup: PredictionTrieLookup | None = None
+        if config.nvext_prediction_trie_path:
+            try:
+                trie_path = Path(config.nvext_prediction_trie_path)
+                trie = load_prediction_trie(trie_path)
+                prediction_lookup = PredictionTrieLookup(trie)
+                logger.info("Loaded prediction trie from %s", config.nvext_prediction_trie_path)
+            except FileNotFoundError:
+                logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
+            except Exception as e:
+                logger.exception("Failed to load prediction trie: %s", e)
 
-    logger.info(
-        "Dynamo agent hints enabled: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
-        config.nvext_prefix_total_requests,
-        config.nvext_prefix_osl,
-        config.nvext_prefix_iat,
-        "loaded" if config.nvext_prediction_trie_path else "disabled",
-    )
+        # Create base transport and wrap with custom transport
+        base_transport = httpx.AsyncHTTPTransport()
+        dynamo_transport = _DynamoTransport(
+            transport=base_transport,
+            total_requests=config.nvext_prefix_total_requests,
+            osl=config.nvext_prefix_osl,
+            iat=config.nvext_prefix_iat,
+            prediction_lookup=prediction_lookup,
+            cache_pin_type=config.nvext_cache_pin_type,
+            cache_control_mode=config.nvext_cache_control_mode,
+            max_sensitivity=config.nvext_max_sensitivity,
+        )
 
-    return _create_http_client(llm_config=config, use_async=True, transport=dynamo_transport)
+        http_client_kwargs["transport"] = dynamo_transport
+        logger.info(
+            "Dynamo agent hints enabled: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
+            config.nvext_prefix_total_requests,
+            config.nvext_prefix_osl,
+            config.nvext_prefix_iat,
+            "loaded" if config.nvext_prediction_trie_path else "disabled",
+        )
+
+    return _create_http_client(llm_config=config, use_async=True, **http_client_kwargs)
 
 
 # =============================================================================
