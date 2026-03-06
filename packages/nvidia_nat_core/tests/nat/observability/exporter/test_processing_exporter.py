@@ -1102,21 +1102,64 @@ class TestTaskCreation:
         assert "Attempted to create export task while not running" in caplog.text
 
     async def test_create_export_task_error_handling(self, processing_exporter, caplog):
-        """Test error handling in task creation."""
+        """Test error handling in task creation when loop is shutting down.
+
+        RuntimeError from asyncio.create_task (e.g. 'cannot schedule new futures after shutdown')
+        should be caught gracefully and logged as a warning, not re-raised.
+        """
         processing_exporter._running = True
 
         try:
-            # Use a mock coroutine that doesn't need to be awaited
+            # Use a mock coroutine that tracks close() calls
             mock_coro = Mock()
 
-            with patch('asyncio.create_task', side_effect=RuntimeError("Task creation failed")):
-                with pytest.raises(RuntimeError):
-                    with caplog.at_level(logging.ERROR):
-                        processing_exporter._create_export_task(mock_coro)
+            with patch('asyncio.create_task', side_effect=RuntimeError("cannot schedule new futures after shutdown")):
+                with caplog.at_level(logging.WARNING):
+                    # Should NOT raise - the RuntimeError is caught internally
+                    processing_exporter._create_export_task(mock_coro)
 
-            assert "Failed to create task" in caplog.text
+            assert "Cannot create export task (loop shutting down)" in caplog.text
+            # Verify the coroutine was closed to prevent resource leak
+            mock_coro.close.assert_called_once()
         finally:
             # Cleanup: stop the exporter to prevent garbage collection warning
+            await processing_exporter.stop()
+
+    async def test_create_export_task_closes_coroutine_when_not_running(self, processing_exporter):
+        """Test that coroutine is properly closed when exporter is not running.
+
+        This prevents 'coroutine was never awaited' warnings on the early-return path.
+        """
+        processing_exporter._running = False
+
+        mock_coro = Mock()
+        processing_exporter._create_export_task(mock_coro)
+
+        # Verify the coroutine was closed to prevent resource leak
+        mock_coro.close.assert_called_once()
+
+    async def test_create_export_task_race_condition_during_shutdown(self, processing_exporter, caplog):
+        """Test the race condition where stop() is called between the running check and task creation.
+
+        Simulates the scenario where:
+        1. _create_export_task checks self._running (True)
+        2. Event loop begins shutting down
+        3. asyncio.create_task raises RuntimeError
+        The error should be caught gracefully without crashing.
+        """
+        processing_exporter._running = True
+
+        try:
+            mock_coro = Mock()
+
+            with patch('asyncio.create_task', side_effect=RuntimeError("cannot schedule new futures after shutdown")):
+                with caplog.at_level(logging.WARNING):
+                    # This should not raise
+                    processing_exporter._create_export_task(mock_coro)
+
+            assert "Cannot create export task" in caplog.text
+            mock_coro.close.assert_called_once()
+        finally:
             await processing_exporter.stop()
 
 
