@@ -73,10 +73,10 @@ class StepAdaptor:
         return False
 
     @staticmethod
-    def _extract_react_thought(output: str) -> str | None:
+    def _extract_react_thought(output: str, fallback: str = "_Thinking..._") -> str:
         """Extract ReAct-style 'Thought: ...' from LLM output for thought process display."""
         if not output or not isinstance(output, str):
-            return None
+            return fallback
         # Match "Thought:" (case-insensitive, optional colon) and capture until Action/Final Answer/end
         match = re.search(
             r"thought\s*:?\s*(.*?)(?=\s*(?:action\s*\d*\s*:|final\s+answer\s*:)|$)",
@@ -84,9 +84,9 @@ class StepAdaptor:
             re.DOTALL | re.IGNORECASE,
         )
         if not match:
-            return None
+            return fallback
         text = match.group(1).strip()
-        return text if text else None
+        return text if text else fallback
 
     def _handle_llm(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         input_str: str | None = None
@@ -141,14 +141,11 @@ class StepAdaptor:
         thought_text = None
         if step.event_type == IntermediateStepType.LLM_START:
             # Show "Thinking..." placeholder at START
-            thought_text = "Thinking..."
-        elif step.event_type == IntermediateStepType.LLM_NEW_TOKEN and output_str:
-            # Try to extract partial thought from streaming tokens
-            extracted = self._extract_react_thought(output_str)
-            thought_text = extracted if extracted else "Thinking..."
-        elif step.event_type == IntermediateStepType.LLM_END and output_str:
-            # END will show complete thought
-            thought_text = self._extract_react_thought(output_str)
+            thought_text = "_Thinking..._"
+        elif step.event_type == IntermediateStepType.LLM_NEW_TOKEN:
+            thought_text = self._extract_react_thought(output_str or "", fallback="_Thinking..._")
+        elif step.event_type == IntermediateStepType.LLM_END:
+            thought_text = self._extract_react_thought(output_str or "", fallback="Completed thought.")
 
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=step.name or "",
