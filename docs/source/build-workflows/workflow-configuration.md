@@ -71,6 +71,23 @@ From the above we see that it is divided into four sections: `functions`, `llms`
 ### `functions`
 The `functions` section contains the tools used in the workflow, in our example we have two `webpage_query` and `current_datetime`. By convention, the key matches the `_type` value, however this is not a strict requirement, and can be used to include multiple instances of the same tool.
 
+#### Thought process description
+
+Agent responses in the NeMo Agent Toolkit UI include a thought process display which shows a step-by-step view of what the workflow is doing.
+
+To customize the text shown for a function in the thought process display, set `thought_description` in that function's configuration. Unlike `description`, which provides the tool's help text that the agent uses to decide when and how to call the tool, `thought_description` only affects the label shown in the thought process display. For example:
+
+```yaml
+functions:
+  webpage_query:
+    _type: webpage_query
+    thought_description: "Searching internal documentation"
+    webpage_url: https://docs.smith.langchain.com
+    description: "Search for information about LangSmith. For any questions about LangSmith, you must use this tool!"
+    embedder_name: nv-embedqa-e5-v5
+    chunk_size: 512
+```
+If `thought_description` is not set, NeMo Agent Toolkit uses a default thought description. For runtime customization of the thought process display from within your function code, refer to [Customizing Thought Process Display](../extend/custom-components/custom-functions/functions.md#customizing-thought-process-display).
 
 ### `llms`
 This section contains the models used in the workflow. The `_type` value refers to the API hosting the model, in this case `nim` refers to an NIM model hosted on [`build.nvidia.com`](https://build.nvidia.com).
