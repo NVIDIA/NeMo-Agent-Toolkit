@@ -47,6 +47,7 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
+from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.runtime.session import SessionManager
 
@@ -94,6 +95,12 @@ def evaluation_run(default_eval_run_config, eval_input, default_eval_config):
 def generated_answer():
     """Fixture to provide a generated answer."""
     return "Generated answer"
+
+
+def test_evaluation_run_registers_file_callback_by_default(default_eval_run_config):
+    """`EvaluationRun` should register file output callback when write_output is enabled."""
+    eval_run = EvaluationRun(default_eval_run_config)
+    assert any(isinstance(cb, FileEvalCallback) for cb in eval_run.callback_manager._callbacks)
 
 
 @pytest.fixture

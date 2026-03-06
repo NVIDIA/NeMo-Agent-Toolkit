@@ -78,6 +78,11 @@ class EvaluationRun:
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
         self.callback_manager: EvalCallbackManager = callback_manager or EvalCallbackManager()
+        if self.config.write_output:
+            from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+            if not any(isinstance(cb, FileEvalCallback) for cb in self.callback_manager._callbacks):
+                # Keep direct `EvaluationRun(...)` behavior consistent with CLI usage.
+                self.callback_manager.register(FileEvalCallback())
         self.eval_config: EvalConfig | None = None
         self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
