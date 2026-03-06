@@ -139,16 +139,18 @@ def eval_output(average_score):
 def mock_evaluator(eval_output):
     """Fixture to create a mock evaluator."""
 
-    async def mock_evaluate_fn(_eval_input):
-        return eval_output
+    class LegacyEvaluatorDouble:
 
-    # Create a mock evaluator
-    mock_evaluator = AsyncMock()
-    mock_evaluator.evaluate_fn = AsyncMock(side_effect=mock_evaluate_fn)
-    # Explicitly disable ATIF lane for legacy evaluator fixture.
-    mock_evaluator.evaluate_atif_fn = None
+        def __init__(self, output):
 
-    return mock_evaluator
+            async def mock_evaluate_fn(_eval_input):
+                return output
+
+            self.evaluate_fn = AsyncMock(side_effect=mock_evaluate_fn)
+            # Explicitly disable ATIF lane for legacy evaluator fixture.
+            self.evaluate_atif_fn = None
+
+    return LegacyEvaluatorDouble(eval_output)
 
 
 @pytest.fixture
@@ -599,9 +601,13 @@ async def test_run_evaluators_partial_failure(evaluation_run, mock_evaluator, ev
     bad_evaluator_name = "BadEvaluator"
 
     # Create a failing evaluator
-    mock_failing_evaluator = AsyncMock()
-    mock_failing_evaluator.evaluate_fn.side_effect = RuntimeError("Evaluator failed")
-    mock_failing_evaluator.evaluate_atif_fn = None
+    class LegacyFailingEvaluatorDouble:
+
+        def __init__(self):
+            self.evaluate_fn = AsyncMock(side_effect=RuntimeError("Evaluator failed"))
+            self.evaluate_atif_fn = None
+
+    mock_failing_evaluator = LegacyFailingEvaluatorDouble()
 
     evaluators = {good_evaluator_name: mock_evaluator, bad_evaluator_name: mock_failing_evaluator}
 

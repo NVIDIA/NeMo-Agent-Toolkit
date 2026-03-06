@@ -48,6 +48,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
+from nat.plugins.eval.evaluator.atif_evaluator import LegacyEvaluator
 from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
@@ -549,7 +550,7 @@ class EvaluationRun:
         """Run one evaluator through the legacy `evaluate_fn` lane."""
         try:
             evaluate_fn = getattr(evaluator, "evaluate_fn", None)
-            if not callable(evaluate_fn):
+            if not isinstance(evaluator, LegacyEvaluator):
                 raise TypeError(f"Evaluator '{evaluator_name}' is missing callable evaluate_fn and evaluate_atif_fn")
             eval_result = evaluate_fn(self.eval_input)
             if not inspect.isawaitable(eval_result):
@@ -564,14 +565,16 @@ class EvaluationRun:
     async def run_evaluators(self, evaluators: dict[str, Any]):
         """Run all configured evaluators asynchronously."""
         atif_evaluators: dict[str, AtifEvaluator] = {}
-        legacy_evaluators = {}
+        legacy_evaluators: dict[str, LegacyEvaluator] = {}
         for name, evaluator in evaluators.items():
             if not evaluator:
                 continue
             if isinstance(evaluator, AtifEvaluator):
                 atif_evaluators[name] = evaluator
-            else:
+            elif isinstance(evaluator, LegacyEvaluator):
                 legacy_evaluators[name] = evaluator
+            else:
+                logger.warning("Skipping evaluator %s: missing ATIF and legacy evaluator interfaces", name)
 
         if not atif_evaluators and not legacy_evaluators:
             logger.warning("All evaluators were empty or invalid.")

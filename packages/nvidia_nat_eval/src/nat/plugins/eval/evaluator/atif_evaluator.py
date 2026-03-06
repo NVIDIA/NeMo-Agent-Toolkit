@@ -48,3 +48,12 @@ class AtifEvaluator(Protocol):
     async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
         """Evaluate using ATIF-native sample payloads."""
         ...
+
+
+@runtime_checkable
+class LegacyEvaluator(Protocol):
+    """Protocol for evaluators that consume legacy `EvalInput` payloads."""
+
+    async def evaluate_fn(self, eval_input) -> EvalOutput:
+        """Evaluate using legacy eval input payloads."""
+        ...
