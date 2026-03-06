@@ -31,6 +31,11 @@ llms:
     _type: nim
     model_name: meta/llama-3.3-70b-instruct
     max_tokens: 8
+  nim_trajectory_eval_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
 
 embedders:
   nv-embedqa-e5-v5:
@@ -71,3 +76,7 @@ eval:
       enable_atif_evaluator: true
       metric: ContextRelevance
       llm_name: nim_rag_eval_llm
+    trajectory_accuracy:
+      _type: trajectory
+      enable_atif_evaluator: true
+      llm_name: nim_trajectory_eval_llm
