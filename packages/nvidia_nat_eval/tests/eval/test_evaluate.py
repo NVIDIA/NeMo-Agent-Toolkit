@@ -817,6 +817,7 @@ def test_write_configuration_handles_missing_effective_config(evaluation_run, de
     assert config_metadata_file.exists(), "config_metadata.json should be created"
 
 
+# Batch-3: Tests for running eval via run_and_evaluate
 @pytest.mark.parametrize("skip_workflow", [True, False])
 async def test_run_and_evaluate(evaluation_run, default_eval_config, session_manager, mock_evaluator, skip_workflow):
     """
@@ -825,7 +826,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     2. runs workflow
     3. evaluates
     4. profiles
-    5. writes output.
+    5. fires _on_eval_complete callback.
     """
     evaluation_run.config.skip_workflow = skip_workflow
     # Patch load_config to return an Config instance with eval_config set
@@ -852,7 +853,6 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     mock_uploader.run_custom_scripts = MagicMock()
     mock_uploader.upload_directory = AsyncMock()
 
-    # check if run_custom_scripts and upload_directory are called
     # Patch functions and classes. Goal here is simply to ensure calls are made to the right functions.
     with patch("nat.runtime.loader.load_config", mock_load_config), \
          patch("nat.plugins.eval.runtime.builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
@@ -865,7 +865,7 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
          patch.object(evaluation_run, "run_evaluators", AsyncMock()) as mock_run_evaluators, \
          patch.object(evaluation_run, "profile_workflow",
                       AsyncMock(return_value=ProfilerResults())) as mock_profile_workflow, \
-         patch.object(evaluation_run, "write_output", MagicMock()) as mock_write_output:
+         patch.object(evaluation_run, "_on_eval_complete", MagicMock()) as mock_on_eval_complete:
 
         # Run the function
         await evaluation_run.run_and_evaluate(session_manager=session_manager)
@@ -889,8 +889,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
         # Ensure profiling is executed
         mock_profile_workflow.assert_called_once()
 
-        # Ensure output is written with both dataset_handler and profiler_results
-        mock_write_output.assert_called_once_with(mock_dataset_handler, mock_profile_workflow.return_value)
+        # Ensure _on_eval_complete is called with the dataset handler
+        mock_on_eval_complete.assert_called_once_with(mock_dataset_handler)
 
         # Ensure custom scripts are run and directory is uploaded
         mock_uploader.run_custom_scripts.assert_called_once()
