@@ -15,10 +15,9 @@
 # limitations under the License.
 """Compare two eval run output directories.
 
-This script compares common evaluator outputs from two run directories:
-- accuracy_output.json
-- groundedness_output.json
-- relevance_output.json
+This script compares evaluator outputs from two run directories.
+By default it prioritizes common files (RAGAS, trajectory, and tunable RAG),
+and it also auto-discovers any additional ``*_output.json`` evaluator files.
 
 It prints:
 - average score delta per evaluator
@@ -42,6 +41,9 @@ EVALUATOR_FILES = (
     "accuracy_output.json",
     "groundedness_output.json",
     "relevance_output.json",
+    "trajectory_accuracy_output.json",
+    "tuneable_eval_output.json",
+    "tunable_eval_output.json",
 )
 
 
@@ -60,6 +62,33 @@ def _fmt_score(v: object) -> str:
     if isinstance(v, float):
         return f"{v:.6f}"
     return str(v)
+
+
+def _discover_evaluator_files(run_a: Path, run_b: Path) -> list[str]:
+    """Discover evaluator output files from both run directories.
+
+    Includes all ``*_output.json`` files except workflow outputs.
+    Preferred known evaluator files are listed first for stable output.
+    """
+    excluded = {"workflow_output.json", "workflow_output_atif.json"}
+    discovered = set()
+    for run_dir in (run_a, run_b):
+        if not run_dir.exists():
+            continue
+        for path in run_dir.glob("*_output.json"):
+            if path.name not in excluded:
+                discovered.add(path.name)
+
+    ordered: list[str] = []
+    for name in EVALUATOR_FILES:
+        if name in discovered:
+            ordered.append(name)
+
+    for name in sorted(discovered):
+        if name not in ordered:
+            ordered.append(name)
+
+    return ordered
 
 
 def compare_evaluator(run_a: Path, run_b: Path, file_name: str, show_item_diffs: bool) -> None:
@@ -113,7 +142,12 @@ def main() -> int:
     print(f"Run A: {args.run_a}")
     print(f"Run B: {args.run_b}")
 
-    for file_name in EVALUATOR_FILES:
+    evaluator_files = _discover_evaluator_files(args.run_a, args.run_b)
+    if not evaluator_files:
+        print("\nNo evaluator output files found in either run directory.")
+        return 0
+
+    for file_name in evaluator_files:
         compare_evaluator(args.run_a, args.run_b, file_name, args.show_item_diffs)
 
     return 0
