@@ -36,8 +36,8 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
-from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluatorConfig
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluator
+from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluatorConfig
 from nat.plugins.langchain.eval.trajectory_evaluator import register_trajectory_evaluator
 
 
@@ -156,9 +156,8 @@ def fixture_atif_samples():
                                 arguments={"query": "artificial intelligence"},
                             )
                         ],
-                        observation=ATIFObservation(results=[
-                            ATIFObservationResult(source_call_id="call-1", content="Search results context")
-                        ]),
+                        observation=ATIFObservation(
+                            results=[ATIFObservationResult(source_call_id="call-1", content="Search results context")]),
                     ),
                 ],
             ),
@@ -173,10 +172,7 @@ def fixture_atif_samples():
                 agent=ATIFAgentConfig(name="test-agent", version="0.0.0"),
                 steps=[
                     ATIFStep(step_id=1, source="user", message="What is ML?"),
-                    ATIFStep(step_id=2,
-                             source="agent",
-                             model_name="mock-llm",
-                             message="ML is a subset of AI."),
+                    ATIFStep(step_id=2, source="agent", model_name="mock-llm", message="ML is a subset of AI."),
                 ],
             ),
             expected_output_obj="Machine learning.",
@@ -250,12 +246,13 @@ async def test_trajectory_legacy_and_atif_lane_parity_with_tolerance(trajectory_
                         source="agent",
                         model_name="mock-llm",
                         message="AI answer",
-                        tool_calls=[ATIFToolCall(tool_call_id="call-1",
-                                                 function_name="web_search",
-                                                 arguments={"query": "What is AI?"})],
-                        observation=ATIFObservation(results=[
-                            ATIFObservationResult(source_call_id="call-1", content="Search results context")
-                        ]),
+                        tool_calls=[
+                            ATIFToolCall(tool_call_id="call-1",
+                                         function_name="web_search",
+                                         arguments={"query": "What is AI?"})
+                        ],
+                        observation=ATIFObservation(
+                            results=[ATIFObservationResult(source_call_id="call-1", content="Search results context")]),
                     ),
                 ],
             ),

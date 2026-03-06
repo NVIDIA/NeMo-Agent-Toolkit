@@ -148,7 +148,11 @@ class TrajectoryEvaluator(BaseEvaluator):
                                                             return_reasoning=True,
                                                             requires_reference=True)
 
-    async def _evaluate_with_trajectory(self, item_id, lane: str, question: str, generated_answer: str,
+    async def _evaluate_with_trajectory(self,
+                                        item_id,
+                                        lane: str,
+                                        question: str,
+                                        generated_answer: str,
                                         agent_trajectory: list[tuple[AgentAction, str]]) -> EvalOutputItem:
         """Run trajectory scoring for one item regardless of input lane."""
         question_text = _coerce_text(question)
@@ -191,7 +195,11 @@ class TrajectoryEvaluator(BaseEvaluator):
         question = _atif_to_user_input(sample.trajectory)
         generated_answer = sample.output_obj if sample.output_obj is not None else ""
         agent_trajectory = _atif_to_agent_actions(sample.trajectory)
-        return await self._evaluate_with_trajectory(sample.item_id, "atif", question, generated_answer, agent_trajectory)
+        return await self._evaluate_with_trajectory(sample.item_id,
+                                                    "atif",
+                                                    question,
+                                                    generated_answer,
+                                                    agent_trajectory)
 
     async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
         """ATIF-native evaluation lane for trajectory scoring."""
