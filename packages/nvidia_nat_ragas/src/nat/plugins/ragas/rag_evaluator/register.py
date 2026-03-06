@@ -26,6 +26,7 @@ from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvaluatorLLMConfig
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 logger = logging.getLogger(__name__)
@@ -48,6 +49,10 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
     input_obj_field: str | None = Field(
         default=None,
         description="The field in the input object that contains the content to evaluate.",
+    )
+    enable_atif_evaluator: bool = Field(
+        default=False,
+        description="Enable ATIF-native RAGAS evaluator lane. Disabled by default until rollout stabilization.",
     )
 
     @model_validator(mode="before")
@@ -112,6 +117,14 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             return EvalOutput(average_score=0.0, eval_output_items=[])
         return await evaluator.evaluate(eval_input)
 
+    async def evaluate_atif_fn(atif_samples: AtifEvalSampleList) -> EvalOutput:
+        """Run ATIF-native RAGAS evaluation and return NAT eval output."""
+        if not atif_evaluator:
+            logger.warning("No ATIF evaluator found for RAGAS metrics.")
+            return EvalOutput(average_score=0.0, eval_output_items=[])
+        return await atif_evaluator.evaluate(atif_samples)
+
+    from .atif_evaluate import RAGAtifEvaluator
     from .evaluate import RAGEvaluator
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -136,4 +149,11 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
                              metrics=metrics,
                              max_concurrency=builder.get_max_concurrency(),
                              input_obj_field=config.input_obj_field) if metrics else None
-    yield EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
+    atif_evaluator = RAGAtifEvaluator(
+        evaluator_llm=llm, metrics=metrics,
+        max_concurrency=builder.get_max_concurrency()) if (metrics and config.enable_atif_evaluator) else None
+
+    evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
+    if config.enable_atif_evaluator:
+        evaluator_info.evaluate_atif_fn = evaluate_atif_fn
+    yield evaluator_info
