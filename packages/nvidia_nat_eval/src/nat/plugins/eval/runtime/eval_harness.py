@@ -47,9 +47,7 @@ class EvaluationHarness:
     def __init__(self, logger_instance: logging.Logger | None = None):
         self._logger = logger_instance or logger
 
-    async def _evaluate_single(self,
-                               evaluator_name: str,
-                               evaluator: Any,
+    async def _evaluate_single(self, evaluator_name: str, evaluator: Any,
                                atif_samples: AtifEvalSampleList) -> tuple[str, EvalOutput] | None:
         """Evaluate one evaluator using the ATIF lane.
 

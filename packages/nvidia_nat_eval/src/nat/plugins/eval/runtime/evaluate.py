@@ -529,7 +529,8 @@ class EvaluationRun:
             if not self.atif_eval_samples and self.eval_input is not None:
                 # Lazy-populate when run_single_evaluator is called outside run_and_evaluate.
                 self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
-            harness_results = await self.evaluation_harness.evaluate({evaluator_name: evaluator}, self.atif_eval_samples)
+            harness_results = await self.evaluation_harness.evaluate({evaluator_name: evaluator},
+                                                                     self.atif_eval_samples)
             eval_output = harness_results.get(evaluator_name)
             if eval_output is None:
                 return
@@ -812,8 +813,9 @@ class EvaluationRun:
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
                     evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
-                    needs_atif_samples = any(callable(getattr(evaluator, "evaluate_atif_fn", None))
-                                             for evaluator in evaluators.values() if evaluator is not None)
+                    needs_atif_samples = any(
+                        callable(getattr(evaluator, "evaluate_atif_fn", None)) for evaluator in evaluators.values()
+                        if evaluator is not None)
                     if needs_atif_samples:
                         # Build and cache ATIF trajectories only when ATIF-native evaluators are present.
                         self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)

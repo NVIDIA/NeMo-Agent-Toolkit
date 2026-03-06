@@ -284,6 +284,7 @@ class TunableRagEvaluator(BaseEvaluator):
         return await self._evaluate_item_core(sample.item_id, question, answer_description, generated_answer)
 
     async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
+
         async def wrapped(sample: AtifEvalSample) -> EvalOutputItem:
             async with self.semaphore:
                 return await self.evaluate_atif_item(sample)

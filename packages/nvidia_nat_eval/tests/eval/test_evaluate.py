@@ -515,8 +515,7 @@ async def test_run_single_evaluator_atif_lane(evaluation_run, eval_output):
     atif_evaluator.evaluate_atif_fn = AsyncMock(return_value=eval_output)
     atif_evaluator.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
 
-    with patch.object(evaluation_run.evaluation_harness,
-                      "evaluate",
+    with patch.object(evaluation_run.evaluation_harness, "evaluate",
                       wraps=evaluation_run.evaluation_harness.evaluate) as mock_harness_evaluate:
         await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
 
@@ -572,8 +571,7 @@ async def test_run_evaluators_uses_harness_for_atif_evaluators(evaluation_run, e
     atif_evaluator_2.evaluate_atif_fn = AsyncMock(return_value=eval_output)
     atif_evaluator_2.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
 
-    with patch.object(evaluation_run.evaluation_harness,
-                      "evaluate",
+    with patch.object(evaluation_run.evaluation_harness, "evaluate",
                       wraps=evaluation_run.evaluation_harness.evaluate) as mock_harness_evaluate:
         await evaluation_run.run_evaluators({"Atif1": atif_evaluator_1, "Atif2": atif_evaluator_2})
 
