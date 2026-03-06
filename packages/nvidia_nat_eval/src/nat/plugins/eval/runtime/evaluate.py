@@ -14,9 +14,11 @@
 # limitations under the License.
 
 import asyncio
+import inspect
 import json
 import logging
 import shutil
+from collections.abc import Awaitable
 from contextlib import nullcontext
 from datetime import UTC
 from datetime import datetime
@@ -45,6 +47,7 @@ from nat.data_models.evaluator import EvalOutput
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.eval_callbacks import EvalCallbackManager
+from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.runtime.session import SessionManager
@@ -82,6 +85,7 @@ class EvaluationRun:
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
         from nat.plugins.eval.runtime.atif_adapter import EvalAtifAdapter
         self.atif_adapter = EvalAtifAdapter()
+        self.evaluation_harness = EvaluationHarness()
         # Metadata
         self.eval_input: EvalInput | None = None
         self.atif_eval_samples: AtifEvalSampleList = []
@@ -520,15 +524,31 @@ class EvaluationRun:
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
+        atif_evaluate_fn = getattr(evaluator, "evaluate_atif_fn", None)
+        if callable(atif_evaluate_fn):
+            if not self.atif_eval_samples and self.eval_input is not None:
+                # Lazy-populate when run_single_evaluator is called outside run_and_evaluate.
+                self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+            harness_results = await self.evaluation_harness.evaluate({evaluator_name: evaluator}, self.atif_eval_samples)
+            eval_output = harness_results.get(evaluator_name)
+            if eval_output is None:
+                return
+            self.evaluation_results.append((evaluator_name, eval_output))
+            if self.callback_manager:
+                await self.callback_manager.a_on_evaluator_score(eval_output=eval_output, evaluator_name=evaluator_name)
+            return
+        await self._run_single_legacy_evaluator(evaluator_name, evaluator)
+
+    async def _run_single_legacy_evaluator(self, evaluator_name: str, evaluator: Any):
+        """Run one evaluator through the legacy `evaluate_fn` lane."""
         try:
-            atif_evaluate_fn = getattr(evaluator, "evaluate_atif_fn", None)
-            if callable(atif_evaluate_fn):
-                if not self.atif_eval_samples and self.eval_input is not None:
-                    # Lazy-populate when run_single_evaluator is called outside run_and_evaluate.
-                    self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
-                eval_output = await atif_evaluate_fn(self.atif_eval_samples)
-            else:
-                eval_output = await evaluator.evaluate_fn(self.eval_input)
+            evaluate_fn = getattr(evaluator, "evaluate_fn", None)
+            if not callable(evaluate_fn):
+                raise RuntimeError("missing callable evaluate_fn and evaluate_atif_fn")
+            eval_result = evaluate_fn(self.eval_input)
+            if not inspect.isawaitable(eval_result):
+                raise RuntimeError("evaluate_fn must be awaitable")
+            eval_output = await eval_result
             self.evaluation_results.append((evaluator_name, eval_output))
             if self.callback_manager:
                 await self.callback_manager.a_on_evaluator_score(eval_output=eval_output, evaluator_name=evaluator_name)
@@ -537,14 +557,38 @@ class EvaluationRun:
 
     async def run_evaluators(self, evaluators: dict[str, Any]):
         """Run all configured evaluators asynchronously."""
-        tasks = [self.run_single_evaluator(name, evaluator) for name, evaluator in evaluators.items() if evaluator]
+        atif_evaluators = {}
+        legacy_evaluators = {}
+        for name, evaluator in evaluators.items():
+            if not evaluator:
+                continue
+            if callable(getattr(evaluator, "evaluate_atif_fn", None)):
+                atif_evaluators[name] = evaluator
+            else:
+                legacy_evaluators[name] = evaluator
 
-        if not tasks:
+        if not atif_evaluators and not legacy_evaluators:
             logger.warning("All evaluators were empty or invalid.")
             return
 
         try:
-            await asyncio.gather(*tasks)
+            if atif_evaluators:
+                if not self.atif_eval_samples and self.eval_input is not None:
+                    # Lazy-populate for direct callers of run_evaluators.
+                    self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+                harness_results = await self.evaluation_harness.evaluate(atif_evaluators, self.atif_eval_samples)
+                for evaluator_name, eval_output in harness_results.items():
+                    self.evaluation_results.append((evaluator_name, eval_output))
+                    if self.callback_manager:
+                        await self.callback_manager.a_on_evaluator_score(eval_output=eval_output,
+                                                                         evaluator_name=evaluator_name)
+
+            if legacy_evaluators:
+                tasks: list[Awaitable[None]] = [
+                    self._run_single_legacy_evaluator(evaluator_name=name, evaluator=evaluator)
+                    for name, evaluator in legacy_evaluators.items()
+                ]
+                await asyncio.gather(*tasks)
         except Exception as e:
             logger.error("An error occurred while running evaluators: %s", e)
             raise

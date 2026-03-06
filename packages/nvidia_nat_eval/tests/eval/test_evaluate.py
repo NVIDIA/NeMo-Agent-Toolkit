@@ -515,10 +515,14 @@ async def test_run_single_evaluator_atif_lane(evaluation_run, eval_output):
     atif_evaluator.evaluate_atif_fn = AsyncMock(return_value=eval_output)
     atif_evaluator.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
 
-    await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
+    with patch.object(evaluation_run.evaluation_harness,
+                      "evaluate",
+                      wraps=evaluation_run.evaluation_harness.evaluate) as mock_harness_evaluate:
+        await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
 
     atif_evaluator.evaluate_atif_fn.assert_awaited_once()
     atif_evaluator.evaluate_fn.assert_not_called()
+    mock_harness_evaluate.assert_awaited_once()
     assert evaluation_run.evaluation_results[-1][0] == "AtifEvaluator"
     assert evaluation_run.evaluation_results[-1][1] == eval_output
 
@@ -556,6 +560,27 @@ async def test_run_evaluators_success(evaluation_run, mock_evaluator, eval_outpu
         assert evaluator_name in evaluators, f"Evaluator name {evaluator_name} should match one of the evaluators"
         assert result == eval_output, f"Stored result for {evaluator_name} should match the provided eval_output"
         assert result.average_score == average_score, f"Expected average score to be {average_score}"
+
+
+async def test_run_evaluators_uses_harness_for_atif_evaluators(evaluation_run, eval_output):
+    """`run_evaluators` delegates ATIF evaluator execution to `EvaluationHarness`."""
+    atif_evaluator_1 = AsyncMock()
+    atif_evaluator_1.evaluate_atif_fn = AsyncMock(return_value=eval_output)
+    atif_evaluator_1.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+
+    atif_evaluator_2 = AsyncMock()
+    atif_evaluator_2.evaluate_atif_fn = AsyncMock(return_value=eval_output)
+    atif_evaluator_2.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+
+    with patch.object(evaluation_run.evaluation_harness,
+                      "evaluate",
+                      wraps=evaluation_run.evaluation_harness.evaluate) as mock_harness_evaluate:
+        await evaluation_run.run_evaluators({"Atif1": atif_evaluator_1, "Atif2": atif_evaluator_2})
+
+    mock_harness_evaluate.assert_awaited_once()
+    atif_evaluator_1.evaluate_fn.assert_not_called()
+    atif_evaluator_2.evaluate_fn.assert_not_called()
+    assert len(evaluation_run.evaluation_results) == 2
 
 
 async def test_run_evaluators_partial_failure(evaluation_run, mock_evaluator, eval_output, average_score):
