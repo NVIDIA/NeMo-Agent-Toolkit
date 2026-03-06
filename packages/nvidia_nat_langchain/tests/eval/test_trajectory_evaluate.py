@@ -277,8 +277,20 @@ async def test_trajectory_legacy_and_atif_lane_parity_with_tolerance(trajectory_
     assert legacy_output.eval_output_items[0].score == pytest.approx(atif_output.eval_output_items[0].score, abs=0.01)
 
 
-async def test_register_trajectory_evaluator_exposes_legacy_and_atif_lanes(mock_llm, mock_tools):
+async def test_register_trajectory_evaluator_exposes_legacy_lane_by_default(mock_llm, mock_tools):
     config = TrajectoryEvaluatorConfig(llm_name="judge_llm")
+    builder = MagicMock(spec=["get_llm", "get_max_concurrency", "get_all_tools"])
+    builder.get_llm = AsyncMock(return_value=mock_llm)
+    builder.get_all_tools = AsyncMock(return_value=mock_tools)
+    builder.get_max_concurrency.return_value = 2
+
+    async with register_trajectory_evaluator(config, builder) as info:
+        assert callable(info.evaluate_fn)
+        assert not callable(getattr(info, "evaluate_atif_fn", None))
+
+
+async def test_register_trajectory_evaluator_exposes_atif_lane_when_enabled(mock_llm, mock_tools):
+    config = TrajectoryEvaluatorConfig(llm_name="judge_llm", enable_atif_evaluator=True)
     builder = MagicMock(spec=["get_llm", "get_max_concurrency", "get_all_tools"])
     builder.get_llm = AsyncMock(return_value=mock_llm)
     builder.get_all_tools = AsyncMock(return_value=mock_tools)

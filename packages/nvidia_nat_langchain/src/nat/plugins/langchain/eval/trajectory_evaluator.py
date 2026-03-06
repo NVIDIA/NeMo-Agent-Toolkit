@@ -20,6 +20,7 @@ from langchain_classic.evaluation import TrajectoryEvalChain
 from langchain_core.agents import AgentAction
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
+from pydantic import Field
 
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
@@ -50,7 +51,10 @@ def _coerce_text(value) -> str:
 class TrajectoryEvaluatorConfig(EvaluatorLLMConfig, name="trajectory"):
     """Agent trajectory evaluator configuration."""
 
-    pass
+    enable_atif_evaluator: bool = Field(
+        default=False,
+        description="Enable ATIF-native trajectory evaluator lane. Disabled by default during migration.",
+    )
 
 
 def _to_agent_actions(intermediate_steps: list[IntermediateStep]) -> list[tuple[AgentAction, str]]:
@@ -144,7 +148,7 @@ class TrajectoryEvaluator(BaseEvaluator):
                                                             return_reasoning=True,
                                                             requires_reference=True)
 
-    async def _evaluate_with_trajectory(self, item_id, question: str, generated_answer: str,
+    async def _evaluate_with_trajectory(self, item_id, lane: str, question: str, generated_answer: str,
                                         agent_trajectory: list[tuple[AgentAction, str]]) -> EvalOutputItem:
         """Run trajectory scoring for one item regardless of input lane."""
         question_text = _coerce_text(question)
@@ -157,11 +161,17 @@ class TrajectoryEvaluator(BaseEvaluator):
             # Some judge models occasionally miss the strict "Score: " suffix
             # expected by LangChain's legacy trajectory parser.
             if isinstance(e, ValueError) and "not enough values to unpack" in str(e):
-                logger.warning("Trajectory judge output parsing failed for question '%s': %s",
+                logger.warning("Trajectory judge output parsing failed [lane=%s item_id=%s question=%r]: %s",
+                               lane,
+                               item_id,
                                question_text,
                                e)
             else:
-                logger.exception("Error evaluating trajectory for question: %s, Error: %s", question_text, e)
+                logger.exception("Error evaluating trajectory [lane=%s item_id=%s question=%r]: %s",
+                                 lane,
+                                 item_id,
+                                 question_text,
+                                 e)
             return EvalOutputItem(id=item_id, score=0.0, reasoning={}, error=str(e))
 
         reasoning = {
@@ -174,14 +184,14 @@ class TrajectoryEvaluator(BaseEvaluator):
         question = item.input_obj
         generated_answer = item.output_obj
         agent_trajectory = _to_agent_actions(item.trajectory)
-        return await self._evaluate_with_trajectory(item.id, question, generated_answer, agent_trajectory)
+        return await self._evaluate_with_trajectory(item.id, "legacy", question, generated_answer, agent_trajectory)
 
     async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
         """Evaluate a single ATIF-native sample."""
         question = _atif_to_user_input(sample.trajectory)
         generated_answer = sample.output_obj if sample.output_obj is not None else ""
         agent_trajectory = _atif_to_agent_actions(sample.trajectory)
-        return await self._evaluate_with_trajectory(sample.item_id, question, generated_answer, agent_trajectory)
+        return await self._evaluate_with_trajectory(sample.item_id, "atif", question, generated_answer, agent_trajectory)
 
     async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
         """ATIF-native evaluation lane for trajectory scoring."""
@@ -209,5 +219,6 @@ async def register_trajectory_evaluator(config: TrajectoryEvaluatorConfig, build
     tools = await builder.get_all_tools(wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     evaluator = TrajectoryEvaluator(llm=llm, tools=tools, max_concurrency=builder.get_max_concurrency())
     evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluator.evaluate, description="Trajectory Evaluator")
-    evaluator_info.evaluate_atif_fn = evaluator.evaluate_atif_fn
+    if config.enable_atif_evaluator:
+        evaluator_info.evaluate_atif_fn = evaluator.evaluate_atif_fn
     yield evaluator_info
