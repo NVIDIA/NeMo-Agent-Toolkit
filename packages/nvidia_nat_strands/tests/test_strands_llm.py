@@ -156,76 +156,89 @@ class TestNIMStrands:
             api_type=APITypeEnum.RESPONSES,
         )
 
+    @pytest.fixture(name="mock_oai_clients")
+    def mock_oai_clients_fixture(self):
+        with patch("openai.AsyncOpenAI") as mock_oai:
+            mock_oai.return_value = mock_oai
+
+            # Patch OpenAIModel constructor to track the call
+            with patch("strands.models.openai.OpenAIModel.__init__", return_value=None) as mock_oai_model:
+                yield mock_oai, mock_oai_model
+
     @pytest.mark.asyncio
-    async def test_nim_strands_basic(self, nim_config, mock_builder):
+    async def test_nim_strands_basic(self, nim_config, mock_builder, mock_oai_clients):
         """Test that nim_strands creates a NIMCompatibleOpenAIModel."""
-        # Patch OpenAIModel.__init__ to track the call
-        with patch("strands.models.openai.OpenAIModel.__init__", return_value=None) as mock_init:
-            # pylint: disable=not-async-context-manager
-            async with nim_strands(nim_config, mock_builder) as result:
-                # Verify the result is a NIMCompatibleOpenAIModel instance
-                assert result is not None
+        (mock_oai, mock_oai_model) = mock_oai_clients
 
-                # Verify OpenAIModel.__init__ was called (the base class)
-                mock_init.assert_called_once()
-                call_args = mock_init.call_args
+        # pylint: disable=not-async-context-manager
+        async with nim_strands(nim_config, mock_builder) as result:
+            # Verify the result is a NIMCompatibleOpenAIModel instance
+            assert result is not None
 
-                # First arg is self, get kwargs
-                call_kwargs = call_args[1]
+            mock_oai.assert_called_once()  # Ensure OpenAI client init was called
+            oai_call_args = mock_oai.call_args
+            oai_call_kwargs = oai_call_args[1]
+            assert oai_call_kwargs["api_key"] == "test-api-key"
+            assert oai_call_kwargs["base_url"] == "https://integrate.api.nvidia.com/v1"
 
-                # Verify client_args
-                assert "client_args" in call_kwargs
-                client_args = call_kwargs["client_args"]
-                assert client_args["api_key"] == "test-api-key"
-                assert client_args["base_url"] == "https://integrate.api.nvidia.com/v1"
+            # Verify OpenAIModel.__init__ was called (the base class)
+            mock_oai_model.assert_called_once()
+            call_args = mock_oai_model.call_args
 
-                # Verify model_id
-                assert call_kwargs["model_id"] == "meta/llama-3.1-8b-instruct"
+            # First arg is self, get kwargs
+            call_kwargs = call_args[1]
+
+            # Verify client
+            assert "client" in call_kwargs
+            call_kwargs["client"] = mock_oai
+
+            # Verify model_id
+            assert call_kwargs["model_id"] == "meta/llama-3.1-8b-instruct"
 
     @pytest.mark.asyncio
-    async def test_nim_strands_with_env_var(self, mock_builder):
+    async def test_nim_strands_with_env_var(self, mock_builder, mock_oai_clients):
         """Test nim_strands with environment variable for API key."""
+        (mock_oai, mock_oai_model) = mock_oai_clients
         nim_config = NIMModelConfig(model_name="test-model")
 
-        with patch("strands.models.openai.OpenAIModel.__init__", return_value=None) as mock_init:
-            with patch.dict("os.environ", {"NVIDIA_API_KEY": "env-api-key"}):
-                # pylint: disable=not-async-context-manager
-                async with nim_strands(nim_config, mock_builder):
-                    mock_init.assert_called_once()
-                    call_kwargs = mock_init.call_args[1]
-                    client_args = call_kwargs["client_args"]
-                    assert client_args["api_key"] == "env-api-key"
-
-    @pytest.mark.asyncio
-    async def test_nim_strands_default_base_url(self, mock_builder):
-        """Test nim_strands uses default base_url when not provided."""
-        nim_config = NIMModelConfig(model_name="test-model", api_key="test-key")
-
-        with patch("strands.models.openai.OpenAIModel.__init__", return_value=None) as mock_init:
+        with patch.dict("os.environ", {"NVIDIA_API_KEY": "env-api-key"}):
             # pylint: disable=not-async-context-manager
             async with nim_strands(nim_config, mock_builder):
-                mock_init.assert_called_once()
-                call_kwargs = mock_init.call_args[1]
-                client_args = call_kwargs["client_args"]
-                assert client_args["base_url"] == "https://integrate.api.nvidia.com/v1"
+                mock_oai_model.assert_called_once()
+                mock_oai.assert_called_once()
+
+                call_kwargs = mock_oai.call_args[1]
+                assert call_kwargs["api_key"] == "env-api-key"
 
     @pytest.mark.asyncio
-    async def test_nim_strands_nim_override_dummy_api_key(self, mock_builder):
+    async def test_nim_strands_default_base_url(self, mock_builder, mock_oai_clients):
+        """Test nim_strands uses default base_url when not provided."""
+        (mock_oai, mock_oai_model) = mock_oai_clients
+        nim_config = NIMModelConfig(model_name="test-model", api_key="test-key")
+
+        async with nim_strands(nim_config, mock_builder):  # pylint: disable=not-async-context-manager
+            mock_oai_model.assert_called_once()
+            mock_oai.assert_called_once()
+            call_kwargs = mock_oai.call_args[1]
+            assert call_kwargs["base_url"] == "https://integrate.api.nvidia.com/v1"
+
+    @pytest.mark.asyncio
+    async def test_nim_strands_nim_override_dummy_api_key(self, mock_builder, mock_oai_clients):
         """Test nim_strands uses dummy API key when base_url is set but no API key available."""
+        (mock_oai, mock_oai_model) = mock_oai_clients
         nim_config = NIMModelConfig(
             model_name="test-model",
             base_url="https://custom-nim.example.com/v1",
         )
 
-        with patch("strands.models.openai.OpenAIModel.__init__", return_value=None) as mock_init:
-            with patch.dict(os.environ, {}, clear=True):
-                # pylint: disable=not-async-context-manager
-                async with nim_strands(nim_config, mock_builder):
-                    mock_init.assert_called_once()
-                    call_kwargs = mock_init.call_args[1]
-                    client_args = call_kwargs["client_args"]
-                    assert client_args["base_url"] == "https://custom-nim.example.com/v1"
-                    assert client_args["api_key"] == "dummy-api-key"
+        with patch.dict(os.environ, {}, clear=True):
+            # pylint: disable=not-async-context-manager
+            async with nim_strands(nim_config, mock_builder):
+                mock_oai_model.assert_called_once()
+                mock_oai.assert_called_once()
+                call_kwargs = mock_oai.call_args[1]
+                assert call_kwargs["base_url"] == "https://custom-nim.example.com/v1"
+                assert call_kwargs["api_key"] == "dummy-api-key"
 
     def test_nim_compatible_openai_model_format_request_messages(self):
         """Test NIMCompatibleOpenAIModel.format_request_messages."""
