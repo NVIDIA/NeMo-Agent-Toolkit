@@ -19,6 +19,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 from typing import Protocol
+from typing import runtime_checkable
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -40,6 +41,7 @@ class AtifEvalSample(BaseModel):
 AtifEvalSampleList = Sequence[AtifEvalSample]
 
 
+@runtime_checkable
 class AtifEvaluator(Protocol):
     """Protocol for evaluators that consume ATIF-native samples."""
 

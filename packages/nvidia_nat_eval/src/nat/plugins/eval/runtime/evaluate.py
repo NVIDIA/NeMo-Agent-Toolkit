@@ -530,8 +530,7 @@ class EvaluationRun:
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
-        atif_evaluate_fn = getattr(evaluator, "evaluate_atif_fn", None)
-        if callable(atif_evaluate_fn):
+        if isinstance(evaluator, AtifEvaluator):
             if not self.atif_eval_samples and self.eval_input is not None:
                 # Lazy-populate when run_single_evaluator is called outside run_and_evaluate.
                 self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
@@ -569,7 +568,7 @@ class EvaluationRun:
         for name, evaluator in evaluators.items():
             if not evaluator:
                 continue
-            if callable(getattr(evaluator, "evaluate_atif_fn", None)):
+            if isinstance(evaluator, AtifEvaluator):
                 atif_evaluators[name] = evaluator
             else:
                 legacy_evaluators[name] = evaluator
