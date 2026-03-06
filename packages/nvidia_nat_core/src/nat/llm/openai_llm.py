@@ -30,7 +30,8 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 
 
-class OpenAIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, SSLVerificationMixin, name="openai"):
+class OpenAIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, SSLVerificationMixin,
+                        name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")

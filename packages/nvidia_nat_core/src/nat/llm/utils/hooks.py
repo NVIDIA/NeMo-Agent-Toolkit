@@ -26,6 +26,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import httpx
 
+    from nat.data_models.llm import LLMBaseConfig
+
 from nat.llm.utils.constants import LLMHeaderPrefix
 from nat.llm.utils.http_client import _create_http_client
 

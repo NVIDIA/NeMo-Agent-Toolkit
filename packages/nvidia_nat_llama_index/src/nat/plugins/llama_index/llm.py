@@ -14,8 +14,8 @@
 # limitations under the License.
 
 import os
+import typing
 from collections.abc import Sequence
-from typing import TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -38,7 +38,10 @@ from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
-ModelType = TypeVar("ModelType")
+if typing.TYPE_CHECKING:
+    import httpx
+
+ModelType = typing.TypeVar("ModelType")
 
 
 def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> ModelType:
