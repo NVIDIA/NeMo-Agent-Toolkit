@@ -57,12 +57,14 @@ class StepAdaptor:
             return False
 
         if config.mode == StepAdaptorMode.DEFAULT:
-            # default existing behavior: show LLM events + TOOL_END + FUNCTION events
+            # default existing behavior: show LLM events + TOOL_END + FUNCTION events + SPAN events
             if step.event_category == IntermediateStepCategory.LLM:
                 return True
             if step.event_category == IntermediateStepCategory.TOOL:
                 return True
             if step.event_category == IntermediateStepCategory.FUNCTION:
+                return True
+            if step.event_category == IntermediateStepCategory.SPAN:
                 return True
             return False
 
@@ -322,6 +324,25 @@ class StepAdaptor:
 
         return None
 
+    def _handle_span(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
+        """
+        Handles SPAN events (SPAN_START, SPAN_CHUNK, SPAN_END) for custom thoughts.
+        """
+        # Check if this is a custom thought with metadata
+        if not step.metadata or not isinstance(step.metadata, dict):
+            return None
+
+        thought_text = step.metadata.get("thought_text")
+        if not thought_text:
+            return None
+
+        # All SPAN event types (START, CHUNK, END) share the same response structure
+        return ResponseIntermediateStep(id=step.UUID,
+                                        name=step.name or "Span",
+                                        payload="",
+                                        parent_id=ancestry.function_id,
+                                        thought_text=thought_text)
+
     def _handle_custom(self, payload: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         """
         Handles the CUSTOM event
@@ -367,6 +388,9 @@ class StepAdaptor:
 
             if step.event_category == IntermediateStepCategory.FUNCTION:
                 return self._handle_function(payload, ancestry)
+
+            if step.event_category == IntermediateStepCategory.SPAN:
+                return self._handle_span(payload, ancestry)
 
             if step.event_category == IntermediateStepCategory.CUSTOM:
                 return self._handle_custom(payload, ancestry)

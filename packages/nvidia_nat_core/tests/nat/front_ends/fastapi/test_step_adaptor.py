@@ -125,7 +125,7 @@ def test_process_llm_start_shows_thinking_placeholder(step_adaptor_default, make
         ))
     assert result is not None
     assert isinstance(result, ResponseIntermediateStep)
-    assert result.thought_text == "Thinking..."
+    assert result.thought_text == "_Thinking..._"
 
 
 def test_process_llm_end_extracts_thought_text(step_adaptor_default, make_intermediate_step):
@@ -152,8 +152,8 @@ def test_process_llm_end_extracts_thought_text(step_adaptor_default, make_interm
     assert result.thought_text == "I need to use the calculator to add 2 and 3."
 
 
-def test_extract_react_thought_no_thought_returns_none(step_adaptor_default, make_intermediate_step):
-    """LLM_END without 'Thought:' has thought_text None."""
+def test_extract_react_thought_no_thought_returns_thinking_fallback(step_adaptor_default, make_intermediate_step):
+    """LLM_END without 'Thought:' falls back to 'Completed thought.' to prevent UI jumping."""
     uid = "llm-uuid-no-thought"
     step_adaptor_default.process(
         make_intermediate_step(
@@ -170,7 +170,8 @@ def test_extract_react_thought_no_thought_returns_none(step_adaptor_default, mak
             UUID=uid,
         ))
     assert result is not None
-    assert result.thought_text is None
+    # Should keep "Thinking..." instead of None to avoid UI flicker
+    assert result.thought_text == "Completed thought."
 
 
 def test_tool_start_has_thought_text(step_adaptor_default, make_intermediate_step):
@@ -806,3 +807,76 @@ def test_tool_end_with_thought_description_override(step_adaptor_default, make_i
     assert result is not None
     assert isinstance(result, ResponseIntermediateStep)
     assert result.thought_text == f"{custom_thought}... completed"
+
+
+# --------------------
+# Tests for custom thought emission via SPAN events
+# --------------------
+def test_span_start_with_custom_thought(step_adaptor_default):
+    """Test that SPAN_START events with thought_text metadata are processed correctly."""
+    custom_thought = "Processing data: initializing..."
+    payload = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
+                                      name="custom_thought",
+                                      data=StreamEventData(input=None),
+                                      UUID="span-uuid-1",
+                                      metadata={"thought_text": custom_thought})
+    step = IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+                            payload=payload)
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == custom_thought
+    assert result.name == "custom_thought"
+
+
+def test_span_chunk_with_custom_thought(step_adaptor_default):
+    """Test that SPAN_CHUNK events update the thought text."""
+    uuid = "span-uuid-chunk"
+
+    payload_start = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
+                                            name="custom_thought",
+                                            data=StreamEventData(input=None),
+                                            UUID=uuid,
+                                            metadata={"thought_text": "Processing: 0%"})
+    step_start = IntermediateStep(parent_id="root",
+                                  function_ancestry=InvocationNode(parent_id="abc",
+                                                                   function_id="def",
+                                                                   function_name="xyz"),
+                                  payload=payload_start)
+    step_adaptor_default.process(step_start)
+
+    custom_thought_update = "Processing: 50%"
+    payload_chunk = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_CHUNK,
+                                            name="custom_thought",
+                                            data=StreamEventData(chunk="50%"),
+                                            UUID=uuid,
+                                            metadata={"thought_text": custom_thought_update})
+    step_chunk = IntermediateStep(parent_id="root",
+                                  function_ancestry=InvocationNode(parent_id="abc",
+                                                                   function_id="def",
+                                                                   function_name="xyz"),
+                                  payload=payload_chunk)
+    result = step_adaptor_default.process(step_chunk)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == custom_thought_update
+
+
+def test_span_without_thought_text_returns_none(step_adaptor_default):
+    """Test that SPAN events without thought_text metadata return None."""
+    payload = IntermediateStepPayload(
+        event_type=IntermediateStepType.SPAN_START,
+        name="regular_span",
+        data=StreamEventData(input=None),
+        UUID="span-uuid-no-thought",
+    )
+    step = IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+                            payload=payload)
+
+    result = step_adaptor_default.process(step)
+    assert result is None
