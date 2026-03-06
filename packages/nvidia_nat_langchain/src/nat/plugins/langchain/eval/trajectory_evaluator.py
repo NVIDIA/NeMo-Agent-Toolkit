@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 from collections.abc import Mapping
 
@@ -195,9 +196,11 @@ class TrajectoryEvaluator(BaseEvaluator):
 
     async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
         """ATIF-native evaluation lane for trajectory scoring."""
-        output_items = []
-        for sample in atif_samples:
-            output_items.append(await self.evaluate_atif_item(sample))
+        async def wrapped(sample: AtifEvalSample) -> EvalOutputItem:
+            async with self.semaphore:
+                return await self.evaluate_atif_item(sample)
+
+        output_items = await asyncio.gather(*[wrapped(sample) for sample in atif_samples])
         numeric_scores = [item.score for item in output_items if isinstance(item.score, int | float)]
         avg_score = round(sum(numeric_scores) / len(numeric_scores), 2) if numeric_scores else None
         return EvalOutput(average_score=avg_score, eval_output_items=output_items)

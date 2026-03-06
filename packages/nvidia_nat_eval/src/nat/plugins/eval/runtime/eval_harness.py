@@ -36,6 +36,7 @@ import logging
 from typing import Any
 
 from nat.data_models.evaluator import EvalOutput
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 
 logger = logging.getLogger(__name__)
@@ -47,27 +48,26 @@ class EvaluationHarness:
     def __init__(self, logger_instance: logging.Logger | None = None):
         self._logger = logger_instance or logger
 
-    async def _evaluate_single(self, evaluator_name: str, evaluator: Any,
+    async def _evaluate_single(self, evaluator_name: str, evaluator: AtifEvaluator,
                                atif_samples: AtifEvalSampleList) -> tuple[str, EvalOutput] | None:
         """Evaluate one evaluator using the ATIF lane.
 
         Returns:
             A tuple of evaluator name and result on success, otherwise ``None``.
         """
-        atif_evaluate_fn = getattr(evaluator, "evaluate_atif_fn", None)
-        if not callable(atif_evaluate_fn):
+        if not callable(evaluator.evaluate_atif_fn):
             self._logger.warning("Skipping evaluator %s: missing callable evaluate_atif_fn", evaluator_name)
             return None
 
         try:
-            eval_output = await atif_evaluate_fn(atif_samples)
+            eval_output = await evaluator.evaluate_atif_fn(atif_samples)
             return evaluator_name, eval_output
         except Exception:
             # Best-effort policy: log per-evaluator failure and continue.
             self._logger.exception("An error occurred while running evaluator %s", evaluator_name)
             return None
 
-    async def evaluate(self, evaluators: dict[str, Any], atif_samples: AtifEvalSampleList) -> dict[str, EvalOutput]:
+    async def evaluate(self, evaluators: dict[str, AtifEvaluator], atif_samples: AtifEvalSampleList) -> dict[str, EvalOutput]:
         """Evaluate ATIF-native evaluators concurrently.
 
         Args:

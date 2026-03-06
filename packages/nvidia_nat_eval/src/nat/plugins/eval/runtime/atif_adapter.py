@@ -66,9 +66,9 @@ class EvalAtifAdapter:
         self._cache[key] = trajectory
         return trajectory
 
-    def ensure_cache(self,
-                     eval_input: EvalInput,
-                     prebuilt_trajectories: Mapping[str, ATIFTrajectory | Mapping[str, Any]] | None = None) -> None:
+    def _ensure_cache(self,
+                      eval_input: EvalInput,
+                      prebuilt_trajectories: Mapping[str, ATIFTrajectory | Mapping[str, Any]] | None = None) -> None:
         """Populate cache for all eval items."""
         for item in eval_input.eval_input_items:
             prebuilt = None
@@ -85,7 +85,7 @@ class EvalAtifAdapter:
             prebuilt_trajectories: Mapping[str, ATIFTrajectory | Mapping[str, Any]] | None = None
     ) -> AtifEvalSampleList:
         """Build ATIF-native samples for all eval input items."""
-        self.ensure_cache(eval_input=eval_input, prebuilt_trajectories=prebuilt_trajectories)
+        self._ensure_cache(eval_input=eval_input, prebuilt_trajectories=prebuilt_trajectories)
         samples: AtifEvalSampleList = []
         for item in eval_input.eval_input_items:
             trajectory = self._cache[self._cache_key(item.id)]

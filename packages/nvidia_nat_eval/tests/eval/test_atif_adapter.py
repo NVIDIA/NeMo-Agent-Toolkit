@@ -49,13 +49,13 @@ class _CountingConverter:
                               agent=ATIFAgentConfig(name=agent_name or "nat-agent", version="0.0.0"))
 
 
-def test_ensure_cache_converts_once_per_item():
+def test_private_ensure_cache_converts_once_per_item():
     converter = _CountingConverter()
     adapter = EvalAtifAdapter(converter=converter)
     eval_input = EvalInput(eval_input_items=[_make_eval_input_item("1")])
 
-    adapter.ensure_cache(eval_input)
-    adapter.ensure_cache(eval_input)
+    adapter._ensure_cache(eval_input)
+    adapter._ensure_cache(eval_input)
 
     assert converter.calls == 1
 

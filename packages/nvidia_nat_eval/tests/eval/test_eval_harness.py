@@ -63,13 +63,13 @@ async def test_evaluate_best_effort_when_one_evaluator_fails():
     bad_evaluator.evaluate_atif_fn.assert_awaited_once_with(samples)
 
 
-async def test_evaluate_skips_evaluator_without_atif_lane():
-    """Harness skips evaluators missing `evaluate_atif_fn`."""
+async def test_evaluate_skips_none_evaluator_entry():
+    """Harness skips falsy evaluator entries."""
     harness = EvaluationHarness()
     samples = [object()]
 
     with patch("nat.plugins.eval.runtime.eval_harness.logger.warning") as mock_log_warning:
-        results = await harness.evaluate({"missing": object()}, samples)
+        results = await harness.evaluate({"missing": None}, samples)
 
     assert results == {}
-    mock_log_warning.assert_called_once()
+    mock_log_warning.assert_not_called()

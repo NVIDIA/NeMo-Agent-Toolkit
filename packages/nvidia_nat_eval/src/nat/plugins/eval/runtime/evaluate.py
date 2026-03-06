@@ -47,6 +47,7 @@ from nat.data_models.evaluator import EvalOutput
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.eval_callbacks import EvalCallbackManager
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
 from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
@@ -563,7 +564,7 @@ class EvaluationRun:
 
     async def run_evaluators(self, evaluators: dict[str, Any]):
         """Run all configured evaluators asynchronously."""
-        atif_evaluators = {}
+        atif_evaluators: dict[str, AtifEvaluator] = {}
         legacy_evaluators = {}
         for name, evaluator in evaluators.items():
             if not evaluator:
