@@ -110,6 +110,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Control Flow
 - **[`router_agent`](control_flow/router_agent/README.md)**: Configurable Router Agent that analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on request content **[🟢 Beginner]**
 - **[`sequential_executor`](control_flow/sequential_executor/README.md)**: Linear tool execution pipeline that chains multiple functions together where each function's output becomes the input for the next function, with optional type compatibility checking and error handling **[🟢 Beginner]**
+- **[`parallel_executor`](control_flow/parallel_executor/README.md)**: Sequential workflow with a custom parallel fan-out and fan-in stage that executes independent branches concurrently and merges outputs with partial failure handling **[🟢 Beginner]**
 - **[`hybrid_control_flow`](control_flow/hybrid_control_flow/README.md)**: Demonstrates how to compose router agent and sequential executor control flow patterns together, showing routing to sequential executors, calling router agents from sequential executors, and routing to nested router agents **[🟢 Beginner]**
 
 ### Custom Functions
@@ -170,7 +171,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`email_phishing_analyzer`](evaluation_and_profiling/email_phishing_analyzer/README.md)**: Evaluation and profiling configurations for the email phishing analyzer example **[🟨 Intermediate]**
 - **[`simple_calculator_eval`](evaluation_and_profiling/simple_calculator_eval/README.md)**: Evaluation and profiling configurations based on the basic simple calculator example **[🟨 Intermediate]**
 - **[`simple_web_query_eval`](evaluation_and_profiling/simple_web_query_eval/README.md)**: Evaluation and profiling configurations based on the basic simple web query example **[🟨 Intermediate]**
-- **[`swe_bench`](evaluation_and_profiling/swe_bench/README.md)**: Software engineering benchmark system for evaluating AI models on real-world coding tasks **[🛑 Advanced]**
 
 ### Finetuning
 - **[`dpo_tic_tac_toe`](finetuning/dpo_tic_tac_toe/README.md)**: Demonstrates how to use the NeMo Agent Toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer **[🛑 Advanced]**

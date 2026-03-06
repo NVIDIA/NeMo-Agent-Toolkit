@@ -131,6 +131,13 @@ reviews:
       instructions: >-
         This directory contains the core functionality of the toolkit. Changes should prioritize backward compatibility.
 
+    - path: "packages/nvidia_nat_core/src/nat/eval/**/*"
+      instructions: >-
+        - This is a deprecated compatibility shim area and should not grow.
+        - Flag any PR that adds new files under this path as a blocking issue.
+        - New evaluation code should be added under `packages/nvidia_nat_eval/src/nat/plugins/eval/` instead.
+        - Changes in this path should be limited to compatibility-only fixes that are explicitly justified in PR notes.
+
     - path: "packages/**/*"
       instructions: >-
         - This directory contains packages for the toolkit, each should contain a `pyproject.toml` file.
@@ -146,6 +153,20 @@ reviews:
         - A single dependency should be listed on each line and should always have a version specifier.
         - All dependencies should be listed under the `[tool.setuptools_dynamic_dependencies]` section
         - Any dependency that is an NVIDIA NeMo Agent Toolkit package should be declared with a version constraint of `== {version}` 
+
+    - path: "packages/nvidia_nat_core/pyproject.toml"
+      instructions: >-
+        - This package is part of the thin-core strategy; default to minimizing direct dependencies.
+        - Treat any new dependency addition as high-risk and require explicit justification in PR review notes.
+        - Prefer moving framework-specific or optional capabilities into non-core plugin packages instead of adding dependencies here.
+        - If a new dependency is unavoidable, confirm it is required by core contracts/runtime and not by optional evaluators, exporters, profiling, or framework integrations.
+
+    - path: "packages/nvidia_nat_eval/pyproject.toml"
+      instructions: >-
+        - This package follows a thin-core eval strategy; prioritize keeping dependencies minimal.
+        - Treat any new dependency addition as high-risk and require explicit justification in PR review notes.
+        - Prefer package-affinity placement (framework/profiler/security/exporter packages) instead of adding dependencies here.
+        - If a new dependency is unavoidable, confirm it supports core harness/contracts only and is not better hosted in optional packages.
 
     - path: "**/tests/**/*.py"
       instructions: >-

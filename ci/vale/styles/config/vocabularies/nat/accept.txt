@@ -4,6 +4,7 @@
 
 [Aa]gentic
 [Aa]gno
+# Allow AIQ for AIQ Blueprint
 AIQ
 [Aa]llowlist
 [Aa]nonymize(d?)
@@ -12,7 +13,7 @@ Arize
 ART
 arXiv
 [Aa]sync
-[Aa]nthropic('s)?
+Anthropic
 Authlib
 [Aa]utoencoder
 [Bb]ackdoor(s?)
@@ -20,7 +21,7 @@ Authlib
 [Bb]ackpressure
 [Bb]atcher
 [Bb]oolean
-[Bb]rev
+Brev
 [Cc]allable(s?)
 # Documentation for ccache only capitalizes the name at the start of a sentence https://ccache.dev/
 [Cc]cache
@@ -69,7 +70,7 @@ etcd
 Faiss
 [Ff]inetunable
 [Ff]inetune(d?)
-[Ff]inetune(r|rs|ing)
+[Ff]inetune(r|rs)
 [Ff]inetuning
 Gantt
 [Gg]eneratable
@@ -93,7 +94,6 @@ Jira
 jsonlines
 [Kk]aggle
 [Kk]eycloak
-kv
 KV
 LangChain
 Langfuse
@@ -112,6 +112,7 @@ Loghub
 Mem0
 [Mm]iddleware
 Milvus
+# Minimax the algorithm, not the MiniMax model
 Minimax
 [Mm]itigation(s?)
 [Mm]ixin(s?)
@@ -196,6 +197,7 @@ triages
 [Uu]nittest(s?)
 [Uu]nprocessable
 [Uu]nregister(ing|ed|s)?
+[Uu]nsloth
 [Uu]ntrusted
 [Uu]ploader
 [Uu]psert
@@ -208,4 +210,4 @@ vLLM
 [Ww]eb[Ss]ocket
 XGBoost
 Zep
-zsh
+Zsh

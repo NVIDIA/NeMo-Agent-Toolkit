@@ -18,8 +18,11 @@ import json
 import logging
 import uuid
 from collections.abc import AsyncGenerator
+from collections.abc import Callable
 
+from pydantic import BaseModel
 from pydantic import Field
+from pydantic import model_validator
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -40,6 +43,37 @@ from nat.utils.type_converter import GlobalTypeConverter
 logger = logging.getLogger(__name__)
 
 
+class TruncationRetryConfig(BaseModel):
+    """Configuration for retrying LLM calls that are truncated (finish_reason='length')."""
+
+    max_retries: int = Field(default=0,
+                             description="Number of retries when LLM output is truncated. "
+                             "0 disables recovery (raises RuntimeError).")
+    token_increment: int | None = Field(default=None,
+                                        description="Fixed number of tokens added to max_tokens on each retry. "
+                                        "Mutually exclusive with token_scaling. Defaults to 1024 if neither is set.")
+    token_scaling: float | None = Field(default=None,
+                                        description="Multiplicative factor applied to max_tokens on each retry "
+                                        "(e.g. 1.5 = 50%% increase per retry). "
+                                        "Mutually exclusive with token_increment.")
+
+    @model_validator(mode="after")
+    def _check_scaling_strategy(self) -> "TruncationRetryConfig":
+        if self.token_increment is not None and self.token_scaling is not None:
+            raise ValueError("Set token_increment or token_scaling, not both.")
+        if self.max_retries > 0 and self.token_increment is None and self.token_scaling is None:
+            self.token_increment = 1024
+        return self
+
+    def build_scaling_fn(self) -> Callable[[int], int]:
+        """Build a callable that computes the next max_tokens from the current value."""
+        if self.token_scaling is not None:
+            factor: float = self.token_scaling
+            return lambda current: int(current * factor)
+        increment: int = self.token_increment or 1024
+        return lambda current: current + increment
+
+
 class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
     """
     A Tool Calling Agent requires an LLM which supports tool calling. A tool Calling Agent utilizes the tool
@@ -52,6 +86,12 @@ class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
     max_iterations: int = Field(default=15, description="Number of tool calls before stoping the tool calling agent.")
     max_history: int = Field(default=15, description="Maximum number of messages to keep in the conversation history.")
 
+    truncation_retry: TruncationRetryConfig = Field(default_factory=TruncationRetryConfig,
+                                                    description="Configuration for retrying truncated LLM responses.")
+    max_empty_response_retries: int = Field(
+        default=0,
+        description="Number of retries when LLM returns an empty response (no content, no tool calls). "
+        "0 disables recovery (raises RuntimeError).")
     system_prompt: str | None = Field(default=None, description="Provides the system prompt to use with the agent.")
     additional_instructions: str | None = Field(default=None,
                                                 description="Additional instructions appended to the system prompt.")
@@ -87,13 +127,18 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
         tool_names=config.return_direct, wrapper_type=LLMFrameworkEnum.LANGCHAIN) if config.return_direct else None
 
     # construct the Tool Calling Agent Graph from the configured llm, and tools
-    graph: CompiledStateGraph = await ToolCallAgentGraph(llm=llm,
-                                                         tools=tools,
-                                                         prompt=prompt,
-                                                         detailed_logs=config.verbose,
-                                                         log_response_max_chars=config.log_response_max_chars,
-                                                         handle_tool_errors=config.handle_tool_errors,
-                                                         return_direct=return_direct_tools).build_graph()
+    graph: CompiledStateGraph = await ToolCallAgentGraph(
+        llm=llm,
+        tools=tools,
+        prompt=prompt,
+        detailed_logs=config.verbose,
+        log_response_max_chars=config.log_response_max_chars,
+        handle_tool_errors=config.handle_tool_errors,
+        return_direct=return_direct_tools,
+        max_truncation_retries=config.truncation_retry.max_retries,
+        truncation_scaling_fn=config.truncation_retry.build_scaling_fn(),
+        max_empty_response_retries=config.max_empty_response_retries,
+    ).build_graph()
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> str:
         """
@@ -129,14 +174,17 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
             state = ToolCallAgentGraphState(**state)
             output_message = state.messages[-1]
             return str(output_message.content)
+
         except GraphRecursionError:
             logger.warning(
                 "%s Tool Calling Agent reached its maximum iteration limit (%d) without producing a final answer. "
                 "This typically means the LLM kept calling tools instead of returning a response.",
                 AGENT_LOG_PREFIX,
                 config.max_iterations)
+
             return (f"The tool calling agent could not produce a final answer within {config.max_iterations} "
                     "iterations. The agent repeatedly called tools without converging on a response.")
+
         except Exception as ex:
             logger.error("%s Tool Calling Agent failed with exception: %s", AGENT_LOG_PREFIX, ex)
             raise

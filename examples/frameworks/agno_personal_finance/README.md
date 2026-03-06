@@ -85,7 +85,7 @@ nat run --config_file examples/frameworks/agno_personal_finance/configs/config.y
 2025-07-23 03:43:32,572 - nat.runtime.loader - WARNING - Loading module 'nat_alert_triage_agent.register' from entry point 'nat_alert_triage_agent' took a long time (117.298603 ms). Ensure all imports are inside your registered functions.
 2025-07-23 03:43:32,786 - nat.cli.commands.start - INFO - Starting NeMo Agent Toolkit from config file: 'examples/frameworks/agno_personal_finance/configs/config.yml'
 2025-07-23 03:43:32,788 - nat.cli.commands.start - WARNING - The front end type in the config file (fastapi) does not match the command name (console). Overwriting the config file front end.
-2025-07-23 03:43:34,109 - nat.plugins.eval.profiler.decorators.framework_wrapper - INFO - Agno callback handler registered
+2025-07-23 03:43:34,109 - nat.plugins.profiler.decorators.framework_wrapper - INFO - Agno callback handler registered
 
 Configuration Summary:
 --------------------

@@ -13,7 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
+
+import pytest
 
 from nat.eval.eval_callbacks import EvalCallback
 from nat.eval.eval_callbacks import EvalCallbackManager
@@ -60,3 +63,60 @@ class TestEvalCallbackManager:
     def test_empty_manager(self):
         mgr = EvalCallbackManager()
         mgr.on_eval_complete(EvalResult(metric_scores={}, items=[]))  # Should not raise
+
+    def test_optional_sync_hooks(self):
+        cb = MagicMock()
+        mgr = EvalCallbackManager()
+        mgr.register(cb)
+
+        mgr.on_eval_started(workflow_alias="wf", eval_input="ei", config={"a": 1}, job_id="job-1")
+        mgr.on_prediction(item={"id": 1}, output="out")
+        mgr.on_eval_summary(usage_stats={"runtime": 1.0}, evaluation_results=[], profiler_results={})
+
+        cb.on_eval_started.assert_called_once()
+        cb.on_prediction.assert_called_once()
+        cb.on_eval_summary.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_optional_async_hooks(self):
+        cb = MagicMock()
+        cb.a_on_usage_stats = AsyncMock()
+        cb.a_on_evaluator_score = AsyncMock()
+        cb.a_on_export_flush = AsyncMock()
+
+        mgr = EvalCallbackManager()
+        mgr.register(cb)
+
+        await mgr.a_on_usage_stats(item={"id": 1}, usage_stats_item={"runtime": 0.1})
+        await mgr.a_on_evaluator_score(eval_output={"score": 0.9}, evaluator_name="acc")
+        await mgr.a_on_export_flush()
+
+        cb.a_on_usage_stats.assert_awaited_once()
+        cb.a_on_evaluator_score.assert_awaited_once()
+        cb.a_on_export_flush.assert_awaited_once()
+
+    def test_evaluation_context_optional(self):
+
+        class _DummyContext:
+
+            def __init__(self):
+                self.entered = False
+
+            def __enter__(self):
+                self.entered = True
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        cb = MagicMock()
+        ctx = _DummyContext()
+        cb.evaluation_context.return_value = ctx
+
+        mgr = EvalCallbackManager()
+        mgr.register(cb)
+
+        with mgr.evaluation_context():
+            pass
+
+        assert ctx.entered is True
