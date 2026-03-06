@@ -127,6 +127,7 @@ def run_one(
     exitfirst: bool,
     is_verbose: bool,
     extra_flags: list[str],
+    no_tests: bool = False,
 ) -> int:
     logger = logging.getLogger("testing")
     logger.setLevel(logging.INFO)
@@ -166,6 +167,10 @@ def run_one(
 
         if not (project_dir / "tests").exists():
             logger.info(f"{display_project_dir} (no tests)")
+            return 0
+
+        if no_tests:
+            logger.info(f"{display_project_dir} (skipping tests)")
             return 0
 
         # 2) Run pytest in that environment.
@@ -212,7 +217,8 @@ def main(junit_xml: str | None,
          exitfirst: bool,
          jobs: int,
          project: str | None,
-         extra_flags: list[str]) -> int:
+         extra_flags: list[str],
+         no_tests: bool = False) -> int:
     verbose_flag_pattern = re.compile(r"--verbose|--verbosity(?:=\d+|\s\d+)|-v+")
     has_verbose_flag = any(
         verbose_flag_pattern.fullmatch(flag) or (
@@ -260,7 +266,8 @@ def main(junit_xml: str | None,
                       run_integration=run_integration,
                       exitfirst=exitfirst,
                       is_verbose=has_verbose_flag,
-                      extra_flags=extra_flags) for p in projects
+                      extra_flags=extra_flags,
+                      no_tests=no_tests) for p in projects
         ]
         try:
             for fut in as_completed(futs):
@@ -297,6 +304,10 @@ if __name__ == "__main__":
     parser.add_argument("--run_slow", action="store_true", default=False)
     parser.add_argument("--run_integration", action="store_true", default=False)
     parser.add_argument("--examples_only", action="store_true", default=False)
+    parser.add_argument("--no_tests",
+                        action="store_true",
+                        default=False,
+                        help="Don't run any tests, just set up environments and report success if that succeeds")
     parser.add_argument("-x", "--exitfirst", action="store_true", default=False, help="Exit on first test failure")
     parser.add_argument("--jobs", type=int, default=1)
     parser.add_argument(
@@ -317,4 +328,5 @@ if __name__ == "__main__":
              exitfirst=args.exitfirst,
              jobs=args.jobs,
              project=args.project,
-             extra_flags=args.extra_flags))
+             extra_flags=args.extra_flags,
+             no_tests=args.no_tests))
