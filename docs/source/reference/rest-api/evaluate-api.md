@@ -26,15 +26,31 @@ Availability requirements:
 - `async_endpoints` support (for Dask-backed async job endpoints)
 - `nvidia-nat-eval` support (provides evaluation runtime)
 
-For users installing from source:
+Install both of these features with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e '.[async_endpoints,eval]'
+uv pip install -e ".[async_endpoints,eval]"
 ```
 
-For users installing from package distributions:
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
-pip install "nvidia-nat[async_endpoints,eval]"
+uv pip install "nvidia-nat[async_endpoints,eval]"
 ```
+
+:::
+
+::::
 
 The `/evaluate` and `/evaluate/item` routes are registered by the core FastAPI front end and enabled only when `nvidia-nat-eval` and asynchronous endpoint support are installed.
 

@@ -155,10 +155,10 @@ Installing from source is required to run any examples provided in the repositor
     uv sync
     ```
 
-    At this point individual plugins, which are located under the `packages` directory, can be installed with the following command `uv pip install -e '.[<plugin_name>]'`.
+    At this point individual plugins, which are located under the `packages` directory, can be installed with the following command `uv pip install -e ".[<plugin_name>]"`.
     For example, to install the LangChain/LangGraph plugin, run the following:
     ```bash
-    uv pip install -e '.[langchain]'
+    uv pip install -e ".[langchain]"
     ```
 
     :::{note}
@@ -167,7 +167,7 @@ Installing from source is required to run any examples provided in the repositor
 
     In addition to plugins, there are optional dependencies needed for profiling. Installing the `profiling` sub-package is required for [evaluation](../improve-workflows/evaluate.md) and profiling workflows using `nat eval`. To install the `eval` package and the additional profiler dependencies, run the following:
     ```bash
-    uv pip install -e '.[eval,profiling]'
+    uv pip install -e ".[eval,profiling]"
     ```
 
 6. Verify that you've installed the NeMo Agent Toolkit library.
