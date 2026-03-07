@@ -154,7 +154,7 @@ You can also author a custom evaluator that only implements `evaluate_atif_fn` a
 This is useful when your scoring logic consumes canonical ATIF trajectories directly.
 
 The following example registers a minimal ATIF-only cosine-similarity evaluator:
-`examples/getting_started/simple_web_query/src/nat_simple_web_query/atif_only_evaluator_register.py`:
+`examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/atif_only_evaluator_register.py`:
 ```python
 import math
 from collections import Counter
@@ -219,7 +219,7 @@ async def register_atif_cosine_similarity_evaluator(config: AtifCosineSimilarity
 ```
 
 Import the evaluator registration module in your package `register.py` so it is discovered at runtime:
-`examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`:
+`examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/register.py`:
 ```python
 from .atif_only_evaluator_register import register_atif_cosine_similarity_evaluator
 ```
