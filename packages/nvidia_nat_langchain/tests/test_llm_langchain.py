@@ -25,8 +25,6 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
-from nat.llm.dynamo_llm import CacheControlMode
-from nat.llm.dynamo_llm import CachePinType
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
@@ -212,7 +210,7 @@ class TestDynamoLangChain:
 
     @patch("langchain_openai.ChatOpenAI")
     async def test_basic_creation_without_prefix(self, mock_chat, dynamo_cfg_no_prefix, mock_builder):
-        """Wrapper should create ChatOpenAI without custom httpx client when nvext hints disabled."""
+        """Wrapper should create ChatOpenAI with httpx client (no Dynamo transport when nvext hints disabled)."""
         async with dynamo_langchain(dynamo_cfg_no_prefix, mock_builder) as client:
             mock_chat.assert_called_once()
             kwargs = mock_chat.call_args.kwargs
@@ -220,8 +218,8 @@ class TestDynamoLangChain:
             assert kwargs["model"] == "test-model"
             assert kwargs["base_url"] == "http://localhost:8000/v1"
             assert kwargs["stream_usage"] is True
-            # Should NOT have custom httpx client
-            assert "http_async_client" not in kwargs
+            # Always passes an httpx client; when enable_nvext_hints=False it has no _DynamoTransport
+            assert "http_async_client" in kwargs
             assert client is mock_chat.return_value
 
     @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
@@ -237,17 +235,7 @@ class TestDynamoLangChain:
         mock_create_client.return_value = mock_httpx_client
 
         async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder) as client:
-            # Verify httpx client was created with correct parameters
-            mock_create_client.assert_called_once_with(
-                total_requests=15,
-                osl=2048,
-                iat=50,
-                timeout=300.0,
-                prediction_lookup=None,
-                cache_pin_type=CachePinType.EPHEMERAL,
-                cache_control_mode=CacheControlMode.ALWAYS,
-                max_sensitivity=1000,
-            )
+            mock_create_client.assert_called_once_with(dynamo_cfg_with_prefix)
 
             # Verify ChatOpenAI was called with the custom httpx client
             mock_chat.assert_called_once()

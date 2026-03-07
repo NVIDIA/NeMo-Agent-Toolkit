@@ -412,13 +412,9 @@ class TestCreateHttpxClient:
     """Tests for _create_httpx_client_with_dynamo_hooks."""
 
     def test_uses_custom_timeout(self):
-        """Test that the function uses the provided timeout."""
-        client = _create_httpx_client_with_dynamo_hooks(
-            total_requests=10,
-            osl=512,
-            iat=250,
-            timeout=120.0,
-        )
+        """Test that the function uses the provided timeout from config."""
+        config = DynamoModelConfig(model_name="test", request_timeout=120.0)
+        client = _create_httpx_client_with_dynamo_hooks(config)
 
         assert client.timeout.connect == 120.0
         assert client.timeout.read == 120.0
@@ -426,25 +422,24 @@ class TestCreateHttpxClient:
 
     def test_uses_default_timeout(self):
         """Test that the function uses default timeout when not specified."""
-        client = _create_httpx_client_with_dynamo_hooks(
-            total_requests=10,
-            osl=512,
-            iat=250,
-        )
+        config = DynamoModelConfig(model_name="test")
+        client = _create_httpx_client_with_dynamo_hooks(config)
 
         assert client.timeout.connect == 600.0
 
     def test_creates_client_with_custom_transport(self):
-        """Test that _create_httpx_client_with_dynamo_hooks uses _DynamoTransport."""
+        """Test that _create_httpx_client_with_dynamo_hooks uses _DynamoTransport when enable_nvext_hints=True."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = _create_httpx_client_with_dynamo_hooks(
-            total_requests=7,
-            osl=2048,
-            iat=50,
-            timeout=120.0,
-            prediction_lookup=None,
+        config = DynamoModelConfig(
+            model_name="test",
+            enable_nvext_hints=True,
+            nvext_prefix_total_requests=7,
+            nvext_prefix_osl=2048,
+            nvext_prefix_iat=50,
+            request_timeout=120.0,
         )
+        client = _create_httpx_client_with_dynamo_hooks(config)
 
         # Verify client uses custom transport
         assert isinstance(client._transport, _DynamoTransport)
@@ -462,12 +457,12 @@ class TestCreateHttpxClient:
         """Test that _create_httpx_client_with_dynamo_hooks passes cache_pin_type=None through."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = _create_httpx_client_with_dynamo_hooks(
-            total_requests=10,
-            osl=512,
-            iat=250,
-            cache_pin_type=None,
+        config = DynamoModelConfig(
+            model_name="test",
+            enable_nvext_hints=True,
+            nvext_cache_pin_type=None,
         )
+        client = _create_httpx_client_with_dynamo_hooks(config)
 
         assert isinstance(client._transport, _DynamoTransport)
         assert client._transport._cache_pin_type is None
@@ -476,12 +471,12 @@ class TestCreateHttpxClient:
         """Test that _create_httpx_client_with_dynamo_hooks passes cache_control_mode through."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = _create_httpx_client_with_dynamo_hooks(
-            total_requests=10,
-            osl=512,
-            iat=250,
-            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        config = DynamoModelConfig(
+            model_name="test",
+            enable_nvext_hints=True,
+            nvext_cache_control_mode=CacheControlMode.FIRST_ONLY,
         )
+        client = _create_httpx_client_with_dynamo_hooks(config)
 
         assert isinstance(client._transport, _DynamoTransport)
         assert client._transport._cache_control_mode == CacheControlMode.FIRST_ONLY

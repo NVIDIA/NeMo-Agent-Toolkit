@@ -28,7 +28,6 @@ from nat.profiler.prediction_trie import save_prediction_trie
 from nat.profiler.prediction_trie.data_models import LLMCallPrediction
 from nat.profiler.prediction_trie.data_models import PredictionMetrics
 from nat.profiler.prediction_trie.data_models import PredictionTrieNode
-from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
 
 @pytest.fixture(name="trie_file")
@@ -86,7 +85,7 @@ def test_dynamo_config_with_nonexistent_trie_path():
 @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
 @patch("langchain_openai.ChatOpenAI")
 async def test_dynamo_langchain_loads_trie_and_passes_to_client(mock_chat, mock_create_client, trie_file, mock_builder):
-    """Test that dynamo_langchain loads trie from path and passes PredictionTrieLookup to httpx client."""
+    """Test that dynamo_langchain calls _create_httpx_client_with_dynamo_hooks with config that has trie path."""
     mock_httpx_client = MagicMock()
     mock_httpx_client.aclose = AsyncMock()
     mock_create_client.return_value = mock_httpx_client
@@ -101,11 +100,8 @@ async def test_dynamo_langchain_loads_trie_and_passes_to_client(mock_chat, mock_
     )
 
     async with dynamo_langchain(config, mock_builder):
-        # Verify httpx client was created with prediction_lookup
-        mock_create_client.assert_called_once()
-        call_kwargs = mock_create_client.call_args.kwargs
-        assert "prediction_lookup" in call_kwargs
-        assert isinstance(call_kwargs["prediction_lookup"], PredictionTrieLookup)
+        mock_create_client.assert_called_once_with(config)
+        assert mock_create_client.call_args[0][0].nvext_prediction_trie_path == trie_file
 
     mock_httpx_client.aclose.assert_awaited_once()
 
@@ -113,7 +109,7 @@ async def test_dynamo_langchain_loads_trie_and_passes_to_client(mock_chat, mock_
 @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
 @patch("langchain_openai.ChatOpenAI")
 async def test_dynamo_langchain_handles_nonexistent_trie_gracefully(mock_chat, mock_create_client, mock_builder):
-    """Test that dynamo_langchain logs warning and continues when trie file doesn't exist."""
+    """Test that dynamo_langchain calls client creation with config when trie path doesn't exist."""
     mock_httpx_client = MagicMock()
     mock_httpx_client.aclose = AsyncMock()
     mock_create_client.return_value = mock_httpx_client
@@ -127,12 +123,8 @@ async def test_dynamo_langchain_handles_nonexistent_trie_gracefully(mock_chat, m
         nvext_prediction_trie_path="/nonexistent/path/trie.json",
     )
 
-    # Should not raise an exception
     async with dynamo_langchain(config, mock_builder):
-        # Verify httpx client was created with prediction_lookup=None
-        mock_create_client.assert_called_once()
-        call_kwargs = mock_create_client.call_args.kwargs
-        assert call_kwargs["prediction_lookup"] is None
+        mock_create_client.assert_called_once_with(config)
 
     mock_httpx_client.aclose.assert_awaited_once()
 
@@ -140,7 +132,7 @@ async def test_dynamo_langchain_handles_nonexistent_trie_gracefully(mock_chat, m
 @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
 @patch("langchain_openai.ChatOpenAI")
 async def test_dynamo_langchain_no_trie_path_means_no_lookup(mock_chat, mock_create_client, mock_builder):
-    """Test that dynamo_langchain passes None when no trie path is configured."""
+    """Test that dynamo_langchain calls client creation with config when no trie path is configured."""
     mock_httpx_client = MagicMock()
     mock_httpx_client.aclose = AsyncMock()
     mock_create_client.return_value = mock_httpx_client
@@ -154,9 +146,8 @@ async def test_dynamo_langchain_no_trie_path_means_no_lookup(mock_chat, mock_cre
     )
 
     async with dynamo_langchain(config, mock_builder):
-        mock_create_client.assert_called_once()
-        call_kwargs = mock_create_client.call_args.kwargs
-        assert call_kwargs["prediction_lookup"] is None
+        mock_create_client.assert_called_once_with(config)
+        assert mock_create_client.call_args[0][0].nvext_prediction_trie_path is None
 
     mock_httpx_client.aclose.assert_awaited_once()
 
@@ -183,12 +174,8 @@ async def test_dynamo_langchain_handles_invalid_trie_file_gracefully(mock_chat, 
             nvext_prediction_trie_path=invalid_trie_path,
         )
 
-        # Should not raise an exception
         async with dynamo_langchain(config, mock_builder):
-            # Verify httpx client was created with prediction_lookup=None
-            mock_create_client.assert_called_once()
-            call_kwargs = mock_create_client.call_args.kwargs
-            assert call_kwargs["prediction_lookup"] is None
+            mock_create_client.assert_called_once_with(config)
 
         mock_httpx_client.aclose.assert_awaited_once()
     finally:

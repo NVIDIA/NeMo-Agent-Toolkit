@@ -705,28 +705,22 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 
 def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "httpx.AsyncClient":
     """
-    Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
+    Create an httpx.AsyncClient, when `config.enable_nvext_hints` is True, Dynamo hint injection via custom transport
+    is added.
 
     This client can be passed to the OpenAI SDK or wrapped in an AsyncOpenAI client
     for use with LiteLLM/ADK. All hints are injected into ``nvext.agent_hints``
     in the request body.
 
     Args:
-        total_requests: Expected number of requests for this prefix
-        osl: Expected output tokens (raw integer, always sent as int in agent_hints)
-        iat: Expected inter-arrival time in ms (raw integer, always sent as int)
-        timeout: HTTP request timeout in seconds
-        prediction_lookup: Optional PredictionTrieLookup for dynamic hint injection
-        cache_pin_type: Cache pinning strategy. When set, injects nvext.cache_control with TTL. Set to None to disable.
-        cache_control_mode: When to inject cache_control: 'always' or 'first_only' per prefix.
-        max_sensitivity: Maximum latency sensitivity for computing priority
+        config: LLM Config
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.
     """
     import httpx
 
-    from nat.llm.utils.httpx_utils import _create_http_client
+    from nat.llm.utils.http_client import _create_http_client
 
     http_client_kwargs = {}
     if config.enable_nvext_hints:
