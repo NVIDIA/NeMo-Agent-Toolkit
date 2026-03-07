@@ -72,14 +72,21 @@ def _evaluate_single(item: EvalInputItem, database_dir: str) -> EvalOutputItem:
     from tooltalk.evaluation.tool_executor import ToolExecutor
 
     # output_obj contains the conversation JSON with predictions added by the workflow
-    if item.output_obj is None:
+    if not item.output_obj:
         return EvalOutputItem(
             id=item.id,
             score=0.0,
-            reasoning={"error": "No workflow output (output_obj is None)"},
+            reasoning={"error": "No workflow output (output_obj is empty or None)"},
         )
 
-    conversation_with_predictions = json.loads(item.output_obj)
+    try:
+        conversation_with_predictions = json.loads(item.output_obj)
+    except (json.JSONDecodeError, TypeError) as e:
+        return EvalOutputItem(
+            id=item.id,
+            score=0.0,
+            reasoning={"error": f"Invalid JSON in output_obj: {e}"},
+        )
 
     # Use ToolTalk's ToolExecutor to compute metrics
     tool_executor = ToolExecutor(init_database_dir=database_dir)

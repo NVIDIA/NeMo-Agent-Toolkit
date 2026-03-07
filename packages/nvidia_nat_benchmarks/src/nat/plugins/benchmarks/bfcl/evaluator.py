@@ -55,8 +55,15 @@ def _extract_function_call(raw_output: str) -> str:
     if converted:
         return converted
 
+    # If the whole output looks like Python code with imports, extract calls first
+    stripped_output = raw_output.strip()
+    if stripped_output.startswith("import ") or stripped_output.startswith("from "):
+        calls = _extract_calls_from_code(stripped_output)
+        if calls:
+            return calls
+
     # Try to find lines that look like function calls (name(...))
-    lines = raw_output.strip().split('\n')
+    lines = stripped_output.split('\n')
     func_call_lines = []
     for line in lines:
         stripped = line.strip()
@@ -73,18 +80,6 @@ def _extract_function_call(raw_output: str) -> str:
         if len(func_call_lines) == 1:
             return func_call_lines[0]
         return '[' + ', '.join(func_call_lines) + ']'
-
-    # If the whole output looks like Python code with imports, extract calls
-    if raw_output.strip().startswith("import ") or raw_output.strip().startswith("from "):
-        calls = _extract_calls_from_code(raw_output.strip())
-        if calls:
-            return calls
-
-    # If the whole output looks like Python code with imports, extract calls
-    if raw_output.strip().startswith("import ") or raw_output.strip().startswith("from "):
-        calls = _extract_calls_from_code(raw_output.strip())
-        if calls:
-            return calls
 
     # Fallback: return as-is and let the AST parser try
     return raw_output
