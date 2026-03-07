@@ -149,6 +149,91 @@ class SimilarityEvaluator(BaseEvaluator):
         return EvalOutputItem(id=item.id, score=similarity_score, reasoning=reasoning)
 ```
 
+### ATIF-native custom evaluator (ATIF-only example)
+You can also author a custom evaluator that only implements `evaluate_atif_fn` and does not provide `evaluate_fn`.
+This is useful when your scoring logic consumes canonical ATIF trajectories directly.
+
+The following example registers a minimal ATIF-only cosine-similarity evaluator:
+`examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/atif_only_evaluator_register.py`:
+```python
+import math
+from collections import Counter
+
+from pydantic import Field
+
+from nat.builder.builder import EvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
+from nat.cli.register_workflow import register_evaluator
+from nat.data_models.evaluator import EvalOutput
+from nat.data_models.evaluator import EvalOutputItem
+from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
+
+
+class AtifCosineSimilarityEvaluatorConfig(EvaluatorBaseConfig, name="atif_cosine_similarity"):
+    normalize_case: bool = Field(default=True)
+
+
+class AtifCosineSimilarityEvaluator:
+    def _cosine_similarity(self, text_a: str, text_b: str) -> float:
+        counts_a = Counter(text_a.split())
+        counts_b = Counter(text_b.split())
+        shared_tokens = set(counts_a) & set(counts_b)
+        numerator = sum(counts_a[token] * counts_b[token] for token in shared_tokens)
+        norm_a = math.sqrt(sum(value * value for value in counts_a.values()))
+        norm_b = math.sqrt(sum(value * value for value in counts_b.values()))
+        if norm_a == 0.0 or norm_b == 0.0:
+            return 0.0
+        return numerator / (norm_a * norm_b)
+
+    def _count_tool_calls(self, sample) -> int:
+        steps = getattr(sample.trajectory, "steps", None) or []
+        return sum(len(getattr(step, "tool_calls", None) or []) for step in steps)
+
+    async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
+        output_items = []
+        for sample in atif_samples:
+            expected = str(sample.expected_output_obj or "").strip().casefold()
+            generated = str(sample.output_obj or "").strip().casefold()
+            score = round(self._cosine_similarity(expected, generated), 2)
+            tool_call_count = self._count_tool_calls(sample)
+            output_items.append(
+                EvalOutputItem(
+                    id=sample.item_id,
+                    score=score,
+                    reasoning={
+                        "comparison": "cosine-similarity",
+                        "trajectory_tool_call_count": tool_call_count,
+                    },
+                ))
+        avg = sum(item.score for item in output_items) / len(output_items) if output_items else None
+        return EvalOutput(average_score=avg, eval_output_items=output_items)
+
+
+@register_evaluator(config_type=AtifCosineSimilarityEvaluatorConfig)
+async def register_atif_cosine_similarity_evaluator(config: AtifCosineSimilarityEvaluatorConfig, _builder: EvalBuilder):
+    evaluator = AtifCosineSimilarityEvaluator()
+    evaluator_info = EvaluatorInfo(config=config, description="ATIF-only cosine similarity custom evaluator")
+    evaluator_info.evaluate_atif_fn = evaluator.evaluate_atif_fn
+    yield evaluator_info
+```
+
+Import the evaluator registration module in your package `register.py` so it is discovered at runtime:
+`examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/register.py`:
+```python
+from .atif_only_evaluator_register import register_atif_cosine_similarity_evaluator
+```
+
+Then add it to your evaluation config:
+`examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_atif_custom_evaluator.yml`:
+```yaml
+eval:
+  evaluators:
+    atif_cosine_similarity_eval:
+      _type: atif_cosine_similarity
+      normalize_case: true
+```
+
 ### Display all evaluators
 To display all evaluators, run the following command:
 ```bash
