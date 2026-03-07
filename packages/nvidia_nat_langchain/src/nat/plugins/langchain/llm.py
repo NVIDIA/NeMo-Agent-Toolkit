@@ -18,7 +18,6 @@ import logging
 import os
 from collections.abc import AsyncIterator
 from collections.abc import Sequence
-from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
@@ -242,8 +241,6 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     """
     from langchain_openai import ChatOpenAI
 
-    from nat.profiler.prediction_trie import load_prediction_trie
-    from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
     # Build config dict excluding Dynamo-specific and NAT-specific fields
     config_dict = llm_config.model_dump(
