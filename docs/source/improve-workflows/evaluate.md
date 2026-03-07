@@ -1021,6 +1021,27 @@ eval:
     max_concurrency: 4
 ```
 
+### Shuffling evaluation order
+
+By default, evaluation items are processed in the order they appear in the dataset. To randomize the order, enable `shuffle` in the `eval.general` section. This can help reduce ordering bias in evaluation results — for example, when using KV cache or prefix sharing optimizations that may favor items processed together.
+
+```yaml
+eval:
+  general:
+    shuffle: true
+```
+
+For reproducible shuffling across runs, set `shuffle_seed` to a fixed integer:
+
+```yaml
+eval:
+  general:
+    shuffle: true
+    shuffle_seed: 42
+```
+
+When `shuffle_seed` is omitted, a different random order is used each run.
+
 ### Pickup where you left off
 When running the evaluation on a large dataset, it is recommended to resume the evaluation from where it was left off. This is particularly useful while using overloaded services that may timeout while running the workflow. When that happens a workflow interrupted warning is issued and workflow output is saved to a file.
 

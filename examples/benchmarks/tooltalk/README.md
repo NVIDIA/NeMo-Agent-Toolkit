@@ -1,5 +1,19 @@
-<!-- SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 
 # ToolTalk Benchmark Evaluation
 
@@ -124,12 +138,30 @@ nat eval --config_file examples/benchmarks/tooltalk/configs/eval_easy.yml
 
 ## Understanding Results
 
+### The `tooltalk_evaluator`
+
+This example uses the **`tooltalk_evaluator`** (`_type: tooltalk_evaluator` in the eval config). It calls ToolTalk's built-in `ToolExecutor.evaluate_predictions()` directly in Python to compare the agent's predicted API calls against the ground-truth calls in each conversation. For each conversation, it produces the metrics described below.
+
+The evaluator is configured in the YAML under `eval.evaluators`:
+
+```yaml
+evaluators:
+  tooltalk:
+    _type: tooltalk_evaluator
+    database_dir: ${TOOLTALK_DATABASE_DIR}
+```
+
+### Output files
+
 Results are saved to `.tmp/nat/benchmarks/tooltalk/easy/`:
 
 ```bash
 ls .tmp/nat/benchmarks/tooltalk/easy/
 # config_original.yml  config_effective.yml  workflow_output.json  tooltalk_output.json
 ```
+
+- `workflow_output.json` — raw workflow responses (conversations with predictions)
+- `tooltalk_output.json` — evaluator scores and per-conversation metrics
 
 ### Inspect per-conversation metrics
 

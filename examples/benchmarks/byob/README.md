@@ -1,19 +1,58 @@
-<!-- SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 
 # BYOB (Bring Your Own Benchmark) Evaluation
 
-**Complexity:** 🟢 Beginner
+**Complexity:** 🟡 Intermediate
 
-Score NAT agent workflow outputs using [NeMo Evaluator's BYOB framework](https://docs.nvidia.com/nemo/evaluator/). BYOB lets you define custom benchmarks with any dataset and scorer — this example shows how to plug BYOB scorers into NAT's evaluation pipeline.
+Run [NeMo Evaluator BYOB](https://docs.nvidia.com/nemo/evaluator/) benchmarks directly on NAT agent workflows — without re-implementing the dataset loader or scorer logic.
+
+## Why BYOB in NAT?
+
+NeMo Evaluator's BYOB (Bring Your Own Benchmark) framework lets users define custom evaluation benchmarks using the `@benchmark` and `@scorer` decorators. A benchmark definition specifies a dataset, a prompt template, and a scorer function — everything needed to evaluate a model.
+
+Normally, NeMo Evaluator runs the full pipeline: it loads the dataset, renders prompts, calls the model endpoint, and scores the responses. **This integration reuses the benchmark definition, dataset loading, and scorer functions from NeMo Evaluator, but replaces the model-calling step with NAT's workflow execution.** This means:
+
+- **Existing BYOB benchmarks work as-is** — the same `@benchmark` + `@scorer` Python file you use with NeMo Evaluator works identically with NAT. No re-implementation needed.
+- **NAT handles the agent execution** — instead of calling a model endpoint, NAT runs its own workflow (tool-calling agents, RAG pipelines, multi-step reasoning chains) to generate responses.
+- **Scorers run in-process** — the scorer receives `ScorerInput(response=workflow_output, target=ground_truth)` and returns a score dict. `model_call_fn` is `None` (NAT handles all LLM calls upstream).
+
+```
+┌─────────────────────────────────────┐
+│  BYOB Benchmark Definition (.py)    │  ← Written once, used in both systems
+│  @benchmark + @scorer               │
+├───────────────┬─────────────────────┤
+│ NeMo Evaluator│  NAT Integration    │
+│ (standalone)  │  (this example)     │
+│               │                     │
+│ load_dataset()│  load_dataset()     │  ← Same function, reused
+│ render_prompt │  NAT workflow       │  ← NAT replaces model calling
+│ call_model()  │  (agents, tools)    │
+│ scorer_fn()   │  scorer_fn()        │  ← Same scorer, reused
+└───────────────┴─────────────────────┘
+```
 
 ## Key Features
 
-- **Any BYOB benchmark**: Use any benchmark defined with `@benchmark` + `@scorer` decorators
-- **Built-in scorers**: `exact_match`, `contains`, `f1_token`, `bleu`, `rouge`, `regex_match`
+- **Direct reuse**: Any benchmark defined with `@benchmark` + `@scorer` works without modification
+- **Built-in scorers**: `exact_match`, `contains`, `f1_token`, `bleu`, `rouge`, `regex_match` — all from `nemo_evaluator.contrib.byob.scorers`
 - **Custom scorers**: Write your own scorer function with `ScorerInput`
-- **No model_call_fn needed**: BYOB scorers run in-process — NAT handles the LLM calls
-- **Dataset from benchmark**: Dataset path, prompt template, and target field come from the benchmark definition
+- **HuggingFace datasets**: BYOB's `load_dataset()` supports `hf://` URIs, local JSONL, CSV, and TSV
+- **Dataset from benchmark**: Dataset path, prompt template, and target field come from the benchmark definition — no duplication in NAT config
 
 ## Table of Contents
 
@@ -113,6 +152,27 @@ INFO - BYOB evaluation complete: avg_correct=0.XXX (3 items)
 
 ## Understanding Results
 
+### The `byob_evaluator`
+
+This example uses the **`byob_evaluator`** (`_type: byob_evaluator` in the eval config). It imports the benchmark definition at evaluation time, then calls `bench.scorer_fn(ScorerInput(...))` for each item to produce a score dict.
+
+The evaluator is configured in the YAML under `eval.evaluators`:
+
+```yaml
+evaluators:
+  byob:
+    _type: byob_evaluator
+    benchmark_module: /path/to/my_benchmark.py   # Same file used for the dataset
+    benchmark_name: my_qa_test                    # Normalized benchmark name
+    score_field: correct                          # Key from scorer output to use as primary score
+```
+
+The `score_field` parameter controls which key from the scorer's output dict becomes the item's primary score. For `exact_match` and `contains`, this is `correct` (boolean → 1.0 or 0.0). For `f1_token`, you'd set `score_field: f1` to get the F1 float. The `average_score` in the output is the mean of all items' primary scores.
+
+The metrics available in each item's `reasoning` dict depend entirely on what the scorer function returns — the evaluator passes through the full scorer output without modification.
+
+### Inspect results
+
 ```bash
 python -c "
 import json
@@ -137,16 +197,50 @@ Average score: 0.667
 
 ## Built-in Scorers Reference
 
-| Scorer | Score field | Description |
-|--------|-----------|-------------|
-| `exact_match` | `correct` | Case-insensitive, whitespace-trimmed equality |
-| `contains` | `correct` | Target is a substring of response |
-| `f1_token` | `f1` | Token-level F1 (also returns `precision`, `recall`) |
-| `regex_match` | `correct` | Target is a regex pattern matched against response |
-| `bleu` | `bleu_1`..`bleu_4` | BLEU-1 through BLEU-4 with smoothing |
-| `rouge` | `rouge_1`, `rouge_2`, `rouge_l` | ROUGE F1 scores |
+BYOB scorers come from the [NeMo Evaluator](https://docs.nvidia.com/nemo/evaluator/) framework (`nemo_evaluator.contrib.byob.scorers`). They are standard NLP evaluation metrics packaged as simple Python functions that accept a `ScorerInput` and return a dict of metric values. When you use BYOB through NAT, the scorer runs in-process against the workflow's output — NAT handles the LLM calls and the scorer only sees the final `(response, target)` pair.
 
-Set `score_field` in the evaluator config to match your scorer:
+You can use any built-in scorer directly, compose them with `any_of()` / `all_of()`, or write your own from scratch. The only requirement is the signature: `def scorer(sample: ScorerInput) -> dict`.
+
+### Simple scorers
+
+These return a single `correct` boolean. Use `score_field: correct` in the evaluator config.
+
+| Scorer | Import | What it checks |
+|--------|--------|----------------|
+| `exact_match` | `from nemo_evaluator.contrib.byob.scorers import exact_match` | Case-insensitive, whitespace-trimmed string equality |
+| `contains` | `from nemo_evaluator.contrib.byob.scorers import contains` | Whether the target appears as a substring of the response |
+| `regex_match` | `from nemo_evaluator.contrib.byob.scorers import regex_match` | Whether the response matches a regex pattern (target is the pattern) |
+
+### Metric scorers
+
+These return numeric scores. Set `score_field` to the metric you want as the primary score.
+
+| Scorer | Import | Returns |
+|--------|--------|---------|
+| `f1_token` | `from nemo_evaluator.contrib.byob.scorers import f1_token` | `{"f1": float, "precision": float, "recall": float}` — token-level overlap |
+| `bleu` | `from nemo_evaluator.contrib.byob.scorers import bleu` | `{"bleu_1": float, ..., "bleu_4": float}` — sentence-level BLEU with smoothing |
+| `rouge` | `from nemo_evaluator.contrib.byob.scorers import rouge` | `{"rouge_1": float, "rouge_2": float, "rouge_l": float}` — ROUGE F1 scores |
+
+### Composer functions
+
+Combine multiple scorers into one:
+
+| Function | What it does |
+|----------|-------------|
+| `any_of(exact_match, contains)` | Correct if **any** scorer passes |
+| `all_of(exact_match, regex_match)` | Correct only if **all** scorers pass |
+
+```python
+from nemo_evaluator.contrib.byob.scorers import exact_match, contains, any_of
+
+@scorer
+def flexible_scorer(sample: ScorerInput) -> dict:
+    return any_of(exact_match, contains)(sample)
+```
+
+### Configuring `score_field`
+
+Set `score_field` in the evaluator config to tell NAT which key from the scorer output dict to use as the primary score:
 
 ```yaml
 evaluators:
@@ -154,7 +248,7 @@ evaluators:
     _type: byob_evaluator
     benchmark_module: /path/to/benchmark.py
     benchmark_name: my_benchmark
-    score_field: f1  # For f1_token scorer
+    score_field: f1  # For f1_token scorer (default: "correct")
 ```
 
 ---

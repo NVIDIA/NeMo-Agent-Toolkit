@@ -43,7 +43,9 @@ class DatasetHandler:
                  concurrency: int,
                  num_passes: int = 1,
                  adjust_dataset_size: bool = False,
-                 custom_pre_eval_process_function: str | None = None):
+                 custom_pre_eval_process_function: str | None = None,
+                 shuffle: bool = False,
+                 shuffle_seed: int | None = None):
         from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
 
         self.dataset_config = dataset_config
@@ -54,6 +56,10 @@ class DatasetHandler:
         self.concurrency = concurrency
         self.num_passes = num_passes
         self.adjust_dataset_size = adjust_dataset_size
+
+        # Shuffle configuration
+        self.shuffle = shuffle
+        self.shuffle_seed = shuffle_seed
 
         # Custom pre-evaluation process function
         self.custom_pre_eval_process_function = custom_pre_eval_process_function
@@ -220,6 +226,10 @@ class DatasetHandler:
 
         if (self.dataset_config.id_key in input_df.columns):
             input_df.drop_duplicates(subset=[self.dataset_config.id_key], inplace=True)
+
+        # Shuffle dataset order if requested
+        if self.shuffle:
+            input_df = input_df.sample(frac=1, random_state=self.shuffle_seed).reset_index(drop=True)
 
         if self.reps > 1 and self.adjust_dataset_size:
             raise ValueError("reps and adjust_dataset_size are mutually exclusive")

@@ -679,7 +679,9 @@ class EvaluationRun:
                                          concurrency=self.eval_config.general.max_concurrency,
                                          num_passes=self.config.num_passes,
                                          adjust_dataset_size=self.config.adjust_dataset_size,
-                                         custom_pre_eval_process_function=custom_pre_eval_process_function)
+                                         custom_pre_eval_process_function=custom_pre_eval_process_function,
+                                         shuffle=self.eval_config.general.shuffle,
+                                         shuffle_seed=self.eval_config.general.shuffle_seed)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
         if self.eval_input.eval_input_items:
             try:

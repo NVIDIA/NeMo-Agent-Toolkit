@@ -1,5 +1,19 @@
-<!-- SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved. -->
-<!-- SPDX-License-Identifier: Apache-2.0 -->
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 
 # Galileo Agent Leaderboard v2 Evaluation
 
@@ -119,6 +133,44 @@ nat eval --config_file examples/benchmarks/agent_leaderboard/configs/eval_bankin
 
 ## Understanding Results
 
+### The `agent_leaderboard_tsq` evaluator
+
+This example uses the **Tool Selection Quality (TSQ)** evaluator (`_type: agent_leaderboard_tsq` in the eval config). It compares the tool calls the agent made (captured by the workflow via `ToolIntentBuffer`) against the expected tool calls derived from the scenario's user goals.
+
+The evaluator computes an **F1 score** between predicted and expected tool sets:
+- **Precision** = (correctly predicted tools) / (total predicted tools)
+- **Recall** = (correctly predicted tools) / (total expected tools)
+- **F1** = 2 × precision × recall / (precision + recall)
+
+Tool names are normalized before comparison (case-insensitive, underscores/hyphens stripped, module prefixes removed) so that `banking_tools__get_account_balance` matches `get_account_balance`.
+
+The evaluator is configured in the YAML under `eval.evaluators`:
+
+```yaml
+evaluators:
+  tsq:
+    _type: agent_leaderboard_tsq
+    tool_weight: 1.0          # Weight for tool selection F1 (default: 1.0)
+    parameter_weight: 0.0     # Weight for parameter accuracy (default: 0.0)
+```
+
+The final score per item is `tool_weight × tool_f1 + parameter_weight × param_accuracy`. With default weights, only tool selection matters.
+
+### Per-item metrics
+
+Each item in the evaluator output contains:
+
+| Field | Description |
+|-------|-------------|
+| `tool_selection_f1` | F1 score between predicted and expected tool names |
+| `parameter_accuracy` | Parameter correctness (placeholder — future enhancement) |
+| `predicted_tools` | Normalized list of tools the agent called |
+| `expected_tools` | Normalized list of tools expected from user goals |
+| `num_predicted` | Total tool call intents captured |
+| `num_expected` | Total expected tool calls from ground truth |
+
+### Inspect results
+
 ```bash
 python -c "
 import json
@@ -137,25 +189,25 @@ for item in data['eval_output_items'][:3]:
 
 **Example output:**
 ```
-Average TSQ F1: 0.425
-Total scenarios: 100
+Average TSQ F1: 0.650
+Total scenarios: 10
   banking_scenario_000:
+    F1=1.00  predicted=['getaccountbalance']
+    expected=['getaccountbalance']
+  banking_scenario_001:
     F1=0.67  predicted=['getaccountbalance', 'gettransactionhistory']
     expected=['getaccountbalance', 'transferfunds']
-  banking_scenario_001:
-    F1=1.00  predicted=['getloaninformation']
-    expected=['getloaninformation']
   banking_scenario_002:
     F1=0.00  predicted=['scheduleappointment']
     expected=['getexchangerates']
 ```
 
-### TSQ Score interpretation
+### Score interpretation
 
-| Score | Meaning |
-|-------|---------|
+| F1 Score | Meaning |
+|----------|---------|
 | 1.0 | All expected tools predicted, no extra tools |
-| 0.5-0.9 | Partial match — some tools correct, some missing or extra |
+| 0.5–0.9 | Partial match — some tools correct, some missing or extra |
 | 0.0 | No overlap between predicted and expected tools |
 
 ---
@@ -179,10 +231,11 @@ nat eval --config_file examples/benchmarks/agent_leaderboard/configs/eval_all_do
 
 ### Available domains
 
-| Domain | Description | Typical tool count |
-|--------|-------------|-------------------|
-| `banking` | Account management, transfers, loans | ~20 tools |
-| `healthcare` | Appointments, prescriptions, records | ~15 tools |
-| `insurance` | Policies, claims, coverage | ~15 tools |
-| `investment` | Portfolio, stocks, trading | ~15 tools |
-| `telecom` | Plans, billing, support | ~15 tools |
+| Domain | Scenarios | Tools | Personas | Description |
+|--------|-----------|-------|----------|-------------|
+| `banking` | 100 | 20 | 100 | Account management, transfers, loans, cards |
+| `healthcare` | 100 | 20 | 100 | Appointments, prescriptions, medical records |
+| `insurance` | 100 | 20 | 100 | Policies, claims, coverage, renewals |
+| `investment` | 100 | 20 | 100 | Portfolio management, stocks, trading |
+| `telecom` | 100 | 20 | 100 | Plans, billing, support, device management |
+| **Total** | **500** | **100** | **500** | |
