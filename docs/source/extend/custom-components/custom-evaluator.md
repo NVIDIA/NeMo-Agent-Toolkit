@@ -225,7 +225,7 @@ from .atif_only_evaluator_register import register_atif_cosine_similarity_evalua
 ```
 
 Then add it to your evaluation config:
-`examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_atif.yml`:
+`examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_atif_custom_evaluator.yml`:
 ```yaml
 eval:
   evaluators:

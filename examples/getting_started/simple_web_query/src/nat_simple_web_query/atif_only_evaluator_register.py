@@ -38,7 +38,13 @@ class AtifCosineSimilarityEvaluatorConfig(EvaluatorBaseConfig, name="atif_cosine
 
 
 class AtifCosineSimilarityEvaluator:
-    """Minimal ATIF-only evaluator that scores output and expected text similarity."""
+    """Minimal ATIF-only evaluator that scores output and expected text similarity.
+
+    Note:
+        `AtifEvaluator` is a protocol used for structural typing (duck typing).
+        This class does not need to explicitly inherit from `AtifEvaluator`;
+        implementing `evaluate_atif_fn` with the expected signature is sufficient.
+    """
 
     def __init__(self, normalize_case: bool = True) -> None:
         self._normalize_case = normalize_case
