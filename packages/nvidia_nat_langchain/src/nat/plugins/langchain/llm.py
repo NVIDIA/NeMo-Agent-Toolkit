@@ -241,7 +241,6 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     """
     from langchain_openai import ChatOpenAI
 
-
     # Build config dict excluding Dynamo-specific and NAT-specific fields
     config_dict = llm_config.model_dump(
         exclude={"type", "thinking", "api_type", *DynamoModelConfig.get_dynamo_field_names()},
