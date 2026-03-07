@@ -1,0 +1,31 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../../.."
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project]
+name = "nat_benchmark_byob"
+dynamic = ["version", "dependencies"]
+requires-python = ">=3.11,<3.14"
+description = "BYOB (Bring Your Own Benchmark) evaluation example for NeMo Agent Toolkit"
+classifiers = ["Programming Language :: Python"]
+
+[tool.setuptools_dynamic_dependencies]
+dependencies = [
+  "nvidia-nat[eval,langchain,test] == {version}",
+  "nvidia-nat-benchmarks == {version}",
+  "nemo-evaluator",
+]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../../..", editable = true }
+nvidia-nat-benchmarks = { path = "../../../packages/nvidia_nat_benchmarks", editable = true }
+
+[project.entry-points.'nat.components']
+nat_benchmark_byob = "nat_benchmark_byob.register"
