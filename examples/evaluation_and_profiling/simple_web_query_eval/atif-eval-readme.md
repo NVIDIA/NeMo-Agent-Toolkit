@@ -94,4 +94,4 @@ python packages/nvidia_nat_eval/scripts/compare_eval_runs.py \
   --run_b ./.tmp/nat/examples/evaluation_and_profiling/simple_web_query_eval/atif_custom_evaluator
 ```
 
-This is mostly useful to verify file presence/differences, since evaluator sets differ between these two configs.
+This is mostly useful to verify file presence/differences, since evaluator sets differ between these two configuration files.
