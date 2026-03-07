@@ -15,6 +15,7 @@
 """Unit and integration tests for LLM HTTP event hooks."""
 
 from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 from pydantic import Field
@@ -26,7 +27,6 @@ from nat.data_models.llm import SSLVerificationMixin
 from nat.llm.utils.hooks import _create_metadata_injection_client
 
 
-# TODO: need some tests for handling for request_timeout and verify_ssl
 class LLMConfig(LLMBaseConfig):
     pass
 
@@ -120,6 +120,58 @@ class TestCreateMetadataInjectionClient:
         assert len(client.event_hooks["request"]) == 1
 
         await client.aclose()
+
+    @pytest.mark.parametrize(
+        "llm_config,expected_timeout",
+        [
+            (LLMConfig(), None),
+            (LLMConfigWithTimeout(), None),
+            (LLMConfigWithTimeout(request_timeout=45), 45),
+        ],
+        ids=["no_request_timeout_attr", "request_timeout_none", "request_timeout_45"],
+    )
+    async def test_request_timeout_passed_to_client(self, llm_config, expected_timeout):
+        """Client receives timeout from config when request_timeout is set."""
+        import httpx
+        captured: dict = {}
+        real_async_client = httpx.AsyncClient
+        def capture_async_client(*args, **kwargs):
+            captured.clear()
+            captured.update(kwargs)
+            return real_async_client(*args, **kwargs)
+        with patch.object(httpx, "AsyncClient", side_effect=capture_async_client):
+            client = _create_metadata_injection_client(llm_config=llm_config)
+            if expected_timeout is None:
+                assert "timeout" not in captured
+            else:
+                assert captured["timeout"] == expected_timeout
+            await client.aclose()
+
+    @pytest.mark.parametrize(
+        "llm_config,expected_verify",
+        [
+            (LLMConfig(), None),
+            (LLMConfigWithSSL(verify_ssl=True), True),
+            (LLMConfigWithSSL(verify_ssl=False), False),
+        ],
+        ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
+    )
+    async def test_verify_ssl_passed_to_client(self, llm_config, expected_verify):
+        """Client receives verify from config when verify_ssl is set."""
+        import httpx
+        captured: dict = {}
+        real_async_client = httpx.AsyncClient
+        def capture_async_client(*args, **kwargs):
+            captured.clear()
+            captured.update(kwargs)
+            return real_async_client(*args, **kwargs)
+        with patch.object(httpx, "AsyncClient", side_effect=capture_async_client):
+            client = _create_metadata_injection_client(llm_config=llm_config)
+            if expected_verify is None:
+                assert "verify" not in captured
+            else:
+                assert captured["verify"] is expected_verify
+            await client.aclose()
 
 
 class TestMetadataInjectionIntegration:
