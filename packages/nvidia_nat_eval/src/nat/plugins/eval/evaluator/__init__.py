@@ -14,5 +14,6 @@
 # limitations under the License.
 
 from .atif_base_evaluator import AtifBaseEvaluator
+from .base_evaluator import BaseEvaluator
 
-__all__ = ["AtifBaseEvaluator"]
+__all__ = ["AtifBaseEvaluator", "BaseEvaluator"]
