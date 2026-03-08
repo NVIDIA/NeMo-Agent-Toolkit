@@ -170,6 +170,48 @@ def test_extract_tools_schema_mixed_formats():
     assert result[1].function.name == "anthropic_tool"
 
 
+def test_extract_tools_schema_anthropic_additional_properties():
+    """Test that additionalProperties from Anthropic input_schema is preserved."""
+    invocation_params = {
+        "tools": [{
+            "name": "flexible_tool",
+            "description": "A tool that allows extra keys",
+            "input_schema": {
+                "type": "object",
+                "properties": {"a": {"type": "string"}},
+                "required": [],
+                "additionalProperties": True,
+            },
+        }]
+    }
+    result = _extract_tools_schema(invocation_params)
+    assert len(result) == 1
+    assert result[0].function.parameters.additionalProperties is True
+    assert "a" in result[0].function.parameters.properties
+
+
+def test_extract_tools_schema_skips_unparseable_tool():
+    """Test that an unparseable tool is skipped while valid tools are kept."""
+    invocation_params = {
+        "tools": [
+            {
+                "name": "good_tool",
+                "description": "A valid Anthropic tool",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"q": {"type": "string"}},
+                    "required": ["q"],
+                },
+            },
+            # Missing "name" — should be skipped by both parsers
+            {"description": "no name field"},
+        ]
+    }
+    result = _extract_tools_schema(invocation_params)
+    assert len(result) == 1
+    assert result[0].function.name == "good_tool"
+
+
 def test_extract_tools_schema_empty_and_none():
     """Test edge cases: empty tools list and None invocation_params."""
     assert _extract_tools_schema({}) == []

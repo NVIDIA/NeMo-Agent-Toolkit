@@ -56,7 +56,7 @@ def _extract_tools_schema(invocation_params: dict) -> list:
             except Exception:
                 # Handle non-OpenAI tool formats (e.g. Anthropic: top-level name/description/input_schema)
                 try:
-                    input_schema = tool.get("input_schema", {})
+                    input_schema = tool.get("input_schema") or {}
                     tools_schema.append(
                         ToolSchema(
                             type="function",
@@ -66,11 +66,12 @@ def _extract_tools_schema(invocation_params: dict) -> list:
                                 parameters=ToolParameters(
                                     properties=input_schema.get("properties", {}),
                                     required=input_schema.get("required", []),
+                                    additionalProperties=input_schema.get("additionalProperties", False),
                                 ),
                             ),
                         ))
-                except Exception:
-                    logger.debug(
+                except (KeyError, TypeError):
+                    logger.exception(
                         "Failed to parse tool schema from invocation params: %s. \n This "
                         "can occur when the LLM server has native tools and can be ignored if "
                         "using the responses API.",
