@@ -18,12 +18,12 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.config_optimizer.parameters.optimizer import optimize_parameters
 from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.config_optimizer.parameters.optimizer import optimize_parameters
 
 
 class _FakeTrial:

@@ -71,8 +71,9 @@ def optimizer_command(ctx, **kwargs) -> None:
 
 async def run_optimizer(config: OptimizerRunConfig):
     if optimize_config is None:
-        raise click.UsageError("The optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
-                               "Or install the full toolkit: pip install nvidia-nat") from _optimizer_import_error
+        raise click.UsageError(
+            "The optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
+            "Or install the full toolkit: pip install nvidia-nat") from _optimizer_import_error
     await optimize_config(config)
 
 

@@ -23,14 +23,14 @@ import pytest
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
+from nat.config_optimizer.prompts.ga_prompt_optimizer import optimize_prompts
 from nat.data_models.config import Config
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerMetric
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
-from nat.config_optimizer.prompts.ga_prompt_optimizer import optimize_prompts
 
 # Module-level tracking for oracle feedback verification in tests
 oracle_feedback_received: dict[str, typing.Any] = {"count": 0, "values": []}

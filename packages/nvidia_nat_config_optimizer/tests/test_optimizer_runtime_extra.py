@@ -16,11 +16,11 @@
 import pytest
 from pydantic import BaseModel
 
+from nat.config_optimizer.optimizer_runtime import optimize_config
+from nat.data_models.optimizer import GAPromptOptimizationConfig
 from nat.data_models.optimizer import NumericOptimizationConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.data_models.optimizer import GAPromptOptimizationConfig
-from nat.config_optimizer.optimizer_runtime import optimize_config
 
 
 class _DummyConfig(BaseModel):
@@ -64,15 +64,18 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     calls = {"numeric": 0, "prompt": 0}
 
     class _FakeNumericRunner:
+
         async def run(self, **kwargs):  # noqa: ANN001, ARG002
             calls["numeric"] += 1
             return cfg
 
     class _FakePromptRunner:
+
         async def run(self, **kwargs):  # noqa: ANN001, ARG002
             calls["prompt"] += 1
 
     def _fake_build_numeric(_config):
+
         @asynccontextmanager
         async def _cm():
             yield _FakeNumericRunner()
@@ -80,6 +83,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
         return _cm()
 
     def _fake_build_prompt(_config):
+
         @asynccontextmanager
         async def _cm():
             yield _FakePromptRunner()

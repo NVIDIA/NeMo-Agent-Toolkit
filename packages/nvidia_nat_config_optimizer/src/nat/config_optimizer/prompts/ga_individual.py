@@ -13,10 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Runtime data types for GA prompt optimization."""
 
 from dataclasses import dataclass
+from typing import Any
 
 
 @dataclass
@@ -34,3 +34,5 @@ class Individual:
     metrics: dict[str, float] | None = None
     scalar_fitness: float | None = None
     worst_items_reasoning: list[str] | None = None
+    trial_number: int | None = None
+    eval_output: Any | None = None

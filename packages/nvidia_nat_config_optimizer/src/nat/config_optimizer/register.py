@@ -12,22 +12,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Registry for optimizer strategies (numeric/parameter and GA prompt)."""
 
 import asyncio
 from collections.abc import AsyncIterator
 
 from nat.cli.register_workflow import register_optimizer
+from nat.config_optimizer.parameters.base import BaseParameterOptimizer
+from nat.config_optimizer.parameters.optimizer import optimize_parameters
+from nat.config_optimizer.prompts.ga_prompt_optimizer import GAPromptOptimizer
 from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import GAPromptOptimizationConfig
 from nat.data_models.optimizer import NumericOptimizationConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
-from nat.config_optimizer.parameters.base import BaseParameterOptimizer
-from nat.config_optimizer.parameters.optimizer import optimize_parameters
-from nat.config_optimizer.prompts.ga_prompt_optimizer import GAPromptOptimizer
 
 
 class _ParameterOptimizerRunner(BaseParameterOptimizer):
@@ -40,19 +39,19 @@ class _ParameterOptimizerRunner(BaseParameterOptimizer):
         full_space: dict[str, SearchSpace],
         optimizer_config: OptimizerConfig,
         opt_run_config: OptimizerRunConfig,
-    ) -> Config:
+        callback_manager=None,
+    ) -> tuple[Config, dict[str, object], int]:
         return await asyncio.to_thread(
             optimize_parameters,
             base_cfg=base_cfg,
             full_space=full_space,
             optimizer_config=optimizer_config,
             opt_run_config=opt_run_config,
+            callback_manager=callback_manager,
         )
 
 
-async def _parameter_optimizer_build(
-    config: NumericOptimizationConfig,
-) -> AsyncIterator[_ParameterOptimizerRunner]:
+async def _parameter_optimizer_build(config: NumericOptimizationConfig, ) -> AsyncIterator[_ParameterOptimizerRunner]:
     yield _ParameterOptimizerRunner()
 
 
@@ -62,9 +61,7 @@ async def register_numeric_optimizer(config: NumericOptimizationConfig):
         yield runner
 
 
-async def _ga_prompt_optimizer_build(
-    config: GAPromptOptimizationConfig,
-) -> AsyncIterator[GAPromptOptimizer]:
+async def _ga_prompt_optimizer_build(config: GAPromptOptimizationConfig, ) -> AsyncIterator[GAPromptOptimizer]:
     yield GAPromptOptimizer()
 
 

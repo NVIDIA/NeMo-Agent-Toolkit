@@ -24,6 +24,9 @@ from typing import Any
 import optuna
 import yaml
 
+from nat.config_optimizer.eval_runtime_loader import load_evaluation_run
+from nat.config_optimizer.parameters.selection import pick_trial
+from nat.config_optimizer.update_helpers import apply_suggestions
 from nat.data_models.config import Config
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
@@ -31,9 +34,6 @@ from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.data_models.optimizer import SamplerType
 from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.config_optimizer.eval_runtime_loader import load_evaluation_run
-from nat.config_optimizer.parameters.selection import pick_trial
-from nat.config_optimizer.update_helpers import apply_suggestions
 
 if TYPE_CHECKING:
     from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager

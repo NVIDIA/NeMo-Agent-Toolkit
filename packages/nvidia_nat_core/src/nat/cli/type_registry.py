@@ -150,8 +150,7 @@ LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsy
 LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 MemoryRegisteredCallableT = Callable[[MemoryBaseConfigT, Builder], AbstractAsyncContextManager[MemoryEditor]]
 ObjectStoreRegisteredCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AbstractAsyncContextManager[ObjectStore]]
-OptimizerRegisteredCallableT = Callable[[OptimizerStrategyBaseConfigT],
-                                        AbstractAsyncContextManager[typing.Any]]
+OptimizerRegisteredCallableT = Callable[[OptimizerStrategyBaseConfigT], AbstractAsyncContextManager[typing.Any]]
 RegistryHandlerRegisteredCallableT = Callable[[RegistryHandlerBaseConfigT],
                                               AbstractAsyncContextManager[AbstractRegistryHandler]]
 RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
@@ -989,7 +988,7 @@ class TypeRegistry:
             return self._registered_optimizer_infos[config_type]
         except KeyError as err:
             raise KeyError(f"Could not find a registered Optimizer for config `{config_type}`. "
-                          f"Registered configs: {set(self._registered_optimizer_infos.keys())}") from err
+                           f"Registered configs: {set(self._registered_optimizer_infos.keys())}") from err
 
     def get_registered_optimizers(self) -> list[RegisteredInfo[OptimizerStrategyBaseConfig]]:
 

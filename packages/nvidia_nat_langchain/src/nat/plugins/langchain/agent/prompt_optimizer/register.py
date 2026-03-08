@@ -19,9 +19,9 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
+from nat.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
 
 
 class PromptOptimizerConfig(FunctionBaseConfig, name="prompt_init"):
