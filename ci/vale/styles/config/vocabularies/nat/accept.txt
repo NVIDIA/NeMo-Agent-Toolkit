@@ -20,6 +20,7 @@ Authlib
 [Bb]ackoff
 [Bb]ackpressure
 [Bb]atcher
+BFCL
 [Bb]oolean
 Brev
 [Cc]allable(s?)
@@ -55,6 +56,7 @@ Datadog
 [Dd]atastore
 DB(s?)
 [Dd]eclaratively
+[Dd]eduplic(ate|ated|ation)
 [Dd]enylist
 [Dd]eserialize
 [Dd]ev
@@ -181,11 +183,13 @@ SSE
 [Ss]ubgraph(s?)
 [Ss]ubpackage(s?)
 [Ss]ubsampl(e|ing)
+[Ss]ubstring(s?)
 [Ss]ubtask(s?)
 [Ss]ubword(s?)
 [Ss]uperset(s?)
 Tavily
 [Tt]eardown
+[Tt]elecom
 [Tt]imestamp(s?)
 [Tt]okenization
 [Tt]oolchain

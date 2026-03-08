@@ -19,17 +19,17 @@ limitations under the License.
 
 **Complexity:** 🟡 Intermediate
 
-Run [NeMo Evaluator BYOB](https://docs.nvidia.com/nemo/evaluator/latest/) benchmarks directly on NAT agent workflows — without re-implementing the dataset loader or scorer logic.
+Run [NeMo Evaluator BYOB](https://docs.nvidia.com/nemo/evaluator/latest/) benchmarks directly on NeMo Agent Toolkit workflows — without re-implementing the dataset loader or scorer logic.
 
-## Why BYOB in NAT?
+## Why BYOB in NeMo Agent Toolkit?
 
-NeMo Evaluator's BYOB (Bring Your Own Benchmark) framework lets users define custom evaluation benchmarks using the `@benchmark` and `@scorer` decorators. A benchmark definition specifies a dataset, a prompt template, and a scorer function — everything needed to evaluate a model.
+The NeMo Evaluator BYOB (Bring Your Own Benchmark) framework lets users define custom evaluation benchmarks using the `@benchmark` and `@scorer` decorators. A benchmark definition specifies a dataset, a prompt template, and a scorer function — everything needed to evaluate a model.
 
-Normally, NeMo Evaluator runs the full pipeline: it loads the dataset, renders prompts, calls the model endpoint, and scores the responses. **This integration reuses the benchmark definition, dataset loading, and scorer functions from NeMo Evaluator, but replaces the model-calling step with NAT's workflow execution.** This means:
+Normally, NeMo Evaluator runs the full pipeline: it loads the dataset, renders prompts, calls the model endpoint, and scores the responses. **This integration reuses the benchmark definition, dataset loading, and scorer functions from NeMo Evaluator, but replaces the model-calling step with NeMo Agent Toolkit workflow execution.** This means:
 
-- **Existing BYOB benchmarks work as-is** — the same `@benchmark` + `@scorer` Python file you use with NeMo Evaluator works identically with NAT. No re-implementation needed.
-- **NAT handles the agent execution** — instead of calling a model endpoint, NAT runs its own workflow (tool-calling agents, RAG pipelines, multi-step reasoning chains) to generate responses.
-- **Scorers run in-process** — the scorer receives `ScorerInput(response=workflow_output, target=ground_truth)` and returns a score dict. `model_call_fn` is `None` (NAT handles all LLM calls upstream).
+- **Existing BYOB benchmarks work as-is** — the same `@benchmark` + `@scorer` Python file you use with NeMo Evaluator works identically with NeMo Agent Toolkit. No re-implementation needed.
+- **NeMo Agent Toolkit handles the agent execution** — instead of calling a model endpoint, the toolkit runs its own workflow (tool-calling agents, RAG pipelines, multi-step reasoning chains) to generate responses.
+- **Scorers run in-process** — the scorer receives `ScorerInput(response=workflow_output, target=ground_truth)` and returns a score dict. `model_call_fn` is `None` (NeMo Agent Toolkit handles all LLM calls upstream).
 
 ```
 ┌─────────────────────────────────────┐
@@ -51,8 +51,8 @@ Normally, NeMo Evaluator runs the full pipeline: it loads the dataset, renders p
 - **Direct reuse**: Any benchmark defined with `@benchmark` + `@scorer` works without modification
 - **Built-in scorers**: `exact_match`, `contains`, `f1_token`, `bleu`, `rouge`, `regex_match` — all from `nemo_evaluator.contrib.byob.scorers`
 - **Custom scorers**: Write your own scorer function with `ScorerInput`
-- **HuggingFace datasets**: BYOB's `load_dataset()` supports `hf://` URIs, local JSONL, CSV, and TSV
-- **Dataset from benchmark**: Dataset path, prompt template, and target field come from the benchmark definition — no duplication in NAT config
+- **HuggingFace datasets**: The BYOB `load_dataset()` function supports `hf://` URIs, local JSONL, CSV, and TSV
+- **Dataset from benchmark**: Dataset path, prompt template, and target field come from the benchmark definition — no duplication in the eval config
 
 ## Table of Contents
 
@@ -197,7 +197,7 @@ Average score: 0.667
 
 ## Built-in Scorers Reference
 
-BYOB scorers come from the [NeMo Evaluator](https://docs.nvidia.com/nemo/evaluator/latest/) framework (`nemo_evaluator.contrib.byob.scorers`). They are standard NLP evaluation metrics packaged as simple Python functions that accept a `ScorerInput` and return a dict of metric values. When you use BYOB through NAT, the scorer runs in-process against the workflow's output — NAT handles the LLM calls and the scorer only sees the final `(response, target)` pair.
+BYOB scorers come from the [NeMo Evaluator](https://docs.nvidia.com/nemo/evaluator/latest/) framework (`nemo_evaluator.contrib.byob.scorers`). They are standard NLP evaluation metrics packaged as simple Python functions that accept a `ScorerInput` and return a dict of metric values. When you use BYOB through NeMo Agent Toolkit, the scorer runs in-process against the workflow output — the toolkit handles the LLM calls and the scorer only sees the final `(response, target)` pair.
 
 You can use any built-in scorer directly, compose them with `any_of()` / `all_of()`, or write your own from scratch. The only requirement is the signature: `def scorer(sample: ScorerInput) -> dict`.
 
@@ -240,7 +240,7 @@ def flexible_scorer(sample: ScorerInput) -> dict:
 
 ### Configuring `score_field`
 
-Set `score_field` in the evaluator config to tell NAT which key from the scorer output dict to use as the primary score:
+Set `score_field` in the evaluator config to select which key from the scorer output dict to use as the primary score:
 
 ```yaml
 evaluators:
@@ -289,5 +289,5 @@ def custom_scorer(sample: ScorerInput) -> dict:
 | `response` | `str` | Model's generated response |
 | `target` | `Any` | Ground-truth value from dataset |
 | `metadata` | `dict` | Full dataset row |
-| `model_call_fn` | `Optional[Callable]` | Always `None` in NAT (LLM calls handled by workflow) |
+| `model_call_fn` | `Optional[Callable]` | Always `None` in NeMo Agent Toolkit (LLM calls handled by workflow) |
 | `config` | `Dict[str, Any]` | Benchmark's `extra` config |

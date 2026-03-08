@@ -19,13 +19,13 @@ limitations under the License.
 
 **Complexity:** 🟡 Intermediate
 
-Evaluate NAT agent workflows against the [ToolTalk](https://github.com/microsoft/ToolTalk) multi-turn function calling benchmark. ToolTalk tests whether an agent can correctly select and execute API tools across multi-turn conversations with simulated database backends.
+Evaluate NeMo Agent Toolkit agent workflows against the [ToolTalk](https://github.com/microsoft/ToolTalk) multi-turn function calling benchmark. ToolTalk tests whether an agent can correctly select and execute API tools across multi-turn conversations with simulated database backends.
 
 ## Key Features
 
 - **Multi-turn conversations**: Each scenario replays a full user-agent conversation with ground-truth tool calls
 - **Simulated tool backends**: ToolTalk's `ToolExecutor` provides realistic database-backed tool responses
-- **Native FC via `bind_tools()`**: Uses NAT's LangChain LLM with native function calling — no raw API calls
+- **Native FC via `bind_tools()`**: Uses the NeMo Agent Toolkit LangChain LLM with native function calling — no raw API calls
 - **Built-in metrics**: Reports `recall`, `action_precision`, `bad_action_rate`, `success`, and `soft_success`
 - **Easy + Full splits**: 29 easy conversations, 50 full conversations
 
@@ -67,7 +67,7 @@ pip install nvidia-tooltalk
 export NVIDIA_API_KEY=<your-nvidia-api-key>
 ```
 
-Or add it to a `.env` file in your project root (NAT loads `.env` automatically).
+Or add it to a `.env` file in your project root (NeMo Agent Toolkit loads `.env` automatically).
 
 ### 2. Locate ToolTalk data paths
 
@@ -195,7 +195,7 @@ Total conversations: 29
 | `action_precision` | Fraction of predicted actions that match ground truth |
 | `bad_action_rate` | Fraction of actions that are successful but don't match ground truth |
 | `success` | 1.0 only if recall=1.0 AND bad_action_rate=0.0 |
-| `soft_success` | recall * (1 - bad_action_rate) — partial credit metric |
+| `soft_success` | `recall * (1 - bad_action_rate)` — partial credit metric |
 
 ---
 
@@ -213,7 +213,7 @@ Total conversations: 29
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `file_path` | required | Path to ToolTalk data directory (easy or tooltalk split) |
+| `file_path` | required | Path to ToolTalk data directory (`easy` or `tooltalk` split) |
 | `database_dir` | required | Path to ToolTalk database directory |
 
 ### Tips for better results

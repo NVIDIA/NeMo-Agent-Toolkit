@@ -19,9 +19,9 @@ limitations under the License.
 
 **Complexity:** 🟡 Intermediate
 
-Evaluate NAT agent workflows against the [Berkeley Function Calling Leaderboard (BFCL)](https://gorilla.cs.berkeley.edu/leaderboard.html) v3 benchmark. BFCL tests single-turn function calling accuracy across simple, parallel, and multiple function call scenarios.
+Evaluate NeMo Agent Toolkit agent workflows against the [Berkeley Function Calling Leaderboard (BFCL)](https://gorilla.cs.berkeley.edu/leaderboard.html) v3 benchmark. BFCL tests single-turn function calling accuracy across simple, parallel, and multiple function call scenarios.
 
-This example supports **three evaluation modes** that demonstrate different NAT integration patterns:
+This example supports **three evaluation modes** that demonstrate different NeMo Agent Toolkit integration patterns:
 
 | Mode | Workflow Type | How it works |
 |------|--------------|--------------|
@@ -51,13 +51,13 @@ uv pip install -e examples/benchmarks/bfcl
 
 The NVIDIA `nvidia-bfcl` package must be installed (includes datasets and AST checker).
 Due to an overly restrictive `numpy==1.26.4` pin in `nvidia-bfcl` that conflicts with
-NAT's `numpy>=2.3`, install it with `--no-deps`:
+NeMo Agent Toolkit's `numpy>=2.3`, install it with `--no-deps`:
 
 ```bash
 uv pip install nvidia-bfcl --no-deps
 ```
 
-> `nvidia-bfcl` works correctly with numpy 2.x at runtime — the pin is a packaging
+> `nvidia-bfcl` works correctly with NumPy 2.x at runtime — the pin is a packaging
 > constraint only. The `[bfcl]` extra in `nvidia-nat-benchmarks` installs the required
 > `tree-sitter` dependencies automatically.
 
@@ -71,7 +71,7 @@ uv pip install nvidia-bfcl --no-deps
 export NVIDIA_API_KEY=<your-nvidia-api-key>
 ```
 
-Or add it to a `.env` file in your project root (NAT loads `.env` automatically).
+Or add it to a `.env` file in your project root (NeMo Agent Toolkit loads `.env` automatically).
 
 ### 2. Locate the BFCL dataset
 
@@ -167,7 +167,7 @@ INFO - BFCL evaluation complete: accuracy=0.850 (85/100) category=simple
 | bfcl      |       0.850 | bfcl_output.json |
 ```
 
-> The system prompt uses BFCL's standard format instruction which constrains the LLM to output
+> The system prompt uses the standard BFCL format instruction which constrains the LLM to output
 > `[func_name(param=value)]` format. Accuracy varies by model — `llama-3.3-70b-instruct`
 > typically scores 80-95% on the simple split.
 
@@ -175,7 +175,7 @@ INFO - BFCL evaluation complete: accuracy=0.850 (85/100) category=simple
 
 ## Evaluation Mode 2: Native Function Calling
 
-Uses `llm.bind_tools(schemas)` — the LLM makes structured tool calls via the native `tools=` API parameter. Tool call args are extracted from `AIMessage.tool_calls` and formatted for BFCL scoring.
+Uses `llm.bind_tools(schemas)` — the LLM makes structured tool calls via the native `tools=` API parameter. Tool call arguments are extracted from `AIMessage.tool_calls` and formatted for BFCL scoring.
 
 ```bash
 nat eval --config_file examples/benchmarks/bfcl/configs/eval_fc_simple.yml
@@ -195,7 +195,7 @@ INFO - BFCL evaluation complete: accuracy=0.720 (288/400) category=simple
 | bfcl      |       0.720 | bfcl_output.json |
 ```
 
-> FC mode converts BFCL's function schemas to OpenAI tool format and uses `bind_tools()`.
+> FC mode converts BFCL function schemas to OpenAI tool format and uses `bind_tools()`.
 > The LLM returns structured `tool_calls` with typed arguments, but accuracy can be lower
 > than AST prompting when the schema type conversion (BFCL types → OpenAPI types) loses
 > precision or the model returns string values where integers are expected.
@@ -235,10 +235,10 @@ INFO - BFCL evaluation complete: accuracy=0.900 (360/400) category=simple
 
 ### The `bfcl_evaluator`
 
-All three evaluation modes use the same evaluator: **`bfcl_evaluator`** (`_type: bfcl_evaluator` in the eval config). It calls BFCL's `ast_checker()` function directly in Python to validate the model's function call output against the ground-truth possible answers. The evaluator handles three steps:
+All three evaluation modes use the same evaluator: **`bfcl_evaluator`** (`_type: bfcl_evaluator` in the eval config). It calls the BFCL `ast_checker()` function directly in Python to validate the model's function call output against the ground-truth possible answers. The evaluator handles three steps:
 
 1. **Extract** the function call from the model's raw output (strips markdown, prose, JSON wrapping)
-2. **Decode** the extracted text into a structured function call via BFCL's `default_decode_ast_prompting()`
+2. **Decode** the extracted text into a structured function call via the BFCL `default_decode_ast_prompting()` utility
 3. **Check** the decoded call against ground truth via `ast_checker()` — validates function name, parameter names, types, and values
 
 The evaluator is configured in the YAML under `eval.evaluators`:
@@ -289,7 +289,7 @@ Accuracy: 0.850
 ### Score interpretation
 
 - **1.0**: Function name, parameter names, types, and values all match ground truth
-- **0.0**: Any mismatch — wrong function, wrong params, wrong types, or unparseable output
+- **0.0**: Any mismatch — wrong function, wrong parameters, wrong types, or output that cannot be parsed
 
 ---
 

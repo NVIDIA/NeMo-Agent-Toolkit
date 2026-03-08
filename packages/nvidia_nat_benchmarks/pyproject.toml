@@ -59,7 +59,7 @@ dependencies = [
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 tooltalk = [
-  "nvidia-tooltalk",
+  "nvidia-tooltalk~=26.1",
 ]
 bfcl = [
   # nvidia-bfcl must be installed separately with --no-deps due to an overly
@@ -70,7 +70,7 @@ bfcl = [
   "tree-sitter-javascript~=0.21.0",
 ]
 byob = [
-  "nemo-evaluator",
+  "nemo-evaluator~=0.1",
 ]
 agent-leaderboard = [
   "datasets~=4.4",

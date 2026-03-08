@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟡 Intermediate
 
-Evaluate NAT agent workflows against the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark. This benchmark tests whether an agent can select the correct tools for real-world use cases across multiple domains.
+Evaluate NeMo Agent Toolkit agent workflows against the [Galileo Agent Leaderboard v2](https://huggingface.co/datasets/galileo-ai/agent-leaderboard-v2) benchmark. This benchmark tests whether an agent can select the correct tools for real-world use cases across multiple domains.
 
 ## Key Features
 

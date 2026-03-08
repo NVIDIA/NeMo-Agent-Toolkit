@@ -157,12 +157,22 @@ class PermissiveToolInput(BaseModel):
     def parse_string_to_dict(cls, v: Any) -> dict[str, Any]:
         """Convert JSON string to dict if needed."""
         if isinstance(v, str):
+            # Try standard JSON first (preserves values with apostrophes like O'Reilly)
             try:
-                normalized = v.replace("'", '"')
-                return json.loads(normalized)
+                return json.loads(v)
             except json.JSONDecodeError:
-                logger.warning("Failed to parse input_params string as JSON: %s", v[:100])
-                return {}
+                pass
+            # Fallback: try ast.literal_eval for Python-style dicts with single quotes
+            try:
+                import ast
+
+                result = ast.literal_eval(v)
+                if isinstance(result, dict):
+                    return result
+            except (ValueError, SyntaxError):
+                pass
+            logger.warning("Failed to parse input_params string as JSON (length=%d)", len(v))
+            return {}
         elif isinstance(v, dict):
             return v
         else:
