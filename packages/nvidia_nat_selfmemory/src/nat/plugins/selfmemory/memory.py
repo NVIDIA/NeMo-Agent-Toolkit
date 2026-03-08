@@ -53,11 +53,14 @@ async def selfmemory_provider(config: SelfMemoryProviderConfig, builder: Builder
             "config": config.llm_config,
         }
 
-    if config.encryption_key:
-        os.environ.setdefault("MASTER_ENCRYPTION_KEY", config.encryption_key)
+    encryption_key = config.encryption_key or os.environ.get("MASTER_ENCRYPTION_KEY")
+
+    if encryption_key:
+        os.environ["MASTER_ENCRYPTION_KEY"] = encryption_key
 
     memory = SelfMemory(config=config_dict)
 
-    yield SelfMemoryEditor(memory)
-
-    memory.close()
+    try:
+        yield SelfMemoryEditor(memory)
+    finally:
+        memory.close()

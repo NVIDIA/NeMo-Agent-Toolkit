@@ -36,9 +36,11 @@ class SelfMemoryEditor(MemoryEditor):
 
     async def add_items(self, items: list[MemoryItem]) -> None:
         """Insert multiple MemoryItems into SelfMemory."""
-        for item in items:
-            kwargs = memory_item_to_add_kwargs(item)
-            await asyncio.to_thread(self._backend.add, **kwargs)
+        coroutines = [
+            asyncio.to_thread(self._backend.add, **memory_item_to_add_kwargs(item))
+            for item in items
+        ]
+        await asyncio.gather(*coroutines)
 
     async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
         """Retrieve items relevant to the given query."""
