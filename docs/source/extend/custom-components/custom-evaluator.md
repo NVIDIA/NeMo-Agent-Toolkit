@@ -150,7 +150,8 @@ class SimilarityEvaluator(BaseEvaluator):
 ```
 
 ### ATIF-native custom evaluator (ATIF-only example)
-You can also author a custom evaluator that only implements `evaluate_atif_fn` and does not provide `evaluate_fn`.
+You can also author a custom evaluator that only implements ATIF-native scoring and does not provide `evaluate_fn`.
+When using `AtifBaseEvaluator`, implement `evaluate_atif_item` and reuse the built-in concurrent `evaluate_atif_fn`.
 This is useful when your scoring logic consumes canonical ATIF trajectories directly.
 
 The following example registers a minimal ATIF-only cosine-similarity evaluator:
@@ -164,17 +165,25 @@ from pydantic import Field
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.evaluator import EvaluatorBaseConfig
-from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
+from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 
 
 class AtifCosineSimilarityEvaluatorConfig(EvaluatorBaseConfig, name="atif_cosine_similarity"):
     normalize_case: bool = Field(default=True)
 
 
-class AtifCosineSimilarityEvaluator:
+class AtifCosineSimilarityEvaluator(AtifBaseEvaluator):
+    def __init__(self, normalize_case: bool = True, max_concurrency: int = 4):
+        super().__init__(max_concurrency=max_concurrency)
+        self.normalize_case = normalize_case
+
+    def _normalize(self, value: object) -> str:
+        text = str(value or "").strip()
+        return text.casefold() if self.normalize_case else text
+
     def _cosine_similarity(self, text_a: str, text_b: str) -> float:
         counts_a = Counter(text_a.split())
         counts_b = Counter(text_b.split())
@@ -190,29 +199,27 @@ class AtifCosineSimilarityEvaluator:
         steps = getattr(sample.trajectory, "steps", None) or []
         return sum(len(getattr(step, "tool_calls", None) or []) for step in steps)
 
-    async def evaluate_atif_fn(self, atif_samples: AtifEvalSampleList) -> EvalOutput:
-        output_items = []
-        for sample in atif_samples:
-            expected = str(sample.expected_output_obj or "").strip().casefold()
-            generated = str(sample.output_obj or "").strip().casefold()
-            score = round(self._cosine_similarity(expected, generated), 2)
-            tool_call_count = self._count_tool_calls(sample)
-            output_items.append(
-                EvalOutputItem(
-                    id=sample.item_id,
-                    score=score,
-                    reasoning={
-                        "comparison": "cosine-similarity",
-                        "trajectory_tool_call_count": tool_call_count,
-                    },
-                ))
-        avg = sum(item.score for item in output_items) / len(output_items) if output_items else None
-        return EvalOutput(average_score=avg, eval_output_items=output_items)
+    async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
+        expected = self._normalize(sample.expected_output_obj)
+        generated = self._normalize(sample.output_obj)
+        score = round(self._cosine_similarity(expected, generated), 2)
+        tool_call_count = self._count_tool_calls(sample)
+        return EvalOutputItem(
+            id=sample.item_id,
+            score=score,
+            reasoning={
+                "comparison": "cosine-similarity",
+                "trajectory_tool_call_count": tool_call_count,
+            },
+        )
 
 
 @register_evaluator(config_type=AtifCosineSimilarityEvaluatorConfig)
 async def register_atif_cosine_similarity_evaluator(config: AtifCosineSimilarityEvaluatorConfig, _builder: EvalBuilder):
-    evaluator = AtifCosineSimilarityEvaluator()
+    evaluator = AtifCosineSimilarityEvaluator(
+        normalize_case=config.normalize_case,
+        max_concurrency=_builder.get_max_concurrency(),
+    )
     evaluator_info = EvaluatorInfo(config=config, description="ATIF-only cosine similarity custom evaluator")
     evaluator_info.evaluate_atif_fn = evaluator.evaluate_atif_fn
     yield evaluator_info
