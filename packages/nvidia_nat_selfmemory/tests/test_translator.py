@@ -105,10 +105,10 @@ class TestMemoryItemToAddKwargs:
         assert kwargs["messages"] == "Direct memory text"
 
     def test_default_user_id(self):
-        """Test that missing user_id defaults to 'default'."""
+        """Test that empty user_id defaults to 'default'."""
         item = MemoryItem(
             conversation=[],
-            user_id=None,
+            user_id="",
             memory="Note",
             tags=[],
             metadata={},
