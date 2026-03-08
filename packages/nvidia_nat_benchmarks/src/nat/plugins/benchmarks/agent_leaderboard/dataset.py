@@ -73,9 +73,7 @@ def _derive_expected_tool_calls(user_goals: list[str], tools: list[dict]) -> lis
             tool_name_lower = tool_name.lower()
 
             for keyword, patterns in keyword_mappings.items():
-                if keyword in goal_lower and any(
-                    p in tool_name_lower or p in tool_desc for p in patterns
-                ):
+                if keyword in goal_lower and any(p in tool_name_lower or p in tool_desc for p in patterns):
                     if tool_name not in seen:
                         seen.add(tool_name)
                         expected.append({"tool": tool_name, "parameters": {}})
@@ -165,13 +163,9 @@ def _download_from_huggingface(domains: list[str]) -> list[dict]:
 
 
 @register_dataset_loader(config_type=AgentLeaderboardDatasetConfig)
-async def register_agent_leaderboard_dataset_loader(
-    config: AgentLeaderboardDatasetConfig, builder: EvalBuilder
-):
+async def register_agent_leaderboard_dataset_loader(config: AgentLeaderboardDatasetConfig, builder: EvalBuilder):
     yield DatasetLoaderInfo(
         config=config,
-        load_fn=lambda fp, **kw: load_agent_leaderboard_dataset(
-            fp, domains=config.domains, limit=config.limit, **kw
-        ),
+        load_fn=lambda fp, **kw: load_agent_leaderboard_dataset(fp, domains=config.domains, limit=config.limit, **kw),
         description="Galileo Agent Leaderboard v2 dataset loader",
     )

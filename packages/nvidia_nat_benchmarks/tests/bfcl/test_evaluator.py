@@ -18,18 +18,14 @@ Uses pre-constructed model outputs to validate that ast_checker scoring works
 correctly through the evaluator.
 """
 
+import importlib.util
 import json
-import os
 
 import pytest
 
 from nat.data_models.evaluator import EvalInputItem
 
-try:
-    from bfcl.eval_checker.ast_eval.ast_checker import ast_checker
-    _HAS_BFCL = True
-except ImportError:
-    _HAS_BFCL = False
+_HAS_BFCL = importlib.util.find_spec("bfcl.eval_checker") is not None
 
 pytestmark = pytest.mark.skipif(not _HAS_BFCL, reason="bfcl not installed")
 
@@ -37,17 +33,26 @@ pytestmark = pytest.mark.skipif(not _HAS_BFCL, reason="bfcl not installed")
 def _make_simple_entry() -> dict:
     """BFCL simple test: calculate_triangle_area(base=10, height=5)."""
     return {
-        "id": "simple_0",
-        "question": [[{"role": "user", "content": "Find area of triangle with base 10, height 5"}]],
+        "id":
+            "simple_0",
+        "question": [[{
+            "role": "user", "content": "Find area of triangle with base 10, height 5"
+        }]],
         "function": [{
             "name": "calculate_triangle_area",
             "description": "Calculate the area of a triangle.",
             "parameters": {
                 "type": "dict",
                 "properties": {
-                    "base": {"type": "integer", "description": "The base"},
-                    "height": {"type": "integer", "description": "The height"},
-                    "unit": {"type": "string", "description": "Unit of measure"},
+                    "base": {
+                        "type": "integer", "description": "The base"
+                    },
+                    "height": {
+                        "type": "integer", "description": "The height"
+                    },
+                    "unit": {
+                        "type": "string", "description": "Unit of measure"
+                    },
                 },
                 "required": ["base", "height"],
             },

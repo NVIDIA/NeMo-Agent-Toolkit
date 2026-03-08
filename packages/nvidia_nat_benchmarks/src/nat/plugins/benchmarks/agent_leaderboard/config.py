@@ -59,11 +59,9 @@ class AgentLeaderboardWorkflowConfig(AgentBaseConfig, name="agent_leaderboard_wo
         description="Maximum tool-calling steps per scenario",
     )
     system_prompt: str | None = Field(
-        default=(
-            "You are a tool-calling agent. Select the correct tools to handle the user's request.\n"
-            "Focus on selecting the RIGHT TOOL for each step. Use placeholder values for parameters.\n"
-            "Tool responses are simulated — focus on tool choice, not data quality."
-        ),
+        default=("You are a tool-calling agent. Select the correct tools to handle the user's request.\n"
+                 "Focus on selecting the RIGHT TOOL for each step. Use placeholder values for parameters.\n"
+                 "Tool responses are simulated — focus on tool choice, not data quality."),
         description="System prompt for the agent",
     )
 

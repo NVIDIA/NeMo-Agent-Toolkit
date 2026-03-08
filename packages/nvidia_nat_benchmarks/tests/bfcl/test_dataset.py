@@ -17,7 +17,6 @@
 import json
 import os
 
-import pandas as pd
 import pytest
 
 from nat.plugins.benchmarks.bfcl.dataset import load_bfcl_dataset
@@ -25,14 +24,21 @@ from nat.plugins.benchmarks.bfcl.dataset import load_bfcl_dataset
 
 def _make_bfcl_entry(entry_id: str, question: str = "Calculate area", func_name: str = "calc") -> dict:
     return {
-        "id": entry_id,
-        "question": [[{"role": "user", "content": question}]],
+        "id":
+            entry_id,
+        "question": [[{
+            "role": "user", "content": question
+        }]],
         "function": [{
             "name": func_name,
             "description": "A test function",
             "parameters": {
                 "type": "dict",
-                "properties": {"x": {"type": "integer", "description": "value"}},
+                "properties": {
+                    "x": {
+                        "type": "integer", "description": "value"
+                    }
+                },
                 "required": ["x"],
             },
         }],
@@ -42,7 +48,11 @@ def _make_bfcl_entry(entry_id: str, question: str = "Calculate area", func_name:
 def _make_bfcl_answer(entry_id: str) -> dict:
     return {
         "id": entry_id,
-        "ground_truth": [{"calc": {"x": [10]}}],
+        "ground_truth": [{
+            "calc": {
+                "x": [10]
+            }
+        }],
     }
 
 

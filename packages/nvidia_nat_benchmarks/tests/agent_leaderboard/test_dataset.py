@@ -15,23 +15,39 @@
 """Tests for Agent Leaderboard dataset loader — no network required for unit tests."""
 
 import json
-import os
 
-import pandas as pd
 import pytest
 
-from nat.plugins.benchmarks.agent_leaderboard.dataset import (
-    load_agent_leaderboard_dataset,
-    _derive_expected_tool_calls,
-)
+from nat.plugins.benchmarks.agent_leaderboard.dataset import _derive_expected_tool_calls
+from nat.plugins.benchmarks.agent_leaderboard.dataset import load_agent_leaderboard_dataset
 
 
 def _make_sample_tools():
     return [
-        {"title": "get_account_balance", "description": "Get the balance of an account", "properties": {}, "required": []},
-        {"title": "transfer_funds", "description": "Transfer money between accounts", "properties": {}, "required": []},
-        {"title": "get_exchange_rates", "description": "Get currency exchange rates", "properties": {}, "required": []},
-        {"title": "schedule_appointment", "description": "Schedule a branch appointment", "properties": {}, "required": []},
+        {
+            "title": "get_account_balance",
+            "description": "Get the balance of an account",
+            "properties": {},
+            "required": []
+        },
+        {
+            "title": "transfer_funds",
+            "description": "Transfer money between accounts",
+            "properties": {},
+            "required": []
+        },
+        {
+            "title": "get_exchange_rates",
+            "description": "Get currency exchange rates",
+            "properties": {},
+            "required": []
+        },
+        {
+            "title": "schedule_appointment",
+            "description": "Schedule a branch appointment",
+            "properties": {},
+            "required": []
+        },
     ]
 
 
@@ -44,10 +60,16 @@ def _make_sample_entry(idx: int = 0, domain: str = "banking"):
         "user_goals": ["Check account balance", "Transfer funds"],
         "available_tools": tools,
         "expected_tool_calls": [
-            {"tool": "get_account_balance", "parameters": {}},
-            {"tool": "transfer_funds", "parameters": {}},
+            {
+                "tool": "get_account_balance", "parameters": {}
+            },
+            {
+                "tool": "transfer_funds", "parameters": {}
+            },
         ],
-        "metadata": {"domain": domain, "persona_name": "Test User", "num_goals": 2},
+        "metadata": {
+            "domain": domain, "persona_name": "Test User", "num_goals": 2
+        },
     }
 
 
@@ -78,9 +100,7 @@ class TestDeriveExpectedToolCalls:
 
     def test_deduplicates(self):
         tools = _make_sample_tools()
-        expected = _derive_expected_tool_calls(
-            ["Check balance", "Also check my balance again"], tools
-        )
+        expected = _derive_expected_tool_calls(["Check balance", "Also check my balance again"], tools)
         tool_names = [tc["tool"] for tc in expected]
         assert tool_names.count("get_account_balance") == 1
 
@@ -138,7 +158,7 @@ class TestHuggingFaceDownload:
     def test_downloads_banking_domain(self):
         """Downloads real data from HuggingFace — requires network."""
         try:
-            from datasets import load_dataset
+            import datasets  # noqa: F401
         except ImportError:
             pytest.skip("datasets not installed")
 

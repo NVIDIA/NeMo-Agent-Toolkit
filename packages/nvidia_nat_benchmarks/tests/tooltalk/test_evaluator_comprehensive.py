@@ -30,35 +30,63 @@ except ImportError:
 
 pytestmark = pytest.mark.skipif(not _HAS_TOOLTALK, reason="tooltalk not installed")
 
-from nat.plugins.benchmarks.tooltalk.evaluator import _evaluate_single
+from nat.plugins.benchmarks.tooltalk.evaluator import _evaluate_single  # noqa: E402
 
 
 def _alarm_conv(predictions):
     """Build a standard AddAlarm conversation with given predictions."""
     return {
-        "name": "test", "conversation_id": "test-001",
-        "suites_used": ["Alarm"], "apis_used": ["AddAlarm"],
-        "scenario": "test",
-        "user": {"username": "testuser", "email": "t@t.com", "phone": "123-456-7890",
-                 "name": "Test", "password": "pass", "session_token": "tok-123"},
-        "metadata": {"location": "NY", "timestamp": "2023-09-11 13:00:00",
-                     "session_token": "tok-123", "username": "testuser"},
+        "name":
+            "test",
+        "conversation_id":
+            "test-001",
+        "suites_used": ["Alarm"],
+        "apis_used": ["AddAlarm"],
+        "scenario":
+            "test",
+        "user": {
+            "username": "testuser",
+            "email": "t@t.com",
+            "phone": "123-456-7890",
+            "name": "Test",
+            "password": "pass",
+            "session_token": "tok-123"
+        },
+        "metadata": {
+            "location": "NY", "timestamp": "2023-09-11 13:00:00", "session_token": "tok-123", "username": "testuser"
+        },
         "conversation": [
-            {"index": 0, "role": "user", "text": "Set alarm for 6:30"},
-            {"index": 1, "role": "assistant", "text": "Done.",
-             "apis": [{"request": {"api_name": "AddAlarm",
-                                   "parameters": {"session_token": "tok-123", "time": "18:30:00"}},
-                       "response": {"alarm_id": "5bff-dd80"}, "exception": None}],
-             "predictions": predictions},
+            {
+                "index": 0, "role": "user", "text": "Set alarm for 6:30"
+            },
+            {
+                "index": 1,
+                "role": "assistant",
+                "text": "Done.",
+                "apis": [{
+                    "request": {
+                        "api_name": "AddAlarm", "parameters": {
+                            "session_token": "tok-123", "time": "18:30:00"
+                        }
+                    },
+                    "response": {
+                        "alarm_id": "5bff-dd80"
+                    },
+                    "exception": None
+                }],
+                "predictions": predictions
+            },
         ],
     }
 
 
 def _make_item(conv):
     return EvalInputItem(
-        id="test-001", input_obj=json.dumps(conv),
+        id="test-001",
+        input_obj=json.dumps(conv),
         expected_output_obj=json.dumps(conv),
-        output_obj=json.dumps(conv), full_dataset_entry=conv,
+        output_obj=json.dumps(conv),
+        full_dataset_entry=conv,
     )
 
 
@@ -67,10 +95,21 @@ class TestAllMetricFields:
 
     def test_perfect_match_all_fields(self):
         preds = [
-            {"role": "api", "request": {"api_name": "AddAlarm",
-             "parameters": {"session_token": "tok-123", "time": "18:30:00"}},
-             "response": {"alarm_id": "5bff-dd80"}, "exception": None},
-            {"role": "assistant", "text": "Done."},
+            {
+                "role": "api",
+                "request": {
+                    "api_name": "AddAlarm", "parameters": {
+                        "session_token": "tok-123", "time": "18:30:00"
+                    }
+                },
+                "response": {
+                    "alarm_id": "5bff-dd80"
+                },
+                "exception": None
+            },
+            {
+                "role": "assistant", "text": "Done."
+            },
         ]
         result = _evaluate_single(_make_item(_alarm_conv(preds)), _DB_DIR)
         r = result.reasoning
@@ -102,16 +141,45 @@ class TestAllMetricFields:
     def test_soft_success_calculation(self):
         """3 predictions: 1 match + 2 bad actions → soft_success = recall*(1-bad_rate)."""
         preds = [
-            {"role": "api", "request": {"api_name": "AddAlarm",
-             "parameters": {"session_token": "tok-123", "time": "18:30:00"}},
-             "response": {"alarm_id": "5bff-dd80"}, "exception": None},
-            {"role": "api", "request": {"api_name": "AddAlarm",
-             "parameters": {"session_token": "tok-123", "time": "18:30:00"}},
-             "response": {"alarm_id": "aaaa-bbbb"}, "exception": None},
-            {"role": "api", "request": {"api_name": "AddAlarm",
-             "parameters": {"session_token": "tok-123", "time": "18:30:00"}},
-             "response": {"alarm_id": "cccc-dddd"}, "exception": None},
-            {"role": "assistant", "text": "Done."},
+            {
+                "role": "api",
+                "request": {
+                    "api_name": "AddAlarm", "parameters": {
+                        "session_token": "tok-123", "time": "18:30:00"
+                    }
+                },
+                "response": {
+                    "alarm_id": "5bff-dd80"
+                },
+                "exception": None
+            },
+            {
+                "role": "api",
+                "request": {
+                    "api_name": "AddAlarm", "parameters": {
+                        "session_token": "tok-123", "time": "18:30:00"
+                    }
+                },
+                "response": {
+                    "alarm_id": "aaaa-bbbb"
+                },
+                "exception": None
+            },
+            {
+                "role": "api",
+                "request": {
+                    "api_name": "AddAlarm", "parameters": {
+                        "session_token": "tok-123", "time": "18:30:00"
+                    }
+                },
+                "response": {
+                    "alarm_id": "cccc-dddd"
+                },
+                "exception": None
+            },
+            {
+                "role": "assistant", "text": "Done."
+            },
         ]
         result = _evaluate_single(_make_item(_alarm_conv(preds)), _DB_DIR)
         r = result.reasoning
@@ -128,8 +196,11 @@ class TestMalformedInput:
 
     def test_invalid_json_output(self):
         item = EvalInputItem(
-            id="bad", input_obj="{}", expected_output_obj="{}",
-            output_obj="not valid json at all", full_dataset_entry={},
+            id="bad",
+            input_obj="{}",
+            expected_output_obj="{}",
+            output_obj="not valid json at all",
+            full_dataset_entry={},
         )
         result = _evaluate_single(item, _DB_DIR)
         assert result.score == 0.0
@@ -137,8 +208,11 @@ class TestMalformedInput:
 
     def test_empty_string_output(self):
         item = EvalInputItem(
-            id="empty", input_obj="{}", expected_output_obj="{}",
-            output_obj="", full_dataset_entry={},
+            id="empty",
+            input_obj="{}",
+            expected_output_obj="{}",
+            output_obj="",
+            full_dataset_entry={},
         )
         result = _evaluate_single(item, _DB_DIR)
         assert result.score == 0.0

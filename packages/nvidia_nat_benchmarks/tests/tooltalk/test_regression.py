@@ -48,11 +48,14 @@ def database_dir():
 def _make_alarm_conversation(predictions: list[dict]) -> dict:
     """Build a ToolTalk AddAlarm conversation with given predictions."""
     return {
-        "name": "regression-test",
-        "conversation_id": "regression-001",
+        "name":
+            "regression-test",
+        "conversation_id":
+            "regression-001",
         "suites_used": ["Alarm"],
         "apis_used": ["AddAlarm"],
-        "scenario": "regression",
+        "scenario":
+            "regression",
         "user": {
             "username": "justinkool",
             "email": "test@test.com",
@@ -68,16 +71,24 @@ def _make_alarm_conversation(predictions: list[dict]) -> dict:
             "username": "justinkool",
         },
         "conversation": [
-            {"index": 0, "role": "user", "text": "Set an alarm for 6:30 PM"},
+            {
+                "index": 0, "role": "user", "text": "Set an alarm for 6:30 PM"
+            },
             {
                 "index": 1,
                 "role": "assistant",
                 "text": "Alarm set.",
                 "apis": [{
-                    "request": {"api_name": "AddAlarm", "parameters": {
-                        "session_token": "98a5a87a-7714-b404", "time": "18:30:00",
-                    }},
-                    "response": {"alarm_id": "5bff-dd80"},
+                    "request": {
+                        "api_name": "AddAlarm",
+                        "parameters": {
+                            "session_token": "98a5a87a-7714-b404",
+                            "time": "18:30:00",
+                        }
+                    },
+                    "response": {
+                        "alarm_id": "5bff-dd80"
+                    },
                     "exception": None,
                 }],
                 "predictions": predictions,
@@ -94,19 +105,28 @@ class TestToolTalkEvaluatorRegression:
         predictions = [
             {
                 "role": "api",
-                "request": {"api_name": "AddAlarm", "parameters": {
-                    "session_token": "98a5a87a-7714-b404", "time": "18:30:00",
-                }},
-                "response": {"alarm_id": "5bff-dd80"},
+                "request": {
+                    "api_name": "AddAlarm", "parameters": {
+                        "session_token": "98a5a87a-7714-b404",
+                        "time": "18:30:00",
+                    }
+                },
+                "response": {
+                    "alarm_id": "5bff-dd80"
+                },
                 "exception": None,
             },
-            {"role": "assistant", "text": "Alarm set."},
+            {
+                "role": "assistant", "text": "Alarm set."
+            },
         ]
         conv = _make_alarm_conversation(predictions)
         item = EvalInputItem(
-            id="reg-001", input_obj=json.dumps(conv),
+            id="reg-001",
+            input_obj=json.dumps(conv),
             expected_output_obj=json.dumps(conv),
-            output_obj=json.dumps(conv), full_dataset_entry=conv,
+            output_obj=json.dumps(conv),
+            full_dataset_entry=conv,
         )
         result = _evaluate_single(item, database_dir)
 
@@ -124,35 +144,54 @@ class TestToolTalkEvaluatorRegression:
         predictions = [
             {
                 "role": "api",
-                "request": {"api_name": "AddAlarm", "parameters": {
-                    "session_token": "98a5a87a-7714-b404", "time": "18:30:00",
-                }},
-                "response": {"alarm_id": "5bff-dd80"},
+                "request": {
+                    "api_name": "AddAlarm", "parameters": {
+                        "session_token": "98a5a87a-7714-b404",
+                        "time": "18:30:00",
+                    }
+                },
+                "response": {
+                    "alarm_id": "5bff-dd80"
+                },
                 "exception": None,
             },
             {
                 "role": "api",
-                "request": {"api_name": "AddAlarm", "parameters": {
-                    "session_token": "98a5a87a-7714-b404", "time": "18:30:00",
-                }},
-                "response": {"alarm_id": "aaaa-bbbb"},
+                "request": {
+                    "api_name": "AddAlarm", "parameters": {
+                        "session_token": "98a5a87a-7714-b404",
+                        "time": "18:30:00",
+                    }
+                },
+                "response": {
+                    "alarm_id": "aaaa-bbbb"
+                },
                 "exception": None,
             },
             {
                 "role": "api",
-                "request": {"api_name": "AddAlarm", "parameters": {
-                    "session_token": "98a5a87a-7714-b404", "time": "18:30:00",
-                }},
-                "response": {"alarm_id": "cccc-dddd"},
+                "request": {
+                    "api_name": "AddAlarm", "parameters": {
+                        "session_token": "98a5a87a-7714-b404",
+                        "time": "18:30:00",
+                    }
+                },
+                "response": {
+                    "alarm_id": "cccc-dddd"
+                },
                 "exception": None,
             },
-            {"role": "assistant", "text": "Alarm set."},
+            {
+                "role": "assistant", "text": "Alarm set."
+            },
         ]
         conv = _make_alarm_conversation(predictions)
         item = EvalInputItem(
-            id="reg-002", input_obj=json.dumps(conv),
+            id="reg-002",
+            input_obj=json.dumps(conv),
             expected_output_obj=json.dumps(conv),
-            output_obj=json.dumps(conv), full_dataset_entry=conv,
+            output_obj=json.dumps(conv),
+            full_dataset_entry=conv,
         )
         result = _evaluate_single(item, database_dir)
 
@@ -169,19 +208,27 @@ class TestToolTalkEvaluatorRegression:
         predictions = [
             {
                 "role": "api",
-                "request": {"api_name": "DeleteAlarm", "parameters": {
-                    "session_token": "98a5a87a-7714-b404", "alarm_id": "5bff-dd80",
-                }},
+                "request": {
+                    "api_name": "DeleteAlarm",
+                    "parameters": {
+                        "session_token": "98a5a87a-7714-b404",
+                        "alarm_id": "5bff-dd80",
+                    }
+                },
                 "response": None,
                 "exception": "Alarm not found",
             },
-            {"role": "assistant", "text": "Done."},
+            {
+                "role": "assistant", "text": "Done."
+            },
         ]
         conv = _make_alarm_conversation(predictions)
         item = EvalInputItem(
-            id="reg-003", input_obj=json.dumps(conv),
+            id="reg-003",
+            input_obj=json.dumps(conv),
             expected_output_obj=json.dumps(conv),
-            output_obj=json.dumps(conv), full_dataset_entry=conv,
+            output_obj=json.dumps(conv),
+            full_dataset_entry=conv,
         )
         result = _evaluate_single(item, database_dir)
 
@@ -192,13 +239,17 @@ class TestToolTalkEvaluatorRegression:
     def test_no_predictions_zero_recall(self, database_dir):
         """No API predictions at all = recall 0."""
         predictions = [
-            {"role": "assistant", "text": "I can't do that."},
+            {
+                "role": "assistant", "text": "I can't do that."
+            },
         ]
         conv = _make_alarm_conversation(predictions)
         item = EvalInputItem(
-            id="reg-004", input_obj=json.dumps(conv),
+            id="reg-004",
+            input_obj=json.dumps(conv),
             expected_output_obj=json.dumps(conv),
-            output_obj=json.dumps(conv), full_dataset_entry=conv,
+            output_obj=json.dumps(conv),
+            full_dataset_entry=conv,
         )
         result = _evaluate_single(item, database_dir)
 

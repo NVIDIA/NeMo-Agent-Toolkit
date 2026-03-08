@@ -24,7 +24,10 @@ import logging
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvalInput, EvalInputItem, EvalOutput, EvalOutputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutput
+from nat.data_models.evaluator import EvalOutputItem
 
 from .config import ToolTalkEvaluatorConfig
 
@@ -33,7 +36,6 @@ logger = logging.getLogger(__name__)
 
 @register_evaluator(config_type=ToolTalkEvaluatorConfig)
 async def tooltalk_evaluator_function(config: ToolTalkEvaluatorConfig, builder: EvalBuilder):
-    from tooltalk.evaluation.tool_executor import ToolExecutor
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
         eval_output_items = []
@@ -55,7 +57,8 @@ async def tooltalk_evaluator_function(config: ToolTalkEvaluatorConfig, builder: 
 
         logger.info(
             "ToolTalk evaluation complete: average_success=%.3f across %d conversations",
-            average_score, len(scores),
+            average_score,
+            len(scores),
         )
 
         return EvalOutput(average_score=average_score, eval_output_items=eval_output_items)

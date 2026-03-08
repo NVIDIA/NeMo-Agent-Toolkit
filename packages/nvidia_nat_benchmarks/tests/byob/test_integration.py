@@ -25,7 +25,6 @@ import os
 import pytest
 
 try:
-    from nemo_evaluator.contrib.byob.decorators import ScorerInput
     from nemo_evaluator.contrib.byob.eval_logic import import_benchmark
     _HAS_BYOB = True
 except ImportError:
@@ -33,49 +32,62 @@ except ImportError:
 
 pytestmark = pytest.mark.skipif(not _HAS_BYOB, reason="nemo_evaluator BYOB not installed")
 
-from nat.data_models.evaluator import EvalInput, EvalInputItem
-from nat.plugins.benchmarks.byob.evaluator import _evaluate_single
+from nat.data_models.evaluator import EvalInputItem  # noqa: E402
+from nat.plugins.benchmarks.byob.evaluator import _evaluate_single  # noqa: E402
 
 
 class TestBYOBIntegration:
 
     def test_byob_scorer_pipeline_exact_match(self):
         """Full pipeline: import benchmark → create items → score with exact_match."""
-        fixture_path = os.path.join(
-            os.path.dirname(__file__), "fixtures", "sample_benchmark.py"
-        )
+        fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "sample_benchmark.py")
         bench = import_benchmark(fixture_path, "test_exact_match")
 
         # Simulate items that the eval runner would create
         items = [
             EvalInputItem(
                 id="0",
-                input_obj=json.dumps({"question": "What is 2+2?", "target": "4"}),
+                input_obj=json.dumps({
+                    "question": "What is 2+2?", "target": "4"
+                }),
                 expected_output_obj="4",
                 output_obj="4",  # Correct answer
-                full_dataset_entry={"question": "What is 2+2?", "target": "4"},
+                full_dataset_entry={
+                    "question": "What is 2+2?", "target": "4"
+                },
             ),
             EvalInputItem(
                 id="1",
-                input_obj=json.dumps({"question": "Sky color?", "target": "blue"}),
+                input_obj=json.dumps({
+                    "question": "Sky color?", "target": "blue"
+                }),
                 expected_output_obj="blue",
                 output_obj="red",  # Wrong answer
-                full_dataset_entry={"question": "Sky color?", "target": "blue"},
+                full_dataset_entry={
+                    "question": "Sky color?", "target": "blue"
+                },
             ),
             EvalInputItem(
                 id="2",
-                input_obj=json.dumps({"question": "Capital of France?", "target": "Paris"}),
+                input_obj=json.dumps({
+                    "question": "Capital of France?", "target": "Paris"
+                }),
                 expected_output_obj="Paris",
                 output_obj="Paris",  # Correct answer
-                full_dataset_entry={"question": "Capital of France?", "target": "Paris"},
+                full_dataset_entry={
+                    "question": "Capital of France?", "target": "Paris"
+                },
             ),
         ]
 
         results = []
         for item in items:
             result = _evaluate_single(
-                item, bench.scorer_fn, bench.target_field,
-                "correct", bench.extra_config,
+                item,
+                bench.scorer_fn,
+                bench.target_field,
+                "correct",
+                bench.extra_config,
             )
             results.append(result)
 
@@ -91,9 +103,7 @@ class TestBYOBIntegration:
         """Full roundtrip: load dataset → create items → score."""
         from nat.plugins.benchmarks.byob.dataset import load_byob_dataset
 
-        fixture_path = os.path.join(
-            os.path.dirname(__file__), "fixtures", "sample_benchmark.py"
-        )
+        fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "sample_benchmark.py")
 
         # Load dataset
         df = load_byob_dataset("ignored", benchmark_module=fixture_path, benchmark_name="test_exact_match")
@@ -105,20 +115,24 @@ class TestBYOBIntegration:
         # Create eval items from DataFrame (simulating what DatasetHandler does)
         items = []
         for _, row in df.iterrows():
-            items.append(EvalInputItem(
-                id=row["id"],
-                input_obj=row["question"],
-                expected_output_obj=row["answer"],
-                output_obj=row["answer"],  # Simulate perfect answers
-                full_dataset_entry=json.loads(row["question"]),
-            ))
+            items.append(
+                EvalInputItem(
+                    id=row["id"],
+                    input_obj=row["question"],
+                    expected_output_obj=row["answer"],
+                    output_obj=row["answer"],  # Simulate perfect answers
+                    full_dataset_entry=json.loads(row["question"]),
+                ))
 
         # Score all items
         results = []
         for item in items:
             result = _evaluate_single(
-                item, bench.scorer_fn, bench.target_field,
-                "correct", bench.extra_config,
+                item,
+                bench.scorer_fn,
+                bench.target_field,
+                "correct",
+                bench.extra_config,
             )
             results.append(result)
 

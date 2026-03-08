@@ -25,7 +25,10 @@ import logging
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvalInput, EvalInputItem, EvalOutput, EvalOutputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutput
+from nat.data_models.evaluator import EvalOutputItem
 
 from .config import BYOBEvaluatorConfig
 
@@ -44,7 +47,8 @@ def _evaluate_single(
 
     if item.output_obj is None:
         return EvalOutputItem(
-            id=item.id, score=0.0,
+            id=item.id,
+            score=0.0,
             reasoning={"error": "No workflow output (output_obj is None)"},
         )
 
@@ -79,7 +83,8 @@ def _evaluate_single(
         scores = scorer_fn(scorer_input)
     except Exception as e:
         return EvalOutputItem(
-            id=item.id, score=0.0,
+            id=item.id,
+            score=0.0,
             reasoning={"error": f"Scorer failed: {e}"},
         )
 
@@ -97,7 +102,8 @@ async def byob_evaluator_function(config: BYOBEvaluatorConfig, builder: EvalBuil
 
     bench = import_benchmark(config.benchmark_module, config.benchmark_name)
     logger.info("BYOB evaluator loaded benchmark '%s' with scorer '%s'",
-                bench.name, getattr(bench.scorer_fn, '__name__', 'unknown'))
+                bench.name,
+                getattr(bench.scorer_fn, '__name__', 'unknown'))
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
         eval_output_items = []
@@ -105,13 +111,18 @@ async def byob_evaluator_function(config: BYOBEvaluatorConfig, builder: EvalBuil
         for item in eval_input.eval_input_items:
             try:
                 output_item = _evaluate_single(
-                    item, bench.scorer_fn, bench.target_field,
-                    config.score_field, bench.extra_config,
+                    item,
+                    bench.scorer_fn,
+                    bench.target_field,
+                    config.score_field,
+                    bench.extra_config,
                 )
             except Exception as e:
                 logger.exception("Error evaluating BYOB item %s: %s", item.id, e)
                 output_item = EvalOutputItem(
-                    id=item.id, score=0.0, reasoning={"error": str(e)},
+                    id=item.id,
+                    score=0.0,
+                    reasoning={"error": str(e)},
                 )
             eval_output_items.append(output_item)
 
@@ -120,7 +131,9 @@ async def byob_evaluator_function(config: BYOBEvaluatorConfig, builder: EvalBuil
 
         logger.info(
             "BYOB evaluation complete: avg_%s=%.3f (%d items)",
-            config.score_field, average_score, len(scores),
+            config.score_field,
+            average_score,
+            len(scores),
         )
 
         return EvalOutput(average_score=average_score, eval_output_items=eval_output_items)

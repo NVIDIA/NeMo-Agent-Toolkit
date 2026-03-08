@@ -114,8 +114,11 @@ class TestEdgeCases:
     def test_malformed_json_output(self):
         entry = {"expected_tool_calls": [{"tool": "t", "parameters": {}}]}
         item = EvalInputItem(
-            id="bad", input_obj="{}", expected_output_obj="[]",
-            output_obj="not json", full_dataset_entry=entry,
+            id="bad",
+            input_obj="{}",
+            expected_output_obj="[]",
+            output_obj="not json",
+            full_dataset_entry=entry,
         )
         result = _evaluate_single(item, 1.0, 0.0)
         assert result.score == 0.0
@@ -123,8 +126,11 @@ class TestEdgeCases:
     def test_output_is_dict_not_list(self):
         entry = {"expected_tool_calls": [{"tool": "t", "parameters": {}}]}
         item = EvalInputItem(
-            id="bad", input_obj="{}", expected_output_obj="[]",
-            output_obj='{"tool": "t"}', full_dataset_entry=entry,
+            id="bad",
+            input_obj="{}",
+            expected_output_obj="[]",
+            output_obj='{"tool": "t"}',
+            full_dataset_entry=entry,
         )
         result = _evaluate_single(item, 1.0, 0.0)
         # dict is not a list → predicted = [] → score 0

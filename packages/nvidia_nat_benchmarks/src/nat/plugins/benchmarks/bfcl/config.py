@@ -15,7 +15,6 @@
 """Configuration types for the BFCL benchmark."""
 
 from collections.abc import Callable
-from typing import Literal
 
 from pydantic import Field
 
@@ -23,13 +22,21 @@ from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
 
-
 # Valid BFCL v3 single-turn AST test categories
 BFCL_AST_CATEGORIES = [
-    "simple", "multiple", "parallel", "parallel_multiple",
-    "java", "javascript",
-    "live_simple", "live_multiple", "live_parallel", "live_parallel_multiple",
-    "irrelevance", "live_irrelevance", "live_relevance",
+    "simple",
+    "multiple",
+    "parallel",
+    "parallel_multiple",
+    "java",
+    "javascript",
+    "live_simple",
+    "live_multiple",
+    "live_parallel",
+    "live_parallel_multiple",
+    "irrelevance",
+    "live_irrelevance",
+    "live_relevance",
 ]
 
 

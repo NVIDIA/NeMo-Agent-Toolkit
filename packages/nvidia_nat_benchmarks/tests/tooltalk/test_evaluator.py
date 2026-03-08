@@ -57,18 +57,26 @@ def _make_conversation_with_predictions(predictions_match_ground_truth: bool) ->
     correct_api_call = {
         "request": {
             "api_name": "AddAlarm",
-            "parameters": {"session_token": "98a5a87a-7714-b404", "time": "18:30:00"},
+            "parameters": {
+                "session_token": "98a5a87a-7714-b404", "time": "18:30:00"
+            },
         },
-        "response": {"alarm_id": "5bff-dd80"},
+        "response": {
+            "alarm_id": "5bff-dd80"
+        },
         "exception": None,
     }
 
     wrong_api_call = {
         "request": {
             "api_name": "AddAlarm",
-            "parameters": {"session_token": "98a5a87a-7714-b404", "time": "19:00:00"},
+            "parameters": {
+                "session_token": "98a5a87a-7714-b404", "time": "19:00:00"
+            },
         },
-        "response": {"alarm_id": "aaaa-bbbb"},
+        "response": {
+            "alarm_id": "aaaa-bbbb"
+        },
         "exception": None,
     }
 
@@ -78,11 +86,14 @@ def _make_conversation_with_predictions(predictions_match_ground_truth: bool) ->
     prediction_api["bad_action"] = False
 
     return {
-        "name": "test-conversation",
-        "conversation_id": "test-001",
+        "name":
+            "test-conversation",
+        "conversation_id":
+            "test-001",
         "suites_used": ["Alarm"],
         "apis_used": ["AddAlarm"],
-        "scenario": "test",
+        "scenario":
+            "test",
         "user": {
             "username": "justinkool",
             "email": "test@test.com",
@@ -98,7 +109,9 @@ def _make_conversation_with_predictions(predictions_match_ground_truth: bool) ->
             "username": "justinkool",
         },
         "conversation": [
-            {"index": 0, "role": "user", "text": "Set an alarm for 6:30 PM"},
+            {
+                "index": 0, "role": "user", "text": "Set an alarm for 6:30 PM"
+            },
             {
                 "index": 1,
                 "role": "assistant",
@@ -106,7 +119,9 @@ def _make_conversation_with_predictions(predictions_match_ground_truth: bool) ->
                 "apis": [correct_api_call],
                 "predictions": [
                     prediction_api,
-                    {"role": "assistant", "text": "Alarm set."},
+                    {
+                        "role": "assistant", "text": "Alarm set."
+                    },
                 ],
             },
         ],

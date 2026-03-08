@@ -13,18 +13,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nemo_evaluator.contrib.byob import ScorerInput, benchmark, scorer
-from nemo_evaluator.contrib.byob.scorers import exact_match
-
 import json
 import os
 import tempfile
 
+from nemo_evaluator.contrib.byob import ScorerInput
+from nemo_evaluator.contrib.byob import benchmark
+from nemo_evaluator.contrib.byob import scorer
+from nemo_evaluator.contrib.byob.scorers import exact_match
+
 # Create a tiny test dataset as a temp file
 _DATA = [
-    {"id": "0", "question": "What is 2+2?", "target": "4"},
-    {"id": "1", "question": "What color is the sky?", "target": "blue"},
-    {"id": "2", "question": "Capital of France?", "target": "Paris"},
+    {
+        "id": "0", "question": "What is 2+2?", "target": "4"
+    },
+    {
+        "id": "1", "question": "What color is the sky?", "target": "blue"
+    },
+    {
+        "id": "2", "question": "Capital of France?", "target": "Paris"
+    },
 ]
 
 _DATASET_PATH = os.path.join(tempfile.gettempdir(), "byob_test_dataset.jsonl")

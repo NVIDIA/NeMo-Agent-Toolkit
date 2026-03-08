@@ -44,22 +44,22 @@ def _build_tool_schemas(apis_used, disable_docs: bool = False) -> list[dict]:
 
 def _build_messages(conversation_history: list[dict], metadata: dict | None = None) -> list[dict]:
     """Convert ToolTalk conversation history to OpenAI chat messages format."""
-    system_prompt = (
-        "You are a helpful assistant. Here is some user data:"
-        "\nlocation: {location}"
-        "\ntimestamp: {timestamp}"
-        "\nusername (if logged in): {username}"
-    )
+    system_prompt = ("You are a helpful assistant. Here is some user data:"
+                     "\nlocation: {location}"
+                     "\ntimestamp: {timestamp}"
+                     "\nusername (if logged in): {username}")
 
     messages = []
     if metadata:
         messages.append({
-            "role": "system",
-            "content": system_prompt.format(
-                location=metadata.get("location", "unknown"),
-                timestamp=metadata.get("timestamp", "unknown"),
-                username=metadata.get("username", "unknown"),
-            ),
+            "role":
+                "system",
+            "content":
+                system_prompt.format(
+                    location=metadata.get("location", "unknown"),
+                    timestamp=metadata.get("timestamp", "unknown"),
+                    username=metadata.get("username", "unknown"),
+                ),
         })
 
     tool_call_id_counter = 123456789
@@ -69,8 +69,10 @@ def _build_messages(conversation_history: list[dict], metadata: dict | None = No
         elif turn["role"] == "api":
             tool_call_id = str(tool_call_id_counter)
             messages.append({
-                "role": "assistant",
-                "content": "",
+                "role":
+                    "assistant",
+                "content":
+                    "",
                 "tool_calls": [{
                     "id": tool_call_id,
                     "type": "function",
@@ -95,9 +97,13 @@ def _build_messages(conversation_history: list[dict], metadata: dict | None = No
 
 @register_function(config_type=ToolTalkWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tooltalk_workflow(config: ToolTalkWorkflowConfig, builder: Builder):
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
-
-    from tooltalk.apis import ALL_APIS, APIS_BY_NAME, SUITES_BY_NAME
+    from langchain_core.messages import AIMessage
+    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import SystemMessage
+    from langchain_core.messages import ToolMessage
+    from tooltalk.apis import ALL_APIS
+    from tooltalk.apis import APIS_BY_NAME
+    from tooltalk.apis import SUITES_BY_NAME
     from tooltalk.evaluation.tool_executor import ToolExecutor
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -112,11 +118,7 @@ async def tooltalk_workflow(config: ToolTalkWorkflowConfig, builder: Builder):
         if config.api_mode == "exact":
             apis_used = [APIS_BY_NAME[name] for name in conversation["apis_used"]]
         elif config.api_mode == "suite":
-            apis_used = [
-                api
-                for suite_name in conversation["suites_used"]
-                for api in SUITES_BY_NAME[suite_name].apis
-            ]
+            apis_used = [api for suite_name in conversation["suites_used"] for api in SUITES_BY_NAME[suite_name].apis]
         else:
             apis_used = ALL_APIS
 
@@ -159,14 +161,15 @@ async def tooltalk_workflow(config: ToolTalkWorkflowConfig, builder: Builder):
                         lc_messages.append(HumanMessage(content=msg["content"]))
                     elif msg["role"] == "assistant":
                         if "tool_calls" in msg and msg["tool_calls"]:
-                            lc_messages.append(AIMessage(
-                                content=msg.get("content", ""),
-                                tool_calls=[{
-                                    "name": tc["function"]["name"],
-                                    "args": json.loads(tc["function"]["arguments"]),
-                                    "id": tc["id"],
-                                } for tc in msg["tool_calls"]],
-                            ))
+                            lc_messages.append(
+                                AIMessage(
+                                    content=msg.get("content", ""),
+                                    tool_calls=[{
+                                        "name": tc["function"]["name"],
+                                        "args": json.loads(tc["function"]["arguments"]),
+                                        "id": tc["id"],
+                                    } for tc in msg["tool_calls"]],
+                                ))
                         else:
                             lc_messages.append(AIMessage(content=msg["content"]))
                     elif msg["role"] == "tool":

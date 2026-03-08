@@ -20,18 +20,16 @@ adapted for our copy at nat.plugins.benchmarks.bfcl.tool_intent_stubs.
 
 import pytest
 
-from nat.plugins.benchmarks.bfcl.tool_intent_stubs import (
-    ToolIntentBuffer,
-    PermissiveToolInput,
-    _GLOBAL_INTENT_REGISTRY,
-    _current_scenario_id,
-    _generate_mock_response,
-    clear_global_intents,
-    create_tool_stub_function,
-    get_current_scenario_id,
-    get_global_intents,
-    set_current_scenario_id,
-)
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import _GLOBAL_INTENT_REGISTRY
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import PermissiveToolInput
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import ToolIntentBuffer
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import _current_scenario_id
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import _generate_mock_response
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import clear_global_intents
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import create_tool_stub_function
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import get_current_scenario_id
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import get_global_intents
+from nat.plugins.benchmarks.bfcl.tool_intent_stubs import set_current_scenario_id
 
 
 @pytest.fixture(autouse=True)

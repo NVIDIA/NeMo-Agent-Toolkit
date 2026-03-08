@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟡 Intermediate
 
-Run [NeMo Evaluator BYOB](https://docs.nvidia.com/nemo/evaluator/) benchmarks directly on NAT agent workflows — without re-implementing the dataset loader or scorer logic.
+Run [NeMo Evaluator BYOB](https://docs.nvidia.com/nemo/evaluator/latest/) benchmarks directly on NAT agent workflows — without re-implementing the dataset loader or scorer logic.
 
 ## Why BYOB in NAT?
 
@@ -197,7 +197,7 @@ Average score: 0.667
 
 ## Built-in Scorers Reference
 
-BYOB scorers come from the [NeMo Evaluator](https://docs.nvidia.com/nemo/evaluator/) framework (`nemo_evaluator.contrib.byob.scorers`). They are standard NLP evaluation metrics packaged as simple Python functions that accept a `ScorerInput` and return a dict of metric values. When you use BYOB through NAT, the scorer runs in-process against the workflow's output — NAT handles the LLM calls and the scorer only sees the final `(response, target)` pair.
+BYOB scorers come from the [NeMo Evaluator](https://docs.nvidia.com/nemo/evaluator/latest/) framework (`nemo_evaluator.contrib.byob.scorers`). They are standard NLP evaluation metrics packaged as simple Python functions that accept a `ScorerInput` and return a dict of metric values. When you use BYOB through NAT, the scorer runs in-process against the workflow's output — NAT handles the LLM calls and the scorer only sees the final `(response, target)` pair.
 
 You can use any built-in scorer directly, compose them with `any_of()` / `all_of()`, or write your own from scratch. The only requirement is the signature: `def scorer(sample: ScorerInput) -> dict`.
 

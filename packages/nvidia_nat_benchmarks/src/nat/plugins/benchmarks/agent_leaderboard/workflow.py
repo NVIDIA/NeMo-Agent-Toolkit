@@ -28,12 +28,9 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 
-from ..bfcl.tool_intent_stubs import (
-    ToolIntentBuffer,
-    clear_global_intents,
-    get_global_intents,
-    set_current_scenario_id,
-)
+from ..bfcl.tool_intent_stubs import ToolIntentBuffer
+from ..bfcl.tool_intent_stubs import clear_global_intents
+from ..bfcl.tool_intent_stubs import set_current_scenario_id
 from .config import AgentLeaderboardWorkflowConfig
 
 logger = logging.getLogger(__name__)
@@ -65,7 +62,10 @@ def _tool_schema_to_openai(tool: dict) -> dict:
     framework_wrappers=[LLMFrameworkEnum.LANGCHAIN],
 )
 async def agent_leaderboard_workflow(config: AgentLeaderboardWorkflowConfig, builder: Builder):
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+    from langchain_core.messages import AIMessage
+    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import SystemMessage
+    from langchain_core.messages import ToolMessage
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -80,7 +80,7 @@ async def agent_leaderboard_workflow(config: AgentLeaderboardWorkflowConfig, bui
 
         # Scenario isolation
         scenario_id = f"al_{hashlib.md5(input_json[:200].encode()).hexdigest()[:12]}"
-        token = set_current_scenario_id(scenario_id)
+        _token = set_current_scenario_id(scenario_id)
         clear_global_intents(scenario_id)
         intent_buffer = ToolIntentBuffer()
 
@@ -110,14 +110,15 @@ async def agent_leaderboard_workflow(config: AgentLeaderboardWorkflowConfig, bui
 
                     # Canned response
                     canned = f"Successfully executed {name}. Operation completed."
-                    messages.append(AIMessage(
-                        content="",
-                        tool_calls=[{
-                            "name": name,
-                            "args": args,
-                            "id": tc.get("id", f"call_{step}_{name}"),
-                        }],
-                    ))
+                    messages.append(
+                        AIMessage(
+                            content="",
+                            tool_calls=[{
+                                "name": name,
+                                "args": args,
+                                "id": tc.get("id", f"call_{step}_{name}"),
+                            }],
+                        ))
                     messages.append(ToolMessage(
                         content=canned,
                         tool_call_id=tc.get("id", f"call_{step}_{name}"),

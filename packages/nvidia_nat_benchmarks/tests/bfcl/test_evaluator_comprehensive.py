@@ -14,45 +14,51 @@
 # limitations under the License.
 """Comprehensive evaluator tests covering all BFCL scoring paths."""
 
+import importlib.util
 import json
 
 import pytest
 
-try:
-    from bfcl.eval_checker.ast_eval.ast_checker import ast_checker
-    _HAS_BFCL = True
-except ImportError:
-    _HAS_BFCL = False
+_HAS_BFCL = importlib.util.find_spec("bfcl.eval_checker") is not None
 
 pytestmark = pytest.mark.skipif(not _HAS_BFCL, reason="bfcl not installed")
 
-from nat.data_models.evaluator import EvalInputItem
-from nat.plugins.benchmarks.bfcl.evaluator import (
-    _evaluate_single,
-    _extract_function_call,
-    _try_convert_json_to_call,
-    _extract_calls_from_code,
-)
+from nat.data_models.evaluator import EvalInputItem  # noqa: E402
+from nat.plugins.benchmarks.bfcl.evaluator import _evaluate_single  # noqa: E402
+from nat.plugins.benchmarks.bfcl.evaluator import _extract_calls_from_code  # noqa: E402
+from nat.plugins.benchmarks.bfcl.evaluator import _extract_function_call  # noqa: E402
+from nat.plugins.benchmarks.bfcl.evaluator import _try_convert_json_to_call  # noqa: E402
 
 
 def _make_item(entry, answer, output):
     return EvalInputItem(
-        id=entry["id"], input_obj=json.dumps(entry),
+        id=entry["id"],
+        input_obj=json.dumps(entry),
         expected_output_obj=json.dumps(answer),
-        output_obj=output, full_dataset_entry=entry,
+        output_obj=output,
+        full_dataset_entry=entry,
     )
 
 
 def _simple_entry():
     return {
-        "id": "simple_0",
-        "question": [[{"role": "user", "content": "Calculate area"}]],
+        "id":
+            "simple_0",
+        "question": [[{
+            "role": "user", "content": "Calculate area"
+        }]],
         "function": [{
             "name": "calc_area",
             "description": "Calculate area",
             "parameters": {
                 "type": "dict",
-                "properties": {"base": {"type": "integer"}, "height": {"type": "integer"}},
+                "properties": {
+                    "base": {
+                        "type": "integer"
+                    }, "height": {
+                        "type": "integer"
+                    }
+                },
                 "required": ["base", "height"],
             },
         }],
@@ -112,19 +118,50 @@ class TestParallelCategory:
 
     def test_parallel_calls_scored(self):
         entry = {
-            "id": "parallel_0",
-            "question": [[{"role": "user", "content": "Get area and perimeter"}]],
+            "id":
+                "parallel_0",
+            "question": [[{
+                "role": "user", "content": "Get area and perimeter"
+            }]],
             "function": [
-                {"name": "calc_area", "description": "Area", "parameters": {
-                    "type": "dict", "properties": {"x": {"type": "integer"}}, "required": ["x"]}},
-                {"name": "calc_perimeter", "description": "Perimeter", "parameters": {
-                    "type": "dict", "properties": {"x": {"type": "integer"}}, "required": ["x"]}},
+                {
+                    "name": "calc_area",
+                    "description": "Area",
+                    "parameters": {
+                        "type": "dict", "properties": {
+                            "x": {
+                                "type": "integer"
+                            }
+                        }, "required": ["x"]
+                    }
+                },
+                {
+                    "name": "calc_perimeter",
+                    "description": "Perimeter",
+                    "parameters": {
+                        "type": "dict", "properties": {
+                            "x": {
+                                "type": "integer"
+                            }
+                        }, "required": ["x"]
+                    }
+                },
             ],
         }
-        answer = {"id": "parallel_0", "ground_truth": [
-            {"calc_area": {"x": [5]}},
-            {"calc_perimeter": {"x": [5]}},
-        ]}
+        answer = {
+            "id": "parallel_0", "ground_truth": [
+                {
+                    "calc_area": {
+                        "x": [5]
+                    }
+                },
+                {
+                    "calc_perimeter": {
+                        "x": [5]
+                    }
+                },
+            ]
+        }
         item = _make_item(entry, answer, "[calc_area(x=5), calc_perimeter(x=5)]")
         result = _evaluate_single(item, "parallel", "Python")
         assert result.score == 1.0

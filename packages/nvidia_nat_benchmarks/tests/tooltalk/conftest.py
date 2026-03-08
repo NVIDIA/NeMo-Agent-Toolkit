@@ -20,7 +20,6 @@ evaluation. We mock them out so tests can run without installing PyTorch.
 """
 
 import sys
-import types
 from unittest.mock import MagicMock
 
 

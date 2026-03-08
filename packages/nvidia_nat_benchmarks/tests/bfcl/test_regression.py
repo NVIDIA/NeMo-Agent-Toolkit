@@ -14,8 +14,6 @@
 # limitations under the License.
 """Regression tests for BFCL evaluator — pinned behavior for known outputs."""
 
-import pytest
-
 from nat.plugins.benchmarks.bfcl.evaluator import _extract_function_call
 
 

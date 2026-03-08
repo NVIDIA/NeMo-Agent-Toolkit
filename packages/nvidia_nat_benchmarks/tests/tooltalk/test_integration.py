@@ -26,7 +26,6 @@ Run with: pytest -m integration packages/nvidia_nat_benchmarks/tests/tooltalk/te
 import json
 import os
 import shutil
-import tempfile
 
 import pytest
 
@@ -69,7 +68,6 @@ class TestToolTalkIntegration:
     async def test_workflow_produces_predictions(self, single_conversation_dir):
         """The workflow calls a live NIM endpoint and produces tool call predictions."""
         from nat.plugins.benchmarks.tooltalk.dataset import load_tooltalk_dataset
-        from nat.plugins.benchmarks.tooltalk.workflow import _build_tool_schemas, _build_messages
 
         # Load dataset
         df = load_tooltalk_dataset(single_conversation_dir)
@@ -91,9 +89,7 @@ class TestToolTalkIntegration:
                     "_type": "nim",
                     "model_name": "meta/llama-3.3-70b-instruct",
                     "api_key": os.environ["NVIDIA_API_KEY"],
-                    "base_url": os.environ.get(
-                        "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"
-                    ),
+                    "base_url": os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"),
                     "max_tokens": 1024,
                     "temperature": 0.0,
                 },
@@ -142,7 +138,10 @@ class TestToolTalkIntegration:
             capture_output=True,
             text=True,
             timeout=240,
-            env={**os.environ, "NVIDIA_API_KEY": os.environ["NVIDIA_API_KEY"]},
+            check=False,
+            env={
+                **os.environ, "NVIDIA_API_KEY": os.environ["NVIDIA_API_KEY"]
+            },
         )
 
         # Check that the eval completed
@@ -172,6 +171,4 @@ class TestToolTalkIntegration:
         assert "success" in reasoning
 
         # recall should be > 0 (the LLM should at least call AddAlarm once correctly)
-        assert reasoning["recall"] > 0, (
-            f"Expected recall > 0 (LLM should call AddAlarm correctly), got {reasoning}"
-        )
+        assert reasoning["recall"] > 0, (f"Expected recall > 0 (LLM should call AddAlarm correctly), got {reasoning}")

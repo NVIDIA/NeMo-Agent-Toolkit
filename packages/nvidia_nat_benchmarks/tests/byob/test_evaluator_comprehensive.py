@@ -20,15 +20,16 @@ import pytest
 
 try:
     from nemo_evaluator.contrib.byob.decorators import ScorerInput
-    from nemo_evaluator.contrib.byob.scorers import exact_match, contains, f1_token
+    from nemo_evaluator.contrib.byob.scorers import exact_match
+    from nemo_evaluator.contrib.byob.scorers import f1_token
     _HAS_BYOB = True
 except ImportError:
     _HAS_BYOB = False
 
 pytestmark = pytest.mark.skipif(not _HAS_BYOB, reason="nemo_evaluator BYOB not installed")
 
-from nat.data_models.evaluator import EvalInputItem
-from nat.plugins.benchmarks.byob.evaluator import _evaluate_single
+from nat.data_models.evaluator import EvalInputItem  # noqa: E402
+from nat.plugins.benchmarks.byob.evaluator import _evaluate_single  # noqa: E402
 
 
 class TestScoreFieldSelection:
@@ -36,15 +37,20 @@ class TestScoreFieldSelection:
 
     def test_default_correct_field(self):
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="hello",
-            output_obj="hello", full_dataset_entry={"target": "hello"},
+            id="0",
+            input_obj="{}",
+            expected_output_obj="hello",
+            output_obj="hello",
+            full_dataset_entry={"target": "hello"},
         )
         result = _evaluate_single(item, exact_match, "target", "correct", {})
         assert result.score == 1.0
 
     def test_f1_score_field(self):
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="the quick brown fox",
+            id="0",
+            input_obj="{}",
+            expected_output_obj="the quick brown fox",
             output_obj="the quick brown dog",
             full_dataset_entry={"target": "the quick brown fox"},
         )
@@ -56,7 +62,9 @@ class TestScoreFieldSelection:
 
     def test_precision_score_field(self):
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="a b c",
+            id="0",
+            input_obj="{}",
+            expected_output_obj="a b c",
             output_obj="a b c d e",
             full_dataset_entry={"target": "a b c"},
         )
@@ -66,16 +74,22 @@ class TestScoreFieldSelection:
 
     def test_missing_score_field_returns_0(self):
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="hello",
-            output_obj="hello", full_dataset_entry={"target": "hello"},
+            id="0",
+            input_obj="{}",
+            expected_output_obj="hello",
+            output_obj="hello",
+            full_dataset_entry={"target": "hello"},
         )
         result = _evaluate_single(item, exact_match, "target", "nonexistent_field", {})
         assert result.score == 0.0
 
     def test_boolean_score_converted_to_float(self):
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="yes",
-            output_obj="yes", full_dataset_entry={"target": "yes"},
+            id="0",
+            input_obj="{}",
+            expected_output_obj="yes",
+            output_obj="yes",
+            full_dataset_entry={"target": "yes"},
         )
         result = _evaluate_single(item, exact_match, "target", "correct", {})
         assert isinstance(result.score, float)
@@ -87,14 +101,19 @@ class TestMetadataPassthrough:
 
     def test_metadata_available_to_scorer(self):
         """Custom scorer that reads metadata."""
+
         def metadata_checker(sample: ScorerInput) -> dict:
             has_extra = "extra_field" in sample.metadata
             return {"correct": has_extra}
 
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="x",
+            id="0",
+            input_obj="{}",
+            expected_output_obj="x",
             output_obj="x",
-            full_dataset_entry={"target": "x", "extra_field": "present"},
+            full_dataset_entry={
+                "target": "x", "extra_field": "present"
+            },
         )
         result = _evaluate_single(item, metadata_checker, "target", "correct", {})
         assert result.score == 1.0
@@ -102,9 +121,13 @@ class TestMetadataPassthrough:
     def test_string_full_entry_parsed_to_dict(self):
         """full_dataset_entry as JSON string should be parsed."""
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="hello",
+            id="0",
+            input_obj="{}",
+            expected_output_obj="hello",
             output_obj="hello",
-            full_dataset_entry=json.dumps({"target": "hello", "category": "test"}),
+            full_dataset_entry=json.dumps({
+                "target": "hello", "category": "test"
+            }),
         )
         result = _evaluate_single(item, exact_match, "target", "correct", {})
         assert result.score == 1.0
@@ -114,12 +137,15 @@ class TestExtraConfig:
     """Verify extra_config is passed to the scorer."""
 
     def test_config_available_to_scorer(self):
+
         def config_scorer(sample: ScorerInput) -> dict:
             threshold = sample.config.get("threshold", 0.5)
             return {"correct": len(sample.response) > threshold}
 
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="x",
+            id="0",
+            input_obj="{}",
+            expected_output_obj="x",
             output_obj="hello world",
             full_dataset_entry={"target": "x"},
         )
@@ -131,12 +157,16 @@ class TestScorerErrors:
     """Verify error handling when the scorer raises exceptions."""
 
     def test_scorer_exception_returns_0(self):
+
         def bad_scorer(sample: ScorerInput) -> dict:
             raise ValueError("Scorer crashed!")
 
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="x",
-            output_obj="hello", full_dataset_entry={"target": "x"},
+            id="0",
+            input_obj="{}",
+            expected_output_obj="x",
+            output_obj="hello",
+            full_dataset_entry={"target": "x"},
         )
         result = _evaluate_single(item, bad_scorer, "target", "correct", {})
         assert result.score == 0.0
@@ -148,20 +178,27 @@ class TestTargetParsing:
 
     def test_string_target(self):
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj="Paris",
-            output_obj="Paris", full_dataset_entry={"target": "Paris"},
+            id="0",
+            input_obj="{}",
+            expected_output_obj="Paris",
+            output_obj="Paris",
+            full_dataset_entry={"target": "Paris"},
         )
         result = _evaluate_single(item, exact_match, "target", "correct", {})
         assert result.score == 1.0
 
     def test_json_target_parsed(self):
         """JSON-encoded target should be parsed."""
+
         def list_scorer(sample: ScorerInput) -> dict:
             return {"correct": isinstance(sample.target, list)}
 
         item = EvalInputItem(
-            id="0", input_obj="{}", expected_output_obj='["a", "b"]',
-            output_obj="x", full_dataset_entry={"target": ["a", "b"]},
+            id="0",
+            input_obj="{}",
+            expected_output_obj='["a", "b"]',
+            output_obj="x",
+            full_dataset_entry={"target": ["a", "b"]},
         )
         result = _evaluate_single(item, list_scorer, "target", "correct", {})
         assert result.score == 1.0

@@ -27,7 +27,8 @@ import pytest
 _SKIP_REASON = None
 
 try:
-    from bfcl.constant import PROMPT_PATH, POSSIBLE_ANSWER_PATH
+    from bfcl.constant import POSSIBLE_ANSWER_PATH
+    from bfcl.constant import PROMPT_PATH
     _SIMPLE_FILE = os.path.join(PROMPT_PATH, "BFCL_v3_simple.json")
     if not os.path.isfile(_SIMPLE_FILE):
         _SKIP_REASON = "BFCL_v3_simple.json not found"
@@ -107,7 +108,9 @@ class TestBFCLIntegration:
                         "_type": "bfcl",
                         "file_path": small_bfcl_dataset,
                         "test_category": "simple",
-                        "structure": {"question_key": "question", "answer_key": "answer"},
+                        "structure": {
+                            "question_key": "question", "answer_key": "answer"
+                        },
                     },
                 },
                 "evaluators": {
@@ -125,8 +128,13 @@ class TestBFCLIntegration:
 
         result = subprocess.run(
             ["nat", "eval", "--config_file", str(config_path)],
-            capture_output=True, text=True, timeout=240,
-            env={**os.environ, "NVIDIA_API_KEY": os.environ["NVIDIA_API_KEY"]},
+            capture_output=True,
+            text=True,
+            timeout=240,
+            check=False,
+            env={
+                **os.environ, "NVIDIA_API_KEY": os.environ["NVIDIA_API_KEY"]
+            },
         )
 
         assert result.returncode == 0, f"nat eval failed:\n{result.stderr[-2000:]}"
@@ -176,7 +184,9 @@ class TestBFCLIntegration:
                         "_type": "bfcl",
                         "file_path": small_bfcl_dataset,
                         "test_category": "simple",
-                        "structure": {"question_key": "question", "answer_key": "answer"},
+                        "structure": {
+                            "question_key": "question", "answer_key": "answer"
+                        },
                     },
                 },
                 "evaluators": {
@@ -194,8 +204,13 @@ class TestBFCLIntegration:
 
         result = subprocess.run(
             ["nat", "eval", "--config_file", str(config_path)],
-            capture_output=True, text=True, timeout=240,
-            env={**os.environ, "NVIDIA_API_KEY": os.environ["NVIDIA_API_KEY"]},
+            capture_output=True,
+            text=True,
+            timeout=240,
+            check=False,
+            env={
+                **os.environ, "NVIDIA_API_KEY": os.environ["NVIDIA_API_KEY"]
+            },
         )
 
         assert result.returncode == 0, f"nat eval failed:\n{result.stderr[-2000:]}"

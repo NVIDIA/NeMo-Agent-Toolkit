@@ -47,8 +47,8 @@ def load_byob_dataset(
     The file_path parameter is required by NAT's DatasetHandler interface but
     is ignored — the dataset path comes from the benchmark definition.
     """
-    from nemo_evaluator.contrib.byob.eval_logic import import_benchmark
     from nemo_evaluator.contrib.byob.dataset import load_dataset
+    from nemo_evaluator.contrib.byob.eval_logic import import_benchmark
 
     bench = import_benchmark(benchmark_module, benchmark_name)
     logger.info("Imported BYOB benchmark '%s' (dataset: %s)", bench.name, bench.dataset)
@@ -59,8 +59,6 @@ def load_byob_dataset(
     rows = []
     for i, sample in enumerate(samples):
         target = sample.get(bench.target_field, "")
-        # Use response_field for eval-only mode if present
-        response = sample.get(bench.response_field, "") if bench.response_field else ""
 
         rows.append({
             "id": sample.get("id", str(i)),
@@ -77,8 +75,10 @@ async def register_byob_dataset_loader(config: BYOBDatasetConfig, builder: EvalB
     yield DatasetLoaderInfo(
         config=config,
         load_fn=lambda fp, **kw: load_byob_dataset(
-            fp, benchmark_module=config.benchmark_module,
-            benchmark_name=config.benchmark_name, limit=config.limit, **kw,
-        ),
+            fp,
+            benchmark_module=config.benchmark_module,
+            benchmark_name=config.benchmark_name,
+            limit=config.limit,
+            **kw, ),
         description="BYOB benchmark dataset loader",
     )

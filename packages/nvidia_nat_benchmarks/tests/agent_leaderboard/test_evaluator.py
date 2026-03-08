@@ -16,10 +16,9 @@
 
 import json
 
-import pytest
-
 from nat.data_models.evaluator import EvalInputItem
-from nat.plugins.benchmarks.agent_leaderboard.evaluator import _evaluate_single, _normalize_tool_name
+from nat.plugins.benchmarks.agent_leaderboard.evaluator import _evaluate_single
+from nat.plugins.benchmarks.agent_leaderboard.evaluator import _normalize_tool_name
 
 
 def _make_entry(expected_tools: list[str], predicted_tools: list[str]) -> tuple[EvalInputItem, list]:
@@ -129,8 +128,11 @@ class TestTSQEvaluator:
         """None output → score 0."""
         entry = {"expected_tool_calls": [{"tool": "t", "parameters": {}}]}
         item = EvalInputItem(
-            id="test", input_obj="{}", expected_output_obj="[]",
-            output_obj=None, full_dataset_entry=entry,
+            id="test",
+            input_obj="{}",
+            expected_output_obj="[]",
+            output_obj=None,
+            full_dataset_entry=entry,
         )
         result = _evaluate_single(item, 1.0, 0.0)
         assert result.score == 0.0
@@ -151,9 +153,12 @@ class TestTSQDatasetFormat:
         """full_dataset_entry can be a JSON string."""
         entry = {"expected_tool_calls": [{"tool": "get_balance", "parameters": {}}]}
         item = EvalInputItem(
-            id="test", input_obj="{}",
+            id="test",
+            input_obj="{}",
             expected_output_obj="[]",
-            output_obj=json.dumps([{"tool": "get_balance", "parameters": {}}]),
+            output_obj=json.dumps([{
+                "tool": "get_balance", "parameters": {}
+            }]),
             full_dataset_entry=json.dumps(entry),
         )
         result = _evaluate_single(item, 1.0, 0.0)

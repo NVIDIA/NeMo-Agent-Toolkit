@@ -33,8 +33,10 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.agent import AgentBaseConfig
 
-from .tool_intent_stubs import ToolIntentBuffer, set_current_scenario_id, clear_global_intents
-from .workflow_fc import _convert_bfcl_schema_to_openai, GORILLA_TO_OPENAPI
+from .tool_intent_stubs import ToolIntentBuffer
+from .tool_intent_stubs import clear_global_intents
+from .tool_intent_stubs import set_current_scenario_id
+from .workflow_fc import _convert_bfcl_schema_to_openai
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +58,10 @@ class BFCLReActWorkflowConfig(AgentBaseConfig, name="bfcl_react_workflow"):
 
 @register_function(config_type=BFCLReActWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def bfcl_react_workflow(config: BFCLReActWorkflowConfig, builder: Builder):
-    from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+    from langchain_core.messages import AIMessage
+    from langchain_core.messages import HumanMessage
+    from langchain_core.messages import SystemMessage
+    from langchain_core.messages import ToolMessage
 
     llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -68,7 +73,7 @@ async def bfcl_react_workflow(config: BFCLReActWorkflowConfig, builder: Builder)
 
         # Set up scenario isolation for concurrent execution
         scenario_id = f"bfcl_{hashlib.md5(input_json[:200].encode()).hexdigest()[:12]}"
-        token = set_current_scenario_id(scenario_id)
+        _token = set_current_scenario_id(scenario_id)
         clear_global_intents(scenario_id)
         intent_buffer = ToolIntentBuffer()
 
@@ -93,8 +98,7 @@ async def bfcl_react_workflow(config: BFCLReActWorkflowConfig, builder: Builder)
             # Build initial messages
             system_msg = SystemMessage(
                 content="You are a helpful assistant. Use the provided tools to answer the user's request. "
-                "Think step by step about which tool(s) to call and with what parameters."
-            )
+                "Think step by step about which tool(s) to call and with what parameters.")
             messages = [system_msg, HumanMessage(content=user_content)]
 
             # ReAct loop
@@ -134,14 +138,15 @@ async def bfcl_react_workflow(config: BFCLReActWorkflowConfig, builder: Builder)
                     canned = f"Successfully executed {name}. Operation completed."
 
                     # Add the assistant message with tool call + tool response
-                    messages.append(AIMessage(
-                        content="",
-                        tool_calls=[{
-                            "name": name,
-                            "args": args,
-                            "id": tc.get("id", f"call_{step}_{name}"),
-                        }],
-                    ))
+                    messages.append(
+                        AIMessage(
+                            content="",
+                            tool_calls=[{
+                                "name": name,
+                                "args": args,
+                                "id": tc.get("id", f"call_{step}_{name}"),
+                            }],
+                        ))
                     messages.append(ToolMessage(
                         content=canned,
                         tool_call_id=tc.get("id", f"call_{step}_{name}"),

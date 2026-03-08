@@ -16,7 +16,6 @@
 
 import json
 import os
-import tempfile
 
 import pandas as pd
 import pytest
@@ -27,12 +26,17 @@ from nat.plugins.benchmarks.tooltalk.dataset import load_tooltalk_dataset
 def _make_conversation(conversation_id: str, user_text: str = "Hello") -> dict:
     """Create a minimal ToolTalk conversation for testing."""
     return {
-        "name": f"test-{conversation_id}",
-        "conversation_id": conversation_id,
+        "name":
+            f"test-{conversation_id}",
+        "conversation_id":
+            conversation_id,
         "suites_used": ["Alarm"],
         "apis_used": ["AddAlarm"],
-        "scenario": "test scenario",
-        "user": {"username": "testuser", "session_token": "abc-123"},
+        "scenario":
+            "test scenario",
+        "user": {
+            "username": "testuser", "session_token": "abc-123"
+        },
         "metadata": {
             "location": "New York",
             "timestamp": "2023-09-11 13:00:00",
@@ -40,14 +44,25 @@ def _make_conversation(conversation_id: str, user_text: str = "Hello") -> dict:
             "username": "testuser",
         },
         "conversation": [
-            {"index": 0, "role": "user", "text": user_text},
             {
-                "index": 1,
-                "role": "assistant",
-                "text": "Done.",
+                "index": 0, "role": "user", "text": user_text
+            },
+            {
+                "index":
+                    1,
+                "role":
+                    "assistant",
+                "text":
+                    "Done.",
                 "apis": [{
-                    "request": {"api_name": "AddAlarm", "parameters": {"time": "18:30:00"}},
-                    "response": {"alarm_id": "1234-5678"},
+                    "request": {
+                        "api_name": "AddAlarm", "parameters": {
+                            "time": "18:30:00"
+                        }
+                    },
+                    "response": {
+                        "alarm_id": "1234-5678"
+                    },
                     "exception": None,
                 }],
             },

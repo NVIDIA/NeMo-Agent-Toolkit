@@ -24,7 +24,10 @@ import logging
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvalInput, EvalInputItem, EvalOutput, EvalOutputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutput
+from nat.data_models.evaluator import EvalOutputItem
 
 from .config import BFCLEvaluatorConfig
 
@@ -133,17 +136,20 @@ def _evaluate_single(item: EvalInputItem, test_category: str, language: str) -> 
 
     if item.output_obj is None:
         return EvalOutputItem(
-            id=item.id, score=0.0,
+            id=item.id,
+            score=0.0,
             reasoning={"error": "No workflow output (output_obj is None)"},
         )
 
     # Parse the test entry and ground truth
     try:
         entry = json.loads(item.input_obj) if isinstance(item.input_obj, str) else item.input_obj
-        answer = json.loads(item.expected_output_obj) if isinstance(item.expected_output_obj, str) else item.expected_output_obj
+        answer = json.loads(item.expected_output_obj) if isinstance(item.expected_output_obj,
+                                                                    str) else item.expected_output_obj
     except (json.JSONDecodeError, TypeError) as e:
         return EvalOutputItem(
-            id=item.id, score=0.0,
+            id=item.id,
+            score=0.0,
             reasoning={"error": f"Failed to parse input/answer: {e}"},
         )
 
@@ -159,9 +165,11 @@ def _evaluate_single(item: EvalInputItem, test_category: str, language: str) -> 
             # If decoding succeeds and produces non-empty output, it's a failure
             if decoded and any(decoded):
                 return EvalOutputItem(
-                    id=item.id, score=0.0,
-                    reasoning={"error": "Model produced function call for irrelevance test",
-                               "decoded": str(decoded)},
+                    id=item.id,
+                    score=0.0,
+                    reasoning={
+                        "error": "Model produced function call for irrelevance test", "decoded": str(decoded)
+                    },
                 )
         except Exception:
             pass  # Decode failure = success for irrelevance
@@ -176,7 +184,8 @@ def _evaluate_single(item: EvalInputItem, test_category: str, language: str) -> 
         except Exception:
             pass
         return EvalOutputItem(
-            id=item.id, score=0.0,
+            id=item.id,
+            score=0.0,
             reasoning={"error": "Model failed to produce function call for relevance test"},
         )
 
@@ -185,19 +194,29 @@ def _evaluate_single(item: EvalInputItem, test_category: str, language: str) -> 
         decoded_output = default_decode_ast_prompting(model_output_raw, language)
     except Exception as e:
         return EvalOutputItem(
-            id=item.id, score=0.0,
-            reasoning={"error": f"AST decode failed: {e}", "raw_output": model_output_raw[:500]},
+            id=item.id,
+            score=0.0,
+            reasoning={
+                "error": f"AST decode failed: {e}", "raw_output": model_output_raw[:500]
+            },
         )
 
     try:
         checker_result = ast_checker(
-            func_description, decoded_output, possible_answer,
-            language, test_category, "nat_benchmark",
+            func_description,
+            decoded_output,
+            possible_answer,
+            language,
+            test_category,
+            "nat_benchmark",
         )
     except Exception as e:
         return EvalOutputItem(
-            id=item.id, score=0.0,
-            reasoning={"error": f"ast_checker failed: {e}", "decoded": str(decoded_output)[:500]},
+            id=item.id,
+            score=0.0,
+            reasoning={
+                "error": f"ast_checker failed: {e}", "decoded": str(decoded_output)[:500]
+            },
         )
 
     is_valid = checker_result.get("valid", False)
@@ -226,7 +245,9 @@ async def bfcl_evaluator_function(config: BFCLEvaluatorConfig, builder: EvalBuil
             except Exception as e:
                 logger.exception("Error evaluating BFCL item %s: %s", item.id, e)
                 output_item = EvalOutputItem(
-                    id=item.id, score=0.0, reasoning={"error": str(e)},
+                    id=item.id,
+                    score=0.0,
+                    reasoning={"error": str(e)},
                 )
             eval_output_items.append(output_item)
 
@@ -235,7 +256,10 @@ async def bfcl_evaluator_function(config: BFCLEvaluatorConfig, builder: EvalBuil
 
         logger.info(
             "BFCL evaluation complete: accuracy=%.3f (%d/%d) category=%s",
-            average_score, sum(1 for s in scores if s == 1.0), len(scores), config.test_category,
+            average_score,
+            sum(1 for s in scores if s == 1.0),
+            len(scores),
+            config.test_category,
         )
 
         return EvalOutput(average_score=average_score, eval_output_items=eval_output_items)

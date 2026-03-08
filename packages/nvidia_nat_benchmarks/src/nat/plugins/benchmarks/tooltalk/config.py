@@ -14,7 +14,6 @@
 # limitations under the License.
 
 from collections.abc import Callable
-from pathlib import Path
 
 from pydantic import Field
 
@@ -31,8 +30,7 @@ class ToolTalkDatasetConfig(EvalDatasetBaseConfig, name="tooltalk"):
     """
 
     database_dir: str = Field(
-        description="Path to ToolTalk database directory (contains Account.json, Alarm.json, etc.)",
-    )
+        description="Path to ToolTalk database directory (contains Account.json, Alarm.json, etc.)", )
 
     def parser(self) -> tuple[Callable, dict]:
         from .dataset import load_tooltalk_dataset
@@ -46,9 +44,7 @@ class ToolTalkWorkflowConfig(AgentBaseConfig, name="tooltalk_workflow"):
     """
 
     description: str = Field(default="ToolTalk Benchmark Workflow")
-    database_dir: str = Field(
-        description="Path to ToolTalk database directory",
-    )
+    database_dir: str = Field(description="Path to ToolTalk database directory", )
     api_mode: str = Field(
         default="all",
         description="Which API docs to include: 'exact' (only APIs in conversation), "
@@ -70,6 +66,4 @@ class ToolTalkEvaluatorConfig(EvaluatorBaseConfig, name="tooltalk_evaluator"):
     Uses ToolTalk's built-in metrics: recall, action_precision, bad_action_rate, success.
     """
 
-    database_dir: str = Field(
-        description="Path to ToolTalk database directory",
-    )
+    database_dir: str = Field(description="Path to ToolTalk database directory", )

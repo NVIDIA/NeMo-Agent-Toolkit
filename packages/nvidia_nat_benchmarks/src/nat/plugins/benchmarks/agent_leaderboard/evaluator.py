@@ -24,7 +24,10 @@ import logging
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvalInput, EvalInputItem, EvalOutput, EvalOutputItem
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
+from nat.data_models.evaluator import EvalOutput
+from nat.data_models.evaluator import EvalOutputItem
 
 from .config import TSQEvaluatorConfig
 
@@ -45,7 +48,8 @@ def _evaluate_single(item: EvalInputItem, tool_weight: float, parameter_weight: 
     """Evaluate tool selection quality for a single scenario."""
     if item.output_obj is None:
         return EvalOutputItem(
-            id=item.id, score=0.0,
+            id=item.id,
+            score=0.0,
             reasoning={"error": "No workflow output"},
         )
 
@@ -75,7 +79,8 @@ def _evaluate_single(item: EvalInputItem, tool_weight: float, parameter_weight: 
     # If not found, try parsing the 'question' field (which contains the serialized entry)
     if not expected and "question" in full_entry:
         try:
-            question_data = json.loads(full_entry["question"]) if isinstance(full_entry["question"], str) else full_entry["question"]
+            question_data = json.loads(full_entry["question"]) if isinstance(full_entry["question"],
+                                                                             str) else full_entry["question"]
             if isinstance(question_data, dict):
                 expected = question_data.get("expected_tool_calls", [])
         except (json.JSONDecodeError, TypeError):
@@ -133,7 +138,9 @@ async def agent_leaderboard_tsq_evaluator(config: TSQEvaluatorConfig, builder: E
             except Exception as e:
                 logger.exception("Error evaluating TSQ for item %s: %s", item.id, e)
                 output_item = EvalOutputItem(
-                    id=item.id, score=0.0, reasoning={"error": str(e)},
+                    id=item.id,
+                    score=0.0,
+                    reasoning={"error": str(e)},
                 )
             eval_output_items.append(output_item)
 

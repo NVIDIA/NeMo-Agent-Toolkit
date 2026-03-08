@@ -33,21 +33,25 @@ import asyncio
 from uuid import uuid4
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.cli.register_workflow import register_per_user_function_group, register_per_user_function
-from nat.data_models.config import Config, GeneralConfig
-from nat.data_models.function import FunctionGroupBaseConfig, FunctionBaseConfig
+from nat.cli.register_workflow import register_per_user_function
+from nat.cli.register_workflow import register_per_user_function_group
+from nat.data_models.config import Config
+from nat.data_models.config import GeneralConfig
+from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.function import FunctionGroupBaseConfig
 from nat.runtime.session import SessionManager
-
 
 # ---------------------------------------------------------------------------
 # Schemas
 # ---------------------------------------------------------------------------
+
 
 class IncrementInput(BaseModel):
     n: int = Field(default=1, description="Amount to add to the counter")
@@ -65,6 +69,7 @@ class EchoInput(BaseModel):
 # ---------------------------------------------------------------------------
 # Config types (unique names to avoid conflicts with other tests)
 # ---------------------------------------------------------------------------
+
 
 class IsolationCounterGroupConfig(FunctionGroupBaseConfig, name="isolation_counter_group"):
     """Per-user function group with a counter — validates fresh-instance-per-user."""
@@ -86,6 +91,7 @@ class EchoWorkflowConfig(FunctionBaseConfig, name="isolation_echo_workflow"):
 # ---------------------------------------------------------------------------
 # Component registrations
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="module", autouse=True)
 def _register_components():
@@ -110,9 +116,13 @@ def _register_components():
         async def get_count(inp: IncrementInput) -> CounterOutput:
             return CounterOutput(count=counter["value"], instance_id=instance_id)
 
-        group.add_function(name="increment", fn=increment, input_schema=IncrementInput,
+        group.add_function(name="increment",
+                           fn=increment,
+                           input_schema=IncrementInput,
                            description="Increment counter by n")
-        group.add_function(name="get_count", fn=get_count, input_schema=IncrementInput,
+        group.add_function(name="get_count",
+                           fn=get_count,
+                           input_schema=IncrementInput,
                            description="Get current count without incrementing")
 
         yield group
@@ -120,10 +130,9 @@ def _register_components():
     # The workflow must be per-user so that SessionManager creates a
     # PerUserWorkflowBuilder per unique user_id (which instantiates per-user
     # function groups fresh for each user).
-    @register_per_user_function(config_type=EchoWorkflowConfig,
-                                input_type=EchoInput,
-                                single_output_type=str)
+    @register_per_user_function(config_type=EchoWorkflowConfig, input_type=EchoInput, single_output_type=str)
     async def echo_workflow(config: EchoWorkflowConfig, builder: Builder):
+
         async def _echo(inp: EchoInput) -> str:
             return inp.text
 
@@ -133,6 +142,7 @@ def _register_components():
 # ---------------------------------------------------------------------------
 # Helper: build a minimal Config using the per-user function group
 # ---------------------------------------------------------------------------
+
 
 def _make_config() -> Config:
     return Config(
@@ -145,6 +155,7 @@ def _make_config() -> Config:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestPerUserFunctionGroupEvalIsolation:
     """
@@ -188,8 +199,7 @@ class TestPerUserFunctionGroupEvalIsolation:
 
         # Instance IDs must be different — they are separate objects
         assert result_a1.instance_id != result_b1.instance_id, (
-            "Different user_ids must produce different function group instances"
-        )
+            "Different user_ids must produce different function group instances")
 
     @pytest.mark.asyncio
     async def test_same_user_id_shares_state(self):
@@ -269,5 +279,4 @@ class TestPerUserFunctionGroupEvalIsolation:
         # All instance_ids must be distinct — 3 separate objects
         instance_ids = {r["instance_id"] for r in results}
         assert len(instance_ids) == 3, (
-            f"Expected 3 distinct function group instances, got {len(instance_ids)}: {instance_ids}"
-        )
+            f"Expected 3 distinct function group instances, got {len(instance_ids)}: {instance_ids}")

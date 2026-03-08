@@ -15,7 +15,6 @@
 """Configuration types for BYOB (Bring Your Own Benchmark) integration."""
 
 from collections.abc import Callable
-from typing import Any
 
 from pydantic import Field
 
@@ -30,13 +29,9 @@ class BYOBDatasetConfig(EvalDatasetBaseConfig, name="byob"):
     and name are used to import the benchmark and access its dataset.
     """
 
-    benchmark_module: str = Field(
-        description="Python module path or file path to the benchmark definition "
-        "(e.g. 'my_benchmarks.qa' or '/path/to/benchmark.py')",
-    )
-    benchmark_name: str = Field(
-        description="Normalized benchmark name as registered with @benchmark decorator",
-    )
+    benchmark_module: str = Field(description="Python module path or file path to the benchmark definition "
+                                  "(e.g. 'my_benchmarks.qa' or '/path/to/benchmark.py')", )
+    benchmark_name: str = Field(description="Normalized benchmark name as registered with @benchmark decorator", )
     limit: int | None = Field(
         default=None,
         description="Limit number of dataset samples (for testing)",
@@ -58,12 +53,8 @@ class BYOBEvaluatorConfig(EvaluatorBaseConfig, name="byob_evaluator"):
     (safe for all built-in scorers like exact_match, contains, f1_token).
     """
 
-    benchmark_module: str = Field(
-        description="Python module path or file path to the benchmark definition",
-    )
-    benchmark_name: str = Field(
-        description="Normalized benchmark name",
-    )
+    benchmark_module: str = Field(description="Python module path or file path to the benchmark definition", )
+    benchmark_name: str = Field(description="Normalized benchmark name", )
     score_field: str = Field(
         default="correct",
         description="Key in scorer output dict to use as the primary score "
