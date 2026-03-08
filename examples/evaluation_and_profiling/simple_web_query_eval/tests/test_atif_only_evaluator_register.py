@@ -25,7 +25,9 @@ from nat_simple_web_query_eval.atif_only_evaluator_register import register_atif
 
 async def test_register_atif_cosine_similarity_evaluator_exposes_only_atif_lane():
     config = AtifCosineSimilarityEvaluatorConfig()
-    async with register_atif_cosine_similarity_evaluator(config, MagicMock()) as evaluator_info:
+    builder = MagicMock()
+    builder.get_max_concurrency.return_value = 2
+    async with register_atif_cosine_similarity_evaluator(config, builder) as evaluator_info:
         assert evaluator_info.evaluate_fn is None
         assert callable(evaluator_info.evaluate_atif_fn)
 
