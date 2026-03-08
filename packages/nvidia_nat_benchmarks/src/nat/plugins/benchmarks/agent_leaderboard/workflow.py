@@ -28,9 +28,9 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 
-from ..bfcl.tool_intent_stubs import ToolIntentBuffer
-from ..bfcl.tool_intent_stubs import clear_global_intents
-from ..bfcl.tool_intent_stubs import set_current_scenario_id
+from ..common.tool_intent_stubs import ToolIntentBuffer
+from ..common.tool_intent_stubs import clear_global_intents
+from ..common.tool_intent_stubs import set_current_scenario_id
 from .config import AgentLeaderboardWorkflowConfig
 
 logger = logging.getLogger(__name__)
@@ -62,6 +62,7 @@ def _tool_schema_to_openai(tool: dict) -> dict:
     framework_wrappers=[LLMFrameworkEnum.LANGCHAIN],
 )
 async def agent_leaderboard_workflow(config: AgentLeaderboardWorkflowConfig, builder: Builder):
+    """Register the Agent Leaderboard workflow."""
     from langchain_core.messages import AIMessage
     from langchain_core.messages import HumanMessage
     from langchain_core.messages import SystemMessage

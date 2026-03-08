@@ -15,14 +15,25 @@
 """Configuration types for Galileo Agent Leaderboard v2 benchmark."""
 
 from collections.abc import Callable
+from enum import StrEnum
 
 from pydantic import Field
+from pydantic import PositiveInt
+from pydantic import field_validator
 
 from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
 
-AVAILABLE_DOMAINS = ["banking", "healthcare", "insurance", "investment", "telecom"]
+
+class AgentLeaderboardDomain(StrEnum):
+    """Available domains in the Galileo Agent Leaderboard v2 dataset."""
+
+    BANKING = "banking"
+    HEALTHCARE = "healthcare"
+    INSURANCE = "insurance"
+    INVESTMENT = "investment"
+    TELECOM = "telecom"
 
 
 class AgentLeaderboardDatasetConfig(EvalDatasetBaseConfig, name="agent_leaderboard"):
@@ -32,18 +43,30 @@ class AgentLeaderboardDatasetConfig(EvalDatasetBaseConfig, name="agent_leaderboa
     Each scenario has a user message, user_goals, and available tools.
     """
 
-    domains: list[str] = Field(
-        default=["banking"],
-        description=f"Domains to include: {AVAILABLE_DOMAINS}",
+    domains: list[AgentLeaderboardDomain] = Field(
+        default=[AgentLeaderboardDomain.BANKING],
+        description="Domains to include: banking, healthcare, insurance, investment, telecom",
     )
     limit: int | None = Field(
         default=None,
         description="Max scenarios to load (for testing)",
     )
 
+    @field_validator("domains")
+    @classmethod
+    def _validate_domains_non_empty(cls, v: list[AgentLeaderboardDomain]) -> list[AgentLeaderboardDomain]:
+        """Ensure at least one domain is specified."""
+        if not v:
+            raise ValueError("At least one domain must be specified")
+        return v
+
     def parser(self) -> tuple[Callable, dict]:
         from .dataset import load_agent_leaderboard_dataset
-        return load_agent_leaderboard_dataset, {"domains": self.domains, "limit": self.limit}
+
+        return load_agent_leaderboard_dataset, {
+            "domains": [str(d) for d in self.domains],
+            "limit": self.limit,
+        }
 
 
 class AgentLeaderboardWorkflowConfig(AgentBaseConfig, name="agent_leaderboard_workflow"):
@@ -54,7 +77,7 @@ class AgentLeaderboardWorkflowConfig(AgentBaseConfig, name="agent_leaderboard_wo
     """
 
     description: str = Field(default="Agent Leaderboard Workflow")
-    max_steps: int = Field(
+    max_steps: PositiveInt = Field(
         default=10,
         description="Maximum tool-calling steps per scenario",
     )
@@ -72,5 +95,15 @@ class TSQEvaluatorConfig(EvaluatorBaseConfig, name="agent_leaderboard_tsq"):
     Computes F1 score between predicted and expected tool calls.
     """
 
-    tool_weight: float = Field(default=1.0, description="Weight for tool selection accuracy")
-    parameter_weight: float = Field(default=0.0, description="Weight for parameter accuracy")
+    tool_weight: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Weight for tool selection accuracy",
+    )
+    parameter_weight: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Weight for parameter accuracy",
+    )

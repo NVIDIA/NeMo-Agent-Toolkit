@@ -59,12 +59,29 @@ dependencies = [
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 tooltalk = [
-  "tooltalk",
+  "nvidia-tooltalk",
+]
+bfcl = [
+  # nvidia-bfcl must be installed separately with --no-deps due to an overly
+  # restrictive numpy==1.26.4 pin that conflicts with nvidia-nat-core (numpy>=2.3).
+  # Install manually: uv pip install nvidia-bfcl --no-deps
+  "tree-sitter~=0.21.0",
+  "tree-sitter-java~=0.21.0",
+  "tree-sitter-javascript~=0.21.0",
+]
+byob = [
+  "nemo-evaluator",
+]
+agent-leaderboard = [
+  "datasets~=4.4",
+]
+all = [
+  "nvidia-nat-benchmarks[tooltalk,bfcl,byob,agent-leaderboard] == {version}",
 ]
 test = [
   "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",
-  "tooltalk",
+  "nvidia-nat-benchmarks[all] == {version}",
 ]
 
 [tool.uv]

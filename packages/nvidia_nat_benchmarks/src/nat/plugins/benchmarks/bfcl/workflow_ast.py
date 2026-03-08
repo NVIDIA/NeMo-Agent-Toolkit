@@ -15,7 +15,7 @@
 """BFCL AST (prompting) workflow.
 
 Serializes function schemas as text in the system prompt and makes a single
-LLM call. The model outputs raw function call text (e.g. `func(param=val)`)
+LLM call. The model outputs raw function call text (e.g. ``func(param=val)``)
 which BFCL's ast_checker can parse.
 """
 
@@ -27,6 +27,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 
+from ..common.bfcl_helpers import extract_user_message
 from .config import BFCLASTWorkflowConfig
 
 logger = logging.getLogger(__name__)
@@ -44,12 +45,12 @@ SYSTEM_PROMPT = (  # noqa: E501 — verbatim from bfcl.model_handler.constant.DE
     "[func_name1(params_name1=params_value1, params_name2=params_value2...), func_name2(params)]\n"
     "You SHOULD NOT include any other text in the response.\n\n"
     "Here is a list of functions in JSON format that you can invoke.\n"
-    "{functions_json}\n"
-)
+    "{functions_json}\n")
 
 
 @register_function(config_type=BFCLASTWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def bfcl_ast_workflow(config: BFCLASTWorkflowConfig, builder: Builder):
+    """Register the BFCL AST prompting workflow."""
     from langchain_core.messages import HumanMessage
     from langchain_core.messages import SystemMessage
 
@@ -61,16 +62,9 @@ async def bfcl_ast_workflow(config: BFCLASTWorkflowConfig, builder: Builder):
         functions = entry.get("function", [])
         question_turns = entry.get("question", [[]])
 
-        # Build system message with function schemas
         functions_json = json.dumps(functions, indent=2)
         system_msg = SystemMessage(content=SYSTEM_PROMPT.format(functions_json=functions_json))
-
-        # Build user message(s) — BFCL uses the last turn's last message
-        user_content = ""
-        for turn in question_turns:
-            for msg in turn:
-                if msg.get("role") == "user":
-                    user_content = msg["content"]
+        user_content = extract_user_message(question_turns)
 
         messages = [system_msg, HumanMessage(content=user_content)]
         response = await llm.ainvoke(messages)

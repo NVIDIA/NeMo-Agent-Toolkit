@@ -20,6 +20,7 @@ and expected tool calls (from dataset ground truth).
 
 import json
 import logging
+from functools import partial
 
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
@@ -29,6 +30,7 @@ from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 
+from ..common.eval_helpers import run_evaluator_loop
 from .config import TSQEvaluatorConfig
 
 logger = logging.getLogger(__name__)
@@ -42,6 +44,49 @@ def _normalize_tool_name(name: str) -> str:
     if "__" in name:
         name = name.split("__", 1)[1]
     return name.lower().strip().replace("_", "").replace("-", "")
+
+
+def _parse_expected_tool_calls(item: EvalInputItem) -> list[dict]:
+    """Extract expected tool calls from the eval item, trying multiple locations.
+
+    The expected tool calls may be in full_dataset_entry, the 'question' field
+    within full_dataset_entry, or in input_obj as a last resort.
+
+    Args:
+        item: The evaluation input item.
+
+    Returns:
+        List of expected tool call dicts.
+    """
+    full_entry = item.full_dataset_entry
+    if isinstance(full_entry, str):
+        try:
+            full_entry = json.loads(full_entry)
+        except (json.JSONDecodeError, TypeError):
+            full_entry = {}
+    if not isinstance(full_entry, dict):
+        full_entry = {}
+
+    expected = full_entry.get("expected_tool_calls", [])
+
+    if not expected and "question" in full_entry:
+        try:
+            question_data = json.loads(full_entry["question"]) if isinstance(full_entry["question"],
+                                                                             str) else full_entry["question"]
+            if isinstance(question_data, dict):
+                expected = question_data.get("expected_tool_calls", [])
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    if not expected and item.input_obj:
+        try:
+            input_data = json.loads(item.input_obj) if isinstance(item.input_obj, str) else item.input_obj
+            if isinstance(input_data, dict):
+                expected = input_data.get("expected_tool_calls", [])
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    return expected
 
 
 def _evaluate_single(item: EvalInputItem, tool_weight: float, parameter_weight: float) -> EvalOutputItem:
@@ -61,39 +106,7 @@ def _evaluate_single(item: EvalInputItem, tool_weight: float, parameter_weight: 
     except (json.JSONDecodeError, TypeError):
         predicted = []
 
-    # Parse expected tool calls from ground truth
-    # The full_dataset_entry from DatasetHandler is a DataFrame row with 'question' as serialized JSON.
-    # We need to parse that JSON to get the actual entry with expected_tool_calls.
-    full_entry = item.full_dataset_entry
-    if isinstance(full_entry, str):
-        try:
-            full_entry = json.loads(full_entry)
-        except (json.JSONDecodeError, TypeError):
-            full_entry = {}
-    if not isinstance(full_entry, dict):
-        full_entry = {}
-
-    # Check if expected_tool_calls is directly in full_entry
-    expected = full_entry.get("expected_tool_calls", [])
-
-    # If not found, try parsing the 'question' field (which contains the serialized entry)
-    if not expected and "question" in full_entry:
-        try:
-            question_data = json.loads(full_entry["question"]) if isinstance(full_entry["question"],
-                                                                             str) else full_entry["question"]
-            if isinstance(question_data, dict):
-                expected = question_data.get("expected_tool_calls", [])
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-    # Also try input_obj as a last resort
-    if not expected and item.input_obj:
-        try:
-            input_data = json.loads(item.input_obj) if isinstance(item.input_obj, str) else item.input_obj
-            if isinstance(input_data, dict):
-                expected = input_data.get("expected_tool_calls", [])
-        except (json.JSONDecodeError, TypeError):
-            pass
+    expected = _parse_expected_tool_calls(item)
 
     # Calculate tool selection F1
     predicted_tools = {_normalize_tool_name(tc.get("tool", "")) for tc in predicted} - {""}
@@ -128,28 +141,19 @@ def _evaluate_single(item: EvalInputItem, tool_weight: float, parameter_weight: 
 
 @register_evaluator(config_type=TSQEvaluatorConfig)
 async def agent_leaderboard_tsq_evaluator(config: TSQEvaluatorConfig, builder: EvalBuilder):
+    """Register the Agent Leaderboard TSQ evaluator."""
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
-        eval_output_items = []
-
-        for item in eval_input.eval_input_items:
-            try:
-                output_item = _evaluate_single(item, config.tool_weight, config.parameter_weight)
-            except Exception as e:
-                logger.exception("Error evaluating TSQ for item %s: %s", item.id, e)
-                output_item = EvalOutputItem(
-                    id=item.id,
-                    score=0.0,
-                    reasoning={"error": str(e)},
-                )
-            eval_output_items.append(output_item)
-
-        scores = [i.score for i in eval_output_items if isinstance(i.score, (int, float))]
-        average_score = sum(scores) / len(scores) if scores else 0.0
-
-        logger.info("TSQ evaluation complete: avg_f1=%.3f across %d scenarios", average_score, len(scores))
-
-        return EvalOutput(average_score=average_score, eval_output_items=eval_output_items)
+        """Evaluate tool selection quality for all scenarios."""
+        return run_evaluator_loop(
+            eval_input,
+            evaluate_item_fn=partial(
+                _evaluate_single,
+                tool_weight=config.tool_weight,
+                parameter_weight=config.parameter_weight,
+            ),
+            benchmark_name="Agent Leaderboard TSQ",
+        )
 
     yield EvaluatorInfo(
         config=config,

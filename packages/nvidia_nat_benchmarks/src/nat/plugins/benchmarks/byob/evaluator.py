@@ -21,6 +21,7 @@ f1_token, bleu, rouge, regex_match).
 
 import json
 import logging
+from functools import partial
 
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
@@ -30,6 +31,7 @@ from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 
+from ..common.eval_helpers import run_evaluator_loop
 from .config import BYOBEvaluatorConfig
 
 logger = logging.getLogger(__name__)
@@ -98,45 +100,29 @@ def _evaluate_single(
 
 @register_evaluator(config_type=BYOBEvaluatorConfig)
 async def byob_evaluator_function(config: BYOBEvaluatorConfig, builder: EvalBuilder):
+    """Register the BYOB benchmark evaluator."""
     from nemo_evaluator.contrib.byob.eval_logic import import_benchmark
 
     bench = import_benchmark(config.benchmark_module, config.benchmark_name)
-    logger.info("BYOB evaluator loaded benchmark '%s' with scorer '%s'",
-                bench.name,
-                getattr(bench.scorer_fn, '__name__', 'unknown'))
+    logger.info(
+        "BYOB evaluator loaded benchmark '%s' with scorer '%s'",
+        bench.name,
+        getattr(bench.scorer_fn, '__name__', 'unknown'),
+    )
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
-        eval_output_items = []
-
-        for item in eval_input.eval_input_items:
-            try:
-                output_item = _evaluate_single(
-                    item,
-                    bench.scorer_fn,
-                    bench.target_field,
-                    config.score_field,
-                    bench.extra_config,
-                )
-            except Exception as e:
-                logger.exception("Error evaluating BYOB item %s: %s", item.id, e)
-                output_item = EvalOutputItem(
-                    id=item.id,
-                    score=0.0,
-                    reasoning={"error": str(e)},
-                )
-            eval_output_items.append(output_item)
-
-        scores = [i.score for i in eval_output_items if isinstance(i.score, (int, float))]
-        average_score = sum(scores) / len(scores) if scores else 0.0
-
-        logger.info(
-            "BYOB evaluation complete: avg_%s=%.3f (%d items)",
-            config.score_field,
-            average_score,
-            len(scores),
+        """Evaluate all items using the BYOB scorer."""
+        return run_evaluator_loop(
+            eval_input,
+            evaluate_item_fn=partial(
+                _evaluate_single,
+                scorer_fn=bench.scorer_fn,
+                target_field=bench.target_field,
+                score_field=config.score_field,
+                extra_config=bench.extra_config,
+            ),
+            benchmark_name=f"BYOB ({config.benchmark_name})",
         )
-
-        return EvalOutput(average_score=average_score, eval_output_items=eval_output_items)
 
     yield EvaluatorInfo(
         config=config,

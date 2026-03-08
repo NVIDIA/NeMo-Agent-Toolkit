@@ -26,6 +26,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 
+from .config import ToolTalkApiMode
 from .config import ToolTalkWorkflowConfig
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,7 @@ def _build_messages(conversation_history: list[dict], metadata: dict | None = No
 
 @register_function(config_type=ToolTalkWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tooltalk_workflow(config: ToolTalkWorkflowConfig, builder: Builder):
+    """Register the ToolTalk benchmark workflow."""
     from langchain_core.messages import AIMessage
     from langchain_core.messages import HumanMessage
     from langchain_core.messages import SystemMessage
@@ -115,9 +117,9 @@ async def tooltalk_workflow(config: ToolTalkWorkflowConfig, builder: Builder):
         user_data = conversation.get("user")
 
         # Select APIs based on api_mode
-        if config.api_mode == "exact":
+        if config.api_mode == ToolTalkApiMode.EXACT:
             apis_used = [APIS_BY_NAME[name] for name in conversation["apis_used"]]
-        elif config.api_mode == "suite":
+        elif config.api_mode == ToolTalkApiMode.SUITE:
             apis_used = [api for suite_name in conversation["suites_used"] for api in SUITES_BY_NAME[suite_name].apis]
         else:
             apis_used = ALL_APIS

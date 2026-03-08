@@ -20,6 +20,8 @@ Supports both AST prompting and FC workflow outputs.
 
 import json
 import logging
+import re
+from functools import partial
 
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
@@ -29,6 +31,7 @@ from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 
+from ..common.eval_helpers import run_evaluator_loop
 from .config import BFCLEvaluatorConfig
 
 logger = logging.getLogger(__name__)
@@ -36,17 +39,13 @@ logger = logging.getLogger(__name__)
 
 def _extract_function_call(raw_output: str) -> str:
     """Extract function call text from model output, stripping markdown and prose."""
-    import re
-
     # Try to extract from markdown code blocks first (python, json, tool_code, or untagged)
     code_blocks = re.findall(r'```(?:python|tool_code|json)?\s*\n?(.*?)\n?```', raw_output, re.DOTALL)
     if code_blocks:
         block = code_blocks[-1].strip()
-        # If it's JSON with "name"/"parameters", convert to function call
         converted = _try_convert_json_to_call(block)
         if converted:
             return converted
-        # If it's Python code with imports, extract just the function call lines
         if block.startswith("import ") or block.startswith("from "):
             calls = _extract_calls_from_code(block)
             if calls:
@@ -70,7 +69,6 @@ def _extract_function_call(raw_output: str) -> str:
     func_call_lines = []
     for line in lines:
         stripped = line.strip()
-        # Remove common prefixes
         for prefix in ['tools.', '> ', '- ']:
             if stripped.startswith(prefix):
                 stripped = stripped[len(prefix):]
@@ -78,7 +76,6 @@ def _extract_function_call(raw_output: str) -> str:
             func_call_lines.append(stripped)
 
     if func_call_lines:
-        # Strip 'tools.' prefix from extracted calls
         func_call_lines = [re.sub(r'^tools\.', '', c) for c in func_call_lines]
         if len(func_call_lines) == 1:
             return func_call_lines[0]
@@ -90,36 +87,31 @@ def _extract_function_call(raw_output: str) -> str:
 
 def _try_convert_json_to_call(text: str) -> str | None:
     """Try to parse JSON tool-call format and convert to Python function call."""
-    import json as _json
     try:
-        obj = _json.loads(text)
+        obj = json.loads(text)
         if isinstance(obj, dict) and "name" in obj:
             name = obj["name"]
             params = obj.get("parameters", obj.get("arguments", {}))
             if isinstance(params, dict):
                 param_strs = [f"{k}={repr(v)}" for k, v in params.items()]
                 return f"{name}({', '.join(param_strs)})"
-    except (_json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError):
         pass
     return None
 
 
 def _extract_calls_from_code(code: str) -> str | None:
     """Extract function call expressions from Python code (skip imports, assignments)."""
-    import re
     lines = code.strip().split('\n')
     calls = []
     for line in lines:
         stripped = line.strip()
-        # Skip imports, print, assignments with =
         if stripped.startswith(("import ", "from ", "print(", "#", "def ", "return ")):
             continue
-        # Look for variable = func(...) patterns
         assign_match = re.match(r'^[a-zA-Z_]\w*\s*=\s*([a-zA-Z_]\w*(?:\.\w+)*\s*\(.*\))\s*$', stripped)
         if assign_match:
             calls.append(assign_match.group(1))
             continue
-        # Look for bare function calls
         if re.match(r'^[a-zA-Z_]\w*(?:\.\w+)*\s*\(', stripped):
             calls.append(stripped)
     if calls:
@@ -159,35 +151,10 @@ def _evaluate_single(item: EvalInputItem, test_category: str, language: str) -> 
 
     # Handle irrelevance/relevance tests differently
     if "irrelevance" in test_category:
-        # For irrelevance: model should NOT produce a valid function call
-        try:
-            decoded = default_decode_ast_prompting(model_output_raw, language)
-            # If decoding succeeds and produces non-empty output, it's a failure
-            if decoded and any(decoded):
-                return EvalOutputItem(
-                    id=item.id,
-                    score=0.0,
-                    reasoning={
-                        "error": "Model produced function call for irrelevance test", "decoded": str(decoded)
-                    },
-                )
-        except Exception:
-            pass  # Decode failure = success for irrelevance
-        return EvalOutputItem(id=item.id, score=1.0, reasoning={"status": "correct_irrelevance"})
+        return _evaluate_irrelevance(item.id, model_output_raw, language)
 
     if "relevance" in test_category:
-        # For relevance: model should produce a valid function call (any)
-        try:
-            decoded = default_decode_ast_prompting(model_output_raw, language)
-            if decoded and any(decoded):
-                return EvalOutputItem(id=item.id, score=1.0, reasoning={"status": "correct_relevance"})
-        except Exception:
-            pass
-        return EvalOutputItem(
-            id=item.id,
-            score=0.0,
-            reasoning={"error": "Model failed to produce function call for relevance test"},
-        )
+        return _evaluate_relevance(item.id, model_output_raw, language)
 
     # Standard AST evaluation: decode and check
     try:
@@ -221,7 +188,7 @@ def _evaluate_single(item: EvalInputItem, test_category: str, language: str) -> 
 
     is_valid = checker_result.get("valid", False)
     score = 1.0 if is_valid else 0.0
-    reasoning = {
+    reasoning: dict = {
         "valid": is_valid,
         "raw_output": model_output_raw[:500],
         "decoded": str(decoded_output)[:500],
@@ -233,36 +200,53 @@ def _evaluate_single(item: EvalInputItem, test_category: str, language: str) -> 
     return EvalOutputItem(id=item.id, score=score, reasoning=reasoning)
 
 
+def _evaluate_irrelevance(item_id: str, model_output_raw: str, language: str) -> EvalOutputItem:
+    """For irrelevance tests: model should NOT produce a valid function call."""
+    from bfcl.model_handler.utils import default_decode_ast_prompting
+
+    try:
+        decoded = default_decode_ast_prompting(model_output_raw, language)
+        if decoded and any(decoded):
+            return EvalOutputItem(
+                id=item_id,
+                score=0.0,
+                reasoning={
+                    "error": "Model produced function call for irrelevance test", "decoded": str(decoded)
+                },
+            )
+    except Exception:
+        pass  # Decode failure = success for irrelevance
+    return EvalOutputItem(id=item_id, score=1.0, reasoning={"status": "correct_irrelevance"})
+
+
+def _evaluate_relevance(item_id: str, model_output_raw: str, language: str) -> EvalOutputItem:
+    """For relevance tests: model should produce a valid function call (any)."""
+    from bfcl.model_handler.utils import default_decode_ast_prompting
+
+    try:
+        decoded = default_decode_ast_prompting(model_output_raw, language)
+        if decoded and any(decoded):
+            return EvalOutputItem(id=item_id, score=1.0, reasoning={"status": "correct_relevance"})
+    except Exception:
+        pass
+    return EvalOutputItem(
+        id=item_id,
+        score=0.0,
+        reasoning={"error": "Model failed to produce function call for relevance test"},
+    )
+
+
 @register_evaluator(config_type=BFCLEvaluatorConfig)
 async def bfcl_evaluator_function(config: BFCLEvaluatorConfig, builder: EvalBuilder):
+    """Register the BFCL benchmark evaluator."""
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
-        eval_output_items = []
-
-        for item in eval_input.eval_input_items:
-            try:
-                output_item = _evaluate_single(item, config.test_category, config.language)
-            except Exception as e:
-                logger.exception("Error evaluating BFCL item %s: %s", item.id, e)
-                output_item = EvalOutputItem(
-                    id=item.id,
-                    score=0.0,
-                    reasoning={"error": str(e)},
-                )
-            eval_output_items.append(output_item)
-
-        scores = [i.score for i in eval_output_items if isinstance(i.score, (int, float))]
-        average_score = sum(scores) / len(scores) if scores else 0.0
-
-        logger.info(
-            "BFCL evaluation complete: accuracy=%.3f (%d/%d) category=%s",
-            average_score,
-            sum(1 for s in scores if s == 1.0),
-            len(scores),
-            config.test_category,
+        """Evaluate all items using BFCL's ast_checker."""
+        return run_evaluator_loop(
+            eval_input,
+            evaluate_item_fn=partial(_evaluate_single, test_category=config.test_category, language=config.language),
+            benchmark_name=f"BFCL ({config.test_category})",
         )
-
-        return EvalOutput(average_score=average_score, eval_output_items=eval_output_items)
 
     yield EvaluatorInfo(
         config=config,

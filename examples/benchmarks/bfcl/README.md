@@ -49,11 +49,17 @@ uv pip install -e examples/benchmarks/bfcl
 
 ### Prerequisites
 
-The NVIDIA `bfcl` package must be installed (includes datasets and AST checker):
+The NVIDIA `nvidia-bfcl` package must be installed (includes datasets and AST checker).
+Due to an overly restrictive `numpy==1.26.4` pin in `nvidia-bfcl` that conflicts with
+NAT's `numpy>=2.3`, install it with `--no-deps`:
 
 ```bash
-pip install nvidia-bfcl
+uv pip install nvidia-bfcl --no-deps
 ```
+
+> `nvidia-bfcl` works correctly with numpy 2.x at runtime — the pin is a packaging
+> constraint only. The `[bfcl]` extra in `nvidia-nat-benchmarks` installs the required
+> `tree-sitter` dependencies automatically.
 
 ---
 

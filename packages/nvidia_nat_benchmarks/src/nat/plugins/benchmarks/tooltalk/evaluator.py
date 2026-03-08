@@ -20,6 +20,7 @@ ground truth, producing metrics: recall, action_precision, bad_action_rate, succ
 
 import json
 import logging
+from functools import partial
 
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
@@ -29,52 +30,16 @@ from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 
+from ..common.eval_helpers import run_evaluator_loop
 from .config import ToolTalkEvaluatorConfig
 
 logger = logging.getLogger(__name__)
-
-
-@register_evaluator(config_type=ToolTalkEvaluatorConfig)
-async def tooltalk_evaluator_function(config: ToolTalkEvaluatorConfig, builder: EvalBuilder):
-
-    async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
-        eval_output_items = []
-
-        for item in eval_input.eval_input_items:
-            try:
-                output_item = _evaluate_single(item, config.database_dir)
-                eval_output_items.append(output_item)
-            except Exception as e:
-                logger.exception("Error evaluating ToolTalk item %s: %s", item.id, e)
-                eval_output_items.append(EvalOutputItem(
-                    id=item.id,
-                    score=0.0,
-                    reasoning={"error": str(e)},
-                ))
-
-        scores = [item.score for item in eval_output_items if isinstance(item.score, (int, float))]
-        average_score = sum(scores) / len(scores) if scores else 0.0
-
-        logger.info(
-            "ToolTalk evaluation complete: average_success=%.3f across %d conversations",
-            average_score,
-            len(scores),
-        )
-
-        return EvalOutput(average_score=average_score, eval_output_items=eval_output_items)
-
-    yield EvaluatorInfo(
-        config=config,
-        evaluate_fn=evaluate_fn,
-        description="ToolTalk benchmark evaluator (recall, action_precision, success)",
-    )
 
 
 def _evaluate_single(item: EvalInputItem, database_dir: str) -> EvalOutputItem:
     """Evaluate a single ToolTalk conversation using ToolTalk's built-in metrics."""
     from tooltalk.evaluation.tool_executor import ToolExecutor
 
-    # output_obj contains the conversation JSON with predictions added by the workflow
     if not item.output_obj:
         return EvalOutputItem(
             id=item.id,
@@ -91,7 +56,6 @@ def _evaluate_single(item: EvalInputItem, database_dir: str) -> EvalOutputItem:
             reasoning={"error": f"Invalid JSON in output_obj: {e}"},
         )
 
-    # Use ToolTalk's ToolExecutor to compute metrics
     tool_executor = ToolExecutor(init_database_dir=database_dir)
     result = tool_executor.evaluate_predictions(conversation_with_predictions)
     metrics = result.get("metrics", {})
@@ -112,3 +76,22 @@ def _evaluate_single(item: EvalInputItem, database_dir: str) -> EvalOutputItem:
     }
 
     return EvalOutputItem(id=item.id, score=success, reasoning=reasoning)
+
+
+@register_evaluator(config_type=ToolTalkEvaluatorConfig)
+async def tooltalk_evaluator_function(config: ToolTalkEvaluatorConfig, builder: EvalBuilder):
+    """Register the ToolTalk benchmark evaluator."""
+
+    async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
+        """Evaluate all items using ToolTalk's built-in metrics."""
+        return run_evaluator_loop(
+            eval_input,
+            evaluate_item_fn=partial(_evaluate_single, database_dir=config.database_dir),
+            benchmark_name="ToolTalk",
+        )
+
+    yield EvaluatorInfo(
+        config=config,
+        evaluate_fn=evaluate_fn,
+        description="ToolTalk benchmark evaluator (recall, action_precision, success)",
+    )
