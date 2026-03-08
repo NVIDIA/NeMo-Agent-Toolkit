@@ -74,3 +74,17 @@ async def test_atif_base_evaluator_uses_bounded_concurrency():
 
     assert evaluator.peak_active <= 2
     assert evaluator.peak_active > 1
+
+
+async def test_atif_base_evaluator_processes_all_samples_when_remainder_exists():
+    """Ensure semaphore-based batching does not drop tail samples."""
+    evaluator = _ConcurrencyProbeAtifEvaluator(max_concurrency=4)
+    samples = [_sample(str(i), "x", "x") for i in range(10)]  # 10 % 4 != 0
+
+    output = await evaluator.evaluate_atif_fn(samples)
+
+    assert len(output.eval_output_items) == len(samples)
+    returned_ids = {str(item.id) for item in output.eval_output_items}
+    expected_ids = {str(sample.item_id) for sample in samples}
+    assert returned_ids == expected_ids
+    assert evaluator.peak_active <= 4
