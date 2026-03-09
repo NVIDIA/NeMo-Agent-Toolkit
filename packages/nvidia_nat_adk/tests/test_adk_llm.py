@@ -206,7 +206,7 @@ class TestDynamoAdk:
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
     async def test_basic_creation_without_prefix(self, mock_litellm_class, dynamo_cfg_no_prefix, mock_builder):
-        """Wrapper should create LiteLlm with client kwarg (no Dynamo transport when nvext hints disabled)."""
+        """Wrapper should create LiteLlm without client kwarg when nvext hints are disabled."""
         mock_llm_instance = MagicMock()
         mock_litellm_class.return_value = mock_llm_instance
 
