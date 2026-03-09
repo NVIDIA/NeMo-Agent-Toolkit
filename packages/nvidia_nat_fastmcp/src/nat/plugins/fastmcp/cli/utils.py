@@ -16,9 +16,9 @@
 
 from __future__ import annotations
 
-from fnmatch import fnmatch
 from collections.abc import Iterable
 from collections.abc import Iterator
+from fnmatch import fnmatch
 from pathlib import Path
 
 from watchfiles import Change
@@ -58,16 +58,16 @@ def _filter_change_set(
 
 
 def iter_file_changes(
-    paths: Iterable[Path],
-    debounce_ms: int = 750,
-    include_globs: Iterable[str] = (),
-    exclude_globs: Iterable[str] = (),
+        paths: Iterable[Path],
+        debounce_ms: int = 750,
+        include_globs: Iterable[str] = (),
+        exclude_globs: Iterable[str] = (),
 ) -> Iterator[set[tuple[Change, str]]]:
     """Yield filtered file change sets using watchfiles with debounce."""
     watch_paths = [str(path) for path in paths]
     include_patterns = tuple(pattern.strip() for pattern in include_globs if pattern.strip())
-    exclude_patterns = DEFAULT_RELOAD_EXCLUDE_GLOBS + tuple(pattern.strip() for pattern in exclude_globs
-                                                            if pattern.strip())
+    exclude_patterns = DEFAULT_RELOAD_EXCLUDE_GLOBS + tuple(pattern.strip()
+                                                            for pattern in exclude_globs if pattern.strip())
     for changes in watch(*watch_paths, debounce=debounce_ms):
         filtered_changes = _filter_change_set(changes, include_patterns, exclude_patterns)
         if filtered_changes:

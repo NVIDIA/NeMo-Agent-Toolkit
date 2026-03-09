@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import SecretStr
 from starlette.testclient import TestClient
+from watchfiles import Change
 
 from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
 from nat.builder.function_base import FunctionBase
@@ -34,7 +35,6 @@ from nat.plugins.fastmcp.cli.utils import _filter_change_set
 from nat.plugins.fastmcp.cli.utils import iter_file_changes
 from nat.plugins.fastmcp.server.front_end_config import FastMCPFrontEndConfig
 from nat.plugins.fastmcp.server.front_end_plugin_worker import FastMCPFrontEndPluginWorker
-from watchfiles import Change
 
 
 class _MockTestSchema(BaseModel):
@@ -128,8 +128,8 @@ def test_iter_file_changes_applies_include_and_exclude_globs(monkeypatch: pytest
 
     change_iterator = iter_file_changes(paths=[Path("/tmp")],
                                         debounce_ms=50,
-                                        include_globs=("*.py",),
-                                        exclude_globs=("*.log",))
+                                        include_globs=("*.py", ),
+                                        exclude_globs=("*.log", ))
     assert next(change_iterator) == {(Change.modified, "/tmp/workflow.py")}
     with pytest.raises(StopIteration):
         next(change_iterator)
