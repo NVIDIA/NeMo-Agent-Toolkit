@@ -24,7 +24,17 @@ if TYPE_CHECKING:
 def _create_http_client(llm_config: "LLMBaseConfig",
                         use_async: bool = True,
                         **kwargs) -> "httpx.AsyncClient | httpx.Client":
-    """Create an httpx.AsyncClient based on LLM configuration."""
+    """
+    Create an httpx client with timeout and verify setting based on LLM configuration parameters.
+
+    Args:
+        llm_config: LLM configuration object
+        use_async: Whether to create an AsyncClient (True) or a regular Client (False). Defaults to True.
+
+    Returns:
+        An httpx.AsyncClient or httpx.Client
+    """
+
     import httpx
 
     def _set_kwarg(kwarg_name: str, config_attr: str):
@@ -43,8 +53,12 @@ def _create_http_client(llm_config: "LLMBaseConfig",
 
 
 def _handle_litellm_verify_ssl(llm_config: "LLMBaseConfig") -> None:
-    if not getattr(llm_config, "verify_ssl", True):
-        # Currently litellm does not support disabling this on a per-LLM basis for any backend other than Bedrock and
-        # AIM Guardrail.
-        import litellm
-        litellm.ssl_verify = False
+    """
+    Disable SSL verification for litellm if verify_ssl is set to False in the LLM configuration.
+
+    Currently litellm does not support disabling this on a per-LLM basis for any backend other than Bedrock and AIM
+    Guardrail, calling this function will set the global litellm.ssl_verify and impact all subsequent litellm calls.
+    """
+
+    import litellm
+    litellm.ssl_verify = getattr(llm_config, "verify_ssl", True)
