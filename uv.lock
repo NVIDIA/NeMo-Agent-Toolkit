@@ -6903,6 +6903,7 @@ source = { editable = "packages/nvidia_nat_config_optimizer" }
 dependencies = [
     { name = "numpy" },
     { name = "nvidia-nat-core" },
+    { name = "nvidia-nat-eval" },
     { name = "optuna" },
     { name = "pandas" },
     { name = "pydantic" },
@@ -6914,6 +6915,7 @@ requires-dist = [
     { name = "matplotlib", marker = "extra == 'visualization'", specifier = "~=3.9" },
     { name = "numpy", specifier = "~=2.3" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-eval", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "optuna", specifier = "~=4.4.0" },
     { name = "pandas", specifier = "~=2.2" },

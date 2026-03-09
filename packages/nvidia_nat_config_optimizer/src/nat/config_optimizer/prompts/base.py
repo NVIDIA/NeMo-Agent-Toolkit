@@ -25,7 +25,17 @@ from nat.data_models.optimizer import OptimizerRunConfig
 
 
 class BasePromptOptimizer(ABC):
-    """Interface that all prompt optimization strategies must implement."""
+    """Interface that all prompt optimization strategies must implement.
+
+    Prompt optimizers run after parameter optimization (when both are enabled).
+    The runtime passes ``base_cfg`` as the already-tuned config from the numeric
+    phase, plus optional ``trial_number_offset`` and ``frozen_params``.
+
+    Unlike :class:`~nat.config_optimizer.parameters.base.BaseParameterOptimizer`,
+    this interface returns ``None``. Implementations persist the best prompts
+    to disk (e.g. ``optimized_prompts.json``) rather than updating the config
+    in memory. The config is used as input for evaluation but is not mutated.
+    """
 
     @abstractmethod
     async def run(
@@ -36,5 +46,5 @@ class BasePromptOptimizer(ABC):
         optimizer_config: OptimizerConfig,
         opt_run_config: OptimizerRunConfig,
     ) -> None:
-        """Run prompt optimization."""
+        """Run prompt optimization. Persists best prompts to disk; returns None."""
         ...

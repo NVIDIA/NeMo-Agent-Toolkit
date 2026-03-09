@@ -50,6 +50,7 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
   "nvidia-nat-core == {version}",
+  "nvidia-nat-eval == {version}",
   "numpy~=2.3",
   "optuna~=4.4.0",
   "pandas~=2.2",
@@ -79,4 +80,5 @@ asyncio_mode = "auto"
 
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
+nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }

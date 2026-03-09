@@ -24,7 +24,7 @@ from nat.config_optimizer.prompts.ga_prompt_optimizer import GAPromptOptimizer
 from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import GAPromptOptimizationConfig
-from nat.data_models.optimizer import NumericOptimizationConfig
+from nat.data_models.optimizer import OptunaParameterOptimizationConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 
@@ -51,12 +51,12 @@ class _ParameterOptimizerRunner(BaseParameterOptimizer):
         )
 
 
-async def _parameter_optimizer_build(config: NumericOptimizationConfig, ) -> AsyncIterator[_ParameterOptimizerRunner]:
+async def _parameter_optimizer_build(config: OptunaParameterOptimizationConfig, ) -> AsyncIterator[_ParameterOptimizerRunner]:
     yield _ParameterOptimizerRunner()
 
 
-@register_optimizer(config_type=NumericOptimizationConfig)
-async def register_numeric_optimizer(config: NumericOptimizationConfig):
+@register_optimizer(config_type=OptunaParameterOptimizationConfig)
+async def register_numeric_optimizer(config: OptunaParameterOptimizationConfig):
     async for runner in _parameter_optimizer_build(config):
         yield runner
 

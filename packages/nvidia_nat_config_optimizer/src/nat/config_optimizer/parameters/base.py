@@ -25,7 +25,17 @@ from nat.data_models.optimizer import OptimizerRunConfig
 
 
 class BaseParameterOptimizer(ABC):
-    """Interface that all parameter optimization strategies must implement."""
+    """Interface that all parameter optimization strategies must implement.
+
+    Parameter optimizers run first in the optimization pipeline. They receive
+    the original ``base_cfg`` and return a new config with the best numeric
+    parameters applied. Implementations may also return a tuple
+    ``(Config, dict, int)`` for ``(tuned_cfg, best_params, n_trials)``.
+
+    Unlike :class:`~nat.config_optimizer.prompts.base.BasePromptOptimizer`,
+    this interface returns a ``Config`` (or tuple including it). The config
+    is not mutated; a new instance is produced with suggested values applied.
+    """
 
     @abstractmethod
     async def run(
@@ -36,5 +46,5 @@ class BaseParameterOptimizer(ABC):
         optimizer_config: OptimizerConfig,
         opt_run_config: OptimizerRunConfig,
     ) -> Config:
-        """Run parameter optimization and return the tuned config."""
+        """Run parameter optimization and return the tuned config (or tuple)."""
         ...

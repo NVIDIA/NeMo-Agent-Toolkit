@@ -2,7 +2,7 @@
 
 Workflow config and prompt optimization for [NVIDIA NeMo Agent Toolkit](https://github.com/NVIDIA/NeMo-Agent-Toolkit). Provides genetic-algorithm and numeric (Optuna) optimizers for workflow configs and prompts. Scoped to config-level optimization (hyperparameters, prompts); excludes runtime/inference optimizations.
 
-Install with NAT: `pip install nvidia-nat` (config optimizer is included by default), or `pip install nvidia-nat-core nvidia-nat-config-optimizer`.
+Install with NeMo Agent Toolkit: `pip install nvidia-nat` (config optimizer is included by default), or `pip install nvidia-nat-core nvidia-nat-config-optimizer`.
 
 Config-optimizer-only (minimal deps): `pip install nvidia-nat-config-optimizer` (requires `nvidia-nat-core` for eval contracts).
 

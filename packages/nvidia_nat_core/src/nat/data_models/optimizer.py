@@ -45,9 +45,9 @@ class SamplerType(StrEnum):
     GRID = "grid"
 
 
-class NumericOptimizationConfig(OptimizerStrategyBaseConfig, name="numeric"):
+class OptunaParameterOptimizationConfig(OptimizerStrategyBaseConfig, name="numeric"):
     """
-    Configuration for numeric/enum optimization (Optuna).
+    Configuration for Optuna-based numeric/enum parameter optimization.
     """
 
     enabled: bool = Field(default=True, description="Enable numeric optimization")
@@ -107,7 +107,7 @@ class GAPromptOptimizationConfig(PromptOptimizationConfig, name="ga"):
         description="Number of top individuals carried over unchanged each generation.",
         default=2,
     )
-    ga_selection_method: str = Field(
+    ga_selection_method: Literal["tournament", "roulette"] = Field(
         description="Parent selection strategy: 'tournament' or 'roulette'.",
         default="tournament",
     )
@@ -202,7 +202,7 @@ class OptimizerConfig(BaseOptimizerConfig):
     Extends the shared base with strategy-specific nests: .numeric for
     parameter/Optuna optimization, .prompt for prompt optimization.
     """
-    numeric: NumericOptimizationConfig = NumericOptimizationConfig()
+    numeric: OptunaParameterOptimizationConfig = OptunaParameterOptimizationConfig()
     prompt: GAPromptOptimizationConfig = GAPromptOptimizationConfig()
 
 

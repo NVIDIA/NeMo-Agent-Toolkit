@@ -1304,7 +1304,7 @@ class TypeRegistry:
             return [i.static_type() for i in self._registered_evaluator_infos]
 
         if component_type == ComponentEnum.OPTIMIZER:
-            return [i.config_type.static_type() for i in self._registered_optimizer_infos]
+            return [i.static_type() for i in self._registered_optimizer_infos]
 
         if component_type == ComponentEnum.DATASET_LOADER:
             return [i.static_type() for i in self._registered_dataset_loader_infos]

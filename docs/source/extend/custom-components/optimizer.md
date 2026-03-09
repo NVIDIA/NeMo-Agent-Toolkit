@@ -28,7 +28,7 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
 * **Config Base Classes**
    - {py:class}`~nat.data_models.optimizer.OptimizerStrategyBaseConfig`: Base class that all optimizer strategy configs must extend. Provides an `enabled` field and integrates with the NeMo Agent Toolkit type registry.
    - {py:class}`~nat.data_models.optimizer.PromptOptimizationConfig`: Base for prompt optimization strategy configs. Adds `prompt_population_init_function` and `prompt_recombination_function` fields.
-   - {py:class}`~nat.data_models.optimizer.NumericOptimizationConfig`: Built-in config for numeric/enum parameter optimization using Optuna.
+   - {py:class}`~nat.data_models.optimizer.OptunaParameterOptimizationConfig`: Built-in config for Optuna-based numeric/enum parameter optimization.
 
 * **Optimizer ABCs**
    - {py:class}`~nat.config_optimizer.prompts.base.BasePromptOptimizer`: Abstract base class for prompt optimization strategies. Requires implementing an async `run()` method that optimizes prompts in-place.

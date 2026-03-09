@@ -156,7 +156,6 @@ async def optimize_prompts(
 class GAPromptOptimizer(BasePromptOptimizer):
     """Genetic-algorithm prompt optimizer."""
 
-    # ---------- evaluation (merged from BaseEvolutionaryPromptOptimizer) ---------- #
     async def _evaluate_single_given_trial(
         self,
         ind: Individual,
@@ -432,6 +431,8 @@ class GAPromptOptimizer(BasePromptOptimizer):
             raise ValueError("optimizer_config.eval_metrics must be provided for GA prompt optimization")
         eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
 
+        if optimizer_config.output_path is None:
+            raise ValueError("optimizer_config.output_path cannot be None for GA prompt optimization")
         out_dir = optimizer_config.output_path
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -442,7 +443,7 @@ class GAPromptOptimizer(BasePromptOptimizer):
         offspring_size = prompt_cfg.ga_offspring_size or max(0, pop_size - elitism)
         crossover_rate = float(prompt_cfg.ga_crossover_rate)
         mutation_rate = float(prompt_cfg.ga_mutation_rate)
-        selection_method = prompt_cfg.ga_selection_method.lower()
+        selection_method = prompt_cfg.ga_selection_method
         tournament_size = max(2, int(prompt_cfg.ga_tournament_size))
         max_eval_concurrency = max(1, int(prompt_cfg.ga_parallel_evaluations))
         diversity_lambda = float(prompt_cfg.ga_diversity_lambda)
@@ -534,7 +535,8 @@ class GAPromptOptimizer(BasePromptOptimizer):
                         return _make_individual(mutated)
 
                 needed = max(0, pop_size - 1)
-                individuals.extend(await asyncio.gather(*[_create_one() for _ in range(needed)]))
+                tasks = [_create_one() for _ in range(needed)]
+                individuals.extend(await asyncio.gather(*tasks))
                 return individuals
 
             async def _make_child(
@@ -571,14 +573,20 @@ class GAPromptOptimizer(BasePromptOptimizer):
             def _select_parent(curr_pop: list[Individual]) -> Individual:
                 if selection_method == "tournament":
                     return self._tournament_select(curr_pop, tournament_size)
-                total = (sum(max(ind.scalar_fitness or 0.0, 0.0) for ind in curr_pop) or 1.0)
-                r = random.random() * total
-                acc = 0.0
-                for ind in curr_pop:
-                    acc += max(ind.scalar_fitness or 0.0, 0.0)
-                    if acc >= r:
-                        return ind
-                return curr_pop[-1]
+                elif selection_method == "roulette":
+                    total = (sum(max(ind.scalar_fitness or 0.0, 0.0) for ind in curr_pop) or 1.0)
+                    r = random.random() * total
+                    acc = 0.0
+                    for ind in curr_pop:
+                        acc += max(ind.scalar_fitness or 0.0, 0.0)
+                        if acc >= r:
+                            return ind
+                    return curr_pop[-1]
+                else:
+                    raise ValueError(
+                        f"Invalid ga_selection_method: {selection_method!r}. "
+                        "Must be 'tournament' or 'roulette'."
+                    )
 
             population = await _initial_population()
             history_rows: list[dict[str, Any]] = []
@@ -656,8 +664,6 @@ class GAPromptOptimizer(BasePromptOptimizer):
 
                 needed = pop_size - len(next_population)
                 offspring: list[Individual] = []
-                for _ in range(max(0, offspring_size), needed):
-                    pass
                 while len(offspring) < needed:
                     p1 = _select_parent(population)
                     p2 = _select_parent(population)

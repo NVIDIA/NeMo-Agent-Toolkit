@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from nat.config_optimizer.optimizer_runtime import optimize_config
 from nat.data_models.optimizer import GAPromptOptimizationConfig
-from nat.data_models.optimizer import NumericOptimizationConfig
+from nat.data_models.optimizer import OptunaParameterOptimizationConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 
@@ -29,7 +29,6 @@ class _DummyConfig(BaseModel):
     optimizer: OptimizerConfig = OptimizerConfig()
 
 
-@pytest.mark.asyncio
 async def test_optimize_config_returns_input_when_no_space(monkeypatch):
     cfg = _DummyConfig()
     # Ensure no optimizer phases are enabled
@@ -47,7 +46,6 @@ async def test_optimize_config_returns_input_when_no_space(monkeypatch):
     assert out is cfg
 
 
-@pytest.mark.asyncio
 async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     cfg = _DummyConfig()
     # Enable both phases
@@ -97,7 +95,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     registry = GlobalTypeRegistry.get()
     numeric_info = RegisteredOptimizerInfo(
         full_type="test/numeric",
-        config_type=NumericOptimizationConfig,
+        config_type=OptunaParameterOptimizationConfig,
         build_fn=lambda c: _fake_build_numeric(c),
         discovery_metadata=DiscoveryMetadata(),
     )
@@ -111,7 +109,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
         registry,
         "_registered_optimizer_infos",
         {
-            NumericOptimizationConfig: numeric_info,
+            OptunaParameterOptimizationConfig: numeric_info,
             GAPromptOptimizationConfig: prompt_info,
         },
     )
