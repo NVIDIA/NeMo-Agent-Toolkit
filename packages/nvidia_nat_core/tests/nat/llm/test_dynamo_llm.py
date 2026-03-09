@@ -481,6 +481,25 @@ class TestCreateHttpxClient:
         assert isinstance(client._transport, _DynamoTransport)
         assert client._transport._cache_control_mode == CacheControlMode.FIRST_ONLY
 
+    @pytest.mark.parametrize(
+        "config,expected_verify",
+        [
+            (DynamoModelConfig(model_name="test"), True),
+            (DynamoModelConfig(model_name="test", verify_ssl=True), True),
+            (DynamoModelConfig(model_name="test", verify_ssl=False), False),
+        ],
+        ids=["default_verify_ssl", "verify_ssl_true", "verify_ssl_false"],
+    )
+    def test_verify_ssl_passed_to_client(self,
+                                         config: DynamoModelConfig,
+                                         expected_verify: bool,
+                                         mock_httpx_async_client):
+        """Verify that verify_ssl from config is passed to the underlying httpx.AsyncClient as verify."""
+        _create_httpx_client_with_dynamo_hooks(config)
+        mock_httpx_async_client.assert_called_once()
+        call_kwargs = mock_httpx_async_client.call_args.kwargs
+        assert call_kwargs["verify"] is expected_verify
+
 
 # ---------------------------------------------------------------------------
 # _DynamoTransport Tests
