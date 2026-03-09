@@ -22,6 +22,7 @@ import typing
 from collections.abc import AsyncGenerator
 from collections.abc import Generator
 from pathlib import Path
+from unittest import mock
 
 import pytest
 import pytest_asyncio
@@ -889,3 +890,12 @@ def import_adk_early():
         import google.adk  # noqa: F401
     except ImportError:
         pass
+
+
+@pytest.fixture(name="mock_create_http_client")
+def mock_create_http_client_fixture() -> Generator[mock.MagicMock]:
+    from nat.llm.utils.http_client import _create_http_client as orig_create_http_client
+    with mock.patch('nat.llm.utils.http_client._create_http_client') as mock_create_http_client:
+        # Just capture the arguments
+        mock_create_http_client.side_effect = orig_create_http_client
+        yield mock_create_http_client

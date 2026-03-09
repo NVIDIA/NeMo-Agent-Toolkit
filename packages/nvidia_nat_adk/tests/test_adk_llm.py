@@ -204,14 +204,6 @@ class TestDynamoAdk:
             enable_nvext_hints=True,
         )
 
-    @pytest.fixture(name="mock_create_http_client")
-    def mock_create_http_client_fixture(self) -> Generator[MagicMock]:
-        from nat.llm.utils.http_client import _create_http_client as orig_create_http_client
-        with patch('nat.llm.utils.http_client._create_http_client') as mock_create_http_client:
-            # Just capture the arguments
-            mock_create_http_client.side_effect = orig_create_http_client
-            yield mock_create_http_client
-
     @patch('google.adk.models.lite_llm.LiteLlm')
     async def test_basic_creation_without_prefix(self,
                                                  mock_litellm_class: MagicMock,
@@ -236,9 +228,11 @@ class TestDynamoAdk:
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
-    async def test_creation_with_nvext_hints_enabled(
-        self, mock_litellm_class, mock_create_http_client, dynamo_cfg_with_prefix, mock_builder
-    ):
+    async def test_creation_with_nvext_hints_enabled(self,
+                                                     mock_litellm_class,
+                                                     mock_create_http_client,
+                                                     dynamo_cfg_with_prefix,
+                                                     mock_builder):
         """Wrapper should create LiteLlm with a custom AsyncOpenAI client when nvext hints are enabled."""
         mock_llm_instance = MagicMock()
         mock_litellm_class.return_value = mock_llm_instance
@@ -270,9 +264,11 @@ class TestDynamoAdk:
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
-    async def test_excludes_dynamo_specific_fields(
-        self, mock_litellm_class, mock_create_http_client, dynamo_cfg_with_prefix, mock_builder
-    ):
+    async def test_excludes_dynamo_specific_fields(self,
+                                                   mock_litellm_class,
+                                                   mock_create_http_client,
+                                                   dynamo_cfg_with_prefix,
+                                                   mock_builder):
         """Dynamo-specific fields should be excluded from LiteLlm kwargs.
 
         DynamoModelConfig has fields (nvext_prefix_id_template, nvext_prefix_total_requests,
