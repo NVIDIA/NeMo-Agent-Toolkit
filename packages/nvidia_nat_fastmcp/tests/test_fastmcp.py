@@ -14,6 +14,9 @@
 # limitations under the License.
 """Tests for FastMCP CLI and server wiring."""
 
+from pathlib import Path
+
+import pytest
 from fastmcp import FastMCP
 from fastmcp.server.auth import RemoteAuthProvider
 from fastmcp.server.auth.providers.introspection import IntrospectionTokenVerifier
@@ -27,8 +30,11 @@ from nat.builder.function_base import FunctionBase
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.plugins.fastmcp.cli.commands import fastmcp_command  # pylint: disable=import-error,no-name-in-module
+from nat.plugins.fastmcp.cli.utils import _filter_change_set
+from nat.plugins.fastmcp.cli.utils import iter_file_changes
 from nat.plugins.fastmcp.server.front_end_config import FastMCPFrontEndConfig
 from nat.plugins.fastmcp.server.front_end_plugin_worker import FastMCPFrontEndPluginWorker
+from watchfiles import Change
 
 
 class _MockTestSchema(BaseModel):
@@ -89,6 +95,41 @@ def test_fastmcp_cli_groups() -> None:
     assert "dev" in server_group.commands
     assert "install" in server_group.commands
     assert "run" in server_group.commands
+
+    dev_cmd = server_group.commands["dev"]
+    option_names = {option.name for option in dev_cmd.params if hasattr(option, "name")}
+    assert "reload_include_glob" in option_names
+    assert "reload_exclude_glob" in option_names
+
+
+def test_filter_change_set_excludes_noisy_files_by_glob() -> None:
+    changes = {
+        (Change.modified, "/tmp/server.log"),
+        (Change.modified, "/tmp/__pycache__/worker.pyc"),
+        (Change.modified, "/tmp/worker.py"),
+    }
+    filtered = _filter_change_set(changes, include_globs=(), exclude_globs=("*.log", "*__pycache__/*", "*.pyc"))
+    assert filtered == {(Change.modified, "/tmp/worker.py")}
+
+
+def test_iter_file_changes_applies_include_and_exclude_globs(monkeypatch: pytest.MonkeyPatch) -> None:
+    emitted_changes = iter([
+        {(Change.modified, "/tmp/server.log")},
+        {(Change.modified, "/tmp/workflow.py")},
+    ])
+
+    def fake_watch(*_args, **_kwargs):
+        return emitted_changes
+
+    monkeypatch.setattr("nat.plugins.fastmcp.cli.utils.watch", fake_watch)
+
+    change_iterator = iter_file_changes(paths=[Path("/tmp")],
+                                        debounce_ms=50,
+                                        include_globs=("*.py",),
+                                        exclude_globs=("*.log",))
+    assert next(change_iterator) == {(Change.modified, "/tmp/workflow.py")}
+    with pytest.raises(StopIteration):
+        next(change_iterator)
 
 
 async def test_fastmcp_auth_disabled():

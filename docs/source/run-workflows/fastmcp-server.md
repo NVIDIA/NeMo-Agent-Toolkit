@@ -75,6 +75,16 @@ nat fastmcp server dev --config_file examples/getting_started/simple_calculator/
   --watch-path examples/getting_started/simple_calculator/src
 ```
 
+If your watch path contains actively written files (such as logs, temp files, or cache artifacts), limit which changes trigger reload with include and exclude globs:
+
+```bash
+nat fastmcp server dev --config_file examples/getting_started/simple_calculator/configs/config.yml \
+  --watch-path examples/getting_started/simple_calculator/src \
+  --reload-include-glob "*.py" \
+  --reload-include-glob "*.yml" \
+  --reload-exclude-glob "*.log"
+```
+
 ### Generating MCP Client Configuration Snippets
 
 Use `nat fastmcp server install` to generate MCP client configuration snippets for a FastMCP server. This command does not modify your environment.
