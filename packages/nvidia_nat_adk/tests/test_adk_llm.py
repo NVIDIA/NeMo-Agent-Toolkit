@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import Generator
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
