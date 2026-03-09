@@ -236,7 +236,9 @@ class TestDynamoAdk:
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
-    async def test_creation_with_nvext_hints_enabled(self, mock_litellm_class, dynamo_cfg_with_prefix, mock_builder):
+    async def test_creation_with_nvext_hints_enabled(
+        self, mock_litellm_class, mock_create_http_client, dynamo_cfg_with_prefix, mock_builder
+    ):
         """Wrapper should create LiteLlm with a custom AsyncOpenAI client when nvext hints are enabled."""
         mock_llm_instance = MagicMock()
         mock_litellm_class.return_value = mock_llm_instance
@@ -247,6 +249,8 @@ class TestDynamoAdk:
 
             assert "client" in kwargs
             assert client is mock_llm_instance
+
+        assert "transport" in mock_create_http_client.call_args.kwargs
 
     @patch('httpx.AsyncClient')
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
@@ -266,7 +270,9 @@ class TestDynamoAdk:
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
-    async def test_excludes_dynamo_specific_fields(self, mock_litellm_class, dynamo_cfg_with_prefix, mock_builder):
+    async def test_excludes_dynamo_specific_fields(
+        self, mock_litellm_class, mock_create_http_client, dynamo_cfg_with_prefix, mock_builder
+    ):
         """Dynamo-specific fields should be excluded from LiteLlm kwargs.
 
         DynamoModelConfig has fields (nvext_prefix_id_template, nvext_prefix_total_requests,
@@ -291,6 +297,8 @@ class TestDynamoAdk:
         assert "nvext_prefix_iat" not in kwargs
         assert "enable_nvext_hints" not in kwargs
         assert "request_timeout" not in kwargs
+
+        assert "transport" in mock_create_http_client.call_args.kwargs
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
