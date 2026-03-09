@@ -41,5 +41,3 @@ dependencies = [
 nvidia-nat = { path = "../../..", editable = true }
 nvidia-nat-benchmarks = { path = "../../../packages/nvidia_nat_benchmarks", editable = true }
 
-[project.entry-points.'nat.components']
-nat_benchmark_bfcl = "nat_benchmark_bfcl.register"

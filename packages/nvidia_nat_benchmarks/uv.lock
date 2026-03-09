@@ -2309,8 +2309,8 @@ tooltalk = [
 requires-dist = [
     { name = "datasets", marker = "extra == 'agent-leaderboard'", specifier = "~=4.4" },
     { name = "nemo-evaluator", marker = "extra == 'byob'", specifier = "~=0.1" },
-    { name = "nvidia-nat-benchmarks", extras = ["agent-leaderboard", "bfcl", "byob", "tooltalk"], marker = "extra == 'all'", specifier = "==1.6.0.dev51+gab4c3030" },
-    { name = "nvidia-nat-benchmarks", extras = ["all"], marker = "extra == 'test'", specifier = "==1.6.0.dev51+gab4c3030" },
+    { name = "nvidia-nat-benchmarks", extras = ["agent-leaderboard", "bfcl", "byob", "tooltalk"], marker = "extra == 'all'", specifier = "==1.6.0.dev52+g385376c7" },
+    { name = "nvidia-nat-benchmarks", extras = ["all"], marker = "extra == 'test'", specifier = "==1.6.0.dev52+g385376c7" },
     { name = "nvidia-nat-core", editable = "../nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "../nvidia_nat_core" },
     { name = "nvidia-nat-eval", editable = "../nvidia_nat_eval" },
