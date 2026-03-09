@@ -80,6 +80,16 @@ nat run --config_file examples/MCP/simple_calculator_fastmcp/configs/config-mcp-
 
 The client configuration is in `examples/MCP/simple_calculator_fastmcp/configs/config-mcp-client.yml`.
 
+## Expose Selected Tools
+
+To expose only specific tools from the workflow, use `--tool_names` when starting the server:
+
+```bash
+nat fastmcp server run --config_file examples/getting_started/simple_calculator/configs/config.yml \
+  --tool_names calculator__multiply \
+  --tool_names calculator__divide
+```
+
 ## Related Examples
 - `examples/MCP/simple_calculator_fastmcp_protected/`: Protected FastMCP calculator example
 

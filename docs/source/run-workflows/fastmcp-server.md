@@ -127,7 +127,8 @@ You can publish a subset of tools using the `--tool_names` flag:
 
 ```bash
 nat fastmcp server run --config_file examples/getting_started/simple_calculator/configs/config.yml \
-  --tool_names calculator
+  --tool_names calculator__multiply \
+  --tool_names calculator__divide
 ```
 
 ### Mounting at Custom Paths
