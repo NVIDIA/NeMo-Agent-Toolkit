@@ -35,6 +35,7 @@ repos:
       - { id: uv-lock, name: "uv-lock-adk", args: [--project, packages/nvidia_nat_adk], files: "packages/nvidia_nat_adk/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-agno", args: [--project, packages/nvidia_nat_agno], files: "packages/nvidia_nat_agno/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-autogen", args: [--project, packages/nvidia_nat_autogen], files: "packages/nvidia_nat_autogen/pyproject.toml" }
+      - { id: uv-lock, name: "uv-lock-benchmarks", args: [--project, packages/nvidia_nat_benchmarks], files: "packages/nvidia_nat_benchmarks/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-core", args: [--project, packages/nvidia_nat_core], files: "packages/nvidia_nat_core/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-crewai", args: [--project, packages/nvidia_nat_crewai], files: "packages/nvidia_nat_crewai/pyproject.toml" }
       - { id: uv-lock, name: "uv-lock-data_flywheel", args: [--project, packages/nvidia_nat_data_flywheel], files: "packages/nvidia_nat_data_flywheel/pyproject.toml" }
