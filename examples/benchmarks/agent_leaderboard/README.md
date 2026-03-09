@@ -33,8 +33,7 @@ Evaluate NeMo Agent Toolkit agent workflows against the [Galileo Agent Leaderboa
 
 - [Installation](#installation)
 - [Set Up Environment](#set-up-environment)
-- [Option A: Download Dataset First](#option-a-download-dataset-first)
-- [Option B: Auto-Download from HuggingFace](#option-b-auto-download-from-huggingface)
+- [Auto-Download from HuggingFace](#auto-download-from-huggingface)
 - [Run Evaluation](#run-evaluation)
 - [Understanding Results](#understanding-results)
 - [All Domains Evaluation](#all-domains-evaluation)
@@ -59,34 +58,7 @@ export NVIDIA_API_KEY=<your-nvidia-api-key>
 
 ---
 
-## Option A: Download Dataset First
-
-Use the download script to fetch and transform the dataset:
-
-```bash
-python examples/dynamo_integration/scripts/download_agent_leaderboard_v2.py \
-  --output-dir data/agent_leaderboard \
-  --domains banking
-```
-
-**Expected output:**
-```
-INFO - Loading agent leaderboard v2 dataset from Hugging Face...
-INFO - Loading domain: banking
-INFO - Loaded 20 tools, 20 personas, 100 scenarios for banking
-INFO - Saved 100 entries to data/agent_leaderboard/agent_leaderboard_v2_banking.json
-INFO - Saved raw data to data/agent_leaderboard/raw/banking
-```
-
-Then set the data path:
-
-```bash
-export AGENT_LEADERBOARD_DATA=data/agent_leaderboard/agent_leaderboard_v2_banking.json
-```
-
----
-
-## Option B: Auto-Download from HuggingFace
+## Auto-Download from HuggingFace
 
 If no local file is found, the dataset loader downloads directly from HuggingFace. Just point `file_path` to a non-existent path and the `domains` config will be used to download:
 
