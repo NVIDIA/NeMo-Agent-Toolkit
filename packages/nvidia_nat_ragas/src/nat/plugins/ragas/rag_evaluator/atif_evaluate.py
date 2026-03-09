@@ -16,12 +16,15 @@
 import logging
 import typing
 from collections.abc import Sequence
+from typing import Literal
 
 from tqdm import tqdm
 
 from nat.data_models.atif import ATIFObservationResult
+from nat.data_models.atif import ATIFStep
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalOutput
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.plugins.eval.utils.tqdm_position_registry import TqdmPositionRegistry
 from nat.utils.atif_message_utils import message_to_text
@@ -32,9 +35,14 @@ from .evaluate import _ragas_results_to_eval_output
 if typing.TYPE_CHECKING:
     from ragas import EvaluationDataset
     from ragas.llms import LangchainLLMWrapper
+    from ragas.messages import AIMessage
+    from ragas.messages import HumanMessage
+    from ragas.messages import ToolMessage
     from ragas.metrics import Metric
 
 logger = logging.getLogger(__name__)
+
+SampleType = Literal["single_turn", "multi_turn"]
 
 
 def _observation_result_to_text(result: ATIFObservationResult) -> str:
@@ -53,32 +61,121 @@ def _trajectory_to_retrieved_contexts(trajectory: ATIFTrajectory) -> list[str]:
     return contexts
 
 
+def _atif_step_to_ragas_messages(
+    step: ATIFStep,
+) -> list["HumanMessage | AIMessage | ToolMessage"]:
+    """Convert a single ATIF step into one or more RAGAS message objects.
+
+    Mapping:
+        source="user"  → HumanMessage
+        source="agent" → AIMessage (with optional ToolCall list)
+                         followed by ToolMessage per observation result
+        source="system" → HumanMessage (best-effort; RAGAS has no SystemMessage)
+    """
+    from ragas.messages import AIMessage as RagasAIMessage
+    from ragas.messages import HumanMessage as RagasHumanMessage
+    from ragas.messages import ToolCall as RagasToolCall
+    from ragas.messages import ToolMessage as RagasToolMessage
+
+    messages: list[RagasHumanMessage | RagasAIMessage | RagasToolMessage] = []
+    text = message_to_text(step.message)
+
+    if step.source == "user":
+        messages.append(RagasHumanMessage(content=text))
+        return messages
+
+    if step.source == "system":
+        messages.append(RagasHumanMessage(content=text))
+        return messages
+
+    ragas_tool_calls = []
+    if step.tool_calls:
+        for tc in step.tool_calls:
+            ragas_tool_calls.append(
+                RagasToolCall(name=tc.function_name, args=tc.arguments)
+            )
+
+    messages.append(RagasAIMessage(content=text, tool_calls=ragas_tool_calls or None))
+
+    if step.observation and step.observation.results:
+        for result in step.observation.results:
+            tool_content = _observation_result_to_text(result)
+            if tool_content:
+                messages.append(RagasToolMessage(content=tool_content))
+
+    return messages
+
+
+def _atif_trajectory_to_multi_turn_messages(
+    trajectory: ATIFTrajectory,
+) -> list["HumanMessage | AIMessage | ToolMessage"]:
+    """Convert an entire ATIF trajectory into a RAGAS multi-turn message sequence."""
+    messages: list = []
+    for step in trajectory.steps:
+        messages.extend(_atif_step_to_ragas_messages(step))
+    return messages
+
+
 class RAGAtifEvaluator:
 
-    def __init__(self, evaluator_llm: "LangchainLLMWrapper", metrics: Sequence["Metric"], max_concurrency=8):
+    def __init__(
+        self,
+        evaluator_llm: "LangchainLLMWrapper",
+        metrics: Sequence["Metric"],
+        max_concurrency: int = 8,
+        sample_type: SampleType = "single_turn",
+    ):
         self.evaluator_llm = evaluator_llm
         self.metrics = metrics
         self.max_concurrency = max_concurrency
+        self.sample_type = sample_type
+
+    def _build_single_turn_sample(self, sample: AtifEvalSample):
+        """Build a RAGAS SingleTurnSample from an ATIF eval sample."""
+        from ragas import SingleTurnSample
+
+        user_input = trajectory_to_user_input(sample.trajectory)
+        reference = sample.expected_output_obj
+        response = sample.output_obj
+        reference_contexts = [""]
+        retrieved_contexts = _trajectory_to_retrieved_contexts(sample.trajectory)
+        return SingleTurnSample(
+            user_input=user_input,
+            reference=reference,
+            response=response,
+            reference_contexts=reference_contexts,
+            retrieved_contexts=retrieved_contexts,
+        )
+
+    def _build_multi_turn_sample(self, sample: AtifEvalSample):
+        """Build a RAGAS MultiTurnSample from an ATIF eval sample."""
+        from ragas import MultiTurnSample
+
+        conversation = _atif_trajectory_to_multi_turn_messages(sample.trajectory)
+        reference = sample.expected_output_obj
+        kwargs: dict[str, typing.Any] = {"user_input": conversation}
+        if reference is not None:
+            kwargs["reference"] = str(reference)
+
+        reference_tool_calls = sample.metadata.get("reference_tool_calls")
+        if reference_tool_calls is not None:
+            kwargs["reference_tool_calls"] = reference_tool_calls
+
+        return MultiTurnSample(**kwargs)
 
     def atif_samples_to_ragas(self, atif_samples: AtifEvalSampleList) -> "EvaluationDataset":
-        """Converts ATIF-native samples into a Ragas-compatible EvaluationDataset."""
+        """Converts ATIF-native samples into a Ragas-compatible EvaluationDataset.
+
+        Uses SingleTurnSample or MultiTurnSample depending on ``self.sample_type``.
+        """
         from ragas import EvaluationDataset
-        from ragas import SingleTurnSample
 
         samples = []
         for sample in atif_samples:
-            user_input = trajectory_to_user_input(sample.trajectory)
-            reference = sample.expected_output_obj
-            response = sample.output_obj
-            reference_contexts = [""]
-            retrieved_contexts = _trajectory_to_retrieved_contexts(sample.trajectory)
-            ragas_sample = SingleTurnSample(
-                user_input=user_input,
-                reference=reference,
-                response=response,
-                reference_contexts=reference_contexts,
-                retrieved_contexts=retrieved_contexts,
-            )
+            if self.sample_type == "multi_turn":
+                ragas_sample = self._build_multi_turn_sample(sample)
+            else:
+                ragas_sample = self._build_single_turn_sample(sample)
             samples.append(ragas_sample)
         return EvaluationDataset(samples=samples)
 

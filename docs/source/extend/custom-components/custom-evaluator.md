@@ -241,6 +241,37 @@ eval:
       normalize_case: true
 ```
 
+### Using Ragas Multi-turn Metrics with ATIF Trajectories
+
+The built-in `ragas` evaluator supports both single-turn and multi-turn evaluation modes. Single-turn mode (`sample_type: single_turn`, the default) is suitable for metrics like `AnswerAccuracy` and `ContextRelevance`. Multi-turn mode (`sample_type: multi_turn`) is required for trajectory-aware metrics such as `AgentGoalAccuracyWithoutReference` and `ToolCallAccuracy`.
+
+In multi-turn mode, the ATIF trajectory is converted into a sequence of Ragas message types:
+
+- Steps with `source: user` become `HumanMessage`
+- Steps with `source: agent` become `AIMessage`, with ATIF `tool_calls` mapped to Ragas `ToolCall` objects
+- Tool observation results become `ToolMessage`
+
+To use multi-turn metrics, add an evaluator with `sample_type: multi_turn` and `enable_atif_evaluator: true`:
+
+```yaml
+eval:
+  evaluators:
+    agent_goal:
+      _type: ragas
+      metric: AgentGoalAccuracyWithoutReference
+      llm_name: nim_rag_eval_llm
+      enable_atif_evaluator: true
+      sample_type: multi_turn
+    tool_call_accuracy:
+      _type: ragas
+      metric: ToolCallAccuracy
+      llm_name: nim_rag_eval_llm
+      enable_atif_evaluator: true
+      sample_type: multi_turn
+```
+
+For `ToolCallAccuracy`, you can optionally supply expected tool calls through the `reference_tool_calls` key in `AtifEvalSample.metadata` when using the Python API.
+
 ### Display all evaluators
 To display all evaluators, run the following command:
 ```bash

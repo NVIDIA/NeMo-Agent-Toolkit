@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -53,6 +54,14 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
     enable_atif_evaluator: bool = Field(
         default=False,
         description="Enable ATIF-native RAGAS evaluator lane. Disabled by default until rollout stabilization.",
+    )
+    sample_type: Literal["single_turn", "multi_turn"] = Field(
+        default="single_turn",
+        description=(
+            "RAGAS sample type for ATIF evaluation. "
+            "'single_turn' uses SingleTurnSample (for AnswerAccuracy, ContextRelevance, etc.). "
+            "'multi_turn' uses MultiTurnSample (for AgentGoalAccuracyWithoutReference, ToolCallAccuracy, etc.)."
+        ),
     )
 
     @model_validator(mode="before")
@@ -151,7 +160,8 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
                              input_obj_field=config.input_obj_field) if metrics else None
     atif_evaluator = RAGAtifEvaluator(
         evaluator_llm=llm, metrics=metrics,
-        max_concurrency=builder.get_max_concurrency()) if (metrics and config.enable_atif_evaluator) else None
+        max_concurrency=builder.get_max_concurrency(),
+        sample_type=config.sample_type) if (metrics and config.enable_atif_evaluator) else None
 
     evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
     if config.enable_atif_evaluator:

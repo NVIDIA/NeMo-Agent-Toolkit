@@ -84,7 +84,26 @@ Notes:
 - The custom evaluator is ATIF-only and registered from `nat_simple_web_query_eval`.
 - It scores using token cosine similarity and includes trajectory metadata (`trajectory_tool_call_count`) in reasoning.
 
-## 3) Optional quick compare
+## 3) Test ATIF multi-turn Ragas evaluators
+
+For agent workflows with tool calls, you can use Ragas multi-turn metrics such as `AgentGoalAccuracyWithoutReference`
+and `ToolCallAccuracy`. These require `sample_type: multi_turn` and `enable_atif_evaluator: true` in the evaluator config:
+
+```yaml
+eval:
+  evaluators:
+    agent_goal:
+      _type: ragas
+      metric: AgentGoalAccuracyWithoutReference
+      llm_name: nim_rag_eval_llm
+      enable_atif_evaluator: true
+      sample_type: multi_turn
+```
+
+Multi-turn mode converts ATIF trajectory steps into a Ragas `MultiTurnSample` with `HumanMessage`,
+`AIMessage` (with `ToolCall`), and `ToolMessage` sequences, preserving the full agent interaction history.
+
+## 4) Optional quick compare
 
 Compare two run directories:
 
