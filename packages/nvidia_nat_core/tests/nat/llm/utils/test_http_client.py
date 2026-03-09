@@ -24,9 +24,9 @@ import pytest
 from nat.llm.utils.http_client import _create_http_client
 from nat.llm.utils.http_client import _handle_litellm_verify_ssl
 
-from ._llm_models import LLMConfig
-from ._llm_models import LLMConfigWithSSL
-from ._llm_models import LLMConfigWithTimeout
+from ._llm_configs import LLMConfig
+from ._llm_configs import LLMConfigWithSSL
+from ._llm_configs import LLMConfigWithTimeout
 
 if typing.TYPE_CHECKING:
     from nat.data_models.llm import LLMBaseConfig

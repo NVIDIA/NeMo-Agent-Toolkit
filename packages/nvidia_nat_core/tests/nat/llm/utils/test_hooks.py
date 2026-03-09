@@ -23,9 +23,9 @@ from pytest_httpserver import HTTPServer
 from nat.builder.context import ContextState
 from nat.llm.utils.hooks import _create_metadata_injection_client
 
-from ._llm_models import LLMConfig
-from ._llm_models import LLMConfigWithSSL
-from ._llm_models import LLMConfigWithTimeout
+from ._llm_configs import LLMConfig
+from ._llm_configs import LLMConfigWithSSL
+from ._llm_configs import LLMConfigWithTimeout
 
 
 class TestMetadataInjectionHook:
