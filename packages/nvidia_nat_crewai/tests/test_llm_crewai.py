@@ -79,6 +79,16 @@ class TestNimCrewAI:
         assert os.environ["NVIDIA_NIM_API_KEY"] == "legacy-key"
         mock_llm.assert_called_once()
 
+    @patch("nat.plugins.crewai.llm._handle_litellm_verify_ssl")
+    @patch("crewai.LLM")
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    async def test_nim_verify_ssl_passed_to_handle(self, mock_llm, mock_handle_verify_ssl, verify_ssl, mock_builder):
+        """verify_ssl from config is passed to _handle_litellm_verify_ssl."""
+        nim_cfg = NIMModelConfig(model_name="test-nim", verify_ssl=verify_ssl)
+        async with nim_crewai(nim_cfg, mock_builder):
+            pass
+        mock_handle_verify_ssl.assert_called_once_with(verify_ssl)
+
 
 # ---------------------------------------------------------------------------
 # OpenAI → CrewAI wrapper tests
@@ -125,6 +135,16 @@ class TestOpenAICrewAI:
             async with openai_crewai(openai_cfg_responses, mock_builder):
                 pass
         mock_llm.assert_not_called()
+
+    @patch("nat.plugins.crewai.llm._handle_litellm_verify_ssl")
+    @patch("crewai.LLM")
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    async def test_openai_verify_ssl_passed_to_handle(self, mock_llm, mock_handle_verify_ssl, verify_ssl, mock_builder):
+        """verify_ssl from config is passed to _handle_litellm_verify_ssl."""
+        openai_cfg = OpenAIModelConfig(model_name="gpt-4o", verify_ssl=verify_ssl)
+        async with openai_crewai(openai_cfg, mock_builder):
+            pass
+        mock_handle_verify_ssl.assert_called_once_with(verify_ssl)
 
 
 # ---------------------------------------------------------------------------
