@@ -899,3 +899,21 @@ def mock_create_http_client_fixture() -> Generator[mock.MagicMock]:
         # Just capture the arguments
         mock_create_http_client.side_effect = orig_create_http_client
         yield mock_create_http_client
+
+
+@pytest.fixture(name="mock_httpx_async_client")
+def fixture_mock_async_httpx_client():
+    import httpx
+
+    with mock.patch.object(httpx, "AsyncClient") as mock_httpx:
+        mock_httpx.return_value = mock_httpx
+        yield mock_httpx
+
+
+@pytest.fixture(name="mock_httpx_sync_client")
+def fixture_mock_sync_httpx_client():
+    import httpx
+
+    with mock.patch.object(httpx, "Client") as mock_httpx:
+        mock_httpx.return_value = mock_httpx
+        yield mock_httpx
