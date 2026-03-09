@@ -204,21 +204,27 @@ class TestDynamoAdk:
         )
 
     @patch('google.adk.models.lite_llm.LiteLlm')
-    @pytest.mark.asyncio
     async def test_basic_creation_without_prefix(self, mock_litellm_class, dynamo_cfg_no_prefix, mock_builder):
-        """Wrapper should create LiteLlm without client kwarg when nvext hints are disabled."""
+        """Wrapper should create LiteLlm with client without the Dynamo transport when nvext hints are disabled."""
         mock_llm_instance = MagicMock()
         mock_litellm_class.return_value = mock_llm_instance
 
-        async with dynamo_adk(dynamo_cfg_no_prefix, mock_builder) as client:
-            mock_litellm_class.assert_called_once()
-            kwargs = mock_litellm_class.call_args.kwargs
+        from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks as orig_create_client
 
-            assert mock_litellm_class.call_args.args[0] == "test-model"
-            assert kwargs["api_base"] == "http://localhost:8000/v1"
-            # Always passes a client; when enable_nvext_hints=False it has no _DynamoTransport
-            assert "client" in kwargs
-            assert client is mock_llm_instance
+        with patch('nat.llm.dynamo_llm._create_httpx_client_with_dynamo_hooks') as mock_create_client:
+            # Just capture the arguments
+            mock_create_client.side_effect = orig_create_client
+
+            async with dynamo_adk(dynamo_cfg_no_prefix, mock_builder) as client:
+                mock_litellm_class.assert_called_once()
+                kwargs = mock_litellm_class.call_args.kwargs
+
+                assert mock_litellm_class.call_args.args[0] == "test-model"
+                assert kwargs["api_base"] == "http://localhost:8000/v1"
+
+                assert client is mock_llm_instance
+                mock_create_client.assert_called_once_with(dynamo_cfg_no_prefix)
+                assert "transport" not in mock_create_client.call_args.kwargs
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
