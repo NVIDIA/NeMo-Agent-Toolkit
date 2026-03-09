@@ -60,8 +60,7 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
         description=(
             "RAGAS sample type for ATIF evaluation. "
             "'single_turn' uses SingleTurnSample (for AnswerAccuracy, ContextRelevance, etc.). "
-            "'multi_turn' uses MultiTurnSample (for AgentGoalAccuracyWithoutReference, ToolCallAccuracy, etc.)."
-        ),
+            "'multi_turn' uses MultiTurnSample (for AgentGoalAccuracyWithoutReference, ToolCallAccuracy, etc.)."),
     )
 
     @model_validator(mode="before")
@@ -78,6 +77,9 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
                 raise ValueError("Metric value must be a RagasMetricConfig object.")
         elif not isinstance(metric, str):
             raise ValueError("Metric must be either a string or a single-item dictionary.")
+
+        if values.get("sample_type") == "multi_turn" and not values.get("enable_atif_evaluator"):
+            raise ValueError("sample_type='multi_turn' requires enable_atif_evaluator=True.")
 
         return values
 
@@ -158,10 +160,11 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
                              metrics=metrics,
                              max_concurrency=builder.get_max_concurrency(),
                              input_obj_field=config.input_obj_field) if metrics else None
-    atif_evaluator = RAGAtifEvaluator(
-        evaluator_llm=llm, metrics=metrics,
-        max_concurrency=builder.get_max_concurrency(),
-        sample_type=config.sample_type) if (metrics and config.enable_atif_evaluator) else None
+    atif_evaluator = RAGAtifEvaluator(evaluator_llm=llm,
+                                      metrics=metrics,
+                                      max_concurrency=builder.get_max_concurrency(),
+                                      sample_type=config.sample_type) if (metrics
+                                                                          and config.enable_atif_evaluator) else None
 
     evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
     if config.enable_atif_evaluator:

@@ -620,6 +620,7 @@ async def test_register_ragas_evaluator_atif_lane_enabled():
 # MultiTurnSample conversion tests
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(name="multi_turn_atif_samples")
 def fixture_multi_turn_atif_samples():
     """ATIF samples with tool calls suitable for multi-turn conversion."""
@@ -647,9 +648,8 @@ def fixture_multi_turn_atif_samples():
                         arguments={"numbers": [12, 15]},
                     ),
                 ],
-                observation=ATIFObservation(
-                    results=[ATIFObservationResult(source_call_id="call-1", content="180.0")],
-                ),
+                observation=ATIFObservation(results=[ATIFObservationResult(source_call_id="call-1",
+                                                                           content="180.0")], ),
             ),
             ATIFStep(
                 step_id=3,
@@ -662,9 +662,8 @@ def fixture_multi_turn_atif_samples():
                         arguments={"numbers": [180.0, 8]},
                     ),
                 ],
-                observation=ATIFObservation(
-                    results=[ATIFObservationResult(source_call_id="call-2", content="188.0")],
-                ),
+                observation=ATIFObservation(results=[ATIFObservationResult(source_call_id="call-2",
+                                                                           content="188.0")], ),
             ),
             ATIFStep(step_id=4, source="agent", message="The answer is 188.0"),
         ],
@@ -751,9 +750,7 @@ def test_atif_samples_to_ragas_multi_turn_no_tools(ragas_judge_llm, ragas_metric
     samples = [
         AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj="Hi", output_obj="Hi there!", metadata={})
     ]
-    evaluator = RAGAtifEvaluator(
-        evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn"
-    )
+    evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn")
     dataset = evaluator.atif_samples_to_ragas(samples)
 
     assert len(dataset.samples) == 1
@@ -778,12 +775,8 @@ def test_atif_samples_to_ragas_multi_turn_empty_trajectory(ragas_judge_llm, raga
         agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
         steps=[],
     )
-    samples = [
-        AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj=None, output_obj=None, metadata={})
-    ]
-    evaluator = RAGAtifEvaluator(
-        evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn"
-    )
+    samples = [AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj=None, output_obj=None, metadata={})]
+    evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn")
     dataset = evaluator.atif_samples_to_ragas(samples)
 
     assert len(dataset.samples) == 1
@@ -820,21 +813,15 @@ def test_atif_samples_to_ragas_multi_turn_multiple_tool_calls(ragas_judge_llm, r
                     ATIFToolCall(tool_call_id="c1", function_name="tool_a", arguments={"x": 1}),
                     ATIFToolCall(tool_call_id="c2", function_name="tool_b", arguments={"y": 2}),
                 ],
-                observation=ATIFObservation(
-                    results=[
-                        ATIFObservationResult(source_call_id="c1", content="result_a"),
-                        ATIFObservationResult(source_call_id="c2", content="result_b"),
-                    ],
-                ),
+                observation=ATIFObservation(results=[
+                    ATIFObservationResult(source_call_id="c1", content="result_a"),
+                    ATIFObservationResult(source_call_id="c2", content="result_b"),
+                ], ),
             ),
         ],
     )
-    samples = [
-        AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj=None, output_obj=None, metadata={})
-    ]
-    evaluator = RAGAtifEvaluator(
-        evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn"
-    )
+    samples = [AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj=None, output_obj=None, metadata={})]
+    evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn")
     dataset = evaluator.atif_samples_to_ragas(samples)
 
     sample = dataset.samples[0]
@@ -850,6 +837,47 @@ def test_atif_samples_to_ragas_multi_turn_multiple_tool_calls(ragas_judge_llm, r
     assert sample.user_input[2].content == "result_a"
     assert isinstance(sample.user_input[3], RagasToolMessage)
     assert sample.user_input[3].content == "result_b"
+
+
+def test_atif_samples_to_ragas_multi_turn_observation_without_tool_calls(ragas_judge_llm, ragas_metrics):
+    """Observation-only ATIF steps should not emit invalid orphan ToolMessages."""
+    from ragas import MultiTurnSample
+    from ragas.messages import AIMessage as RagasAIMessage
+    from ragas.messages import HumanMessage as RagasHumanMessage
+
+    from nat.data_models.atif import ATIFAgentConfig
+    from nat.data_models.atif import ATIFObservation
+    from nat.data_models.atif import ATIFObservationResult
+    from nat.data_models.atif import ATIFStep
+    from nat.data_models.atif import ATIFTrajectory
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+    from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
+
+    trajectory = ATIFTrajectory(
+        session_id="observation-no-tools",
+        agent=ATIFAgentConfig(name="nat-agent", version="0.0.0"),
+        steps=[
+            ATIFStep(step_id=1, source="user", message="Summarize the latest result."),
+            ATIFStep(
+                step_id=2,
+                source="agent",
+                message="Here is what I found.",
+                observation=ATIFObservation(results=[ATIFObservationResult(content="The latest result is 188.0")], ),
+            ),
+        ],
+    )
+    samples = [AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj=None, output_obj=None, metadata={})]
+
+    evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn")
+    dataset = evaluator.atif_samples_to_ragas(samples)
+
+    sample = dataset.samples[0]
+    assert isinstance(sample, MultiTurnSample)
+    assert len(sample.user_input) == 2
+    assert isinstance(sample.user_input[0], RagasHumanMessage)
+    assert isinstance(sample.user_input[1], RagasAIMessage)
+    assert sample.user_input[1].tool_calls is None
+    assert sample.user_input[1].content == "Here is what I found.\n\nThe latest result is 188.0"
 
 
 def test_atif_samples_to_ragas_multi_turn_with_reference_tool_calls(ragas_judge_llm, ragas_metrics):
@@ -881,9 +909,7 @@ def test_atif_samples_to_ragas_multi_turn_with_reference_tool_calls(ragas_judge_
             metadata={"reference_tool_calls": ref_tool_calls},
         )
     ]
-    evaluator = RAGAtifEvaluator(
-        evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn"
-    )
+    evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, sample_type="multi_turn")
     dataset = evaluator.atif_samples_to_ragas(samples)
 
     sample = dataset.samples[0]
@@ -904,6 +930,19 @@ def test_default_sample_type_is_single_turn(ragas_judge_llm, ragas_metrics, atif
         assert isinstance(sample, SingleTurnSample)
 
 
+def test_ragas_evaluator_config_multi_turn_requires_atif_lane():
+    """Multi-turn sample conversion is only valid on the ATIF evaluator lane."""
+    from nat.plugins.ragas.rag_evaluator.register import RagasEvaluatorConfig
+
+    with pytest.raises(ValueError, match="sample_type='multi_turn' requires enable_atif_evaluator=True"):
+        RagasEvaluatorConfig(
+            llm_name="judge",
+            metric="AgentGoalAccuracyWithoutReference",
+            sample_type="multi_turn",
+            enable_atif_evaluator=False,
+        )
+
+
 async def test_register_ragas_evaluator_multi_turn_sample_type():
     """Ensure sample_type=multi_turn is wired through registration."""
     from nat.plugins.ragas.rag_evaluator.register import RagasEvaluatorConfig
@@ -915,7 +954,9 @@ async def test_register_ragas_evaluator_multi_turn_sample_type():
 
     config = RagasEvaluatorConfig(
         llm_name="judge",
-        metric={"AgentGoalAccuracyWithoutReference": {"skip": True}},
+        metric={"AgentGoalAccuracyWithoutReference": {
+            "skip": True
+        }},
         enable_atif_evaluator=True,
         sample_type="multi_turn",
     )

@@ -61,9 +61,11 @@ def _trajectory_to_retrieved_contexts(trajectory: ATIFTrajectory) -> list[str]:
     return contexts
 
 
-def _atif_step_to_ragas_messages(
-    step: ATIFStep,
-) -> list["HumanMessage | AIMessage | ToolMessage"]:
+def _join_non_empty(parts: Sequence[str], separator: str = "\n\n") -> str:
+    return separator.join([part for part in parts if part])
+
+
+def _atif_step_to_ragas_messages(step: ATIFStep, ) -> list["HumanMessage | AIMessage | ToolMessage"]:
     """Convert a single ATIF step into one or more RAGAS message objects.
 
     Mapping:
@@ -91,24 +93,33 @@ def _atif_step_to_ragas_messages(
     ragas_tool_calls = []
     if step.tool_calls:
         for tc in step.tool_calls:
-            ragas_tool_calls.append(
-                RagasToolCall(name=tc.function_name, args=tc.arguments)
-            )
+            ragas_tool_calls.append(RagasToolCall(name=tc.function_name, args=tc.arguments))
 
-    messages.append(RagasAIMessage(content=text, tool_calls=ragas_tool_calls or None))
-
+    observation_texts = []
     if step.observation and step.observation.results:
         for result in step.observation.results:
             tool_content = _observation_result_to_text(result)
             if tool_content:
-                messages.append(RagasToolMessage(content=tool_content))
+                observation_texts.append(tool_content)
+
+    # RAGAS only allows ToolMessage after an AIMessage with tool_calls.
+    # If ATIF contains observation results without explicit tool_calls,
+    # fold them into the AI content as a best-effort representation.
+    ai_content = text
+    if observation_texts and not ragas_tool_calls:
+        ai_content = _join_non_empty([text, *observation_texts])
+
+    messages.append(RagasAIMessage(content=ai_content, tool_calls=ragas_tool_calls or None))
+
+    if ragas_tool_calls:
+        for observation_text in observation_texts:
+            messages.append(RagasToolMessage(content=observation_text))
 
     return messages
 
 
 def _atif_trajectory_to_multi_turn_messages(
-    trajectory: ATIFTrajectory,
-) -> list["HumanMessage | AIMessage | ToolMessage"]:
+    trajectory: ATIFTrajectory, ) -> list["HumanMessage | AIMessage | ToolMessage"]:
     """Convert an entire ATIF trajectory into a RAGAS multi-turn message sequence."""
     messages: list = []
     for step in trajectory.steps:
