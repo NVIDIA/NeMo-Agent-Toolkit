@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Generator
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -178,11 +179,11 @@ class TestDynamoAdk:
     """Tests for the dynamo_adk wrapper."""
 
     @pytest.fixture
-    def mock_builder(self):
+    def mock_builder(self) -> MagicMock:
         return MagicMock()
 
     @pytest.fixture
-    def dynamo_cfg_no_prefix(self):
+    def dynamo_cfg_no_prefix(self) -> DynamoModelConfig:
         """Dynamo config without nvext hints (no custom client injection)."""
         return DynamoModelConfig(
             model_name="test-model",
@@ -191,7 +192,7 @@ class TestDynamoAdk:
         )
 
     @pytest.fixture
-    def dynamo_cfg_with_prefix(self):
+    def dynamo_cfg_with_prefix(self) -> DynamoModelConfig:
         """Dynamo config with nvext hints enabled (injects custom client)."""
         return DynamoModelConfig(
             model_name="test-model",
@@ -203,28 +204,35 @@ class TestDynamoAdk:
             enable_nvext_hints=True,
         )
 
+    @pytest.fixture(name="mock_create_http_client")
+    def mock_create_http_client_fixture(self) -> Generator[MagicMock]:
+        from nat.llm.utils.http_client import _create_http_client as orig_create_http_client
+        with patch('nat.llm.utils.http_client._create_http_client') as mock_create_http_client:
+            # Just capture the arguments
+            mock_create_http_client.side_effect = orig_create_http_client
+            yield mock_create_http_client
+
     @patch('google.adk.models.lite_llm.LiteLlm')
-    async def test_basic_creation_without_prefix(self, mock_litellm_class, dynamo_cfg_no_prefix, mock_builder):
+    async def test_basic_creation_without_prefix(self,
+                                                 mock_litellm_class: MagicMock,
+                                                 mock_create_http_client: MagicMock,
+                                                 dynamo_cfg_no_prefix: DynamoModelConfig,
+                                                 mock_builder: MagicMock):
         """Wrapper should create LiteLlm with client without the Dynamo transport when nvext hints are disabled."""
         mock_llm_instance = MagicMock()
         mock_litellm_class.return_value = mock_llm_instance
 
-        from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks as orig_create_client
+        async with dynamo_adk(dynamo_cfg_no_prefix, mock_builder) as client:
+            mock_litellm_class.assert_called_once()
+            kwargs = mock_litellm_class.call_args.kwargs
 
-        with patch('nat.llm.dynamo_llm._create_httpx_client_with_dynamo_hooks') as mock_create_client:
-            # Just capture the arguments
-            mock_create_client.side_effect = orig_create_client
+            assert mock_litellm_class.call_args.args[0] == "test-model"
+            assert kwargs["api_base"] == "http://localhost:8000/v1"
 
-            async with dynamo_adk(dynamo_cfg_no_prefix, mock_builder) as client:
-                mock_litellm_class.assert_called_once()
-                kwargs = mock_litellm_class.call_args.kwargs
-
-                assert mock_litellm_class.call_args.args[0] == "test-model"
-                assert kwargs["api_base"] == "http://localhost:8000/v1"
-
-                assert client is mock_llm_instance
-                mock_create_client.assert_called_once_with(dynamo_cfg_no_prefix)
-                assert "transport" not in mock_create_client.call_args.kwargs
+            assert client is mock_llm_instance
+            client_create_kwargs = mock_create_http_client.call_args.kwargs
+            assert client_create_kwargs["llm_config"] == dynamo_cfg_no_prefix
+            assert "transport" not in client_create_kwargs
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
