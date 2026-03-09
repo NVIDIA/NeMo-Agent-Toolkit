@@ -105,10 +105,13 @@ def test_fastmcp_cli_groups() -> None:
 def test_filter_change_set_excludes_noisy_files_by_glob() -> None:
     changes = {
         (Change.modified, "/tmp/server.log"),
+        (Change.modified, "/tmp/__pycache__"),
         (Change.modified, "/tmp/__pycache__/worker.pyc"),
         (Change.modified, "/tmp/worker.py"),
     }
-    filtered = _filter_change_set(changes, include_globs=(), exclude_globs=("*.log", "*__pycache__/*", "*.pyc"))
+    filtered = _filter_change_set(changes,
+                                  include_globs=(),
+                                  exclude_globs=("*.log", "*__pycache__", "*__pycache__/*", "*.pyc"))
     assert filtered == {(Change.modified, "/tmp/worker.py")}
 
 

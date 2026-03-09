@@ -31,6 +31,7 @@ DEFAULT_RELOAD_EXCLUDE_GLOBS: tuple[str, ...] = (
     "*.swp",
     "*.pyc",
     "*.pyo",
+    "*__pycache__",
     "*__pycache__/*",
 )
 
