@@ -245,11 +245,9 @@ class TestDynamoAdk:
 
         assert "transport" in mock_create_http_client.call_args.kwargs
 
-    @patch('httpx.AsyncClient')
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
-    def test_dynamo_verify_ssl(self, mock_async_client, verify_ssl):
+    def test_dynamo_verify_ssl(self, mock_httpx_async_client, verify_ssl):
         """verify_ssl from config is passed to httpx.AsyncClient as verify."""
-        mock_async_client.return_value = MagicMock()
         config = DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
@@ -258,8 +256,8 @@ class TestDynamoAdk:
 
         _create_httpx_client_with_dynamo_hooks(config)
 
-        mock_async_client.assert_called_once()
-        assert mock_async_client.call_args.kwargs["verify"] is verify_ssl
+        mock_httpx_async_client.assert_called_once()
+        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     @pytest.mark.asyncio
