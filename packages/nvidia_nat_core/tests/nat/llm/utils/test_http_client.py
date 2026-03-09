@@ -15,28 +15,21 @@
 """Unit tests for the HTTP client."""
 
 import sys
+import typing
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from pydantic import Field
 
-from nat.data_models.llm import LLMBaseConfig
-from nat.data_models.llm import SSLVerificationMixin
 from nat.llm.utils.http_client import _create_http_client
 from nat.llm.utils.http_client import _handle_litellm_verify_ssl
 
+from ._llm_models import LLMConfig
+from ._llm_models import LLMConfigWithSSL
+from ._llm_models import LLMConfigWithTimeout
 
-class LLMConfig(LLMBaseConfig):
-    pass
-
-
-class LLMConfigWithTimeout(LLMBaseConfig):
-    request_timeout: float | None = Field(default=None, gt=0.0, description="HTTP request timeout in seconds.")
-
-
-class LLMConfigWithSSL(LLMConfigWithTimeout, SSLVerificationMixin):
-    pass
+if typing.TYPE_CHECKING:
+    from nat.data_models.llm import LLMBaseConfig
 
 
 @pytest.mark.parametrize("use_async", [True, False], ids=["async", "sync"])
@@ -50,7 +43,7 @@ class LLMConfigWithSSL(LLMConfigWithTimeout, SSLVerificationMixin):
     ids=["no_request_timeout_attr", "request_timeout_none", "request_timeout_float"],
 )
 def test_create_http_client_timeout(
-    llm_config: LLMBaseConfig,
+    llm_config: "LLMBaseConfig",
     expected_timeout: float | None,
     use_async: bool,
     mock_httpx_async_client,
@@ -81,7 +74,7 @@ def test_create_http_client_timeout(
     ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
 )
 def test_create_http_client_verify_ssl(
-    llm_config: LLMBaseConfig,
+    llm_config: "LLMBaseConfig",
     expected_verify: bool | None,
     use_async: bool,
     mock_httpx_async_client,
@@ -110,7 +103,7 @@ def test_create_http_client_verify_ssl(
     ],
     ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
 )
-def test_handle_litellm_verify_ssl(llm_config: LLMBaseConfig, expected_value: bool):
+def test_handle_litellm_verify_ssl(llm_config: "LLMBaseConfig", expected_value: bool):
     """litellm.ssl_verify is set from config verify_ssl."""
     mock_litellm = MagicMock()
     with patch.dict(sys.modules, {"litellm": mock_litellm}):

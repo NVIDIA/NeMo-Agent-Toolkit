@@ -18,25 +18,14 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-from pydantic import Field
 from pytest_httpserver import HTTPServer
 
 from nat.builder.context import ContextState
-from nat.data_models.llm import LLMBaseConfig
-from nat.data_models.llm import SSLVerificationMixin
 from nat.llm.utils.hooks import _create_metadata_injection_client
 
-
-class LLMConfig(LLMBaseConfig):
-    pass
-
-
-class LLMConfigWithTimeout(LLMBaseConfig):
-    request_timeout: float | None = Field(default=None, gt=0.0, description="HTTP request timeout in seconds.")
-
-
-class LLMConfigWithSSL(LLMConfigWithTimeout, SSLVerificationMixin):
-    pass
+from ._llm_models import LLMConfig
+from ._llm_models import LLMConfigWithSSL
+from ._llm_models import LLMConfigWithTimeout
 
 
 class TestMetadataInjectionHook:
@@ -135,10 +124,12 @@ class TestCreateMetadataInjectionClient:
         import httpx
         captured: dict = {}
         real_async_client = httpx.AsyncClient
+
         def capture_async_client(*args, **kwargs):
             captured.clear()
             captured.update(kwargs)
             return real_async_client(*args, **kwargs)
+
         with patch.object(httpx, "AsyncClient", side_effect=capture_async_client):
             client = _create_metadata_injection_client(llm_config=llm_config)
             if expected_timeout is None:
@@ -161,10 +152,12 @@ class TestCreateMetadataInjectionClient:
         import httpx
         captured: dict = {}
         real_async_client = httpx.AsyncClient
+
         def capture_async_client(*args, **kwargs):
             captured.clear()
             captured.update(kwargs)
             return real_async_client(*args, **kwargs)
+
         with patch.object(httpx, "AsyncClient", side_effect=capture_async_client):
             client = _create_metadata_injection_client(llm_config=llm_config)
             if expected_verify is None:
