@@ -238,10 +238,9 @@ class TestDynamoAdk:
             verify_ssl=verify_ssl,
         )
 
-        _create_httpx_client_with_dynamo_hooks(config)
-
-        mock_httpx_async_client.assert_called_once()
-        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+        async for _ in _create_httpx_client_with_dynamo_hooks(config):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
     @patch('google.adk.models.lite_llm.LiteLlm')
     async def test_excludes_dynamo_specific_fields(self,
