@@ -463,6 +463,16 @@ $ nat fastmcp server dev --config_file examples/getting_started/simple_calculato
   --watch-path examples/getting_started/simple_calculator/src
 ```
 
+To avoid restart loops when watched directories include logs or temporary artifacts, use reload filters:
+
+```console
+$ nat fastmcp server dev --config_file examples/getting_started/simple_calculator/configs/config.yml \
+  --watch-path examples/getting_started/simple_calculator/src \
+  --reload-include-glob "*.py" \
+  --reload-include-glob "*.yml" \
+  --reload-exclude-glob "*.log"
+```
+
 ```console
 $ nat fastmcp server install nat-workflow --url http://localhost:9902/mcp --name mcp_math
 ```
