@@ -54,11 +54,11 @@ def _create_http_client(llm_config: "LLMBaseConfig",
 
 
 @contextlib.contextmanager
-def http_client(llm_config: "LLMBaseConfig") -> "httpx.Client":
+def http_client(llm_config: "LLMBaseConfig", **kwargs) -> "httpx.Client":
     """
     Context manager for a synchronous httpx client, to ensure that the client is properly closed after use.
     """
-    client = _create_http_client(llm_config, use_async=False)
+    client = _create_http_client(llm_config=llm_config, use_async=False, **kwargs)
     try:
         yield client
     finally:
@@ -66,11 +66,11 @@ def http_client(llm_config: "LLMBaseConfig") -> "httpx.Client":
 
 
 @contextlib.asynccontextmanager
-async def async_http_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
+async def async_http_client(llm_config: "LLMBaseConfig", **kwargs) -> "httpx.AsyncClient":
     """
     Async context manager for an asynchronous httpx client, to ensure that the client is properly closed after use.
     """
-    client = _create_http_client(llm_config, use_async=True)
+    client = _create_http_client(llm_config=llm_config, use_async=True, **kwargs)
     try:
         yield client
     finally:
@@ -78,15 +78,15 @@ async def async_http_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
 
 
 @contextlib.asynccontextmanager
-async def http_clients(llm_config: "LLMBaseConfig") -> dict[str, "httpx.AsyncClient | httpx.Client"]:
+async def http_clients(llm_config: "LLMBaseConfig", **kwargs) -> dict[str, "httpx.AsyncClient | httpx.Client"]:
     """
     Get a dictionary of HTTP clients, one sync one async.
 
     This is a wrapper around `async_http_client` and `http_client`, useful for LLMs that support both sync and async
     clients.
     """
-    async with async_http_client(llm_config) as async_client:
-        with http_client(llm_config) as sync_client:
+    async with async_http_client(llm_config, **kwargs) as async_client:
+        with http_client(llm_config, **kwargs) as sync_client:
             yield {"http_client": sync_client, "async_http_client": async_client}
 
 

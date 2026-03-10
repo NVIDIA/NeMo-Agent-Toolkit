@@ -204,6 +204,7 @@ class TestDynamoAdk:
             assert kwargs["api_base"] == "http://localhost:8000/v1"
 
             assert client is mock_llm_instance
+            mock_create_http_client.assert_called_once()
             client_create_kwargs = mock_create_http_client.call_args.kwargs
             assert client_create_kwargs["llm_config"] == dynamo_cfg_no_prefix
             assert "transport" not in client_create_kwargs
