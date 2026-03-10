@@ -201,7 +201,7 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
-    async for http_client in _create_http_client_with_dynamo_hooks(config):
+    async for http_client in _create_httpx_client_with_dynamo_hooks(config):
 
         api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
         base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
