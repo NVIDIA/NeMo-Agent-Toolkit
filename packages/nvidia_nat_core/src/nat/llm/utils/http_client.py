@@ -52,6 +52,18 @@ def _create_http_client(llm_config: "LLMBaseConfig",
     return client_class(**kwargs)
 
 
+def _get_http_clients(llm_config: LLMBaseConfig) -> dict[str, "httpx.AsyncClient | httpx.Client"]:
+    """
+    Get a dictionary of HTTP clients, one sync one async.
+
+    This is a wrapper around `_create_http_client`, useful for LLMs that support both sync and async clients.
+    """
+    return {
+        "http_client": _create_http_client(llm_config, use_async=False),
+        "async_http_client": _create_http_client(llm_config, use_async=True)
+    }
+
+
 def _handle_litellm_verify_ssl(llm_config: "LLMBaseConfig") -> None:
     """
     Disable SSL verification for litellm if verify_ssl is set to False in the LLM configuration.

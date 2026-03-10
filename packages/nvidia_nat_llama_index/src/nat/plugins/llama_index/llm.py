@@ -30,7 +30,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.llm.utils.http_client import _create_http_client
+from nat.llm.utils.http_client import _get_http_clients
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -83,14 +83,6 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
             ))
 
     return client
-
-
-def _get_http_clients(llm_config: LLMBaseConfig) -> dict[str, "httpx.AsyncClient | httpx.Client"]:
-    """Get a dictionary of HTTP clients, one sync one async."""
-    return {
-        "http_client": _create_http_client(llm_config, use_async=False),
-        "async_http_client": _create_http_client(llm_config, use_async=True)
-    }
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
