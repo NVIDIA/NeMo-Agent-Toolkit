@@ -130,9 +130,7 @@ async def test_litellm_verify_ssl(mock_litellm_class, mock_handle_verify_ssl, ve
     config = OpenAIModelConfig(model_name="gpt-4", verify_ssl=verify_ssl)
 
     async with openai_adk(config, mock_builder):
-        pass
-
-    mock_handle_verify_ssl.assert_called_once_with(verify_ssl)
+        mock_handle_verify_ssl.assert_called_once_with(config)
 
 
 async def test_litellm_adk_decorator_registration():
