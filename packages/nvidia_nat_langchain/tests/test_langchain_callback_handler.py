@@ -99,7 +99,11 @@ def test_extract_tools_schema_openai_format():
                 "name": "get_weather",
                 "description": "Get the current weather",
                 "parameters": {
-                    "properties": {"location": {"type": "string"}},
+                    "properties": {
+                        "location": {
+                            "type": "string"
+                        }
+                    },
                     "required": ["location"],
                 },
             },
@@ -121,8 +125,12 @@ def test_extract_tools_schema_anthropic_format():
             "input_schema": {
                 "type": "object",
                 "properties": {
-                    "query": {"type": "string", "description": "Search query"},
-                    "limit": {"type": "integer", "description": "Max results"},
+                    "query": {
+                        "type": "string", "description": "Search query"
+                    },
+                    "limit": {
+                        "type": "integer", "description": "Max results"
+                    },
                 },
                 "required": ["query"],
             },
@@ -148,7 +156,11 @@ def test_extract_tools_schema_mixed_formats():
                     "name": "openai_tool",
                     "description": "An OpenAI-format tool",
                     "parameters": {
-                        "properties": {"x": {"type": "integer"}},
+                        "properties": {
+                            "x": {
+                                "type": "integer"
+                            }
+                        },
                         "required": ["x"],
                     },
                 },
@@ -158,7 +170,11 @@ def test_extract_tools_schema_mixed_formats():
                 "description": "An Anthropic-format tool",
                 "input_schema": {
                     "type": "object",
-                    "properties": {"y": {"type": "string"}},
+                    "properties": {
+                        "y": {
+                            "type": "string"
+                        }
+                    },
                     "required": [],
                 },
             },
@@ -178,7 +194,11 @@ def test_extract_tools_schema_anthropic_additional_properties():
             "description": "A tool that allows extra keys",
             "input_schema": {
                 "type": "object",
-                "properties": {"a": {"type": "string"}},
+                "properties": {
+                    "a": {
+                        "type": "string"
+                    }
+                },
                 "required": [],
                 "additionalProperties": True,
             },
@@ -199,12 +219,18 @@ def test_extract_tools_schema_skips_unparseable_tool():
                 "description": "A valid Anthropic tool",
                 "input_schema": {
                     "type": "object",
-                    "properties": {"q": {"type": "string"}},
+                    "properties": {
+                        "q": {
+                            "type": "string"
+                        }
+                    },
                     "required": ["q"],
                 },
             },
             # Missing "name" — should be skipped by both parsers
-            {"description": "no name field"},
+            {
+                "description": "no name field"
+            },
         ]
     }
     result = _extract_tools_schema(invocation_params)
