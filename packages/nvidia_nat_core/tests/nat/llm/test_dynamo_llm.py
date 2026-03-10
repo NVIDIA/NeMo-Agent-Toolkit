@@ -486,9 +486,9 @@ class TestCreateHttpxClient:
         ids=["default_verify_ssl", "verify_ssl_true", "verify_ssl_false"],
     )
     async def test_verify_ssl_passed_to_client(self,
-                                                config: DynamoModelConfig,
-                                                expected_verify: bool,
-                                                mock_httpx_async_client):
+                                               config: DynamoModelConfig,
+                                               expected_verify: bool,
+                                               mock_httpx_async_client):
         """Verify that verify_ssl from config is passed to the underlying httpx.AsyncClient as verify."""
         async with _create_httpx_client_with_dynamo_hooks(config):
             pass
