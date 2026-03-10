@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
@@ -24,8 +22,6 @@ from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
 from nat.llm.utils.http_client import _get_http_clients
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
-
-logger = logging.getLogger(__name__)
 
 
 @register_embedder_client(config_type=AzureOpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -57,7 +53,7 @@ async def nim_llama_index(embedder_config: NIMEmbedderModelConfig, _builder: Bui
     from llama_index.embeddings.nvidia import NVIDIAEmbedding  # pylint: disable=no-name-in-module
 
     if not embedder_config.verify_ssl:
-        logger.warning("verify_ssl is currently not supported for NVIDIAEmbedding.")
+        raise ValueError("verify_ssl is currently not supported for NVIDIAEmbedding.")
 
     client = NVIDIAEmbedding(
         **embedder_config.model_dump(exclude={"model_name", "type", "verify_ssl"},
@@ -95,8 +91,4 @@ async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, _builde
                                   retry_codes=embedder_config.retry_on_status_codes,
                                   retry_on_messages=embedder_config.retry_on_errors)
 
-    yield client
-    yield client
-    yield client
-    yield client
     yield client
