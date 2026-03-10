@@ -82,11 +82,6 @@ class TestBedrockStrands:
     """Tests for the bedrock_strands function."""
 
     @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def bedrock_config(self):
         """Create an AWSBedrockModelConfig instance."""
         return AWSBedrockModelConfig(
@@ -126,11 +121,6 @@ class TestBedrockStrands:
 
 class TestNIMStrands:
     """Tests for the nim_strands function."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def nim_config(self):
