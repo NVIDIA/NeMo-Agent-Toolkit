@@ -27,13 +27,21 @@ from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.plugins.langchain.llm import aws_bedrock_langchain
 from nat.plugins.langchain.llm import azure_openai_langchain
 from nat.plugins.langchain.llm import dynamo_langchain
+from nat.plugins.langchain.llm import litellm_langchain
 from nat.plugins.langchain.llm import nim_langchain
 from nat.plugins.langchain.llm import openai_langchain
+
+
+@pytest.fixture
+def mock_builder():
+    return MagicMock(spec=Builder)
+
 
 # ---------------------------------------------------------------------------
 # NIM → LangChain wrapper tests
@@ -42,10 +50,6 @@ from nat.plugins.langchain.llm import openai_langchain
 
 class TestNimLangChain:
     """Tests for the nim_langchain wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def nim_cfg(self):
@@ -93,10 +97,6 @@ class TestNimLangChain:
 
 class TestOpenAILangChain:
     """Tests for the openai_langchain wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def oa_cfg(self):
@@ -164,10 +164,6 @@ class TestAzureOpenAILangChain:
     """Tests for the azure_openai_langchain wrapper."""
 
     @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def azure_cfg(self):
         return AzureOpenAIModelConfig(
             azure_deployment="gpt-4",
@@ -178,9 +174,12 @@ class TestAzureOpenAILangChain:
 
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
     @patch("langchain_openai.AzureChatOpenAI")
-    async def test_verify_ssl_passed_to_client(
-        self, mock_chat, azure_cfg, mock_builder, mock_httpx_async_client, verify_ssl
-    ):
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_chat,
+                                               azure_cfg,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
         """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
         mock_httpx_async_client.aclose = AsyncMock()
         azure_cfg.verify_ssl = verify_ssl
@@ -197,10 +196,6 @@ class TestAzureOpenAILangChain:
 
 class TestBedrockLangChain:
     """Tests for the aws_bedrock_langchain wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def bedrock_cfg(self):
@@ -233,10 +228,6 @@ class TestBedrockLangChain:
 
 class TestDynamoLangChain:
     """Tests for the dynamo_langchain wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def dynamo_cfg_no_prefix(self):
@@ -373,15 +364,46 @@ class TestDynamoLangChain:
 
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
     @patch("langchain_openai.ChatOpenAI")
-    async def test_verify_ssl_passed_to_client(
-        self, mock_chat, dynamo_cfg_no_prefix, mock_builder, mock_httpx_async_client, verify_ssl
-    ):
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_chat,
+                                               dynamo_cfg_no_prefix,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
         """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
         dynamo_cfg_no_prefix.verify_ssl = verify_ssl
         async with dynamo_langchain(dynamo_cfg_no_prefix, mock_builder):
             pass
         mock_httpx_async_client.assert_called_once()
         assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+
+# ---------------------------------------------------------------------------
+# LiteLLM → LangChain wrapper tests
+# ---------------------------------------------------------------------------
+
+
+class TestLiteLlmLangChain:
+    """Tests for the litellm_langchain wrapper."""
+
+    @pytest.fixture
+    def litellm_cfg(self):
+        return LiteLlmModelConfig(model_name="gpt-4", base_url="http://localhost:4000", api_key="test-key")
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("nat.llm.utils.http_client._handle_litellm_verify_ssl")
+    @patch("langchain_litellm.ChatLiteLLM")
+    async def test_verify_ssl_calls_handle_litellm_verify_ssl(self,
+                                                              mock_chat,
+                                                              mock_handle_verify_ssl,
+                                                              litellm_cfg,
+                                                              mock_builder,
+                                                              verify_ssl):
+        """Test that litellm_langchain calls _handle_litellm_verify_ssl with the config's verify_ssl value."""
+        litellm_cfg.verify_ssl = verify_ssl
+        async with litellm_langchain(litellm_cfg, mock_builder):
+            pass
+        mock_handle_verify_ssl.assert_called_once_with(verify_ssl)
 
 
 # ---------------------------------------------------------------------------
