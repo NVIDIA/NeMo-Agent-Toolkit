@@ -49,7 +49,8 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
     )
     input_obj_field: str | None = Field(
         default=None,
-        description="The field in the input object that contains the content to evaluate.",
+        description=("Legacy lane only: field in `input_obj` used as `user_input` for ragas scoring. "
+                     "ATIF lane derives `user_input` from trajectory."),
     )
     enable_atif_evaluator: bool = Field(
         default=False,
@@ -96,8 +97,8 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
 async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBuilder):
 
     def get_ragas_metric(metric_name: str):
-        """Fetch metric constructor from v0.4 collections, falling back to legacy namespace."""
-        module_names = ("ragas.metrics.collections", "ragas.metrics")
+        """Fetch metric constructor from the v0.4 collections namespace."""
+        module_names = ("ragas.metrics.collections", )
         for module_name in module_names:
             try:
                 module = import_module(module_name)

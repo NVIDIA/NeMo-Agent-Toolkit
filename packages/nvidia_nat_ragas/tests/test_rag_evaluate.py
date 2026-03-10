@@ -22,6 +22,7 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
+from ragas.metrics.result import MetricResult
 
 langchain_exceptions = pytest.importorskip("langchain_core.exceptions")
 if not hasattr(langchain_exceptions, "ContextOverflowError"):
@@ -114,17 +115,12 @@ def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
 
 
 def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_adapter):
-    """Test eval_input mapping to ragasas dataset"""
-    from ragas import EvaluationDataset
+    """Test item-level mapping to ragas samples."""
     from ragas import SingleTurnSample
 
-    # call actual function
-    dataset = rag_evaluator.eval_input_to_ragas(rag_eval_input)
-
-    assert isinstance(dataset, EvaluationDataset)
-    assert len(dataset.samples) == len(rag_eval_input.eval_input_items)
-
-    for sample, item in zip(dataset.samples, rag_eval_input.eval_input_items):
+    samples = [rag_evaluator._eval_input_item_to_ragas(item) for item in rag_eval_input.eval_input_items]
+    assert len(samples) == len(rag_eval_input.eval_input_items)
+    for sample, item in zip(samples, rag_eval_input.eval_input_items):
         # check if the contents of the ragas dataset match the original EvalInput
         assert isinstance(sample, SingleTurnSample)
         assert sample.user_input == item.input_obj
@@ -137,15 +133,18 @@ def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_ad
 async def test_rag_evaluate_success(rag_evaluator, rag_eval_input):
     """
     Test evaluate function to verify the following functions are called
-    1. `score_metric` is invoked once per input item.
+    1. `score_metric_result` is invoked once per input item.
     2. Returned `EvalOutput` has expected averaged score and item count.
 
     Only limited coverage is possible via unit tests as most of the functionality is
     implemented within the ragas framework. The simple example's end-to-end test covers functional
     testing.
     """
-    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric", new_callable=AsyncMock,
-               return_value=0.8) as mock_score_metric:
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric_result",
+               new_callable=AsyncMock,
+               return_value=MetricResult(value=0.8, reason="ok", traces={
+                   "input": {}, "output": {}
+               })) as mock_score_metric:
         output = await rag_evaluator.evaluate(rag_eval_input)
 
     assert mock_score_metric.await_count == len(rag_eval_input.eval_input_items)
@@ -162,7 +161,7 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input):
 
     error_message = "Mocked exception in metric.ascore"
 
-    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric",
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric_result",
                new_callable=AsyncMock,
                side_effect=Exception(error_message)) as mock_score_metric:
 
@@ -182,18 +181,16 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input):
 
 
 def test_atif_samples_to_ragas(ragas_judge_llm, ragas_metrics, atif_samples):
-    """Test ATIF sample mapping to ragas dataset."""
-    from ragas import EvaluationDataset
+    """Test ATIF sample mapping to ragas single-turn samples."""
     from ragas import SingleTurnSample
 
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
-    dataset = atif_evaluator.atif_samples_to_ragas(atif_samples)
+    ragas_samples = [atif_evaluator._atif_sample_to_ragas(sample) for sample in atif_samples]
 
-    assert isinstance(dataset, EvaluationDataset)
-    assert len(dataset.samples) == len(atif_samples)
-    for sample in dataset.samples:
+    assert len(ragas_samples) == len(atif_samples)
+    for sample in ragas_samples:
         assert isinstance(sample, SingleTurnSample)
         assert sample.retrieved_contexts == ["retrieved context"]
 
@@ -207,9 +204,11 @@ async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_sa
     dataset.__len__.return_value = len(dataset.samples)
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
 
-    with patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric",
+    with patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric_result",
                new_callable=AsyncMock,
-               return_value=0.6) as mock_score_metric:
+               return_value=MetricResult(value=0.6, reason="ok", traces={
+                   "input": {}, "output": {}
+               })) as mock_score_metric:
         output = await atif_evaluator.evaluate(atif_samples)
 
         assert mock_score_metric.await_count == len(atif_samples)
@@ -255,11 +254,11 @@ def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
                            metadata={}))
 
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
-    legacy_dataset = rag_evaluator.eval_input_to_ragas(rag_eval_input)
-    atif_dataset = atif_evaluator.atif_samples_to_ragas(atif_samples)
+    legacy_samples = [rag_evaluator._eval_input_item_to_ragas(item) for item in rag_eval_input.eval_input_items]
+    atif_ragas_samples = [atif_evaluator._atif_sample_to_ragas(sample) for sample in atif_samples]
 
-    assert len(legacy_dataset.samples) == len(atif_dataset.samples)
-    for legacy_sample, atif_sample in zip(legacy_dataset.samples, atif_dataset.samples):
+    assert len(legacy_samples) == len(atif_ragas_samples)
+    for legacy_sample, atif_sample in zip(legacy_samples, atif_ragas_samples):
         assert legacy_sample.user_input == atif_sample.user_input
         assert legacy_sample.reference == atif_sample.reference
         assert legacy_sample.response == atif_sample.response
@@ -294,11 +293,9 @@ def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
     ]
 
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
-    dataset = atif_evaluator.atif_samples_to_ragas(atif_samples)
-
-    assert len(dataset.samples) == 1
-    assert dataset.samples[0].user_input == expected_user_input
-    assert dataset.samples[0].retrieved_contexts == expected_contexts
+    ragas_sample = atif_evaluator._atif_sample_to_ragas(atif_samples[0])
+    assert ragas_sample.user_input == expected_user_input
+    assert ragas_sample.retrieved_contexts == expected_contexts
 
 
 async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
@@ -316,7 +313,8 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
     async def _mock_score_metric(_metric, sample):
-        return 0.5 + (0.5 if sample.retrieved_contexts else 0.0)
+        score = 0.5 + (0.5 if sample.retrieved_contexts else 0.0)
+        return MetricResult(value=score, reason="mock", traces={"input": {}, "output": {}})
 
     atif_samples = []
     for item in rag_eval_input.eval_input_items:
@@ -342,10 +340,10 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
                            metadata={}))
 
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
-    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric",
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric_result",
                new_callable=AsyncMock,
                side_effect=_mock_score_metric), \
-         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric",
+         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric_result",
                new_callable=AsyncMock,
                side_effect=_mock_score_metric):
         legacy_output = await rag_evaluator.evaluate(rag_eval_input)
@@ -363,7 +361,7 @@ def test_extract_input_obj_base_model_with_field(rag_evaluator_content):
     model_obj = ExampleModel(content="hello world", other="ignore me")
     dummy_item = SimpleNamespace(input_obj=model_obj)
 
-    extracted = rag_evaluator_content.extract_input_obj(dummy_item)
+    extracted = rag_evaluator_content._extract_input_obj(dummy_item)
     assert extracted == "hello world"
 
 
@@ -372,7 +370,7 @@ def test_extract_input_obj_dict_with_field(rag_evaluator_content):
     dict_obj = {"content": "dict hello", "other": 123}
     dummy_item = SimpleNamespace(input_obj=dict_obj)
 
-    extracted = rag_evaluator_content.extract_input_obj(dummy_item)
+    extracted = rag_evaluator_content._extract_input_obj(dummy_item)
     assert extracted == "dict hello"
 
 
@@ -384,8 +382,8 @@ def test_extract_input_obj_base_model_without_field(rag_evaluator, rag_evaluator
     model_obj = ExampleModel(content="json hello", other="data")
     dummy_item = SimpleNamespace(input_obj=model_obj)
 
-    extracted_default = rag_evaluator.extract_input_obj(dummy_item)
-    extracted_with_field = rag_evaluator_content.extract_input_obj(dummy_item)
+    extracted_default = rag_evaluator._extract_input_obj(dummy_item)
+    extracted_with_field = rag_evaluator_content._extract_input_obj(dummy_item)
 
     # Default evaluator returns the full JSON string, evaluator with field returns the field value.
     assert extracted_with_field == "json hello"

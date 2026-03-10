@@ -14,27 +14,21 @@
 # limitations under the License.
 
 import logging
-import typing
 from collections.abc import Sequence
 
 from pydantic import BaseModel
 
-from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
+from ragas import SingleTurnSample
+from ragas.metrics.base import SimpleBaseMetric
 
+from .data_models import EvalOutputItemRagasReasoning
+from .utils import extract_metric_score
 from .utils import nan_to_zero
-from .utils import score_metric
-
-if typing.TYPE_CHECKING:
-    # We are lazily importing ragas to avoid import-time side effects such as applying the nest_asyncio patch, which is
-    # not compatible with Python 3.12+, we want to ensure that we are able to apply the nest_asyncio2 patch instead.
-    from ragas import EvaluationDataset
-    from ragas.llms import LangchainLLMWrapper
-    from ragas.metrics import Metric
+from .utils import score_metric_result
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +36,8 @@ logger = logging.getLogger(__name__)
 class RAGEvaluator(BaseEvaluator):
 
     def __init__(self,
-                 evaluator_llm: "LangchainLLMWrapper",
-                 metrics: Sequence["Metric"],
+                 evaluator_llm: object,
+                 metrics: Sequence[SimpleBaseMetric],
                  max_concurrency=8,
                  input_obj_field: str | None = None):
         metric_name = metrics[0].name if metrics else "no-metrics"
@@ -51,7 +45,7 @@ class RAGEvaluator(BaseEvaluator):
         self.metrics = metrics
         self.input_obj_field = input_obj_field
 
-    def extract_input_obj(self, item: EvalInputItem) -> str:
+    def _extract_input_obj(self, item: EvalInputItem) -> str:
         """Extracts the input object from EvalInputItem based on the configured input_obj_field."""
         input_obj = item.input_obj
         if isinstance(input_obj, BaseModel):
@@ -70,15 +64,14 @@ class RAGEvaluator(BaseEvaluator):
 
         return str(input_obj)  # Fallback to string representation of the dict
 
-    def eval_input_item_to_ragas(self, item: EvalInputItem):
+    def _eval_input_item_to_ragas(self, item: EvalInputItem):
         """Convert one `EvalInputItem` into a ragas `SingleTurnSample`."""
         from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
-        from ragas import SingleTurnSample
 
         event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
         intermediate_step_adapter = IntermediateStepAdapter()
 
-        user_input = self.extract_input_obj(item)
+        user_input = self._extract_input_obj(item)
         reference = item.expected_output_obj
         response = item.output_obj
         reference_contexts = [""]
@@ -90,36 +83,28 @@ class RAGEvaluator(BaseEvaluator):
                                 reference_contexts=reference_contexts,
                                 retrieved_contexts=retrieved_contexts)
 
-    def eval_input_to_ragas(self, eval_input: EvalInput) -> "EvaluationDataset":
-        """Converts EvalInput into a Ragas-compatible EvaluationDataset."""
-        from ragas import EvaluationDataset
-        samples = [self.eval_input_item_to_ragas(item) for item in eval_input.eval_input_items]
-        return EvaluationDataset(samples=samples)
-
     async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
         """Run configured ragas metric for one eval item and return one output item."""
         if not self.metrics:
             raise ValueError("No RAGAS metrics configured.")
 
         metric = self.metrics[0]
-        sample = self.eval_input_item_to_ragas(item)
-        raw_score = await score_metric(metric, sample)
+        ragas_sample = self._eval_input_item_to_ragas(item)
+        metric_result = await score_metric_result(metric, ragas_sample)
+        raw_score = extract_metric_score(metric_result)
         score = nan_to_zero(raw_score)
+        # stash the input and the ragas reasoning for analysis later
+        reasoning = EvalOutputItemRagasReasoning(
+            user_input=ragas_sample.user_input,
+            reference=ragas_sample.reference,
+            response=ragas_sample.response,
+            retrieved_contexts=ragas_sample.retrieved_contexts,
+            ragas_reason=metric_result.reason,
+            ragas_traces=metric_result.traces,
+        )
 
         return EvalOutputItem(
             id=item.id,
             score=score,
-            reasoning={
-                "user_input": sample.user_input,
-                "reference": sample.reference,
-                "response": sample.response,
-                "retrieved_contexts": sample.retrieved_contexts,
-            },
+            reasoning=reasoning.model_dump(exclude_none=True),
         )
-
-    async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
-        """Run Ragas metrics evaluation on the provided eval input."""
-        if not self.metrics:
-            logger.warning("No RAGAS metrics configured for evaluator; returning empty results.")
-            return EvalOutput(average_score=0.0, eval_output_items=[])
-        return await super().evaluate(eval_input)
