@@ -41,7 +41,8 @@ async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig
                                          exclude_none=True,
                                          exclude_unset=True),
             api_version=embedder_config.api_version,
-            **http_clients_dict,
+            http_client=http_clients_dict["http_client"],
+            http_async_client=http_clients_dict["async_http_client"],
         )
 
         if isinstance(embedder_config, RetryMixin):
@@ -82,7 +83,9 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
                                          by_alias=True,
                                          exclude_none=True,
                                          exclude_unset=True),
-            **http_clients_dict)
+            http_client=http_clients_dict["http_client"],
+            http_async_client=http_clients_dict["async_http_client"],
+        )
 
         if isinstance(embedder_config, RetryMixin):
             client = patch_with_retry(client,
