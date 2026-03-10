@@ -92,13 +92,9 @@ def ragas_judge_llm() -> "LangchainLLMWrapper":
 
 @pytest.fixture
 def ragas_metrics() -> "Sequence[Metric]":
-    """Fixture to provide mocked ragas metrics"""
+    """Fixture to provide a single mocked ragas metric."""
     from ragas.metrics import Metric
-    metric_names = ["AnswerAccuracy", "ContextRelevance", "ResponseGroundedness"]
-    # Create mocked Metric objects for each metric name
-    mocked_metrics = [MagicMock(spec=Metric, name=name) for name in metric_names]
-
-    return mocked_metrics
+    return [MagicMock(spec=Metric, name="AnswerAccuracy")]
 
 
 @pytest.fixture

@@ -53,9 +53,3 @@ def build_metric_kwargs(sample: object) -> dict[str, str | list[str]]:
 async def score_metric_result(metric: SimpleBaseMetric, sample: object) -> MetricResult:
     """Run one metric and return raw ragas `MetricResult`."""
     return await metric.ascore(**build_metric_kwargs(sample))
-
-
-async def score_metric(metric: SimpleBaseMetric, sample: object) -> float | None:
-    """Score a single sample with one metric via v0.4-style async API."""
-    score_result = await score_metric_result(metric, sample)
-    return extract_metric_score(score_result)
