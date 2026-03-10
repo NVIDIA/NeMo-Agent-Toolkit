@@ -688,22 +688,22 @@ class JwtAuthPayload(BaseModel):
     """JWT Bearer token authentication payload."""
     model_config = ConfigDict(extra="forbid")
     method: typing.Literal[AuthMethod.JWT] = Field(description="Authentication method discriminator.")
-    token: SerializableSecretStr = Field(description="Encoded JWT Bearer token.")
+    token: SerializableSecretStr = Field(min_length=1, description="Encoded JWT Bearer token.")
 
 
 class ApiKeyAuthPayload(BaseModel):
     """API key authentication payload."""
     model_config = ConfigDict(extra="forbid")
     method: typing.Literal[AuthMethod.API_KEY] = Field(description="Authentication method discriminator.")
-    token: SerializableSecretStr = Field(description="API key token.")
+    token: SerializableSecretStr = Field(min_length=1, description="API key token.")
 
 
 class BasicAuthPayload(BaseModel):
     """Username/password authentication payload."""
     model_config = ConfigDict(extra="forbid")
     method: typing.Literal[AuthMethod.BASIC] = Field(description="Authentication method discriminator.")
-    username: str = Field(description="Username for basic authentication.")
-    password: SerializableSecretStr = Field(description="Password for basic authentication.")
+    username: str = Field(min_length=1, description="Username for basic authentication.")
+    password: SerializableSecretStr = Field(min_length=1, description="Password for basic authentication.")
 
 
 AuthPayload = typing.Annotated[

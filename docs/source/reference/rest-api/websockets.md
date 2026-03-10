@@ -52,8 +52,8 @@ to the client.
     - Format: String for text messages and array for contents which can have attachments such as image, audio and videos. See above example.
     -   Attachments support OpenAI compatible chat objects such as (Default, Image, Audio, and Streaming)
 - `status`: Indicates the processing state of the message.
-    - Possible values: `in_progress`, `completed`, `failed`.
-    - Optional: Typically used for system messages.
+    - For system messages: `in_progress`, `completed`, `failed`.
+    - For `auth_response_message`: `success`, `error`.
 - `timestamp`: Captures when the message was created or updated.
      - Format: ISO 8601 (e.g., `2025-01-13T10:00:00Z`).
  - `user`: Stores user information - OPTIONAL
@@ -159,8 +159,8 @@ Definition: This message contains the response content from the human in the loo
 Definition: This message allows clients to authenticate over a WebSocket connection when header-based or
 cookie-based authentication is not feasible (e.g., browser WebSocket APIs that do not support custom headers).
 The server validates the credentials, resolves a user identity, and associates it with the current session.
-On success, the server responds with a `system_response_message` confirming the authenticated user. On failure,
-an `error_message` is returned.
+The server responds with an `auth_response_message` in both cases — with `status: "success"` and the resolved
+`user_id` on success, or `status: "error"` with structured error details on failure.
 
 The `payload` field uses a discriminated union on the `method` field. Exactly one of the following payload types
 must be provided:
@@ -169,7 +169,7 @@ must be provided:
 |-----------|------------------------------|------------------------------------|
 | `jwt`     | `token`                      | Encoded JWT Bearer token           |
 | `api_key` | `token`                      | API key token                      |
-| `basic`   | `username`, `password`       | Username/password credentials      |
+| `basic`   | `username`, `password`       | Username and password credentials  |
 
 #### JWT Auth Message Example:
 ```json
@@ -177,7 +177,7 @@ must be provided:
   "type": "auth_message",
   "payload": {
     "method": "jwt",
-    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "token": "<jwt-token>"
   }
 }
 ```
@@ -188,7 +188,7 @@ must be provided:
   "type": "auth_message",
   "payload": {
     "method": "api_key",
-    "token": "nvapi-abc123..."
+    "token": "<api-key>"
   }
 }
 ```
@@ -199,8 +199,8 @@ must be provided:
   "type": "auth_message",
   "payload": {
     "method": "basic",
-    "username": "john.doe",
-    "password": "s3cret"
+    "username": "<username>",
+    "password": "<password>"
   }
 }
 ```
@@ -272,7 +272,7 @@ Definition: This message contains the final response content from a running work
 ```
 
 ### System Response Token Message, Type: `error_message`
-Definition: This message sends various types of error content to the client. The `content` object matches the Error model: `code` is one of `unknown_error`, `workflow_error`, `invalid_message`, `invalid_message_type`, `invalid_user_message_content`, `invalid_data_content`; `message` and `details` are strings.
+Definition: This message sends various types of error content to the client. The `content` object matches the Error model: `code` is one of `unknown_error`, `workflow_error`, `invalid_message`, `invalid_message_type`, `invalid_user_message_content`, `invalid_data_content`, `user_auth_error`; `message` and `details` are strings.
 #### System Response Token Message Error Type Example:
 ```json
 {

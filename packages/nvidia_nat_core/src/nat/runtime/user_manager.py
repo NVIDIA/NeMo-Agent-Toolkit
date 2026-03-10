@@ -76,6 +76,12 @@ class UserManager:
     def _from_auth_payload(payload: AuthPayload) -> UserInfo:
         """Resolve a ``UserInfo`` from a WebSocket auth message payload.
 
+        This is an identity resolver, not an authenticator.  JWTs are decoded
+        with ``verify_signature=False`` to extract identity claims; API keys and
+        basic credentials are mapped directly.  Clients should verify and
+        authenticate credentials (e.g. via JWKS, OAuth flows, or other auth
+        middleware) before sending them over a WebSocket auth message.
+
         Args:
             payload: Discriminated union of JWT, API key, or basic auth credentials.
 
@@ -107,7 +113,7 @@ class UserManager:
                 password=payload.password,
             ))
 
-    # -- Connection credential extraction -------------------------------------
+        raise ValueError(f"Unsupported auth payload type: {type(payload).__name__}")
 
     @staticmethod
     def _get_session_cookie(connection: Request | WebSocket) -> str | None:
@@ -176,8 +182,6 @@ class UserManager:
             raise ValueError(f"Failed to decode JWT from Authorization header: {exc}") from exc
 
         return claims
-
-    # -- UserInfo construction ------------------------------------------------
 
     @staticmethod
     def _user_info_from_session_cookie(cookie_value: str) -> UserInfo:

@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Structured user identity model for the NeMo Agent Toolkit user management system."""
+"""Structured user identity model supporting multiple credential sources."""
 
 import base64
 import typing
@@ -24,7 +24,7 @@ from pydantic import Field
 from pydantic import PrivateAttr
 from pydantic import SecretStr
 
-_USER_ID_NAMESPACE: uuid.UUID = uuid.UUID("9f6b3c8a-2d4e-4f1a-b5c7-8e9f0a1b2c3d")
+_USER_ID_NAMESPACE: uuid.UUID = uuid.uuid5(uuid.NAMESPACE_DNS, "nemo-agent-toolkit")
 
 
 class JwtUserInfo(BaseModel):
@@ -108,13 +108,9 @@ class UserInfo(BaseModel):
         if self.basic_user is not None:
             self._set_user_id(self.basic_user.credential)
 
-    # -- Public API -----------------------------------------------------------
-
     def get_user_id(self) -> str:
         """Return the user ID."""
         return self._user_id
-
-    # -- Internal ------------------------------------------------------------
 
     def _set_user_id(self, identity_key: str) -> None:
         """Derive and set the deterministic UUID from an identity source value."""
@@ -137,8 +133,6 @@ class UserInfo(BaseModel):
         if self._session_cookie is not None:
             return self._session_cookie
         return None
-
-    # -- Internal factory methods (used by UserManager) -----------------------
 
     @classmethod
     def _from_session_cookie(cls, cookie: str) -> "UserInfo":

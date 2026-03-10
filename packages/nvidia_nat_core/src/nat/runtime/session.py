@@ -485,32 +485,32 @@ class SessionManager:
             token_workflow_parent_id, token_workflow_parent_name = \
                 await self.set_metadata_from_http_request(http_connection)
 
-        if user_id is None and self._is_workflow_per_user:
-            raise ValueError("user_id is required for per-user workflow but could not be determined. "
-                             "Include a standard Bearer JWT token in the Authorization header "
-                             "(e.g. 'Authorization: Bearer <token>'), or construct a UserInfo instance "
-                             "and pass UserInfo.get_user_id() as the user_id parameter.")
-
         token_user_id = self._context_state.user_id.set(user_id)
 
         builder_info: PerUserBuilderInfo | None = None
         request_start_time: float | None = None
         request_success = True
 
-        if self._is_workflow_per_user:
-            logger.debug(f"Getting or creating per-user builder for user {user_id}")
-            _, workflow = await self._get_or_create_per_user_builder(user_id)
-            builder_info = self._per_user_builders[user_id]
-            async with builder_info.lock:
-                builder_info.ref_count += 1
-                logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
-            semaphore = builder_info.semaphore
-            request_start_time = time.perf_counter()
-        else:
-            workflow = self._shared_workflow
-            semaphore = self._semaphore
-
         try:
+            if not user_id and self._is_workflow_per_user:
+                raise ValueError("user_id is required for per-user workflow but could not be determined. "
+                                 "Include a standard Bearer JWT token in the Authorization header "
+                                 "(e.g. 'Authorization: Bearer <token>'), or construct a UserInfo instance "
+                                 "and pass UserInfo.get_user_id() as the user_id parameter.")
+
+            if self._is_workflow_per_user:
+                logger.debug(f"Getting or creating per-user builder for user {user_id}")
+                _, workflow = await self._get_or_create_per_user_builder(user_id)
+                builder_info = self._per_user_builders[user_id]
+                async with builder_info.lock:
+                    builder_info.ref_count += 1
+                    logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
+                semaphore = builder_info.semaphore
+                request_start_time = time.perf_counter()
+            else:
+                workflow = self._shared_workflow
+                semaphore = self._semaphore
+
             session = Session(session_manager=self, user_id=user_id, workflow=workflow, semaphore=semaphore)
 
             yield session

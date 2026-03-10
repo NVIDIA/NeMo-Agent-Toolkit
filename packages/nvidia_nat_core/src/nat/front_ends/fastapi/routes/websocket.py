@@ -42,10 +42,8 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
             await websocket.close(code=1008, reason="Invalid session ID")
             return
 
-        headers = list(websocket.scope.get("headers", []))
-        headers_modified = False
-
         if session_id:
+            headers = list(websocket.scope.get("headers", []))
             cookie_header = f"{SESSION_COOKIE_NAME}={session_id}"
 
             cookie_exists = False
@@ -71,19 +69,6 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
                 headers.append((b"cookie", cookie_header.encode()))
                 logger.info("WebSocket: Added new session cookie header: %s", session_id[:10] + "...")
 
-            headers_modified = True
-
-        token = websocket.query_params.get("token")
-        if token:
-            has_auth = any(name == b"authorization" for name, _ in headers)
-            if not has_auth:
-                headers.append((b"authorization", f"Bearer {token}".encode()))
-                logger.info("WebSocket: Injected Authorization header from ?token= query param")
-                headers_modified = True
-            else:
-                logger.info("WebSocket: Authorization header already present, ignoring ?token= query param")
-
-        if headers_modified:
             websocket.scope["headers"] = headers
 
         async with WebSocketMessageHandler(websocket, session_manager, worker.get_step_adaptor(), worker) as handler:
