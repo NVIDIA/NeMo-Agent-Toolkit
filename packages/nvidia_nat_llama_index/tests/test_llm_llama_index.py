@@ -30,6 +30,12 @@ from nat.plugins.llama_index.llm import aws_bedrock_llama_index
 from nat.plugins.llama_index.llm import nim_llama_index
 from nat.plugins.llama_index.llm import openai_llama_index
 
+
+@pytest.fixture
+def mock_builder() -> MagicMock:
+    return MagicMock(spec=Builder)
+
+
 # ---------------------------------------------------------------------------
 # NIM → Llama-Index wrapper tests
 # ---------------------------------------------------------------------------
@@ -37,10 +43,6 @@ from nat.plugins.llama_index.llm import openai_llama_index
 
 class TestNimLlamaIndex:
     """Tests for nim_llama_index."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def nim_cfg(self):
@@ -67,6 +69,23 @@ class TestNimLlamaIndex:
                 pass
         mock_nv.assert_not_called()
 
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("llama_index.llms.nvidia.NVIDIA")
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_nv,
+                                               nim_cfg,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               mock_httpx_sync_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to both sync and async httpx clients as verify."""
+        nim_cfg.verify_ssl = verify_ssl
+        async with nim_llama_index(nim_cfg, mock_builder):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+            mock_httpx_sync_client.assert_called_once()
+            assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
+
 
 # ---------------------------------------------------------------------------
 # OpenAI → Llama-Index wrapper tests
@@ -75,10 +94,6 @@ class TestNimLlamaIndex:
 
 class TestOpenAILlamaIndex:
     """Tests for openai_llama_index."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def oa_cfg_chat(self):
@@ -110,6 +125,23 @@ class TestOpenAILlamaIndex:
             assert kwargs["temperature"] == 0.1
             assert llm is mock_resp.return_value
 
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("llama_index.llms.openai.OpenAI")
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_openai,
+                                               oa_cfg_chat,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               mock_httpx_sync_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to both sync and async httpx clients as verify."""
+        oa_cfg_chat.verify_ssl = verify_ssl
+        async with openai_llama_index(oa_cfg_chat, mock_builder):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+            mock_httpx_sync_client.assert_called_once()
+            assert mock_httpx_sync_client.call_args.kwargs["verify"] is verify_ssl
+
 
 # ---------------------------------------------------------------------------
 # AWS Bedrock → Llama-Index wrapper tests
@@ -118,10 +150,6 @@ class TestOpenAILlamaIndex:
 
 class TestBedrockLlamaIndex:
     """Tests for aws_bedrock_llama_index."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def br_cfg(self):
