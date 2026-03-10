@@ -48,11 +48,6 @@ class TestSerpApiTool:
     """Tests for the serp_api_tool function."""
 
     @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def tool_config(self):
         """Create a valid SerpApiToolConfig object."""
         return SerpApiToolConfig(api_key="test_api_key", max_results=3)

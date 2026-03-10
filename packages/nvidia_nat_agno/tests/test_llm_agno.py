@@ -33,11 +33,6 @@ class TestNimAgno:
     """Tests for the nim_agno function."""
 
     @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def nim_config(self):
         """Create a NIMModelConfig instance."""
         return NIMModelConfig(model_name="test-model")
@@ -154,11 +149,6 @@ class TestNimAgno:
 
 class TestOpenAIAgno:
     """Tests for the openai_agno function."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def openai_config(self):

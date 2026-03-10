@@ -38,10 +38,6 @@ class TestNimCrewAI:
     """Tests for the nim_crewai wrapper."""
 
     @pytest.fixture
-    def mock_builder(self) -> Builder:
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def nim_cfg(self):
         return NIMModelConfig(model_name="test-nim")
 
@@ -97,10 +93,6 @@ class TestNimCrewAI:
 
 class TestOpenAICrewAI:
     """Tests for the openai_crewai wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self) -> Builder:
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def openai_cfg(self):

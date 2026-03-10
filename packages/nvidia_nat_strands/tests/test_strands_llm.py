@@ -34,11 +34,6 @@ class TestOpenAIStrands:
     """Tests for the openai_strands function."""
 
     @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def openai_config(self):
         """Create an OpenAIModelConfig instance."""
         return OpenAIModelConfig(model_name="gpt-4")

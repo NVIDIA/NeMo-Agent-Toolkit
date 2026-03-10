@@ -30,12 +30,6 @@ from nat.plugins.adk.llm import openai_adk
 
 
 @pytest.fixture
-def mock_builder():
-    """Mock builder fixture."""
-    return MagicMock()
-
-
-@pytest.fixture
 def litellm_config():
     """Sample LiteLLM configuration for testing."""
     return OpenAIModelConfig(model_name="gpt-3.5-turbo",
@@ -176,10 +170,6 @@ async def test_litellm_adk_decorator_registration():
 
 class TestDynamoAdk:
     """Tests for the dynamo_adk wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self) -> MagicMock:
-        return MagicMock()
 
     @pytest.fixture
     def dynamo_cfg_no_prefix(self) -> DynamoModelConfig:

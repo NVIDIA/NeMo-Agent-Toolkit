@@ -114,11 +114,6 @@ class TestToolWrapper:
         mock_fn.acall_invoke = mock_acall_invoke
         return mock_fn
 
-    @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
-
     @patch("nat.plugins.agno.tool_wrapper.tool")
     def test_agno_tool_wrapper(self, mock_tool, mock_function, mock_builder):
         """Test that agno_tool_wrapper creates an Agno Tool with the correct parameters."""

@@ -35,10 +35,6 @@ class TestOpenAISemanticKernel:
     """Tests for the openai_semantic_kernel wrapper."""
 
     @pytest.fixture
-    def mock_builder(self) -> Builder:
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def oa_cfg(self):
         return OpenAIModelConfig(model_name="gpt-4o")
 

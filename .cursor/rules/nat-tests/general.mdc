@@ -23,10 +23,13 @@ All tests in NeMo Agent Toolkit use pytest. See the general coding guidelines fo
 
 - Use `pytest` for all unit tests
 - Name test files `test_*.py`
-- Use `@pytest.fixture(name="fixture_name")` decorator pattern
 - Mock external services with `pytest_httpserver` or `unittest.mock`
 - Maintain ≥ 80% code coverage
 - Do NOT add `@pytest.mark.asyncio` to any test - async tests are automatically detected and run by the async runner
+
+### Fixtures
+- Use `@pytest.fixture(name="fixture_name")` decorator pattern
+- Fixtures that are used in multiple tests should be defined in the `packages/nvidia_nat_test/src/nat/test/plugin.py` file, fixtures specific to a single package should be defined in a `conftest.py` file in the `tests` directory of the package, and fixtures that are specific to a single test can be defined in the test file itself.
 
 ### Integration Tests
 

@@ -20,7 +20,6 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
@@ -29,12 +28,6 @@ from nat.llm.openai_llm import OpenAIModelConfig
 from nat.plugins.llama_index.llm import aws_bedrock_llama_index
 from nat.plugins.llama_index.llm import nim_llama_index
 from nat.plugins.llama_index.llm import openai_llama_index
-
-
-@pytest.fixture
-def mock_builder() -> MagicMock:
-    return MagicMock(spec=Builder)
-
 
 # ---------------------------------------------------------------------------
 # NIM → Llama-Index wrapper tests

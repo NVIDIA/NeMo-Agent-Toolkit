@@ -918,3 +918,9 @@ def fixture_mock_sync_httpx_client() -> Generator[mock.MagicMock]:
     with mock.patch.object(httpx, "Client") as mock_client:
         mock_client.return_value = mock_client
         yield mock_client
+
+
+@pytest.fixture
+def mock_builder() -> mock.MagicMock:
+    from nat.builder.builder import Builder
+    return mock.MagicMock(spec=Builder)

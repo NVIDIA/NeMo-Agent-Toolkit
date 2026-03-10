@@ -37,12 +37,6 @@ from nat.plugins.langchain.llm import litellm_langchain
 from nat.plugins.langchain.llm import nim_langchain
 from nat.plugins.langchain.llm import openai_langchain
 
-
-@pytest.fixture
-def mock_builder():
-    return MagicMock(spec=Builder)
-
-
 # ---------------------------------------------------------------------------
 # NIM → LangChain wrapper tests
 # ---------------------------------------------------------------------------
