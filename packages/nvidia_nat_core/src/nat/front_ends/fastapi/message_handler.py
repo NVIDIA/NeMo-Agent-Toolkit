@@ -223,26 +223,23 @@ class WebSocketMessageHandler:
 
     async def _process_auth_message(self, message: WebSocketAuthMessage) -> None:
         """Resolve user identity from an auth message payload and store the user_id."""
-        user_info: UserInfo | None = UserManager._from_auth_payload(message.payload)
-        if user_info is not None:
+        try:
+            user_info: UserInfo = UserManager._from_auth_payload(message.payload)
             self._user_id = user_info.get_user_id()
-            logger.info("Auth message resolved user_id=%s", self._user_id)
             response: WebSocketAuthResponseMessage = WebSocketAuthResponseMessage(
                 status=AuthMessageStatus.SUCCESS,
                 user_id=self._user_id,
             )
-            await self._socket.send_json(response.model_dump())
-        else:
-            logger.warning("Auth message could not be resolved to a user_id")
+        except Exception as exc:
             response = WebSocketAuthResponseMessage(
                 status=AuthMessageStatus.ERROR,
                 payload=Error(
                     code=ErrorTypes.USER_AUTH_ERROR,
                     message="Authentication failed",
-                    details=f"Could not resolve user identity from auth payload (method={message.payload.method})",
+                    details=str(exc),
                 ),
             )
-            await self._socket.send_json(response.model_dump())
+        await self._socket.send_json(response.model_dump())
 
     async def _process_websocket_user_interaction_response_message(
             self, user_content: WebSocketUserInteractionResponseMessage) -> TextContent:

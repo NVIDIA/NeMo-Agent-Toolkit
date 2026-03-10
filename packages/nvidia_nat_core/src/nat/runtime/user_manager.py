@@ -28,6 +28,7 @@ from nat.data_models.api_server import ApiKeyAuthPayload
 from nat.data_models.api_server import AuthPayload
 from nat.data_models.api_server import BasicAuthPayload
 from nat.data_models.api_server import JwtAuthPayload
+from nat.data_models.authentication import HeaderAuthScheme
 from nat.data_models.user_info import BasicUserInfo
 from nat.data_models.user_info import JwtUserInfo
 from nat.data_models.user_info import UserInfo
@@ -54,8 +55,12 @@ class UserManager:
             connection: The incoming Starlette ``Request`` or ``WebSocket``.
 
         Returns:
-            A fully populated ``UserInfo``, or ``None`` if no usable
-            credential is found.
+            A fully populated ``UserInfo``, or ``None`` if no credential
+            is present on the connection.
+
+        Raises:
+            ValueError: If a credential is found but cannot be resolved
+                to a valid user identity.
         """
         cookie: str | None = cls._get_session_cookie(connection)
         if cookie:
@@ -68,41 +73,39 @@ class UserManager:
         return None
 
     @staticmethod
-    def _from_auth_payload(payload: AuthPayload) -> UserInfo | None:
+    def _from_auth_payload(payload: AuthPayload) -> UserInfo:
         """Resolve a ``UserInfo`` from a WebSocket auth message payload.
 
         Args:
             payload: Discriminated union of JWT, API key, or basic auth credentials.
 
         Returns:
-            A ``UserInfo`` with a deterministic user ID, or ``None`` if the
-            payload cannot be resolved.
+            A ``UserInfo`` with a deterministic user ID.
+
+        Raises:
+            ValueError: If the payload cannot be resolved to a valid user identity.
         """
         if isinstance(payload, JwtAuthPayload):
             raw_token: str = payload.token.get_secret_value()
             if not raw_token or raw_token.count(".") != 2:
-                return None
+                raise ValueError("JWT token is empty or malformed (expected 3 dot-separated parts)")
             try:
                 claims: dict[str, typing.Any] = jwt.decode(raw_token, options={"verify_signature": False})
-            except Exception:
-                return None
-            if not isinstance(claims, dict):
-                return None
+            except Exception as exc:
+                raise ValueError(f"Failed to decode JWT token: {exc}") from exc
             return UserManager._user_info_from_jwt(claims)
 
         if isinstance(payload, ApiKeyAuthPayload):
             token_value: str = payload.token.get_secret_value()
             if not token_value:
-                return None
-            return UserInfo._from_session_cookie(token_value)
+                raise ValueError("API key token is empty")
+            return UserInfo._from_api_key(token_value)
 
         if isinstance(payload, BasicAuthPayload):
             return UserInfo(basic_user=BasicUserInfo(
                 username=payload.username,
                 password=payload.password,
             ))
-
-        return None
 
     # -- Connection credential extraction -------------------------------------
 
@@ -130,13 +133,21 @@ class UserManager:
     def _get_jwt_claims(connection: Request | WebSocket) -> dict[str, typing.Any] | None:
         """Extract and decode a JWT Bearer token from the ``Authorization`` header.
 
-        Returns the decoded claims dict, or ``None`` if no valid JWT is present.
-        Does not verify the signature — used only to extract identity claims.
+        Args:
+            connection: The incoming Starlette ``Request`` or ``WebSocket``.
+
+        Returns:
+            The decoded claims dict, or ``None`` if no ``Authorization``
+            header is present.
+
+        Raises:
+            ValueError: If an ``Authorization`` header is present but the
+                token cannot be decoded into valid JWT claims.
         """
         auth: str | None = None
 
         if isinstance(connection, Request):
-            auth = connection.headers.get("authorization") or connection.headers.get("Authorization")
+            auth = connection.headers.get("authorization")
         elif isinstance(connection, WebSocket) and hasattr(connection, "scope") and "headers" in connection.scope:
             for name, value in connection.scope.get("headers", []):
                 try:
@@ -152,18 +163,19 @@ class UserManager:
             return None
 
         parts: list[str] = auth.strip().split(maxsplit=1)
-        if len(parts) != 2 or parts[0].lower() != "bearer":
+        if len(parts) != 2 or parts[0].lower() != HeaderAuthScheme.BEARER.lower():
             return None
 
         token: str = parts[1]
         if not token or token.count(".") != 2:
-            return None
+            raise ValueError("Bearer token is empty or malformed (expected 3 dot-separated parts)")
 
         try:
-            payload: dict[str, typing.Any] = jwt.decode(token, options={"verify_signature": False})
-            return payload if isinstance(payload, dict) else None
-        except Exception:
-            return None
+            claims: dict[str, typing.Any] = jwt.decode(token, options={"verify_signature": False})
+        except Exception as exc:
+            raise ValueError(f"Failed to decode JWT from Authorization header: {exc}") from exc
+
+        return claims
 
     # -- UserInfo construction ------------------------------------------------
 

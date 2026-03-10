@@ -44,7 +44,6 @@ from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.runtime_enum import RuntimeTypeEnum
 from nat.data_models.user_info import UserInfo
-from nat.runtime.user_manager import SESSION_COOKIE_NAME
 from nat.runtime.user_manager import UserManager
 
 if typing.TYPE_CHECKING:
@@ -488,8 +487,9 @@ class SessionManager:
 
         if user_id is None and self._is_workflow_per_user:
             raise ValueError("user_id is required for per-user workflow but could not be determined. "
-                             "Provide a valid JWT in the Authorization header, "
-                             f"set a '{SESSION_COOKIE_NAME}' cookie, or pass user_id explicitly.")
+                             "Include a standard Bearer JWT token in the Authorization header "
+                             "(e.g. 'Authorization: Bearer <token>'), or construct a UserInfo instance "
+                             "and pass UserInfo.get_user_id() as the user_id parameter.")
 
         token_user_id = self._context_state.user_id.set(user_id)
 

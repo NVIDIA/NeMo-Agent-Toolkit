@@ -717,7 +717,7 @@ class WebSocketAuthMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
     type: typing.Literal[WebSocketMessageType.AUTH_MESSAGE]
     payload: AuthPayload
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class AuthMessageStatus(StrEnum):
@@ -733,7 +733,7 @@ class WebSocketAuthResponseMessage(BaseModel):
     status: AuthMessageStatus = Field(description="Outcome of the authentication attempt.")
     user_id: str | None = Field(default=None, description="Resolved user identifier (present on success).")
     payload: Error | None = Field(default=None, description="Error details (present on failure).")
-    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+    timestamp: str = Field(default_factory=lambda: str(datetime.datetime.now(datetime.UTC)))
 
 
 class SystemIntermediateStepContent(BaseModel):

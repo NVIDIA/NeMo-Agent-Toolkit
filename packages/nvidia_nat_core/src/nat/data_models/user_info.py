@@ -67,7 +67,7 @@ class BasicUserInfo(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    username: str = Field(description="Unique username identifying this user.")
+    username: str = Field(min_length=1, description="Unique username identifying this user.")
     password: SecretStr = Field(description="Password for this user.")
 
     _credential: str = PrivateAttr()
@@ -102,6 +102,7 @@ class UserInfo(BaseModel):
     _user_id: str = PrivateAttr(default="")
     _session_cookie: str | None = PrivateAttr(default=None)
     _jwt: JwtUserInfo | None = PrivateAttr(default=None)
+    _api_key: str | None = PrivateAttr(default=None)
 
     def model_post_init(self, __context: typing.Any) -> None:
         if self.basic_user is not None:
@@ -131,6 +132,8 @@ class UserInfo(BaseModel):
             return self._jwt
         if self.basic_user is not None:
             return self.basic_user
+        if self._api_key is not None:
+            return self._api_key
         if self._session_cookie is not None:
             return self._session_cookie
         return None
@@ -142,6 +145,13 @@ class UserInfo(BaseModel):
         instance: UserInfo = cls()
         object.__setattr__(instance, "_session_cookie", cookie)
         instance._set_user_id(cookie)
+        return instance
+
+    @classmethod
+    def _from_api_key(cls, api_key: str) -> "UserInfo":
+        instance: UserInfo = cls()
+        object.__setattr__(instance, "_api_key", api_key)
+        instance._set_user_id(api_key)
         return instance
 
     @classmethod
