@@ -43,8 +43,9 @@ from nat.data_models.config import Config
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import InteractionPrompt
 from nat.data_models.runtime_enum import RuntimeTypeEnum
-from nat.runtime.connection_auth import get_auth_and_cookies_from_connection
-from nat.runtime.connection_auth import resolve_user_id
+from nat.data_models.user_info import UserInfo
+from nat.runtime.user_manager import SESSION_COOKIE_NAME
+from nat.runtime.user_manager import UserManager
 
 if typing.TYPE_CHECKING:
     from nat.builder.per_user_workflow_builder import PerUserWorkflowBuilder
@@ -391,25 +392,15 @@ class SessionManager:
         return len(builders_to_cleanup)
 
     def _get_user_id_from_context(self) -> str | None:
-        """
-        Get user ID from current context.
+        """Get user ID from current context.
 
-        Extraction order:
-        1. From context user_id (set from JWT or nat-session cookie)
-        2. From context user_manager if set
-        3. None (for shared workflow or unauthenticated access)
-
+        Returns:
+            The user ID string, or ``None`` for shared/unauthenticated access.
         """
         try:
-            # Primary: Get from context user_id (set from JWT or nat-session cookie)
-            user_id = self._context.user_id
+            user_id: str | None = self._context.user_id
             if user_id:
                 return user_id
-
-            # Fallback: Get from user_manager if set
-            user_manager = self._context.user_manager
-            if user_manager:
-                return user_manager.get_id()
             return None
         except Exception as e:
             logger.debug(f"Could not extract user_id from context: {e}")
@@ -462,7 +453,6 @@ class SessionManager:
     @asynccontextmanager
     async def session(self,
                       user_id: str | None = None,
-                      user_manager=None,
                       http_connection: HTTPConnection | None = None,
                       user_message_id: str | None = None,
                       conversation_id: str | None = None,
@@ -474,73 +464,51 @@ class SessionManager:
         if user_input_callback is not None:
             token_user_input = self._context_state.user_input_callback.set(user_input_callback)
 
-        token_user_manager = None
-        if user_manager is not None:
-            token_user_manager = self._context_state.user_manager.set(user_manager)
-
         token_user_authentication = None
         if user_authentication_callback is not None:
             token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
 
-        token_user_id_http = None
-        token_user_id_builder = None
-        # Parse once: get auth header and cookies for user_id (nat-session cookie first, then JWT)
-        auth_value, cookies_dict = (None, {})
-        if http_connection is not None:
-            auth_value, cookies_dict = get_auth_and_cookies_from_connection(http_connection)
-            resolved_user_id = resolve_user_id(auth_value, cookies_dict)
-            if resolved_user_id:
-                token_user_id_http = self._context_state.user_id.set(resolved_user_id)
-
-        if isinstance(http_connection, WebSocket):
-            self.set_metadata_from_websocket(http_connection,
-                                             user_message_id,
-                                             conversation_id,
-                                             pre_parsed_cookies=cookies_dict)
-
         token_workflow_parent_id = None
         token_workflow_parent_name = None
+
+        if isinstance(http_connection, WebSocket):
+            if user_id is None:
+                user_info: UserInfo | None = UserManager.extract_user_from_connection(http_connection)
+                if user_info is not None:
+                    user_id = user_info.get_user_id()
+            self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id)
+
         if isinstance(http_connection, Request):
+            if user_id is None:
+                user_info = UserManager.extract_user_from_connection(http_connection)
+                if user_info is not None:
+                    user_id = user_info.get_user_id()
             token_workflow_parent_id, token_workflow_parent_name = \
                 await self.set_metadata_from_http_request(http_connection)
+
+        if user_id is None and self._is_workflow_per_user:
+            raise ValueError("user_id is required for per-user workflow but could not be determined. "
+                             "Provide a valid JWT in the Authorization header, "
+                             f"set a '{SESSION_COOKIE_NAME}' cookie, or pass user_id explicitly.")
+
+        token_user_id = self._context_state.user_id.set(user_id)
 
         builder_info: PerUserBuilderInfo | None = None
         request_start_time: float | None = None
         request_success = True
 
         if self._is_workflow_per_user:
-            # Resolve user_id: explicit param > context
-            if user_id is None:
-                user_id = self._get_user_id_from_context()
-            if user_id is None:
-                raise ValueError("user_id is required for per-user workflow but could not be determined. "
-                                 "Ensure a valid JWT is in the Authorization header or 'nat-session' cookie is set, "
-                                 "or pass user_id explicitly.")
-
-            # To ensure the user_id is set in the context before the per-user builder is created
-            token_user_id_builder = self._context_state.user_id.set(user_id)
-
-            # Get or create per-user builder
             logger.debug(f"Getting or creating per-user builder for user {user_id}")
             _, workflow = await self._get_or_create_per_user_builder(user_id)
             builder_info = self._per_user_builders[user_id]
             async with builder_info.lock:
                 builder_info.ref_count += 1
                 logger.debug(f"Incremented ref_count for user {user_id} to {builder_info.ref_count}")
-            # Use per-user semaphore for concurrency control
             semaphore = builder_info.semaphore
-            # Start request timing for metrics
             request_start_time = time.perf_counter()
         else:
             workflow = self._shared_workflow
-            # Use shared semaphore for concurrency control
             semaphore = self._semaphore
-
-        # TODO: this logic needs to be cleaned up since it is a duplicated setting of the user_id
-        # But we need to keep it for now to maintain the token_user_id
-        token_user_id = None
-        if user_id is not None:
-            token_user_id = self._context_state.user_id.set(user_id)
 
         try:
             session = Session(session_manager=self, user_id=user_id, workflow=workflow, semaphore=semaphore)
@@ -566,14 +534,7 @@ class SessionManager:
                 self._context_state.workflow_parent_name.reset(token_workflow_parent_name)
             if token_workflow_parent_id is not None:
                 self._context_state.workflow_parent_id.reset(token_workflow_parent_id)
-            if token_user_id is not None:
-                self._context_state.user_id.reset(token_user_id)
-            if token_user_id_builder is not None:
-                self._context_state.user_id.reset(token_user_id_builder)
-            if token_user_id_http is not None:
-                self._context_state.user_id.reset(token_user_id_http)
-            if token_user_manager is not None:
-                self._context_state.user_manager.reset(token_user_manager)
+            self._context_state.user_id.reset(token_user_id)
             if token_user_input is not None:
                 self._context_state.user_input_callback.reset(token_user_input)
             if token_user_authentication is not None:
@@ -707,8 +668,7 @@ class SessionManager:
                                     pre_parsed_cookies: dict[str, str] | None = None) -> None:
         """
         Extracts and sets user metadata for WebSocket connections.
-        If pre_parsed_cookies is provided (e.g. from get_auth_and_cookies_from_connection),
-        uses it instead of parsing scope headers again.
+        If pre_parsed_cookies is provided, uses it instead of parsing scope headers again.
         """
         self._context.metadata._request.url_path = websocket.url.path
         self._context.metadata._request.url_port = websocket.url.port

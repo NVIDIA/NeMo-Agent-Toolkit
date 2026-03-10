@@ -29,6 +29,7 @@ from uuid import uuid4
 
 import yaml
 from pydantic import BaseModel
+from pydantic import SecretStr
 from tqdm import tqdm
 
 from nat.builder.context import ContextState
@@ -45,6 +46,8 @@ from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.user_info import BasicUserInfo
+from nat.data_models.user_info import UserInfo
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
@@ -199,9 +202,11 @@ class EvaluationRun:
                 pre_span_id = _generate_nonzero_span_id()
                 self._item_span_ids[str(item.id)] = pre_span_id
 
-            user_id = self.config.user_id
+            eval_username: str = "nat_eval_user"
             if self.eval_config.general.per_input_user_id:
-                user_id += f"-{uuid4()}"
+                eval_username += f"-{uuid4()}"
+            eval_user_id: str = UserInfo(
+                basic_user=BasicUserInfo(username=eval_username, password=SecretStr("nat_eval_user"))).get_user_id()
 
             # Set the pre-generated span_id in the ContextVar BEFORE entering
             # the session/runner context. asyncio.create_task() copies ContextVars,
@@ -209,7 +214,7 @@ class EvaluationRun:
             ctx_state = ContextState.get()
             root_span_token = ctx_state._root_span_id.set(pre_span_id) if pre_span_id is not None else None
             try:
-                async with session_manager.session(user_id=user_id) as session:
+                async with session_manager.session(user_id=eval_user_id) as session:
                     async with session.run(item.input_obj) as runner:
                         if not session.workflow.has_single_output:
                             # raise an error if the workflow has multiple outputs

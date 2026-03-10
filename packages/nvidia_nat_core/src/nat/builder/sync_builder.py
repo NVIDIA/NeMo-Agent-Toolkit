@@ -20,7 +20,6 @@ from collections.abc import Sequence
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
-from nat.builder.builder import UserManagerHolder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
@@ -506,14 +505,6 @@ class SyncBuilder:
         """
         return self._loop.run_until_complete(
             self._builder.get_ttc_strategy_config(strategy_name, pipeline_type, stage_type))
-
-    def get_user_manager(self) -> UserManagerHolder:
-        """Get the user manager holder.
-
-        Returns:
-            The user manager holder instance
-        """
-        return self._builder.get_user_manager()
 
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
         """Get the dependencies for a function.

@@ -37,6 +37,8 @@ to the client.
       - `system_response_message`
       - `system_interaction_message`
       - `user_interaction_message`
+      - `auth_message`
+      - `auth_response_message`
       - `observability_trace_message`
       - `error_message`
 - `schema_type`:  Defines the response schema for a given workflow
@@ -58,9 +60,6 @@ to the client.
     -   name: User name
     -   email: User email
     -   other info: Any other information
-- `security`: Stores security information such as `api_key`, auth token etc. - OPTIONAL
-    -   `api_key`: API key
-    - token: auth or access token
 - `error`: Error information object with `code` (string, see Error types), `message` (string), and `details` (string)
 - `schema_version`: schema version - `OPTIONAL`
 
@@ -113,10 +112,6 @@ running workflow.
     "name": "string",
     "email": "string"
   },
-  "security": {
-    "api_key": "string",
-    "token": "string"
-  },
   "error": {
     "code": "string",
     "message": "string",
@@ -155,11 +150,84 @@ Definition: This message contains the response content from the human in the loo
     "name": "string",
     "email": "string"
   },
-  "security": {
-    "api_key": "string",
-    "token": "string"
-  },
   "schema_version": "string"
+}
+```
+
+## Auth Message
+### Authentication Message
+Definition: This message allows clients to authenticate over a WebSocket connection when header-based or
+cookie-based authentication is not feasible (e.g., browser WebSocket APIs that do not support custom headers).
+The server validates the credentials, resolves a user identity, and associates it with the current session.
+On success, the server responds with a `system_response_message` confirming the authenticated user. On failure,
+an `error_message` is returned.
+
+The `payload` field uses a discriminated union on the `method` field. Exactly one of the following payload types
+must be provided:
+
+| Method    | Fields                       | Description                        |
+|-----------|------------------------------|------------------------------------|
+| `jwt`     | `token`                      | Encoded JWT Bearer token           |
+| `api_key` | `token`                      | API key token                      |
+| `basic`   | `username`, `password`       | Username/password credentials      |
+
+#### JWT Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "jwt",
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+#### API Key Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "api_key",
+    "token": "nvapi-abc123..."
+  }
+}
+```
+
+#### Basic Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "basic",
+    "username": "john.doe",
+    "password": "s3cret"
+  }
+}
+```
+
+#### Auth Success Response Example:
+```json
+{
+  "type": "auth_response_message",
+  "status": "success",
+  "user_id": "5a3f8e2b-1c4d-5e6f-7a8b-9c0d1e2f3a4b",
+  "payload": null,
+  "timestamp": "2025-01-13T10:00:00Z"
+}
+```
+
+#### Auth Failure Response Example:
+```json
+{
+  "type": "auth_response_message",
+  "status": "error",
+  "user_id": null,
+  "payload": {
+    "code": "user_auth_error",
+    "message": "Authentication failed",
+    "details": "Could not resolve user identity from auth payload (method=jwt)"
+  },
+  "timestamp": "2025-01-13T10:00:00Z"
 }
 ```
 

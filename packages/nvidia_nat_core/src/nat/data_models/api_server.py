@@ -109,13 +109,6 @@ class TextContent(BaseModel):
     text: str = "default"
 
 
-class Security(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    api_key: SerializableSecretStr = Field(default="default")
-    token: SerializableSecretStr = Field(default="default")
-
-
 UserContent = typing.Annotated[TextContent | ImageContent | AudioContent, Discriminator("type")]
 
 
@@ -587,6 +580,8 @@ class WebSocketMessageType(StrEnum):
     INTERMEDIATE_STEP_MESSAGE = "system_intermediate_message"
     SYSTEM_INTERACTION_MESSAGE = "system_interaction_message"
     USER_INTERACTION_MESSAGE = "user_interaction_message"
+    AUTH_MESSAGE = "auth_message"
+    AUTH_RESPONSE = "auth_response_message"
     OBSERVABILITY_TRACE_MESSAGE = "observability_trace_message"
     ERROR_MESSAGE = "error_message"
 
@@ -635,6 +630,7 @@ class ErrorTypes(StrEnum):
     INVALID_MESSAGE_TYPE = "invalid_message_type"
     INVALID_USER_MESSAGE_CONTENT = "invalid_user_message_content"
     INVALID_DATA_CONTENT = "invalid_data_content"
+    USER_AUTH_ERROR = "user_auth_error"
 
 
 class Error(BaseModel):
@@ -659,7 +655,6 @@ class WebSocketUserMessage(BaseModel):
     conversation_id: str | None = None
     content: UserMessageContent
     user: User = User()
-    security: Security = Security()
     error: Error = Error()
     schema_version: str = "1.0.0"
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
@@ -677,9 +672,67 @@ class WebSocketUserInteractionResponseMessage(BaseModel):
     conversation_id: str | None = None
     content: UserMessageContent
     user: User = User()
-    security: Security = Security()
     error: Error = Error()
     schema_version: str = "1.0.0"
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+
+
+class AuthMethod(StrEnum):
+    """Supported authentication methods for WebSocket auth messages."""
+    JWT = "jwt"
+    API_KEY = "api_key"
+    BASIC = "basic"
+
+
+class JwtAuthPayload(BaseModel):
+    """JWT Bearer token authentication payload."""
+    model_config = ConfigDict(extra="forbid")
+    method: typing.Literal[AuthMethod.JWT] = Field(description="Authentication method discriminator.")
+    token: SerializableSecretStr = Field(description="Encoded JWT Bearer token.")
+
+
+class ApiKeyAuthPayload(BaseModel):
+    """API key authentication payload."""
+    model_config = ConfigDict(extra="forbid")
+    method: typing.Literal[AuthMethod.API_KEY] = Field(description="Authentication method discriminator.")
+    token: SerializableSecretStr = Field(description="API key token.")
+
+
+class BasicAuthPayload(BaseModel):
+    """Username/password authentication payload."""
+    model_config = ConfigDict(extra="forbid")
+    method: typing.Literal[AuthMethod.BASIC] = Field(description="Authentication method discriminator.")
+    username: str = Field(description="Username for basic authentication.")
+    password: SerializableSecretStr = Field(description="Password for basic authentication.")
+
+
+AuthPayload = typing.Annotated[
+    JwtAuthPayload | ApiKeyAuthPayload | BasicAuthPayload,
+    Discriminator("method"),
+]
+
+
+class WebSocketAuthMessage(BaseModel):
+    """WebSocket authentication message for payload-based auth when header or cookie auth is not feasible."""
+    model_config = ConfigDict(extra="forbid")
+    type: typing.Literal[WebSocketMessageType.AUTH_MESSAGE]
+    payload: AuthPayload
+    timestamp: str = str(datetime.datetime.now(datetime.UTC))
+
+
+class AuthMessageStatus(StrEnum):
+    """Outcome of a WebSocket authentication attempt."""
+    SUCCESS = "success"
+    ERROR = "error"
+
+
+class WebSocketAuthResponseMessage(BaseModel):
+    """Server response to a WebSocket ``auth_message``."""
+    model_config = ConfigDict(extra="forbid")
+    type: typing.Literal[WebSocketMessageType.AUTH_RESPONSE] = WebSocketMessageType.AUTH_RESPONSE
+    status: AuthMessageStatus = Field(description="Outcome of the authentication attempt.")
+    user_id: str | None = Field(default=None, description="Resolved user identifier (present on success).")
+    payload: Error | None = Field(default=None, description="Error details (present on failure).")
     timestamp: str = str(datetime.datetime.now(datetime.UTC))
 
 
