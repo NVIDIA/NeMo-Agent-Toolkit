@@ -39,6 +39,8 @@ All tests in NeMo Agent Toolkit use pytest. See the general coding guidelines fo
 
 **Directories**: `root_repo_dir`, `examples_dir` (NAT repo only)
 
+**Mocked Objects**: `mock_httpx_async_client`, `mock_httpx_sync_client`, `mock_builder`
+
 There are many more fixtures available, refer to the [plugin.py](mdc:packages/nvidia_nat_test/src/nat/test/plugin.py) file and any `conftest.py` files defined in the file hierarchy of the current test file for the complete list.
 
 ### Integration Tests
