@@ -25,6 +25,7 @@ from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
 from nat.embedder.huggingface_embedder import HuggingFaceEmbedderConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
+from nat.llm.utils.http_client import _get_http_clients
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
@@ -34,11 +35,12 @@ async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig
     from langchain_openai import AzureOpenAIEmbeddings
 
     client = AzureOpenAIEmbeddings(
-        **embedder_config.model_dump(exclude={"type", "api_version"},
+        **embedder_config.model_dump(exclude={"api_version", "type", "verify_ssl"},
                                      by_alias=True,
                                      exclude_none=True,
                                      exclude_unset=True),
         api_version=embedder_config.api_version,
+        **_get_http_clients(embedder_config),
     )
 
     if isinstance(embedder_config, RetryMixin):
@@ -55,6 +57,7 @@ async def nim_langchain(embedder_config: NIMEmbedderModelConfig, builder: Builde
 
     from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
 
+    # verify_ssl is a supported keyword parameter for the NVIDIAEmbeddings client
     client = NVIDIAEmbeddings(
         **embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True, exclude_unset=True))
 
@@ -73,7 +76,11 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
     from langchain_openai import OpenAIEmbeddings
 
     client = OpenAIEmbeddings(
-        **embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+        **embedder_config.model_dump(exclude={"type", "verify_ssl"},
+                                     by_alias=True,
+                                     exclude_none=True,
+                                     exclude_unset=True),
+        **_get_http_clients(embedder_config))
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
