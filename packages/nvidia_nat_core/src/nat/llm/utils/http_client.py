@@ -52,7 +52,7 @@ def _create_http_client(llm_config: "LLMBaseConfig",
     return client_class(**kwargs)
 
 
-def _get_http_clients(llm_config: LLMBaseConfig) -> dict[str, "httpx.AsyncClient | httpx.Client"]:
+def _get_http_clients(llm_config: "LLMBaseConfig") -> dict[str, "httpx.AsyncClient | httpx.Client"]:
     """
     Get a dictionary of HTTP clients, one sync one async.
 
