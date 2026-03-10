@@ -31,7 +31,7 @@ name = "nvidia-nat-config-optimizer"
 dynamic = ["version", "dependencies", "optional-dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "Workflow config and prompt optimizer for NVIDIA NeMo Agent Toolkit"
-readme = "README.md"
+readme = "src/nat/meta/pypi.md"
 license = { text = "Apache-2.0" }
 keywords = ["ai", "rag", "agents", "optimization"]
 classifiers = [
@@ -65,6 +65,9 @@ visualization = [
 test = [
   "nvidia-nat-test == {version}",
 ]
+
+[project.entry-points.'nat.cli']
+optimize = "nat.plugins.config_optimizer.cli.commands:optimizer_command"
 
 [tool.uv]
 build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]

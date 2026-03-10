@@ -54,11 +54,11 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
                           "This error can be resolve by installing \"nvidia-nat[langchain]\".") from exc
 
     try:
-        from nat.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
+        from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
     except ImportError as exc:
         raise ImportError(
             "nvidia-nat-config-optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
-            "Or install the full toolkit: pip install nvidia-nat[optimizer]"
+            "Or install the full toolkit: pip install nvidia-nat[config-optimizer]"
         ) from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -130,11 +130,11 @@ async def prompt_recombiner_function(config: PromptRecombinerConfig, builder: Bu
                           "This error can be resolve by installing \"nvidia-nat[langchain]\".") from exc
 
     try:
-        from nat.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
+        from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
     except ImportError as exc:
         raise ImportError(
             "nvidia-nat-config-optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
-            "Or install the full toolkit: pip install nvidia-nat[optimizer]"
+            "Or install the full toolkit: pip install nvidia-nat[config-optimizer]"
         ) from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

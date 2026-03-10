@@ -31,8 +31,8 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
    - {py:class}`~nat.data_models.optimizer.OptunaParameterOptimizationConfig`: Built-in config for Optuna-based numeric/enum parameter optimization.
 
 * **Optimizer ABCs**
-   - {py:class}`~nat.config_optimizer.prompts.base.BasePromptOptimizer`: Abstract base class for prompt optimization strategies. Requires implementing an async `run()` method that optimizes prompts in-place.
-   - {py:class}`~nat.config_optimizer.parameters.base.BaseParameterOptimizer`: Abstract base class for parameter optimization strategies. Requires implementing an async `run()` method that returns an optimized `Config`.
+   - {py:class}`~nat.plugins.config_optimizer.prompts.base.BasePromptOptimizer`: Abstract base class for prompt optimization strategies. Requires implementing an async `run()` method that optimizes prompts in-place.
+   - {py:class}`~nat.plugins.config_optimizer.parameters.base.BaseParameterOptimizer`: Abstract base class for parameter optimization strategies. Requires implementing an async `run()` method that returns an optimized `Config`.
 
 * **Registration**
    - {py:deco}`~nat.cli.register_workflow.register_optimizer`: Decorator that registers an optimizer strategy with the global type registry so the optimizer runtime can resolve the strategy from the type of `cfg.optimizer.numeric` or `cfg.optimizer.prompt`.
@@ -57,10 +57,10 @@ class IterativeRefinementPromptConfig(PromptOptimizationConfig, name="iterative"
 
 ### 2. Implement the Optimizer
 
-Implement {py:class}`~nat.config_optimizer.prompts.base.BasePromptOptimizer`:
+Implement {py:class}`~nat.plugins.config_optimizer.prompts.base.BasePromptOptimizer`:
 
 ```python
-from nat.config_optimizer.prompts.base import BasePromptOptimizer
+from nat.plugins.config_optimizer.prompts.base import BasePromptOptimizer
 from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig, OptimizerRunConfig
@@ -121,7 +121,7 @@ from . import iterative_prompt_optimizer  # noqa: F401 — triggers @register_op
 Custom strategy selection for `optimizer.prompt` is currently programmatic. After loading your workflow config, set `cfg.optimizer.prompt` to your custom config before calling `optimize_config`:
 
 ```python
-from nat.config_optimizer.optimizer_runtime import optimize_config
+from nat.plugins.config_optimizer.optimizer_runtime import optimize_config
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.runtime.loader import load_config
 
@@ -145,7 +145,7 @@ await optimize_config(
 
 ## Adding a Custom Parameter Optimizer
 
-The pattern is the same, but parameter optimizers extend {py:class}`~nat.config_optimizer.parameters.base.BaseParameterOptimizer` and return an optimized {py:class}`~nat.data_models.config.Config`:
+The pattern is the same, but parameter optimizers extend {py:class}`~nat.plugins.config_optimizer.parameters.base.BaseParameterOptimizer` and return an optimized {py:class}`~nat.data_models.config.Config`:
 
 ### 1. Define a Config Class
 
@@ -162,7 +162,7 @@ class RandomSearchConfig(OptimizerStrategyBaseConfig, name="random_search"):
 ### 2. Implement the Optimizer
 
 ```python
-from nat.config_optimizer.parameters.base import BaseParameterOptimizer
+from nat.plugins.config_optimizer.parameters.base import BaseParameterOptimizer
 from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig, OptimizerRunConfig
@@ -205,7 +205,7 @@ async def register_random_search(config: RandomSearchConfig):
 Custom strategy selection for `optimizer.numeric` is also programmatic:
 
 ```python
-from nat.config_optimizer.optimizer_runtime import optimize_config
+from nat.plugins.config_optimizer.optimizer_runtime import optimize_config
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.runtime.loader import load_config
 

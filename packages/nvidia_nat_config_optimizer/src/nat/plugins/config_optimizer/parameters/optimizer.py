@@ -24,9 +24,9 @@ from typing import Any
 import optuna
 import yaml
 
-from nat.config_optimizer.eval_runtime_loader import load_evaluation_run
-from nat.config_optimizer.parameters.selection import pick_trial
-from nat.config_optimizer.update_helpers import apply_suggestions
+from nat.plugins.config_optimizer.eval_runtime_loader import load_evaluation_run
+from nat.plugins.config_optimizer.parameters.selection import pick_trial
+from nat.plugins.config_optimizer.update_helpers import apply_suggestions
 from nat.data_models.config import Config
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
@@ -265,7 +265,7 @@ def optimize_parameters(
 
     # Generate Pareto front visualizations
     try:
-        from nat.config_optimizer.parameters.pareto_visualizer import create_pareto_visualization
+        from nat.plugins.config_optimizer.parameters.pareto_visualizer import create_pareto_visualization
         logger.info("Generating Pareto front visualizations...")
         create_pareto_visualization(
             data_source=study,

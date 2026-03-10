@@ -16,7 +16,7 @@
 import pytest
 from pydantic import BaseModel
 
-from nat.config_optimizer.optimizer_runtime import optimize_config
+from nat.plugins.config_optimizer.optimizer_runtime import optimize_config
 from nat.data_models.optimizer import GAPromptOptimizationConfig
 from nat.data_models.optimizer import OptunaParameterOptimizationConfig
 from nat.data_models.optimizer import OptimizerConfig
@@ -36,7 +36,7 @@ async def test_optimize_config_returns_input_when_no_space(monkeypatch):
     cfg.optimizer.prompt.enabled = False
 
     # Force walk_optimizables to empty mapping
-    from nat.config_optimizer import optimizer_runtime as rt
+    from nat.plugins.config_optimizer import optimizer_runtime as rt
 
     monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {}, raising=True)
     # Also bypass load_config by passing BaseModel directly
@@ -54,7 +54,7 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
 
     from contextlib import asynccontextmanager
 
-    from nat.config_optimizer import optimizer_runtime as rt
+    from nat.plugins.config_optimizer import optimizer_runtime as rt
 
     # Provide a small non-empty space
     monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {"x": object()}, raising=True)

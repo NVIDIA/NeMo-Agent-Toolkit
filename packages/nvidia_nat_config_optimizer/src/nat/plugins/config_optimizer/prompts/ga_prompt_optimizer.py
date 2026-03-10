@@ -29,14 +29,14 @@ from typing import Any
 from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
-from nat.config_optimizer.eval_runtime_loader import load_evaluation_run
-from nat.config_optimizer.prompts.base import BasePromptOptimizer
-from nat.config_optimizer.prompts.ga_individual import Individual
-from nat.config_optimizer.prompts.oracle_feedback import build_oracle_feedback
-from nat.config_optimizer.prompts.oracle_feedback import check_adaptive_triggers
-from nat.config_optimizer.prompts.oracle_feedback import extract_worst_reasoning
-from nat.config_optimizer.prompts.oracle_feedback import should_inject_feedback
-from nat.config_optimizer.update_helpers import apply_suggestions
+from nat.plugins.config_optimizer.eval_runtime_loader import load_evaluation_run
+from nat.plugins.config_optimizer.prompts.base import BasePromptOptimizer
+from nat.plugins.config_optimizer.prompts.ga_individual import Individual
+from nat.plugins.config_optimizer.prompts.oracle_feedback import build_oracle_feedback
+from nat.plugins.config_optimizer.prompts.oracle_feedback import check_adaptive_triggers
+from nat.plugins.config_optimizer.prompts.oracle_feedback import extract_worst_reasoning
+from nat.plugins.config_optimizer.prompts.oracle_feedback import should_inject_feedback
+from nat.plugins.config_optimizer.update_helpers import apply_suggestions
 from nat.data_models.config import Config
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
@@ -61,7 +61,7 @@ def _on_prompt_trial_end(
     """Build TrialResults for each individual in a GA generation and fire on_trial_end."""
     if callback_manager is None:
         return
-    from nat.eval.eval_callbacks import build_eval_result
+    from nat.plugins.eval.eval_callbacks import build_eval_result
     from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
 
     for ind in population:

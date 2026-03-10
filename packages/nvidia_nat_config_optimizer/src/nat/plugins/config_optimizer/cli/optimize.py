@@ -20,12 +20,7 @@ from pathlib import Path
 import click
 
 from nat.data_models.optimizer import OptimizerRunConfig
-
-try:
-    from nat.config_optimizer.optimizer_runtime import optimize_config
-except ImportError as _e:
-    optimize_config = None
-    _optimizer_import_error = _e
+from nat.plugins.config_optimizer.optimizer_runtime import optimize_config
 
 logger = logging.getLogger(__name__)
 
@@ -69,14 +64,6 @@ def optimizer_command(ctx, **kwargs) -> None:
     pass
 
 
-async def run_optimizer(config: OptimizerRunConfig):
-    if optimize_config is None:
-        raise click.UsageError(
-            "The optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
-            "Or install the full toolkit: pip install nvidia-nat") from _optimizer_import_error
-    await optimize_config(config)
-
-
 @optimizer_command.result_callback(replace=True)
 def run_optimizer_callback(
     processors,  # pylint: disable=unused-argument
@@ -96,4 +83,4 @@ def run_optimizer_callback(
         endpoint_timeout=endpoint_timeout,
     )
 
-    asyncio.run(run_optimizer(config))
+    asyncio.run(optimize_config(config))

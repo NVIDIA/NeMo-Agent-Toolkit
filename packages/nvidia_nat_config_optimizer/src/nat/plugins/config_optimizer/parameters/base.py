@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""ABC for prompt optimizers."""
+"""ABC for parameter optimizers."""
 
 from abc import ABC
 from abc import abstractmethod
@@ -24,17 +24,17 @@ from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
 
 
-class BasePromptOptimizer(ABC):
-    """Interface that all prompt optimization strategies must implement.
+class BaseParameterOptimizer(ABC):
+    """Interface that all parameter optimization strategies must implement.
 
-    Prompt optimizers run after parameter optimization (when both are enabled).
-    The runtime passes ``base_cfg`` as the already-tuned config from the numeric
-    phase, plus optional ``trial_number_offset`` and ``frozen_params``.
+    Parameter optimizers run first in the optimization pipeline. They receive
+    the original ``base_cfg`` and return a new config with the best numeric
+    parameters applied. Implementations may also return a tuple
+    ``(Config, dict, int)`` for ``(tuned_cfg, best_params, n_trials)``.
 
-    Unlike :class:`~nat.config_optimizer.parameters.base.BaseParameterOptimizer`,
-    this interface returns ``None``. Implementations persist the best prompts
-    to disk (e.g. ``optimized_prompts.json``) rather than updating the config
-    in memory. The config is used as input for evaluation but is not mutated.
+    Unlike :class:`~nat.plugins.config_optimizer.prompts.base.BasePromptOptimizer`,
+    this interface returns a ``Config`` (or tuple including it). The config
+    is not mutated; a new instance is produced with suggested values applied.
     """
 
     @abstractmethod
@@ -45,6 +45,6 @@ class BasePromptOptimizer(ABC):
         full_space: dict[str, SearchSpace],
         optimizer_config: OptimizerConfig,
         opt_run_config: OptimizerRunConfig,
-    ) -> None:
-        """Run prompt optimization. Persists best prompts to disk; returns None."""
+    ) -> Config:
+        """Run parameter optimization and return the tuned config (or tuple)."""
         ...

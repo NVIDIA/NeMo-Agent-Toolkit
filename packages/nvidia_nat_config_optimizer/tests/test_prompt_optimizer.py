@@ -23,8 +23,8 @@ import pytest
 from nat.builder.builder import Builder
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
-from nat.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
-from nat.config_optimizer.prompts.ga_prompt_optimizer import optimize_prompts
+from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
+from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import optimize_prompts
 from nat.data_models.config import Config
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.optimizable import SearchSpace
@@ -158,9 +158,9 @@ async def test_optimize_prompts_happy_path_with_recombine(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
+    with patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
                return_value=_EvalRun), \
-         patch("nat.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
+         patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(base_cfg=base_cfg,
@@ -213,9 +213,9 @@ async def test_optimize_prompts_happy_path_without_recombine(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
+    with patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run",
                return_value=_EvalRun), \
-         patch("nat.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
+         patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(base_cfg=base_cfg,
@@ -262,8 +262,8 @@ async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):
             self.config = config
 
         async def run_and_evaluate(self):
-            from nat.eval.evaluator.evaluator_model import EvalOutput
-            from nat.eval.evaluator.evaluator_model import EvalOutputItem
+            from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+            from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
             items = [
                 EvalOutputItem(id=1, score=0.2, reasoning="Failed to greet properly"),
@@ -276,8 +276,8 @@ async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):
         _ = (cfg, prompts)
         return Config()
 
-    with patch("nat.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run", return_value=_EvalRun), \
-         patch("nat.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
+    with patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.load_evaluation_run", return_value=_EvalRun), \
+         patch("nat.plugins.config_optimizer.prompts.ga_prompt_optimizer.apply_suggestions",
                side_effect=fake_apply_suggestions):
 
         await optimize_prompts(

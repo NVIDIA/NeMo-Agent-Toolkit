@@ -47,7 +47,7 @@ async def test_run_full_workflow():
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key", "require_nest_asyncio")
 async def test_optimize_full_workflow(capsys):
-    from nat.config_optimizer.optimizer_runtime import optimize_config
+    from nat.plugins.config_optimizer.optimizer_runtime import optimize_config
     from nat.data_models.config import Config
     from nat.data_models.optimizer import OptimizerRunConfig
     from nat_email_phishing_analyzer.register import EmailPhishingAnalyzerConfig

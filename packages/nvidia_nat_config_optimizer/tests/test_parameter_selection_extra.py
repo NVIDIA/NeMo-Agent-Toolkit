@@ -16,7 +16,7 @@
 import optuna
 from optuna.study import StudyDirection
 
-from nat.config_optimizer.parameters.selection import pick_trial
+from nat.plugins.config_optimizer.parameters.selection import pick_trial
 
 
 def _make_study_with_trials(values_list):  # noqa: ANN001
