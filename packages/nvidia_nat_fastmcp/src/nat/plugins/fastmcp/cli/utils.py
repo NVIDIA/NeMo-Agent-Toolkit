@@ -24,19 +24,22 @@ from pathlib import Path
 from watchfiles import Change
 from watchfiles import watch
 
+# `watchfiles.watch()` already uses `DefaultFilter`, which ignores common
+# artifacts such as `__pycache__`, `*.pyc`, `*.pyo`, and `*.swp`.
+# These are additional noisy patterns for dev workflows.
 DEFAULT_RELOAD_EXCLUDE_GLOBS: tuple[str, ...] = (
     "*.log",
     "*.tmp",
     "*.temp",
-    "*.swp",
-    "*.pyc",
-    "*.pyo",
-    "*__pycache__",
-    "*__pycache__/*",
 )
 
 
 def _glob_matches(path: str, pattern: str) -> bool:
+    """Return True when a path matches a glob pattern.
+
+    Matching is performed against both the normalized full path and basename
+    so patterns like `*.py` work regardless of directory depth.
+    """
     normalized_path = path.replace("\\", "/")
     normalized_pattern = pattern.replace("\\", "/")
     return fnmatch(normalized_path, normalized_pattern) or fnmatch(Path(normalized_path).name, normalized_pattern)
@@ -47,6 +50,7 @@ def _filter_change_set(
     include_globs: tuple[str, ...],
     exclude_globs: tuple[str, ...],
 ) -> set[tuple[Change, str]]:
+    """Filter change events using include and exclude glob rules."""
     filtered_changes: set[tuple[Change, str]] = set()
     for change_type, changed_path in changes:
         if include_globs and not any(_glob_matches(changed_path, pattern) for pattern in include_globs):
@@ -63,11 +67,28 @@ def iter_file_changes(
         include_globs: Iterable[str] = (),
         exclude_globs: Iterable[str] = (),
 ) -> Iterator[set[tuple[Change, str]]]:
-    """Yield filtered file change sets using watchfiles with debounce."""
+    """Yield filtered file change sets using watchfiles with debounce.
+
+    Args:
+        paths: File or directory paths to watch for changes.
+        debounce_ms: Debounce interval in milliseconds passed to watchfiles.
+        include_globs: Optional include patterns. When provided, only matching
+            paths trigger reload checks.
+        exclude_globs: Optional exclude patterns. These are merged with
+            `DEFAULT_RELOAD_EXCLUDE_GLOBS` only when include patterns are not
+            provided.
+
+    Yields:
+        Sets of `(Change, path)` tuples that pass include/exclude filtering.
+    """
     watch_paths = [str(path) for path in paths]
     include_patterns = tuple(pattern.strip() for pattern in include_globs if pattern.strip())
-    exclude_patterns = DEFAULT_RELOAD_EXCLUDE_GLOBS + tuple(pattern.strip()
-                                                            for pattern in exclude_globs if pattern.strip())
+    user_exclude_patterns = tuple(pattern.strip() for pattern in exclude_globs if pattern.strip())
+    if include_patterns:
+        # Explicit include patterns should not be blocked by default excludes.
+        exclude_patterns = user_exclude_patterns
+    else:
+        exclude_patterns = DEFAULT_RELOAD_EXCLUDE_GLOBS + user_exclude_patterns
     for changes in watch(*watch_paths, debounce=debounce_ms):
         filtered_changes = _filter_change_set(changes, include_patterns, exclude_patterns)
         if filtered_changes:

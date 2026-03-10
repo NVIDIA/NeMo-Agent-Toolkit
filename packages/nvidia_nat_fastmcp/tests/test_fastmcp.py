@@ -135,6 +135,22 @@ def test_iter_file_changes_applies_include_and_exclude_globs(monkeypatch: pytest
         next(change_iterator)
 
 
+def test_iter_file_changes_include_glob_can_match_default_excluded_patterns(monkeypatch: pytest.MonkeyPatch) -> None:
+    emitted_changes = iter([
+        {(Change.modified, "/tmp/server.log")},
+    ])
+
+    def fake_watch(*_args, **_kwargs):
+        return emitted_changes
+
+    monkeypatch.setattr("nat.plugins.fastmcp.cli.utils.watch", fake_watch)
+
+    change_iterator = iter_file_changes(paths=[Path("/tmp")], debounce_ms=50, include_globs=("*.log", ))
+    assert next(change_iterator) == {(Change.modified, "/tmp/server.log")}
+    with pytest.raises(StopIteration):
+        next(change_iterator)
+
+
 async def test_fastmcp_auth_disabled():
     config = Config(general=GeneralConfig(front_end=FastMCPFrontEndConfig()))
     worker = FastMCPFrontEndPluginWorker(config)

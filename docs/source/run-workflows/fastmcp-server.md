@@ -75,7 +75,12 @@ nat fastmcp server dev --config_file examples/getting_started/simple_calculator/
   --watch-path examples/getting_started/simple_calculator/src
 ```
 
-If your watch path contains actively written files (such as logs, temp files, or cache artifacts), limit which changes trigger reload with include and exclude globs:
+By default, developer mode ignores common noisy files such as `*.log`, `*.tmp`, and `*.temp`.
+To further control which changes trigger reloads, use include and exclude globs:
+
+- `--reload-include-glob` narrows reloads to matching paths.
+- `--reload-exclude-glob` removes matches from that set.
+- When include globs are provided, they take precedence over default excludes.
 
 ```bash
 nat fastmcp server dev --config_file examples/getting_started/simple_calculator/configs/config.yml \
