@@ -40,12 +40,3 @@ class LLMBaseConfig(TypedBaseModel, BaseModelRegistryTag):
 
 
 LLMBaseConfigT = typing.TypeVar("LLMBaseConfigT", bound=LLMBaseConfig)
-
-
-class SSLVerificationMixin(BaseModel):
-    """Mixin for SSL verification configuration."""
-
-    verify_ssl: bool = Field(
-        default=True,
-        description="Whether to verify SSL certificates when making API calls to the LLM provider. Defaults to True.",
-    )

@@ -12,21 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""LLM configuration models for testing."""
 
+from pydantic import BaseModel
 from pydantic import Field
 
-from nat.data_models.llm import LLMBaseConfig
-from nat.data_models.ssl_verification_mixin import SSLVerificationMixin
 
+class SSLVerificationMixin(BaseModel):
+    """Mixin for SSL verification configuration."""
 
-class LLMConfig(LLMBaseConfig):
-    pass
-
-
-class LLMConfigWithTimeout(LLMBaseConfig):
-    request_timeout: float | None = Field(default=None, gt=0.0, description="HTTP request timeout in seconds.")
-
-
-class LLMConfigWithSSL(LLMConfigWithTimeout, SSLVerificationMixin):
-    pass
+    verify_ssl: bool = Field(
+        default=True,
+        description="Whether to verify SSL certificates when making API calls to the LLM provider. Defaults to True.",
+    )
