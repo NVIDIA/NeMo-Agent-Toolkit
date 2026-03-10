@@ -146,7 +146,7 @@ For simple local development and debugging, you can export traces directly to a 
     ```bash
     export LANGFUSE_PUBLIC_KEY=<your_key>
     export LANGFUSE_SECRET_KEY=<your_secret>
-    export LANGFUSE_HOST=<your_host>
+    export LANGFUSE_BASE_URL=<your_base_url>
     ```
 
 3. Run the workflow:
