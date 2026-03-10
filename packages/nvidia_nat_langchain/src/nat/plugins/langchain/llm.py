@@ -249,10 +249,9 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
         exclude_unset=True,
     )
 
-    http_async_client = _create_httpx_client_with_dynamo_hooks(llm_config)
-    config_dict["http_async_client"] = http_async_client
+    async for http_async_client in _create_httpx_client_with_dynamo_hooks(llm_config):
+        config_dict["http_async_client"] = http_async_client
 
-    try:
         # Create the ChatOpenAI client
         if llm_config.api_type == APITypeEnum.RESPONSES:
             client = ChatOpenAI(stream_usage=True, use_responses_api=True, use_previous_response_id=True, **config_dict)
@@ -260,9 +259,6 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
             client = ChatOpenAI(stream_usage=True, **config_dict)
 
         yield _patch_llm_based_on_config(client, llm_config)
-    finally:
-        # Ensure the httpx client is properly closed to avoid resource leaks
-        await http_async_client.aclose()
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
