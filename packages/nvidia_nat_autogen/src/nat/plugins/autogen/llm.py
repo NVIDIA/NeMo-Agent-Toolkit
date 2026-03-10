@@ -221,7 +221,15 @@ async def azure_openai_autogen(llm_config: AzureOpenAIModelConfig,
             "http_client":
                 http_client,
             **llm_config.model_dump(
-                exclude={"api_version", "azure_deployment", "azure_endpoint", "request_timeout", "thinking", "type"},
+                exclude={
+                    "api_version",
+                    "azure_deployment",
+                    "azure_endpoint",
+                    "request_timeout",
+                    "thinking",
+                    "type",
+                    "verify_ssl",
+                },
                 by_alias=True,
                 exclude_none=True,
             ),
@@ -345,7 +353,12 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
             "http_client":
                 http_client,
             **llm_config.model_dump(
-                exclude={"model_name", "thinking", "type"},
+                exclude={
+                    "model_name",
+                    "thinking",
+                    "type",
+                    "verify_ssl",
+                },
                 by_alias=True,
                 exclude_none=True,
                 exclude_unset=True,
@@ -408,7 +421,12 @@ async def litellm_autogen(llm_config: LiteLlmModelConfig, _builder: Builder) -> 
             "http_client":
                 http_client,
             **llm_config.model_dump(
-                exclude={"model_name", "thinking", "type"},
+                exclude={
+                    "model_name",
+                    "thinking",
+                    "type",
+                    "verify_ssl",
+                },
                 by_alias=True,
                 exclude_none=True,
                 exclude_unset=True,
