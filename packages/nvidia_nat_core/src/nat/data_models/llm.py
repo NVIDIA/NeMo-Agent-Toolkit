@@ -16,7 +16,6 @@
 import typing
 from enum import StrEnum
 
-from pydantic import BaseModel
 from pydantic import Field
 
 from .common import BaseModelRegistryTag
