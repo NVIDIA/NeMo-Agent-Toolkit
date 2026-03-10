@@ -47,8 +47,6 @@ from nat.utils.responses_api import validate_no_responses_api
 from nat.utils.type_utils import override
 
 if TYPE_CHECKING:
-    import httpx
-
     from nat.data_models.llm import LLMBaseConfig
 
 logger = logging.getLogger(__name__)
