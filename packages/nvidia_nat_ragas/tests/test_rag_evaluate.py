@@ -207,16 +207,14 @@ async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_sa
     dataset.__len__.return_value = len(dataset.samples)
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
 
-    with patch.object(atif_evaluator, "atif_samples_to_ragas", return_value=dataset) as mock_to_ragas, \
-         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric",
+    with patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric",
                new_callable=AsyncMock,
                return_value=0.6) as mock_score_metric:
         output = await atif_evaluator.evaluate(atif_samples)
 
-        mock_to_ragas.assert_called_once_with(atif_samples)
-        assert mock_score_metric.await_count == len(dataset.samples)
+        assert mock_score_metric.await_count == len(atif_samples)
         assert output.average_score == pytest.approx(0.6, abs=1e-9)
-        assert len(output.eval_output_items) == len(dataset.samples)
+        assert len(output.eval_output_items) == len(atif_samples)
 
 
 def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
