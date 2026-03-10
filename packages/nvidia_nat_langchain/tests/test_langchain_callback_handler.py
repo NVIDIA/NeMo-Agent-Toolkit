@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import logging
 from uuid import uuid4
 
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -236,6 +237,38 @@ def test_extract_tools_schema_skips_unparseable_tool():
     result = _extract_tools_schema(invocation_params)
     assert len(result) == 1
     assert result[0].function.name == "good_tool"
+
+
+def test_extract_tools_schema_skips_non_mapping_input_schema(caplog):
+    """Test that a tool with a non-mapping input_schema is skipped and logged."""
+    invocation_params = {
+        "tools": [
+            {
+                "name": "good_tool",
+                "description": "A valid Anthropic tool",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "q": {
+                            "type": "string"
+                        }
+                    },
+                    "required": ["q"],
+                },
+            },
+            {
+                "name": "bad_tool",
+                "description": "Malformed schema",
+                "input_schema": [{"type": "string"}],
+            },
+        ]
+    }
+
+    with caplog.at_level(logging.DEBUG, logger="nat.plugins.langchain.callback_handler"):
+        result = _extract_tools_schema(invocation_params)
+
+    assert [tool.function.name for tool in result] == ["good_tool"]
+    assert "Failed to parse tool schema" in caplog.text
 
 
 def test_extract_tools_schema_empty_and_none():

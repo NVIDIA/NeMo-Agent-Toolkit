@@ -70,7 +70,7 @@ def _extract_tools_schema(invocation_params: dict) -> list:
                                 ),
                             ),
                         ))
-                except (KeyError, TypeError):
+                except (KeyError, TypeError, AttributeError):
                     logger.exception(
                         "Failed to parse tool schema from invocation params: %s. \n This "
                         "can occur when the LLM server has native tools and can be ignored if "
