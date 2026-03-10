@@ -328,11 +328,15 @@ class StepAdaptor:
         """
         Handles SPAN events (SPAN_START, SPAN_CHUNK, SPAN_END) for custom thoughts.
         """
-        # Check if this is a custom thought with metadata
-        if not step.metadata or not isinstance(step.metadata, dict):
-            return None
+        # Extract thought_text from data field based on event type
+        thought_text = None
+        if step.event_type == IntermediateStepType.SPAN_START and step.data:
+            thought_text = step.data.input
+        elif step.event_type == IntermediateStepType.SPAN_CHUNK and step.data:
+            thought_text = step.data.chunk
+        elif step.event_type == IntermediateStepType.SPAN_END and step.data:
+            thought_text = step.data.output
 
-        thought_text = step.metadata.get("thought_text")
         if not thought_text:
             return None
 
@@ -341,7 +345,7 @@ class StepAdaptor:
                                         name=step.name or "Span",
                                         payload="",
                                         parent_id=ancestry.function_id,
-                                        thought_text=thought_text)
+                                        thought_text=str(thought_text))
 
     def _handle_custom(self, payload: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         """

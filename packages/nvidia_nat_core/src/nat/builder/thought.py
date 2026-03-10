@@ -49,16 +49,14 @@ def emit_thought(context: "Context", thought_text: str, name: str | None = None)
         IntermediateStepPayload(UUID=thought_uuid,
                                 event_type=IntermediateStepType.SPAN_START,
                                 name=thought_name,
-                                data=StreamEventData(input=None),
-                                metadata={"thought_text": thought_text}))
+                                data=StreamEventData(input=thought_text)))
 
     # Immediately emit END event (complete thought)
     context.intermediate_step_manager.push_intermediate_step(
         IntermediateStepPayload(UUID=thought_uuid,
                                 event_type=IntermediateStepType.SPAN_END,
                                 name=thought_name,
-                                data=StreamEventData(output=None),
-                                metadata={"thought_text": thought_text}))
+                                data=StreamEventData(output=thought_text)))
 
     return thought_uuid
 
@@ -84,8 +82,7 @@ def emit_thought_start(context: "Context", thought_text: str, name: str | None =
         IntermediateStepPayload(UUID=thought_uuid,
                                 event_type=IntermediateStepType.SPAN_START,
                                 name=thought_name,
-                                data=StreamEventData(input=None),
-                                metadata={"thought_text": thought_text}))
+                                data=StreamEventData(input=thought_text)))
 
     return thought_uuid
 
@@ -104,8 +101,7 @@ def emit_thought_chunk(context: "Context", thought_uuid: str, thought_text: str)
         IntermediateStepPayload(UUID=thought_uuid,
                                 event_type=IntermediateStepType.SPAN_CHUNK,
                                 name="custom_thought",
-                                data=StreamEventData(chunk=thought_text),
-                                metadata={"thought_text": thought_text}))
+                                data=StreamEventData(chunk=thought_text)))
 
 
 def emit_thought_end(context: "Context", thought_uuid: str, thought_text: str | None = None) -> None:
@@ -120,5 +116,4 @@ def emit_thought_end(context: "Context", thought_uuid: str, thought_text: str | 
         IntermediateStepPayload(UUID=thought_uuid,
                                 event_type=IntermediateStepType.SPAN_END,
                                 name="custom_thought",
-                                data=StreamEventData(output=None),
-                                metadata={"thought_text": thought_text} if thought_text else {}))
+                                data=StreamEventData(output=thought_text)))

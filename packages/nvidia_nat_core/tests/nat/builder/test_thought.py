@@ -98,9 +98,9 @@ def test_emit_thought_creates_start_and_end_events(ctx: Context, output_steps: l
     assert start_event.payload.event_type == IntermediateStepType.SPAN_START
     assert end_event.payload.event_type == IntermediateStepType.SPAN_END
 
-    # Check thought_text in metadata
-    assert start_event.payload.metadata["thought_text"] == "Processing data..."
-    assert end_event.payload.metadata["thought_text"] == "Processing data..."
+    # Check thought_text in data
+    assert start_event.payload.data.input == "Processing data..."
+    assert end_event.payload.data.output == "Processing data..."
 
 
 def test_emit_thought_custom_name(ctx: Context, output_steps: list[IntermediateStep]):
@@ -126,7 +126,7 @@ def test_emit_thought_start_creates_start_event(ctx: Context, output_steps: list
     start_event = output_steps[0]
     assert start_event.payload.UUID == thought_uuid
     assert start_event.payload.event_type == IntermediateStepType.SPAN_START
-    assert start_event.payload.metadata["thought_text"] == "Starting process..."
+    assert start_event.payload.data.input == "Starting process..."
 
     # Balance span stack for fixture teardown
     emit_thought_end(ctx, thought_uuid)
@@ -150,7 +150,7 @@ def test_emit_thought_chunk_creates_chunk_event(ctx: Context, output_steps: list
     chunk_event = output_steps[0]
     assert chunk_event.payload.UUID == thought_uuid
     assert chunk_event.payload.event_type == IntermediateStepType.SPAN_CHUNK
-    assert chunk_event.payload.metadata["thought_text"] == "Processing: 50%"
+    assert chunk_event.payload.data.chunk == "Processing: 50%"
 
     emit_thought_end(ctx, thought_uuid)
 
@@ -173,7 +173,7 @@ def test_emit_thought_end_creates_end_event(ctx: Context, output_steps: list[Int
     end_event = output_steps[0]
     assert end_event.payload.UUID == thought_uuid
     assert end_event.payload.event_type == IntermediateStepType.SPAN_END
-    assert end_event.payload.metadata["thought_text"] == "Complete"
+    assert end_event.payload.data.output == "Complete"
 
 
 def test_emit_thought_end_with_no_text(ctx: Context, output_steps: list[IntermediateStep]):
@@ -186,8 +186,8 @@ def test_emit_thought_end_with_no_text(ctx: Context, output_steps: list[Intermed
     end_event = output_steps[0]
     assert end_event.payload.UUID == thought_uuid
     assert end_event.payload.event_type == IntermediateStepType.SPAN_END
-    # metadata should be empty dict when no thought_text provided
-    assert end_event.payload.metadata == {}
+    # data.output should be None when no thought_text provided
+    assert end_event.payload.data.output is None
 
 
 # --------------------------------------------------------------------------- #

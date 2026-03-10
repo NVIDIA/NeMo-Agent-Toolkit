@@ -813,13 +813,12 @@ def test_tool_end_with_thought_description_override(step_adaptor_default, make_i
 # Tests for custom thought emission via SPAN events
 # --------------------
 def test_span_start_with_custom_thought(step_adaptor_default):
-    """Test that SPAN_START events with thought_text metadata are processed correctly."""
+    """Test that SPAN_START events with thought_text in data.input are processed correctly."""
     custom_thought = "Processing data: initializing..."
     payload = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
                                       name="custom_thought",
-                                      data=StreamEventData(input=None),
-                                      UUID="span-uuid-1",
-                                      metadata={"thought_text": custom_thought})
+                                      data=StreamEventData(input=custom_thought),
+                                      UUID="span-uuid-1")
     step = IntermediateStep(parent_id="root",
                             function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
                             payload=payload)
@@ -838,9 +837,8 @@ def test_span_chunk_with_custom_thought(step_adaptor_default):
 
     payload_start = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
                                             name="custom_thought",
-                                            data=StreamEventData(input=None),
-                                            UUID=uuid,
-                                            metadata={"thought_text": "Processing: 0%"})
+                                            data=StreamEventData(input="Processing: 0%"),
+                                            UUID=uuid)
     step_start = IntermediateStep(parent_id="root",
                                   function_ancestry=InvocationNode(parent_id="abc",
                                                                    function_id="def",
@@ -851,9 +849,8 @@ def test_span_chunk_with_custom_thought(step_adaptor_default):
     custom_thought_update = "Processing: 50%"
     payload_chunk = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_CHUNK,
                                             name="custom_thought",
-                                            data=StreamEventData(chunk="50%"),
-                                            UUID=uuid,
-                                            metadata={"thought_text": custom_thought_update})
+                                            data=StreamEventData(chunk=custom_thought_update),
+                                            UUID=uuid)
     step_chunk = IntermediateStep(parent_id="root",
                                   function_ancestry=InvocationNode(parent_id="abc",
                                                                    function_id="def",
@@ -867,13 +864,11 @@ def test_span_chunk_with_custom_thought(step_adaptor_default):
 
 
 def test_span_without_thought_text_returns_none(step_adaptor_default):
-    """Test that SPAN events without thought_text metadata return None."""
-    payload = IntermediateStepPayload(
-        event_type=IntermediateStepType.SPAN_START,
-        name="regular_span",
-        data=StreamEventData(input=None),
-        UUID="span-uuid-no-thought",
-    )
+    """Test that SPAN events without thought_text in data return None."""
+    payload = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
+                                      name="regular_span",
+                                      data=StreamEventData(input=None),
+                                      UUID="span-uuid-no-thought")
     step = IntermediateStep(parent_id="root",
                             function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
                             payload=payload)
