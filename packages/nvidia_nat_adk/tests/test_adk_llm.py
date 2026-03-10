@@ -50,7 +50,6 @@ def minimal_litellm_config():
 
 
 @patch('google.adk.models.lite_llm.LiteLlm')
-@pytest.mark.asyncio
 async def test_litellm_adk_with_full_config(mock_litellm_class, litellm_config, mock_builder):
     """Test litellm_adk function with full configuration."""
     mock_llm_instance = MagicMock()
@@ -71,7 +70,6 @@ async def test_litellm_adk_with_full_config(mock_litellm_class, litellm_config, 
 
 
 @patch('google.adk.models.lite_llm.LiteLlm')
-@pytest.mark.asyncio
 async def test_litellm_adk_config_exclusion(mock_litellm_class, mock_builder):
     """Test that 'type' field is excluded from config when creating LiteLlm."""
     config_with_type = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.5)
@@ -102,7 +100,6 @@ async def test_litellm_adk_config_exclusion(mock_litellm_class, mock_builder):
 
 
 @patch('google.adk.models.lite_llm.LiteLlm')
-@pytest.mark.asyncio
 async def test_litellm_adk_is_generator(mock_litellm_class, litellm_config, mock_builder):
     """Test that litellm_adk returns an async context manager."""
     mock_llm_instance = MagicMock()
@@ -126,7 +123,6 @@ async def test_litellm_adk_is_generator(mock_litellm_class, litellm_config, mock
 @patch('nat.plugins.adk.llm._handle_litellm_verify_ssl')
 @patch('google.adk.models.lite_llm.LiteLlm')
 @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
-@pytest.mark.asyncio
 async def test_litellm_verify_ssl(mock_litellm_class, mock_handle_verify_ssl, verify_ssl, mock_builder):
     """verify_ssl from config is passed to _handle_litellm_verify_ssl (underlying litellm client)."""
     mock_llm_instance = MagicMock()
@@ -139,7 +135,6 @@ async def test_litellm_verify_ssl(mock_litellm_class, mock_handle_verify_ssl, ve
     mock_handle_verify_ssl.assert_called_once_with(verify_ssl)
 
 
-@pytest.mark.asyncio
 async def test_litellm_adk_decorator_registration():
     """Test that the litellm_adk function is properly decorated."""
     from nat.plugins.adk.llm import openai_adk
@@ -216,7 +211,6 @@ class TestDynamoAdk:
             assert "transport" not in client_create_kwargs
 
     @patch('google.adk.models.lite_llm.LiteLlm')
-    @pytest.mark.asyncio
     async def test_creation_with_nvext_hints_enabled(self,
                                                      mock_litellm_class,
                                                      mock_create_http_client,
@@ -250,7 +244,6 @@ class TestDynamoAdk:
         assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
     @patch('google.adk.models.lite_llm.LiteLlm')
-    @pytest.mark.asyncio
     async def test_excludes_dynamo_specific_fields(self,
                                                    mock_litellm_class,
                                                    mock_create_http_client,
@@ -284,7 +277,6 @@ class TestDynamoAdk:
         assert "transport" in mock_create_http_client.call_args.kwargs
 
     @patch('google.adk.models.lite_llm.LiteLlm')
-    @pytest.mark.asyncio
     async def test_client_passed_per_instance(self, mock_litellm_class, mock_builder):
         """Each LiteLlm instance should receive a client kwarg when nvext hints are enabled."""
         mock_llm_instance = MagicMock()
@@ -301,7 +293,6 @@ class TestDynamoAdk:
                 pass
             assert "client" in mock_litellm_class.call_args.kwargs
 
-    @pytest.mark.asyncio
     async def test_dynamo_adk_decorator_registration(self):
         """Test that the dynamo_adk function is properly decorated."""
         from nat.plugins.adk.llm import dynamo_adk
