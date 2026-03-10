@@ -77,6 +77,24 @@ class TestOpenAIStrands:
                 pass
         mock_model.assert_not_called()
 
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("openai.AsyncOpenAI")
+    @patch("strands.models.openai.OpenAIModel")
+    @pytest.mark.asyncio
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_model,
+                                               mock_async_openai,
+                                               openai_config,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        mock_model.return_value = MagicMock()
+        openai_config.verify_ssl = verify_ssl
+        async with openai_strands(openai_config, mock_builder):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
 
 class TestBedrockStrands:
     """Tests for the bedrock_strands function."""
@@ -336,6 +354,23 @@ class TestNIMStrands:
                 async with nim_strands(nim_config_wrong_api, mock_builder):
                     pass
             mock_init.assert_not_called()
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("openai.AsyncOpenAI")
+    @patch("strands.models.openai.OpenAIModel.__init__", return_value=None)
+    @pytest.mark.asyncio
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_init,
+                                               mock_async_openai,
+                                               nim_config,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        nim_config.verify_ssl = verify_ssl
+        async with nim_strands(nim_config, mock_builder):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
 
 class TestPatchLLMBasedOnConfig:
