@@ -742,7 +742,7 @@ async def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "
                 logger.exception("Failed to load prediction trie")
 
         # Create base transport and wrap with custom transport
-        base_transport = httpx.AsyncHTTPTransport()
+        base_transport = httpx.AsyncHTTPTransport(verify=config.verify_ssl)
         dynamo_transport = _DynamoTransport(
             transport=base_transport,
             total_requests=config.nvext_prefix_total_requests,
