@@ -31,6 +31,16 @@ All tests in NeMo Agent Toolkit use pytest. See the general coding guidelines fo
 - Use `@pytest.fixture(name="fixture_name")` decorator pattern
 - Fixtures that are used in multiple tests should be defined in the `packages/nvidia_nat_test/src/nat/test/plugin.py` file, fixtures specific to a single package should be defined in a `conftest.py` file in the `tests` directory of the package, and fixtures that are specific to a single test can be defined in the test file itself.
 
+#### Available Fixtures
+
+**API Keys**: `nvidia_api_key`, `openai_api_key`, `tavily_api_key`, `mem0_api_key`
+
+**Services**: `milvus_uri`, `redis_url`, `mysql_connection_info`, `phoenix_url`
+
+**Directories**: `root_repo_dir`, `examples_dir` (NAT repo only)
+
+There are many more fixtures available, refer to the [plugin.py](mdc:packages/nvidia_nat_test/src/nat/test/plugin.py) file and any `conftest.py` files defined in the file hierarchy of the current test file for the complete list.
+
 ### Integration Tests
 
 For workflows that require actual LLM services or external services, follow the integration testing guidelines:
@@ -96,14 +106,6 @@ pytest --run_slow --run_integration packages/nvidia_nat_langchain
 - `locate_example_config(ConfigClass)` - Find config files
 - `run_workflow(config_file, question, expected_answer)` - Run and validate workflows
 - `load_config(config_file)` - Load configuration objects
-
-### Available Fixtures
-
-**API Keys**: `nvidia_api_key`, `openai_api_key`, `tavily_api_key`, `mem0_api_key`
-
-**Services**: `milvus_uri`, `redis_url`, `mysql_connection_info`, `phoenix_url`
-
-**Directories**: `root_repo_dir`, `examples_dir` (NAT repo only)
 
 ### Test LLM
 

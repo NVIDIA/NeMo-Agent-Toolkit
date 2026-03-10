@@ -14,15 +14,17 @@
 # limitations under the License.
 # pylint: disable=unused-argument, not-async-context-manager
 
+from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
 
-from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.plugins.semantic_kernel.llm import azure_openai_semantic_kernel
 from nat.plugins.semantic_kernel.llm import openai_semantic_kernel
 
 # ---------------------------------------------------------------------------
@@ -58,6 +60,61 @@ class TestOpenAISemanticKernel:
             async with openai_semantic_kernel(oa_cfg_responses, mock_builder):
                 pass
         mock_sk.assert_not_called()
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("openai.AsyncOpenAI")
+    @patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion")
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_sk,
+                                               mock_async_openai,
+                                               oa_cfg,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        mock_async_openai.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+        mock_async_openai.return_value.__aexit__ = AsyncMock(return_value=None)
+        oa_cfg.verify_ssl = verify_ssl
+        async with openai_semantic_kernel(oa_cfg, mock_builder):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+
+# ---------------------------------------------------------------------------
+# Azure OpenAI → Semantic-Kernel wrapper tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.usefixtures("set_test_api_keys")
+class TestAzureOpenAISemanticKernel:
+    """Tests for the azure_openai_semantic_kernel wrapper."""
+
+    @pytest.fixture
+    def azure_cfg(self):
+        return AzureOpenAIModelConfig(
+            azure_deployment="gpt-4",
+            api_key="test-key",
+            azure_endpoint="https://test.openai.azure.com",
+            api_version="2024-02-01",
+        )
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("openai.AsyncAzureOpenAI")
+    @patch("semantic_kernel.connectors.ai.open_ai.AzureChatCompletion")
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_azure_chat,
+                                               mock_async_azure_openai,
+                                               azure_cfg,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        mock_async_azure_openai.return_value.__aenter__ = AsyncMock(return_value=MagicMock())
+        mock_async_azure_openai.return_value.__aexit__ = AsyncMock(return_value=None)
+        azure_cfg.verify_ssl = verify_ssl
+        async with azure_openai_semantic_kernel(azure_cfg, mock_builder):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
 
 # ---------------------------------------------------------------------------
