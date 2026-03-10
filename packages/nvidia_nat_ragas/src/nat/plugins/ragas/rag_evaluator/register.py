@@ -94,6 +94,7 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
 
 @register_evaluator(config_type=RagasEvaluatorConfig)
 async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBuilder):
+
     def get_ragas_metric(metric_name: str):
         """Fetch metric constructor from v0.4 collections, falling back to legacy namespace."""
         module_names = ("ragas.metrics.collections", "ragas.metrics")

@@ -144,8 +144,7 @@ async def test_rag_evaluate_success(rag_evaluator, rag_eval_input):
     implemented within the ragas framework. The simple example's end-to-end test covers functional
     testing.
     """
-    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric",
-               new_callable=AsyncMock,
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric", new_callable=AsyncMock,
                return_value=0.8) as mock_score_metric:
         output = await rag_evaluator.evaluate(rag_eval_input)
 
