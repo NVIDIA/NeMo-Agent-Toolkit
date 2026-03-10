@@ -201,20 +201,15 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
-    http_client = _create_httpx_client_with_dynamo_hooks(config)
+    async with _create_httpx_client_with_dynamo_hooks(config) as http_client:
 
-    api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
-    base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
+        api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
+        base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
 
-    openai_client = AsyncOpenAI(
-        api_key=api_key,
-        base_url=base_url,
-        http_client=http_client,
-    )
-    config_dict["client"] = openai_client
-
-    try:
+        openai_client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=http_client,
+        )
+        config_dict["client"] = openai_client
         yield LiteLlm(config.model_name, **config_dict)
-    finally:
-        if http_client is not None:
-            await http_client.aclose()

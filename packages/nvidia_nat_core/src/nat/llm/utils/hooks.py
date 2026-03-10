@@ -21,6 +21,7 @@ traceability in LLM server logs.
 """
 
 import logging
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -34,7 +35,8 @@ from nat.llm.utils.http_client import _create_http_client
 logger = logging.getLogger(__name__)
 
 
-def _create_metadata_injection_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
+@asynccontextmanager
+async def _create_metadata_injection_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
     """
     Httpx event hook that injects custom metadata as HTTP headers.
 
@@ -66,4 +68,8 @@ def _create_metadata_injection_client(llm_config: "LLMBaseConfig") -> "httpx.Asy
         except Exception as e:
             logger.debug("Could not inject custom metadata headers, request will proceed without them: %s", e)
 
-    return _create_http_client(llm_config=llm_config, use_async=True, event_hooks={"request": [on_request]})
+    client = _create_http_client(llm_config=llm_config, use_async=True, event_hooks={"request": [on_request]})
+    try:
+        yield client
+    finally:
+        await client.aclose()
