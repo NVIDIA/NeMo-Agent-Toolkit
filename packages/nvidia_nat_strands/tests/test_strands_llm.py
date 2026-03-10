@@ -19,7 +19,6 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.builder.builder import Builder
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.nim_llm import NIMModelConfig

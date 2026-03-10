@@ -22,7 +22,6 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.builder.builder import Builder
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
 from nat.plugins.agno.tools.serp_api_tool import SerpApiToolConfig
