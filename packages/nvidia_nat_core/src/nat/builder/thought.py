@@ -87,7 +87,7 @@ def emit_thought_start(context: "Context", thought_text: str, name: str | None =
     return thought_uuid
 
 
-def emit_thought_chunk(context: "Context", thought_uuid: str, thought_text: str) -> None:
+def emit_thought_chunk(context: "Context", thought_uuid: str, thought_text: str, name: str | None = None) -> None:
     """Emit an update to a streaming thought started with emit_thought_start().
 
     This updates the thought text in the UI, useful for showing progress updates.
@@ -96,24 +96,33 @@ def emit_thought_chunk(context: "Context", thought_uuid: str, thought_text: str)
         context: The NAT context object (obtain via Context.get())
         thought_uuid: The UUID returned from emit_thought_start()
         thought_text: The updated thought text to display
+        name: Optional name for the thought (defaults to "custom_thought", should match emit_thought_start)
     """
+    thought_name = name or "custom_thought"
+
     context.intermediate_step_manager.push_intermediate_step(
         IntermediateStepPayload(UUID=thought_uuid,
                                 event_type=IntermediateStepType.SPAN_CHUNK,
-                                name="custom_thought",
+                                name=thought_name,
                                 data=StreamEventData(chunk=thought_text)))
 
 
-def emit_thought_end(context: "Context", thought_uuid: str, thought_text: str | None = None) -> None:
+def emit_thought_end(context: "Context",
+                     thought_uuid: str,
+                     thought_text: str | None = None,
+                     name: str | None = None) -> None:
     """Complete a streaming thought started with emit_thought_start().
 
     Args:
         context: The NAT context object (obtain via Context.get())
         thought_uuid: The UUID returned from emit_thought_start()
         thought_text: Optional final thought text (if None, keeps the last chunk text)
+        name: Optional name for the thought (defaults to "custom_thought", should match emit_thought_start)
     """
+    thought_name = name or "custom_thought"
+
     context.intermediate_step_manager.push_intermediate_step(
         IntermediateStepPayload(UUID=thought_uuid,
                                 event_type=IntermediateStepType.SPAN_END,
-                                name="custom_thought",
+                                name=thought_name,
                                 data=StreamEventData(output=thought_text)))

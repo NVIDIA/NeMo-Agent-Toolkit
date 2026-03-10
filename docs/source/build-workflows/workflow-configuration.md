@@ -75,7 +75,7 @@ The `functions` section contains the tools used in the workflow, in our example 
 
 Agent responses in the NeMo Agent Toolkit UI include a thought process display which shows a step-by-step view of what the workflow is doing.
 
-To customize the text shown for a function in the thought process display, set `thought_description` in that function's configuration. Unlike `description`, which provides the tool's help text that the agent uses to decide when and how to call the tool, `thought_description` only affects the label shown in the thought process display. For example:
+To customize the text shown for a function in the thought process display, set the `thought_description` attribute. Unlike `description`, which provides help text that the agent uses to decide when and how to call the tool, `thought_description` only affects the message shown in the thought process display UI as well as in observability traces. For example:
 
 ```yaml
 functions:

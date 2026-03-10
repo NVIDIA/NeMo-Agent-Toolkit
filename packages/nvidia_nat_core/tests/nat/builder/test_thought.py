@@ -47,7 +47,7 @@ class _DummyFunction(InvocationNode):  # what active_function.get() returns
 
 
 @pytest.fixture(name="ctx_state")
-def ctx_state_fixture():
+def fixture_ctx_state():
     """Fresh context state for each test."""
     s = ContextState()
 
@@ -59,12 +59,12 @@ def ctx_state_fixture():
 
 
 @pytest.fixture(name="output_steps")
-def output_steps_fixture():
+def fixture_output_steps():
     return []
 
 
 @pytest.fixture(name="ctx")
-def ctx_fixture(ctx_state: ContextState, output_steps):
+def fixture_ctx(ctx_state: ContextState, output_steps):
     """Context with intermediate step manager subscribed to output_steps."""
     ctx = Context(ctx_state)
 
@@ -237,6 +237,15 @@ def test_multiple_concurrent_thoughts(ctx: Context, output_steps: list[Intermedi
     assert output_steps[0].payload.UUID == uuid1
     assert output_steps[1].payload.UUID == uuid2
 
+    output_steps.clear()
+
     # Pop in reverse order (LIFO)
     emit_thought_end(ctx, uuid2)
     emit_thought_end(ctx, uuid1)
+
+    # Should have 2 END events with correct UUIDs in LIFO order
+    assert len(output_steps) == 2
+    assert output_steps[0].payload.UUID == uuid2
+    assert output_steps[0].payload.event_type == IntermediateStepType.SPAN_END
+    assert output_steps[1].payload.UUID == uuid1
+    assert output_steps[1].payload.event_type == IntermediateStepType.SPAN_END

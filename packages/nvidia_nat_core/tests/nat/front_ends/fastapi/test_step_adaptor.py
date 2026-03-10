@@ -26,14 +26,14 @@ from nat.data_models.step_adaptor import StepAdaptorMode
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 
 
-@pytest.fixture
-def default_config():
+@pytest.fixture(name="default_config")
+def fixture_default_config():
     """Return a default StepAdaptorConfig object (mode=DEFAULT)."""
     return StepAdaptorConfig(mode=StepAdaptorMode.DEFAULT, custom_event_types=[])
 
 
-@pytest.fixture
-def custom_config():
+@pytest.fixture(name="custom_config")
+def fixture_custom_config():
     """Return a custom StepAdaptorConfig object (mode=CUSTOM) with custom types."""
     return StepAdaptorConfig(
         mode=StepAdaptorMode.CUSTOM,
@@ -44,8 +44,8 @@ def custom_config():
     )
 
 
-@pytest.fixture
-def disabled_config():
+@pytest.fixture(name="disabled_config")
+def fixture_disabled_config():
     """Return a custom StepAdaptorConfig object that disables intermediate steps."""
     return StepAdaptorConfig(
         mode=StepAdaptorMode.OFF,
@@ -56,26 +56,26 @@ def disabled_config():
     )
 
 
-@pytest.fixture
-def step_adaptor_default(default_config):
+@pytest.fixture(name="step_adaptor_default")
+def fixture_step_adaptor_default(default_config):
     """Return a StepAdaptor using the default config."""
     return StepAdaptor(config=default_config)
 
 
-@pytest.fixture
-def step_adaptor_custom(custom_config):
+@pytest.fixture(name="step_adaptor_custom")
+def fixture_step_adaptor_custom(custom_config):
     """Return a StepAdaptor using the custom config."""
     return StepAdaptor(config=custom_config)
 
 
-@pytest.fixture
-def step_adaptor_disabled(disabled_config):
+@pytest.fixture(name="step_adaptor_disabled")
+def fixture_step_adaptor_disabled(disabled_config):
     """Return a StepAdaptor using the disabled config."""
     return StepAdaptor(config=disabled_config)
 
 
-@pytest.fixture
-def make_intermediate_step():
+@pytest.fixture(name="make_intermediate_step")
+def fixture_make_intermediate_step():
     """A factory fixture to create an IntermediateStep with minimal defaults."""
 
     def _make_step(event_type: IntermediateStepType, data_input=None, data_output=None, name=None, UUID=None):
@@ -670,7 +670,7 @@ def test_function_events_in_custom_mode(step_adaptor_custom, make_intermediate_s
 # --------------------
 # Tests for thought_description override
 # --------------------
-def test_function_start_with_thought_description_override(step_adaptor_default, make_intermediate_step):
+def test_function_start_with_thought_description_override(step_adaptor_default):
     """FUNCTION_START events use custom thought_description from metadata when provided."""
     custom_thought = "Authenticating user credentials"
     payload = IntermediateStepPayload(
@@ -693,7 +693,7 @@ def test_function_start_with_thought_description_override(step_adaptor_default, 
     assert result.thought_text == f"{custom_thought}..."
 
 
-def test_function_end_with_thought_description_override(step_adaptor_default, make_intermediate_step):
+def test_function_end_with_thought_description_override(step_adaptor_default):
     """FUNCTION_END events use custom thought_description from start event metadata."""
     uuid = "function-uuid-custom-end"
     custom_thought = "Generating SQL query"
@@ -747,7 +747,7 @@ def test_function_without_thought_description_uses_default(step_adaptor_default,
     assert result.thought_text == "Running function: test_function..."
 
 
-def test_tool_start_with_thought_description_override(step_adaptor_default, make_intermediate_step):
+def test_tool_start_with_thought_description_override(step_adaptor_default):
     """TOOL_START events use custom thought_description from metadata when provided."""
     custom_thought = "Executing database query"
     payload = IntermediateStepPayload(
@@ -770,7 +770,7 @@ def test_tool_start_with_thought_description_override(step_adaptor_default, make
     assert result.thought_text == f"{custom_thought}..."
 
 
-def test_tool_end_with_thought_description_override(step_adaptor_default, make_intermediate_step):
+def test_tool_end_with_thought_description_override(step_adaptor_default):
     """TOOL_END events use custom thought_description from start event metadata."""
     uuid = "tool-uuid-custom-end"
     custom_thought = "Executing database query"
@@ -861,6 +861,38 @@ def test_span_chunk_with_custom_thought(step_adaptor_default):
     assert result is not None
     assert isinstance(result, ResponseIntermediateStep)
     assert result.thought_text == custom_thought_update
+
+
+def test_span_end_with_custom_thought(step_adaptor_default):
+    """Test that SPAN_END events extract thought_text from data.output."""
+    uuid = "span-uuid-end"
+
+    payload_start = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
+                                            name="custom_thought",
+                                            data=StreamEventData(input="Starting process..."),
+                                            UUID=uuid)
+    step_start = IntermediateStep(parent_id="root",
+                                  function_ancestry=InvocationNode(parent_id="abc",
+                                                                   function_id="def",
+                                                                   function_name="xyz"),
+                                  payload=payload_start)
+    step_adaptor_default.process(step_start)
+
+    custom_thought_final = "Process completed successfully"
+    payload_end = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_END,
+                                          name="custom_thought",
+                                          data=StreamEventData(output=custom_thought_final),
+                                          UUID=uuid)
+    step_end = IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(parent_id="abc",
+                                                                 function_id="def",
+                                                                 function_name="xyz"),
+                                payload=payload_end)
+    result = step_adaptor_default.process(step_end)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == custom_thought_final
 
 
 def test_span_without_thought_text_returns_none(step_adaptor_default):
