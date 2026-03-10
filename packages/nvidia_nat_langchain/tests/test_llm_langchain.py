@@ -275,11 +275,17 @@ class TestDynamoLangChain:
                                                  mock_chat,
                                                  mock_create_client,
                                                  dynamo_cfg_with_prefix,
-                                                 mock_builder):
+                                                 mock_builder,
+                                                 mock_httpx_async_client):
         """Wrapper should create ChatOpenAI with custom httpx client when nvext hints enabled."""
-        mock_httpx_client = MagicMock()
-        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
-        mock_create_client.return_value = mock_httpx_client
+
+        async def _aexit(*a, **k):
+            await mock_httpx_async_client.aclose()
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_httpx_async_client
+        mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+        mock_create_client.return_value = mock_cm
 
         async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder) as client:
             mock_create_client.assert_called_once_with(dynamo_cfg_with_prefix)
@@ -289,19 +295,26 @@ class TestDynamoLangChain:
             kwargs = mock_chat.call_args.kwargs
 
             assert kwargs["model"] == "test-model"
-            assert kwargs["http_async_client"] is mock_httpx_client
+            assert kwargs["http_async_client"] is mock_httpx_async_client
             assert client is mock_chat.return_value
 
         # Verify the httpx client was properly closed
-        mock_httpx_client.aclose.assert_awaited_once()
+        mock_httpx_async_client.aclose.assert_awaited_once()
 
     @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
     async def test_responses_api_branch(self, mock_chat, mock_create_client, dynamo_cfg_responses_api, mock_builder):
         """When APIType==RESPONSES, special flags should be added."""
         mock_httpx_client = MagicMock()
-        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
-        mock_create_client.return_value = mock_httpx_client
+        mock_httpx_client.aclose = AsyncMock()
+
+        async def _aexit(*a, **k):
+            await mock_httpx_client.aclose()
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_httpx_client
+        mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+        mock_create_client.return_value = mock_cm
 
         async with dynamo_langchain(dynamo_cfg_responses_api, mock_builder):
             pass
@@ -336,8 +349,15 @@ class TestDynamoLangChain:
         If someone accidentally removes a field from the exclude set, this test will fail.
         """
         mock_httpx_client = MagicMock()
-        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
-        mock_create_client.return_value = mock_httpx_client
+        mock_httpx_client.aclose = AsyncMock()
+
+        async def _aexit(*a, **k):
+            await mock_httpx_client.aclose()
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_httpx_client
+        mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+        mock_create_client.return_value = mock_cm
 
         async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder):
             pass

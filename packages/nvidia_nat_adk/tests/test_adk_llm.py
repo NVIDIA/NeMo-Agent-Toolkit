@@ -228,7 +228,7 @@ class TestDynamoAdk:
         assert "transport" in mock_create_http_client.call_args.kwargs
 
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
-    def test_dynamo_verify_ssl(self, mock_httpx_async_client, verify_ssl):
+    async def test_dynamo_verify_ssl(self, mock_httpx_async_client, verify_ssl):
         """verify_ssl from config is passed to httpx.AsyncClient as verify."""
         config = DynamoModelConfig(
             model_name="test-model",
@@ -236,7 +236,8 @@ class TestDynamoAdk:
             verify_ssl=verify_ssl,
         )
 
-        _create_httpx_client_with_dynamo_hooks(config)
+        async with _create_httpx_client_with_dynamo_hooks(config):
+            pass
 
         mock_httpx_async_client.assert_called_once()
         assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl

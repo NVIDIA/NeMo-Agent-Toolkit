@@ -88,7 +88,14 @@ async def test_dynamo_langchain_loads_trie_and_passes_to_client(mock_chat, mock_
     """Test that dynamo_langchain calls _create_httpx_client_with_dynamo_hooks with config that has trie path."""
     mock_httpx_client = MagicMock()
     mock_httpx_client.aclose = AsyncMock()
-    mock_create_client.return_value = mock_httpx_client
+
+    async def _aexit(*a, **k):
+        await mock_httpx_client.aclose()
+
+    mock_cm = AsyncMock()
+    mock_cm.__aenter__.return_value = mock_httpx_client
+    mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+    mock_create_client.return_value = mock_cm
 
     config = DynamoModelConfig(
         base_url="http://localhost:8000/v1",
@@ -112,7 +119,14 @@ async def test_dynamo_langchain_handles_nonexistent_trie_gracefully(mock_chat, m
     """Test that dynamo_langchain calls client creation with config when trie path doesn't exist."""
     mock_httpx_client = MagicMock()
     mock_httpx_client.aclose = AsyncMock()
-    mock_create_client.return_value = mock_httpx_client
+
+    async def _aexit(*a, **k):
+        await mock_httpx_client.aclose()
+
+    mock_cm = AsyncMock()
+    mock_cm.__aenter__.return_value = mock_httpx_client
+    mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+    mock_create_client.return_value = mock_cm
 
     config = DynamoModelConfig(
         base_url="http://localhost:8000/v1",
@@ -135,7 +149,14 @@ async def test_dynamo_langchain_no_trie_path_means_no_lookup(mock_chat, mock_cre
     """Test that dynamo_langchain calls client creation with config when no trie path is configured."""
     mock_httpx_client = MagicMock()
     mock_httpx_client.aclose = AsyncMock()
-    mock_create_client.return_value = mock_httpx_client
+
+    async def _aexit(*a, **k):
+        await mock_httpx_client.aclose()
+
+    mock_cm = AsyncMock()
+    mock_cm.__aenter__.return_value = mock_httpx_client
+    mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+    mock_create_client.return_value = mock_cm
 
     config = DynamoModelConfig(
         base_url="http://localhost:8000/v1",
@@ -158,7 +179,14 @@ async def test_dynamo_langchain_handles_invalid_trie_file_gracefully(mock_chat, 
     """Test that dynamo_langchain logs warning and continues when trie file is invalid JSON."""
     mock_httpx_client = MagicMock()
     mock_httpx_client.aclose = AsyncMock()
-    mock_create_client.return_value = mock_httpx_client
+
+    async def _aexit(*a, **k):
+        await mock_httpx_client.aclose()
+
+    mock_cm = AsyncMock()
+    mock_cm.__aenter__.return_value = mock_httpx_client
+    mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+    mock_create_client.return_value = mock_cm
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write("not valid json {{{")
