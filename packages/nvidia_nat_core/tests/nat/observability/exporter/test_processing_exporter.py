@@ -1138,8 +1138,6 @@ class TestTaskCreation:
         # Verify the coroutine was closed to prevent resource leak
         mock_coro.close.assert_called_once()
 
-  
-
 
 class TestCleanup:
     """Test cleanup functionality."""
