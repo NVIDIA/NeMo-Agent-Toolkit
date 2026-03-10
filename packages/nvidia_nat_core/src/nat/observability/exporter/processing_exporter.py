@@ -508,11 +508,18 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
     def _create_export_task(self, coro: Coroutine) -> None:
         """Create task with minimal overhead but proper tracking.
 
+        Handles the race condition where stop() may be called between the
+        running check and task creation, or where the event loop may be
+        shutting down. In these cases the coroutine is closed to prevent
+        'coroutine was never awaited' warnings and the error is logged
+        rather than propagated.
+
         Args:
             coro: The coroutine to create a task for
         """
         if not self._running:
             logger.warning("%s: Attempted to create export task while not running", self.name)
+            coro.close()
             return
 
         try:
@@ -520,9 +527,13 @@ class ProcessingExporter(Generic[PipelineInputT, PipelineOutputT], BaseExporter,
             self._tasks.add(task)
             task.add_done_callback(self._tasks.discard)
 
-        except Exception as e:
-            logger.error("%s: Failed to create task: %s", self.name, e)
-            raise
+        except RuntimeError as e:
+            # Handle race condition: stop() was called between the _running check
+            # and asyncio.create_task(), or the event loop is shutting down.
+            # This prevents "cannot schedule new futures after shutdown" from
+            # crashing the export chain.
+            coro.close()
+            logger.warning("%s: Cannot create export task (loop shutting down): %s", self.name, e)
 
     @override
     async def _cleanup(self) -> None:
