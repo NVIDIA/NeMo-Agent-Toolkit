@@ -48,7 +48,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.llm.utils.http_client import _create_http_client
+from nat.llm.utils.http_client import async_http_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -146,51 +146,52 @@ async def openai_autogen(llm_config: OpenAIModelConfig, _builder: Builder) -> As
     from autogen_ext.models.openai import OpenAIChatCompletionClient
 
     # Extract AutoGen-compatible configuration
-    config_obj = {
-        **llm_config.model_dump(
-            exclude={
-                "api_key",
-                "base_url",
-                "model_name",
-                "request_timeout",
-                "thinking",
-                "type",
-                "verify_ssl",
-            },
-            by_alias=True,
-            exclude_none=True,
-        ),
-        "http_client":
-            _create_http_client(llm_config)
-    }
+    async with async_http_client(llm_config) as http_client:
+        config_obj = {
+            **llm_config.model_dump(
+                exclude={
+                    "api_key",
+                    "base_url",
+                    "model_name",
+                    "request_timeout",
+                    "thinking",
+                    "type",
+                    "verify_ssl",
+                },
+                by_alias=True,
+                exclude_none=True,
+            ),
+            "http_client":
+                http_client
+        }
 
-    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
-        config_obj["api_key"] = api_key
-    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
-        config_obj["base_url"] = base_url
-    if llm_config.request_timeout is not None:
-        config_obj["timeout"] = llm_config.request_timeout
+        if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+            config_obj["api_key"] = api_key
+        if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+            config_obj["base_url"] = base_url
+        if llm_config.request_timeout is not None:
+            config_obj["timeout"] = llm_config.request_timeout
 
-    # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
-    model_info = ModelInfo(vision=False,
-                           function_calling=True,
-                           json_output=True,
-                           family=ModelFamily.UNKNOWN,
-                           structured_output=True,
-                           multiple_system_messages=True)
+        # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
+        model_info = ModelInfo(vision=False,
+                               function_calling=True,
+                               json_output=True,
+                               family=ModelFamily.UNKNOWN,
+                               structured_output=True,
+                               multiple_system_messages=True)
 
-    # Add required AutoGen 0.7.4 parameters
-    config_obj.update({"model_info": model_info})
-    config_obj.pop("model", None)
+        # Add required AutoGen 0.7.4 parameters
+        config_obj.update({"model_info": model_info})
+        config_obj.pop("model", None)
 
-    # Create AutoGen OpenAI client
-    client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
+        # Create AutoGen OpenAI client
+        client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
 
-    try:
-        # Apply NAT mixins and yield patched client
-        yield _patch_autogen_client_based_on_config(client, llm_config)
-    finally:
-        await _close_autogen_client(client)
+        try:
+            # Apply NAT mixins and yield patched client
+            yield _patch_autogen_client_based_on_config(client, llm_config)
+        finally:
+            await _close_autogen_client(client)
 
 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
@@ -209,43 +210,44 @@ async def azure_openai_autogen(llm_config: AzureOpenAIModelConfig,
     from autogen_core.models import ModelInfo
     from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 
-    config_obj = {
-        "api_key":
-            llm_config.api_key,
-        "api_version":
-            llm_config.api_version,
-        "base_url":
-            f"{llm_config.azure_endpoint}/openai/deployments/{llm_config.azure_deployment}",
-        "http_client":
-            _create_http_client(llm_config),
-        **llm_config.model_dump(
-            exclude={"api_version", "azure_deployment", "azure_endpoint", "request_timeout", "thinking", "type"},
-            by_alias=True,
-            exclude_none=True,
-        ),
-    }
+    async with async_http_client(llm_config) as http_client:
+        config_obj = {
+            "api_key":
+                llm_config.api_key,
+            "api_version":
+                llm_config.api_version,
+            "base_url":
+                f"{llm_config.azure_endpoint}/openai/deployments/{llm_config.azure_deployment}",
+            "http_client":
+                http_client,
+            **llm_config.model_dump(
+                exclude={"api_version", "azure_deployment", "azure_endpoint", "request_timeout", "thinking", "type"},
+                by_alias=True,
+                exclude_none=True,
+            ),
+        }
 
-    if llm_config.request_timeout is not None:
-        config_obj["timeout"] = llm_config.request_timeout
+        if llm_config.request_timeout is not None:
+            config_obj["timeout"] = llm_config.request_timeout
 
-    model_info = ModelInfo(vision=False,
-                           function_calling=True,
-                           json_output=True,
-                           family=ModelFamily.UNKNOWN,
-                           structured_output=True,
-                           multiple_system_messages=True)
+        model_info = ModelInfo(vision=False,
+                               function_calling=True,
+                               json_output=True,
+                               family=ModelFamily.UNKNOWN,
+                               structured_output=True,
+                               multiple_system_messages=True)
 
-    config_obj.update({"model_info": model_info})
+        config_obj.update({"model_info": model_info})
 
-    client = AzureOpenAIChatCompletionClient(
-        model=llm_config.azure_deployment,  # Use deployment name for Azure
-        **config_obj)
+        client = AzureOpenAIChatCompletionClient(
+            model=llm_config.azure_deployment,  # Use deployment name for Azure
+            **config_obj)
 
-    try:
-        # Apply NAT mixins and yield patched client
-        yield _patch_autogen_client_based_on_config(client, llm_config)
-    finally:
-        await _close_autogen_client(client)
+        try:
+            # Apply NAT mixins and yield patched client
+            yield _patch_autogen_client_based_on_config(client, llm_config)
+        finally:
+            await _close_autogen_client(client)
 
 
 def _strip_strict_from_tools_deep(kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -337,47 +339,48 @@ async def nim_autogen(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     from autogen_core.models import ModelInfo
     from autogen_ext.models.openai import OpenAIChatCompletionClient
 
-    # Extract NIM configuration for OpenAI-compatible client
-    config_obj = {
-        "http_client":
-            _create_http_client(llm_config),
-        **llm_config.model_dump(
-            exclude={"model_name", "thinking", "type"},
-            by_alias=True,
-            exclude_none=True,
-            exclude_unset=True,
-        ),
-    }
+    async with async_http_client(llm_config) as http_client:
+        # Extract NIM configuration for OpenAI-compatible client
+        config_obj = {
+            "http_client":
+                http_client,
+            **llm_config.model_dump(
+                exclude={"model_name", "thinking", "type"},
+                by_alias=True,
+                exclude_none=True,
+                exclude_unset=True,
+            ),
+        }
 
-    if llm_config.base_url is None:
-        config_obj["base_url"] = "https://integrate.api.nvidia.com/v1"
-    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("NVIDIA_API_KEY")):
-        config_obj["api_key"] = api_key
+        if llm_config.base_url is None:
+            config_obj["base_url"] = "https://integrate.api.nvidia.com/v1"
+        if (api_key := get_secret_value(llm_config.api_key) or os.getenv("NVIDIA_API_KEY")):
+            config_obj["api_key"] = api_key
 
-    # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
-    # Note: structured_output=False because NIM doesn't support OpenAI's 'strict' parameter
-    model_info = ModelInfo(vision=False,
-                           function_calling=True,
-                           json_output=True,
-                           family=ModelFamily.UNKNOWN,
-                           structured_output=False,
-                           multiple_system_messages=True)
+        # Define model info for AutoGen 0.7.4 (replaces model_capabilities)
+        # Note: structured_output=False because NIM doesn't support OpenAI's 'strict' parameter
+        model_info = ModelInfo(vision=False,
+                               function_calling=True,
+                               json_output=True,
+                               family=ModelFamily.UNKNOWN,
+                               structured_output=False,
+                               multiple_system_messages=True)
 
-    # Add required AutoGen 0.7.4 parameters
-    config_obj.update({"model_info": model_info})
-    config_obj.pop("model", None)
+        # Add required AutoGen 0.7.4 parameters
+        config_obj.update({"model_info": model_info})
+        config_obj.pop("model", None)
 
-    # NIM uses OpenAI-compatible API
-    client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
+        # NIM uses OpenAI-compatible API
+        client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
 
-    # Patch to remove 'strict' field from tools (NIM doesn't support it)
-    client = _patch_nim_client_for_tools(client)
+        # Patch to remove 'strict' field from tools (NIM doesn't support it)
+        client = _patch_nim_client_for_tools(client)
 
-    try:
-        # Apply NAT mixins and yield patched client
-        yield _patch_autogen_client_based_on_config(client, llm_config)
-    finally:
-        await _close_autogen_client(client)
+        try:
+            # Apply NAT mixins and yield patched client
+            yield _patch_autogen_client_based_on_config(client, llm_config)
+        finally:
+            await _close_autogen_client(client)
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)
@@ -399,41 +402,42 @@ async def litellm_autogen(llm_config: LiteLlmModelConfig, _builder: Builder) -> 
     from autogen_core.models import ModelInfo
     from autogen_ext.models.openai import OpenAIChatCompletionClient
 
-    # Extract LiteLLM configuration for OpenAI-compatible client
-    config_obj = {
-        "http_client":
-            _create_http_client(llm_config),
-        **llm_config.model_dump(
-            exclude={"model_name", "thinking", "type"},
-            by_alias=True,
-            exclude_none=True,
-            exclude_unset=True,
-        ),
-    }
+    async with async_http_client(llm_config) as http_client:
+        # Extract LiteLLM configuration for OpenAI-compatible client
+        config_obj = {
+            "http_client":
+                http_client,
+            **llm_config.model_dump(
+                exclude={"model_name", "thinking", "type"},
+                by_alias=True,
+                exclude_none=True,
+                exclude_unset=True,
+            ),
+        }
 
-    # Resolve API key from secret if provided
-    if llm_config.api_key is not None:
-        config_obj["api_key"] = get_secret_value(llm_config.api_key)
+        # Resolve API key from secret if provided
+        if llm_config.api_key is not None:
+            config_obj["api_key"] = get_secret_value(llm_config.api_key)
 
-    # Define model info for AutoGen
-    model_info = ModelInfo(vision=False,
-                           function_calling=True,
-                           json_output=True,
-                           family=ModelFamily.UNKNOWN,
-                           structured_output=True,
-                           multiple_system_messages=True)
+        # Define model info for AutoGen
+        model_info = ModelInfo(vision=False,
+                               function_calling=True,
+                               json_output=True,
+                               family=ModelFamily.UNKNOWN,
+                               structured_output=True,
+                               multiple_system_messages=True)
 
-    config_obj.update({"model_info": model_info})
-    config_obj.pop("model", None)
+        config_obj.update({"model_info": model_info})
+        config_obj.pop("model", None)
 
-    # LiteLLM uses OpenAI-compatible API
-    client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
+        # LiteLLM uses OpenAI-compatible API
+        client = OpenAIChatCompletionClient(model=llm_config.model_name, **config_obj)
 
-    try:
-        # Apply NAT mixins and yield patched client
-        yield _patch_autogen_client_based_on_config(client, llm_config)
-    finally:
-        await _close_autogen_client(client)
+        try:
+            # Apply NAT mixins and yield patched client
+            yield _patch_autogen_client_based_on_config(client, llm_config)
+        finally:
+            await _close_autogen_client(client)
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.AUTOGEN)

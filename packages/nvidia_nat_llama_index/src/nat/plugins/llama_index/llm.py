@@ -30,7 +30,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.llm.utils.http_client import _get_http_clients
+from nat.llm.utils.http_client import http_clients
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -113,13 +113,14 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
     if llm_config.request_timeout is not None:
         config_dict["timeout"] = llm_config.request_timeout
 
-    config_dict.update(_get_http_clients(llm_config))
-    llm = AzureOpenAI(
-        **config_dict,
-        api_version=llm_config.api_version,
-    )
+    async with http_clients(llm_config) as http_clients_dict:
+        config_dict.update(http_clients_dict)
+        llm = AzureOpenAI(
+            **config_dict,
+            api_version=llm_config.api_version,
+        )
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+        yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -141,10 +142,11 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
         exclude_unset=True,
     )
 
-    config_dict.update(_get_http_clients(llm_config))
-    llm = NVIDIA(**config_dict)
+    async with http_clients(llm_config) as http_clients_dict:
+        config_dict.update(http_clients_dict)
+        llm = NVIDIA(**config_dict)
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+        yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -168,13 +170,14 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
     if llm_config.request_timeout is not None:
         config_dict["timeout"] = llm_config.request_timeout
 
-    config_dict.update(_get_http_clients(llm_config))
-    if llm_config.api_type == APITypeEnum.RESPONSES:
-        llm = OpenAIResponses(**config_dict)
-    else:
-        llm = OpenAI(**config_dict)
+    async with http_clients(llm_config) as http_clients_dict:
+        config_dict.update(http_clients_dict)
+        if llm_config.api_type == APITypeEnum.RESPONSES:
+            llm = OpenAIResponses(**config_dict)
+        else:
+            llm = OpenAI(**config_dict)
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+        yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)

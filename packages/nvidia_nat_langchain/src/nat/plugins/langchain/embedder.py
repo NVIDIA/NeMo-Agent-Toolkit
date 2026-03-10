@@ -25,7 +25,7 @@ from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
 from nat.embedder.huggingface_embedder import HuggingFaceEmbedderConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
-from nat.llm.utils.http_client import _get_http_clients
+from nat.llm.utils.http_client import http_clients
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 
@@ -34,22 +34,23 @@ async def azure_openai_langchain(embedder_config: AzureOpenAIEmbedderModelConfig
 
     from langchain_openai import AzureOpenAIEmbeddings
 
-    client = AzureOpenAIEmbeddings(
-        **embedder_config.model_dump(exclude={"api_version", "type", "verify_ssl"},
-                                     by_alias=True,
-                                     exclude_none=True,
-                                     exclude_unset=True),
-        api_version=embedder_config.api_version,
-        **_get_http_clients(embedder_config),
-    )
+    async with http_clients(embedder_config) as http_clients_dict:
+        client = AzureOpenAIEmbeddings(
+            **embedder_config.model_dump(exclude={"api_version", "type", "verify_ssl"},
+                                         by_alias=True,
+                                         exclude_none=True,
+                                         exclude_unset=True),
+            api_version=embedder_config.api_version,
+            **http_clients_dict,
+        )
 
-    if isinstance(embedder_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=embedder_config.num_retries,
-                                  retry_codes=embedder_config.retry_on_status_codes,
-                                  retry_on_messages=embedder_config.retry_on_errors)
+        if isinstance(embedder_config, RetryMixin):
+            client = patch_with_retry(client,
+                                      retries=embedder_config.num_retries,
+                                      retry_codes=embedder_config.retry_on_status_codes,
+                                      retry_on_messages=embedder_config.retry_on_errors)
 
-    yield client
+        yield client
 
 
 @register_embedder_client(config_type=NIMEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -75,20 +76,21 @@ async def openai_langchain(embedder_config: OpenAIEmbedderModelConfig, builder: 
 
     from langchain_openai import OpenAIEmbeddings
 
-    client = OpenAIEmbeddings(
-        **embedder_config.model_dump(exclude={"type", "verify_ssl"},
-                                     by_alias=True,
-                                     exclude_none=True,
-                                     exclude_unset=True),
-        **_get_http_clients(embedder_config))
+    async with http_clients(embedder_config) as http_clients_dict:
+        client = OpenAIEmbeddings(
+            **embedder_config.model_dump(exclude={"type", "verify_ssl"},
+                                         by_alias=True,
+                                         exclude_none=True,
+                                         exclude_unset=True),
+            **http_clients_dict)
 
-    if isinstance(embedder_config, RetryMixin):
-        client = patch_with_retry(client,
-                                  retries=embedder_config.num_retries,
-                                  retry_codes=embedder_config.retry_on_status_codes,
-                                  retry_on_messages=embedder_config.retry_on_errors)
+        if isinstance(embedder_config, RetryMixin):
+            client = patch_with_retry(client,
+                                      retries=embedder_config.num_retries,
+                                      retry_codes=embedder_config.retry_on_status_codes,
+                                      retry_on_messages=embedder_config.retry_on_errors)
 
-    yield client
+        yield client
 
 
 @register_embedder_client(config_type=HuggingFaceEmbedderConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import contextlib
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -52,16 +53,41 @@ def _create_http_client(llm_config: "LLMBaseConfig",
     return client_class(**kwargs)
 
 
-def _get_http_clients(llm_config: "LLMBaseConfig") -> dict[str, "httpx.AsyncClient | httpx.Client"]:
+@contextlib.contextmanager
+def http_client(llm_config: "LLMBaseConfig") -> "httpx.Client":
+    """
+    Context manager for a synchronous httpx client, to ensure that the client is properly closed after use.
+    """
+    client = _create_http_client(llm_config, use_async=False)
+    try:
+        yield client
+    finally:
+        client.close()
+
+
+@contextlib.asynccontextmanager
+async def async_http_client(llm_config: "LLMBaseConfig") -> "httpx.AsyncClient":
+    """
+    Async context manager for an asynchronous httpx client, to ensure that the client is properly closed after use.
+    """
+    client = _create_http_client(llm_config, use_async=True)
+    try:
+        yield client
+    finally:
+        await client.aclose()
+
+
+@contextlib.asynccontextmanager
+async def http_clients(llm_config: "LLMBaseConfig") -> dict[str, "httpx.AsyncClient | httpx.Client"]:
     """
     Get a dictionary of HTTP clients, one sync one async.
 
-    This is a wrapper around `_create_http_client`, useful for LLMs that support both sync and async clients.
+    This is a wrapper around `async_http_client` and `http_client`, useful for LLMs that support both sync and async
+    clients.
     """
-    return {
-        "http_client": _create_http_client(llm_config, use_async=False),
-        "async_http_client": _create_http_client(llm_config, use_async=True)
-    }
+    async with async_http_client(llm_config) as async_client:
+        with http_client(llm_config) as sync_client:
+            yield {"http_client": sync_client, "async_http_client": async_client}
 
 
 def _handle_litellm_verify_ssl(llm_config: "LLMBaseConfig") -> None:

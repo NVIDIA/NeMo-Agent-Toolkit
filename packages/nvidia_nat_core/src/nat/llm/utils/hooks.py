@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from nat.data_models.llm import LLMBaseConfig
 
 from nat.llm.utils.constants import LLMHeaderPrefix
-from nat.llm.utils.http_client import _create_http_client
+from nat.llm.utils.http_client import async_http_client
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +68,5 @@ async def _create_metadata_injection_client(llm_config: "LLMBaseConfig") -> "htt
         except Exception as e:
             logger.debug("Could not inject custom metadata headers, request will proceed without them: %s", e)
 
-    client = _create_http_client(llm_config=llm_config, use_async=True, event_hooks={"request": [on_request]})
-    try:
+    async with async_http_client(llm_config=llm_config, event_hooks={"request": [on_request]}) as client:
         yield client
-    finally:
-        await client.aclose()

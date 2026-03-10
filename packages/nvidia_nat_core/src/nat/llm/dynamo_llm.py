@@ -722,7 +722,7 @@ async def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "
     """
     import httpx
 
-    from nat.llm.utils.http_client import _create_http_client
+    from nat.llm.utils.http_client import async_http_client
 
     http_client_kwargs = {}
     if config.enable_nvext_hints:
@@ -763,11 +763,8 @@ async def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "
             "loaded" if config.nvext_prediction_trie_path else "disabled",
         )
 
-    client = _create_http_client(llm_config=config, use_async=True, **http_client_kwargs)
-    try:
+    async with async_http_client(llm_config=config, **http_client_kwargs) as client:
         yield client
-    finally:
-        await client.aclose()
 
 
 # =============================================================================
