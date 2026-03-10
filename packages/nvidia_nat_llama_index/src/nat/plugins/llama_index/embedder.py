@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
@@ -20,7 +22,10 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
+from nat.llm.utils.http_client import _get_http_clients
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
+
+logger = logging.getLogger(__name__)
 
 
 @register_embedder_client(config_type=AzureOpenAIEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -29,11 +34,12 @@ async def azure_openai_llama_index(embedder_config: AzureOpenAIEmbedderModelConf
     from llama_index.embeddings.azure_openai import AzureOpenAIEmbedding
 
     client = AzureOpenAIEmbedding(
-        **embedder_config.model_dump(exclude={"type", "api_version"},
+        **embedder_config.model_dump(exclude={"api_version", "type", "verify_ssl"},
                                      by_alias=True,
                                      exclude_none=True,
                                      exclude_unset=True),
         api_version=embedder_config.api_version,
+        **_get_http_clients(embedder_config),
     )
 
     if isinstance(embedder_config, RetryMixin):
@@ -50,8 +56,11 @@ async def nim_llama_index(embedder_config: NIMEmbedderModelConfig, _builder: Bui
 
     from llama_index.embeddings.nvidia import NVIDIAEmbedding  # pylint: disable=no-name-in-module
 
+    if not embedder_config.verify_ssl:
+        logger.warning("verify_ssl is currently not supported for NVIDIAEmbedding.")
+
     client = NVIDIAEmbedding(
-        **embedder_config.model_dump(exclude={"type", "model_name"},
+        **embedder_config.model_dump(exclude={"model_name", "type", "verify_ssl"},
                                      by_alias=True,
                                      exclude_none=True,
                                      exclude_unset=True),
@@ -73,7 +82,12 @@ async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, _builde
     from llama_index.embeddings.openai import OpenAIEmbedding
 
     client = OpenAIEmbedding(
-        **embedder_config.model_dump(exclude={"type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+        **embedder_config.model_dump(exclude={"type", "verify_ssl"},
+                                     by_alias=True,
+                                     exclude_none=True,
+                                     exclude_unset=True),
+        **_get_http_clients(embedder_config),
+    )
 
     if isinstance(embedder_config, RetryMixin):
         client = patch_with_retry(client,
@@ -81,4 +95,8 @@ async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, _builde
                                   retry_codes=embedder_config.retry_on_status_codes,
                                   retry_on_messages=embedder_config.retry_on_errors)
 
+    yield client
+    yield client
+    yield client
+    yield client
     yield client
