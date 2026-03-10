@@ -902,18 +902,19 @@ def mock_create_http_client_fixture() -> Generator[mock.MagicMock]:
 
 
 @pytest.fixture(name="mock_httpx_async_client")
-def fixture_mock_async_httpx_client():
+def fixture_mock_async_httpx_client() -> Generator[mock.MagicMock]:
     import httpx
 
-    with mock.patch.object(httpx, "AsyncClient") as mock_httpx:
-        mock_httpx.return_value = mock_httpx
-        yield mock_httpx
+    with mock.patch.object(httpx, "AsyncClient") as mock_client:
+        mock_client.return_value = mock_client
+        mock_client.aclose = mock.AsyncMock()
+        yield mock_client
 
 
 @pytest.fixture(name="mock_httpx_sync_client")
-def fixture_mock_sync_httpx_client():
+def fixture_mock_sync_httpx_client() -> Generator[mock.MagicMock]:
     import httpx
 
-    with mock.patch.object(httpx, "Client") as mock_httpx:
-        mock_httpx.return_value = mock_httpx
-        yield mock_httpx
+    with mock.patch.object(httpx, "Client") as mock_client:
+        mock_client.return_value = mock_client
+        yield mock_client

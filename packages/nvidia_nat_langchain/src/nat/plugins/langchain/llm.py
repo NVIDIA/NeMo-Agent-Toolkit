@@ -270,7 +270,10 @@ async def litellm_langchain(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     from langchain_litellm import ChatLiteLLM
 
+    from nat.llm.utils.http_client import _handle_litellm_verify_ssl
+
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
+    _handle_litellm_verify_ssl(llm_config.verify_ssl)
 
     client = ChatLiteLLM(**llm_config.model_dump(
         exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))

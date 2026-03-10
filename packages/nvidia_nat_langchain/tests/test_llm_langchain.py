@@ -25,10 +25,12 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.plugins.langchain.llm import aws_bedrock_langchain
+from nat.plugins.langchain.llm import azure_openai_langchain
 from nat.plugins.langchain.llm import dynamo_langchain
 from nat.plugins.langchain.llm import nim_langchain
 from nat.plugins.langchain.llm import openai_langchain
@@ -72,6 +74,16 @@ class TestNimLangChain:
             async with nim_langchain(nim_cfg_wrong_api, mock_builder):
                 pass
         mock_chat.assert_not_called()
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("langchain_nvidia_ai_endpoints.ChatNVIDIA")
+    async def test_verify_ssl_passed_to_chat_nvidia(self, mock_chat, nim_cfg, mock_builder, verify_ssl):
+        """Test that verify_ssl is passed to ChatNVIDIA."""
+        nim_cfg.verify_ssl = verify_ssl
+        async with nim_langchain(nim_cfg, mock_builder):
+            pass
+        mock_chat.assert_called_once()
+        assert mock_chat.call_args.kwargs["verify_ssl"] is verify_ssl
 
 
 # ---------------------------------------------------------------------------
@@ -125,6 +137,57 @@ class TestOpenAILangChain:
         # Other original kwargs remain unchanged
         assert kwargs["temperature"] == 0.2
         assert kwargs["stream_usage"] is True
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_chat,
+                                               oa_cfg,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        mock_httpx_async_client.aclose = AsyncMock()
+        oa_cfg.verify_ssl = verify_ssl
+        async with openai_langchain(oa_cfg, mock_builder):
+            pass
+        mock_httpx_async_client.assert_called_once()
+        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+
+# ---------------------------------------------------------------------------
+# Azure OpenAI → LangChain wrapper tests
+# ---------------------------------------------------------------------------
+
+
+class TestAzureOpenAILangChain:
+    """Tests for the azure_openai_langchain wrapper."""
+
+    @pytest.fixture
+    def mock_builder(self):
+        return MagicMock(spec=Builder)
+
+    @pytest.fixture
+    def azure_cfg(self):
+        return AzureOpenAIModelConfig(
+            azure_deployment="gpt-4",
+            api_key="test-key",
+            azure_endpoint="https://test.openai.azure.com",
+            api_version="2024-02-01",
+        )
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("langchain_openai.AzureChatOpenAI")
+    async def test_verify_ssl_passed_to_client(
+        self, mock_chat, azure_cfg, mock_builder, mock_httpx_async_client, verify_ssl
+    ):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        mock_httpx_async_client.aclose = AsyncMock()
+        azure_cfg.verify_ssl = verify_ssl
+        async with azure_openai_langchain(azure_cfg, mock_builder):
+            pass
+        mock_httpx_async_client.assert_called_once()
+        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +370,18 @@ class TestDynamoLangChain:
 
         # Verify the httpx client was properly closed
         mock_httpx_client.aclose.assert_awaited_once()
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_verify_ssl_passed_to_client(
+        self, mock_chat, dynamo_cfg_no_prefix, mock_builder, mock_httpx_async_client, verify_ssl
+    ):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        dynamo_cfg_no_prefix.verify_ssl = verify_ssl
+        async with dynamo_langchain(dynamo_cfg_no_prefix, mock_builder):
+            pass
+        mock_httpx_async_client.assert_called_once()
+        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
 
 # ---------------------------------------------------------------------------
