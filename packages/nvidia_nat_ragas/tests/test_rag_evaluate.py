@@ -100,14 +100,14 @@ def ragas_metrics() -> "Sequence[Metric]":
 @pytest.fixture
 def rag_evaluator(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
     from nat.plugins.ragas.rag_evaluator.evaluate import RAGEvaluator
-    return RAGEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    return RAGEvaluator(metrics=ragas_metrics)
 
 
 @pytest.fixture
 def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
     """RAGEvaluator configured to extract a specific field (`content`) from BaseModel or dict input objects."""
     from nat.plugins.ragas.rag_evaluator.evaluate import RAGEvaluator
-    return RAGEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics, input_obj_field="content")
+    return RAGEvaluator(metrics=ragas_metrics, input_obj_field="content")
 
 
 def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_adapter):
@@ -182,7 +182,7 @@ def test_atif_samples_to_ragas(ragas_judge_llm, ragas_metrics, atif_samples):
 
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
-    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
     ragas_samples = [atif_evaluator._atif_sample_to_ragas(sample) for sample in atif_samples]
 
     assert len(ragas_samples) == len(atif_samples)
@@ -198,14 +198,14 @@ async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_sa
     dataset = MagicMock()
     dataset.samples = [MagicMock(), MagicMock()]
     dataset.__len__.return_value = len(dataset.samples)
-    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
 
     with patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric_result",
                new_callable=AsyncMock,
                return_value=MetricResult(value=0.6, reason="ok", traces={
                    "input": {}, "output": {}
                })) as mock_score_metric:
-        output = await atif_evaluator.evaluate(atif_samples)
+        output = await atif_evaluator.evaluate_atif_fn(atif_samples)
 
         assert mock_score_metric.await_count == len(atif_samples)
         assert output.average_score == pytest.approx(0.6, abs=1e-9)
@@ -249,7 +249,7 @@ def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
                            output_obj=item.output_obj,
                            metadata={}))
 
-    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
     legacy_samples = [rag_evaluator._eval_input_item_to_ragas(item) for item in rag_eval_input.eval_input_items]
     atif_ragas_samples = [atif_evaluator._atif_sample_to_ragas(sample) for sample in atif_samples]
 
@@ -288,7 +288,7 @@ def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
         AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj="ref", output_obj="resp", metadata={})
     ]
 
-    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
     ragas_sample = atif_evaluator._atif_sample_to_ragas(atif_samples[0])
     assert ragas_sample.user_input == expected_user_input
     assert ragas_sample.retrieved_contexts == expected_contexts
@@ -335,7 +335,7 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
                            output_obj=item.output_obj,
                            metadata={}))
 
-    atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
     with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric_result",
                new_callable=AsyncMock,
                side_effect=_mock_score_metric), \
@@ -343,7 +343,7 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
                new_callable=AsyncMock,
                side_effect=_mock_score_metric):
         legacy_output = await rag_evaluator.evaluate(rag_eval_input)
-        atif_output = await atif_evaluator.evaluate(atif_samples)
+        atif_output = await atif_evaluator.evaluate_atif_fn(atif_samples)
 
     assert legacy_output.average_score == pytest.approx(atif_output.average_score, abs=1e-9)
     assert len(legacy_output.eval_output_items) == len(atif_output.eval_output_items)
@@ -423,3 +423,39 @@ async def test_register_ragas_evaluator_atif_lane_enabled():
         assert callable(getattr(evaluator_info, "evaluate_atif_fn", None))
 
     builder.get_llm.assert_awaited_once()
+
+
+async def test_register_ragas_evaluator_injects_llm_into_metric_kwargs():
+    """Ensure ragas metric constructor receives resolved llm when supported."""
+    from nat.plugins.ragas.rag_evaluator.llm_adapter import NatLangChainRagasLLMAdapter
+    from nat.plugins.ragas.rag_evaluator.register import RagasEvaluatorConfig
+    from nat.plugins.ragas.rag_evaluator.register import register_ragas_evaluator
+
+    builder = MagicMock()
+    resolved_llm = MagicMock()
+    builder.get_llm = AsyncMock(return_value=resolved_llm)
+    builder.get_max_concurrency = MagicMock(return_value=1)
+
+    metric_ctor_mock = MagicMock(return_value=MagicMock(name="metric_instance"))
+
+    def metric_ctor(*, name: str, llm: object):
+        return metric_ctor_mock(name=name, llm=llm)
+
+    mock_module = SimpleNamespace(AnswerAccuracy=metric_ctor)
+    config = RagasEvaluatorConfig(
+        llm_name="judge",
+        metric={"AnswerAccuracy": {
+            "kwargs": {
+                "name": "answer_accuracy_custom"
+            }
+        }},
+    )
+
+    with patch("nat.plugins.ragas.rag_evaluator.register.import_module", return_value=mock_module):
+        async with register_ragas_evaluator(config=config, builder=builder):
+            pass
+
+    metric_ctor_mock.assert_called_once()
+    metric_call_kwargs = metric_ctor_mock.call_args.kwargs
+    assert metric_call_kwargs["name"] == "answer_accuracy_custom"
+    assert isinstance(metric_call_kwargs["llm"], NatLangChainRagasLLMAdapter)

@@ -49,7 +49,7 @@ def _trajectory_to_retrieved_contexts(trajectory: ATIFTrajectory) -> list[str]:
 
 class RAGAtifEvaluator(AtifBaseEvaluator):
 
-    def __init__(self, evaluator_llm: object, metrics: Sequence[SimpleBaseMetric], max_concurrency=8):
+    def __init__(self, metrics: Sequence[SimpleBaseMetric], max_concurrency=8):
         super().__init__(max_concurrency=max_concurrency)
         self.metrics = metrics
 
@@ -79,6 +79,7 @@ class RAGAtifEvaluator(AtifBaseEvaluator):
         metric_result = await score_metric_result(metric, ragas_sample)
         raw_score = extract_metric_score(metric_result)
         score = nan_to_zero(raw_score)
+        # stash the input and the ragas reasoning for analysis later
         reasoning = EvalOutputItemRagasReasoning(
             user_input=ragas_sample.user_input,
             reference=ragas_sample.reference,

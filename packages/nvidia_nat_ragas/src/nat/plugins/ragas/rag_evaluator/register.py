@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import logging
 from importlib import import_module
 
@@ -122,19 +123,24 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
         if not atif_evaluator:
             logger.warning("No ATIF evaluator found for RAGAS metrics.")
             return EvalOutput(average_score=0.0, eval_output_items=[])
-        return await atif_evaluator.evaluate(atif_samples)
+        return await atif_evaluator.evaluate_atif_fn(atif_samples)
 
     from .atif_evaluate import RAGAtifEvaluator
     from .evaluate import RAGEvaluator
+    from .llm_adapter import NatLangChainRagasLLMAdapter
 
-    llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    # Keep NAT's existing framework registry boundary (LangChain/LlamaIndex/etc.) and
+    # adapt to ragas locally. ragas' InstructorBaseRagasLLM is a library contract, not
+    # a NAT framework, so we avoid introducing a global LLMFrameworkEnum.RAGAS.
+    langchain_llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if config.do_auto_retry:
-        llm = patch_with_retry(
-            llm,
+        langchain_llm = patch_with_retry(
+            langchain_llm,
             retries=config.num_retries,
             retry_codes=config.retry_on_status_codes,
             retry_on_messages=config.retry_on_errors,
         )
+    ragas_llm = NatLangChainRagasLLMAdapter(langchain_llm)
 
     metrics = []
     metric_name = config.metric_name
@@ -142,15 +148,16 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
     if not metric_config.skip:
         metric_callable = get_ragas_metric(metric_name)
         kwargs = metric_config.kwargs or {}
+        metric_params = inspect.signature(metric_callable).parameters
+        if "llm" in metric_params and "llm" not in kwargs:
+            kwargs["llm"] = ragas_llm
         metrics.append(metric_callable(**kwargs))
 
-    evaluator = RAGEvaluator(evaluator_llm=llm,
-                             metrics=metrics,
+    evaluator = RAGEvaluator(metrics=metrics,
                              max_concurrency=builder.get_max_concurrency(),
                              input_obj_field=config.input_obj_field) if metrics else None
-    atif_evaluator = RAGAtifEvaluator(
-        evaluator_llm=llm, metrics=metrics,
-        max_concurrency=builder.get_max_concurrency()) if (metrics and config.enable_atif_evaluator) else None
+    atif_evaluator = RAGAtifEvaluator(metrics=metrics, max_concurrency=builder.get_max_concurrency()) if (
+        metrics and config.enable_atif_evaluator) else None
 
     evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
     if config.enable_atif_evaluator:
