@@ -69,17 +69,14 @@ def iter_file_changes(
 ) -> Iterator[set[tuple[Change, str]]]:
     """Yield filtered file change sets using watchfiles with debounce.
 
-    Args:
-        paths: File or directory paths to watch for changes.
-        debounce_ms: Debounce interval in milliseconds passed to watchfiles.
-        include_globs: Optional include patterns. When provided, only matching
-            paths trigger reload checks.
-        exclude_globs: Optional exclude patterns. These are merged with
-            `DEFAULT_RELOAD_EXCLUDE_GLOBS` only when include patterns are not
-            provided.
-
-    Yields:
-        Sets of `(Change, path)` tuples that pass include/exclude filtering.
+    :param paths: File or directory paths to watch for changes.
+    :param debounce_ms: Debounce interval in milliseconds passed to `watchfiles`.
+    :param include_globs: Optional include patterns. When provided, only matching
+        paths trigger reload checks.
+    :param exclude_globs: Optional exclude patterns. These are merged with
+        `DEFAULT_RELOAD_EXCLUDE_GLOBS` only when include patterns are not provided.
+    :returns: Iterator yielding sets of `(Change, path)` tuples that pass
+        include/exclude filtering.
     """
     watch_paths = [str(path) for path in paths]
     include_patterns = tuple(pattern.strip() for pattern in include_globs if pattern.strip())
