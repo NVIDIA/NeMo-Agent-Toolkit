@@ -184,7 +184,7 @@ async def litellm_llama_index(llm_config: LiteLlmModelConfig, _builder: Builder)
 
     from nat.llm.utils.http_client import _handle_litellm_verify_ssl
 
-    _handle_litellm_verify_ssl(llm_config.verify_ssl)
+    _handle_litellm_verify_ssl(llm_config)
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
 
     llm = LiteLLM(

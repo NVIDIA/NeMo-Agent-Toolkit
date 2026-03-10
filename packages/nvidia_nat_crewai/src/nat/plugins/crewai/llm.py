@@ -115,7 +115,7 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
     if llm_config.request_timeout is not None:
         config_dict["timeout"] = llm_config.request_timeout
 
-    _handle_litellm_verify_ssl(llm_config.verify_ssl)
+    _handle_litellm_verify_ssl(llm_config)
 
     client = LLM(
         **config_dict,
@@ -139,7 +139,7 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
         if nvidia_api_key is not None:
             os.environ["NVIDIA_NIM_API_KEY"] = nvidia_api_key
 
-    _handle_litellm_verify_ssl(llm_config.verify_ssl)
+    _handle_litellm_verify_ssl(llm_config)
 
     client = LLM(
         **llm_config.model_dump(
@@ -168,7 +168,7 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
         exclude_unset=True,
     )
 
-    _handle_litellm_verify_ssl(llm_config.verify_ssl)
+    _handle_litellm_verify_ssl(llm_config)
 
     if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
         config_dict["api_key"] = api_key
@@ -189,7 +189,7 @@ async def litellm_crewai(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
 
-    _handle_litellm_verify_ssl(llm_config.verify_ssl)
+    _handle_litellm_verify_ssl(llm_config)
 
     client = LLM(**llm_config.model_dump(
         exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
