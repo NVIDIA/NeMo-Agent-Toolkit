@@ -738,8 +738,8 @@ async def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "
                 logger.info("Loaded prediction trie from %s", config.nvext_prediction_trie_path)
             except FileNotFoundError:
                 logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
-            except Exception as e:
-                logger.exception("Failed to load prediction trie: %s", e)
+            except Exception:
+                logger.exception("Failed to load prediction trie")
 
         # Create base transport and wrap with custom transport
         base_transport = httpx.AsyncHTTPTransport()
