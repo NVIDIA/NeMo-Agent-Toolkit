@@ -60,7 +60,6 @@ import logging
 import threading
 import uuid
 import warnings
-from collections.abc import Generator
 from collections.abc import Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -704,7 +703,7 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 # =============================================================================
 
 
-async def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "Generator[httpx.AsyncClient]":
+def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "httpx.AsyncClient":
     """
     Create an httpx.AsyncClient, when `config.enable_nvext_hints` is True, Dynamo hint injection via custom transport
     is added.
@@ -762,12 +761,7 @@ async def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "
             "loaded" if config.nvext_prediction_trie_path else "disabled",
         )
 
-    http_client = _create_http_client(llm_config=config, use_async=True, **http_client_kwargs)
-
-    try:
-        yield http_client
-    finally:
-        await http_client.aclose()
+    return _create_http_client(llm_config=config, use_async=True, **http_client_kwargs)
 
 
 # =============================================================================
