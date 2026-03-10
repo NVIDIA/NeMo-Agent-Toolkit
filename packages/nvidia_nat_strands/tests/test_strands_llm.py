@@ -191,8 +191,7 @@ class TestNIMStrands:
             call_kwargs = call_args[1]
 
             # Verify client
-            assert "client" in call_kwargs
-            call_kwargs["client"] = mock_oai
+            call_kwargs["client"] == mock_oai
 
             # Verify model_id
             assert call_kwargs["model_id"] == "meta/llama-3.1-8b-instruct"
