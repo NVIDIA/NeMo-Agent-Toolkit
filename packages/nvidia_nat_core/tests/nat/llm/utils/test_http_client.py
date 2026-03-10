@@ -22,6 +22,7 @@ from unittest.mock import patch
 import pytest
 
 from nat.llm.utils.http_client import _create_http_client
+from nat.llm.utils.http_client import _get_http_clients
 from nat.llm.utils.http_client import _handle_litellm_verify_ssl
 
 from ._llm_configs import LLMConfig
@@ -92,6 +93,37 @@ def test_create_http_client_verify_ssl(
         assert "verify" not in call_kwargs
     else:
         assert call_kwargs["verify"] is expected_verify
+
+
+@pytest.mark.parametrize(
+    "llm_config,expected_verify",
+    [
+        (LLMConfig(), None),
+        (LLMConfigWithSSL(verify_ssl=True), True),
+        (LLMConfigWithSSL(verify_ssl=False), False),
+    ],
+    ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
+)
+def test_get_http_clients(
+    mock_httpx_async_client,
+    mock_httpx_sync_client,
+    llm_config: "LLMBaseConfig",
+    expected_verify: bool | None,
+):
+    """_get_http_clients returns both sync and async clients and passes verify_ssl when set."""
+    result = _get_http_clients(llm_config)
+
+    assert set(result.keys()) == {"http_client", "async_http_client"}
+    mock_httpx_sync_client.assert_called_once()
+    mock_httpx_async_client.assert_called_once()
+    assert result["http_client"] is mock_httpx_sync_client.return_value
+    assert result["async_http_client"] is mock_httpx_async_client.return_value
+    if expected_verify is None:
+        assert "verify" not in mock_httpx_sync_client.call_args.kwargs
+        assert "verify" not in mock_httpx_async_client.call_args.kwargs
+    else:
+        assert mock_httpx_sync_client.call_args.kwargs["verify"] is expected_verify
+        assert mock_httpx_async_client.call_args.kwargs["verify"] is expected_verify
 
 
 @pytest.mark.parametrize(
