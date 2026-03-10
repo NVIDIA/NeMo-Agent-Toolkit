@@ -395,8 +395,7 @@ class TestLiteLlmLangChain:
         """Test that litellm_langchain calls _handle_litellm_verify_ssl with the config's verify_ssl value."""
         litellm_cfg.verify_ssl = verify_ssl
         async with litellm_langchain(litellm_cfg, mock_builder):
-            pass
-        mock_handle_verify_ssl.assert_called_once_with(verify_ssl)
+            mock_handle_verify_ssl.assert_called_once_with(litellm_cfg)
 
 
 # ---------------------------------------------------------------------------

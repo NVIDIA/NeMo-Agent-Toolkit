@@ -81,8 +81,7 @@ class TestNimCrewAI:
         """verify_ssl from config is passed to _handle_litellm_verify_ssl."""
         nim_cfg = NIMModelConfig(model_name="test-nim", verify_ssl=verify_ssl)
         async with nim_crewai(nim_cfg, mock_builder):
-            pass
-        mock_handle_verify_ssl.assert_called_once_with(verify_ssl)
+            mock_handle_verify_ssl.assert_called_once_with(nim_cfg)
 
 
 # ---------------------------------------------------------------------------
@@ -134,8 +133,7 @@ class TestOpenAICrewAI:
         """verify_ssl from config is passed to _handle_litellm_verify_ssl."""
         openai_cfg = OpenAIModelConfig(model_name="gpt-4o", verify_ssl=verify_ssl)
         async with openai_crewai(openai_cfg, mock_builder):
-            pass
-        mock_handle_verify_ssl.assert_called_once_with(verify_ssl)
+            mock_handle_verify_ssl.assert_called_once_with(openai_cfg)
 
 
 # ---------------------------------------------------------------------------
