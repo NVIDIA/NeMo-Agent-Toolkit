@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import logging
+from importlib import import_module
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -93,22 +94,19 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
 
 @register_evaluator(config_type=RagasEvaluatorConfig)
 async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBuilder):
-    from ragas.metrics import Metric
-
-    def get_ragas_metric(metric_name: str) -> Metric | None:
-        """Fetch callable for RAGAS metric by name."""
-        try:
-            import ragas.metrics as ragas_metrics
-
-            return getattr(ragas_metrics, metric_name)
-        except ImportError as e:
-            message = f"Ragas metrics not found {e}."
-            logger.error(message)
-            raise ValueError(message) from e
-        except AttributeError as e:
-            message = f"Ragas metric {metric_name} not found {e}."
-            logger.exception(message)
-            return None
+    def get_ragas_metric(metric_name: str):
+        """Fetch metric constructor from v0.4 collections, falling back to legacy namespace."""
+        module_names = ("ragas.metrics.collections", "ragas.metrics")
+        for module_name in module_names:
+            try:
+                module = import_module(module_name)
+            except ImportError:
+                continue
+            metric_ctor = getattr(module, metric_name, None)
+            if metric_ctor is not None:
+                return metric_ctor
+        raise ValueError(
+            f"Ragas metric '{metric_name}' was not found in supported namespaces: {', '.join(module_names)}")
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
         """Run RAGAS evaluation and return NAT eval output."""
@@ -141,9 +139,8 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
     metric_config = config.metric_config
     if not metric_config.skip:
         metric_callable = get_ragas_metric(metric_name)
-        if metric_callable:
-            kwargs = metric_config.kwargs or {}
-            metrics.append(metric_callable(**kwargs))
+        kwargs = metric_config.kwargs or {}
+        metrics.append(metric_callable(**kwargs))
 
     evaluator = RAGEvaluator(evaluator_llm=llm,
                              metrics=metrics,

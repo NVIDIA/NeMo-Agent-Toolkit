@@ -121,8 +121,8 @@ def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
 
 def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_adapter):
     """Test eval_input mapping to ragasas dataset"""
-    from ragas.evaluation import EvaluationDataset
-    from ragas.evaluation import SingleTurnSample
+    from ragas import EvaluationDataset
+    from ragas import SingleTurnSample
 
     # call actual function
     dataset = rag_evaluator.eval_input_to_ragas(rag_eval_input)
@@ -270,58 +270,38 @@ def test_ragas_to_eval_output_nan_handling(rag_evaluator, rag_eval_input, metric
             assert scores_match(actual, expected), f"Expected {expected}, got {actual}"
 
 
-async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
+async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_metrics):
     """
     Test evaluate function to verify the following functions are called
     1. rag_evaluator.eval_input_to_ragas
-    2. ragas.evaluate
-    3. nat.plugins.ragas.rag_evaluator.ragas_to_eval_output
+    2. nat.plugins.ragas.rag_evaluator.evaluate._score_metric
 
     Only limited coverage is possible via unit tests as most of the functionality is
     implemented within the ragas framework. The simple example's end-to-end test covers functional
     testing.
     """
-    mock_results_dataset = MagicMock()
-    dataset = "mock_dataset"
-    mock_output = "mock_output"
-
-    with patch.object(rag_evaluator, "eval_input_to_ragas", return_value=dataset) as mock_eval_input_to_ragas, \
-         patch.object(rag_evaluator, "ragas_to_eval_output", return_value=mock_output) as mock_ragas_to_eval_output, \
-         patch("ragas.evaluate", new_callable=MagicMock) as mock_ragas_evaluate:
-
-        # Configure mock return values
-        mock_ragas_evaluate.return_value = mock_results_dataset
-
-        # Call the actual function
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate._score_metric",
+               new_callable=AsyncMock,
+               return_value=0.8) as mock_score_metric:
         output = await rag_evaluator.evaluate(rag_eval_input)
 
-        # Assertions to ensure correct function calls
-        mock_eval_input_to_ragas.assert_called_once_with(rag_eval_input)
-        mock_ragas_evaluate.assert_called_once()
-        called_kwargs = mock_ragas_evaluate.call_args.kwargs
-
-        assert called_kwargs["dataset"] == dataset
-        assert called_kwargs["metrics"] == ragas_metrics
-        assert called_kwargs["show_progress"] is True
-        assert called_kwargs["llm"] == ragas_judge_llm
-        mock_ragas_to_eval_output.assert_called_once_with(rag_eval_input, mock_results_dataset)
-
-        # Validate final output
-        assert output == mock_output
+    assert mock_score_metric.await_count == len(rag_eval_input.eval_input_items)
+    assert output.average_score == pytest.approx(0.8, abs=1e-9)
+    assert len(output.eval_output_items) == len(rag_eval_input.eval_input_items)
 
 
-async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_llm, ragas_metrics):
+async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_metrics):
     """
-    Validate evaluate processing when ragas.evaluate raises an exception. Also
-    eval_input_to_ragas and ragas_to_eval_output are run as-is (not mocked) to validate
-    their handling of the input and failed-output
+    Validate evaluate processing when metric scoring raises an exception.
     """
 
     from nat.data_models.evaluator import EvalOutput
 
-    error_message = "Mocked exception in ragas.evaluate"
+    error_message = "Mocked exception in metric.ascore"
 
-    with patch("ragas.evaluate", side_effect=Exception(error_message)) as mock_ragas_evaluate:
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate._score_metric",
+               new_callable=AsyncMock,
+               side_effect=Exception(error_message)) as mock_score_metric:
 
         # Call function under test and ensure it does not crash
         try:
@@ -329,26 +309,19 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_judge_l
         except Exception:
             pytest.fail("rag_evaluator.evaluate() should handle exceptions gracefully and not crash.")
 
-        ragas_dataset = rag_evaluator.eval_input_to_ragas(eval_input=rag_eval_input)
-        # Validate ragas.evaluate was called and failed
-        mock_ragas_evaluate.assert_called_once()
-        called_kwargs = mock_ragas_evaluate.call_args.kwargs
-
-        assert called_kwargs["dataset"] == ragas_dataset
-        assert called_kwargs["metrics"] == ragas_metrics
-        assert called_kwargs["show_progress"] is True
-        assert called_kwargs["llm"] == ragas_judge_llm
+        assert mock_score_metric.await_count >= 1
 
         # Ensure output is valid with an average_score of 0.0
         assert isinstance(output, EvalOutput)
         assert output.average_score == 0.0
-        assert output.eval_output_items == []  # No results due to failure
+        assert len(output.eval_output_items) == len(rag_eval_input.eval_input_items)
+        assert all(item.score == 0.0 for item in output.eval_output_items)
 
 
 def test_atif_samples_to_ragas(ragas_judge_llm, ragas_metrics, atif_samples):
     """Test ATIF sample mapping to ragas dataset."""
-    from ragas.evaluation import EvaluationDataset
-    from ragas.evaluation import SingleTurnSample
+    from ragas import EvaluationDataset
+    from ragas import SingleTurnSample
 
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
@@ -366,27 +339,21 @@ async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_sa
     """Test ATIF-native evaluate path for RAGAS evaluator."""
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
-    mock_results_dataset = MagicMock()
-    dataset = "mock_dataset"
-    mock_output = "mock_output"
+    dataset = MagicMock()
+    dataset.samples = [MagicMock(), MagicMock()]
+    dataset.__len__.return_value = len(dataset.samples)
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
 
     with patch.object(atif_evaluator, "atif_samples_to_ragas", return_value=dataset) as mock_to_ragas, \
-         patch("ragas.evaluate", new_callable=MagicMock) as mock_ragas_evaluate, \
-         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate._ragas_results_to_eval_output",
-               return_value=mock_output) as mock_to_output:
-        mock_ragas_evaluate.return_value = mock_results_dataset
+         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate._score_metric",
+               new_callable=AsyncMock,
+               return_value=0.6) as mock_score_metric:
         output = await atif_evaluator.evaluate(atif_samples)
 
         mock_to_ragas.assert_called_once_with(atif_samples)
-        mock_ragas_evaluate.assert_called_once()
-        called_kwargs = mock_ragas_evaluate.call_args.kwargs
-        assert called_kwargs["dataset"] == dataset
-        assert called_kwargs["metrics"] == ragas_metrics
-        assert called_kwargs["show_progress"] is True
-        assert called_kwargs["llm"] == ragas_judge_llm
-        mock_to_output.assert_called_once()
-        assert output == mock_output
+        assert mock_score_metric.await_count == len(dataset.samples)
+        assert output.average_score == pytest.approx(0.6, abs=1e-9)
+        assert len(output.eval_output_items) == len(dataset.samples)
 
 
 def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
@@ -487,26 +454,8 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
-    metric_name = "AnswerAccuracy"
-
-    def _mock_ragas_evaluate(*_args, **kwargs):
-        dataset = kwargs["dataset"]
-        rows = []
-        scores = []
-        for sample in dataset.samples:
-            score = 0.5 + (0.5 if sample.retrieved_contexts else 0.0)
-            scores.append({metric_name: score})
-            rows.append({
-                "user_input": sample.user_input,
-                "reference": sample.reference,
-                "response": sample.response,
-                "retrieved_contexts": sample.retrieved_contexts,
-                metric_name: score,
-            })
-        result = MagicMock()
-        result.scores = scores
-        result.to_pandas.return_value = pd.DataFrame(rows)
-        return result
+    async def _mock_score_metric(_metric, sample):
+        return 0.5 + (0.5 if sample.retrieved_contexts else 0.0)
 
     atif_samples = []
     for item in rag_eval_input.eval_input_items:
@@ -532,7 +481,12 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
                            metadata={}))
 
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
-    with patch("ragas.evaluate", side_effect=_mock_ragas_evaluate):
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate._score_metric",
+               new_callable=AsyncMock,
+               side_effect=_mock_score_metric), \
+         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate._score_metric",
+               new_callable=AsyncMock,
+               side_effect=_mock_score_metric):
         legacy_output = await rag_evaluator.evaluate(rag_eval_input)
         atif_output = await atif_evaluator.evaluate(atif_samples)
 
