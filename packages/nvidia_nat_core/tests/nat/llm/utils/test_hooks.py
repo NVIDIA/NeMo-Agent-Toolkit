@@ -15,7 +15,6 @@
 """Unit and integration tests for LLM HTTP event hooks."""
 
 from unittest.mock import MagicMock
-from unittest.mock import patch
 
 import pytest
 from pytest_httpserver import HTTPServer
