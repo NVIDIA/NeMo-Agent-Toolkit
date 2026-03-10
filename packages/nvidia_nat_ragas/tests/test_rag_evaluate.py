@@ -20,7 +20,6 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
-import pandas as pd
 import pytest
 from pydantic import BaseModel
 
@@ -108,11 +107,6 @@ def rag_evaluator(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
 
 
 @pytest.fixture
-def metric_name() -> str:
-    return "AnswerAccuracy"
-
-
-@pytest.fixture
 def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
     """RAGEvaluator configured to extract a specific field (`content`) from BaseModel or dict input objects."""
     from nat.plugins.ragas.rag_evaluator.evaluate import RAGEvaluator
@@ -140,147 +134,17 @@ def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_ad
             item.trajectory, intermediate_step_adapter.DEFAULT_EVENT_FILTER)
 
 
-def test_ragas_to_eval_output(rag_evaluator, rag_eval_input, rag_user_inputs, metric_name):
-    """Test ragas ouput mapping to NAT's EvalOuput"""
-    from nat.data_models.evaluator import EvalOutput
-
-    mock_results_dataset = MagicMock()
-
-    # Mock scores
-    scores = [{metric_name: 0.8}, {metric_name: 0.9}]
-    mock_results_dataset.scores = scores
-
-    # Mock ragas DF converter
-    mock_data = pd.DataFrame([{
-        "user_input": rag_user_inputs[0], metric_name: scores[0][metric_name]
-    }, {
-        "user_input": rag_user_inputs[1], metric_name: scores[1][metric_name]
-    }])
-    mock_results_dataset.to_pandas.return_value = mock_data
-
-    # Call actual function
-    eval_output = rag_evaluator.ragas_to_eval_output(rag_eval_input, mock_results_dataset)
-
-    assert isinstance(eval_output, EvalOutput)
-    # Check average score
-    expected_avg_score = sum(score[metric_name] for score in scores) / len(scores)
-    assert eval_output.average_score == expected_avg_score
-
-    # Validate length of eval_output_items
-    assert len(eval_output.eval_output_items) == len(scores)
-
-    # Check each output item
-    for output_item, input_item, score in zip(eval_output.eval_output_items, rag_eval_input.eval_input_items, scores):
-        # Ensure `id` is either `input_item.id` or `input_item.input_obj`
-        assert output_item.id in (input_item.id, input_item.input_obj)
-        assert output_item.score == score[metric_name]
-
-
-@pytest.mark.parametrize(
-    "scores, expected_avg_score, expected_item_count",
-    [
-        ([], 0.0, 0),  # Test empty dataset
-        ([{
-            "AnswerAccuracy": 0.8
-        }], 0.8, 1),  # Test fewer entries (single result)
-        ([{
-            "AnswerAccuracy": 0.8
-        }, {
-            "AnswerAccuracy": 0.9
-        }], 0.85, 2),  # Valid case
-    ])
-def test_ragas_to_eval_output_unexpected_entries(rag_evaluator,
-                                                 rag_eval_input,
-                                                 metric_name,
-                                                 scores,
-                                                 expected_avg_score,
-                                                 expected_item_count):
-    """Test ragas_to_eval_output with empty, fewer, and more dataset entries"""
-    from nat.data_models.evaluator import EvalOutput
-
-    # Mock ragas results
-    mock_results_dataset = MagicMock()
-    mock_results_dataset.scores = scores
-
-    # Mock ragas results convert
-    mock_data = pd.DataFrame([{
-        "user_input": f"Question {i+1}", metric_name: score[metric_name]
-    } for i, score in enumerate(scores)])
-    mock_results_dataset.to_pandas.return_value = mock_data
-
-    # Call the actual function
-    eval_output = rag_evaluator.ragas_to_eval_output(rag_eval_input, mock_results_dataset)
-
-    # Assertions
-    assert isinstance(eval_output, EvalOutput)
-    assert len(eval_output.eval_output_items) == expected_item_count
-    assert round(eval_output.average_score, 4) == round(expected_avg_score, 4)
-
-
-def test_ragas_to_eval_output_nan_handling(rag_evaluator, rag_eval_input, metric_name):
-    """
-    Ensure that NaN or None scores are preserved in individual output items,
-    but the average score is computed by treating NaN/None as 0.0.
-    """
-    import math
-
-    # Helper function to compare values accounting for NaN
-    def scores_match(actual, expected):
-        if expected is None:
-            return actual is None
-        if isinstance(expected, float) and math.isnan(expected):
-            return isinstance(actual, float) and math.isnan(actual)
-        return actual == expected
-
-    # fmt: off
-    test_cases = [
-        # (scores list, expected per-item scores list (preserving NaN/None), expected average (using 0.0 for NaN/None))
-        ([{metric_name: float("nan")}],            [float("nan")],           0.0),
-        ([{metric_name: None}],                   [None],                   0.0),
-        ([{metric_name: float("nan")},
-          {metric_name: 0.9}],                    [float("nan"), 0.9],      0.45),
-        ([{metric_name: None},
-          {metric_name: 0.9},
-          {metric_name: float("nan")}],           [None, 0.9, float("nan")], 0.3),
-    ]
-    # fmt: on
-
-    for scores, expected_item_scores, expected_avg in test_cases:
-        # Mock ragas results
-        mock_results_dataset = MagicMock()
-        mock_results_dataset.scores = scores
-
-        # Build the mocked pandas DataFrame using the raw (possibly NaN/None) values
-        mock_data = pd.DataFrame([{
-            "user_input": f"Question {i+1}", metric_name: score[metric_name]
-        } for i, score in enumerate(scores)])
-        mock_results_dataset.to_pandas.return_value = mock_data
-
-        # Invoke the method under test
-        eval_output = rag_evaluator.ragas_to_eval_output(rag_eval_input, mock_results_dataset)
-
-        # --- Assertions ---
-        # Average score should match the expected value (with small tolerance for float ops)
-        assert round(eval_output.average_score, 4) == round(expected_avg, 4)
-
-        # Each individual item score should preserve NaN/None values
-        actual_item_scores = [item.score for item in eval_output.eval_output_items]
-        assert len(actual_item_scores) == len(expected_item_scores)
-        for actual, expected in zip(actual_item_scores, expected_item_scores):
-            assert scores_match(actual, expected), f"Expected {expected}, got {actual}"
-
-
-async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_metrics):
+async def test_rag_evaluate_success(rag_evaluator, rag_eval_input):
     """
     Test evaluate function to verify the following functions are called
-    1. rag_evaluator.eval_input_to_ragas
-    2. nat.plugins.ragas.rag_evaluator.evaluate._score_metric
+    1. `score_metric` is invoked once per input item.
+    2. Returned `EvalOutput` has expected averaged score and item count.
 
     Only limited coverage is possible via unit tests as most of the functionality is
     implemented within the ragas framework. The simple example's end-to-end test covers functional
     testing.
     """
-    with patch("nat.plugins.ragas.rag_evaluator.evaluate._score_metric",
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric",
                new_callable=AsyncMock,
                return_value=0.8) as mock_score_metric:
         output = await rag_evaluator.evaluate(rag_eval_input)
@@ -290,7 +154,7 @@ async def test_rag_evaluate_success(rag_evaluator, rag_eval_input, ragas_metrics
     assert len(output.eval_output_items) == len(rag_eval_input.eval_input_items)
 
 
-async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_metrics):
+async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input):
     """
     Validate evaluate processing when metric scoring raises an exception.
     """
@@ -299,7 +163,7 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input, ragas_metrics
 
     error_message = "Mocked exception in metric.ascore"
 
-    with patch("nat.plugins.ragas.rag_evaluator.evaluate._score_metric",
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric",
                new_callable=AsyncMock,
                side_effect=Exception(error_message)) as mock_score_metric:
 
@@ -345,7 +209,7 @@ async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_sa
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
 
     with patch.object(atif_evaluator, "atif_samples_to_ragas", return_value=dataset) as mock_to_ragas, \
-         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate._score_metric",
+         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric",
                new_callable=AsyncMock,
                return_value=0.6) as mock_score_metric:
         output = await atif_evaluator.evaluate(atif_samples)
@@ -481,10 +345,10 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
                            metadata={}))
 
     atif_evaluator = RAGAtifEvaluator(evaluator_llm=ragas_judge_llm, metrics=ragas_metrics)
-    with patch("nat.plugins.ragas.rag_evaluator.evaluate._score_metric",
+    with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric",
                new_callable=AsyncMock,
                side_effect=_mock_score_metric), \
-         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate._score_metric",
+         patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric",
                new_callable=AsyncMock,
                side_effect=_mock_score_metric):
         legacy_output = await rag_evaluator.evaluate(rag_eval_input)

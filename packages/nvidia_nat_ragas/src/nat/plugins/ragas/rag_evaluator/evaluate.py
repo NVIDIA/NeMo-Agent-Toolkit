@@ -14,13 +14,10 @@
 # limitations under the License.
 
 import logging
-import math
 import typing
 from collections.abc import Sequence
-from typing import Any
 
 from pydantic import BaseModel
-from tqdm import tqdm
 
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
@@ -36,53 +33,10 @@ if typing.TYPE_CHECKING:
     # We are lazily importing ragas to avoid import-time side effects such as applying the nest_asyncio patch, which is
     # not compatible with Python 3.12+, we want to ensure that we are able to apply the nest_asyncio2 patch instead.
     from ragas import EvaluationDataset
-    from ragas.dataset_schema import EvaluationResult
     from ragas.llms import LangchainLLMWrapper
     from ragas.metrics import Metric
 
 logger = logging.getLogger(__name__)
-
-# Backward-compatible aliases for existing imports/tests.
-_nan_to_zero = nan_to_zero
-_score_metric = score_metric
-
-
-def _ragas_results_to_eval_output(results_dataset: "EvaluationResult | None",
-                                  ids: list[Any] | None = None) -> EvalOutput:
-    """Convert a ragas EvaluationResult to NAT EvalOutput."""
-    if not results_dataset:
-        logger.error("Ragas evaluation failed with no results", exc_info=True)
-        return EvalOutput(average_score=0.0, eval_output_items=[])
-
-    scores: list[dict[str, float]] = results_dataset.scores
-    if not scores:
-        logger.warning("Ragas returned empty score list")
-        return EvalOutput(average_score=0.0, eval_output_items=[])
-
-    original_scores_dict = {metric: [score.get(metric) for score in scores] for metric in scores[0]}
-    scores_dict = {metric: [nan_to_zero(score.get(metric)) for score in scores] for metric in scores[0]}
-    first_metric_name = next(iter(scores_dict.keys()), None)
-
-    average_scores = {metric: (sum(values) / len(values) if values else 0.0) for metric, values in scores_dict.items()}
-    first_avg_score = average_scores.get(first_metric_name, 0.0)
-    if isinstance(first_avg_score, float) and math.isnan(first_avg_score):
-        first_avg_score = 0.0
-
-    df = results_dataset.to_pandas()
-    fallback_ids = df["user_input"].tolist()
-    output_ids = ids if ids and len(ids) >= len(df) else fallback_ids
-
-    eval_output_items = [
-        EvalOutputItem(
-            id=output_ids[i],
-            score=original_scores_dict[first_metric_name][i] if first_metric_name else None,
-            reasoning={
-                key: getattr(row, key, None)
-                for key in ["user_input", "reference", "response", "retrieved_contexts"]
-            },
-        ) for i, row in enumerate(df.itertuples(index=False))
-    ]
-    return EvalOutput(average_score=first_avg_score, eval_output_items=eval_output_items)
 
 
 class RAGEvaluator(BaseEvaluator):
@@ -94,7 +48,6 @@ class RAGEvaluator(BaseEvaluator):
                  input_obj_field: str | None = None):
         metric_name = metrics[0].name if metrics else "no-metrics"
         super().__init__(max_concurrency=max_concurrency, tqdm_desc=f"Evaluating Ragas {metric_name}")
-        self.evaluator_llm = evaluator_llm
         self.metrics = metrics
         self.input_obj_field = input_obj_field
 
@@ -143,11 +96,6 @@ class RAGEvaluator(BaseEvaluator):
         samples = [self.eval_input_item_to_ragas(item) for item in eval_input.eval_input_items]
         return EvaluationDataset(samples=samples)
 
-    def ragas_to_eval_output(self, eval_input: EvalInput, results_dataset: "EvaluationResult | None") -> EvalOutput:
-        """Converts the ragas EvaluationResult to nat EvalOutput"""
-        ids = [item.id for item in eval_input.eval_input_items]
-        return _ragas_results_to_eval_output(results_dataset=results_dataset, ids=ids)
-
     async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
         """Run configured ragas metric for one eval item and return one output item."""
         if not self.metrics:
@@ -155,7 +103,7 @@ class RAGEvaluator(BaseEvaluator):
 
         metric = self.metrics[0]
         sample = self.eval_input_item_to_ragas(item)
-        raw_score = await _score_metric(metric, sample)
+        raw_score = await score_metric(metric, sample)
         score = nan_to_zero(raw_score)
 
         return EvalOutputItem(

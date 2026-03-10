@@ -37,9 +37,6 @@ if typing.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Backward-compatible alias for existing imports/tests.
-_score_metric = score_metric
-
 
 def _observation_result_to_text(result: ATIFObservationResult) -> str:
     return message_to_text(result.content)
@@ -61,7 +58,6 @@ class RAGAtifEvaluator(AtifBaseEvaluator):
 
     def __init__(self, evaluator_llm: "LangchainLLMWrapper", metrics: Sequence["Metric"], max_concurrency=8):
         super().__init__(max_concurrency=max_concurrency)
-        self.evaluator_llm = evaluator_llm
         self.metrics = metrics
 
     def atif_sample_to_ragas(self, sample: AtifEvalSample):
@@ -95,7 +91,7 @@ class RAGAtifEvaluator(AtifBaseEvaluator):
 
         metric = self.metrics[0]
         ragas_sample = self.atif_sample_to_ragas(sample)
-        raw_score = await _score_metric(metric, ragas_sample)
+        raw_score = await score_metric(metric, ragas_sample)
         score = nan_to_zero(raw_score)
         return EvalOutputItem(
             id=sample.item_id,
