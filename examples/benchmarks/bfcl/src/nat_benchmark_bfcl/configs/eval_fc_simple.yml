@@ -1,0 +1,51 @@
+
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# BFCL v3 — Native Function Calling on simple split
+# Usage: nat eval --config_file examples/benchmarks/bfcl/configs/eval_fc_simple.yml
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.3-70b-instruct
+    base_url: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
+    api_key: ${NVIDIA_API_KEY}
+    max_tokens: 512
+    temperature: 0.0
+
+workflow:
+  _type: bfcl_fc_workflow
+  llm_name: nim_llm
+
+eval:
+  general:
+    output_dir: .tmp/nat/benchmarks/bfcl/fc_simple/
+    workflow_alias: bfcl_fc_simple
+    per_input_user_id: false
+    max_concurrency: 5
+    dataset:
+      _type: bfcl
+      file_path: ${BFCL_DATASET_FILE}
+      test_category: simple
+      structure:
+        question_key: question
+        answer_key: answer
+
+  evaluators:
+    bfcl:
+      _type: bfcl_evaluator
+      test_category: simple
+      language: Python

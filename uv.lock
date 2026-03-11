@@ -440,6 +440,15 @@ wheels = [
 ]
 
 [[package]]
+name = "argcomplete"
+version = "3.6.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/61/0b9ae6399dd4a58d8c1b1dc5a27d6f2808023d0b5dd3104bb99f45a33ff6/argcomplete-3.6.3.tar.gz", hash = "sha256:62e8ed4fd6a45864acc8235409461b72c9a28ee785a2011cc5eb78318786c89c", size = 73754, upload-time = "2025-10-20T03:33:34.741Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/f5/9373290775639cb67a2fce7f629a1c240dce9f12fe927bc32b2736e16dfc/argcomplete-3.6.3-py3-none-any.whl", hash = "sha256:f5007b3a600ccac5d25bbce33089211dfd49eab4a7718da3f10e3082525a92ce", size = 43846, upload-time = "2025-10-20T03:33:33.021Z" },
+]
+
+[[package]]
 name = "argon2-cffi"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1588,6 +1597,36 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ac/97/a538654732974a94ff96c1db621fa464f455c02d4bb7d2652f4edc21d600/cryptography-46.0.5-pp311-pypy311_pp73-manylinux_2_34_aarch64.whl", hash = "sha256:d861ee9e76ace6cf36a6a89b959ec08e7bc2493ee39d07ffe5acb23ef46d27da", size = 4217990, upload-time = "2026-02-10T19:18:25.957Z" },
     { url = "https://files.pythonhosted.org/packages/ae/11/7e500d2dd3ba891197b9efd2da5454b74336d64a7cc419aa7327ab74e5f6/cryptography-46.0.5-pp311-pypy311_pp73-manylinux_2_34_x86_64.whl", hash = "sha256:2b7a67c9cd56372f3249b39699f2ad479f6991e62ea15800973b956f4b73e257", size = 4381252, upload-time = "2026-02-10T19:18:27.496Z" },
     { url = "https://files.pythonhosted.org/packages/bc/58/6b3d24e6b9bc474a2dcdee65dfd1f008867015408a271562e4b690561a4d/cryptography-46.0.5-pp311-pypy311_pp73-win_amd64.whl", hash = "sha256:8456928655f856c6e1533ff59d5be76578a7157224dbd9ce6872f25055ab9ab7", size = 3407605, upload-time = "2026-02-10T19:18:29.233Z" },
+]
+
+[[package]]
+name = "cuda-bindings"
+version = "12.9.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cuda-pathfinder", marker = "sys_platform == 'linux' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/2b/ebcbb60aa6dba830474cd360c42e10282f7a343c0a1f58d24fbd3b7c2d77/cuda_bindings-12.9.4-cp311-cp311-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a6a429dc6c13148ff1e27c44f40a3dd23203823e637b87fd0854205195988306", size = 11840604, upload-time = "2025-10-21T14:51:34.565Z" },
+    { url = "https://files.pythonhosted.org/packages/45/e7/b47792cc2d01c7e1d37c32402182524774dadd2d26339bd224e0e913832e/cuda_bindings-12.9.4-cp311-cp311-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c912a3d9e6b6651853eed8eed96d6800d69c08e94052c292fec3f282c5a817c9", size = 12210593, upload-time = "2025-10-21T14:51:36.574Z" },
+    { url = "https://files.pythonhosted.org/packages/dd/be/90d32049e06abcfba4b2e7df1dbcb5e16215c8852eef0cd8b25f38a66bd4/cuda_bindings-12.9.4-cp311-cp311-win_amd64.whl", hash = "sha256:443b0875916879c2e4c3722941e25e42d5ab9bcbf34c9e83404fb100fa1f6913", size = 11490933, upload-time = "2025-10-21T14:51:38.792Z" },
+    { url = "https://files.pythonhosted.org/packages/0c/c2/65bfd79292b8ff18be4dd7f7442cea37bcbc1a228c1886f1dea515c45b67/cuda_bindings-12.9.4-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:694ba35023846625ef471257e6b5a4bc8af690f961d197d77d34b1d1db393f56", size = 11760260, upload-time = "2025-10-21T14:51:40.79Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/c1/dabe88f52c3e3760d861401bb994df08f672ec893b8f7592dc91626adcf3/cuda_bindings-12.9.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:fda147a344e8eaeca0c6ff113d2851ffca8f7dfc0a6c932374ee5c47caa649c8", size = 12151019, upload-time = "2025-10-21T14:51:43.167Z" },
+    { url = "https://files.pythonhosted.org/packages/df/6b/9c1b1a6c01392bfdd758e9486f52a1a72bc8f49e98f9355774ef98b5fb4e/cuda_bindings-12.9.4-cp312-cp312-win_amd64.whl", hash = "sha256:696ca75d249ddf287d01b9a698b8e2d8a05046495a9c051ca15659dc52d17615", size = 11586961, upload-time = "2025-10-21T14:51:45.394Z" },
+    { url = "https://files.pythonhosted.org/packages/05/8b/b4b2d1c7775fa403b64333e720cfcfccef8dcb9cdeb99947061ca5a77628/cuda_bindings-12.9.4-cp313-cp313-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:cf8bfaedc238f3b115d957d1fd6562b7e8435ba57f6d0e2f87d0e7149ccb2da5", size = 11570071, upload-time = "2025-10-21T14:51:47.472Z" },
+    { url = "https://files.pythonhosted.org/packages/63/56/e465c31dc9111be3441a9ba7df1941fe98f4aa6e71e8788a3fb4534ce24d/cuda_bindings-12.9.4-cp313-cp313-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:32bdc5a76906be4c61eb98f546a6786c5773a881f3b166486449b5d141e4a39f", size = 11906628, upload-time = "2025-10-21T14:51:49.905Z" },
+    { url = "https://files.pythonhosted.org/packages/05/d0/d0e4e2e047d8e899f023fa15ad5e9894ce951253f4c894f1cd68490fdb14/cuda_bindings-12.9.4-cp313-cp313-win_amd64.whl", hash = "sha256:a2e82c8985948f953c2be51df45c3fe11c812a928fca525154fb9503190b3e64", size = 11556719, upload-time = "2025-10-21T14:51:52.248Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/07/6aff13bc1e977e35aaa6b22f52b172e2890c608c6db22438cf7ed2bf43a6/cuda_bindings-12.9.4-cp313-cp313t-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:3adf4958dcf68ae7801a59b73fb00a8b37f8d0595060d66ceae111b1002de38d", size = 11566797, upload-time = "2025-10-21T14:51:54.581Z" },
+    { url = "https://files.pythonhosted.org/packages/a3/84/1e6be415e37478070aeeee5884c2022713c1ecc735e6d82d744de0252eee/cuda_bindings-12.9.4-cp313-cp313t-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:56e0043c457a99ac473ddc926fe0dc4046694d99caef633e92601ab52cbe17eb", size = 11925991, upload-time = "2025-10-21T14:51:56.535Z" },
+    { url = "https://files.pythonhosted.org/packages/4d/3c/972edfddb4ae8a9fccd3c3766ed47453b6f805b6026b32f10209dd4b8ad4/cuda_bindings-12.9.4-cp313-cp313t-win_amd64.whl", hash = "sha256:b32d8b685f0e66f5658bcf4601ef034e89fc2843582886f0a58784a4302da06c", size = 11894363, upload-time = "2025-10-21T14:51:58.633Z" },
+]
+
+[[package]]
+name = "cuda-pathfinder"
+version = "1.4.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/02/59a5bc738a09def0b49aea0e460bdf97f65206d0d041246147cf6207e69c/cuda_pathfinder-1.4.1-py3-none-any.whl", hash = "sha256:40793006082de88e0950753655e55558a446bed9a7d9d0bcb48b2506d50ed82a", size = 43903, upload-time = "2026-03-06T21:05:24.372Z" },
 ]
 
 [[package]]
@@ -5555,6 +5594,62 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-benchmark-agent-leaderboard"
+source = { editable = "examples/benchmarks/agent_leaderboard" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-benchmarks", extra = ["agent-leaderboard"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat-benchmarks", extras = ["agent-leaderboard"], editable = "packages/nvidia_nat_benchmarks" },
+]
+
+[[package]]
+name = "nat-benchmark-bfcl"
+source = { editable = "examples/benchmarks/bfcl" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-benchmarks", extra = ["bfcl"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat-benchmarks", extras = ["bfcl"], editable = "packages/nvidia_nat_benchmarks" },
+]
+
+[[package]]
+name = "nat-benchmark-byob"
+source = { editable = "examples/benchmarks/byob" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-benchmarks", extra = ["byob"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat-benchmarks", extras = ["byob"], editable = "packages/nvidia_nat_benchmarks" },
+]
+
+[[package]]
+name = "nat-benchmark-tooltalk"
+source = { editable = "examples/benchmarks/tooltalk" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat-benchmarks", extra = ["tooltalk"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat", extras = ["eval", "langchain", "test"], editable = "." },
+    { name = "nvidia-nat-benchmarks", extras = ["tooltalk"], editable = "packages/nvidia_nat_benchmarks" },
+]
+
+[[package]]
 name = "nat-currency-agent-a2a"
 source = { editable = "examples/A2A/currency_agent_a2a" }
 dependencies = [
@@ -6195,6 +6290,29 @@ wheels = [
 ]
 
 [[package]]
+name = "nemo-evaluator"
+version = "0.1.95"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "flask" },
+    { name = "httpx" },
+    { name = "jinja2" },
+    { name = "psutil" },
+    { name = "pydantic" },
+    { name = "pydantic-core" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "structlog" },
+    { name = "typing-extensions" },
+    { name = "werkzeug" },
+    { name = "yq" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f4/d7/435c316dd105567aeba3717dec50ce0fa6c74d1ad41cf2388cd394310119/nemo_evaluator-0.1.95.tar.gz", hash = "sha256:0d5c771697077587b31f6818f29b8544f0a05ea134ee8877d2d48f4007beec16", size = 150232, upload-time = "2026-03-05T01:38:01.264Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/66/02/493061480914ed3494cf96ae81757a96a01615d909c94c24d48ec34fef57/nemo_evaluator-0.1.95-py3-none-any.whl", hash = "sha256:22fa6f36b53b19d1faa135115e3208eebc129767846fea7da1788a0d729cb755", size = 197442, upload-time = "2026-03-05T01:37:58.331Z" },
+]
+
+[[package]]
 name = "nemo-microservices"
 version = "1.5.0"
 source = { registry = "https://pypi.org/simple" }
@@ -6344,6 +6462,129 @@ wheels = [
 ]
 
 [[package]]
+name = "nvidia-cublas-cu12"
+version = "12.8.4.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/29/99/db44d685f0e257ff0e213ade1964fc459b4a690a73293220e98feb3307cf/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:b86f6dd8935884615a0683b663891d43781b819ac4f2ba2b0c9604676af346d0", size = 590537124, upload-time = "2025-03-07T01:43:53.556Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/61/e24b560ab2e2eaeb3c839129175fb330dfcfc29e5203196e5541a4c44682/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142", size = 594346921, upload-time = "2025-03-07T01:44:31.254Z" },
+    { url = "https://files.pythonhosted.org/packages/70/61/7d7b3c70186fb651d0fbd35b01dbfc8e755f69fd58f817f3d0f642df20c3/nvidia_cublas_cu12-12.8.4.1-py3-none-win_amd64.whl", hash = "sha256:47e9b82132fa8d2b4944e708049229601448aaad7e6f296f630f2d1a32de35af", size = 567544208, upload-time = "2025-03-07T01:53:30.535Z" },
+]
+
+[[package]]
+name = "nvidia-cuda-cupti-cu12"
+version = "12.8.90"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d5/1f/b3bd73445e5cb342727fd24fe1f7b748f690b460acadc27ea22f904502c8/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:4412396548808ddfed3f17a467b104ba7751e6b58678a4b840675c56d21cf7ed", size = 9533318, upload-time = "2025-03-07T01:40:10.421Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/02/2adcaa145158bf1a8295d83591d22e4103dbfd821bcaf6f3f53151ca4ffa/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182", size = 10248621, upload-time = "2025-03-07T01:40:21.213Z" },
+    { url = "https://files.pythonhosted.org/packages/41/bc/83f5426095d93694ae39fe1311431b5d5a9bb82e48bf0dd8e19be2765942/nvidia_cuda_cupti_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:bb479dcdf7e6d4f8b0b01b115260399bf34154a1a2e9fe11c85c517d87efd98e", size = 7015759, upload-time = "2025-03-07T01:51:11.355Z" },
+]
+
+[[package]]
+name = "nvidia-cuda-nvrtc-cu12"
+version = "12.8.93"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/05/6b/32f747947df2da6994e999492ab306a903659555dddc0fbdeb9d71f75e52/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994", size = 88040029, upload-time = "2025-03-07T01:42:13.562Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/d1/e50d0acaab360482034b84b6e27ee83c6738f7d32182b987f9c7a4e32962/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:fc1fec1e1637854b4c0a65fb9a8346b51dd9ee69e61ebaccc82058441f15bce8", size = 43106076, upload-time = "2025-03-07T01:41:59.817Z" },
+    { url = "https://files.pythonhosted.org/packages/45/51/52a3d84baa2136cc8df15500ad731d74d3a1114d4c123e043cb608d4a32b/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-win_amd64.whl", hash = "sha256:7a4b6b2904850fe78e0bd179c4b655c404d4bb799ef03ddc60804247099ae909", size = 73586838, upload-time = "2025-03-07T01:52:13.483Z" },
+]
+
+[[package]]
+name = "nvidia-cuda-runtime-cu12"
+version = "12.8.90"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/75/f865a3b236e4647605ea34cc450900854ba123834a5f1598e160b9530c3a/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:52bf7bbee900262ffefe5e9d5a2a69a30d97e2bc5bb6cc866688caa976966e3d", size = 965265, upload-time = "2025-03-07T01:39:43.533Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/9b/a997b638fcd068ad6e4d53b8551a7d30fe8b404d6f1804abf1df69838932/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90", size = 954765, upload-time = "2025-03-07T01:40:01.615Z" },
+    { url = "https://files.pythonhosted.org/packages/30/a5/a515b7600ad361ea14bfa13fb4d6687abf500adc270f19e89849c0590492/nvidia_cuda_runtime_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:c0c6027f01505bfed6c3b21ec546f69c687689aad5f1a377554bc6ca4aa993a8", size = 944318, upload-time = "2025-03-07T01:51:01.794Z" },
+]
+
+[[package]]
+name = "nvidia-cudnn-cu12"
+version = "9.10.2.21"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fa/41/e79269ce215c857c935fd86bcfe91a451a584dfc27f1e068f568b9ad1ab7/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c9132cc3f8958447b4910a1720036d9eff5928cc3179b0a51fb6d167c6cc87d8", size = 705026878, upload-time = "2025-06-06T21:52:51.348Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/51/e123d997aa098c61d029f76663dedbfb9bc8dcf8c60cbd6adbe42f76d049/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8", size = 706758467, upload-time = "2025-06-06T21:54:08.597Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/90/0bd6e586701b3a890fd38aa71c387dab4883d619d6e5ad912ccbd05bfd67/nvidia_cudnn_cu12-9.10.2.21-py3-none-win_amd64.whl", hash = "sha256:c6288de7d63e6cf62988f0923f96dc339cea362decb1bf5b3141883392a7d65e", size = 692992268, upload-time = "2025-06-06T21:55:18.114Z" },
+]
+
+[[package]]
+name = "nvidia-cufft-cu12"
+version = "11.3.3.83"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/60/bc/7771846d3a0272026c416fbb7e5f4c1f146d6d80704534d0b187dd6f4800/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:848ef7224d6305cdb2a4df928759dca7b1201874787083b6e7550dd6765ce69a", size = 193109211, upload-time = "2025-03-07T01:44:56.873Z" },
+    { url = "https://files.pythonhosted.org/packages/1f/13/ee4e00f30e676b66ae65b4f08cb5bcbb8392c03f54f2d5413ea99a5d1c80/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74", size = 193118695, upload-time = "2025-03-07T01:45:27.821Z" },
+    { url = "https://files.pythonhosted.org/packages/7d/ec/ce1629f1e478bb5ccd208986b5f9e0316a78538dd6ab1d0484f012f8e2a1/nvidia_cufft_cu12-11.3.3.83-py3-none-win_amd64.whl", hash = "sha256:7a64a98ef2a7c47f905aaf8931b69a3a43f27c55530c698bb2ed7c75c0b42cb7", size = 192216559, upload-time = "2025-03-07T01:53:57.106Z" },
+]
+
+[[package]]
+name = "nvidia-cufile-cu12"
+version = "1.13.1.3"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/fe/1bcba1dfbfb8d01be8d93f07bfc502c93fa23afa6fd5ab3fc7c1df71038a/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc", size = 1197834, upload-time = "2025-03-07T01:45:50.723Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/f5/5607710447a6fe9fd9b3283956fceeee8a06cda1d2f56ce31371f595db2a/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:4beb6d4cce47c1a0f1013d72e02b0994730359e17801d395bdcbf20cfb3bb00a", size = 1120705, upload-time = "2025-03-07T01:45:41.434Z" },
+]
+
+[[package]]
+name = "nvidia-curand-cu12"
+version = "10.3.9.90"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/45/5e/92aa15eca622a388b80fbf8375d4760738df6285b1e92c43d37390a33a9a/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:dfab99248034673b779bc6decafdc3404a8a6f502462201f2f31f11354204acd", size = 63625754, upload-time = "2025-03-07T01:46:10.735Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/aa/6584b56dc84ebe9cf93226a5cde4d99080c8e90ab40f0c27bda7a0f29aa1/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9", size = 63619976, upload-time = "2025-03-07T01:46:23.323Z" },
+    { url = "https://files.pythonhosted.org/packages/b9/75/70c05b2f3ed5be3bb30b7102b6eb78e100da4bbf6944fd6725c012831cab/nvidia_curand_cu12-10.3.9.90-py3-none-win_amd64.whl", hash = "sha256:f149a8ca457277da854f89cf282d6ef43176861926c7ac85b2a0fbd237c587ec", size = 62765309, upload-time = "2025-03-07T01:54:20.478Z" },
+]
+
+[[package]]
+name = "nvidia-cusolver-cu12"
+version = "11.7.3.90"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nvidia-cublas-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cusparse-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c8/32/f7cd6ce8a7690544d084ea21c26e910a97e077c9b7f07bf5de623ee19981/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:db9ed69dbef9715071232caa9b69c52ac7de3a95773c2db65bdba85916e4e5c0", size = 267229841, upload-time = "2025-03-07T01:46:54.356Z" },
+    { url = "https://files.pythonhosted.org/packages/85/48/9a13d2975803e8cf2777d5ed57b87a0b6ca2cc795f9a4f59796a910bfb80/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl", hash = "sha256:4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450", size = 267506905, upload-time = "2025-03-07T01:47:16.273Z" },
+    { url = "https://files.pythonhosted.org/packages/13/c0/76ca8551b8a84146ffa189fec81c26d04adba4bc0dbe09cd6e6fd9b7de04/nvidia_cusolver_cu12-11.7.3.90-py3-none-win_amd64.whl", hash = "sha256:4a550db115fcabc4d495eb7d39ac8b58d4ab5d8e63274d3754df1c0ad6a22d34", size = 256720438, upload-time = "2025-03-07T01:54:39.898Z" },
+]
+
+[[package]]
+name = "nvidia-cusparse-cu12"
+version = "12.5.8.93"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nvidia-nvjitlink-cu12", marker = "sys_platform == 'linux' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/f7/cd777c4109681367721b00a106f491e0d0d15cfa1fd59672ce580ce42a97/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9b6c161cb130be1a07a27ea6923df8141f3c295852f4b260c65f18f3e0a091dc", size = 288117129, upload-time = "2025-03-07T01:47:40.407Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/f5/e1854cb2f2bcd4280c44736c93550cc300ff4b8c95ebe370d0aa7d2b473d/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b", size = 288216466, upload-time = "2025-03-07T01:48:13.779Z" },
+    { url = "https://files.pythonhosted.org/packages/62/07/f3b2ad63f8e3d257a599f422ae34eb565e70c41031aecefa3d18b62cabd1/nvidia_cusparse_cu12-12.5.8.93-py3-none-win_amd64.whl", hash = "sha256:9a33604331cb2cac199f2e7f5104dfbb8a5a898c367a53dfda9ff2acb6b6b4dd", size = 284937404, upload-time = "2025-03-07T01:55:07.742Z" },
+]
+
+[[package]]
+name = "nvidia-cusparselt-cu12"
+version = "0.7.1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/73/b9/598f6ff36faaece4b3c50d26f50e38661499ff34346f00e057760b35cc9d/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:8878dce784d0fac90131b6817b607e803c36e629ba34dc5b433471382196b6a5", size = 283835557, upload-time = "2025-02-26T00:16:54.265Z" },
+    { url = "https://files.pythonhosted.org/packages/56/79/12978b96bd44274fe38b5dde5cfb660b1d114f70a65ef962bcbbed99b549/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623", size = 287193691, upload-time = "2025-02-26T00:15:44.104Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/d8/a6b0d0d0c2435e9310f3e2bb0d9c9dd4c33daef86aa5f30b3681defd37ea/nvidia_cusparselt_cu12-0.7.1-py3-none-win_amd64.whl", hash = "sha256:f67fbb5831940ec829c9117b7f33807db9f9678dc2a617fbe781cac17b4e1075", size = 271020911, upload-time = "2025-02-26T00:14:47.204Z" },
+]
+
+[[package]]
 name = "nvidia-haystack"
 version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -6402,6 +6643,10 @@ examples = [
     { name = "nat-alert-triage-agent" },
     { name = "nat-autogen-demo" },
     { name = "nat-automated-description-generation" },
+    { name = "nat-benchmark-agent-leaderboard" },
+    { name = "nat-benchmark-bfcl" },
+    { name = "nat-benchmark-byob" },
+    { name = "nat-benchmark-tooltalk" },
     { name = "nat-currency-agent-a2a" },
     { name = "nat-documentation-guides" },
     { name = "nat-dpo-tic-tac-toe" },
@@ -6589,6 +6834,10 @@ requires-dist = [
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
     { name = "nat-autogen-demo", marker = "extra == 'examples'", editable = "examples/frameworks/nat_autogen_demo" },
     { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
+    { name = "nat-benchmark-agent-leaderboard", marker = "extra == 'examples'", editable = "examples/benchmarks/agent_leaderboard" },
+    { name = "nat-benchmark-bfcl", marker = "extra == 'examples'", editable = "examples/benchmarks/bfcl" },
+    { name = "nat-benchmark-byob", marker = "extra == 'examples'", editable = "examples/benchmarks/byob" },
+    { name = "nat-benchmark-tooltalk", marker = "extra == 'examples'", editable = "examples/benchmarks/tooltalk" },
     { name = "nat-currency-agent-a2a", marker = "extra == 'examples'", editable = "examples/A2A/currency_agent_a2a" },
     { name = "nat-documentation-guides", marker = "extra == 'examples'", editable = "examples/documentation_guides" },
     { name = "nat-dpo-tic-tac-toe", marker = "extra == 'examples'", editable = "examples/finetuning/dpo_tic_tac_toe" },
@@ -6811,6 +7060,49 @@ requires-dist = [
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
 ]
 provides-extras = ["test"]
+
+[[package]]
+name = "nvidia-nat-benchmarks"
+source = { editable = "packages/nvidia_nat_benchmarks" }
+dependencies = [
+    { name = "nvidia-nat-core" },
+    { name = "nvidia-nat-eval" },
+    { name = "nvidia-nat-langchain" },
+]
+
+[package.optional-dependencies]
+agent-leaderboard = [
+    { name = "datasets" },
+]
+bfcl = [
+    { name = "tree-sitter" },
+    { name = "tree-sitter-java" },
+    { name = "tree-sitter-javascript" },
+]
+byob = [
+    { name = "nemo-evaluator" },
+]
+tooltalk = [
+    { name = "nvidia-tooltalk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "datasets", marker = "extra == 'agent-leaderboard'", specifier = "~=4.4" },
+    { name = "nemo-evaluator", marker = "extra == 'byob'", specifier = "~=0.1" },
+    { name = "nvidia-nat-benchmarks", extras = ["agent-leaderboard", "bfcl", "byob", "tooltalk"], marker = "extra == 'all'", specifier = "==1.6.0.dev52+g385376c7" },
+    { name = "nvidia-nat-benchmarks", extras = ["all"], marker = "extra == 'test'", specifier = "==1.6.0.dev52+g385376c7" },
+    { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "packages/nvidia_nat_core" },
+    { name = "nvidia-nat-eval", editable = "packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-langchain", editable = "packages/nvidia_nat_langchain" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
+    { name = "nvidia-tooltalk", marker = "extra == 'tooltalk'", specifier = "~=26.1" },
+    { name = "tree-sitter", marker = "extra == 'bfcl'", specifier = "~=0.21.0" },
+    { name = "tree-sitter-java", marker = "extra == 'bfcl'", specifier = "~=0.21.0" },
+    { name = "tree-sitter-javascript", marker = "extra == 'bfcl'", specifier = "~=0.21.0" },
+]
+provides-extras = ["tooltalk", "bfcl", "byob", "agent-leaderboard", "all", "test"]
 
 [[package]]
 name = "nvidia-nat-core"
@@ -7467,6 +7759,44 @@ requires-dist = [
 provides-extras = ["test"]
 
 [[package]]
+name = "nvidia-nccl-cu12"
+version = "2.27.5"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bb/1c/857979db0ef194ca5e21478a0612bcdbbe59458d7694361882279947b349/nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:31432ad4d1fb1004eb0c56203dc9bc2178a1ba69d1d9e02d64a6938ab5e40e7a", size = 322400625, upload-time = "2025-06-26T04:11:04.496Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/89/f7a07dc961b60645dbbf42e80f2bc85ade7feb9a491b11a1e973aa00071f/nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ad730cf15cb5d25fe849c6e6ca9eb5b76db16a80f13f425ac68d8e2e55624457", size = 322348229, upload-time = "2025-06-26T04:11:28.385Z" },
+]
+
+[[package]]
+name = "nvidia-nvjitlink-cu12"
+version = "12.8.93"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f6/74/86a07f1d0f42998ca31312f998bd3b9a7eff7f52378f4f270c8679c77fb9/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl", hash = "sha256:81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88", size = 39254836, upload-time = "2025-03-07T01:49:55.661Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/a2/8cee5da30d13430e87bf99bb33455d2724d0a4a9cb5d7926d80ccb96d008/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:adccd7161ace7261e01bb91e44e88da350895c270d23f744f0820c818b7229e7", size = 38386204, upload-time = "2025-03-07T01:49:43.612Z" },
+    { url = "https://files.pythonhosted.org/packages/ed/d7/34f02dad2e30c31b10a51f6b04e025e5dd60e5f936af9045a9b858a05383/nvidia_nvjitlink_cu12-12.8.93-py3-none-win_amd64.whl", hash = "sha256:bd93fbeeee850917903583587f4fc3a4eafa022e34572251368238ab5e6bd67f", size = 268553710, upload-time = "2025-03-07T01:56:24.13Z" },
+]
+
+[[package]]
+name = "nvidia-nvshmem-cu12"
+version = "3.4.5"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/6a/03aa43cc9bd3ad91553a88b5f6fb25ed6a3752ae86ce2180221962bc2aa5/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:0b48363fc6964dede448029434c6abed6c5e37f823cb43c3bcde7ecfc0457e15", size = 138936938, upload-time = "2025-09-06T00:32:05.589Z" },
+    { url = "https://files.pythonhosted.org/packages/b5/09/6ea3ea725f82e1e76684f0708bbedd871fc96da89945adeba65c3835a64c/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd", size = 139103095, upload-time = "2025-09-06T00:32:31.266Z" },
+]
+
+[[package]]
+name = "nvidia-nvtx-cu12"
+version = "12.8.90"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/c0/1b303feea90d296f6176f32a2a70b5ef230f9bdeb3a72bddb0dc922dc137/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:d7ad891da111ebafbf7e015d34879f7112832fc239ff0d7d776b6cb685274615", size = 91161, upload-time = "2025-03-07T01:42:23.922Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/eb/86626c1bbc2edb86323022371c39aa48df6fd8b0a1647bc274577f72e90b/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f", size = 89954, upload-time = "2025-03-07T01:42:44.131Z" },
+    { url = "https://files.pythonhosted.org/packages/9f/99/4c9c0c329bf9fc125008c3b54c7c94c0023518d06fc025ae36431375e1fe/nvidia_nvtx_cu12-12.8.90-py3-none-win_amd64.whl", hash = "sha256:619c8304aedc69f02ea82dd244541a83c3d9d40993381b3b590f1adaed3db41e", size = 56492, upload-time = "2025-03-07T01:52:24.69Z" },
+]
+
+[[package]]
 name = "nvidia-rag"
 version = "2.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -7509,6 +7839,24 @@ dependencies = [
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8c/79/017fab2f7167a9a9795665f894d04f77aafceca80821b51589bb4b23ff5c/nvidia_sphinx_theme-0.0.9.post1-py3-none-any.whl", hash = "sha256:21ca60206dff2f380d7783d64bbaf71a5b9cacae53c7d0686f089c16b5a3d45a", size = 143816, upload-time = "2025-11-09T23:16:55.719Z" },
+]
+
+[[package]]
+name = "nvidia-tooltalk"
+version = "26.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "nemo-evaluator" },
+    { name = "numpy" },
+    { name = "openai" },
+    { name = "pytest" },
+    { name = "torch" },
+    { name = "tqdm" },
+    { name = "transformers" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/81/5cef75e53bddb8f1df42c3b25390cb3a8fcf75569047248cb02bb9721e33/nvidia_tooltalk-26.1-py3-none-any.whl", hash = "sha256:a6bfedbb590e50a55cbcf14bfe430d16e18c020998e0fbb6c8700685bb2442b7", size = 165640, upload-time = "2026-02-27T08:28:30.982Z" },
 ]
 
 [[package]]
@@ -11469,6 +11817,15 @@ wheels = [
 ]
 
 [[package]]
+name = "structlog"
+version = "25.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/52/9ba0f43b686e7f3ddfeaa78ac3af750292662284b3661e91ad5494f21dbc/structlog-25.5.0.tar.gz", hash = "sha256:098522a3bebed9153d4570c6d0288abf80a031dfdb2048d59a49e9dc2190fc98", size = 1460830, upload-time = "2025-10-27T08:28:23.028Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a8/45/a132b9074aa18e799b891b91ad72133c98d8042c70f6240e4c5f9dabee2f/structlog-25.5.0-py3-none-any.whl", hash = "sha256:a8453e9b9e636ec59bd9e79bbd4a72f025981b3ba0f5837aebf48f02f37a7f9f", size = 72510, upload-time = "2025-10-27T08:28:21.535Z" },
+]
+
+[[package]]
 name = "sympy"
 version = "1.14.0"
 source = { registry = "https://pypi.org/simple" }
@@ -11770,12 +12127,74 @@ wheels = [
 ]
 
 [[package]]
+name = "tomlkit"
+version = "0.14.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/af/14b24e41977adb296d6bd1fb59402cf7d60ce364f90c890bd2ec65c43b5a/tomlkit-0.14.0.tar.gz", hash = "sha256:cf00efca415dbd57575befb1f6634c4f42d2d87dbba376128adb42c121b87064", size = 187167, upload-time = "2026-01-13T01:14:53.304Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b5/11/87d6d29fb5d237229d67973a6c9e06e048f01cf4994dee194ab0ea841814/tomlkit-0.14.0-py3-none-any.whl", hash = "sha256:592064ed85b40fa213469f81ac584f67a4f2992509a7c3ea2d632208623a3680", size = 39310, upload-time = "2026-01-13T01:14:51.965Z" },
+]
+
+[[package]]
 name = "toolz"
 version = "1.1.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/11/d6/114b492226588d6ff54579d95847662fc69196bdeec318eb45393b24c192/toolz-1.1.0.tar.gz", hash = "sha256:27a5c770d068c110d9ed9323f24f1543e83b2f300a687b7891c1a6d56b697b5b", size = 52613, upload-time = "2025-10-17T04:03:21.661Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fb/12/5911ae3eeec47800503a238d971e51722ccea5feb8569b735184d5fcdbc0/toolz-1.1.0-py3-none-any.whl", hash = "sha256:15ccc861ac51c53696de0a5d6d4607f99c210739caf987b5d2054f3efed429d8", size = 58093, upload-time = "2025-10-17T04:03:20.435Z" },
+]
+
+[[package]]
+name = "torch"
+version = "2.10.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cuda-bindings", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "filelock" },
+    { name = "fsspec" },
+    { name = "jinja2" },
+    { name = "networkx" },
+    { name = "nvidia-cublas-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cudnn-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cufft-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cufile-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-curand-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cusolver-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cusparse-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-cusparselt-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-nccl-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-nvshmem-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "nvidia-nvtx-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "setuptools", version = "81.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai')" },
+    { name = "setuptools", version = "82.0.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.12' and extra == 'extra-10-nvidia-nat-adk') or (python_full_version >= '3.12' and extra == 'extra-10-nvidia-nat-most') or (python_full_version >= '3.12' and extra != 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "sympy" },
+    { name = "triton", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (platform_machine != 'x86_64' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (sys_platform != 'linux' and extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
+    { name = "typing-extensions" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/8b/4b61d6e13f7108f36910df9ab4b58fd389cc2520d54d81b88660804aad99/torch-2.10.0-2-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:418997cb02d0a0f1497cf6a09f63166f9f5df9f3e16c8a716ab76a72127c714f", size = 79423467, upload-time = "2026-02-10T21:44:48.711Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/54/a2ba279afcca44bbd320d4e73675b282fcee3d81400ea1b53934efca6462/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:13ec4add8c3faaed8d13e0574f5cd4a323c11655546f91fbe6afa77b57423574", size = 79498202, upload-time = "2026-02-10T21:44:52.603Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/23/2c9fe0c9c27f7f6cb865abcea8a4568f29f00acaeadfc6a37f6801f84cb4/torch-2.10.0-2-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:e521c9f030a3774ed770a9c011751fb47c4d12029a3d6522116e48431f2ff89e", size = 79498254, upload-time = "2026-02-10T21:44:44.095Z" },
+    { url = "https://files.pythonhosted.org/packages/78/89/f5554b13ebd71e05c0b002f95148033e730d3f7067f67423026cc9c69410/torch-2.10.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:3282d9febd1e4e476630a099692b44fdc214ee9bf8ee5377732d9d9dfe5712e4", size = 145992610, upload-time = "2026-01-21T16:25:26.327Z" },
+    { url = "https://files.pythonhosted.org/packages/ae/30/a3a2120621bf9c17779b169fc17e3dc29b230c29d0f8222f499f5e159aa8/torch-2.10.0-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:a2f9edd8dbc99f62bc4dfb78af7bf89499bca3d753423ac1b4e06592e467b763", size = 915607863, upload-time = "2026-01-21T16:25:06.696Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/3d/c87b33c5f260a2a8ad68da7147e105f05868c281c63d65ed85aa4da98c66/torch-2.10.0-cp311-cp311-win_amd64.whl", hash = "sha256:29b7009dba4b7a1c960260fc8ac85022c784250af43af9fb0ebafc9883782ebd", size = 113723116, upload-time = "2026-01-21T16:25:21.916Z" },
+    { url = "https://files.pythonhosted.org/packages/61/d8/15b9d9d3a6b0c01b883787bd056acbe5cc321090d4b216d3ea89a8fcfdf3/torch-2.10.0-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:b7bd80f3477b830dd166c707c5b0b82a898e7b16f59a7d9d42778dd058272e8b", size = 79423461, upload-time = "2026-01-21T16:24:50.266Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/af/758e242e9102e9988969b5e621d41f36b8f258bb4a099109b7a4b4b50ea4/torch-2.10.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:5fd4117d89ffd47e3dcc71e71a22efac24828ad781c7e46aaaf56bf7f2796acf", size = 145996088, upload-time = "2026-01-21T16:24:44.171Z" },
+    { url = "https://files.pythonhosted.org/packages/23/8e/3c74db5e53bff7ed9e34c8123e6a8bfef718b2450c35eefab85bb4a7e270/torch-2.10.0-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:787124e7db3b379d4f1ed54dd12ae7c741c16a4d29b49c0226a89bea50923ffb", size = 915711952, upload-time = "2026-01-21T16:23:53.503Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/01/624c4324ca01f66ae4c7cd1b74eb16fb52596dce66dbe51eff95ef9e7a4c/torch-2.10.0-cp312-cp312-win_amd64.whl", hash = "sha256:2c66c61f44c5f903046cc696d088e21062644cbe541c7f1c4eaae88b2ad23547", size = 113757972, upload-time = "2026-01-21T16:24:39.516Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/5c/dee910b87c4d5c0fcb41b50839ae04df87c1cfc663cf1b5fca7ea565eeaa/torch-2.10.0-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:6d3707a61863d1c4d6ebba7be4ca320f42b869ee657e9b2c21c736bf17000294", size = 79498198, upload-time = "2026-01-21T16:24:34.704Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/6f/f2e91e34e3fcba2e3fc8d8f74e7d6c22e74e480bbd1db7bc8900fdf3e95c/torch-2.10.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:5c4d217b14741e40776dd7074d9006fd28b8a97ef5654db959d8635b2fe5f29b", size = 146004247, upload-time = "2026-01-21T16:24:29.335Z" },
+    { url = "https://files.pythonhosted.org/packages/98/fb/5160261aeb5e1ee12ee95fe599d0541f7c976c3701d607d8fc29e623229f/torch-2.10.0-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:6b71486353fce0f9714ca0c9ef1c850a2ae766b409808acd58e9678a3edb7738", size = 915716445, upload-time = "2026-01-21T16:22:45.353Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/16/502fb1b41e6d868e8deb5b0e3ae926bbb36dab8ceb0d1b769b266ad7b0c3/torch-2.10.0-cp313-cp313-win_amd64.whl", hash = "sha256:c2ee399c644dc92ef7bc0d4f7e74b5360c37cdbe7c5ba11318dda49ffac2bc57", size = 113757050, upload-time = "2026-01-21T16:24:19.204Z" },
+    { url = "https://files.pythonhosted.org/packages/1a/0b/39929b148f4824bc3ad6f9f72a29d4ad865bcf7ebfc2fa67584773e083d2/torch-2.10.0-cp313-cp313t-macosx_14_0_arm64.whl", hash = "sha256:3202429f58309b9fa96a614885eace4b7995729f44beb54d3e4a47773649d382", size = 79851305, upload-time = "2026-01-21T16:24:09.209Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/14/21fbce63bc452381ba5f74a2c0a959fdf5ad5803ccc0c654e752e0dbe91a/torch-2.10.0-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:aae1b29cd68e50a9397f5ee897b9c24742e9e306f88a807a27d617f07adb3bd8", size = 146005472, upload-time = "2026-01-21T16:22:29.022Z" },
+    { url = "https://files.pythonhosted.org/packages/54/fd/b207d1c525cb570ef47f3e9f836b154685011fce11a2f444ba8a4084d042/torch-2.10.0-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:6021db85958db2f07ec94e1bc77212721ba4920c12a18dc552d2ae36a3eb163f", size = 915612644, upload-time = "2026-01-21T16:21:47.019Z" },
+    { url = "https://files.pythonhosted.org/packages/36/53/0197f868c75f1050b199fe58f9bf3bf3aecac9b4e85cc9c964383d745403/torch-2.10.0-cp313-cp313t-win_amd64.whl", hash = "sha256:ff43db38af76fda183156153983c9a096fc4c78d0cd1e07b14a2314c7f01c2c8", size = 113997015, upload-time = "2026-01-21T16:23:00.767Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/13/e76b4d9c160e89fff48bf16b449ea324bda84745d2ab30294c37c2434c0d/torch-2.10.0-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:cdf2a523d699b70d613243211ecaac14fe9c5df8a0b0a9c02add60fb2a413e0f", size = 79498248, upload-time = "2026-01-21T16:23:09.315Z" },
 ]
 
 [[package]]
@@ -11855,6 +12274,72 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/c4/35/67252acc1b929dc88b6602e8c4a982e64f31e733b804c14bc24b47da35e6/transformers-4.57.6.tar.gz", hash = "sha256:55e44126ece9dc0a291521b7e5492b572e6ef2766338a610b9ab5afbb70689d3", size = 10134912, upload-time = "2026-01-16T10:38:39.284Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/03/b8/e484ef633af3887baeeb4b6ad12743363af7cce68ae51e938e00aaa0529d/transformers-4.57.6-py3-none-any.whl", hash = "sha256:4c9e9de11333ddfe5114bc872c9f370509198acf0b87a832a0ab9458e2bd0550", size = 11993498, upload-time = "2026-01-16T10:38:31.289Z" },
+]
+
+[[package]]
+name = "tree-sitter"
+version = "0.21.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/39/9e/b7cb190aa08e4ea387f2b1531da03efb4b8b033426753c0b97e3698645f6/tree-sitter-0.21.3.tar.gz", hash = "sha256:b5de3028921522365aa864d95b3c41926e0ba6a85ee5bd000e10dc49b0766988", size = 155688, upload-time = "2024-03-26T10:53:35.451Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/b5/72657d5874d7f0a722c0288f04e5e2bc33d7715b13a858885b6593047dce/tree_sitter-0.21.3-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:54b22c3c2aab3e3639a4b255d9df8455da2921d050c4829b6a5663b057f10db5", size = 133429, upload-time = "2024-03-26T10:52:46.345Z" },
+    { url = "https://files.pythonhosted.org/packages/d3/64/c5d397efbb6d0dbed4254cd2ca389ed186a2e1e7e32661059f6eeaaf6424/tree_sitter-0.21.3-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:ab6e88c1e2d5e84ff0f9e5cd83f21b8e5074ad292a2cf19df3ba31d94fbcecd4", size = 126088, upload-time = "2024-03-26T10:52:47.759Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/88/941669acc140f94e6c6196d6d8676ac4cd57c3b3fbc1ee61bb11c1b2da71/tree_sitter-0.21.3-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fc3fd34ed4cd5db445bc448361b5da46a2a781c648328dc5879d768f16a46771", size = 487879, upload-time = "2024-03-26T10:52:49.091Z" },
+    { url = "https://files.pythonhosted.org/packages/29/4e/798154f2846d620bf9fa3bc244e056d4858f2108f834656bf9f1219d4f30/tree_sitter-0.21.3-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fabc7182f6083269ce3cfcad202fe01516aa80df64573b390af6cd853e8444a1", size = 498776, upload-time = "2024-03-26T10:52:50.709Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/d1/05ea77487bc7a3946d0e80fb6c5cb61515953f5e7a4f6804b98e113ed4b0/tree_sitter-0.21.3-cp311-cp311-musllinux_1_1_aarch64.whl", hash = "sha256:4f874c3f7d2a2faf5c91982dc7d88ff2a8f183a21fe475c29bee3009773b0558", size = 483348, upload-time = "2024-03-26T10:52:52.267Z" },
+    { url = "https://files.pythonhosted.org/packages/42/fa/bf938e7c6afbc368d503deeda060891c3dba57e2d1166e4b884271f55616/tree_sitter-0.21.3-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:ee61ee3b7a4eedf9d8f1635c68ba4a6fa8c46929601fc48a907c6cfef0cfbcb2", size = 493757, upload-time = "2024-03-26T10:52:54.845Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/a7/98da36a6eab22f5729989c9e0137b1b04cbe368d1e024fccd72c0b00719b/tree_sitter-0.21.3-cp311-cp311-win_amd64.whl", hash = "sha256:0b7256c723642de1c05fbb776b27742204a2382e337af22f4d9e279d77df7aa2", size = 109735, upload-time = "2024-03-26T10:52:57.243Z" },
+    { url = "https://files.pythonhosted.org/packages/81/e1/cceb06eae617a6bf5eeeefa9813d9fd57d89b50f526ce02486a336bcd2a9/tree_sitter-0.21.3-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:669b3e5a52cb1e37d60c7b16cc2221c76520445bb4f12dd17fd7220217f5abf3", size = 133640, upload-time = "2024-03-26T10:52:59.135Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/ce/ac14e5cbb0f30b7bd338122491ee2b8e6c0408cfe26741cbd66fa9b53d35/tree_sitter-0.21.3-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:2aa2a5099a9f667730ff26d57533cc893d766667f4d8a9877e76a9e74f48f0d3", size = 125954, upload-time = "2024-03-26T10:53:00.879Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/df/76dbf830126e566c48db0d1bf2bef3f9d8cac938302a9b0f762ded8206c2/tree_sitter-0.21.3-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6a3e06ae2a517cf6f1abb682974f76fa760298e6d5a3ecf2cf140c70f898adf0", size = 490092, upload-time = "2024-03-26T10:53:03.144Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/87/0c3593552cb0d09ab6271d37fc0e6a9476919d2a975661d709d4b3289fc7/tree_sitter-0.21.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:af992dfe08b4fefcfcdb40548d0d26d5d2e0a0f2d833487372f3728cd0772b48", size = 502155, upload-time = "2024-03-26T10:53:04.76Z" },
+    { url = "https://files.pythonhosted.org/packages/05/92/b2cb22cf52c18fcc95662897f380cf230c443dfc9196b872aad5948b7bb3/tree_sitter-0.21.3-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:c7cbab1dd9765138505c4a55e2aa857575bac4f1f8a8b0457744a4fefa1288e6", size = 486020, upload-time = "2024-03-26T10:53:06.414Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/ea/69b543538a46d763f3e787234d1617b718ab90f32ffa676ca856f1d9540e/tree_sitter-0.21.3-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:e1e66aeb457d1529370fcb0997ae5584c6879e0e662f1b11b2f295ea57e22f54", size = 496348, upload-time = "2024-03-26T10:53:07.939Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/4f/df4ea84476443021707b537217c32147ccccbc3e10c17b216a969991e1b3/tree_sitter-0.21.3-cp312-cp312-win_amd64.whl", hash = "sha256:013c750252dc3bd0e069d82e9658de35ed50eecf31c6586d0de7f942546824c5", size = 109771, upload-time = "2024-03-26T10:53:10.342Z" },
+]
+
+[[package]]
+name = "tree-sitter-java"
+version = "0.21.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/04/33/627a1bc82178131057bfad7ba1178f09979ac6ee8034915eb3caf0ff6088/tree_sitter_java-0.21.0-cp38-abi3-macosx_10_9_x86_64.whl", hash = "sha256:d30fb39af6590f6be877ff8d39c7e193f37594375b8fcdda55babd264411616b", size = 75795, upload-time = "2024-04-07T18:43:55.394Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/5a/c274c4b338b77035804905d216c73dbf7e672d5b8ef55e89ec47fa62f27a/tree_sitter_java-0.21.0-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:696391968cdc467f97e525fbe43790c2d5ba46bf446376eb30d5c20b5c9d795a", size = 78061, upload-time = "2024-04-07T18:43:57.438Z" },
+    { url = "https://files.pythonhosted.org/packages/90/27/1fb08e41074ee0cf26741f852ab995878974f63c5ce32df929507683417b/tree_sitter_java-0.21.0-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:6b82318982531a473c598601d73956b0b1f9e608d39e427ba8c1a59f2d6da262", size = 125576, upload-time = "2024-04-07T18:43:59.071Z" },
+    { url = "https://files.pythonhosted.org/packages/60/e7/b7dee7289ff66af83bf4c784847c9ded95276794d8d070495ca4b41d963d/tree_sitter_java-0.21.0-cp38-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f9c01f48ec3a3d4b55fb2c56b7cad6ebf94dba568d690b45d966731859485dd4", size = 116990, upload-time = "2024-04-07T18:44:00.859Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/e3/591d561cc52a7b672b3c0836696b97222673ee7b0d2785b5ee26064dce1f/tree_sitter_java-0.21.0-cp38-abi3-musllinux_1_1_aarch64.whl", hash = "sha256:d83ca51b26826550051c53468ec74f5b570b4afb4d4520df0aa2a35b52de2289", size = 128126, upload-time = "2024-04-07T18:44:02.731Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/48/fbf338a749bd6e7e58bf9c30de5d7afb697a8ac5263cb68e79bdf18a6cfa/tree_sitter_java-0.21.0-cp38-abi3-musllinux_1_1_x86_64.whl", hash = "sha256:8afb56c90048272b079235b82fc2a4a69b058b4ace206d9475cbad2eb143f40a", size = 119512, upload-time = "2024-04-07T18:44:04.682Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/e2/a84f1b286197645cbedd360971ed0da4ad1ff21be236d927e62b679186de/tree_sitter_java-0.21.0-cp38-abi3-win_amd64.whl", hash = "sha256:6534fac27a93160a2b27a0c77f22a7c91f0aee2dba9d4cdbf835bf509ddfbf4f", size = 74376, upload-time = "2024-04-07T18:44:06.002Z" },
+]
+
+[[package]]
+name = "tree-sitter-javascript"
+version = "0.21.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4c/f3/16e8566c46fe14965386284296e2f83f0e06b16a613d1d518b434844180b/tree-sitter-javascript-0.21.4.tar.gz", hash = "sha256:5ae97db218c22f16f1fd1108d77c4017b453addc36041136779c99800f23ff20", size = 109366, upload-time = "2024-07-06T00:52:05.796Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ad/44/c677dd586079a27b5237786e14713fdbff9fc556cea968658e09e26fa472/tree_sitter_javascript-0.21.4-cp38-abi3-macosx_10_9_x86_64.whl", hash = "sha256:e0f1d26ec85cc66d56fb25fd41ce499dc5c4a60b478a91754684e2289433daae", size = 57025, upload-time = "2024-07-06T00:51:56.957Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/49/a1dd762cfe11dbaabdcf5abb46dcf8650d89e456466cc569164bdc921d11/tree_sitter_javascript-0.21.4-cp38-abi3-macosx_11_0_arm64.whl", hash = "sha256:e9172dc9e59649d7598c6509103db1648e7187c2bcb39c34222fc052b9db0ac4", size = 60305, upload-time = "2024-07-06T00:51:58.367Z" },
+    { url = "https://files.pythonhosted.org/packages/f5/eb/1f7eb01fb0b62270c75eab9ac883a65226acfc63e76973cb21abee0ccad0/tree_sitter_javascript-0.21.4-cp38-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:d45bd39ce931b164f84cfb6a186df504e38c6f91f541e2e60d5a40eb9d574005", size = 85520, upload-time = "2024-07-06T00:51:59.887Z" },
+    { url = "https://files.pythonhosted.org/packages/e3/e3/a9f64c23cd37e88aae0758f31502f57613aa73058fb49c1c6eb9df97d201/tree_sitter_javascript-0.21.4-cp38-abi3-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:00ff426e9bb552abb49ce3234b083edb1a6aa73bfeea7d9bf0f6bb3d0256c4cd", size = 76624, upload-time = "2024-07-06T00:52:01.315Z" },
+    { url = "https://files.pythonhosted.org/packages/61/d4/8ed6ef32244dbb652a0e433a6f357afaf91614f69159abb03e4a5f96109a/tree_sitter_javascript-0.21.4-cp38-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:c2945bc49985ab396773e2738ae9b1e7d06950d6ad70c535c010fb9b2816a855", size = 73782, upload-time = "2024-07-06T00:52:02.675Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/a1/57579a8ab9a23ea6204d54958516a0119e168960e1d34cff036b9e762abc/tree_sitter_javascript-0.21.4-cp38-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:5fc87d07f4c6a7067d4e0f004956a549c05e21eeced3287f3ea2bdd04a71a97a", size = 73276, upload-time = "2024-07-06T00:52:03.794Z" },
+    { url = "https://files.pythonhosted.org/packages/19/e5/0681f027261093609cc56e5ca5e3c8e7eeee16e01081e0eee6c8d02fd2ce/tree_sitter_javascript-0.21.4-cp38-abi3-win_amd64.whl", hash = "sha256:2843b0e81564d8176922ef2b40db128a4de026606d6b1d22a06efb8e8a5c01b8", size = 60417, upload-time = "2024-07-06T00:52:04.7Z" },
+]
+
+[[package]]
+name = "triton"
+version = "3.6.0"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0f/2c/96f92f3c60387e14cc45aed49487f3486f89ea27106c1b1376913c62abe4/triton-3.6.0-cp311-cp311-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:49df5ef37379c0c2b5c0012286f80174fcf0e073e5ade1ca9a86c36814553651", size = 176081190, upload-time = "2026-01-20T16:16:00.523Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/12/b05ba554d2c623bffa59922b94b0775673de251f468a9609bc9e45de95e9/triton-3.6.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:e8e323d608e3a9bfcc2d9efcc90ceefb764a82b99dea12a86d643c72539ad5d3", size = 188214640, upload-time = "2026-01-20T16:00:35.869Z" },
+    { url = "https://files.pythonhosted.org/packages/17/5d/08201db32823bdf77a0e2b9039540080b2e5c23a20706ddba942924ebcd6/triton-3.6.0-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:374f52c11a711fd062b4bfbb201fd9ac0a5febd28a96fb41b4a0f51dde3157f4", size = 176128243, upload-time = "2026-01-20T16:16:07.857Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/a8/cdf8b3e4c98132f965f88c2313a4b493266832ad47fb52f23d14d4f86bb5/triton-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:74caf5e34b66d9f3a429af689c1c7128daba1d8208df60e81106b115c00d6fca", size = 188266850, upload-time = "2026-01-20T16:00:43.041Z" },
+    { url = "https://files.pythonhosted.org/packages/3c/12/34d71b350e89a204c2c7777a9bba0dcf2f19a5bfdd70b57c4dbc5ffd7154/triton-3.6.0-cp313-cp313-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:448e02fe6dc898e9e5aa89cf0ee5c371e99df5aa5e8ad976a80b93334f3494fd", size = 176133521, upload-time = "2026-01-20T16:16:13.321Z" },
+    { url = "https://files.pythonhosted.org/packages/f9/0b/37d991d8c130ce81a8728ae3c25b6e60935838e9be1b58791f5997b24a54/triton-3.6.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:10c7f76c6e72d2ef08df639e3d0d30729112f47a56b0c81672edc05ee5116ac9", size = 188289450, upload-time = "2026-01-20T16:00:49.136Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/4e/41b0c8033b503fd3cfcd12392cdd256945026a91ff02452bef40ec34bee7/triton-3.6.0-cp313-cp313t-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:1722e172d34e32abc3eb7711d0025bb69d7959ebea84e3b7f7a341cd7ed694d6", size = 176276087, upload-time = "2026-01-20T16:16:18.989Z" },
+    { url = "https://files.pythonhosted.org/packages/35/f8/9c66bfc55361ec6d0e4040a0337fb5924ceb23de4648b8a81ae9d33b2b38/triton-3.6.0-cp313-cp313t-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:d002e07d7180fd65e622134fbd980c9a3d4211fb85224b56a0a0efbd422ab72f", size = 188400296, upload-time = "2026-01-20T16:00:56.042Z" },
 ]
 
 [[package]]
@@ -12487,6 +12972,15 @@ wheels = [
 ]
 
 [[package]]
+name = "xmltodict"
+version = "1.0.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/70/80f3b7c10d2630aa66414bf23d210386700aa390547278c789afa994fd7e/xmltodict-1.0.4.tar.gz", hash = "sha256:6d94c9f834dd9e44514162799d344d815a3a4faec913717a9ecbfa5be1bb8e61", size = 26124, upload-time = "2026-02-22T02:21:22.074Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/34/98a2f52245f4d47be93b580dae5f9861ef58977d73a79eb47c58f1ad1f3a/xmltodict-1.0.4-py3-none-any.whl", hash = "sha256:a4a00d300b0e1c59fc2bfccb53d7b2e88c32f200df138a0dd2229f842497026a", size = 13580, upload-time = "2026-02-22T02:21:21.039Z" },
+]
+
+[[package]]
 name = "xxhash"
 version = "3.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -12647,6 +13141,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/31/74/8b74bae38ed7fe6793d0c15a0c8207bbb819cf287788459e5ed230996cdd/yarl-1.22.0-cp313-cp313t-win_amd64.whl", hash = "sha256:ff86011bd159a9d2dfc89c34cfd8aff12875980e3bd6a39ff097887520e60249", size = 93715, upload-time = "2025-10-06T14:11:11.739Z" },
     { url = "https://files.pythonhosted.org/packages/69/66/991858aa4b5892d57aef7ee1ba6b4d01ec3b7eb3060795d34090a3ca3278/yarl-1.22.0-cp313-cp313t-win_arm64.whl", hash = "sha256:7861058d0582b847bc4e3a4a4c46828a410bca738673f35a29ba3ca5db0b473b", size = 83857, upload-time = "2025-10-06T14:11:13.586Z" },
     { url = "https://files.pythonhosted.org/packages/73/ae/b48f95715333080afb75a4504487cbe142cae1268afc482d06692d605ae6/yarl-1.22.0-py3-none-any.whl", hash = "sha256:1380560bdba02b6b6c90de54133c81c9f2a453dee9912fe58c1dcced1edb7cff", size = 46814, upload-time = "2025-10-06T14:12:53.872Z" },
+]
+
+[[package]]
+name = "yq"
+version = "3.4.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "argcomplete" },
+    { name = "pyyaml" },
+    { name = "tomlkit" },
+    { name = "xmltodict" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/38/6a/eb9721ed0929d0f55d167c2222d288b529723afbef0a07ed7aa6cca72380/yq-3.4.3.tar.gz", hash = "sha256:ba586a1a6f30cf705b2f92206712df2281cd320280210e7b7b80adcb8f256e3b", size = 33214, upload-time = "2024-04-27T15:39:43.29Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f2/ba/d1b21f3e57469030bd6536b91bb28fedd2511d4e68b5a575f2bdb3a3dbb6/yq-3.4.3-py3-none-any.whl", hash = "sha256:547e34bc3caacce83665fd3429bf7c85f8e8b6b9aaee3f953db1ad716ff3434d", size = 18812, upload-time = "2024-04-27T15:39:41.652Z" },
 ]
 
 [[package]]

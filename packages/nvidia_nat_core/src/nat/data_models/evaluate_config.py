@@ -132,6 +132,15 @@ class EvalGeneralConfig(BaseModel):
         "this creates a fresh workflow instance per eval item, resetting all stateful tools to their "
         "initial state. Set to False to disable this behavior.")
 
+    shuffle: bool = Field(
+        default=False,
+        description="When enabled, randomizes the order of evaluation items before running the workflow. "
+        "Useful for reducing ordering bias in evaluation results.")
+
+    shuffle_seed: int | None = Field(
+        default=None,
+        description="Random seed for reproducible shuffling. If None, uses a different random order each run.")
+
     # overwrite the output_dir with the output config if present
     @model_validator(mode="before")
     @classmethod

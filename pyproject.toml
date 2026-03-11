@@ -124,6 +124,10 @@ examples = [
   "nat_agents_examples",
   "nat_alert_triage_agent",
   "nat_autogen_demo",
+  "nat_benchmark_agent_leaderboard",
+  "nat_benchmark_bfcl",
+  "nat_benchmark_byob",
+  "nat_benchmark_tooltalk",
   "nat_automated_description_generation",
   "nat_currency_agent_a2a",
   "nat_dpo_tic_tac_toe",
@@ -261,6 +265,10 @@ nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance"
 nat_agents_examples = { path = "examples/agents", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
 nat_autogen_demo = { path = "examples/frameworks/nat_autogen_demo", editable = true }
+nat_benchmark_agent_leaderboard = { path = "examples/benchmarks/agent_leaderboard", editable = true }
+nat_benchmark_bfcl = { path = "examples/benchmarks/bfcl", editable = true }
+nat_benchmark_byob = { path = "examples/benchmarks/byob", editable = true }
+nat_benchmark_tooltalk = { path = "examples/benchmarks/tooltalk", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
 nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable = true }
