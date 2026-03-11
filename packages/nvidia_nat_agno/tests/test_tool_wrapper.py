@@ -21,7 +21,6 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 
@@ -113,11 +112,6 @@ class TestToolWrapper:
 
         mock_fn.acall_invoke = mock_acall_invoke
         return mock_fn
-
-    @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
 
     @patch("nat.plugins.agno.tool_wrapper.tool")
     def test_agno_tool_wrapper(self, mock_tool, mock_function, mock_builder):

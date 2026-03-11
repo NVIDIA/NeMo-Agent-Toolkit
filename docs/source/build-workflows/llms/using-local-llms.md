@@ -236,3 +236,9 @@ llms:
     base_url: "http://localhost:8000/v1"
     model_name: gpt-oss-20b
 ```
+
+## Self-signed SSL/TLS Certificates
+
+If your locally hosted LLM is served over HTTPS with a self-signed certificate, you may encounter SSL verification errors when NeMo Agent Toolkit tries to communicate with the model. To bypass SSL verification, you can set the `verify_ssl` parameter to `false` in the configuration for the LLM and embedding models. This is currently supported for the following LLM and embedder types:
+- LLMs: `azure_openai`, `dynamo`, `litellm`, `nim`, `openai`
+- Embedders: `azure_openai`, `openai`, `nim`
