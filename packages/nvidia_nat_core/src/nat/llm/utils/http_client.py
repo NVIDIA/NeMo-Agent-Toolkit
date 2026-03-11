@@ -14,9 +14,9 @@
 # limitations under the License.
 
 import contextlib
-from typing import TYPE_CHECKING
+import typing
 
-if TYPE_CHECKING:
+if typing.TYPE_CHECKING:
     import httpx
 
     from nat.data_models.llm import LLMBaseConfig
@@ -77,8 +77,13 @@ async def async_http_client(llm_config: "LLMBaseConfig", **kwargs) -> "httpx.Asy
         await client.aclose()
 
 
+class HttpClients(typing.TypedDict):
+    http_client: "httpx.Client"
+    async_http_client: "httpx.AsyncClient"
+
+
 @contextlib.asynccontextmanager
-async def http_clients(llm_config: "LLMBaseConfig", **kwargs) -> dict[str, "httpx.AsyncClient | httpx.Client"]:
+async def http_clients(llm_config: "LLMBaseConfig", **kwargs) -> HttpClients:
     """
     Get a dictionary of HTTP clients, one sync one async.
 
@@ -87,7 +92,7 @@ async def http_clients(llm_config: "LLMBaseConfig", **kwargs) -> dict[str, "http
     """
     async with async_http_client(llm_config, **kwargs) as async_client:
         with http_client(llm_config, **kwargs) as sync_client:
-            yield {"http_client": sync_client, "async_http_client": async_client}
+            yield HttpClients(http_client=sync_client, async_http_client=async_client)
 
 
 def _handle_litellm_verify_ssl(llm_config: "LLMBaseConfig") -> None:
