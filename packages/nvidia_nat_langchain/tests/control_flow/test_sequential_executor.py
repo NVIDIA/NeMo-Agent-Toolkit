@@ -15,7 +15,6 @@
 
 import logging
 import typing
-from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
@@ -275,14 +274,6 @@ class TestValidateSequentialToolList:
     """Test cases for _validate_sequential_tool_list function."""
 
     @pytest.fixture
-    def mock_builder(self):
-        """Create a mock builder."""
-        builder = MagicMock(spec=Builder)
-        builder.get_function = AsyncMock()
-        builder.get_functions = AsyncMock()
-        return builder
-
-    @pytest.fixture
     def compatible_functions(self):
         """Create compatible mock functions."""
         func1 = MagicMock(spec=Function)
@@ -345,17 +336,16 @@ class TestValidateSequentialToolList:
 class TestSequentialExecution:
     """Test cases for the sequential_execution function."""
 
-    @pytest.fixture
-    def mock_builder(self):
+    @pytest.fixture(name="mock_builder")
+    def mock_builder_fixture(self, mock_builder: MagicMock) -> MagicMock:
         """Create a mock builder with tools."""
-        builder = MagicMock(spec=Builder)
 
         # Create mock tools
         tool1 = MockTool(name="tool1", return_value="result1")
         tool2 = MockTool(name="tool2", return_value="result2")
         tool3 = MockTool(name="tool3", return_value="final_result")
 
-        builder.get_tools.return_value = [tool1, tool2, tool3]
+        mock_builder.get_tools.return_value = [tool1, tool2, tool3]
 
         # Mock functions for type validation
         func1 = MagicMock(spec=Function)
@@ -376,9 +366,9 @@ class TestSequentialExecution:
         func3.single_output_type = str
         func3.streaming_output_type = str
 
-        builder.get_function.side_effect = [func1, func2, func3]
+        mock_builder.get_function.side_effect = [func1, func2, func3]
 
-        return builder
+        return mock_builder
 
     @pytest.mark.asyncio
     async def test_basic_sequential_execution(self, mock_builder):
@@ -661,11 +651,10 @@ class TestErrorScenarios:
     """Test various error scenarios and edge cases."""
 
     @pytest.fixture
-    def mock_builder_with_missing_tool(self):
+    def mock_builder_with_missing_tool(self, mock_builder: MagicMock) -> MagicMock:
         """Create a mock builder that simulates missing tools."""
-        builder = MagicMock(spec=Builder)
-        builder.get_tools.side_effect = KeyError("Tool not found")
-        return builder
+        mock_builder.get_tools.side_effect = KeyError("Tool not found")
+        return mock_builder
 
     @pytest.mark.asyncio
     async def test_missing_tool_error(self, mock_builder_with_missing_tool):

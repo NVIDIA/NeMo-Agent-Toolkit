@@ -39,22 +39,6 @@ from nat.retriever.models import RetrieverOutput
 
 
 @pytest.fixture
-def mock_builder():
-    """Create a mock builder with all required methods."""
-    builder = Mock()
-    builder._functions = {}
-    builder.get_llm = AsyncMock()
-    builder.get_embedder = AsyncMock()
-    builder.get_retriever = AsyncMock()
-    builder.get_memory_client = AsyncMock()
-    builder.get_object_store_client = AsyncMock()
-    builder.get_auth_provider = AsyncMock()
-    builder.get_function = AsyncMock()
-    builder.get_function_config = Mock()
-    return builder
-
-
-@pytest.fixture
 def mock_function():
     """Create a mock NAT Function instance."""
     func = Mock(spec=Function)

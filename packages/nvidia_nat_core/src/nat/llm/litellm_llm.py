@@ -28,6 +28,7 @@ from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.ssl_verification_mixin import SSLVerificationMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 
 
@@ -36,6 +37,7 @@ class LiteLlmModelConfig(
         OptimizableMixin,
         RetryMixin,
         ThinkingMixin,
+        SSLVerificationMixin,
         name="litellm",
 ):
     """A LiteLlm provider to be used with an LLM client."""

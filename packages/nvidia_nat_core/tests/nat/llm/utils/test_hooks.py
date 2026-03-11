@@ -20,7 +20,11 @@ import pytest
 from pytest_httpserver import HTTPServer
 
 from nat.builder.context import ContextState
-from nat.llm.utils.hooks import create_metadata_injection_client
+from nat.llm.utils.hooks import _create_metadata_injection_client
+
+from ._llm_configs import LLMConfig
+from ._llm_configs import LLMConfigWithTimeout
+from ._llm_configs import LLMConfigWithTimeoutAndSSL
 
 
 class TestMetadataInjectionHook:
@@ -46,19 +50,17 @@ class TestMetadataInjectionHook:
 
     async def test_hook_injects_metadata_fields(self, mock_httpx_request, mock_input_message):
         """Test that the hook injects custom metadata fields as headers."""
-        client = create_metadata_injection_client()
-        hook = client.event_hooks["request"][0]
+        async with _create_metadata_injection_client(llm_config=LLMConfig()) as client:
+            hook = client.event_hooks["request"][0]
 
-        context_state = ContextState.get()
-        context_state.input_message.set(mock_input_message)
+            context_state = ContextState.get()
+            context_state.input_message.set(mock_input_message)
 
-        await hook(mock_httpx_request)
+            await hook(mock_httpx_request)
 
-        assert mock_httpx_request.headers["X-Payload-scan-id"] == "scan-12345"
-        assert mock_httpx_request.headers["X-Payload-customer-id"] == "cust-789"
-        assert mock_httpx_request.headers["X-Payload-environment"] == "production"
-
-        await client.aclose()
+            assert mock_httpx_request.headers["X-Payload-scan-id"] == "scan-12345"
+            assert mock_httpx_request.headers["X-Payload-customer-id"] == "cust-789"
+            assert mock_httpx_request.headers["X-Payload-environment"] == "production"
 
     async def test_hook_skips_none_values(self, mock_httpx_request, mock_input_message):
         """Test that None values are not injected as headers."""
@@ -67,43 +69,73 @@ class TestMetadataInjectionHook:
             "optional_field": None,
         }
 
-        client = create_metadata_injection_client()
-        hook = client.event_hooks["request"][0]
+        async with _create_metadata_injection_client(llm_config=LLMConfig()) as client:
+            hook = client.event_hooks["request"][0]
 
-        context_state = ContextState.get()
-        context_state.input_message.set(mock_input_message)
+            context_state = ContextState.get()
+            context_state.input_message.set(mock_input_message)
 
-        await hook(mock_httpx_request)
+            await hook(mock_httpx_request)
 
-        assert "X-Payload-scan-id" in mock_httpx_request.headers
-        assert "X-Payload-optional-field" not in mock_httpx_request.headers
-
-        await client.aclose()
+            assert "X-Payload-scan-id" in mock_httpx_request.headers
+            assert "X-Payload-optional-field" not in mock_httpx_request.headers
 
     async def test_hook_handles_missing_context(self, mock_httpx_request):
         """Test that hook handles missing context gracefully."""
-        client = create_metadata_injection_client()
-        hook = client.event_hooks["request"][0]
+        async with _create_metadata_injection_client(llm_config=LLMConfig()) as client:
+            hook = client.event_hooks["request"][0]
 
-        await hook(mock_httpx_request)
+            await hook(mock_httpx_request)
 
-        payload_headers = [k for k in mock_httpx_request.headers if k.startswith("X-Payload-")]
-        assert len(payload_headers) == 0
-
-        await client.aclose()
+            payload_headers = [k for k in mock_httpx_request.headers if k.startswith("X-Payload-")]
+            assert len(payload_headers) == 0
 
 
 class TestCreateMetadataInjectionClient:
-    """Unit tests for create_metadata_injection_client function."""
+    """Unit tests for _create_metadata_injection_client function."""
 
     async def test_creates_client_with_event_hooks(self):
         """Test that client is created with event hooks."""
-        client = create_metadata_injection_client()
+        async with _create_metadata_injection_client(llm_config=LLMConfig()) as client:
+            assert "request" in client.event_hooks
+            assert len(client.event_hooks["request"]) == 1
 
-        assert "request" in client.event_hooks
-        assert len(client.event_hooks["request"]) == 1
+    @pytest.mark.parametrize(
+        "llm_config,expected_timeout",
+        [
+            (LLMConfig(), None),
+            (LLMConfigWithTimeout(), None),
+            (LLMConfigWithTimeout(request_timeout=45), 45),
+        ],
+        ids=["no_request_timeout_attr", "request_timeout_none", "request_timeout_45"],
+    )
+    async def test_request_timeout_passed_to_client(self,
+                                                    mock_httpx_async_client: MagicMock,
+                                                    llm_config,
+                                                    expected_timeout):
+        """Client receives timeout from config when request_timeout is set."""
+        async with _create_metadata_injection_client(llm_config=llm_config):
+            if expected_timeout is None:
+                assert "timeout" not in mock_httpx_async_client.call_args.kwargs
+            else:
+                assert mock_httpx_async_client.call_args.kwargs["timeout"] == expected_timeout
 
-        await client.aclose()
+    @pytest.mark.parametrize(
+        "llm_config,expected_verify",
+        [
+            (LLMConfig(), None),
+            (LLMConfigWithTimeoutAndSSL(verify_ssl=True), True),
+            (LLMConfigWithTimeoutAndSSL(verify_ssl=False), False),
+        ],
+        ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
+    )
+    async def test_verify_ssl_passed_to_client(self, mock_httpx_async_client: MagicMock, llm_config, expected_verify):
+        """Client receives verify from config when verify_ssl is set."""
+        async with _create_metadata_injection_client(llm_config=llm_config):
+            if expected_verify is None:
+                assert "verify" not in mock_httpx_async_client.call_args.kwargs
+            else:
+                assert mock_httpx_async_client.call_args.kwargs["verify"] is expected_verify
 
 
 class TestMetadataInjectionIntegration:
@@ -139,16 +171,16 @@ class TestMetadataInjectionIntegration:
             }
         })
 
-        client = create_metadata_injection_client()
-        context_state = ContextState.get()
-        context_state.input_message.set(mock_input_message)
+        async with _create_metadata_injection_client(llm_config=LLMConfig()) as client:
+            context_state = ContextState.get()
+            context_state.input_message.set(mock_input_message)
 
-        response = await client.post(httpserver.url_for("/v1/chat/completions"),
-                                     json={
-                                         "model": "test-model", "messages": [{
-                                             "role": "user", "content": "test"
-                                         }]
-                                     })
+            response = await client.post(httpserver.url_for("/v1/chat/completions"),
+                                         json={
+                                             "model": "test-model", "messages": [{
+                                                 "role": "user", "content": "test"
+                                             }]
+                                         })
 
         assert response.status_code == 200
 
@@ -158,8 +190,6 @@ class TestMetadataInjectionIntegration:
 
         assert request_headers["X-Payload-scan-id"] == "integration-test-123"
         assert request_headers["X-Payload-customer-id"] == "customer-456"
-
-        await client.aclose()
 
     async def test_request_succeeds_without_context(self, httpserver: HTTPServer):
         """Test that requests succeed even when ContextState is not available."""
@@ -181,14 +211,13 @@ class TestMetadataInjectionIntegration:
             }
         })
 
-        client = create_metadata_injection_client()
-
-        response = await client.post(httpserver.url_for("/v1/chat/completions"),
-                                     json={
-                                         "model": "test", "messages": [{
-                                             "role": "user", "content": "test"
-                                         }]
-                                     })
+        async with _create_metadata_injection_client(llm_config=LLMConfig()) as client:
+            response = await client.post(httpserver.url_for("/v1/chat/completions"),
+                                         json={
+                                             "model": "test", "messages": [{
+                                                 "role": "user", "content": "test"
+                                             }]
+                                         })
 
         assert response.status_code == 200
 
@@ -197,5 +226,3 @@ class TestMetadataInjectionIntegration:
 
         payload_headers = [k for k in request_headers.keys() if k.startswith("X-Payload-")]
         assert len(payload_headers) == 0
-
-        await client.aclose()
