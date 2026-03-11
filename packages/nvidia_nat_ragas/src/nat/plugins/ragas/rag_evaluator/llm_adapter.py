@@ -33,8 +33,14 @@ class NatLangChainRagasLLMAdapter(InstructorBaseRagasLLM):
       ragas-only concern while preserving the front-facing LLM configuration model.
     """
 
-    def __init__(self, langchain_llm: object):
+    def __init__(self, langchain_llm: object, llm_name: str | None = None):
         self._langchain_llm = langchain_llm
+        self._llm_name = llm_name
+
+    def _llm_context(self) -> str:
+        if self._llm_name:
+            return f" for configured LLM `{self._llm_name}`"
+        return ""
 
     @staticmethod
     def _coerce_output(result: object, response_model: type[InstructorTypeVar]) -> InstructorTypeVar:
@@ -49,27 +55,27 @@ class NatLangChainRagasLLMAdapter(InstructorBaseRagasLLM):
     def _structured_llm(self, response_model: type[InstructorTypeVar]) -> object:
         with_structured_output = getattr(self._langchain_llm, "with_structured_output", None)
         if not callable(with_structured_output):
-            raise TypeError(
-                "NAT LLM does not support `with_structured_output`, required for ragas collections metrics.")
+            raise TypeError("NAT LLM does not support `with_structured_output`, required for ragas collections metrics"
+                             f"{self._llm_context()}.")
         return with_structured_output(response_model)
 
     def generate(self, prompt: str, response_model: type[InstructorTypeVar]) -> InstructorTypeVar:
         structured_llm = self._structured_llm(response_model)
         invoke = getattr(structured_llm, "invoke", None)
         if not callable(invoke):
-            raise TypeError("Structured LLM wrapper does not implement sync `invoke`.")
+            raise TypeError(f"Structured LLM wrapper does not implement sync `invoke`{self._llm_context()}.")
         return self._coerce_output(invoke(prompt), response_model)
 
     async def agenerate(self, prompt: str, response_model: type[InstructorTypeVar]) -> InstructorTypeVar:
         structured_llm = self._structured_llm(response_model)
         ainvoke = getattr(structured_llm, "ainvoke", None)
         if not callable(ainvoke):
-            raise TypeError("Structured LLM wrapper does not implement async `ainvoke`.")
+            raise TypeError(f"Structured LLM wrapper does not implement async `ainvoke`{self._llm_context()}.")
         ainvoke_typed = ainvoke
         ainvoke_fn = ainvoke_typed if isinstance(ainvoke_typed, Callable) else None
         if ainvoke_fn is None:
-            raise TypeError("Structured LLM wrapper has invalid async `ainvoke`.")
+            raise TypeError(f"Structured LLM wrapper has invalid async `ainvoke`{self._llm_context()}.")
         awaitable = ainvoke_fn(prompt)
         if not isinstance(awaitable, Awaitable):
-            raise TypeError("Structured LLM wrapper `ainvoke` must return an awaitable.")
+            raise TypeError(f"Structured LLM wrapper `ainvoke` must return an awaitable{self._llm_context()}.")
         return self._coerce_output(await awaitable, response_model)

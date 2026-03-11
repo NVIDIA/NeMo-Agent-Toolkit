@@ -140,7 +140,7 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             retry_codes=config.retry_on_status_codes,
             retry_on_messages=config.retry_on_errors,
         )
-    ragas_llm = NatLangChainRagasLLMAdapter(langchain_llm)
+    ragas_llm = NatLangChainRagasLLMAdapter(llm_name=config.llm_name, langchain_llm=langchain_llm)
 
     metric = None
     metric_name = config.metric_name
