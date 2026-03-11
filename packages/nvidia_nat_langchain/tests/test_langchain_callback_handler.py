@@ -259,7 +259,9 @@ def test_extract_tools_schema_skips_non_mapping_input_schema(caplog):
             {
                 "name": "bad_tool",
                 "description": "Malformed schema",
-                "input_schema": [{"type": "string"}],
+                "input_schema": [{
+                    "type": "string"
+                }],
             },
         ]
     }
