@@ -27,15 +27,21 @@ llms:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
+    chat_template_kwargs:
+      enable_thinking: false
   nim_rag_eval_llm:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
     max_tokens: 8
+    chat_template_kwargs:
+      enable_thinking: false
   nim_trajectory_eval_llm:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
     max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
 
 embedders:
   nv-embedqa-e5-v5:
