@@ -13,8 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections.abc import Sequence
-
 from nat.data_models.atif import ATIFObservationResult
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalOutputItem
@@ -49,9 +47,9 @@ def _trajectory_to_retrieved_contexts(trajectory: ATIFTrajectory) -> list[str]:
 
 class RAGAtifEvaluator(AtifBaseEvaluator):
 
-    def __init__(self, metrics: Sequence[SimpleBaseMetric], max_concurrency=8):
+    def __init__(self, metric: SimpleBaseMetric, max_concurrency: int = 8):
         super().__init__(max_concurrency=max_concurrency)
-        self.metrics = metrics
+        self.metric = metric
 
     @staticmethod
     def _atif_sample_to_ragas(sample: AtifEvalSample) -> SingleTurnSample:
@@ -71,12 +69,8 @@ class RAGAtifEvaluator(AtifBaseEvaluator):
 
     async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
         """Run configured ragas metric for one ATIF sample and return one output item."""
-        if not self.metrics:
-            raise ValueError("No RAGAS metrics configured.")
-
-        metric = self.metrics[0]
         ragas_sample = self._atif_sample_to_ragas(sample)
-        metric_result = await score_metric_result(metric, ragas_sample)
+        metric_result = await score_metric_result(self.metric, ragas_sample)
         raw_score = extract_metric_score(metric_result)
         score = nan_to_zero(raw_score)
         # stash the input and the ragas reasoning for analysis later

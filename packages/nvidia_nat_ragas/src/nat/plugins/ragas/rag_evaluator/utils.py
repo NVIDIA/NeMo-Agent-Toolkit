@@ -54,11 +54,11 @@ async def score_metric_result(metric: SimpleBaseMetric, sample: object) -> Metri
 
     Examples:
 
-    - ``AnswerAccuracy(self, user_input, response, reference)`` forwards only ``user_input``, ``response``, ``reference``.
-    - ``AnswerCorrectness(self, user_input, response, reference)`` forwards only ``user_input``, ``response``, ``reference``.
-    - ``AnswerRelevancy(self, user_input, response)`` forwards only ``user_input`` and ``response``.
-    - ``BleuScore(self, reference, response)`` forwards only ``reference`` and ``response``.
-    - ``ResponseGroundedness(self, response, retrieved_contexts)`` forwards only ``response`` and ``retrieved_contexts``.
+    - ``AnswerAccuracy(self, user_input, response, reference)`` forwards ``user_input``, ``response``, ``reference``.
+    - ``AnswerCorrectness(self, user_input, response, reference)`` forwards ``user_input``, ``response``, ``reference``.
+    - ``AnswerRelevancy(self, user_input, response)`` forwards ``user_input`` and ``response``.
+    - ``BleuScore(self, reference, response)`` forwards ``reference`` and ``response``.
+    - ``ResponseGroundedness(self, response, retrieved_contexts)`` forwards ``response`` and ``retrieved_contexts``.
 
     """
     metric_kwargs = build_metric_kwargs(sample)

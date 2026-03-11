@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import typing
-from collections.abc import Sequence
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -91,23 +90,23 @@ def ragas_judge_llm() -> "LangchainLLMWrapper":
 
 
 @pytest.fixture
-def ragas_metrics() -> "Sequence[Metric]":
+def ragas_metric() -> "Metric":
     """Fixture to provide a single mocked ragas metric."""
     from ragas.metrics import Metric
-    return [MagicMock(spec=Metric, name="AnswerAccuracy")]
+    return MagicMock(spec=Metric, name="AnswerAccuracy")
 
 
 @pytest.fixture
-def rag_evaluator(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
+def rag_evaluator(ragas_judge_llm, ragas_metric) -> "RAGEvaluator":
     from nat.plugins.ragas.rag_evaluator.evaluate import RAGEvaluator
-    return RAGEvaluator(metrics=ragas_metrics)
+    return RAGEvaluator(metric=ragas_metric)
 
 
 @pytest.fixture
-def rag_evaluator_content(ragas_judge_llm, ragas_metrics) -> "RAGEvaluator":
+def rag_evaluator_content(ragas_judge_llm, ragas_metric) -> "RAGEvaluator":
     """RAGEvaluator configured to extract a specific field (`content`) from BaseModel or dict input objects."""
     from nat.plugins.ragas.rag_evaluator.evaluate import RAGEvaluator
-    return RAGEvaluator(metrics=ragas_metrics, input_obj_field="content")
+    return RAGEvaluator(metric=ragas_metric, input_obj_field="content")
 
 
 def test_eval_input_to_ragas(rag_evaluator, rag_eval_input, intermediate_step_adapter):
@@ -176,13 +175,13 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input):
         assert all(item.score == 0.0 for item in output.eval_output_items)
 
 
-def test_atif_samples_to_ragas(ragas_judge_llm, ragas_metrics, atif_samples):
+def test_atif_samples_to_ragas(ragas_judge_llm, ragas_metric, atif_samples):
     """Test ATIF sample mapping to ragas single-turn samples."""
     from ragas import SingleTurnSample
 
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
-    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metric=ragas_metric)
     ragas_samples = [atif_evaluator._atif_sample_to_ragas(sample) for sample in atif_samples]
 
     assert len(ragas_samples) == len(atif_samples)
@@ -191,14 +190,14 @@ def test_atif_samples_to_ragas(ragas_judge_llm, ragas_metrics, atif_samples):
         assert sample.retrieved_contexts == ["retrieved context"]
 
 
-async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_samples):
+async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metric, atif_samples):
     """Test ATIF-native evaluate path for RAGAS evaluator."""
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
     dataset = MagicMock()
     dataset.samples = [MagicMock(), MagicMock()]
     dataset.__len__.return_value = len(dataset.samples)
-    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metric=ragas_metric)
 
     with patch("nat.plugins.ragas.rag_evaluator.atif_evaluate.score_metric_result",
                new_callable=AsyncMock,
@@ -214,7 +213,7 @@ async def test_rag_atif_evaluate_success(ragas_judge_llm, ragas_metrics, atif_sa
 
 def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
                                             ragas_judge_llm,
-                                            ragas_metrics,
+                                            ragas_metric,
                                             rag_eval_input,
                                             intermediate_step_adapter):
     """Ensure legacy and ATIF lanes produce equivalent ragas input samples."""
@@ -249,7 +248,7 @@ def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
                            output_obj=item.output_obj,
                            metadata={}))
 
-    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metric=ragas_metric)
     legacy_samples = [rag_evaluator._eval_input_item_to_ragas(item) for item in rag_eval_input.eval_input_items]
     atif_ragas_samples = [atif_evaluator._atif_sample_to_ragas(sample) for sample in atif_samples]
 
@@ -271,7 +270,7 @@ def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
     ],
 )
 def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
-                                          ragas_metrics,
+                                          ragas_metric,
                                           atif_trajectory_steps,
                                           expected_user_input,
                                           expected_contexts):
@@ -288,7 +287,7 @@ def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
         AtifEvalSample(item_id=1, trajectory=trajectory, expected_output_obj="ref", output_obj="resp", metadata={})
     ]
 
-    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metric=ragas_metric)
     ragas_sample = atif_evaluator._atif_sample_to_ragas(atif_samples[0])
     assert ragas_sample.user_input == expected_user_input
     assert ragas_sample.retrieved_contexts == expected_contexts
@@ -296,7 +295,7 @@ def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
 
 async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
                                                 ragas_judge_llm,
-                                                ragas_metrics,
+                                                ragas_metric,
                                                 rag_eval_input,
                                                 intermediate_step_adapter):
     """Ensure legacy and ATIF evaluator lanes produce parity scores on the same dataset."""
@@ -335,7 +334,7 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
                            output_obj=item.output_obj,
                            metadata={}))
 
-    atif_evaluator = RAGAtifEvaluator(metrics=ragas_metrics)
+    atif_evaluator = RAGAtifEvaluator(metric=ragas_metric)
     with patch("nat.plugins.ragas.rag_evaluator.evaluate.score_metric_result",
                new_callable=AsyncMock,
                side_effect=_mock_score_metric), \

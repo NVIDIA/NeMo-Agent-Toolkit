@@ -142,7 +142,7 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
         )
     ragas_llm = NatLangChainRagasLLMAdapter(langchain_llm)
 
-    metrics = []
+    metric = None
     metric_name = config.metric_name
     metric_config = config.metric_config
     if not metric_config.skip:
@@ -151,13 +151,13 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
         metric_params = inspect.signature(metric_callable).parameters
         if "llm" in metric_params and "llm" not in kwargs:
             kwargs["llm"] = ragas_llm
-        metrics.append(metric_callable(**kwargs))
+        metric = metric_callable(**kwargs)
 
-    evaluator = RAGEvaluator(metrics=metrics,
+    evaluator = RAGEvaluator(metric=metric,
                              max_concurrency=builder.get_max_concurrency(),
-                             input_obj_field=config.input_obj_field) if metrics else None
-    atif_evaluator = RAGAtifEvaluator(metrics=metrics, max_concurrency=builder.get_max_concurrency()) if (
-        metrics and config.enable_atif_evaluator) else None
+                             input_obj_field=config.input_obj_field) if metric else None
+    atif_evaluator = RAGAtifEvaluator(metric=metric, max_concurrency=builder.get_max_concurrency()) if (
+        metric and config.enable_atif_evaluator) else None
 
     evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
     if config.enable_atif_evaluator:

@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import logging
-from collections.abc import Sequence
 
 from pydantic import BaseModel
 
@@ -35,10 +34,11 @@ logger = logging.getLogger(__name__)
 
 class RAGEvaluator(BaseEvaluator):
 
-    def __init__(self, metrics: Sequence[SimpleBaseMetric], max_concurrency: int = 8, input_obj_field: str | None = None):
-        metric_name = metrics[0].name if metrics else "no-metrics"
+    def __init__(self, metric: SimpleBaseMetric, max_concurrency: int = 8, input_obj_field: str | None = None):
+        """Initialize evaluator with a single RAGAS metric."""
+        metric_name = metric.name
         super().__init__(max_concurrency=max_concurrency, tqdm_desc=f"Evaluating Ragas {metric_name}")
-        self.metrics = metrics
+        self.metric = metric
         self.input_obj_field = input_obj_field
 
     def _extract_input_obj(self, item: EvalInputItem) -> str:
@@ -81,12 +81,8 @@ class RAGEvaluator(BaseEvaluator):
 
     async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
         """Run configured ragas metric for one eval item and return one output item."""
-        if not self.metrics:
-            raise ValueError("No RAGAS metrics configured.")
-
-        metric = self.metrics[0]
         ragas_sample = self._eval_input_item_to_ragas(item)
-        metric_result = await score_metric_result(metric, ragas_sample)
+        metric_result = await score_metric_result(self.metric, ragas_sample)
         raw_score = extract_metric_score(metric_result)
         score = nan_to_zero(raw_score)
         # stash the input and the ragas reasoning for analysis later
