@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 FilesToCheck = [
     # Get all of these extensions and templates (*.in)
-    re.compile(r"[.](cmake|cpp|cc|css|cu|cuh|h|hpp|md|rst|sh|pxd|py|pyx|yml|yaml)(\.in)?$"),
+    re.compile(r"[.](cmake|cpp|cc|css|cu|cuh|h|hpp|md|rst|sh|pxd|py|pyx|toml|yml|yaml)(\.in)?$"),
     # And files with a particular file/extension combo
     re.compile(r"CMakeLists[.]txt$"),
     re.compile(r"setup[.]cfg$"),
@@ -48,6 +48,7 @@ ExemptFiles: list[re.Pattern] = [
     re.compile(r"[^ \/\n]*conda/environments/.*\.yaml$"),  # Ignore generated environment files
     re.compile(r"LICENSE\.md$"),  # Ignore the license file itself
     re.compile(r"^examples/.*/data/.*.md$"),  # Ignore data files in examples
+    re.compile(r"^.nspect-allowlist.toml$"),  # Ignore the nspect allowlist file
 ]
 
 # this will break starting at year 10000, which is probably OK :)
@@ -457,6 +458,7 @@ EXT_LIC_MAPPING = {
     'pyx': A2_LIC_HASH,
     'rst': A2_LIC_RST,
     'sh': A2_LIC_HASH,
+    'toml': A2_LIC_HASH,
     'txt': A2_LIC_HASH,
     'yaml': A2_LIC_HASH,
     'yml': A2_LIC_HASH,
