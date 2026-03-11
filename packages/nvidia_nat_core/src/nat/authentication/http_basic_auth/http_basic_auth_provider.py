@@ -23,7 +23,7 @@ from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BasicAuthCred
 from nat.data_models.authentication import BearerTokenCred
-from nat.runtime.user_manager import SESSION_COOKIE_NAME
+from nat.runtime.session import SESSION_COOKIE_NAME
 
 
 class HTTPBasicAuthProvider(AuthProviderBase):

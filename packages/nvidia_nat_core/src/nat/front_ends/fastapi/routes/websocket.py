@@ -23,8 +23,8 @@ from starlette.websockets import WebSocket
 
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
+from nat.runtime.session import SESSION_COOKIE_NAME
 from nat.runtime.session import SessionManager
-from nat.runtime.user_manager import SESSION_COOKIE_NAME
 
 logger = logging.getLogger(__name__)
 

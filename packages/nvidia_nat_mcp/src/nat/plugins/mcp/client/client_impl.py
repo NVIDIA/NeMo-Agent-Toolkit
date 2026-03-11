@@ -40,7 +40,7 @@ from nat.plugins.mcp.client.client_config import MCPClientConfig
 from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
 from nat.plugins.mcp.utils import truncate_session_id
-from nat.runtime.user_manager import SESSION_COOKIE_NAME
+from nat.runtime.session import SESSION_COOKIE_NAME
 
 logger = logging.getLogger(__name__)
 

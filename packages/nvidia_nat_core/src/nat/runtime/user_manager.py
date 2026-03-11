@@ -16,40 +16,34 @@
 
 from __future__ import annotations
 
+import base64
 import logging
 import typing
 from http.cookies import SimpleCookie
 
-import jwt
 from fastapi import WebSocket
+from pydantic import SecretStr
 from starlette.requests import Request
 
+from nat.authentication.jwt_utils import decode_jwt_claims_unverified
+from nat.authentication.jwt_utils import extract_bearer_token
 from nat.data_models.api_server import ApiKeyAuthPayload
 from nat.data_models.api_server import AuthPayload
 from nat.data_models.api_server import BasicAuthPayload
 from nat.data_models.api_server import JwtAuthPayload
-from nat.data_models.authentication import HeaderAuthScheme
 from nat.data_models.user_info import BasicUserInfo
 from nat.data_models.user_info import JwtUserInfo
 from nat.data_models.user_info import UserInfo
 
 logger = logging.getLogger(__name__)
 
-SESSION_COOKIE_NAME: str = "nat-session"
-
 
 class UserManager:
-    """Stateless resolver that creates ``UserInfo`` from HTTP/WebSocket connections.
-
-    All methods are class or static methods — no instance state is held.
-    """
+    """Stateless resolver that creates ``UserInfo`` from HTTP/WebSocket connections."""
 
     @classmethod
     def extract_user_from_connection(cls, connection: Request | WebSocket) -> UserInfo | None:
         """Resolve an HTTP/WebSocket connection into a ``UserInfo``.
-
-        Checks for a ``nat-session`` cookie first, then falls back to a
-        JWT Bearer token in the ``Authorization`` header.
 
         Args:
             connection: The incoming Starlette ``Request`` or ``WebSocket``.
@@ -64,11 +58,27 @@ class UserManager:
         """
         cookie: str | None = cls._get_session_cookie(connection)
         if cookie:
-            return cls._user_info_from_session_cookie(cookie)
+            user_info: UserInfo = cls._user_info_from_session_cookie(cookie)
+            return user_info
 
-        claims: dict[str, typing.Any] | None = cls._get_jwt_claims(connection)
-        if claims is not None:
-            return cls._user_info_from_jwt(claims)
+        auth_header: str | None = cls._get_auth_header(connection)
+        if auth_header:
+            parts: list[str] = auth_header.strip().split(maxsplit=1)
+            if len(parts) == 2:
+                scheme: str = parts[0].lower()
+                credential: str = parts[1]
+
+                if scheme == "bearer" and credential:
+                    if credential.count(".") == 2:
+                        claims: dict[str, typing.Any] = decode_jwt_claims_unverified(credential)
+                        user_info = cls._user_info_from_jwt(claims)
+                        return user_info
+                    user_info = UserInfo._from_api_key(credential)
+                    return user_info
+
+                if scheme == "basic" and credential:
+                    user_info = cls._user_info_from_basic_auth(credential)
+                    return user_info
 
         return None
 
@@ -93,12 +103,7 @@ class UserManager:
         """
         if isinstance(payload, JwtAuthPayload):
             raw_token: str = payload.token.get_secret_value()
-            if not raw_token or raw_token.count(".") != 2:
-                raise ValueError("JWT token is empty or malformed (expected 3 dot-separated parts)")
-            try:
-                claims: dict[str, typing.Any] = jwt.decode(raw_token, options={"verify_signature": False})
-            except Exception as exc:
-                raise ValueError(f"Failed to decode JWT token: {exc}") from exc
+            claims: dict[str, typing.Any] = decode_jwt_claims_unverified(raw_token)
             return UserManager._user_info_from_jwt(claims)
 
         if isinstance(payload, ApiKeyAuthPayload):
@@ -118,6 +123,8 @@ class UserManager:
     @staticmethod
     def _get_session_cookie(connection: Request | WebSocket) -> str | None:
         """Extract the ``nat-session`` cookie value from a Request or WebSocket."""
+        from nat.runtime.session import SESSION_COOKIE_NAME
+
         if isinstance(connection, Request):
             cookies: dict[str, str] = dict(connection.cookies) if connection.cookies else {}
             return cookies.get(SESSION_COOKIE_NAME)
@@ -136,6 +143,22 @@ class UserManager:
         return None
 
     @staticmethod
+    def _get_auth_header(connection: Request | WebSocket) -> str | None:
+        """Extract the raw ``Authorization`` header value from a connection."""
+        if isinstance(connection, Request):
+            return connection.headers.get("authorization")
+        if isinstance(connection, WebSocket) and hasattr(connection, "scope") and "headers" in connection.scope:
+            for name, value in connection.scope.get("headers", []):
+                try:
+                    name_str: str = name.decode("utf-8").lower()
+                    value_str: str = value.decode("utf-8")
+                except Exception:
+                    continue
+                if name_str == "authorization":
+                    return value_str
+        return None
+
+    @staticmethod
     def _get_jwt_claims(connection: Request | WebSocket) -> dict[str, typing.Any] | None:
         """Extract and decode a JWT Bearer token from the ``Authorization`` header.
 
@@ -150,38 +173,10 @@ class UserManager:
             ValueError: If an ``Authorization`` header is present but the
                 token cannot be decoded into valid JWT claims.
         """
-        auth: str | None = None
-
-        if isinstance(connection, Request):
-            auth = connection.headers.get("authorization")
-        elif isinstance(connection, WebSocket) and hasattr(connection, "scope") and "headers" in connection.scope:
-            for name, value in connection.scope.get("headers", []):
-                try:
-                    name_str: str = name.decode("utf-8").lower()
-                    value_str: str = value.decode("utf-8")
-                except Exception:
-                    continue
-                if name_str == "authorization":
-                    auth = value_str
-                    break
-
-        if not auth:
+        token: str | None = extract_bearer_token(connection)
+        if token is None:
             return None
-
-        parts: list[str] = auth.strip().split(maxsplit=1)
-        if len(parts) != 2 or parts[0].lower() != HeaderAuthScheme.BEARER.lower():
-            return None
-
-        token: str = parts[1]
-        if not token or token.count(".") != 2:
-            raise ValueError("Bearer token is empty or malformed (expected 3 dot-separated parts)")
-
-        try:
-            claims: dict[str, typing.Any] = jwt.decode(token, options={"verify_signature": False})
-        except Exception as exc:
-            raise ValueError(f"Failed to decode JWT from Authorization header: {exc}") from exc
-
-        return claims
+        return decode_jwt_claims_unverified(token)
 
     @staticmethod
     def _user_info_from_session_cookie(cookie_value: str) -> UserInfo:
@@ -192,23 +187,28 @@ class UserManager:
     def _user_info_from_jwt(claims: dict[str, typing.Any]) -> UserInfo:
         """Build a ``UserInfo`` from decoded JWT claims.
 
+        Registered claims (``sub``, ``iss``, ``aud``, ``exp``, ``iat``) follow
+        RFC 7519.  Identity claims (``email``, ``preferred_username``, ``name``)
+        follow OpenID Connect Core 1.0 Section 5.1.  ``sub`` is preferred as
+        the stable identifier per RFC 7519 Section 4.1.2.
+
         Raises:
             ValueError: If the JWT contains no usable identity claim.
         """
         has_identity: bool = any(
             isinstance(claims.get(k), str) and claims.get(k, "").strip()
-            for k in ("email", "preferred_username", "sub"))
+            for k in ("sub", "email", "preferred_username"))
         if not has_identity:
-            raise ValueError("JWT contains no usable identity claim (email, preferred_username, sub)")
+            raise ValueError("JWT contains no usable identity claim (sub, email, preferred_username)")
 
-        first_name: str | None = (claims.get("given_name") if isinstance(claims.get("given_name"), str) else None)
-        last_name: str | None = (claims.get("family_name") if isinstance(claims.get("family_name"), str) else None)
-        if not first_name and not last_name:
+        given_name: str | None = (claims.get("given_name") if isinstance(claims.get("given_name"), str) else None)
+        family_name: str | None = (claims.get("family_name") if isinstance(claims.get("family_name"), str) else None)
+        if not given_name and not family_name:
             raw_name: typing.Any = claims.get("name")
             if isinstance(raw_name, str) and raw_name.strip():
                 name_parts: list[str] = raw_name.strip().split(maxsplit=1)
-                first_name = name_parts[0]
-                last_name = name_parts[1] if len(name_parts) > 1 else None
+                given_name = name_parts[0]
+                family_name = name_parts[1] if len(name_parts) > 1 else None
 
         raw_scope: typing.Any = claims.get("scope")
         scopes: list[str] = raw_scope.split() if isinstance(raw_scope, str) else []
@@ -231,8 +231,8 @@ class UserManager:
             audience = [raw_aud]
 
         jwt_info: JwtUserInfo = JwtUserInfo(
-            first_name=first_name,
-            last_name=last_name,
+            given_name=given_name,
+            family_name=family_name,
             email=claims.get("email") if isinstance(claims.get("email"), str) else None,
             preferred_username=(claims.get("preferred_username")
                                 if isinstance(claims.get("preferred_username"), str) else None),
@@ -249,3 +249,29 @@ class UserManager:
             claims=claims,
         )
         return UserInfo._from_jwt(jwt_info)
+
+    @staticmethod
+    def _user_info_from_basic_auth(b64_credential: str) -> UserInfo:
+        """Build a ``UserInfo`` from a base64-encoded Basic Auth credential.
+
+        Args:
+            b64_credential: The base64-encoded ``username:password`` string.
+
+        Raises:
+            ValueError: If the credential cannot be decoded or is malformed.
+        """
+        try:
+            decoded: str = base64.b64decode(b64_credential).decode("utf-8")
+        except Exception as exc:
+            raise ValueError(f"Failed to decode Basic auth credential: {exc}") from exc
+
+        if ":" not in decoded:
+            raise ValueError("Basic auth credential must contain a colon separator (username:password)")
+
+        username: str
+        password: str
+        username, _, password = decoded.partition(":")
+        if not username:
+            raise ValueError("Basic auth username must not be empty")
+
+        return UserInfo(basic_user=BasicUserInfo(username=username, password=SecretStr(password)))

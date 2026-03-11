@@ -52,6 +52,8 @@ if typing.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+SESSION_COOKIE_NAME: str = "nat-session"
+
 
 class PerUserBuilderInfo(BaseModel):
     """
@@ -342,6 +344,12 @@ class SessionManager:
                 cleanup_coro.close()
                 raise
             session_manager._per_user_builders_cleanup_task = cleanup_task
+
+            if config.users:
+                for username, user_info in config.users.items():
+                    user_id: str = user_info.get_user_id()
+                    logger.info(f"Pre-building per-user workflow for declared user '{username}' (user_id={user_id})")
+                    await session_manager._get_or_create_per_user_builder(user_id)
 
         return session_manager
 

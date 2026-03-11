@@ -23,17 +23,25 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import PrivateAttr
 from pydantic import SecretStr
+from pydantic import model_validator
+
+from nat.data_models.common import OptionalSecretStr
+from nat.data_models.common import SerializableSecretStr
 
 _USER_ID_NAMESPACE: uuid.UUID = uuid.uuid5(uuid.NAMESPACE_DNS, "nemo-agent-toolkit")
 
 
 class JwtUserInfo(BaseModel):
-    """JWT-derived identity fields extracted from decoded token claims."""
+    """JWT-derived identity fields extracted from decoded token claims.
+
+    Registered claims (``sub``, ``iss``, ``aud``, ``exp``, ``iat``) per RFC 7519.
+    Identity claims (``email``, ``preferred_username``, ``name``) per OpenID Connect Core 1.0.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    first_name: str | None = Field(default=None, description="Given name (``given_name`` claim).")
-    last_name: str | None = Field(default=None, description="Family name (``family_name`` claim).")
+    given_name: str | None = Field(default=None, description="Given name (``given_name`` claim).")
+    family_name: str | None = Field(default=None, description="Family name (``family_name`` claim).")
     email: str | None = Field(default=None, description="Email address (``email`` claim).")
     preferred_username: str | None = Field(default=None, description="Login or username.")
     roles: list[str] = Field(default_factory=list, description="Role claims.")
@@ -49,8 +57,12 @@ class JwtUserInfo(BaseModel):
 
     @property
     def identity_claim(self) -> str | None:
-        """Return the first non-empty value from email, preferred_username, or sub."""
-        for key in ("email", "preferred_username", "sub"):
+        """Return the first non-empty value using ``sub > email > preferred_username`` precedence.
+
+        ``sub`` is the stable, locally-unique identifier per RFC 7519 Section 4.1.2.
+        ``email`` and ``preferred_username`` are OIDC fallbacks (OpenID Connect Core 1.0 Section 5.1).
+        """
+        for key in ("sub", "email", "preferred_username"):
             val: typing.Any = self.claims.get(key)
             if val and isinstance(val, str) and val.strip():
                 return val.strip()
@@ -68,7 +80,7 @@ class BasicUserInfo(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     username: str = Field(min_length=1, description="Unique username identifying this user.")
-    password: SecretStr = Field(description="Password for this user.")
+    password: SerializableSecretStr = Field(description="Password for this user.")
 
     _credential: str = PrivateAttr()
 
@@ -85,28 +97,82 @@ class BasicUserInfo(BaseModel):
         return self._credential
 
 
+class JwtIdentity(BaseModel):
+    """Declarative JWT identity for YAML-configured users.
+
+    Declares the expected JWT claim values that an external IdP will
+    include in tokens issued for this user.  Used to pre-register a
+    user identity in YAML so that incoming JWTs can be matched to a
+    pre-built per-user workflow.
+
+    Identity resolution uses ``subject > email > preferred_username``
+    precedence: ``subject`` (the RFC 7519 ``sub`` claim) is the
+    stable, immutable identifier; ``email`` and ``preferred_username``
+    (OpenID Connect Core 1.0 claims) serve as fallbacks when ``sub``
+    is unavailable.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    email: str | None = Field(default=None, description="Email address claim (``email``).")
+    preferred_username: str | None = Field(default=None, description="Preferred username claim.")
+    subject: str | None = Field(default=None, description="Subject claim (``sub``).")
+
+    @property
+    def identity_key(self) -> str | None:
+        """Return the first non-empty claim value.
+
+        Uses ``subject > email > preferred_username`` precedence.
+        ``subject`` per RFC 7519; ``email``/``preferred_username`` per OIDC Core 1.0.
+        """
+        for val in (self.subject, self.email, self.preferred_username):
+            if val and isinstance(val, str) and val.strip():
+                return val.strip()
+        return None
+
+
 class UserInfo(BaseModel):
     """Resolved user identity, independent of how it was identified.
 
-    Do not construct directly.  Use ``UserManager`` for runtime credentials
-    (session cookie / JWT) or pass a ``BasicUserInfo`` for YAML users::
+    For YAML-configured users, construct with exactly one identity source::
 
-        info = UserInfo(basic_user=BasicUserInfo(username="alice", password="s3cret"))
-        info.get_user_id()      # auto-generated UUID
-        info.get_user_details() # BasicUserInfo(username="alice", ...)
+        UserInfo(basic_user=BasicUserInfo(username="alice", password="s3cret"))
+        UserInfo(jwt_identity=JwtIdentity(subject="auth0|abc123"))
+        UserInfo(api_key=SecretStr("sk-service-abc123"))
+
+    For runtime credentials (session cookie / JWT), use ``UserManager``
+    or the ``_from_*`` factory classmethods.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     basic_user: BasicUserInfo | None = Field(default=None, description="Username/password identity.")
+    jwt_identity: JwtIdentity | None = Field(default=None,
+                                             description="Declarative JWT identity for YAML-configured users.")
+    api_key: OptionalSecretStr = Field(default=None, description="Static API key identity.")
     _user_id: str = PrivateAttr(default="")
     _session_cookie: str | None = PrivateAttr(default=None)
     _jwt: JwtUserInfo | None = PrivateAttr(default=None)
-    _api_key: str | None = PrivateAttr(default=None)
+
+    @model_validator(mode="after")
+    def _validate_single_identity_source(self) -> "UserInfo":
+        sources: int = sum(1 for s in (self.basic_user, self.jwt_identity, self.api_key) if s is not None)
+        if sources > 1:
+            raise ValueError(
+                f"At most one identity source (basic_user, jwt_identity, api_key) may be set, got {sources}")
+        return self
 
     def model_post_init(self, __context: typing.Any) -> None:
         if self.basic_user is not None:
             self._set_user_id(self.basic_user.credential)
+        elif self.jwt_identity is not None:
+            identity_key: str | None = self.jwt_identity.identity_key
+            if identity_key is None:
+                raise ValueError("jwt_identity must have at least one non-empty claim "
+                                 "(subject, email, or preferred_username)")
+            self._set_user_id(identity_key)
+        elif self.api_key is not None:
+            self._set_user_id(self.api_key.get_secret_value())
 
     def get_user_id(self) -> str:
         """Return the user ID."""
@@ -114,22 +180,23 @@ class UserInfo(BaseModel):
 
     def _set_user_id(self, identity_key: str) -> None:
         """Derive and set the deterministic UUID from an identity source value."""
-        object.__setattr__(self, "_user_id", str(uuid.uuid5(_USER_ID_NAMESPACE, identity_key)))
+        computed: str = str(uuid.uuid5(_USER_ID_NAMESPACE, identity_key))
+        object.__setattr__(self, "_user_id", computed)
 
     def get_user_details(self) -> JwtUserInfo | BasicUserInfo | str | None:
         """Return the identity-source data used to create this user.
 
         Returns:
             ``JwtUserInfo`` for JWT users, ``BasicUserInfo`` for
-            username/password users, the raw cookie string for session-cookie
-            users, or ``None`` if no source was set.
+            username/password users, the raw API key or cookie string for
+            those users, or ``None`` if no source was set.
         """
         if self._jwt is not None:
             return self._jwt
         if self.basic_user is not None:
             return self.basic_user
-        if self._api_key is not None:
-            return self._api_key
+        if self.api_key is not None:
+            return self.api_key.get_secret_value()
         if self._session_cookie is not None:
             return self._session_cookie
         return None
@@ -143,16 +210,13 @@ class UserInfo(BaseModel):
 
     @classmethod
     def _from_api_key(cls, api_key: str) -> "UserInfo":
-        instance: UserInfo = cls()
-        object.__setattr__(instance, "_api_key", api_key)
-        instance._set_user_id(api_key)
-        return instance
+        return cls(api_key=SecretStr(api_key))
 
     @classmethod
     def _from_jwt(cls, jwt_info: JwtUserInfo) -> "UserInfo":
         identity: str | None = jwt_info.identity_claim
         if identity is None:
-            raise ValueError("JWT contains no usable identity claim (email, preferred_username, sub)")
+            raise ValueError("JWT contains no usable identity claim (sub, email, preferred_username)")
         instance: UserInfo = cls()
         object.__setattr__(instance, "_jwt", jwt_info)
         instance._set_user_id(identity)

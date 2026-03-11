@@ -22,6 +22,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from pydantic import SecretStr
+from pydantic import ValidationError
 from starlette.requests import Request
 from starlette.websockets import WebSocket
 
@@ -31,7 +32,7 @@ from nat.data_models.api_server import JwtAuthPayload
 from nat.data_models.user_info import BasicUserInfo
 from nat.data_models.user_info import JwtUserInfo
 from nat.data_models.user_info import UserInfo
-from nat.runtime.user_manager import SESSION_COOKIE_NAME
+from nat.runtime.session import SESSION_COOKIE_NAME
 from nat.runtime.user_manager import UserManager
 
 
@@ -107,15 +108,15 @@ class TestFromConnectionRequestJwt:
         assert details.email == "test@example.com"
         assert details.subject == "user-123"
 
-    def test_jwt_identity_claim_email_preferred(self):
-        """Input: JWT with email, preferred_username, and sub. Asserts identity_claim is email."""
+    def test_jwt_identity_claim_sub_preferred(self):
+        """Input: JWT with email, preferred_username, and sub. Asserts identity_claim is sub."""
         token: str = _make_jwt({"email": "a@b.com", "preferred_username": "auser", "sub": "sub-1"})
         req = _mock_request(headers={"authorization": f"Bearer {token}"})
         info: UserInfo = UserManager.extract_user_from_connection(req)
 
         details = info.get_user_details()
         assert isinstance(details, JwtUserInfo)
-        assert details.identity_claim == "a@b.com"
+        assert details.identity_claim == "sub-1"
 
     def test_jwt_with_roles_and_scopes(self):
         """Input: JWT with roles list and space-separated scope string. Asserts both are parsed."""
@@ -129,15 +130,15 @@ class TestFromConnectionRequestJwt:
         assert details.scopes == ["read", "write"]
 
     def test_jwt_name_split_into_first_last(self):
-        """Input: JWT with ``name`` claim "Jane Doe". Asserts first_name="Jane", last_name="Doe"."""
+        """Input: JWT with ``name`` claim "Jane Doe". Asserts given_name="Jane", family_name="Doe"."""
         token: str = _make_jwt({"sub": "user-1", "name": "Jane Doe"})
         req = _mock_request(headers={"authorization": f"Bearer {token}"})
         info: UserInfo = UserManager.extract_user_from_connection(req)
 
         details = info.get_user_details()
         assert isinstance(details, JwtUserInfo)
-        assert details.first_name == "Jane"
-        assert details.last_name == "Doe"
+        assert details.given_name == "Jane"
+        assert details.family_name == "Doe"
 
     def test_jwt_given_family_name_preferred_over_name(self):
         """Input: JWT with given_name, family_name, and name. Asserts given/family take precedence."""
@@ -146,8 +147,32 @@ class TestFromConnectionRequestJwt:
         details = UserManager.extract_user_from_connection(req).get_user_details()
 
         assert isinstance(details, JwtUserInfo)
-        assert details.first_name == "Alice"
-        assert details.last_name == "Smith"
+        assert details.given_name == "Alice"
+        assert details.family_name == "Smith"
+
+    def test_jwt_sub_only_returns_user_info(self):
+        """Input: JWT with only sub claim (no email). Asserts identity_claim == sub."""
+        token: str = _make_jwt({"sub": "sub-only-user"})
+        req = _mock_request(headers={"authorization": f"Bearer {token}"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+
+        assert info.get_user_id()
+        details = info.get_user_details()
+        assert isinstance(details, JwtUserInfo)
+        assert details.identity_claim == "sub-only-user"
+        assert details.email is None
+
+    def test_jwt_email_only_returns_user_info(self):
+        """Input: JWT with only email claim (no sub). Asserts identity_claim == email."""
+        token: str = _make_jwt({"email": "emailonly@test.com"})
+        req = _mock_request(headers={"authorization": f"Bearer {token}"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+
+        assert info.get_user_id()
+        details = info.get_user_details()
+        assert isinstance(details, JwtUserInfo)
+        assert details.identity_claim == "emailonly@test.com"
+        assert details.subject is None
 
     def test_jwt_keycloak_realm_access_roles(self):
         """Input: JWT with realm_access.roles. Asserts roles extracted from Keycloak structure."""
@@ -225,11 +250,6 @@ class TestFromConnectionNoCredential:
         req = _mock_request()
         assert UserManager.extract_user_from_connection(req) is None
 
-    def test_non_bearer_scheme_returns_none(self):
-        """Input: Request with Basic auth (not Bearer). Asserts returns None."""
-        req = _mock_request(headers={"authorization": "Basic dXNlcjpwYXNz"})
-        assert UserManager.extract_user_from_connection(req) is None
-
     def test_invalid_jwt_raises(self):
         """Input: Request with undecodable Bearer token. Asserts raises ValueError."""
         req = _mock_request(headers={"authorization": "Bearer not.valid.jwt"})
@@ -280,10 +300,9 @@ class TestFromAuthPayloadJwt:
             UserManager._from_auth_payload(payload)
 
     def test_jwt_payload_empty_token_raises(self):
-        """Input: JWT payload with empty token. Asserts raises ValueError matching "empty or malformed"."""
-        payload = JwtAuthPayload(method="jwt", token=SecretStr(""))
-        with pytest.raises(ValueError, match="empty or malformed"):
-            UserManager._from_auth_payload(payload)
+        """Input: JWT payload with empty token. Asserts raises ValidationError (min_length=1)."""
+        with pytest.raises(ValidationError):
+            JwtAuthPayload(method="jwt", token=SecretStr(""))
 
     def test_jwt_payload_no_identity_claim_raises(self):
         """Input: valid JWT but only iss claim. Asserts raises ValueError matching "no usable identity claim"."""
@@ -313,10 +332,9 @@ class TestFromAuthPayloadApiKey:
                UserManager._from_auth_payload(p2).get_user_id()
 
     def test_api_key_empty_token_raises(self):
-        """Input: API key payload with empty token. Asserts raises ValueError matching "empty"."""
-        payload = ApiKeyAuthPayload(method="api_key", token=SecretStr(""))
-        with pytest.raises(ValueError, match="empty"):
-            UserManager._from_auth_payload(payload)
+        """Input: API key payload with empty token. Asserts raises ValidationError (min_length=1)."""
+        with pytest.raises(ValidationError):
+            ApiKeyAuthPayload(method="api_key", token=SecretStr(""))
 
 
 class TestFromAuthPayloadBasic:
@@ -592,33 +610,15 @@ class TestHandlerProcessAuthMessage:
         call_kwargs: dict = handler._session_manager.session.call_args.kwargs
         assert call_kwargs["user_id"] == resolved_id
 
-    async def test_empty_jwt_token_sends_failure(self):
-        """Input: JWT auth message with empty token. Asserts user_id stays None and error sent."""
-        from nat.data_models.api_server import WebSocketAuthMessage
-        handler = self._make_handler()
-        msg = WebSocketAuthMessage(
-            type="auth_message",
-            payload=JwtAuthPayload(method="jwt", token=SecretStr("")),
-        )
+    async def test_empty_jwt_token_rejected_at_model_level(self):
+        """Input: JWT auth message with empty token. Asserts ValidationError at construction (min_length=1)."""
+        with pytest.raises(ValidationError):
+            JwtAuthPayload(method="jwt", token=SecretStr(""))
 
-        await handler._process_auth_message(msg)
-        assert handler._user_id is None
-        sent = self._last_sent_payload(handler)
-        assert sent["status"] == "error"
-
-    async def test_empty_api_key_sends_failure(self):
-        """Input: API key auth message with empty token. Asserts user_id stays None and error sent."""
-        from nat.data_models.api_server import WebSocketAuthMessage
-        handler = self._make_handler()
-        msg = WebSocketAuthMessage(
-            type="auth_message",
-            payload=ApiKeyAuthPayload(method="api_key", token=SecretStr("")),
-        )
-
-        await handler._process_auth_message(msg)
-        assert handler._user_id is None
-        sent = self._last_sent_payload(handler)
-        assert sent["status"] == "error"
+    async def test_empty_api_key_rejected_at_model_level(self):
+        """Input: API key auth message with empty token. Asserts ValidationError at construction (min_length=1)."""
+        with pytest.raises(ValidationError):
+            ApiKeyAuthPayload(method="api_key", token=SecretStr(""))
 
 
 class TestSessionUserIdResolution:
@@ -973,14 +973,14 @@ class TestUserInfoFromJwtClaimExtraction:
         assert isinstance(details, JwtUserInfo)
         assert details.issuer == "https://idp.example.com"
 
-    def test_name_single_word_first_name_only(self):
-        """Input: claims with name="Alice" (single word). Asserts first_name="Alice", last_name is None."""
+    def test_name_single_word_given_name_only(self):
+        """Input: claims with name="Alice" (single word). Asserts given_name="Alice", family_name is None."""
         token: str = _make_jwt({"sub": "u", "name": "Alice"})
         req = _mock_request(headers={"authorization": f"Bearer {token}"})
         details = UserManager.extract_user_from_connection(req).get_user_details()
         assert isinstance(details, JwtUserInfo)
-        assert details.first_name == "Alice"
-        assert details.last_name is None
+        assert details.given_name == "Alice"
+        assert details.family_name is None
 
     def test_roles_direct_list(self):
         """Input: claims with roles=["admin"]. Asserts details.roles == ["admin"]."""
@@ -1024,3 +1024,184 @@ class TestExtractUserFromConnectionEdgeCases:
         ws = _mock_websocket(auth_header=f"Bearer {token}")
         with pytest.raises(ValueError, match="no usable identity claim"):
             UserManager.extract_user_from_connection(ws)
+
+
+class TestFromConnectionRequestBasicAuth:
+    """extract_user_from_connection resolves a UserInfo from HTTP Basic Auth."""
+
+    def test_basic_auth_returns_user_info(self):
+        """Input: Request with Authorization: Basic header. Asserts UserInfo with BasicUserInfo details."""
+        b64: str = base64.b64encode(b"alice:s3cret").decode()
+        req = _mock_request(headers={"authorization": f"Basic {b64}"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+
+        assert info is not None
+        assert info.get_user_id()
+        details = info.get_user_details()
+        assert isinstance(details, BasicUserInfo)
+        assert details.username == "alice"
+
+    def test_basic_auth_deterministic_uuid(self):
+        """Input: same Basic auth twice. Asserts both produce the same user_id."""
+        b64: str = base64.b64encode(b"alice:s3cret").decode()
+        req1 = _mock_request(headers={"authorization": f"Basic {b64}"})
+        req2 = _mock_request(headers={"authorization": f"Basic {b64}"})
+
+        assert UserManager.extract_user_from_connection(req1).get_user_id() == \
+               UserManager.extract_user_from_connection(req2).get_user_id()
+
+    def test_basic_auth_matches_direct_construction(self):
+        """Input: Basic auth via header matches UserInfo(basic_user=...) with same creds."""
+        b64: str = base64.b64encode(b"alice:s3cret").decode()
+        req = _mock_request(headers={"authorization": f"Basic {b64}"})
+        from_connection: UserInfo = UserManager.extract_user_from_connection(req)
+
+        direct: UserInfo = UserInfo(basic_user=BasicUserInfo(username="alice", password=SecretStr("s3cret")))
+        assert from_connection.get_user_id() == direct.get_user_id()
+
+    def test_basic_auth_invalid_base64_raises(self):
+        """Input: Basic auth with invalid base64. Asserts raises ValueError."""
+        req = _mock_request(headers={"authorization": "Basic not-valid-base64!!!"})
+        with pytest.raises(ValueError, match="Failed to decode Basic auth credential"):
+            UserManager.extract_user_from_connection(req)
+
+    def test_basic_auth_no_colon_raises(self):
+        """Input: Basic auth with base64 that has no colon. Asserts raises ValueError."""
+        b64: str = base64.b64encode(b"nocolon").decode()
+        req = _mock_request(headers={"authorization": f"Basic {b64}"})
+        with pytest.raises(ValueError, match="colon separator"):
+            UserManager.extract_user_from_connection(req)
+
+    def test_basic_auth_empty_username_raises(self):
+        """Input: Basic auth with empty username (:password). Asserts raises ValueError."""
+        b64: str = base64.b64encode(b":password").decode()
+        req = _mock_request(headers={"authorization": f"Basic {b64}"})
+        with pytest.raises(ValueError, match="username must not be empty"):
+            UserManager.extract_user_from_connection(req)
+
+    def test_basic_auth_websocket(self):
+        """Input: WebSocket with Basic auth header. Asserts returns UserInfo with BasicUserInfo."""
+        b64: str = base64.b64encode(b"bob:pass123").decode()
+        ws = _mock_websocket(auth_header=f"Basic {b64}")
+        info: UserInfo = UserManager.extract_user_from_connection(ws)
+
+        assert info is not None
+        details = info.get_user_details()
+        assert isinstance(details, BasicUserInfo)
+        assert details.username == "bob"
+
+
+class TestFromConnectionRequestApiKey:
+    """extract_user_from_connection resolves a UserInfo from a non-JWT Bearer token (API key)."""
+
+    def test_api_key_bearer_returns_user_info(self):
+        """Input: Bearer token that is not a JWT (no dots). Asserts treated as API key."""
+        req = _mock_request(headers={"authorization": "Bearer sk-my-api-key-123"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+
+        assert info is not None
+        assert info.get_user_id()
+        assert info.get_user_details() == "sk-my-api-key-123"
+
+    def test_api_key_deterministic_uuid(self):
+        """Input: same API key Bearer token twice. Asserts same user_id."""
+        req1 = _mock_request(headers={"authorization": "Bearer sk-key-xyz"})
+        req2 = _mock_request(headers={"authorization": "Bearer sk-key-xyz"})
+
+        assert UserManager.extract_user_from_connection(req1).get_user_id() == \
+               UserManager.extract_user_from_connection(req2).get_user_id()
+
+    def test_api_key_matches_from_api_key_factory(self):
+        """Input: API key via Bearer header matches UserInfo._from_api_key with same key."""
+        req = _mock_request(headers={"authorization": "Bearer sk-test-key"})
+        from_connection: UserInfo = UserManager.extract_user_from_connection(req)
+        from_factory: UserInfo = UserInfo._from_api_key("sk-test-key")
+        assert from_connection.get_user_id() == from_factory.get_user_id()
+
+    def test_api_key_matches_yaml_declared_user(self):
+        """Input: API key via Bearer header matches UserInfo(api_key=...) with same key."""
+        req = _mock_request(headers={"authorization": "Bearer sk-yaml-key"})
+        from_connection: UserInfo = UserManager.extract_user_from_connection(req)
+        from_yaml: UserInfo = UserInfo(api_key=SecretStr("sk-yaml-key"))
+        assert from_connection.get_user_id() == from_yaml.get_user_id()
+
+    def test_api_key_one_dot_treated_as_api_key(self):
+        """Input: Bearer token with 1 dot. Asserts treated as API key (not JWT)."""
+        req = _mock_request(headers={"authorization": "Bearer prefix.suffix"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+        assert info is not None
+        assert info.get_user_details() == "prefix.suffix"
+
+    def test_api_key_websocket(self):
+        """Input: WebSocket with non-JWT Bearer token. Asserts treated as API key."""
+        ws = _mock_websocket(auth_header="Bearer nvapi-ws-key")
+        info: UserInfo = UserManager.extract_user_from_connection(ws)
+
+        assert info is not None
+        assert info.get_user_details() == "nvapi-ws-key"
+
+
+class TestJwtVsApiKeyDiscrimination:
+    """Bearer tokens with exactly 2 dots are treated as JWT; all others as API key."""
+
+    def test_three_part_token_treated_as_jwt(self):
+        """Input: valid JWT (3 dot-separated parts). Asserts identity_claim from JWT."""
+        token: str = _make_jwt({"sub": "jwt-user", "email": "jwt@test.com"})
+        req = _mock_request(headers={"authorization": f"Bearer {token}"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+
+        details = info.get_user_details()
+        assert isinstance(details, JwtUserInfo)
+        assert details.email == "jwt@test.com"
+
+    def test_no_dot_token_treated_as_api_key(self):
+        """Input: Bearer token with no dots. Asserts treated as API key."""
+        req = _mock_request(headers={"authorization": "Bearer sk-no-dots"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+        assert info.get_user_details() == "sk-no-dots"
+
+    def test_one_dot_token_treated_as_api_key(self):
+        """Input: Bearer token with 1 dot. Asserts treated as API key."""
+        req = _mock_request(headers={"authorization": "Bearer one.dot"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+        assert info.get_user_details() == "one.dot"
+
+    def test_three_dot_token_treated_as_api_key(self):
+        """Input: Bearer token with 3 dots (not JWT structure). Asserts treated as API key."""
+        req = _mock_request(headers={"authorization": "Bearer a.b.c.d"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+        assert info.get_user_details() == "a.b.c.d"
+
+    def test_malformed_jwt_structure_raises(self):
+        """Input: 3-part token with invalid base64 payload. Asserts raises ValueError (JWT decode fails)."""
+        req = _mock_request(headers={"authorization": "Bearer not.valid.jwt"})
+        with pytest.raises(ValueError, match="Failed to decode JWT"):
+            UserManager.extract_user_from_connection(req)
+
+
+class TestResolutionChainPriority:
+    """Full resolution chain: cookie > Bearer JWT > Bearer API key > Basic Auth."""
+
+    def test_cookie_takes_precedence_over_basic_auth(self):
+        """Input: Request with both cookie and Basic auth. Asserts cookie wins."""
+        b64: str = base64.b64encode(b"alice:pass").decode()
+        req = _mock_request(
+            cookies={SESSION_COOKIE_NAME: "cookie-value"},
+            headers={"authorization": f"Basic {b64}"},
+        )
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+        assert info.get_user_details() == "cookie-value"
+
+    def test_cookie_takes_precedence_over_api_key(self):
+        """Input: Request with both cookie and API key Bearer. Asserts cookie wins."""
+        req = _mock_request(
+            cookies={SESSION_COOKIE_NAME: "cookie-value"},
+            headers={"authorization": "Bearer sk-api-key"},
+        )
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+        assert info.get_user_details() == "cookie-value"
+
+    def test_unknown_scheme_returns_none(self):
+        """Input: Request with unsupported auth scheme. Asserts returns None."""
+        req = _mock_request(headers={"authorization": "Digest realm=test"})
+        assert UserManager.extract_user_from_connection(req) is None
