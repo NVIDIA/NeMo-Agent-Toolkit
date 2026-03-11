@@ -52,13 +52,19 @@ def _mock_request(cookies: dict[str, str] | None = None, headers: dict[str, str]
     return mock
 
 
-def _mock_websocket(cookie_header: str | None = None, auth_header: str | None = None) -> MagicMock:
+def _mock_websocket(
+    cookie_header: str | None = None,
+    auth_header: str | None = None,
+    api_key_header: str | None = None,
+) -> MagicMock:
     """Create a MagicMock that passes ``isinstance(obj, WebSocket)``."""
     raw_headers: list[tuple[bytes, bytes]] = []
     if cookie_header:
         raw_headers.append((b"cookie", cookie_header.encode()))
     if auth_header:
         raw_headers.append((b"authorization", auth_header.encode()))
+    if api_key_header:
+        raw_headers.append((b"x-api-key", api_key_header.encode()))
 
     mock = MagicMock(spec=WebSocket)
     mock.scope = {"headers": raw_headers}
@@ -1141,6 +1147,63 @@ class TestFromConnectionRequestApiKey:
         assert info.get_user_details() == "nvapi-ws-key"
 
 
+class TestFromConnectionXApiKeyHeader:
+    """extract_user_from_connection resolves a UserInfo from an X-API-Key header."""
+
+    def test_x_api_key_header_returns_user_info(self):
+        """Input: Request with X-API-Key header only. Asserts treated as API key."""
+        req = _mock_request(headers={"x-api-key": "nvapi-header-key"})
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+
+        assert info is not None
+        assert info.get_user_details() == "nvapi-header-key"
+
+    def test_x_api_key_deterministic_uuid(self):
+        """Input: Same X-API-Key twice. Asserts same user_id."""
+        req1 = _mock_request(headers={"x-api-key": "nvapi-stable"})
+        req2 = _mock_request(headers={"x-api-key": "nvapi-stable"})
+
+        assert UserManager.extract_user_from_connection(req1).get_user_id() == \
+               UserManager.extract_user_from_connection(req2).get_user_id()
+
+    def test_x_api_key_matches_bearer_api_key(self):
+        """Input: Same key via X-API-Key and Bearer. Asserts same user_id."""
+        from_x_header: UserInfo = UserManager.extract_user_from_connection(
+            _mock_request(headers={"x-api-key": "shared-key"}))
+        from_bearer: UserInfo = UserManager.extract_user_from_connection(
+            _mock_request(headers={"authorization": "Bearer shared-key"}))
+
+        assert from_x_header.get_user_id() == from_bearer.get_user_id()
+
+    def test_x_api_key_websocket(self):
+        """Input: WebSocket with X-API-Key header. Asserts treated as API key."""
+        ws = _mock_websocket(api_key_header="nvapi-ws-x-key")
+        info: UserInfo = UserManager.extract_user_from_connection(ws)
+
+        assert info is not None
+        assert info.get_user_details() == "nvapi-ws-x-key"
+
+    def test_authorization_takes_precedence_over_x_api_key(self):
+        """Input: Request with both Authorization Bearer and X-API-Key. Asserts Authorization wins."""
+        req = _mock_request(headers={
+            "authorization": "Bearer bearer-key",
+            "x-api-key": "x-header-key",
+        })
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+        assert info.get_user_details() == "bearer-key"
+
+    def test_x_api_key_used_when_auth_scheme_unsupported(self):
+        """Input: Unsupported Authorization scheme + X-API-Key. Asserts X-API-Key is used as fallback."""
+        req = _mock_request(headers={
+            "authorization": "Digest realm=test",
+            "x-api-key": "fallback-key",
+        })
+        info: UserInfo = UserManager.extract_user_from_connection(req)
+
+        assert info is not None
+        assert info.get_user_details() == "fallback-key"
+
+
 class TestJwtVsApiKeyDiscrimination:
     """Bearer tokens with exactly 2 dots are treated as JWT; all others as API key."""
 
@@ -1180,7 +1243,7 @@ class TestJwtVsApiKeyDiscrimination:
 
 
 class TestResolutionChainPriority:
-    """Full resolution chain: cookie > Bearer JWT > Bearer API key > Basic Auth."""
+    """Full resolution chain: cookie > Authorization (JWT / API key / Basic) > X-API-Key."""
 
     def test_cookie_takes_precedence_over_basic_auth(self):
         """Input: Request with both cookie and Basic auth. Asserts cookie wins."""

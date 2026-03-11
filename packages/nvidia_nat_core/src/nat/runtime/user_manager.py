@@ -58,27 +58,53 @@ class UserManager:
         """
         cookie: str | None = cls._get_session_cookie(connection)
         if cookie:
-            user_info: UserInfo = cls._user_info_from_session_cookie(cookie)
-            return user_info
+            return cls._user_info_from_session_cookie(cookie)
 
         auth_header: str | None = cls._get_auth_header(connection)
         if auth_header:
-            parts: list[str] = auth_header.strip().split(maxsplit=1)
-            if len(parts) == 2:
-                scheme: str = parts[0].lower()
-                credential: str = parts[1]
+            resolved: UserInfo | None = cls._resolve_from_auth_header(auth_header)
+            if resolved is not None:
+                return resolved
 
-                if scheme == "bearer" and credential:
-                    if credential.count(".") == 2:
-                        claims: dict[str, typing.Any] = decode_jwt_claims_unverified(credential)
-                        user_info = cls._user_info_from_jwt(claims)
-                        return user_info
-                    user_info = UserInfo._from_api_key(credential)
-                    return user_info
+        api_key: str | None = cls._get_api_key_header(connection)
+        if api_key:
+            return UserInfo._from_api_key(api_key)
 
-                if scheme == "basic" and credential:
-                    user_info = cls._user_info_from_basic_auth(credential)
-                    return user_info
+        return None
+
+    @classmethod
+    def _resolve_from_auth_header(cls, auth_header: str) -> UserInfo | None:
+        """Parse an ``Authorization`` header and resolve identity by scheme.
+
+        Args:
+            auth_header: Raw header value (e.g. ``Bearer <token>`` or ``Basic <b64>``).
+
+        Returns:
+            A ``UserInfo`` if the header contains a recognised scheme with a
+            non-empty credential, or ``None`` if the header is malformed or
+            uses an unsupported scheme.
+
+        Raises:
+            ValueError: If a credential is present but cannot be decoded
+                (e.g. invalid JWT structure, malformed base64).
+        """
+        parts: list[str] = auth_header.strip().split(maxsplit=1)
+        if len(parts) != 2:
+            return None
+
+        scheme: str = parts[0].lower()
+        credential: str = parts[1]
+        if not credential:
+            return None
+
+        if scheme == "bearer":
+            if credential.count(".") == 2:
+                claims: dict[str, typing.Any] = decode_jwt_claims_unverified(credential)
+                return cls._user_info_from_jwt(claims)
+            return UserInfo._from_api_key(credential)
+
+        if scheme == "basic":
+            return cls._user_info_from_basic_auth(credential)
 
         return None
 
@@ -140,6 +166,22 @@ class UserManager:
                     for key, morsel in SimpleCookie(value_str).items():
                         if key == SESSION_COOKIE_NAME:
                             return morsel.value
+        return None
+
+    @staticmethod
+    def _get_api_key_header(connection: Request | WebSocket) -> str | None:
+        """Extract the ``X-API-Key`` header value from a connection."""
+        if isinstance(connection, Request):
+            return connection.headers.get("x-api-key")
+        if isinstance(connection, WebSocket) and hasattr(connection, "scope") and "headers" in connection.scope:
+            for name, value in connection.scope.get("headers", []):
+                try:
+                    name_str: str = name.decode("utf-8").lower()
+                    value_str: str = value.decode("utf-8")
+                except Exception:
+                    continue
+                if name_str == "x-api-key":
+                    return value_str
         return None
 
     @staticmethod
