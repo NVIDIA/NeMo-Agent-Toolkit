@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 
 class RAGEvaluator(BaseEvaluator):
 
-    def __init__(self, metrics: Sequence[SimpleBaseMetric], max_concurrency=8, input_obj_field: str | None = None):
-        metric_name = metrics[0].name if metrics else "<none>"
+    def __init__(self, metrics: Sequence[SimpleBaseMetric], max_concurrency: int = 8, input_obj_field: str | None = None):
+        metric_name = metrics[0].name if metrics else "no-metrics"
         super().__init__(max_concurrency=max_concurrency, tqdm_desc=f"Evaluating Ragas {metric_name}")
         self.metrics = metrics
         self.input_obj_field = input_obj_field
