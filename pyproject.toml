@@ -213,6 +213,7 @@ conflicts = [
     [{ extra = "rag" }, { extra = "autogen" }],
     [{ extra = "rag" }, { extra = "most" }],
 ]
+managed = true
 
 [tool.uv.sources]
 # Packages
