@@ -42,7 +42,16 @@ class TestOpenAIStrands:
         """Create an OpenAIModelConfig with wrong API type."""
         return OpenAIModelConfig(model_name="gpt-4", api_type=APITypeEnum.RESPONSES)
 
-    @patch("strands.models.openai.OpenAIModel")
+    @pytest.fixture(name="mock_model", autouse=True)
+    def mock_model_fixture(self):
+        with patch("strands.models.openai.OpenAIModel") as mock_model:
+            yield mock_model
+
+    @pytest.fixture(name="mock_async_openai", autouse=True)
+    def mock_async_openai_fixture(self):
+        with patch("openai.AsyncOpenAI") as mock_async_openai:
+            yield mock_async_openai
+
     @pytest.mark.asyncio
     async def test_openai_strands_basic(self, mock_model, openai_config, mock_builder):
         """Test that openai_strands as async context manager."""
@@ -53,7 +62,6 @@ class TestOpenAIStrands:
         async with openai_strands(openai_config, mock_builder):
             mock_model.assert_called_once()
 
-    @patch("strands.models.openai.OpenAIModel")
     @pytest.mark.asyncio
     async def test_openai_strands_with_params(self, mock_model, openai_config, mock_builder):
         """Test openai_strands with additional parameters."""
@@ -67,7 +75,6 @@ class TestOpenAIStrands:
         async with openai_strands(openai_config, mock_builder):
             mock_model.assert_called_once()
 
-    @patch("strands.models.openai.OpenAIModel")
     @pytest.mark.asyncio
     async def test_api_type_validation(self, mock_model, openai_config_wrong_api, mock_builder):
         """Non-chat-completion API types must raise a ValueError."""
@@ -77,8 +84,6 @@ class TestOpenAIStrands:
         mock_model.assert_not_called()
 
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
-    @patch("openai.AsyncOpenAI")
-    @patch("strands.models.openai.OpenAIModel")
     @pytest.mark.asyncio
     async def test_verify_ssl_passed_to_client(self,
                                                mock_model,
