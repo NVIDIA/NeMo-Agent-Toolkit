@@ -41,34 +41,25 @@ def extract_metric_score(metric_result: MetricResult) -> float | None:
 
 def build_metric_kwargs(sample: object) -> dict[str, str | list[str]]:
     """Build kwargs payload for `metric.ascore(**kwargs)` from a ragas sample."""
-    kwargs = {
-        "user_input": getattr(sample, "user_input", None),
-        "reference": getattr(sample, "reference", None),
-        "response": getattr(sample, "response", None),
-        "reference_contexts": getattr(sample, "reference_contexts", None),
-        "retrieved_contexts": getattr(sample, "retrieved_contexts", None),
-    }
+    keys = {"user_input", "reference", "response", "reference_contexts", "retrieved_contexts"}
     # Avoid passing unsupported optional fields if absent.
-    return {k: v for k, v in kwargs.items() if v is not None}
+    return {k: getattr(sample, k) for k in keys if hasattr(sample, k)}
 
 
 async def score_metric_result(metric: SimpleBaseMetric, sample: object) -> MetricResult:
-    """Run one metric and return raw ragas `MetricResult`.
+    """Run one metric and return raw ragas ``MetricResult``.
 
     We first build a superset of possible sample fields, then filter kwargs by the
-    concrete `metric.ascore(...)` signature so each metric only receives supported args.
+    concrete ``metric.ascore(...)`` signature so each metric only receives supported args.
 
     Examples:
-    - `AnswerAccuracy(self, user_input, response, reference)`:
-      forwards only `user_input`, `response`, `reference`.
-    - `AnswerCorrectness(self, user_input, response, reference)`:
-      forwards only `user_input`, `response`, `reference`.
-    - `AnswerRelevancy(self, user_input, response)`:
-      drops `reference`, `reference_contexts`, and `retrieved_contexts`.
-    - `BleuScore(self, reference, response)`:
-      forwards only `reference` and `response`.
-    - `ResponseGroundedness(self, response, retrieved_contexts)`:
-      forwards only `response` and `retrieved_contexts`.
+
+    - ``AnswerAccuracy(self, user_input, response, reference)`` forwards only ``user_input``, ``response``, ``reference``.
+    - ``AnswerCorrectness(self, user_input, response, reference)`` forwards only ``user_input``, ``response``, ``reference``.
+    - ``AnswerRelevancy(self, user_input, response)`` forwards only ``user_input`` and ``response``.
+    - ``BleuScore(self, reference, response)`` forwards only ``reference`` and ``response``.
+    - ``ResponseGroundedness(self, response, retrieved_contexts)`` forwards only ``response`` and ``retrieved_contexts``.
+
     """
     metric_kwargs = build_metric_kwargs(sample)
     params = signature(metric.ascore).parameters

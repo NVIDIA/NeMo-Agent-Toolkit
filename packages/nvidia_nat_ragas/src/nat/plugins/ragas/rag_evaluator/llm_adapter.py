@@ -25,11 +25,12 @@ from ragas.llms.base import InstructorTypeVar
 class NatLangChainRagasLLMAdapter(InstructorBaseRagasLLM):
     """Expose a NAT-managed LangChain LLM through ragas' native LLM contract.
 
-    Why this adapter exists instead of a new `LLMFrameworkEnum` entry:
-    - NAT framework enums model agent/runtime ecosystems (LangChain, LlamaIndex, etc).
-    - ragas' `InstructorBaseRagasLLM` is a library-specific scoring interface, not a workflow framework.
+    Why this adapter exists instead of a new ``LLMFrameworkEnum`` entry:
+
+    - Framework enums model agent/runtime ecosystems (LangChain, LlamaIndex, etc).
+    - ragas' ``InstructorBaseRagasLLM`` is a library-specific scoring interface, not a workflow framework.
     - Keeping the adaptation local avoids expanding global builder/registry surface area for a
-      ragas-only concern while preserving NAT's front-facing LLM configuration model.
+      ragas-only concern while preserving the front-facing LLM configuration model.
     """
 
     def __init__(self, langchain_llm: object):
