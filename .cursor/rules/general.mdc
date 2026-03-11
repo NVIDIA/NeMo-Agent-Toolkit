@@ -113,11 +113,11 @@ These are the overarching standards that every **source, test, documentation and
   - Test functions should be named using the `test_` prefix, using snake_case.
   - Any frequently repeated code should be extracted into pytest fixtures.
   - Pytest fixtures should define the name argument when applying the pytest.fixture decorator.
-  - The fixture function being decorated should be named using the `fixture_` prefix, using snake_case.
+  - The fixture function being decorated should be named using the `fixture_` prefix or `_fixture` suffix, using snake_case.
   - Example:
     ```python
-    @pytest.fixture(name="my_fixture")
-    def fixture_my_fixture():
+    @pytest.fixture(name="my_custom_config")
+    def my_custom_config_fixture():
         pass
     ```
 - Maintain **≥ 80 %** coverage; add or update tests when introducing changes.

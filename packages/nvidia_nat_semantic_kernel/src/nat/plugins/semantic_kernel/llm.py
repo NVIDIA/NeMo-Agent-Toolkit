@@ -25,6 +25,7 @@ from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import async_http_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -90,18 +91,20 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
 @register_llm_client(config_type=AzureOpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
 async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _builder: Builder):
 
+    from openai import AsyncAzureOpenAI
     from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
-    llm = AzureChatCompletion(
-        api_key=get_secret_value(llm_config.api_key),
-        api_version=llm_config.api_version,
-        endpoint=llm_config.azure_endpoint,
-        deployment_name=llm_config.azure_deployment,
-    )
+    async with async_http_client(llm_config) as http_client:
+        async with AsyncAzureOpenAI(api_key=get_secret_value(llm_config.api_key),
+                                    api_version=llm_config.api_version,
+                                    azure_endpoint=llm_config.azure_endpoint,
+                                    azure_deployment=llm_config.azure_deployment,
+                                    http_client=http_client) as async_client:
+            llm = AzureChatCompletion(async_client=async_client)
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+            yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
@@ -112,9 +115,10 @@ async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builde
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
-    api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
-    base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
+    async with async_http_client(llm_config) as http_client:
+        api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
+        base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
 
-    async with AsyncOpenAI(api_key=api_key, base_url=base_url) as async_client:
-        llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name, async_client=async_client)
-        yield _patch_llm_based_on_config(llm, llm_config)
+        async with AsyncOpenAI(api_key=api_key, base_url=base_url, http_client=http_client) as async_client:
+            llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name, async_client=async_client)
+            yield _patch_llm_based_on_config(llm, llm_config)
