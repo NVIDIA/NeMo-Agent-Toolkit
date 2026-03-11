@@ -54,6 +54,7 @@ async def nim_llama_index(embedder_config: NIMEmbedderModelConfig, _builder: Bui
     from llama_index.embeddings.nvidia import NVIDIAEmbedding  # pylint: disable=no-name-in-module
 
     if not embedder_config.verify_ssl:
+        # Remove once https://github.com/run-llama/llama_index/issues/20945 is resolved
         raise ValueError("verify_ssl is currently not supported for NVIDIAEmbedding.")
 
     client = NVIDIAEmbedding(
