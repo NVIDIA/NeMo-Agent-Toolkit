@@ -78,6 +78,9 @@ async def async_http_client(llm_config: "LLMBaseConfig", **kwargs) -> "httpx.Asy
 
 
 class HttpClients(typing.TypedDict):
+    """
+    Return type for the `http_clients` context manager.
+    """
     http_client: "httpx.Client"
     async_http_client: "httpx.AsyncClient"
 
