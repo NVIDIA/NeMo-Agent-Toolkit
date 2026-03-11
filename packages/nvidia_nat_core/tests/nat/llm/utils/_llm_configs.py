@@ -28,5 +28,5 @@ class LLMConfigWithTimeout(LLMBaseConfig):
     request_timeout: float | None = Field(default=None, gt=0.0, description="HTTP request timeout in seconds.")
 
 
-class LLMConfigWithSSL(LLMConfigWithTimeout, SSLVerificationMixin):
+class LLMConfigWithTimeoutAndSSL(LLMConfigWithTimeout, SSLVerificationMixin):
     pass

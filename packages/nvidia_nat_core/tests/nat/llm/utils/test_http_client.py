@@ -26,8 +26,8 @@ from nat.llm.utils.http_client import _handle_litellm_verify_ssl
 from nat.llm.utils.http_client import http_clients
 
 from ._llm_configs import LLMConfig
-from ._llm_configs import LLMConfigWithSSL
 from ._llm_configs import LLMConfigWithTimeout
+from ._llm_configs import LLMConfigWithTimeoutAndSSL
 
 if typing.TYPE_CHECKING:
     from nat.data_models.llm import LLMBaseConfig
@@ -69,8 +69,8 @@ def test_create_http_client_timeout(
     "llm_config,expected_verify",
     [
         (LLMConfig(), None),
-        (LLMConfigWithSSL(verify_ssl=True), True),
-        (LLMConfigWithSSL(verify_ssl=False), False),
+        (LLMConfigWithTimeoutAndSSL(verify_ssl=True), True),
+        (LLMConfigWithTimeoutAndSSL(verify_ssl=False), False),
     ],
     ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
 )
@@ -99,8 +99,8 @@ def test_create_http_client_verify_ssl(
     "llm_config,expected_verify",
     [
         (LLMConfig(), None),
-        (LLMConfigWithSSL(verify_ssl=True), True),
-        (LLMConfigWithSSL(verify_ssl=False), False),
+        (LLMConfigWithTimeoutAndSSL(verify_ssl=True), True),
+        (LLMConfigWithTimeoutAndSSL(verify_ssl=False), False),
     ],
     ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
 )
@@ -129,8 +129,8 @@ async def test_http_clients(
     "llm_config,expected_value",
     [
         (LLMConfig(), True),
-        (LLMConfigWithSSL(verify_ssl=True), True),
-        (LLMConfigWithSSL(verify_ssl=False), False),
+        (LLMConfigWithTimeoutAndSSL(verify_ssl=True), True),
+        (LLMConfigWithTimeoutAndSSL(verify_ssl=False), False),
     ],
     ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
 )

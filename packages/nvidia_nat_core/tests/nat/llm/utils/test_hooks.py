@@ -23,8 +23,8 @@ from nat.builder.context import ContextState
 from nat.llm.utils.hooks import _create_metadata_injection_client
 
 from ._llm_configs import LLMConfig
-from ._llm_configs import LLMConfigWithSSL
 from ._llm_configs import LLMConfigWithTimeout
+from ._llm_configs import LLMConfigWithTimeoutAndSSL
 
 
 class TestMetadataInjectionHook:
@@ -124,8 +124,8 @@ class TestCreateMetadataInjectionClient:
         "llm_config,expected_verify",
         [
             (LLMConfig(), None),
-            (LLMConfigWithSSL(verify_ssl=True), True),
-            (LLMConfigWithSSL(verify_ssl=False), False),
+            (LLMConfigWithTimeoutAndSSL(verify_ssl=True), True),
+            (LLMConfigWithTimeoutAndSSL(verify_ssl=False), False),
         ],
         ids=["no_verify_ssl_attr", "verify_ssl_true", "verify_ssl_false"],
     )
