@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import math
+from inspect import Parameter
+from inspect import signature
 
 from ragas.metrics.base import SimpleBaseMetric
 from ragas.metrics.result import MetricResult
@@ -51,5 +53,26 @@ def build_metric_kwargs(sample: object) -> dict[str, str | list[str]]:
 
 
 async def score_metric_result(metric: SimpleBaseMetric, sample: object) -> MetricResult:
-    """Run one metric and return raw ragas `MetricResult`."""
-    return await metric.ascore(**build_metric_kwargs(sample))
+    """Run one metric and return raw ragas `MetricResult`.
+
+    We first build a superset of possible sample fields, then filter kwargs by the
+    concrete `metric.ascore(...)` signature so each metric only receives supported args.
+
+    Examples:
+    - `AnswerAccuracy(self, user_input, response, reference)`:
+      forwards only `user_input`, `response`, `reference`.
+    - `AnswerCorrectness(self, user_input, response, reference)`:
+      forwards only `user_input`, `response`, `reference`.
+    - `AnswerRelevancy(self, user_input, response)`:
+      drops `reference`, `reference_contexts`, and `retrieved_contexts`.
+    - `BleuScore(self, reference, response)`:
+      forwards only `reference` and `response`.
+    - `ResponseGroundedness(self, response, retrieved_contexts)`:
+      forwards only `response` and `retrieved_contexts`.
+    """
+    metric_kwargs = build_metric_kwargs(sample)
+    params = signature(metric.ascore).parameters
+    has_var_kwargs = any(p.kind is Parameter.VAR_KEYWORD for p in params.values())
+    if not has_var_kwargs:
+        metric_kwargs = {k: v for k, v in metric_kwargs.items() if k in params}
+    return await metric.ascore(**metric_kwargs)

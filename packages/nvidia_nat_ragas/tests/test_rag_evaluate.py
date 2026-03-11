@@ -459,3 +459,23 @@ async def test_register_ragas_evaluator_injects_llm_into_metric_kwargs():
     metric_call_kwargs = metric_ctor_mock.call_args.kwargs
     assert metric_call_kwargs["name"] == "answer_accuracy_custom"
     assert isinstance(metric_call_kwargs["llm"], NatLangChainRagasLLMAdapter)
+
+
+async def test_score_metric_result_filters_unsupported_kwargs():
+    """Ensure score_metric_result only passes kwargs accepted by metric.ascore."""
+    from nat.plugins.ragas.rag_evaluator.utils import score_metric_result
+
+    class FakeMetric:
+
+        async def ascore(self, user_input: str, response: str, reference: str) -> MetricResult:
+            return MetricResult(value=1.0)
+
+    sample = SimpleNamespace(
+        user_input="q",
+        response="r",
+        reference="g",
+        reference_contexts=["unused"],
+        retrieved_contexts=["unused"],
+    )
+    result = await score_metric_result(FakeMetric(), sample)  # type: ignore[arg-type]
+    assert result.value == 1.0
