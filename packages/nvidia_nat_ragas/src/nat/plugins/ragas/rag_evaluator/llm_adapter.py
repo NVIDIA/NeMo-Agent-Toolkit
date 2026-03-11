@@ -56,7 +56,7 @@ class NatLangChainRagasLLMAdapter(InstructorBaseRagasLLM):
         with_structured_output = getattr(self._langchain_llm, "with_structured_output", None)
         if not callable(with_structured_output):
             raise TypeError("NAT LLM does not support `with_structured_output`, required for ragas collections metrics"
-                             f"{self._llm_context()}.")
+                            f"{self._llm_context()}.")
         return with_structured_output(response_model)
 
     def generate(self, prompt: str, response_model: type[InstructorTypeVar]) -> InstructorTypeVar:
