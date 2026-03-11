@@ -14,88 +14,34 @@
 # limitations under the License.
 
 import logging
-import math
-import typing
-from collections.abc import Sequence
-from typing import Any
 
 from pydantic import BaseModel
-from tqdm import tqdm
 
-from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStepType
-from nat.plugins.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
+from ragas import SingleTurnSample
+from ragas.metrics.base import SimpleBaseMetric
 
-if typing.TYPE_CHECKING:
-    # We are lazily importing ragas to avoid import-time side effects such as applying the nest_asyncio patch, which is
-    # not compatible with Python 3.12+, we want to ensure that we are able to apply the nest_asyncio2 patch instead.
-    from ragas import EvaluationDataset
-    from ragas.dataset_schema import EvaluationResult
-    from ragas.llms import LangchainLLMWrapper
-    from ragas.metrics import Metric
+from .data_models import EvalOutputItemRagasReasoning
+from .utils import extract_metric_score
+from .utils import nan_to_zero
+from .utils import score_metric_result
 
 logger = logging.getLogger(__name__)
 
 
-def _nan_to_zero(v: float | None) -> float:
-    """Convert NaN or None to 0.0 for safe arithmetic/serialization."""
-    return 0.0 if v is None or (isinstance(v, float) and math.isnan(v)) else v
+class RAGEvaluator(BaseEvaluator):
 
-
-def _ragas_results_to_eval_output(results_dataset: "EvaluationResult | None",
-                                  ids: list[Any] | None = None) -> EvalOutput:
-    """Convert a ragas EvaluationResult to NAT EvalOutput."""
-    if not results_dataset:
-        logger.error("Ragas evaluation failed with no results", exc_info=True)
-        return EvalOutput(average_score=0.0, eval_output_items=[])
-
-    scores: list[dict[str, float]] = results_dataset.scores
-    if not scores:
-        logger.warning("Ragas returned empty score list")
-        return EvalOutput(average_score=0.0, eval_output_items=[])
-
-    original_scores_dict = {metric: [score.get(metric) for score in scores] for metric in scores[0]}
-    scores_dict = {metric: [_nan_to_zero(score.get(metric)) for score in scores] for metric in scores[0]}
-    first_metric_name = next(iter(scores_dict.keys()), None)
-
-    average_scores = {metric: (sum(values) / len(values) if values else 0.0) for metric, values in scores_dict.items()}
-    first_avg_score = average_scores.get(first_metric_name, 0.0)
-    if isinstance(first_avg_score, float) and math.isnan(first_avg_score):
-        first_avg_score = 0.0
-
-    df = results_dataset.to_pandas()
-    fallback_ids = df["user_input"].tolist()
-    output_ids = ids if ids and len(ids) >= len(df) else fallback_ids
-
-    eval_output_items = [
-        EvalOutputItem(
-            id=output_ids[i],
-            score=original_scores_dict[first_metric_name][i] if first_metric_name else None,
-            reasoning={
-                key: getattr(row, key, None)
-                for key in ["user_input", "reference", "response", "retrieved_contexts"]
-            },
-        ) for i, row in enumerate(df.itertuples(index=False))
-    ]
-    return EvalOutput(average_score=first_avg_score, eval_output_items=eval_output_items)
-
-
-class RAGEvaluator:
-
-    def __init__(self,
-                 evaluator_llm: "LangchainLLMWrapper",
-                 metrics: Sequence["Metric"],
-                 max_concurrency=8,
-                 input_obj_field: str | None = None):
-        self.evaluator_llm = evaluator_llm
-        self.metrics = metrics
-        self.max_concurrency = max_concurrency
+    def __init__(self, metric: SimpleBaseMetric, max_concurrency: int = 8, input_obj_field: str | None = None):
+        """Initialize evaluator with a single RAGAS metric."""
+        metric_name = metric.name
+        super().__init__(max_concurrency=max_concurrency, tqdm_desc=f"Evaluating Ragas {metric_name}")
+        self.metric = metric
         self.input_obj_field = input_obj_field
 
-    def extract_input_obj(self, item: EvalInputItem) -> str:
+    def _extract_input_obj(self, item: EvalInputItem) -> str:
         """Extracts the input object from EvalInputItem based on the configured input_obj_field."""
         input_obj = item.input_obj
         if isinstance(input_obj, BaseModel):
@@ -114,67 +60,43 @@ class RAGEvaluator:
 
         return str(input_obj)  # Fallback to string representation of the dict
 
-    def eval_input_to_ragas(self, eval_input: EvalInput) -> "EvaluationDataset":
-        """Converts EvalInput into a Ragas-compatible EvaluationDataset."""
+    def _eval_input_item_to_ragas(self, item: EvalInputItem):
+        """Convert one `EvalInputItem` into a ragas `SingleTurnSample`."""
         from nat.plugins.eval.utils.intermediate_step_adapter import IntermediateStepAdapter
-        from ragas import EvaluationDataset
-        from ragas import SingleTurnSample
+
         event_filter = [IntermediateStepType.TOOL_END, IntermediateStepType.LLM_END, IntermediateStepType.CUSTOM_END]
-        samples = []
-
         intermediate_step_adapter = IntermediateStepAdapter()
-        for item in eval_input.eval_input_items:
-            # Extract required fields from EvalInputItem
-            user_input = self.extract_input_obj(item)  # Extract input object as string
-            reference = item.expected_output_obj  # Reference correct answer
-            response = item.output_obj  # Model's generated response
 
-            # Handle context extraction from trajectory if available
-            reference_contexts = [""]  # Default to empty context
-            # implement context extraction from expected_trajectory
+        user_input = self._extract_input_obj(item)
+        reference = item.expected_output_obj
+        response = item.output_obj
+        reference_contexts = [""]
+        retrieved_contexts = intermediate_step_adapter.get_context(item.trajectory, event_filter)
 
-            retrieved_contexts = intermediate_step_adapter.get_context(item.trajectory, event_filter)
-            # implement context extraction from expected_trajectory
+        return SingleTurnSample(user_input=user_input,
+                                reference=reference,
+                                response=response,
+                                reference_contexts=reference_contexts,
+                                retrieved_contexts=retrieved_contexts)
 
-            # Create a SingleTurnSample
-            sample = SingleTurnSample(
-                user_input=user_input,
-                reference=reference,
-                response=response,
-                reference_contexts=reference_contexts,
-                retrieved_contexts=retrieved_contexts,
-            )
-            samples.append(sample)
+    async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
+        """Run configured ragas metric for one eval item and return one output item."""
+        ragas_sample = self._eval_input_item_to_ragas(item)
+        metric_result = await score_metric_result(self.metric, ragas_sample)
+        raw_score = extract_metric_score(metric_result)
+        score = nan_to_zero(raw_score)
+        # stash the input and the ragas reasoning for analysis later
+        reasoning = EvalOutputItemRagasReasoning(
+            user_input=ragas_sample.user_input,
+            reference=ragas_sample.reference,
+            response=ragas_sample.response,
+            retrieved_contexts=ragas_sample.retrieved_contexts,
+            ragas_reason=metric_result.reason,
+            ragas_traces=metric_result.traces,
+        )
 
-        return EvaluationDataset(samples=samples)
-
-    def ragas_to_eval_output(self, eval_input: EvalInput, results_dataset: "EvaluationResult | None") -> EvalOutput:
-        """Converts the ragas EvaluationResult to nat EvalOutput"""
-        ids = [item.id for item in eval_input.eval_input_items]
-        return _ragas_results_to_eval_output(results_dataset=results_dataset, ids=ids)
-
-    async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
-        """Run Ragas metrics evaluation on the provided EvalInput"""
-        from ragas import evaluate as ragas_evaluate
-        from ragas.run_config import RunConfig
-
-        ragas_dataset = self.eval_input_to_ragas(eval_input)
-        tqdm_position = TqdmPositionRegistry.claim()
-        first_metric_name = self.metrics[0].name
-        pbar = tqdm(total=len(ragas_dataset), desc=f"Evaluating Ragas {first_metric_name}", position=tqdm_position)
-        try:
-            results_dataset = ragas_evaluate(dataset=ragas_dataset,
-                                             metrics=self.metrics,
-                                             show_progress=True,
-                                             llm=self.evaluator_llm,
-                                             run_config=RunConfig(max_workers=self.max_concurrency),
-                                             _pbar=pbar)
-        except Exception as e:
-            # On exception we still continue with other evaluators. Log and return an avg_score of 0.0
-            logger.exception("Error evaluating ragas metric, Error: %s", e)
-            results_dataset = None
-        finally:
-            pbar.close()
-            TqdmPositionRegistry.release(tqdm_position)
-
-        return self.ragas_to_eval_output(eval_input, results_dataset)
+        return EvalOutputItem(
+            id=item.id,
+            score=score,
+            reasoning=reasoning.model_dump(exclude_none=True),
+        )
