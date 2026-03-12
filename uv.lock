@@ -7366,7 +7366,7 @@ dependencies = [
 requires-dist = [
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
-    { name = "strands-agents", extras = ["openai"], specifier = "~=1.17" },
+    { name = "strands-agents", extras = ["openai"], specifier = "~=1.21" },
     { name = "strands-agents-tools", specifier = "~=0.2" },
 ]
 provides-extras = ["test"]
