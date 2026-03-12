@@ -72,7 +72,7 @@ async def test_memmachine_memory_client_success(config: MemMachineMemoryClientCo
     mock_memmachine_client.get_or_create_project.return_value = mock_project
 
     # Patch where the import happens - inside the function
-    with patch("memmachine.MemMachineClient", return_value=mock_memmachine_client):
+    with patch("memmachine_client.MemMachineClient", return_value=mock_memmachine_client):
         # @register_memory wraps the function with asynccontextmanager, so use async with
         async with memmachine_memory_client(config, mock_builder) as editor:
             assert editor is not None
@@ -85,7 +85,7 @@ async def test_memmachine_memory_client_minimal_config(config_minimal: MemMachin
                                                        mock_builder: Mock,
                                                        mock_memmachine_client: Mock):
     """Test initialization with minimal config (no org_id/project_id)."""
-    with patch("memmachine.MemMachineClient", return_value=mock_memmachine_client):
+    with patch("memmachine_client.MemMachineClient", return_value=mock_memmachine_client):
         # @register_memory wraps the function with asynccontextmanager, so use async with
         async with memmachine_memory_client(config_minimal, mock_builder) as editor:
             assert editor is not None
@@ -95,7 +95,7 @@ async def test_memmachine_memory_client_minimal_config(config_minimal: MemMachin
 
 async def test_memmachine_memory_client_initialization_error(config: MemMachineMemoryClientConfig, mock_builder: Mock):
     """Test that RuntimeError is raised when client initialization fails."""
-    with patch("memmachine.MemMachineClient", side_effect=ValueError("base_url is required")):
+    with patch("memmachine_client.MemMachineClient", side_effect=ValueError("base_url is required")):
         with pytest.raises(RuntimeError, match="Failed to initialize MemMachineClient"):
             async with memmachine_memory_client(config, mock_builder):
                 pass
@@ -107,7 +107,7 @@ async def test_memmachine_memory_client_project_creation_failure(config: MemMach
     """Test that editor still works if project creation fails."""
     mock_memmachine_client.get_or_create_project.side_effect = Exception("Project creation failed")
 
-    with patch("memmachine.MemMachineClient", return_value=mock_memmachine_client):
+    with patch("memmachine_client.MemMachineClient", return_value=mock_memmachine_client):
         # Should not raise exception, should fall back to using client directly
         # @register_memory wraps the function with asynccontextmanager, so use async with
         async with memmachine_memory_client(config, mock_builder) as editor:
@@ -143,7 +143,7 @@ async def test_memmachine_memory_client_with_retry_mixin(config: MemMachineMemor
     config.retry_on_status_codes = [500, 502, 503]
     config.retry_on_errors = ["ConnectionError"]
 
-    with patch("memmachine.MemMachineClient", return_value=mock_memmachine_client):
+    with patch("memmachine_client.MemMachineClient", return_value=mock_memmachine_client):
         with patch("nat.plugins.memmachine.memory.patch_with_retry") as mock_patch:
             mock_patch.return_value = Mock()
             # @register_memory wraps the function with asynccontextmanager, so use async with

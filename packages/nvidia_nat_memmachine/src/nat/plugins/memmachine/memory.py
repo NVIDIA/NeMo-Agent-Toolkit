@@ -50,7 +50,7 @@ async def memmachine_memory_client(
         _builder: Builder,  # Required by @register_memory contract
 ) -> AsyncGenerator[MemoryEditor, None]:
     # Import and initialize the MemMachine Python SDK
-    from memmachine import MemMachineClient
+    from memmachine_client import MemMachineClient
 
     from .memmachine_editor import MemMachineEditor
 

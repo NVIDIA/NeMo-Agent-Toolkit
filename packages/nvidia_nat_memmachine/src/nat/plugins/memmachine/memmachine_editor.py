@@ -18,7 +18,7 @@ import logging
 from typing import Any
 
 import requests
-from memmachine.common.api import MemoryType
+from memmachine_common.api import MemoryType
 
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
@@ -47,10 +47,7 @@ class MemMachineEditor(MemoryEditor):
         Initialize class with MemMachine instance.
 
         Args:
-            memmachine_instance: Preinstantiated MemMachineClient or Project object
-                from the MemMachine Python SDK. If a MemMachineClient is provided,
-                projects will be created/retrieved as needed. If a Project is provided,
-                it will be used directly.
+            memmachine_instance: Preinstantiated MemMachineClient or Project object.
         """
         self._memmachine = memmachine_instance
         # Check if it's a client or project
@@ -212,7 +209,9 @@ class MemMachineEditor(MemoryEditor):
             query (str): The query string to match.
             top_k (int): Maximum number of items to return.
             kwargs: Other keyword arguments for search.
-                Must include 'user_id'. May include 'session_id', 'agent_id', 'project_id', 'org_id'.
+
+        Keyword arguments must include ``user_id``. May also include
+        ``session_id``, ``agent_id``, ``project_id``, ``org_id``.
 
         Returns:
             list[MemoryItem]: The most relevant MemoryItems for the given query.
@@ -418,14 +417,15 @@ class MemMachineEditor(MemoryEditor):
 
     async def remove_items(self, **kwargs) -> None:
         """
-        Remove items using the MemMachine SDK. Additional parameters
-        needed for deletion can be specified in keyword arguments.
+        Remove items using the MemMachine SDK.
 
         Args:
             kwargs (dict): Keyword arguments to pass to the remove-items method.
-                Should include either 'memory_id' (episodic_id or semantic_id) or 'user_id'.
-                May include 'session_id', 'agent_id', 'project_id', 'org_id'.
-                For memory_id deletion, may include 'memory_type' ('episodic' or 'semantic').
+
+        Should include either ``memory_id`` or ``user_id``. May also include
+        ``session_id``, ``agent_id``, ``project_id``, ``org_id``.
+        For ``memory_id`` deletion, may include ``memory_type``
+        ('episodic' or 'semantic').
         """
         if "memory_id" in kwargs:
             memory_id = kwargs.pop("memory_id")
