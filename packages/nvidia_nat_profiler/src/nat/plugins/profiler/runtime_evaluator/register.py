@@ -21,6 +21,7 @@ from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 
 
 class AverageLLMLatencyConfig(EvaluatorBaseConfig, name="avg_llm_latency"):
@@ -49,52 +50,95 @@ class AverageTokensPerLLMEndConfig(EvaluatorBaseConfig, name="avg_tokens_per_llm
 
 @register_evaluator(config_type=AverageLLMLatencyConfig)
 async def register_avg_llm_latency_evaluator(config: AverageLLMLatencyConfig, builder: EvalBuilder):
+    from .atif_evaluate import AverageLLMLatencyAtifEvaluator
     from .evaluate import AverageLLMLatencyEvaluator
 
-    evaluator = AverageLLMLatencyEvaluator(max_concurrency=config.max_concurrency or builder.get_max_concurrency())
+    max_concurrency = config.max_concurrency or builder.get_max_concurrency()
+    evaluator = AverageLLMLatencyEvaluator(max_concurrency=max_concurrency)
+    atif_evaluator = AverageLLMLatencyAtifEvaluator(max_concurrency=max_concurrency)
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
         return await evaluator.evaluate(eval_input)
 
-    yield EvaluatorInfo(config=config,
-                        evaluate_fn=evaluate_fn,
-                        description="Average LLM latency (s) from LLM_START to LLM_END")
+    async def evaluate_atif_fn(atif_samples: AtifEvalSampleList) -> EvalOutput:
+        return await atif_evaluator.evaluate_atif_fn(atif_samples)
+
+    evaluator_info = EvaluatorInfo(
+        config=config,
+        evaluate_fn=evaluate_fn,
+        description="Average LLM latency (s) from LLM_START to LLM_END",
+    )
+    evaluator_info.evaluate_atif_fn = evaluate_atif_fn
+    yield evaluator_info
 
 
 @register_evaluator(config_type=AverageWorkflowRuntimeConfig)
 async def register_avg_workflow_runtime_evaluator(config: AverageWorkflowRuntimeConfig, builder: EvalBuilder):
+    from .atif_evaluate import AverageWorkflowRuntimeAtifEvaluator
     from .evaluate import AverageWorkflowRuntimeEvaluator
 
-    evaluator = AverageWorkflowRuntimeEvaluator(max_concurrency=config.max_concurrency or builder.get_max_concurrency())
+    max_concurrency = config.max_concurrency or builder.get_max_concurrency()
+    evaluator = AverageWorkflowRuntimeEvaluator(max_concurrency=max_concurrency)
+    atif_evaluator = AverageWorkflowRuntimeAtifEvaluator(max_concurrency=max_concurrency)
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
         return await evaluator.evaluate(eval_input)
 
-    yield EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Average workflow runtime (s)")
+    async def evaluate_atif_fn(atif_samples: AtifEvalSampleList) -> EvalOutput:
+        return await atif_evaluator.evaluate_atif_fn(atif_samples)
+
+    evaluator_info = EvaluatorInfo(
+        config=config,
+        evaluate_fn=evaluate_fn,
+        description="Average workflow runtime (s)",
+    )
+    evaluator_info.evaluate_atif_fn = evaluate_atif_fn
+    yield evaluator_info
 
 
 @register_evaluator(config_type=AverageNumberOfLLMCallsConfig)
 async def register_avg_num_llm_calls_evaluator(config: AverageNumberOfLLMCallsConfig, builder: EvalBuilder):
+    from .atif_evaluate import AverageNumberOfLLMCallsAtifEvaluator
     from .evaluate import AverageNumberOfLLMCallsEvaluator
 
-    evaluator = AverageNumberOfLLMCallsEvaluator(
-        max_concurrency=config.max_concurrency or builder.get_max_concurrency())
+    max_concurrency = config.max_concurrency or builder.get_max_concurrency()
+    evaluator = AverageNumberOfLLMCallsEvaluator(max_concurrency=max_concurrency)
+    atif_evaluator = AverageNumberOfLLMCallsAtifEvaluator(max_concurrency=max_concurrency)
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
         return await evaluator.evaluate(eval_input)
 
-    yield EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Average number of LLM calls")
+    async def evaluate_atif_fn(atif_samples: AtifEvalSampleList) -> EvalOutput:
+        return await atif_evaluator.evaluate_atif_fn(atif_samples)
+
+    evaluator_info = EvaluatorInfo(
+        config=config,
+        evaluate_fn=evaluate_fn,
+        description="Average number of LLM calls",
+    )
+    evaluator_info.evaluate_atif_fn = evaluate_atif_fn
+    yield evaluator_info
 
 
 @register_evaluator(config_type=AverageTokensPerLLMEndConfig)
 async def register_avg_tokens_per_llm_end_evaluator(config: AverageTokensPerLLMEndConfig, builder: EvalBuilder):
+    from .atif_evaluate import AverageTokensPerLLMEndAtifEvaluator
     from .evaluate import AverageTokensPerLLMEndEvaluator
 
-    evaluator = AverageTokensPerLLMEndEvaluator(max_concurrency=config.max_concurrency or builder.get_max_concurrency())
+    max_concurrency = config.max_concurrency or builder.get_max_concurrency()
+    evaluator = AverageTokensPerLLMEndEvaluator(max_concurrency=max_concurrency)
+    atif_evaluator = AverageTokensPerLLMEndAtifEvaluator(max_concurrency=max_concurrency)
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
         return await evaluator.evaluate(eval_input)
 
-    yield EvaluatorInfo(config=config,
-                        evaluate_fn=evaluate_fn,
-                        description="Average total tokens per LLM_END (prompt + completion)")
+    async def evaluate_atif_fn(atif_samples: AtifEvalSampleList) -> EvalOutput:
+        return await atif_evaluator.evaluate_atif_fn(atif_samples)
+
+    evaluator_info = EvaluatorInfo(
+        config=config,
+        evaluate_fn=evaluate_fn,
+        description="Average total tokens per LLM_END (prompt + completion)",
+    )
+    evaluator_info.evaluate_atif_fn = evaluate_atif_fn
+    yield evaluator_info
