@@ -149,6 +149,3 @@ def experimental(func: Any = None, *, feature_name: str | None = None, metadata:
 
     return sync_wrapper
 
-
-# Compatibility aliases with previous releases
-aiq_experimental = experimental

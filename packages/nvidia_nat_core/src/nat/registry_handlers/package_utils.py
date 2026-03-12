@@ -564,7 +564,3 @@ def build_artifact(package_root: str) -> Artifact:
     built_artifact = BuiltArtifact(whl=wheel_data.whl_base64, metadata=metadata)
 
     return Artifact(artifact=built_artifact, whl_path=wheel_data.whl_path)
-
-
-# Compatibility alias
-build_aiq_artifact = build_artifact
