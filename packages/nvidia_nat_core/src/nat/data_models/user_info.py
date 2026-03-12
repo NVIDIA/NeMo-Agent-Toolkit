@@ -55,10 +55,10 @@ class JwtUserInfo(BaseModel):
     client_id: str | None = Field(default=None, description="OAuth2 client identifier (``azp`` or ``client_id``).")
     claims: dict[str, typing.Any] = Field(default_factory=dict, description="Raw JWT claims dict.")
 
+
     @property
     def identity_claim(self) -> str | None:
         """Return the first non-empty value using ``sub > email > preferred_username`` precedence.
-
         ``sub`` is the stable, locally-unique identifier per RFC 7519 Section 4.1.2.
         ``email`` and ``preferred_username`` are OIDC fallbacks (OpenID Connect Core 1.0 Section 5.1).
         """
@@ -66,6 +66,9 @@ class JwtUserInfo(BaseModel):
             val: typing.Any = self.claims.get(key)
             if val and isinstance(val, str) and val.strip():
                 return val.strip()
+        for attr_val in (self.subject, self.email, self.preferred_username):
+            if attr_val and isinstance(attr_val, str) and attr_val.strip():
+                return attr_val.strip()
         return None
 
 
