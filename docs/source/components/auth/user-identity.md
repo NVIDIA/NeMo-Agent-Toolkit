@@ -28,8 +28,8 @@ Identity resolution provides the following capabilities:
 - **Multiple credential types**: Session cookies, JWT Bearer tokens, opaque API keys, `X-API-Key` headers, HTTP Basic Auth, and WebSocket auth messages are all supported.
 - **Per-user workflow support**: When a workflow is configured as per-user, the resolved `user_id` is used to isolate workflow state per user. Each user gets their own workflow instance.
 
-:::{note}
-Identity resolution is an identity mapping step, not an authentication or authorization layer. JSON Web Tokens are decoded without signature verification to extract identity claims. Credential validation (for example, JWKS verification or OAuth flows) should be handled upstream or via an [authentication provider](./api-authentication.md).
+:::{warning}
+Identity resolution is an identity mapping step, not an authentication or authorization layer. **JWTs are decoded with `verify_signature=False`** — the server trusts whatever credential arrives. The resolved `user_id` controls access to per-user workflow state (conversation history, builders, cached tokens). In production, deploy an authenticating reverse proxy or auth middleware that validates JWTs before they reach NAT. Without upstream verification, any party that can send HTTP requests to Nemo Agent Toolkit can impersonate any user. For credential validation, see [Authentication Providers](./api-authentication.md).
 :::
 
 ## Supported Identity Sources
