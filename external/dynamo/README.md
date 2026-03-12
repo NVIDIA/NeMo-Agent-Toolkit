@@ -182,7 +182,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 ### Platform Requirements
 
 > [!WARNING]
-> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/getting-started/support-matrix) for full details.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/latest/getting-started/support-matrix) for full details.
 >
 > **Supported Platforms:**
 > - Ubuntu 22.04 / 24.04 (x86_64)
