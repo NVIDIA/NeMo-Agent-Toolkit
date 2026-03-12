@@ -39,21 +39,11 @@ limitations under the License.
 
 ## 🔥 New Features
 
-- [**LangGraph Agent Automatic Wrapper:**](./examples/frameworks/auto_wrapper/langchain_deep_research/README.md) Easily onboard existing LangGraph agents to NeMo Agent Toolkit. Use the automatic wrapper to access NeMo Agent Toolkit advanced features with very little modification of LangGraph agents.
-
-- [**Automatic Reinforcement Learning (RL):**](./docs/source/improve-workflows/finetuning/index.md) Improve your agent quality by fine-tuning open LLMs to better understand your agent's workflows, tools, and prompts. Perform GRPO with [OpenPipe ART](./docs/source/improve-workflows/finetuning/rl_with_openpipe.md) or DPO with [NeMo Customizer](./docs/source/improve-workflows/finetuning/dpo_with_nemo_customizer.md) using NeMo Agent Toolkit built-in evaluation system as a verifier.
-
-- [**Initial NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Accelerate end-to-end deployment of agentic workflows with initial Dynamo support. Utilize the new agent-aware router to improve worker latency by predicting future agent behavior.
-
-- [**A2A Support:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents using the A2A protocol.
-
-- [**NeMo Agent Toolkit Safety and Security:**](./examples/safety_and_security/retail_agent/README.md) Strengthen safety and security of workflows by simulating scenario-based attacks, profiling risk, running guardrail-ready evaluations, and applying defenses with red teaming. Validate defenses, profile risk, monitor behavior, and harden agents across any framework.
-
-- [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) Build agents using Strands Agents framework and deploy them securely on Amazon Bedrock AgentCore runtime.
-
-- [**Microsoft AutoGen Support:**](./docs/source/components/integrations/frameworks.md#autogen) Build agents using the Microsoft AutoGen framework.
-
-- [**Per-User Functions:**](./docs/source/extend/custom-components/custom-functions/per-user-functions.md) Use per-user functions for deferred instantiation, enabling per-user stateful functions, per-user resources, and other features.
+- [**Dynamo Runtime Intelligence:**](./examples/dynamo_integration/latency_sensitivity_demo/README.md) Automatically infer per-request latency sensitivity from agent profiles and apply runtime hints for cache control, load-aware routing, and priority-aware serving.
+- [**Agent Performance Primitives (APP):**](https://docs.langchain.com/oss/python/integrations/providers/nvidia#install-2) Introduce framework-agnostic performance primitives that accelerate graph-based agent frameworks such as LangChain, CrewAI, and Agno with parallel execution, speculative branching, and node-level priority routing.
+- [**LangSmith Native Integration:**](./docs/source/run-workflows/observe/observe-workflow-with-langsmith.md) Observe end-to-end agent execution with native LangSmith tracing, run evaluation experiments, compare outcomes, and manage prompt versions across development and production workflows.
+- [**FastMCP Workflow Publishing:**](./docs/source/run-workflows/fastmcp-server.md) Publish NeMo Agent Toolkit workflows as MCP servers using the FastMCP server runtime to simplify MCP-native deployment and integration.
+- **Migration notice:** `1.5.0` simplifies package installation and dependency management. See the [Migration Guide](./docs/source/resources/migration-guide.md#v150).
 
 ## ✨ Key Features
 
@@ -70,6 +60,7 @@ limitations under the License.
   - 🎯 [**Hyper-Parameter and Prompt Optimizer:**](./docs/source/improve-workflows/optimizer.md) Automatically identify the best configuration and prompts to ensure you are getting the most out of your agent.
   - 🧠 [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent and train intrinsic information about your workflow directly into the model.
   - ⚡ [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Use Dynamo and NeMo Agent Toolkit together to improve agent performance at scale.
+  - ⚙️ [**Agent Performance Primitives (APP):**](https://docs.langchain.com/oss/python/integrations/providers/nvidia#install-2) Accelerate graph-based agent frameworks such as LangChain, CrewAI, and Agno with parallel execution, speculative branching, and node-level priority routing.
 - 🔌 **Protocol Support:** Integrate with common protocols used to build agents.
   - 🔗 [**Model Context Protocol (MCP):**](./docs/source/build-workflows/mcp-client.md) Integrate [MCP tools](./docs/source/build-workflows/mcp-client.md) into your agents or serve your tools and agents as an [MCP server](./docs/source/run-workflows/mcp-server.md) for others to consume.
   - 🤝 [**Agent-to-Agent (A2A) Protocol:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents with full support for authentication.
@@ -166,8 +157,12 @@ Before getting started, it's possible to run this simple workflow and many other
 
 - [x] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
 - [x] Integration with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo) to reduce LLM latency at scale.
-- [ ] Improve agent throughput with KV-Cache optimization.
-- [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to improve agent safety and security.
+- [x] Improve agent throughput with KV-Cache optimization.
+- [ ] Improved, standalone evaluation harness and migration to [ATIF](https://github.com/laude-institute/harbor/blob/main/docs/rfcs/0001-trajectory-format.md) for trajectory format.
+- [ ] Support for additional programming languages (TypeScript, Rust, Go, WASM) with compiled libraries.
+- [ ] Phasing out wrapping architecture to ease onboarding for more agents.
+- [ ] Support for adding skills and sandboxes to existing agents.
+- [ ] MCP authentication improvements.
 - [ ] Improved memory interface to support self-improving agents.
 
 ## 💬 Feedback
