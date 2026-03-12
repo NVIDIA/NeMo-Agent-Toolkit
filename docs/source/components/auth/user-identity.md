@@ -65,7 +65,9 @@ Each identity source produces a deterministic UUID v5 using a toolkit-specific n
 |---|---|---|
 | JWT | First non-empty value from `sub`, `email`, `preferred_username` | [RFC 7519 Section 4.1.2](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.2), [OpenID Connect Core 1.0 Section 5.1](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims) |
 | API key | Raw API key string | — |
-| Basic Auth | `base64(username:password)` | [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) |
+| Basic Auth | `base64(username:password)` ¹ | [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) |
+
+¹ Because the password is part of the identity key, changing a password produces a new `user_id`. The user's prior per-user workflow state (conversation history, builders) becomes inaccessible.
 | Session cookie | Raw cookie value | — |
 
 **JWT claim precedence**: The `sub` claim is preferred as the stable, locally-unique subject identifier per RFC 7519. If `sub` is absent or empty, the resolver falls back to `email` and then `preferred_username` as defined by OpenID Connect Core 1.0 Standard Claims. If none of these claims contain a usable value, the server rejects the token with an error.
