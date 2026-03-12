@@ -60,9 +60,6 @@ to the client.
     -   name: User name
     -   email: User email
     -   other info: Any other information
-- `security`: Stores security information such as `api_key`, auth token etc. - OPTIONAL
-    -   `api_key`: API key
-    - token: auth or access token
 - `error`: Error information object with `code` (string, see Error types), `message` (string), and `details` (string)
 - `schema_version`: schema version - `OPTIONAL`
 
@@ -186,10 +183,6 @@ running workflow.
     "name": "string",
     "email": "string"
   },
-  "security": {
-    "api_key": "string",
-    "token": "string"
-  },
   "error": {
     "code": "string",
     "message": "string",
@@ -227,10 +220,6 @@ Definition: This message contains the response content from the human in the loo
   "user": {
     "name": "string",
     "email": "string"
-  },
-  "security": {
-    "api_key": "string",
-    "token": "string"
   },
   "schema_version": "string"
 }

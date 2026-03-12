@@ -70,7 +70,7 @@ class JwtUserInfo(BaseModel):
 
 
 class BasicUserInfo(BaseModel):
-    """Username/password identity for YAML-configured or inline users.
+    """Username/password identity.
 
     The user provides ``username`` and ``password``.  A base64-encoded
     ``credential`` (``base64(username:password)``) is derived automatically

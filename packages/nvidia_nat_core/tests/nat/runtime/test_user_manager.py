@@ -888,29 +888,6 @@ class TestGetSessionCookieEdgeCases:
         assert UserManager._get_session_cookie(req) is None
 
 
-class TestGetJwtClaimsEdgeCases:
-    """_get_jwt_claims positive and error paths for Bearer token parsing."""
-
-    def test_bearer_case_insensitive(self):
-        """Input: "bearer <jwt>" (lowercase). Asserts returns decoded claims dict."""
-        token: str = _make_jwt({"sub": "u"})
-        req = _mock_request(headers={"authorization": f"bearer {token}"})
-        claims: dict = UserManager._get_jwt_claims(req)
-        assert claims["sub"] == "u"
-
-    def test_bearer_token_one_dot_raises(self):
-        """Input: "Bearer header.payload" (1 dot). Asserts raises ValueError matching "empty or malformed"."""
-        req = _mock_request(headers={"authorization": "Bearer header.payload"})
-        with pytest.raises(ValueError, match="empty or malformed"):
-            UserManager._get_jwt_claims(req)
-
-    def test_jwt_payload_three_dots_but_invalid_base64_raises(self):
-        """Input: "Bearer a.b.c" (2 dots but undecodable). Asserts raises ValueError matching "Failed to decode"."""
-        req = _mock_request(headers={"authorization": "Bearer a.b.c"})
-        with pytest.raises(ValueError, match="Failed to decode"):
-            UserManager._get_jwt_claims(req)
-
-
 class TestUserInfoFromJwtClaimExtraction:
     """_user_info_from_jwt extracts groups, audience, client_id, exp/iat, name fallbacks."""
 
@@ -995,15 +972,6 @@ class TestUserInfoFromJwtClaimExtraction:
         details = UserManager.extract_user_from_connection(req).get_user_details()
         assert isinstance(details, JwtUserInfo)
         assert details.roles == ["admin"]
-
-
-class TestFromAuthPayloadFailureModes:
-    """_from_auth_payload raises on unsupported payload types."""
-
-    def test_unsupported_payload_type_raises(self):
-        """Input: MagicMock (not JWT/ApiKey/Basic). Asserts raises ValueError matching "Unsupported"."""
-        with pytest.raises(ValueError, match="Unsupported auth payload type"):
-            UserManager._from_auth_payload(MagicMock())
 
 
 class TestExtractUserFromConnectionEdgeCases:
@@ -1124,12 +1092,12 @@ class TestFromConnectionRequestApiKey:
         from_factory: UserInfo = UserInfo._from_api_key("sk-test-key")
         assert from_connection.get_user_id() == from_factory.get_user_id()
 
-    def test_api_key_matches_yaml_declared_user(self):
+    def test_api_key_matches_directly_constructed_user(self):
         """Input: API key via Bearer header matches UserInfo(api_key=...) with same key."""
-        req = _mock_request(headers={"authorization": "Bearer sk-yaml-key"})
+        req = _mock_request(headers={"authorization": "Bearer sk-direct-key"})
         from_connection: UserInfo = UserManager.extract_user_from_connection(req)
-        from_yaml: UserInfo = UserInfo(api_key=SecretStr("sk-yaml-key"))
-        assert from_connection.get_user_id() == from_yaml.get_user_id()
+        from_constructor: UserInfo = UserInfo(api_key=SecretStr("sk-direct-key"))
+        assert from_connection.get_user_id() == from_constructor.get_user_id()
 
     def test_api_key_one_dot_treated_as_api_key(self):
         """Input: Bearer token with 1 dot. Asserts treated as API key (not JWT)."""

@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import base64
-import logging
 import typing
 from http.cookies import SimpleCookie
 
@@ -26,7 +25,6 @@ from pydantic import SecretStr
 from starlette.requests import Request
 
 from nat.authentication.jwt_utils import decode_jwt_claims_unverified
-from nat.authentication.jwt_utils import extract_bearer_token
 from nat.data_models.api_server import ApiKeyAuthPayload
 from nat.data_models.api_server import AuthPayload
 from nat.data_models.api_server import BasicAuthPayload
@@ -34,8 +32,6 @@ from nat.data_models.api_server import JwtAuthPayload
 from nat.data_models.user_info import BasicUserInfo
 from nat.data_models.user_info import JwtUserInfo
 from nat.data_models.user_info import UserInfo
-
-logger = logging.getLogger(__name__)
 
 
 class UserManager:
@@ -144,8 +140,6 @@ class UserManager:
                 password=payload.password,
             ))
 
-        raise ValueError(f"Unsupported auth payload type: {type(payload).__name__}")
-
     @staticmethod
     def _get_session_cookie(connection: Request | WebSocket) -> str | None:
         """Extract the ``nat-session`` cookie value from a Request or WebSocket."""
@@ -199,26 +193,6 @@ class UserManager:
                 if name_str == "authorization":
                     return value_str
         return None
-
-    @staticmethod
-    def _get_jwt_claims(connection: Request | WebSocket) -> dict[str, typing.Any] | None:
-        """Extract and decode a JWT Bearer token from the ``Authorization`` header.
-
-        Args:
-            connection: The incoming Starlette ``Request`` or ``WebSocket``.
-
-        Returns:
-            The decoded claims dict, or ``None`` if no ``Authorization``
-            header is present.
-
-        Raises:
-            ValueError: If an ``Authorization`` header is present but the
-                token cannot be decoded into valid JWT claims.
-        """
-        token: str | None = extract_bearer_token(connection)
-        if token is None:
-            return None
-        return decode_jwt_claims_unverified(token)
 
     @staticmethod
     def _user_info_from_session_cookie(cookie_value: str) -> UserInfo:
