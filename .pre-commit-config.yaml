@@ -30,7 +30,18 @@ repos:
     hooks:
       - id: uv-lock-all-pyprojects
         name: Ensure `uv lock` is run for all pyproject.toml files
-        entry: bash -c 'find . -name pyproject.toml -not -path "*/.*/*" -execdir uv lock \;'
+        entry: >-
+          bash -ec '
+            status=0
+            while IFS= read -r -d "" pyproject; do
+              (
+                echo "Locking $(dirname "$pyproject")" &&
+                cd "$(dirname "$pyproject")" &&
+                uv lock
+              ) || status=$?
+            done < <(find . -name pyproject.toml -not -path "*/.*/*" -print0)
+            exit "$status"
+          '
         language: system
         files: "pyproject\\.toml$"
         pass_filenames: false
