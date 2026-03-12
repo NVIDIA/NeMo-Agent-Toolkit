@@ -111,16 +111,20 @@ async def build_reasoning_function(config: ReasoningFunctionConfig, builder: Bui
 
     # Get the function dependencies of the augmented function
     function_dependencies = builder.get_function_dependencies(config.augmented_fn)
-    function_used_tools = set()
-    function_used_tools.update(function_dependencies.functions)
-    for function_group in function_dependencies.function_groups:
-        function_used_tools.update(builder.get_function_group_dependencies(function_group).functions)
 
     tool_names_with_desc: list[tuple[str, str]] = []
 
-    for tool in function_used_tools:
-        tool_impl = await builder.get_function(tool)
-        tool_names_with_desc.append((tool, tool_impl.description if hasattr(tool_impl, "description") else ""))
+    for fn_name in function_dependencies.functions:
+        tool_impl = await builder.get_function(fn_name)
+        tool_names_with_desc.append((fn_name, tool_impl.description if hasattr(tool_impl, "description") else ""))
+
+    # Resolve function_group members directly instead of using get_function_group_dependencies,
+    # which only tracks external dependencies and not the functions contained in the group.
+    for fg_name in function_dependencies.function_groups:
+        fg = await builder.get_function_group(fg_name)
+        for fn_name, fn_instance in (await fg.get_accessible_functions()).items():
+            desc = fn_instance.description if hasattr(fn_instance, "description") else ""
+            tool_names_with_desc.append((fn_name, desc))
 
     # Draft the reasoning prompt for the augmented function
     template = PromptTemplate(template=config.reasoning_prompt_template,
