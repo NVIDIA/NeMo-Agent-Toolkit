@@ -123,7 +123,7 @@ Instead of providing a static token via environment variable, you can configure 
 
 Function signature: `async def get_service_token(**kwargs) -> str | tuple[str, str]`
 
-The function can access `AIQContext.get()` for runtime context and receive additional arguments via the `kwargs` field in the config. This is useful for enterprise environments with dynamic token management (e.g., fetching from secure vaults).
+The function can access `Context.get()` for runtime context and receive additional arguments via the `kwargs` field in the config. This is useful for enterprise environments with dynamic token management (e.g., fetching from secure vaults).
 
 Example in config:
 ```yaml
