@@ -28,7 +28,7 @@ Identity resolution provides the following capabilities:
 - **Multiple credential types**: Session cookies, JWT Bearer tokens, opaque API keys, `X-API-Key` headers, HTTP Basic Auth, and WebSocket auth messages are all supported.
 - **Per-user workflow support**: When a workflow is configured as per-user, the resolved `user_id` is used to isolate workflow state per user. Each user gets their own workflow instance.
 
-:::{note}
+:::{warning}
 Identity resolution is an identity mapping step, not an authentication or authorization layer. JSON Web Tokens are decoded without signature verification to extract identity claims. Credential validation (for example, JWKS verification or OAuth flows) should be handled upstream or via an [authentication provider](./api-authentication.md).
 :::
 
@@ -66,9 +66,9 @@ Each identity source produces a deterministic UUID v5 using a toolkit-specific n
 | JWT | First non-empty value from `sub`, `email`, `preferred_username` | [RFC 7519 Section 4.1.2](https://www.rfc-editor.org/rfc/rfc7519#section-4.1.2), [OpenID Connect Core 1.0 Section 5.1](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims) |
 | API key | Raw API key string | — |
 | Basic Auth | `base64(username:password)` ¹ | [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617) |
+| Session cookie | Raw cookie value | — |
 
 ¹ Because the password is part of the identity key, changing a password produces a new `user_id`. The user's prior per-user workflow state (conversation history, builders) becomes inaccessible.
-| Session cookie | Raw cookie value | — |
 
 **JWT claim precedence**: The `sub` claim is preferred as the stable, locally-unique subject identifier per RFC 7519. If `sub` is absent or empty, the resolver falls back to `email` and then `preferred_username` as defined by OpenID Connect Core 1.0 Standard Claims. If none of these claims contain a usable value, the server rejects the token with an error.
 

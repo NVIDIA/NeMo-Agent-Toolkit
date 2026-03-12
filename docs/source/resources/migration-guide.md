@@ -29,6 +29,13 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ### v1.6.0
 
+#### User Identity Resolution
+
+User identity is now resolved by a centralized `UserManager` component. The following changes apply:
+
+- **User IDs are now UUID v5 hashes.** Previously, user IDs were raw credential strings (cookie values, JWT claim values). They are now deterministic UUIDs derived from the credential. User IDs are opaque routing keys — no downstream code depends on a specific format.
+- **JWT claim precedence corrected to RFC 7519.** The previous precedence (`name > email > preferred_username > sub`) was non-standard. The new precedence is `sub > email > preferred_username` per [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519) and [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims). Users whose identity was previously resolved from the `name` claim will be assigned a new `user_id` based on `sub` after upgrade.
+- **`Security` model removed from WebSocket messages.** The `Security` Pydantic model and the `security` field on `WebSocketUserMessage` and `WebSocketUserInteractionResponseMessage` have been removed. User identity is now resolved via the `auth_message` flow or from connection headers. See [User Identity Resolution](../components/auth/user-identity.md) for details.
 #### Evaluator Package Split (Breaking)
 
 As part of dependency reduction, evaluator ownership is being moved out of `nvidia-nat-eval` and into framework-specific packages.

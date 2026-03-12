@@ -55,7 +55,6 @@ class JwtUserInfo(BaseModel):
     client_id: str | None = Field(default=None, description="OAuth2 client identifier (``azp`` or ``client_id``).")
     claims: dict[str, typing.Any] = Field(default_factory=dict, description="Raw JWT claims dict.")
 
-
     @property
     def identity_claim(self) -> str | None:
         """Return the first non-empty value using ``sub > email > preferred_username`` precedence.
@@ -77,7 +76,10 @@ class BasicUserInfo(BaseModel):
 
     The user provides ``username`` and ``password``.  A base64-encoded
     ``credential`` (``base64(username:password)``) is derived automatically
-    and used internally to differentiate users.
+    and used as the identity key for UUID v5 generation.
+
+    Because the password is part of the identity key, changing a password
+    produces a new ``user_id`` and the user's prior per-user workflow state becomes inaccessible.
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")

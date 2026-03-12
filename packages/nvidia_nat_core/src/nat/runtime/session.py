@@ -462,38 +462,39 @@ class SessionManager:
                                                              Awaitable[AuthenticatedContext | None]] = None):
 
         token_user_input = None
-        if user_input_callback is not None:
-            token_user_input = self._context_state.user_input_callback.set(user_input_callback)
-
         token_user_authentication = None
-        if user_authentication_callback is not None:
-            token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
-
         token_workflow_parent_id = None
         token_workflow_parent_name = None
-
-        if isinstance(http_connection, WebSocket):
-            if user_id is None:
-                user_info: UserInfo | None = UserManager.extract_user_from_connection(http_connection)
-                if user_info is not None:
-                    user_id = user_info.get_user_id()
-            self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id)
-
-        if isinstance(http_connection, Request):
-            if user_id is None:
-                user_info = UserManager.extract_user_from_connection(http_connection)
-                if user_info is not None:
-                    user_id = user_info.get_user_id()
-            token_workflow_parent_id, token_workflow_parent_name = \
-                await self.set_metadata_from_http_request(http_connection)
-
-        token_user_id = self._context_state.user_id.set(user_id)
+        token_user_id = None
 
         builder_info: PerUserBuilderInfo | None = None
         request_start_time: float | None = None
         request_success = True
 
         try:
+            if user_input_callback is not None:
+                token_user_input = self._context_state.user_input_callback.set(user_input_callback)
+
+            if user_authentication_callback is not None:
+                token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
+
+            if isinstance(http_connection, WebSocket):
+                if user_id is None:
+                    user_info: UserInfo | None = UserManager.extract_user_from_connection(http_connection)
+                    if user_info is not None:
+                        user_id = user_info.get_user_id()
+                self.set_metadata_from_websocket(http_connection, user_message_id, conversation_id)
+
+            if isinstance(http_connection, Request):
+                if user_id is None:
+                    user_info = UserManager.extract_user_from_connection(http_connection)
+                    if user_info is not None:
+                        user_id = user_info.get_user_id()
+                token_workflow_parent_id, token_workflow_parent_name = \
+                    await self.set_metadata_from_http_request(http_connection)
+
+            token_user_id = self._context_state.user_id.set(user_id)
+
             if not user_id and self._is_workflow_per_user:
                 raise ValueError("user_id is required for per-user workflow but could not be determined. "
                                  "Include a standard Bearer JWT token in the Authorization header "
@@ -536,7 +537,8 @@ class SessionManager:
                 self._context_state.workflow_parent_name.reset(token_workflow_parent_name)
             if token_workflow_parent_id is not None:
                 self._context_state.workflow_parent_id.reset(token_workflow_parent_id)
-            self._context_state.user_id.reset(token_user_id)
+            if token_user_id is not None:
+                self._context_state.user_id.reset(token_user_id)
             if token_user_input is not None:
                 self._context_state.user_input_callback.reset(token_user_input)
             if token_user_authentication is not None:

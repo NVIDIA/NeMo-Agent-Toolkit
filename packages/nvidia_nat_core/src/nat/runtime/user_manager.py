@@ -140,6 +140,8 @@ class UserManager:
                 password=payload.password,
             ))
 
+        typing.assert_never(payload)
+
     @staticmethod
     def _get_session_cookie(connection: Request | WebSocket) -> str | None:
         """Extract the ``nat-session`` cookie value from a Request or WebSocket."""
