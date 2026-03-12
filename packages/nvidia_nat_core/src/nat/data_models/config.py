@@ -40,7 +40,6 @@ from nat.data_models.logging import LoggingBaseConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
-from nat.data_models.user_info import UserInfo
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 
 from .authentication import AuthProviderBaseConfig
@@ -310,9 +309,6 @@ class Config(HashableBaseModel):
 
     # Authentication Configuration
     authentication: dict[str, AuthProviderBaseConfig] = Field(default_factory=dict)
-
-    # Pre-defined users (keyed by username)
-    users: dict[str, UserInfo] = Field(default_factory=dict)
 
     # Evaluation Options
     eval: EvalConfig = EvalConfig()

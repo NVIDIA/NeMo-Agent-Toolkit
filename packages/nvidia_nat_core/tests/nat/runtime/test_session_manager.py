@@ -117,7 +117,6 @@ def create_mock_config(is_per_user: bool = False) -> Config:
     config.general.per_user_workflow_timeout = timedelta(minutes=30)
     config.general.per_user_workflow_cleanup_interval = timedelta(minutes=5)
     config.workflow = MagicMock()
-    config.users = {}
     return config
 
 

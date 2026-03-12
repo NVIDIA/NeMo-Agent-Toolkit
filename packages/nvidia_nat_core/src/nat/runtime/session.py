@@ -345,18 +345,6 @@ class SessionManager:
                 raise
             session_manager._per_user_builders_cleanup_task = cleanup_task
 
-            if config.users:
-                try:
-                    for username, user_info in config.users.items():
-                        user_id: str = user_info.get_user_id()
-                        logger.info(
-                            f"Pre-building per-user workflow for declared user '{username}' (user_id={user_id})")
-                        await session_manager._get_or_create_per_user_builder(user_id)
-                except Exception:
-                    logger.exception("Failed to pre-build per-user workflows, shutting down SessionManager")
-                    await session_manager.shutdown()
-                    raise
-
         return session_manager
 
     async def _run_periodic_cleanup(self):

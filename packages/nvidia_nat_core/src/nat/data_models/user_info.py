@@ -97,47 +97,12 @@ class BasicUserInfo(BaseModel):
         return self._credential
 
 
-class JwtIdentity(BaseModel):
-    """Declarative JWT identity for YAML-configured users.
-
-    Declares the expected JWT claim values that an external IdP will
-    include in tokens issued for this user.  Used to pre-register a
-    user identity in YAML so that incoming JWTs can be matched to a
-    pre-built per-user workflow.
-
-    Identity resolution uses ``subject > email > preferred_username``
-    precedence: ``subject`` (the RFC 7519 ``sub`` claim) is the
-    stable, immutable identifier; ``email`` and ``preferred_username``
-    (OpenID Connect Core 1.0 claims) serve as fallbacks when ``sub``
-    is unavailable.
-    """
-
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    email: str | None = Field(default=None, description="Email address claim (``email``).")
-    preferred_username: str | None = Field(default=None, description="Preferred username claim.")
-    subject: str | None = Field(default=None, description="Subject claim (``sub``).")
-
-    @property
-    def identity_key(self) -> str | None:
-        """Return the first non-empty claim value.
-
-        Uses ``subject > email > preferred_username`` precedence.
-        ``subject`` per RFC 7519; ``email``/``preferred_username`` per OIDC Core 1.0.
-        """
-        for val in (self.subject, self.email, self.preferred_username):
-            if val and isinstance(val, str) and val.strip():
-                return val.strip()
-        return None
-
-
 class UserInfo(BaseModel):
     """Resolved user identity, independent of how it was identified.
 
-    For YAML-configured users, construct with exactly one identity source::
+    Construct with exactly one identity source::
 
         UserInfo(basic_user=BasicUserInfo(username="alice", password="s3cret"))
-        UserInfo(jwt_identity=JwtIdentity(subject="auth0|abc123"))
         UserInfo(api_key=SecretStr("sk-service-abc123"))
 
     For runtime credentials (session cookie / JWT), use ``UserManager``
@@ -147,8 +112,6 @@ class UserInfo(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     basic_user: BasicUserInfo | None = Field(default=None, description="Username/password identity.")
-    jwt_identity: JwtIdentity | None = Field(default=None,
-                                             description="Declarative JWT identity for YAML-configured users.")
     api_key: OptionalSecretStr = Field(default=None, description="Static API key identity.")
     _user_id: str = PrivateAttr(default="")
     _session_cookie: str | None = PrivateAttr(default=None)
@@ -156,21 +119,14 @@ class UserInfo(BaseModel):
 
     @model_validator(mode="after")
     def _validate_single_identity_source(self) -> "UserInfo":
-        sources: int = sum(1 for s in (self.basic_user, self.jwt_identity, self.api_key) if s is not None)
+        sources: int = sum(1 for s in (self.basic_user, self.api_key) if s is not None)
         if sources > 1:
-            raise ValueError(
-                f"At most one identity source (basic_user, jwt_identity, api_key) may be set, got {sources}")
+            raise ValueError(f"At most one identity source (basic_user, api_key) may be set, got {sources}")
         return self
 
     def model_post_init(self, __context: typing.Any) -> None:
         if self.basic_user is not None:
             self._set_user_id(self.basic_user.credential)
-        elif self.jwt_identity is not None:
-            identity_key: str | None = self.jwt_identity.identity_key
-            if identity_key is None:
-                raise ValueError("jwt_identity must have at least one non-empty claim "
-                                 "(subject, email, or preferred_username)")
-            self._set_user_id(identity_key)
         elif self.api_key is not None:
             self._set_user_id(self.api_key.get_secret_value())
 

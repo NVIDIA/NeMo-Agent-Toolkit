@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for UserInfo, JwtUserInfo, and BasicUserInfo data models."""
+"""Tests for UserInfo, JwtUserInfo, BasicUserInfo, and credential derivation."""
 
 import base64
 import uuid
@@ -23,7 +23,6 @@ from pydantic import ValidationError
 
 from nat.data_models.user_info import _USER_ID_NAMESPACE
 from nat.data_models.user_info import BasicUserInfo
-from nat.data_models.user_info import JwtIdentity
 from nat.data_models.user_info import JwtUserInfo
 from nat.data_models.user_info import UserInfo
 
@@ -326,41 +325,6 @@ class TestConsoleRunUserCreation:
         assert run_id != eval_id
 
 
-class TestYamlConfiguredUsers:
-    """Config.users allows YAML-declared users whose UserInfo produces valid, stable user_ids."""
-
-    def _make_config_with_users(self, users: dict[str, UserInfo]):
-        from nat.data_models.config import Config
-        return Config(users=users)
-
-    def test_yaml_user_produces_non_empty_id(self):
-        """Input: Config with one YAML user. Asserts get_user_id() returns a non-empty string."""
-        config = self._make_config_with_users({
-            "alice": UserInfo(basic_user=BasicUserInfo(username="alice", password=SecretStr("pw"))),
-        })
-        user_id: str = config.users["alice"].get_user_id()
-        assert isinstance(user_id, str)
-        assert len(user_id) > 0
-
-    def test_yaml_user_id_is_deterministic(self):
-        """Input: same Config.users constructed twice. Asserts identical user_ids."""
-        config_1 = self._make_config_with_users({
-            "alice": UserInfo(basic_user=BasicUserInfo(username="alice", password=SecretStr("pw"))),
-        })
-        config_2 = self._make_config_with_users({
-            "alice": UserInfo(basic_user=BasicUserInfo(username="alice", password=SecretStr("pw"))),
-        })
-        assert config_1.users["alice"].get_user_id() == config_2.users["alice"].get_user_id()
-
-    def test_yaml_different_users_get_different_ids(self):
-        """Input: Config with alice and bob. Asserts their user_ids are different."""
-        config = self._make_config_with_users({
-            "alice": UserInfo(basic_user=BasicUserInfo(username="alice", password=SecretStr("alice_pw"))),
-            "bob": UserInfo(basic_user=BasicUserInfo(username="bob", password=SecretStr("bob_pw"))),
-        })
-        assert config.users["alice"].get_user_id() != config.users["bob"].get_user_id()
-
-
 class TestIdentityClaimEdgeCases:
     """identity_claim precedence when claim values are non-string or empty."""
 
@@ -441,84 +405,6 @@ class TestUserInfoFrozen:
             info.basic_user = BasicUserInfo(username="alice", password=SecretStr("pass"))
 
 
-class TestJwtIdentity:
-    """JwtIdentity.identity_key resolves the first non-empty value from subject, email, preferred_username."""
-
-    def test_identity_key_prefers_subject(self):
-        """Input: all three claims set. Asserts identity_key == subject."""
-        identity: JwtIdentity = JwtIdentity(email="alice@example.com", preferred_username="alice", subject="sub-123")
-        assert identity.identity_key == "sub-123"
-
-    def test_identity_key_falls_back_to_email(self):
-        """Input: no subject, email and preferred_username set. Asserts identity_key == email."""
-        identity: JwtIdentity = JwtIdentity(email="alice@example.com", preferred_username="alice")
-        assert identity.identity_key == "alice@example.com"
-
-    def test_identity_key_falls_back_to_preferred_username(self):
-        """Input: only preferred_username set. Asserts identity_key == preferred_username."""
-        identity: JwtIdentity = JwtIdentity(preferred_username="alice")
-        assert identity.identity_key == "alice"
-
-    def test_identity_key_returns_none_when_all_empty(self):
-        """Input: no claims. Asserts identity_key is None."""
-        identity: JwtIdentity = JwtIdentity()
-        assert identity.identity_key is None
-
-    def test_identity_key_strips_whitespace(self):
-        """Input: email with leading/trailing whitespace. Asserts identity_key is stripped."""
-        identity: JwtIdentity = JwtIdentity(email="  alice@example.com  ")
-        assert identity.identity_key == "alice@example.com"
-
-    def test_identity_key_skips_whitespace_only(self):
-        """Input: whitespace-only subject, valid email. Asserts identity_key == email."""
-        identity: JwtIdentity = JwtIdentity(subject="   ", email="alice@example.com")
-        assert identity.identity_key == "alice@example.com"
-
-    def test_frozen(self):
-        """Input: attempt to mutate email. Asserts raises ValidationError."""
-        identity: JwtIdentity = JwtIdentity(email="alice@example.com")
-        with pytest.raises(ValidationError):
-            identity.email = "bob@example.com"
-
-    def test_extra_fields_forbidden(self):
-        """Input: unexpected extra field. Asserts raises ValidationError."""
-        with pytest.raises(ValidationError):
-            JwtIdentity(email="alice@example.com", extra="bad")
-
-
-class TestUserInfoFromJwtIdentity:
-    """UserInfo created from JwtIdentity derives a deterministic UUID from the identity claim."""
-
-    def test_deterministic_uuid_from_jwt_identity_subject(self):
-        """Input: JwtIdentity with subject. Asserts get_user_id() == uuid5(namespace, subject)."""
-        info: UserInfo = UserInfo(jwt_identity=JwtIdentity(subject="auth0|abc123"))
-        expected: str = str(uuid.uuid5(_USER_ID_NAMESPACE, "auth0|abc123"))
-        assert info.get_user_id() == expected
-
-    def test_same_jwt_identity_same_uuid(self):
-        """Input: identical JwtIdentity twice. Asserts both produce the same user_id."""
-        a: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com"))
-        b: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com"))
-        assert a.get_user_id() == b.get_user_id()
-
-    def test_different_jwt_identities_different_uuids(self):
-        """Input: two JwtIdentities with different emails. Asserts different user_ids."""
-        a: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com"))
-        b: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="bob@corp.com"))
-        assert a.get_user_id() != b.get_user_id()
-
-    def test_jwt_identity_with_no_claims_raises(self):
-        """Input: JwtIdentity with all None claims. Asserts raises ValueError."""
-        with pytest.raises(ValueError, match="jwt_identity must have at least one non-empty claim"):
-            UserInfo(jwt_identity=JwtIdentity())
-
-    def test_uuid_is_valid(self):
-        """Input: UserInfo from JwtIdentity. Asserts get_user_id() parses as a valid UUID v5."""
-        info: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="test@test.com"))
-        parsed: uuid.UUID = uuid.UUID(info.get_user_id())
-        assert parsed.version == 5
-
-
 class TestUserInfoFromPublicApiKey:
     """UserInfo created with the public api_key field derives a deterministic UUID."""
 
@@ -548,36 +434,11 @@ class TestUserInfoFromPublicApiKey:
 class TestSingleIdentitySourceValidator:
     """model_validator rejects multiple identity sources on the same UserInfo."""
 
-    def test_basic_user_and_jwt_identity_raises(self):
-        """Input: basic_user + jwt_identity. Asserts raises ValueError."""
-        with pytest.raises(ValidationError, match="At most one identity source"):
-            UserInfo(
-                basic_user=BasicUserInfo(username="alice", password=SecretStr("pass")),
-                jwt_identity=JwtIdentity(email="alice@corp.com"),
-            )
-
     def test_basic_user_and_api_key_raises(self):
         """Input: basic_user + api_key. Asserts raises ValueError."""
         with pytest.raises(ValidationError, match="At most one identity source"):
             UserInfo(
                 basic_user=BasicUserInfo(username="alice", password=SecretStr("pass")),
-                api_key=SecretStr("sk-key"),
-            )
-
-    def test_jwt_identity_and_api_key_raises(self):
-        """Input: jwt_identity + api_key. Asserts raises ValueError."""
-        with pytest.raises(ValidationError, match="At most one identity source"):
-            UserInfo(
-                jwt_identity=JwtIdentity(email="alice@corp.com"),
-                api_key=SecretStr("sk-key"),
-            )
-
-    def test_all_three_raises(self):
-        """Input: all three identity sources. Asserts raises ValueError."""
-        with pytest.raises(ValidationError, match="At most one identity source"):
-            UserInfo(
-                basic_user=BasicUserInfo(username="alice", password=SecretStr("pass")),
-                jwt_identity=JwtIdentity(email="alice@corp.com"),
                 api_key=SecretStr("sk-key"),
             )
 
@@ -591,11 +452,6 @@ class TestSingleIdentitySourceValidator:
         info: UserInfo = UserInfo(basic_user=BasicUserInfo(username="alice", password=SecretStr("pass")))
         assert len(info.get_user_id()) > 0
 
-    def test_single_jwt_identity_allowed(self):
-        """Input: only jwt_identity. Asserts no error and valid user_id."""
-        info: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com"))
-        assert len(info.get_user_id()) > 0
-
     def test_single_api_key_allowed(self):
         """Input: only api_key. Asserts no error and valid user_id."""
         info: UserInfo = UserInfo(api_key=SecretStr("sk-key"))
@@ -603,152 +459,47 @@ class TestSingleIdentitySourceValidator:
 
 
 class TestUserIdDerivationConsistency:
-    """YAML-declared users and runtime-resolved users must derive the same user_id for the same credential."""
-
-    def test_jwt_identity_matches_from_jwt_runtime(self):
-        """Input: JwtIdentity(subject=X) and _from_jwt(claims={sub: X}). Asserts same user_id."""
-        yaml_user: UserInfo = UserInfo(jwt_identity=JwtIdentity(subject="auth0|abc123"))
-        runtime_jwt: JwtUserInfo = JwtUserInfo(
-            subject="auth0|abc123",
-            claims={"sub": "auth0|abc123"},
-        )
-        runtime_user: UserInfo = UserInfo._from_jwt(runtime_jwt)
-        assert yaml_user.get_user_id() == runtime_user.get_user_id()
-
-    def test_jwt_identity_preferred_username_matches_from_jwt_runtime(self):
-        """Input: JwtIdentity(preferred_username=X) and _from_jwt(claims={preferred_username: X})."""
-        yaml_user: UserInfo = UserInfo(jwt_identity=JwtIdentity(preferred_username="alice"))
-        runtime_jwt: JwtUserInfo = JwtUserInfo(
-            preferred_username="alice",
-            claims={"preferred_username": "alice"},
-        )
-        runtime_user: UserInfo = UserInfo._from_jwt(runtime_jwt)
-        assert yaml_user.get_user_id() == runtime_user.get_user_id()
-
-    def test_jwt_identity_subject_matches_from_jwt_runtime(self):
-        """Input: JwtIdentity(subject=X) and _from_jwt(claims={sub: X}). Asserts same user_id."""
-        yaml_user: UserInfo = UserInfo(jwt_identity=JwtIdentity(subject="sub-123"))
-        runtime_jwt: JwtUserInfo = JwtUserInfo(
-            subject="sub-123",
-            claims={"sub": "sub-123"},
-        )
-        runtime_user: UserInfo = UserInfo._from_jwt(runtime_jwt)
-        assert yaml_user.get_user_id() == runtime_user.get_user_id()
+    """Constructing a UserInfo from public fields produces the same user_id as the factory classmethods."""
 
     def test_api_key_field_matches_from_api_key_runtime(self):
         """Input: api_key=X and _from_api_key(X). Asserts same user_id."""
-        yaml_user: UserInfo = UserInfo(api_key=SecretStr("sk-service-abc123"))
-        runtime_user: UserInfo = UserInfo._from_api_key("sk-service-abc123")
-        assert yaml_user.get_user_id() == runtime_user.get_user_id()
-
-    def test_different_identity_keys_produce_different_uuids(self):
-        """Input: jwt_identity vs api_key with different keys. Asserts different user_ids."""
-        jwt_user: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com"))
-        api_user: UserInfo = UserInfo(api_key=SecretStr("sk-service-key-123"))
-        assert jwt_user.get_user_id() != api_user.get_user_id()
-
-    def test_jwt_identity_email_only_matches_from_jwt_runtime(self):
-        """Input: JwtIdentity(email=X) and _from_jwt(claims={email: X}). Asserts same user_id."""
-        yaml_user: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com"))
-        runtime_jwt: JwtUserInfo = JwtUserInfo(
-            email="alice@corp.com",
-            claims={"email": "alice@corp.com"},
-        )
-        runtime_user: UserInfo = UserInfo._from_jwt(runtime_jwt)
-        assert yaml_user.get_user_id() == runtime_user.get_user_id()
+        field_user: UserInfo = UserInfo(api_key=SecretStr("sk-service-abc123"))
+        factory_user: UserInfo = UserInfo._from_api_key("sk-service-abc123")
+        assert field_user.get_user_id() == factory_user.get_user_id()
 
     def test_basic_user_matches_runtime_basic_auth(self):
         """Input: BasicUserInfo(u, p) and _user_info_from_basic_auth(base64(u:p)). Asserts same user_id."""
         from nat.runtime.user_manager import UserManager
 
-        yaml_user: UserInfo = UserInfo(basic_user=BasicUserInfo(username="carol", password=SecretStr("carol-pass")))
+        constructed: UserInfo = UserInfo(basic_user=BasicUserInfo(username="carol", password=SecretStr("carol-pass")))
         b64_cred: str = base64.b64encode(b"carol:carol-pass").decode()
         runtime_user: UserInfo = UserManager._user_info_from_basic_auth(b64_cred)
-        assert yaml_user.get_user_id() == runtime_user.get_user_id()
-
-    def test_same_identity_key_across_types_produces_same_uuid(self):
-        """uuid5 derivation is key-based, not type-based: same key = same UUID regardless of source."""
-        jwt_user: UserInfo = UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com"))
-        api_user: UserInfo = UserInfo(api_key=SecretStr("alice@corp.com"))
-        assert jwt_user.get_user_id() == api_user.get_user_id()
+        assert constructed.get_user_id() == runtime_user.get_user_id()
 
 
-class TestYamlConfiguredUsersWithAllCredentialTypes:
-    """Config.users accepts all three credential types."""
-
-    def _make_config_with_users(self, users: dict[str, UserInfo]):
-        from nat.data_models.config import Config
-        return Config(users=users)
-
-    def test_yaml_jwt_identity_user(self):
-        """Input: Config with JWT identity user. Asserts non-empty user_id."""
-        config = self._make_config_with_users({
-            "alice": UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com")),
-        })
-        assert len(config.users["alice"].get_user_id()) > 0
-
-    def test_yaml_api_key_user(self):
-        """Input: Config with API key user. Asserts non-empty user_id."""
-        config = self._make_config_with_users({
-            "service": UserInfo(api_key=SecretStr("sk-abc123")),
-        })
-        assert len(config.users["service"].get_user_id()) > 0
-
-    def test_yaml_mixed_credential_types(self):
-        """Input: Config with all three credential types. Asserts all have distinct non-empty user_ids."""
-        config = self._make_config_with_users({
-            "alice": UserInfo(jwt_identity=JwtIdentity(email="alice@corp.com")),
-            "bob": UserInfo(basic_user=BasicUserInfo(username="bob", password=SecretStr("pw"))),
-            "service": UserInfo(api_key=SecretStr("sk-abc123")),
-        })
-        ids: list[str] = [config.users[k].get_user_id() for k in ("alice", "bob", "service")]
-        assert all(len(uid) > 0 for uid in ids)
-        assert len(set(ids)) == 3
-
-
-class TestConfigSerializationRoundTrip:
-    """model_dump(mode='json') → Config(**dict) must preserve SecretStr values in users.
+class TestSerializableSecretStrRoundTrip:
+    """model_dump(mode='json') → UserInfo(**dict) must preserve SecretStr values.
 
     Regression test for the Uvicorn worker handoff bug where SecretStr
     fields were serialized as '**********' during model_dump, causing
-    the reconstructed Config to derive different user_ids.
+    the reconstructed UserInfo to derive different user_ids.
     """
 
-    def _round_trip(self, users: dict[str, UserInfo]) -> dict[str, UserInfo]:
-        from nat.data_models.config import Config
-
-        config: Config = Config(users=users)
-        dumped: dict = config.model_dump(mode="json", by_alias=True, round_trip=True)
-        reconstructed: Config = Config(**dumped)
-        return reconstructed.users
+    @staticmethod
+    def _round_trip(user: UserInfo) -> UserInfo:
+        dumped: dict = user.model_dump(mode="json", by_alias=True, round_trip=True)
+        return UserInfo(**dumped)
 
     def test_basic_user_password_survives_round_trip(self):
         """BasicUserInfo password must not be masked after serialization round-trip."""
         original: UserInfo = UserInfo(basic_user=BasicUserInfo(username="carol", password=SecretStr("carol-pass")))
-        reconstructed: UserInfo = self._round_trip({"carol": original})["carol"]
+        reconstructed: UserInfo = self._round_trip(original)
         assert reconstructed.get_user_id() == original.get_user_id()
         assert reconstructed.basic_user.password.get_secret_value() == "carol-pass"
 
     def test_api_key_survives_round_trip(self):
         """UserInfo.api_key must not be masked after serialization round-trip."""
         original: UserInfo = UserInfo(api_key=SecretStr("nvapi-dave-key"))
-        reconstructed: UserInfo = self._round_trip({"dave": original})["dave"]
+        reconstructed: UserInfo = self._round_trip(original)
         assert reconstructed.get_user_id() == original.get_user_id()
         assert reconstructed.api_key.get_secret_value() == "nvapi-dave-key"
-
-    def test_jwt_identity_unaffected_by_round_trip(self):
-        """JwtIdentity has no SecretStr fields; round-trip is a baseline sanity check."""
-        original: UserInfo = UserInfo(jwt_identity=JwtIdentity(subject="sub-123"))
-        reconstructed: UserInfo = self._round_trip({"alice": original})["alice"]
-        assert reconstructed.get_user_id() == original.get_user_id()
-
-    def test_mixed_users_all_match_after_round_trip(self):
-        """All credential types in a single Config must survive round-trip with matching user_ids."""
-        users: dict[str, UserInfo] = {
-            "jwt": UserInfo(jwt_identity=JwtIdentity(subject="jwt-sub")),
-            "basic": UserInfo(basic_user=BasicUserInfo(username="u", password=SecretStr("p"))),
-            "apikey": UserInfo(api_key=SecretStr("sk-key")),
-        }
-        reconstructed: dict[str, UserInfo] = self._round_trip(users)
-        for name, original in users.items():
-            assert reconstructed[name].get_user_id() == original.get_user_id(), (f"user_id mismatch for {name}")
