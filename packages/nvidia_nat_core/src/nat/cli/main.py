@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 # The purpose of this function is to allow loading the current directory as a module. This allows relative imports and
 # more specifically `..common` to function correctly
 def run_cli():
