@@ -25,13 +25,14 @@ WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
 GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"
 
-create_env group:dev extra:all
+create_env
 
-# Update internal dependencies to the current git tag
-set_versions
+build_wheel . "nvidia-nat"
 
-build_wheel . "nvidia-nat/${GIT_TAG}"
-
+# Build all packages with a pyproject.toml in the first directory below packages
+for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
+    build_package_wheel ${NAT_PACKAGE}
+done
 
 # Build all examples with a pyproject.toml in the first directory below examples
 for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
@@ -39,18 +40,8 @@ for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
     build_wheel ${NAT_EXAMPLE} "examples"
 done
 
-
-# Build all packages with a pyproject.toml in the first directory below packages
-for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
-    build_package_wheel ${NAT_PACKAGE}
-done
-
-if [[ "${BUILD_NAT_COMPAT}" == "true" ]]; then
-    WHEELS_DIR="${WHEELS_BASE_DIR}/nat"
-    for NAT_COMPAT_PACKAGE in "${NAT_COMPAT_PACKAGES[@]}"; do
-        build_package_wheel ${NAT_COMPAT_PACKAGE}
-    done
-fi
+rapids-logger "Removing built examples wheels"
+rm -rf "${WHEELS_BASE_DIR}/examples"
 
 # Flatten out the wheels into a single directory for upload
 BUILT_WHEELS=$(find "${WHEELS_BASE_DIR}"/**/ -type f -name "*.whl")
@@ -60,7 +51,6 @@ for whl in ${BUILT_WHEELS}; do
     mv "${whl}" "${dest_wheel_name}"
     MOVED_WHEELS+=("${dest_wheel_name}")
 done
-
 
 # Test the built wheels
 deactivate
@@ -93,24 +83,35 @@ for whl in "${MOVED_WHEELS[@]}"; do
         fi
 
         # run a simple command to verify installation
-        PYTHON_IMPORT_OUT=$(python -c "import nat" 2>&1)
-        IMPORT_TEST_RESULT=$?
+        if [[ ! "${whl}" =~ nvidia_nat_app ]]; then
+            PYTHON_IMPORT_OUT=$(python -c "import nat" 2>&1)
+            IMPORT_TEST_RESULT=$?
 
-        if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
-            rapids-logger "This may indicate missing dependencies, Python version incompatibility, or build issues"
-            rapids-logger "Check if the wheel includes all necessary binary extensions for this Python version"
-            echo "${PYTHON_IMPORT_OUT}"
-            exit ${IMPORT_TEST_RESULT}
-        fi
+            if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
+                rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
+                rapids-logger "This may indicate missing dependencies, Python version incompatibility, or build issues"
+                rapids-logger "Check if the wheel includes all necessary binary extensions for this Python version"
+                echo "${PYTHON_IMPORT_OUT}"
+                exit ${IMPORT_TEST_RESULT}
+            fi
 
-        REPORTED_VERSION=$(nat --version 2>&1)
-        NAT_CMD_EXIT_CODE=$?
+            REPORTED_VERSION=$(nat --version 2>&1)
+            NAT_CMD_EXIT_CODE=$?
 
-        if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
-            rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
-            echo "${REPORTED_VERSION}"
-            exit ${NAT_CMD_EXIT_CODE}
+            if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
+                rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
+                echo "${REPORTED_VERSION}"
+                exit ${NAT_CMD_EXIT_CODE}
+            fi
+        else
+            rapids-logger "Skipping nat CLI test for nvidia_nat_app (framework-agnostic package); verifying nat_app import"
+            PYTHON_IMPORT_OUT=$(python -c "import nat_app" 2>&1)
+            IMPORT_TEST_RESULT=$?
+            if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
+                rapids-logger "Error, failed to import nat_app from wheel ${whl} with Python ${pyver}"
+                echo "${PYTHON_IMPORT_OUT}"
+                exit ${IMPORT_TEST_RESULT}
+            fi
         fi
 
         set -e

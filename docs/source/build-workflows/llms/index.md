@@ -21,7 +21,7 @@ limitations under the License.
 
 ## Supported LLM Providers
 
-NVIDIA NeMo Agent toolkit supports the following LLM providers:
+NVIDIA NeMo Agent Toolkit supports the following LLM providers:
 | Provider | Type | Description |
 |----------|------|-------------|
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |
@@ -29,7 +29,8 @@ NVIDIA NeMo Agent toolkit supports the following LLM providers:
 | [AWS Bedrock](https://aws.amazon.com/bedrock/) | `aws_bedrock` | AWS Bedrock API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
 | [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
-| [HuggingFace](https://huggingface.co) | `huggingface` | HuggingFace API |
+| [Hugging Face](https://huggingface.co) | `huggingface` | Hugging Face API |
+| [Hugging Face Inference](https://huggingface.co/docs/api-inference) | `huggingface_inference` | Hugging Face Inference API, Endpoints, and TGI |
 
 
 ## LLM Configuration
@@ -97,6 +98,7 @@ The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIM
 * `api_key` - The API key to use for the model
 * `base_url` - The base URL to use for the model
 * `max_retries` - The maximum number of retries for the request
+* `request_timeout` - HTTP request timeout in seconds
 
 :::{note}
 `temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
@@ -133,6 +135,7 @@ The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai
 * `top_p` - The top-p value to use for the model
 * `seed` - The seed to use for the model
 * `max_retries` - The maximum number of retries for the request
+* `request_timeout` - HTTP request timeout in seconds
 
 :::{note}
 `temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
@@ -153,14 +156,14 @@ The LiteLLM LLM provider is defined by the {py:class}`~nat.llm.litellm_llm.LiteL
 * `top_p` - The top-p value to use for the model
 * `max_retries` - The maximum number of retries for the request
 
-### HuggingFace
+### Hugging Face
 
-HuggingFace is a general-purpose LLM provider that can be used with any model supported by the HuggingFace API.
-See the [HuggingFace documentation](https://huggingface.co/docs) for more information.
+Hugging Face is a general-purpose LLM provider that can be used with any model supported by the Hugging Face API.
+See the [Hugging Face documentation](https://huggingface.co/docs) for more information.
 
-The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_llm.HuggingFaceConfig` class.
+The Hugging Face LLM provider is defined by the {py:class}`~nat.llm.huggingface_llm.HuggingFaceConfig` class.
 
-* `model_name` - The HuggingFace model name or path (for example, `Qwen/Qwen3Guard-Gen-0.6B`)
+* `model_name` - The Hugging Face model name or path (for example, `Qwen/Qwen3Guard-Gen-0.6B`)
 * `device` - Device for model execution: `cpu`, `cuda`, `cuda:0`, or `auto` (default: `auto`)
 * `dtype` - Torch data type: `float16`, `bfloat16`, `float32`, or `auto` (default: `auto`)
 * `max_new_tokens` - Maximum number of new tokens to generate (default: `128`)
@@ -168,11 +171,56 @@ The HuggingFace LLM provider is defined by the {py:class}`~nat.llm.huggingface_l
 * `trust_remote_code` - Whether to trust remote code when loading the model (default: `false`)
 
 :::{note}
-HuggingFace is a built-in NeMo Agent Toolkit LLM provider, but requires extra dependencies to run. They can be installed with:
+Hugging Face is a built-in NeMo Agent Toolkit LLM provider, but requires extra dependencies to run. They can be installed with:
 ```
 pip install "transformers[torch,accelerate]~=4.57"
 ```
 :::
+
+### Hugging Face Inference
+
+Hugging Face Inference is an LLM provider for remote model inference via the Hugging Face Serverless Inference API, Dedicated Inference Endpoints, or self-hosted TGI servers.
+
+You can use the following environment variables to configure the Hugging Face Inference LLM provider:
+
+* `HF_TOKEN` - The API token to access Hugging Face Inference resources
+
+The Hugging Face Inference LLM provider is defined by the {py:class}`~nat.llm.huggingface_inference_llm.HuggingFaceInferenceLLMConfig` class.
+
+* `model_name` - The Hugging Face model identifier (for example, `meta-llama/Llama-3.2-8B-Instruct`)
+* `api_key` - The Hugging Face API token for authentication
+* `endpoint_url` - Custom endpoint URL for Inference Endpoints or self-hosted TGI servers. If not provided, uses Serverless API
+* `max_new_tokens` - Maximum number of new tokens to generate (default: `512`)
+* `temperature` - Sampling temperature (default: `0.7`)
+* `top_p` - Top-p (nucleus) sampling parameter
+* `top_k` - Top-k sampling parameter
+* `repetition_penalty` - Penalty for repeating tokens
+* `seed` - Random seed for reproducible generation
+* `timeout` - Request timeout in seconds (default: `120.0`)
+
+```yaml
+llms:
+  # Serverless Inference API
+  serverless_llm:
+    _type: huggingface_inference
+    model_name: meta-llama/Llama-3.2-8B-Instruct
+    api_key: ${HF_TOKEN}
+    max_new_tokens: 512
+    temperature: 0.7
+
+  # Dedicated Inference Endpoint
+  endpoint_llm:
+    _type: huggingface_inference
+    model_name: your-model-name
+    api_key: ${HF_TOKEN}
+    endpoint_url: https://your-endpoint.endpoints.huggingface.cloud
+
+  # Self-hosted TGI server
+  tgi_llm:
+    _type: huggingface_inference
+    model_name: local-model
+    endpoint_url: http://localhost:8080
+```
 
 ### NVIDIA Dynamo (experimental)
 

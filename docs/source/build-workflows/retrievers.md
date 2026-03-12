@@ -17,16 +17,16 @@ limitations under the License.
 
 # Retrievers in NVIDIA NeMo Agent Toolkit
 
-Retrievers are an important component of Retrieval Augmented Generation (RAG) [workflows](./about-building-workflows.md) which allow [LLMs](./llms/index.md) to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within NeMo Agent toolkit, retrievers are a configurable component that can be used within [functions](./functions-and-function-groups/functions.md), similar to LLMs and [embedders](./embedders.md), to provide a consistent read-only interface for connecting to different data store providers.
+Retrievers are an important component of Retrieval Augmented Generation (RAG) [workflows](./about-building-workflows.md) which allow [LLMs](./llms/index.md) to search a data store for content which is semantically similar to a query, which can be used as context by the LLM when providing a response to the query. Within NeMo Agent Toolkit, retrievers are a configurable component that can be used within [functions](./functions-and-function-groups/functions.md), similar to LLMs and [embedders](./embedders.md), to provide a consistent read-only interface for connecting to different data store providers.
 
 ## Features
  - **Standard Interface**: Retrievers implement a standard search interface, allowing for compatibility across different retriever implementations.
  - **Standard Output Format**: Retrievers also implement a standard output format along with conversion functions to provide retriever output as a dictionary or string.
  - **Extensible Via Plugins**: Additional retrievers can be added as plugins by developers to support more data stores.
- - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default NeMo Agent toolkit retriever implementation.
+ - **Additional Framework Implementations**: Retrievers can be loaded using a framework implementation rather than the default NeMo Agent Toolkit retriever implementation.
 
 ## Included Retriever Providers
-NeMo Agent toolkit supports the following retriever providers:
+NeMo Agent Toolkit supports the following retriever providers:
 | Provider | Type | Description |
 |----------|------|-------------|
 | [NVIDIA NIM](https://build.nvidia.com) | `nemo_retriever` | NVIDIA Inference Microservice (NIM) |
@@ -77,7 +77,7 @@ The Milvus retriever provider is defined by the {py:class}`~nat.retriever.milvus
 * `description` - If present it will be used as the [tool](./functions-and-function-groups/functions.md#agents-and-tools) description.
 
 ### Configuration Examples
-Retrievers are configured similarly to other NeMo Agent toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type.
+Retrievers are configured similarly to other NeMo Agent Toolkit components, such as Functions and LLMs. Each Retriever provider (e.g., Milvus) has a Pydantic config object which defines its configurable parameters and type.
 
 Below is an example config object for the NeMo Retriever:
 ```python
@@ -139,7 +139,7 @@ functions:
     retriever_tool:
         _type: retriever_tool
         retriever: my_retriever
-        topic: "NeMo Agent toolkit documentation"
+        topic: "NeMo Agent Toolkit documentation"
 ```
 
 ### Developing with Retrievers
@@ -156,4 +156,4 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
     langchain_retriever = await builder.get_retriever(config.retriever, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 ```
 
-Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. NeMo Agent toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the [agent](../components/agents/index.md) when the function is called.
+Retrievers expose a `search` method for retrieving data that takes a single required argument, "query", and any number of optional keyword arguments. NeMo Agent Toolkit Retrievers support a `bind` method which can be used to set or override defaults for these optional keyword arguments. Any additional required, unbound, parameters can be inspected using the `get_unbound_params` method. This provides flexibility in how retrievers are used in functions, allowing for all search parameters to be specified in the config, or allowing some to be specified by the [agent](../components/agents/index.md) when the function is called.

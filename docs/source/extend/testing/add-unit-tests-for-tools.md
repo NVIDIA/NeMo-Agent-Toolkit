@@ -19,19 +19,35 @@ limitations under the License.
 
 ## Overview
 
-Use `nat.test.ToolTestRunner` to test [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development. Refer to `tests/nat/tools/test_tool_test_runner.py` for a full example.
+Use `nat.test.ToolTestRunner` to test [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) in complete isolation without requiring spinning up entire workflows, agents, and external services. This allows you to validate tool functionality quickly and reliably during development. Refer to `packages/nvidia_nat_core/tests/nat/tools/test_tool_test_runner.py` for a full example.
 
 The `nvidia-nat-test` package must be installed to use the `ToolTestRunner`.
 
-If you are working with a checkout of the NeMo Agent Toolkit repository, you can install it in editable mode:
+If you are working with a checkout of the NeMo Agent Toolkit repository, you can install it with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e '.[test]'
+uv pip install -e ".[test]"
 ```
 
-Alternatively, if working outside of the repository, install with:
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
-uv pip install nvidia-nat-test
+uv pip install "nvidia-nat[test]"
 ```
+
+:::
+
+::::
 
 ## Basic Usage
 

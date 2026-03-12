@@ -19,15 +19,15 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-A minimal example demonstrating a simple LangSmith-Documentation agent. This agent leverages the NeMo Agent toolkit plugin system and `Builder` to integrate pre-built and custom tools into the workflow to answer questions about LangSmith. Key elements are summarized below:
+A minimal example demonstrating a simple LangSmith-Documentation agent. This agent leverages the NeMo Agent Toolkit plugin system and `Builder` to integrate pre-built and custom tools into the workflow to answer questions about LangSmith. Key elements are summarized below:
 
 ## Table of Contents
 
 * [Key Features](#key-features)
-* [Prerequisites](#prerequisites)
 * [Installation and Setup](#installation-and-setup)
+  * [Install this Workflow](#install-this-workflow)
+  * [Set Up API Keys](#set-up-api-keys)
 * [Running the Workflow](#running-the-workflow)
-* [Deployment-Oriented Setup](#docker-quickstart)
 
 ---
 
@@ -39,26 +39,13 @@ A minimal example demonstrating a simple LangSmith-Documentation agent. This age
 - **End-to-End Web RAG:** Complete example of Retrieval-Augmented Generation (RAG) using web-scraped content as the knowledge source.
 - **YAML-based Configuration:** Fully configurable workflow demonstrating integration of web scraping, embeddings, and agent reasoning through simple configuration.
 
-## Prerequisites
-
-Ensure that Docker is installed and the Docker service is running before proceeding.
-
-- Install Docker: Follow the official installation guide for your platform: [Docker Installation Guide](https://docs.docker.com/engine/install/)
-- Start Docker Service:
-  - Linux: Run`sudo systemctl start docker` (ensure your user has permission to run Docker).
-  - Mac & Windows: Docker Desktop should be running in the background.
-- Verify Docker Installation: Run the following command to verify that Docker is installed and running correctly:
-  ```bash
-  docker info
-  ```
-
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
-### Install this Workflow:
+### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/getting_started/simple_web_query
@@ -73,7 +60,7 @@ export NVIDIA_API_KEY=<YOUR_API_KEY>
 
 ## Running the Workflow
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 nat run --config_file examples/getting_started/simple_web_query/configs/config.yml --input "What is LangSmith?"
@@ -85,36 +72,4 @@ nat run --config_file examples/getting_started/simple_web_query/configs/config.y
 
 Workflow Result:
 ['LangSmith is a platform for building production-grade LLM (Large Language Model) applications, allowing users to monitor and evaluate their applications, and providing features such as observability, evaluation, and prompt engineering. It is framework-agnostic and can be used with or without LangChain's open source frameworks.']
-```
-
-## Docker Quickstart
-
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent toolkit virtual environment.
-
-Set your NVIDIA API Key in the `NVIDIA_API_KEY` environment variable.
-
-```bash
-export NVIDIA_API_KEY="your_nvidia_api_key"
-```
-
-From the git repository root, run the following command to build NeMo Agent toolkit and the simple agent into a Docker image.
-
-```bash
-docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -f examples/getting_started/simple_web_query/Dockerfile -t simple-web-query-agent .
-```
-
-Then, run the following command to run the simple agent.
-
-```bash
-docker run -p 8000:8000 -e NVIDIA_API_KEY simple-web-query-agent
-```
-
-After the container starts, you can access the agent at http://localhost:8000.
-
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/generate' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{"input_message": "What is LangSmith?"}'
 ```

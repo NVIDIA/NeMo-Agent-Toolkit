@@ -16,22 +16,35 @@ limitations under the License.
 -->
 
 # Configure the ReAct Agent
-Configure the NVIDIA NeMo Agent toolkit ReAct [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a function.
+Configure the NVIDIA NeMo Agent Toolkit ReAct [agent](../index.md) as a [workflow](../../../build-workflows/about-building-workflows.md) or a function.
 
 ## Requirements
-The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands.
+The ReAct agent requires the `nvidia-nat[langchain]` plugin, which can be installed with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
-- If you have performed a source code checkout:
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
-- If you have installed the NeMo Agent toolkit from a package:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 uv pip install "nvidia-nat[langchain]"
 ```
+
+:::
+
+::::
+
 
 ## Configuration
 
@@ -79,6 +92,8 @@ The following are more ways you can configure your config file when using the Re
 * `max_tool_calls`: Defaults to `15`.  The ReAct agent may reason between tool calls, and might use multiple tools to answer the question; the maximum amount of tool calls the agent may take before answering the original question.
 
 * `pass_tool_call_errors_to_agent`: Defaults to `True`.  If set to `True`, the agent will pass tool call errors to the agent.  If set to `False`, the agent will raise an exception.
+
+* `raise_on_parsing_failure`: Defaults to `True`. If set to `True`, the agent raises a `ReActAgentParsingFailedError` when parsing fails after max retries. If set to `False`, error messages are returned as the answer.
 
 * `normalize_tool_input_quotes`: Defaults to `True`. When JSON parsing of the tool input fails and this is `True`, the agent attempts a fallback that replaces single quotes with double quotes and retries parsing. Set to `False` to bypass normalization and pass the raw string to the tool (useful when inputs contain SQL or other quote‑sensitive content).
 

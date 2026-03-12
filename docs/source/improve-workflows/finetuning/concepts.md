@@ -106,7 +106,7 @@ trajectory = [
 ```
 
 :::{note}
-**Trajectory vs. Rollout**: These terms are often used interchangeably. "Rollout" emphasizes the process of generating the sequence (rolling out the policy), while "trajectory" emphasizes the recorded data. In NeMo Agent toolkit, we use "trajectory" for the data structure.
+**Trajectory vs. Rollout**: These terms are often used interchangeably. "Rollout" emphasizes the process of generating the sequence (rolling out the policy), while "trajectory" emphasizes the recorded data. In NeMo Agent Toolkit, we use "trajectory" for the data structure.
 :::
 
 ### Rewards and Returns
@@ -355,7 +355,7 @@ This architecture ensures:
 
 ### Trajectories
 
-A **trajectory** in NeMo Agent toolkit represents a complete interaction sequence:
+A **trajectory** in NeMo Agent Toolkit represents a complete interaction sequence:
 
 ```python
 class Trajectory(BaseModel):
@@ -450,7 +450,7 @@ This structure enables:
 
 ### Reward Functions
 
-Reward functions determine how well an agent performed. The harness uses the NeMo Agent toolkit [**evaluator system**](../../improve-workflows/evaluate.md) to compute rewards:
+Reward functions determine how well an agent performed. The harness uses the NeMo Agent Toolkit [**evaluator system**](../../improve-workflows/evaluate.md) to compute rewards:
 
 ```yaml
 eval:
@@ -471,7 +471,7 @@ This design allows:
 
 ## The Training Loop
 
-A typical training loop in the NeMo Agent toolkit harness:
+A typical training loop in the NeMo Agent Toolkit harness:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐

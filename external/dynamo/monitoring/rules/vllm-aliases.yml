@@ -1,0 +1,149 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Prometheus Recording Rules for vLLM Metric Aliases
+# ===================================================
+#
+# vLLM metrics have different names than SGLang metrics.
+# These recording rules create vLLM metrics with names that match
+# what the Grafana dashboard expects, enabling a single parameterized
+# dashboard to work with both backends.
+#
+# Dashboard variable: ${backend} = "sglang" or "vllm"
+# Dashboard queries: ${backend}:metric_name
+#
+# Metric Mapping:
+#   Dashboard Query        | vLLM Source Metric(s)
+#   -----------------------|---------------------------------------
+#   vllm:cache_hit_efficiency | (request_prompt_tokens_sum - request_prefill_kv_computed_tokens_sum) / request_prompt_tokens_sum
+#   vllm:gen_throughput    | rate(generation_tokens_total)
+#   vllm:token_usage       | kv_cache_usage_perc
+#   vllm:num_running_reqs  | num_requests_running (same name!)
+#   vllm:num_queue_reqs    | num_requests_waiting
+#   vllm:num_used_tokens   | (computed from kv_cache_usage_perc * total_blocks)
+#
+# Source: vLLM v1 metrics implementation
+# =============================================================================
+# The cache_hit_efficiency rule is derived from the per-request Histogram metrics
+# defined in the vLLM v1 Prometheus stat logger:
+#
+#   Image: nvcr.io/nvidia/ai-dynamo/vllm-runtime:0.9.0
+#   Path:  /opt/vllm/vllm/v1/metrics/loggers.py
+#
+# Two Histogram metrics are used:
+#
+#   1. vllm:request_prompt_tokens (Histogram)
+#      - "Number of prefill tokens processed."
+#      - Observed once per finished request with the total prompt token count.
+#      - loggers.py ~line 619-627
+#
+#   2. vllm:request_prefill_kv_computed_tokens (Histogram)
+#      - "Histogram of new KV tokens computed during prefill
+#        (excluding cached tokens)."
+#      - Observed once per finished request as:
+#          prefill_kv_computed = num_prompt_tokens - max(num_cached_tokens, 0)
+#      - loggers.py ~lines 888-899 (definition), ~lines 1150-1155 (recording)
+#
+# The cache hit rate is therefore:
+#   hit_rate = (prompt_tokens - kv_computed) / prompt_tokens
+#            = cached_tokens / prompt_tokens
+#
+# This gives a true per-request weighted metric (each request contributes
+# proportionally to its prompt size) rather than a cumulative lifetime average.
+#
+# Note: vLLM also exposes two Counters (vllm:prefix_cache_hits_total and
+# vllm:prefix_cache_queries_total) which are incremented per scheduler step
+# with batch totals. The Histogram approach is preferred because:
+#   - It is recorded per finished request (not per scheduler batch)
+#   - It preserves per-request granularity via Histogram _sum and _count
+#   - It enables [P50, P95, P99] analysis of per-request cache benefit
+#
+# vLLM also has an internal CachingMetrics class (stats.py) with a 1000-request
+# sliding window, but that is only used for the text log output and is NOT
+# exposed to Prometheus.
+# =============================================================================
+
+groups:
+  - name: vllm_metric_aliases
+    interval: 2s
+    rules:
+      # Cache hit efficiency: per-request weighted metric derived from Histograms.
+      #
+      # Formula: (prompt_tokens - kv_computed_tokens) / prompt_tokens
+      #   = cached_tokens / prompt_tokens
+      #   = fraction of prompt tokens served from prefix cache
+      #
+      # NOTE: This is expressed as (prompt - computed) / prompt rather than
+      # the algebraically equivalent 1 - (computed / prompt). The reason is
+      # idle behavior: when traffic stops, both rates go to 0. With the
+      # "1 - ..." form, 1 - (0 / 1e-6) = 1.0 (falsely shows 100% hit rate).
+      # With "(prompt - computed) / prompt", (0 - 0) / 1e-6 = 0 (correctly
+      # shows 0% when idle).
+      #
+      # IMPORTANT: Both numerator and denominator MUST use the same rate window.
+      # With scrape_interval=2s, rate() needs at least [4s] to have 2 data
+      # points. Using [10s] provides a stable estimate with ~5 samples.
+      #
+      # Source metrics (both per-finished-request Histograms):
+      #   - vllm:request_prefill_kv_computed_tokens_sum  (tokens recomputed)
+      #   - vllm:request_prompt_tokens_sum               (total prompt tokens)
+      #
+      # See file header for full source documentation.
+      - record: "vllm:cache_hit_efficiency"
+        expr: |
+          (
+            (
+              sum by (instance, model_name) (rate(vllm:request_prompt_tokens_sum[10s]))
+              -
+              sum by (instance, model_name) (rate(vllm:request_prefill_kv_computed_tokens_sum[10s]))
+            )
+            /
+            clamp_min(sum by (instance, model_name) (rate(vllm:request_prompt_tokens_sum[10s])), 1e-6)
+          )
+
+      # Generation throughput: rate of generation tokens.
+      # With scrape_interval=2s, [10s] provides ~5 samples for a stable,
+      # noise-free throughput estimate while still being responsive.
+      - record: "vllm:gen_throughput"
+        expr: |
+          rate(vllm:generation_tokens_total[10s])
+
+      # Token usage percentage: direct alias for kv_cache_usage_perc
+      # This matches SGLang's token_usage metric
+      - record: "vllm:token_usage"
+        expr: |
+          vllm:kv_cache_usage_perc
+
+      # Number of requests in queue: alias for num_requests_waiting
+      # This matches SGLang's num_queue_reqs metric
+      - record: "vllm:num_queue_reqs"
+        expr: |
+          vllm:num_requests_waiting
+
+      # Note: vllm:num_requests_running is already the correct name,
+      # but SGLang uses num_running_reqs. Create an alias.
+      - record: "vllm:num_running_reqs"
+        expr: |
+          vllm:num_requests_running
+
+      # Number of used tokens: accurate estimate derived from KV cache usage
+      # percentage multiplied by the true token capacity.
+      #
+      # vLLM exposes num_gpu_blocks and block_size only as string labels on
+      # vllm:cache_config_info (an info metric with value=1.0). PromQL cannot
+      # convert label string values to numbers for arithmetic, so the capacity
+      # is computed as: num_gpu_blocks * block_size = 70977 * 16 = 1,135,632
+      # (read from the vllm:cache_config_info labels on the running worker).
+      #
+      # To preserve correct per-instance labeling, the scalar is applied via an
+      # info-metric join against cache_config_info so each worker instance gets
+      # its own series even when multiple workers are running.
+      #
+      # If GPU memory utilization or block_size changes, re-derive the capacity:
+      #   capacity = num_gpu_blocks * block_size
+      # Both values are visible in: curl http://localhost:18081/metrics | grep cache_config_info
+      - record: "vllm:num_used_tokens"
+        expr: |
+          vllm:kv_cache_usage_perc
+          * on(instance, engine) group_left()
+          (vllm:cache_config_info * 0 + 1135632)

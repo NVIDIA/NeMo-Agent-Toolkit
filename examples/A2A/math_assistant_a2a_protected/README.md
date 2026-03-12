@@ -19,8 +19,8 @@ limitations under the License.
 **Complexity:** 🟨 Intermediate
 
 This example demonstrates an end-to-end OAuth2-protected A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, with added OAuth2 authentication for secure per-user agent-to-agent communication:
-- **Protected A2A Server**: NeMo Agent toolkit calculator service requiring OAuth2 authentication
-- **OAuth2 A2A Client**: NeMo Agent toolkit math assistant with per-user OAuth2 credentials that connects to the protected A2A server
+- **Protected A2A Server**: NeMo Agent Toolkit calculator service requiring OAuth2 authentication
+- **OAuth2 A2A Client**: NeMo Agent Toolkit math assistant with per-user OAuth2 credentials that connects to the protected A2A server
 - **Authorization Server**: Keycloak authorization server for testing OAuth2-protected A2A communication
 
 ## Key Features
@@ -86,7 +86,7 @@ graph TB
    - Validates JWT tokens before processing requests
 
 3. **Keycloak (Authorization Server)**
-   - Example OAuth2 server for testing OAuth2-protected A2A servers in NeMo Agent toolkit
+   - Example OAuth2 server for testing OAuth2-protected A2A servers in NeMo Agent Toolkit
    - Provides OAuth2 endpoints for token exchange by the A2A client
    - Provides JWKS endpoint for token verification by the A2A server
 
@@ -142,13 +142,13 @@ sequenceDiagram
 ## Prerequisites
 
 - Docker installed and running
-- NeMo Agent toolkit development environment set up
+- NeMo Agent Toolkit development environment set up
 - No services running on ports 8080 or 10000
 - NVIDIA API key
 
 ## Installation
 
-From the root directory of the NeMo Agent toolkit library, install this example:
+From the root directory of the NeMo Agent Toolkit library, install this example:
 
 ```bash
 uv pip install -e examples/A2A/math_assistant_a2a_protected
@@ -232,7 +232,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
    - `jwks_uri`: `http://localhost:8080/realms/master/protocol/openid-connect/certs`
    - `introspection_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/token/introspect`
 
-   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NeMo Agent toolkit A2A client discovers these URLs automatically from the discovery endpoint.
+   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NeMo Agent Toolkit A2A client discovers these URLs automatically from the discovery endpoint.
 
 ### Step 3: Register Math Assistant Client
 

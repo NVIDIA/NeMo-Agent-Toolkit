@@ -19,7 +19,7 @@ limitations under the License.
 
 # DPO with NeMo Customizer
 
-This guide covers Direct Preference Optimization (DPO) training using the NeMo Agent toolkit finetuning harness integrated with [NVIDIA NeMo Customizer](https://docs.nvidia.com/nemo/microservices/latest/fine-tune/index.html). 
+This guide covers Direct Preference Optimization (DPO) training using the NeMo Agent Toolkit finetuning harness integrated with [NVIDIA NeMo Customizer](https://docs.nvidia.com/nemo/microservices/latest/fine-tune/index.html). 
 This integration enables preference-based finetuning of large language models using NVIDIA's enterprise-grade training infrastructure.
 
 ## Understanding DPO
@@ -65,7 +65,7 @@ In simpler terms: DPO increases the probability of chosen responses while decrea
 
 ### Preference Pairs from Test-Time Compute
 
-The NeMo Agent toolkit DPO integration uses Test-Time Compute (TTC) to generate preference pairs automatically. During workflow execution:
+The NeMo Agent Toolkit DPO integration uses Test-Time Compute (TTC) to generate preference pairs automatically. During workflow execution:
 
 1. **Multiple Candidates Generated**: For each decision point, the workflow generates multiple candidate responses
 2. **Candidates Scored**: Each candidate is evaluated using a scoring function
@@ -112,7 +112,7 @@ This approach enables automated preference data collection without manual labeli
 │  │  │                  NeMo Customizer Trainer Adapter                 │   ││
 │  │  │                                                                  │   ││
 │  │  │  1. Convert trajectories to JSONL format                         │   ││
-│  │  │  2. Upload dataset to NeMo Datastore (via HuggingFace Hub API)   │   ││
+│  │  │  2. Upload dataset to NeMo Datastore (via Hugging Face Hub API)  │   ││
 │  │  │  3. Submit customization job to NeMo Customizer                  │   ││
 │  │  │  4. Monitor job progress until completion                        │   ││
 │  │  │  5. Optionally deploy trained model                              │   ││
@@ -163,7 +163,7 @@ This provides:
 
 1. **NeMo Microservices Platform (NMP)**: Access to a deployed NeMo Customizer instance
 2. **Entity Store**: For managing datasets, models, and jobs
-3. **Datastore**: For storing training datasets (accessed via HuggingFace Hub API)
+3. **Datastore**: For storing training datasets (accessed via Hugging Face Hub API)
 
 ## Configuration
 
@@ -380,7 +380,7 @@ trainer_adapters:
 |-------|------|---------|-------------|
 | `entity_host` | `str` | **required** | Base URL for NeMo Entity Store (e.g., `https://nmp.example.com`). |
 | `datastore_host` | `str` | **required** | Base URL for NeMo Datastore (e.g., `https://datastore.example.com`). |
-| `hf_token` | `str` | `""` | HuggingFace token for datastore authentication. Can be empty if not required. |
+| `hf_token` | `str` | `""` | Hugging Face token for datastore authentication. Can be empty if not required. |
 
 #### Namespace and Dataset
 
@@ -547,7 +547,7 @@ async def ttc_move_selector(
 
 ### Phase 1: Data Collection
 
-The DPO trajectory builder collects preference data through the NeMo Agent toolkit evaluation system:
+The DPO trajectory builder collects preference data through the NeMo Agent Toolkit evaluation system:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -612,7 +612,7 @@ The trainer adapter converts trajectories and submits to NeMo Customizer:
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │  Upload to NeMo Datastore:                                            │  │
 │  │                                                                       │  │
-│  │  1. Create dataset repo via HuggingFace Hub API                       │  │
+│  │  1. Create dataset repo via Hugging Face Hub API                       │  │
 │  │  2. Register dataset in Entity Store                                  │  │
 │  │  3. Upload training_file.jsonl and validation_file.jsonl              │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
@@ -831,7 +831,7 @@ trainer_adapters:
    curl https://datastore.example.com/health
    ```
 
-2. Check authentication (HuggingFace token if required)
+2. Check authentication (Hugging Face token if required)
 
 3. Verify network connectivity and firewall rules
 

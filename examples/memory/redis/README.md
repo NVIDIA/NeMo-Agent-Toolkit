@@ -33,7 +33,7 @@ These examples use the redis memory backend.
 
 ## Key Features
 
-- **Redis Memory Backend Integration:** Demonstrates how to integrate Redis as a memory backend for NeMo Agent toolkit workflows, enabling persistent memory storage and retrieval across agent interactions.
+- **Redis Memory Backend Integration:** Demonstrates how to integrate Redis as a memory backend for NeMo Agent Toolkit workflows, enabling persistent memory storage and retrieval across agent interactions.
 - **Chat Memory Management:** Shows implementation of simple chat functionality with the ability to create, store, and recall memories using Redis as the underlying storage system.
 - **Embeddings-Based Memory Search:** Uses embeddings models to create vector representations of queries and stored memories, implementing HNSW indexing with L2 distance metrics for efficient similarity search.
 
@@ -52,11 +52,11 @@ docker info
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 To run this example, install the required dependencies by running the following command:
 ```bash
-uv sync --extra langchain --extra redis --extra telemetry
+uv pip install -e .
 ```
 
 ### Start Services
@@ -78,6 +78,13 @@ docker compose -f examples/deploy/docker-compose.phoenix.yml up
 This example shows how to have a simple chat that uses a Redis memory backend for creating and retrieving memories.
 
 An embeddings model is used to create embeddings for queries and for stored memories. Uses HNSW and L2 distance metric.
+
+### Set Up API Keys
+If you have not already done so, follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key. You need to set your NVIDIA API key as an environment variable to access NVIDIA AI services:
+
+```bash
+export NVIDIA_API_KEY=<YOUR_API_KEY>
+```
 
 ### Create Memory
 

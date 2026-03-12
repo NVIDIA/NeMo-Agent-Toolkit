@@ -18,7 +18,7 @@ limitations under the License.
 
 # Profiling and Performance Monitoring of NVIDIA NeMo Agent Toolkit Workflows
 
-The NeMo Agent toolkit Profiler Module provides profiling and forecasting capabilities for [workflows](../build-workflows/about-building-workflows.md). The profiler instruments the workflow execution by:
+The NeMo Agent Toolkit Profiler Module provides profiling and forecasting capabilities for [workflows](../build-workflows/about-building-workflows.md). The profiler instruments the workflow execution by:
 - Collecting usage statistics in real time (using callbacks).
 - Recording the usage statistics on a per-invocation basis (for example, tokens used, time between calls, and [LLM](../build-workflows/llms/index.md) calls).
 - Storing the data for offline analysis.
@@ -26,41 +26,57 @@ The NeMo Agent toolkit Profiler Module provides profiling and forecasting capabi
 - Computing workflow specific metrics for performance analysis (for example, latency, and throughput).
 - Analyzing workflow performance measures such as bottlenecks, latency, and concurrency spikes.
 
-These functionalities will allow NeMo Agent toolkit developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
-At any or every stage in a workflow execution, the NeMo Agent toolkit profiler generates predictions/forecasts about future token and [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) usage. Client-side forecasting allows for workflow-specific predictions, which can be difficult, if not impossible, to achieve server-side in order to facilitate inference planning.
-Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for NeMo Agent toolkit native observability and workflow fingerprinting.
+These functionalities will allow NeMo Agent Toolkit developers to dynamically stress test their workflows in pre-production phases to receive workflow-specific sizing guidance based on observed latency and throughput of their specific workflows
+At any or every stage in a workflow execution, the NeMo Agent Toolkit profiler generates predictions/forecasts about future token and [tool](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) usage. Client-side forecasting allows for workflow-specific predictions, which can be difficult, if not impossible, to achieve server-side in order to facilitate inference planning.
+Will allow for features such as offline-replay or simulation of workflow runs without the need for deployed infrastructure such as tooling/vector DBs, etc. Will also allow for NeMo Agent Toolkit native observability and workflow fingerprinting.
 
 ## Prerequisites
 
-The NeMo Agent toolkit profiler requires additional dependencies not installed by default.
+The NeMo Agent Toolkit profiler is provided by the evaluation package, and some profiler features rely on additional profiling dependencies such as `scikit-learn`.
 
-Install these dependencies by running the following command from the root directory of the NeMo Agent toolkit repository:
+Install both evaluation and profiling support with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e ".[profiling]"
+uv pip install -e ".[eval,profiling]"
 ```
 
-If you are installing from a package, you need to install the `nvidia-nat[profiling]` package by running the following command:
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat[eval,profiling]"
 ```
+
+:::
+
+::::
 
 ## Current Profiler Architecture
-The NeMo Agent toolkit Profiler can be broken into the following components:
+The NeMo Agent Toolkit Profiler can be broken into the following components:
 
 ### Profiler Decorators and Callbacks
-- `src/nat/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
-- `src/nat/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/decorators` directory defines decorators that can wrap each workflow or LLM framework context manager to inject usage-collection callbacks.
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/callbacks` directory implements callback handlers. These handlers track usage statistics (tokens, time, inputs/outputs) and push them to the NeMo Agent Toolkit usage stats queue. We currently support callback handlers for LangChain/LangGraph,
 LlamaIndex, CrewAI, Google ADK, and Semantic Kernel.
 
 ### Profiler Runner
 
-- `src/nat/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent toolkit [Eval](./evaluate.md) module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
+- `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/profile_runner.py` is the main orchestration class. It collects workflow run statistics from the NeMo Agent Toolkit [Eval](./evaluate.md) module, computed workflow-specific metrics, and optionally forecasts usage metrics using the Profiler module.
 
-- Under `src/nat/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
+- Under `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/forecasting`, the code trains scikit-learn style models on the usage data.
 model_trainer.py can train a LinearModel or a RandomForestModel on the aggregated usage data (the raw statistics collected).
 base_model.py, linear_model.py, and random_forest_regressor.py define the abstract base and specific scikit-learn wrappers.
 
-- Under `src/nat/profiler/inference_optimization` we have several metrics that can be computed out evaluation traces of your workflow including workflow latency, commonly used prompt prefixes for caching, identifying workflow bottlenecks, and concurrency analysis.
+- Under `packages/nvidia_nat_eval/src/nat/plugins/eval/profiler/inference_optimization` we have several metrics that can be computed out evaluation traces of your workflow including workflow latency, commonly used prompt prefixes for caching, identifying workflow bottlenecks, and concurrency analysis.
 
 ### CLI Integrations
 Native integrations with `nat eval` to allow for running of the profiler through a unified evaluation interface. Configurability is exposed through a workflow YAML configuration file consistent with evaluation configurations.
@@ -69,9 +85,9 @@ Native integrations with `nat eval` to allow for running of the profiler through
 ## Using the Profiler
 
 ### Step 1: Enabling Instrumentation on a Workflow [Optional]
-**NOTE:** If you don't set it, NeMo Agent toolkit will inspect your code to infer frameworks used. We recommend you set it explicitly.
+**NOTE:** If you don't set it, NeMo Agent Toolkit will inspect your code to infer frameworks used. We recommend you set it explicitly.
 To enable profiling on a workflow, you need to wrap the workflow with the profiler decorators. The decorators can be applied to any workflow using the `framework_wrappers` argument of the `register_function` decorator.
-Simply specify which NeMo Agent toolkit supported frameworks you will be using anywhere in your workflow (including tools) upon registration and the toolkit will automatically apply the appropriate profiling decorators at build time.
+Simply specify which NeMo Agent Toolkit supported frameworks you will be using anywhere in your workflow (including tools) upon registration and the toolkit will automatically apply the appropriate profiling decorators at build time.
 For example:
 
 ```python
@@ -80,9 +96,9 @@ async def webquery_tool(config: WebQueryToolConfig, builder: Builder):
 ```
 
 Once workflows are instrumented, the profiler will collect usage statistics in real time and store them for offline analysis for any LLM invocations or tool calls your workflow makes during execution. Runtime telemetry
-is stored in a `intermediate_steps_stream` context variable during runtime. NeMo Agent toolkit has a subscriber that will read intermediate steps through eval.
+is stored in a `intermediate_steps_stream` context variable during runtime. NeMo Agent Toolkit has a subscriber that will read intermediate steps through eval.
 
-Even if a function isn’t one of the built-in NeMo Agent toolkit “Functions”, you can still profile it with our simple decorator. The `@track_function` decorator helps you capture details such as when a function starts and ends, its input arguments, and its output—even if the function is asynchronous, a generator, or a class method.
+Even if a function isn’t one of the built-in NeMo Agent Toolkit “Functions”, you can still profile it with our simple decorator. The `@track_function` decorator helps you capture details such as when a function starts and ends, its input arguments, and its output—even if the function is asynchronous, a generator, or a class method.
 
 #### How It Works
 
@@ -108,14 +124,14 @@ It supports all kinds of functions:
   The decorator converts input arguments and outputs into a `JSON`-friendly format (with special handling for Pydantic models), making the data easier to analyze.
 
 - **Reactive Event Streaming:**
-  All profiling events are pushed to the `NeMo Agent toolkit` intermediate step stream, so you can subscribe and monitor events in real time.
+  All profiling events are pushed to the `NeMo Agent Toolkit` intermediate step stream, so you can subscribe and monitor events in real time.
 
 #### How to Use
 
 Just decorate your custom function with `@track_function` and provide any optional metadata if needed:
 
 ```python
-from nat.profiler.decorators.function_tracking import track_function
+from nat.plugins.eval.profiler.decorators.function_tracking import track_function
 
 @track_function(metadata={"action": "compute", "source": "custom_function"})
 def my_custom_function(a, b):
@@ -152,6 +168,18 @@ eval:
       concurrency_spike_analysis:
         enable: true
         spike_threshold: 7
+      # Build a prediction trie for Dynamo routing hints
+      prediction_trie:
+        enable: true
+        # Auto-compute latency sensitivity per LLM call position
+        auto_sensitivity: true
+        sensitivity_scale: 5
+        # Weights for the three scoring signals (must sum to 1.0)
+        w_critical: 0.5
+        w_fanout: 0.3
+        w_position: 0.2
+        # Penalty for LLM calls that run in parallel with longer siblings (default 0.0)
+        w_parallel: 0.0
 
   evaluators:
     accuracy:
@@ -179,6 +207,7 @@ Please also note the `output_dir` parameter which specifies the directory where 
 - `prompt_caching_prefixes`: Identify common prompt prefixes. This is helpful for identifying if you have commonly repeated prompts that can be pre-populated in KV caches
 - `bottleneck_analysis`: Analyze workflow performance measures such as bottlenecks, latency, and concurrency spikes. This can be set to `simple_stack` for a simpler analysis. Nested stack will provide a more detailed analysis identifying nested bottlenecks like tool calls inside other tools calls.
 - `concurrency_spike_analysis`: Analyze concurrency spikes. This will identify if there are any spikes in the number of concurrent tool calls. At a `spike_threshold` of 7, the profiler will identify any spikes where the number of concurrent running functions is greater than or equal to 7. Those are surfaced to the user in a dedicated section of the workflow profiling report.
+- `prediction_trie`: Build a prediction trie from execution traces for `Dynamo` routing hint injection at runtime. See the [Prediction Trie](#prediction-trie-and-dynamo-routing-hints) section below for details.
 
 ### Step 3: Running the Profiler
 
@@ -194,16 +223,112 @@ This will, based on the above configuration, produce the following files in the 
 - `inference_optimization.json`: This file contains the computed workflow-specific metrics. This includes 90%, 95%, and 99% confidence intervals for latency, throughput, and workflow runtime.
 - `standardized_data_all.csv`: This file contains the standardized usage data including prompt tokens, completion tokens, LLM input, framework, and other metadata.
 - You'll also find a JSON file and text report of any advanced or experimental techniques you ran including concurrency analysis, bottleneck analysis, or PrefixSpan.
+- `prediction_trie.json`: When `prediction_trie.enable` is set to `true`, this file contains the prediction trie — a hierarchical model of your workflow's LLM call patterns. See below for details.
 
+
+## Prediction Trie and Dynamo Routing Hints
+
+The prediction trie is a hierarchical data structure built from profiling traces that captures per-LLM-call-position statistics for your workflow. When deployed with a `Dynamo` LLM backend, these statistics are injected as routing hints to optimize `KV` cache management and request scheduling.
+
+### What the Prediction Trie Captures
+
+During profiling, the `trie` builder processes all LLM call events and, for each unique position in your workflow's call graph (identified by `function path` and `call index`), accumulates:
+
+- **Remaining calls**: How many more LLM calls are expected after this one in the workflow.
+- **`Interarrival` time**: Expected time in milliseconds until the next LLM call.
+- **Output tokens**: Expected output token count for this call (with `p50`, `p90`, `p95` percentiles).
+- **Latency sensitivity** (when `auto_sensitivity` is enabled): An auto-computed score indicating how latency-critical this particular call is.
+
+Each metric is aggregated across all profiled traces, producing robust percentile-based predictions.
+
+### Auto Latency Sensitivity
+
+When `auto_sensitivity` is enabled (the default), the profiler automatically determines which LLM calls in your workflow are most latency-critical using three composite signals:
+
+**Critical path weight** (`w_critical`, default 0.5): What fraction of the workflow's total wall-clock time does this call consume? Calls that dominate overall latency score highest.
+
+**Downstream fan-out** (`w_fanout`, default 0.3): How many subsequent LLM calls depend on this call completing? A planning call that gates 5 downstream tool calls scores higher than a leaf call with no dependents.
+
+**User-facing position** (`w_position`, default 0.2): First and last calls in a workflow get boosted sensitivity because they directly affect perceived latency (time-to-first-activity and time-to-final-answer).
+
+**Parallel sibling slack** (`w_parallel`, default 0.0): When an LLM call runs concurrently with a longer sibling task (e.g., a database query or tool call), the LLM call is not on the critical path — the parent waits for the slowest child. The profiler detects this by grouping spans under the same parent and computing how much "slack" the LLM call has relative to its longest overlapping sibling. A call entirely shadowed by a 5x longer sibling gets a slack ratio near 1.0, while a call that is itself the longest sibling gets 0.0. This signal is subtracted from the composite score, reducing sensitivity for calls that have room to be slower without affecting overall latency. Set `w_parallel` to a positive value (e.g., 0.2–0.3) to enable this signal.
+
+These signals are normalized to [0, 1], combined with the configured weights, and mapped to an integer scale from 1 to `sensitivity_scale`. The result is stored alongside each prediction in the `trie`.
+
+#### Override behavior
+
+Auto-computed sensitivity only applies when no manual `@latency_sensitive` decorator is active. If a developer explicitly annotates a function, the manual value always takes precedence:
+
+| Scenario | Effective sensitivity |
+|----------|----------------------|
+| No decorator, no `trie` prediction | Default (2) |
+| No decorator, `trie` says 4 | Auto (4) |
+| `@latency_sensitive(5)`, `trie` says 3 | Manual (5) |
+| `@latency_sensitive(1)`, `trie` says 4 | Manual (1) |
+
+### Enabling the Prediction Trie
+
+Add the `prediction_trie` section to your profiler config:
+
+```yaml
+profiler:
+  prediction_trie:
+    enable: true
+    # Auto latency sensitivity (enabled by default)
+    auto_sensitivity: true
+    sensitivity_scale: 5       # Integer range [1, N] for sensitivity scores
+    w_critical: 0.5            # Weight for critical path signal
+    w_fanout: 0.3              # Weight for fan-out signal
+    w_position: 0.2            # Weight for position signal
+    w_parallel: 0.0            # Penalty for parallel sibling slack (0.0 = disabled)
+```
+
+After running `nat eval`, the profiler writes `prediction_trie.json` to your output directory.
+
+### Using the Prediction Trie at Runtime
+
+To use the `trie` for `Dynamo` routing, set the `prediction_trie_path` on your `Dynamo` LLM config:
+
+```yaml
+llms:
+  my_dynamo_llm:
+    _type: dynamo
+    model: my-model
+    base_url: http://dynamo-endpoint:8000/v1
+    prediction_trie_path: ./.tmp/eval/output/prediction_trie.json
+```
+
+At runtime, the `Dynamo` transport automatically:
+1. Looks up the current `function path` and `call index` in the `trie`.
+2. Overrides static routing hints (`output tokens`, `interarrival time`, `remaining calls`) with per-call-position predictions from profiler data.
+3. If the prediction includes an auto-computed `latency_sensitivity` and no manual `@latency_sensitive` decorator is active, uses the auto value for priority computation.
+4. Injects all hints into `nvext.agent_hints` in the request body for the `Dynamo` backend.
+
+This means you can profile once, then deploy with intelligent per-call routing — no manual annotation required.
+
+### Manual Latency Sensitivity
+
+For cases where you have domain knowledge the profiler cannot observe (e.g., a call feeds a real-time UI), you can manually annotate functions:
+
+```python
+from nat.plugins.eval.profiler.decorators.latency import latency_sensitive
+
+@latency_sensitive(5)
+async def user_facing_response():
+    """This call directly produces output the user sees."""
+    return await llm.generate(prompt)
+```
+
+Manual annotations always override auto-computed values when both are present.
 
 
 ## Walkthrough of Profiling a Workflow
-In this guide, we will walk you through an end-to-end example of how to profile a NeMo Agent toolkit workflow using the NeMo Agent toolkit profiler, which is part of the library's evaluation harness.
+In this guide, we will walk you through an end-to-end example of how to profile a NeMo Agent Toolkit workflow using the NeMo Agent Toolkit profiler, which is part of the library's evaluation harness.
 We will begin by creating a workflow to profile, explore some of the configuration options of the profiler, and then perform an in-depth analysis of the profiling results.
 
 ### Defining a Workflow
 For this guide, we will use a simple, but useful, workflow that analyzes the body of a given email to determine if it is a Phishing email. We will define a single tool that takes an email body as input and returns a response on
-whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the NeMo Agent toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/evaluation_and_profiling/email_phishing_analyzer/`.
+whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the NeMo Agent Toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/evaluation_and_profiling/email_phishing_analyzer/`.
 
 ### Configuring the Workflow
 The configuration file for the workflow is as follows. Here, pay close attention to how the `profiler` and `eval` sections are configured.
@@ -450,12 +575,12 @@ Clearly, the `phi-3-*` models are not good fits given their `groundedness` and `
 The `mixtral-8x22b-instruct` model has a much higher runtime than the `llama-3.1-8b-instruct` model, so we will not use it either. The `llama-3.1-8b-instruct` model has the highest `groundedness` and `relevance`, so we will use it for our workflow.
 
 ### Conclusion
-In this guide, we walked through an end-to-end example of how to profile a NeMo Agent toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
+In this guide, we walked through an end-to-end example of how to profile a NeMo Agent Toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
 
 If you'd like to optimize further, we recommend exploring the `workflow_profiling_report.txt` file that was also created by the profiler. That has detailed information about workflow bottlenecks, and latency at various `concurrencies`, which can be helpful metrics when identifying performance issues in your workflow.
 
 ## Providing Feedback
 
-We welcome feedback on the NeMo Agent toolkit Profiler module. Please provide feedback by creating an issue on the [Git repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
+We welcome feedback on the NeMo Agent Toolkit Profiler module. Please provide feedback by creating an issue on the [Git repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
 
 If you're filing a bug report, please also include a reproducer workflow and the profiler output files.

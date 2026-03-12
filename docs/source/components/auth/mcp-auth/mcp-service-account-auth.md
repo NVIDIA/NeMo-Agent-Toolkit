@@ -52,7 +52,7 @@ Service account authentication uses two types of tokens depending on the MCP ser
 
 ## Configuring Service Account Auth Provider
 
-The `mcp_service_account` provider is a built-in authentication provider in the NVIDIA NeMo Agent toolkit. Configure it in your workflow YAML file:
+The `mcp_service_account` provider is a built-in authentication provider in the NVIDIA NeMo Agent Toolkit. Configure it in your workflow YAML file:
 
 ```yaml
 authentication:
@@ -261,14 +261,14 @@ Function signature: `async def get_service_token(**kwargs) -> str | tuple[str, s
 The function can:
 - Return `str` for the token (uses `header` from config)
 - Return `tuple[str, str]` for `(header_name, token)` to override the header
-- Access runtime context via `AIQContext.get()` if needed
+- Access runtime context via `Context.get()` if needed
 - Receive additional arguments via the `kwargs` field in configuration
 
 Example:
 ```python
 async def get_service_token(vault_path: str, **kwargs) -> str:
-    from nat.builder.context import AIQContext
-    context = AIQContext.get()
+    from nat.builder.context import Context
+    context = Context.get()
     # Fetch token from vault, use context metadata if needed
     return fetch_from_vault(vault_path)
 ```

@@ -20,7 +20,7 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
-create_env group:dev extra:all
+create_env
 
 rapids-logger "Git Version: $(git describe)"
 
@@ -42,16 +42,12 @@ if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
        COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report_${DATE_TAG}.xml"
 fi
 
-pytest ${PYTEST_ARGS}  \
-       --junit-xml=${REPORT_NAME} \
-       --cov=nat --cov-report term-missing \
-       --cov-report=xml:${COV_REPORT_NAME}
+python ${GITLAB_SCRIPT_DIR}/../run_tests.py ${PYTEST_ARGS} --junit_xml=${REPORT_NAME} --cov_xml=${COV_REPORT_NAME}
+
 PYTEST_RESULTS=$?
 
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
-       # Since this dependency is specific to only this script, we will just install it here
-       rapids-logger "Installing slack-sdk"
-       uv pip install "slack-sdk~=3.36"
+       install_slack_sdk
 
        rapids-logger "Reporting test results"
        ${GITLAB_SCRIPT_DIR}/report_test_results.py ${REPORT_NAME} ${COV_REPORT_NAME}

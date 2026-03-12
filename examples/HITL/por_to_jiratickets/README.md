@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-A minimal example demonstrating an end-to-end Jira ticket creating agentic workflow. This workflow leverages the NeMo Agent toolkit plugin system to integrate pre-built and custom tools into the workflow.
+A minimal example demonstrating an end-to-end Jira ticket creating agentic workflow. This workflow leverages the NeMo Agent Toolkit plugin system to integrate pre-built and custom tools into the workflow.
 
 ## Table of Contents
 
@@ -52,11 +52,11 @@ Steps to create a Jira token:
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/HITL/por_to_jiratickets
@@ -79,7 +79,7 @@ export JIRA_TOKEN=<YOUR_JIRA_TOKEN>
 
 ### Human in the Loop (HITL) Configuration
 It is often helpful, or even required, to have human input during the execution of an agent workflow. For example, to ask about preferences, confirmations, or to provide additional information.
-The NeMo Agent toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
+The NeMo Agent Toolkit library provides a way to add HITL interaction to any tool or function, allowing for the dynamic collection of information during the workflow execution, without the need for coding it
 into the agent itself. For instance, this example asks for user permission to create Jira issues and tickets before creating them. We can view the implementation in the
 `examples/HITL/por_to_jiratickets/src/nat_por_to_jiratickets/jira_tickets_tool.py` file. The implementation is below:
 
@@ -134,14 +134,14 @@ async def create_jira_tickets_tool(config: CreateJiraToolConfig, builder: Builde
         logger.debug("Creating %s in Jira", input_text)
         # Rest of the function
 ```
-As we see above, requesting user input using NeMo Agent toolkit is straightforward. We can use the `user_input_manager` to prompt the user for input. The user's response is then processed to determine the next steps in the workflow.
+As we see above, requesting user input using NeMo Agent Toolkit is straightforward. We can use the `user_input_manager` to prompt the user for input. The user's response is then processed to determine the next steps in the workflow.
 This can occur in any tool or function in the workflow, allowing for dynamic interaction with the user as needed.
 
 ## Example Usage
 
 ### Run the Workflow
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 nat run --config_file examples/HITL/por_to_jiratickets/configs/config.yml  --input "Can you extract por file por_requirements.txt, assign story points and create jira tickets for epics first and then followed by tasks?"
@@ -180,8 +180,8 @@ Workflow Result:
 
 Action: create_jira_tickets_tool
 Action Input: {'input_text': 'epics'}
-2025-03-12 16:49:54,916 - nat.agent.react_agent.agent - INFO - Calling tool create_jira_tickets_tool with input: {'input_text': 'epics'}
-2025-03-12 16:49:54,916 - nat.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
+2025-03-12 16:49:54,916 - nat.plugins.langchain.agent.react_agent.agent - INFO - Calling tool create_jira_tickets_tool with input: {'input_text': 'epics'}
+2025-03-12 16:49:54,916 - nat.plugins.langchain.agent.react_agent.agent - INFO - Successfully parsed structured tool input from Action Input
 I would like to create Jira tickets for the extracted data. Please confirm if you would like to proceed. Respond with 'yes' or 'no'.: no
 
 <snipped for brevity>

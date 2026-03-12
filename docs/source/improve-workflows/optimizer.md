@@ -16,13 +16,13 @@ limitations under the License.
 -->
 # NVIDIA NeMo Agent Toolkit Optimizer
 
-This document provides a comprehensive overview of how to use the NeMo Agent toolkit Optimizer to tune your NeMo Agent toolkit [workflows](../build-workflows/about-building-workflows.md).
+This document provides a comprehensive overview of how to use the NeMo Agent Toolkit Optimizer to tune your NeMo Agent Toolkit [workflows](../build-workflows/about-building-workflows.md).
 
 ## Introduction
 
 ### What is Parameter Optimization?
 
-Parameter optimization is the process of automatically finding the best combination of settings (parameters) for your NeMo Agent toolkit workflows. Think of it like tuning a musical instrument – you adjust different knobs and strings until you achieve the perfect sound. Similarly, AI workflows have various "knobs" you can adjust:
+Parameter optimization is the process of automatically finding the best combination of settings (parameters) for your NeMo Agent Toolkit workflows. Think of it like tuning a musical instrument – you adjust different knobs and strings until you achieve the perfect sound. Similarly, AI workflows have various "knobs" you can adjust:
 
 - **Hyperparameters**: Numerical settings that control model behavior (such as `temperature`, `top_p`, `max_tokens`)
 - **Prompts**: The instructions and context you provide to language models
@@ -38,7 +38,7 @@ Manual parameter tuning has several challenges:
 3. **Lack of reproducibility**: Manual tuning is hard to document and reproduce
 4. **Complex interactions**: Parameters often interact in non-obvious ways
 
-The NeMo Agent toolkit Optimizer solves these problems by:
+The NeMo Agent Toolkit Optimizer solves these problems by:
 
 - **Automating the search process**: Tests hundreds of parameter combinations automatically
 - **Using intelligent algorithms**: Employs proven optimization techniques (Optuna for numerical parameters, genetic algorithms for prompts)
@@ -66,7 +66,7 @@ This guide will walk you through:
 
 ## How it Works
 
-The NeMo Agent toolkit Optimizer uses a combination of techniques to find the best parameters for your workflow:
+The NeMo Agent Toolkit Optimizer uses a combination of techniques to find the best parameters for your workflow:
 
 - Numerical Values
   - [Optuna](https://optuna.org/) is used to optimize numerical values.
@@ -87,7 +87,7 @@ The optimization process follows the steps outlined in the diagram above:
 
 4.  **Parameter Suggestion**: In each numeric trial, Optuna's sampler suggests a new set of hyperparameters from the `SearchSpace` you defined with `OptimizableField`. For prompt optimization, a population of prompts is evolved each generation using LLM-powered mutation and optional recombination guided by the `prompt_purpose`. No trajectory feedback is used.
 
-5.  **Workflow Execution**: The NeMo Agent toolkit workflow is executed using the suggested parameters for that trial. This is repeated `reps_per_param_set` times to ensure the results are statistically stable.
+5.  **Workflow Execution**: The NeMo Agent Toolkit workflow is executed using the suggested parameters for that trial. This is repeated `reps_per_param_set` times to ensure the results are statistically stable.
 
 6.  **[Evaluation](./evaluate.md)**: The output of each workflow run is passed to the evaluators defined in the `eval_metrics` configuration. Each evaluator calculates a score for a specific objective (such as correctness, latency, or creativity).
 
@@ -122,6 +122,40 @@ There are three main types of search spaces:
 1. **Continuous Numerical**: A range of numbers (e.g., temperature from 0.1 to 0.9)
 2. **Discrete/Categorical**: A list of specific choices (e.g., model names)
 3. **Prompt**: Special search space for optimizing text prompts using AI-powered mutations
+
+### Loading Prompts from Files
+
+Instead of embedding prompts directly in YAML, you can load them from external files using the `file://` prefix:
+
+```yaml
+workflow:
+  _type: react_agent
+  # Load from relative path (resolved from config file directory)
+  system_prompt: file://prompts/agent_system.j2
+
+  # Absolute paths also work
+  user_prompt: file:///opt/prompts/user.txt
+
+functions:
+  my_analyzer:
+    _type: email_phishing_analyzer
+    # Prompts in nested configs work too
+    prompt: file://prompts/phishing_analysis.txt
+```
+
+**Rules:**
+
+- Only fields whose key ends with `prompt` (case-insensitive) are eligible
+- The value must start with `file://`
+- Relative paths are resolved from the configuration file's directory
+- Allowed extensions: `.txt`, `.md`, `.j2`, `.jinja2`, `.jinja`, `.prompt`, `.tpl`, `.template`
+
+**Benefits for Optimization:**
+
+- Keep prompts in version-controlled files
+- Edit prompts without modifying YAML structure
+- Share base prompts across optimization configuration files
+- The optimizer will still mutate the loaded prompt content during GA optimization
 
 ### How They Work Together
 
@@ -341,8 +375,8 @@ This is the main configuration object for the optimizer.
 -   `prompt.ga_tournament_size: int`: Tournament size when `ga_selection_method` is `tournament`. Defaults to `3`.
 -   `prompt.ga_parallel_evaluations: int`: Maximum number of concurrent evaluations. Controls async concurrency. Defaults to `8`.
 -   `prompt.ga_diversity_lambda: float`: Diversity penalty strength to discourage duplicate prompt sets. `0.0` disables it. Defaults to `0.0`.
--   `prompt.prompt_population_init_function: str | null`: Function name used to mutate base prompts to seed the initial population and perform mutations. The NeMo Agent Toolkit includes a built-in `prompt_init` Function located in the {py:mod}`~nat.agent.prompt_optimizer.register` file you can use in your configurations.
--   `prompt.prompt_recombination_function: str | null`: Optional function name used to recombine two parent prompts into a child prompt. The NeMo Agent Toolkit includes a built-in `prompt_recombiner` Function located in the {py:mod}`~nat.agent.prompt_optimizer.register` file you can use in your configurations.
+-   `prompt.prompt_population_init_function: str | null`: Function name used to mutate base prompts to seed the initial population and perform mutations. The NeMo Agent Toolkit includes a built-in `prompt_init` Function located in the {py:mod}`~nat.plugins.langchain.agent.prompt_optimizer.register` file you can use in your configurations.
+-   `prompt.prompt_recombination_function: str | null`: Optional function name used to recombine two parent prompts into a child prompt. The NeMo Agent Toolkit includes a built-in `prompt_recombiner` Function located in the {py:mod}`~nat.plugins.langchain.agent.prompt_optimizer.register` file you can use in your configurations.
 -   `reps_per_param_set: int`: The number of times to run the workflow for each set of parameters to get a more stable evaluation. This is important for noisy evaluations where the result might vary even with the same parameters. Defaults to `3`.
 -   `target: float | None`: If set, the optimization will stop when the combined score for a trial reaches this value. This is useful if you have a specific performance target and want to save time. The score is normalized between 0 and 1. Defaults to `None`.
 -   `multi_objective_combination_mode: str`: How to combine multiple objective scores into a single scalar. Supported: `harmonic`, `sum`, `chebyshev`. Defaults to `harmonic`.
@@ -444,13 +478,80 @@ All LLM calls and evaluations are executed asynchronously with a concurrency lim
 > - `ga_parallel_evaluations`: Tune based on your environment to balance throughput and rate limits.
 > - **Tip**: Start with 8 and increase until hitting rate limits.
 
+### Oracle Feedback Configuration
+
+Oracle feedback enables context-grounded improvement by extracting reasoning from poorly-performing evaluation items and feeding it back into the mutation process. Instead of blind evolution, the optimizer learns *why* certain prompts failed.
+
+#### Configuration Options
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `oracle_feedback_mode` | `"never"` | When to inject feedback: `"never"`, `"always"`, `"failing_only"`, `"adaptive"` |
+| `oracle_feedback_worst_n` | `5` | Number of worst-scoring items to extract reasoning from |
+| `oracle_feedback_max_chars` | `4000` | Maximum characters for feedback in mutation prompt |
+| `oracle_feedback_fitness_threshold` | `0.3` | For `failing_only`: threshold below which feedback is injected |
+| `oracle_feedback_stagnation_generations` | `3` | For `adaptive`: generations without improvement before enabling |
+| `oracle_feedback_fitness_variance_threshold` | `0.01` | For `adaptive`: variance threshold for collapse detection |
+| `oracle_feedback_diversity_threshold` | `0.5` | For `adaptive`: prompt duplication ratio threshold |
+
+#### Feedback Modes
+
+- **`never`** (default): No feedback injection, original behavior
+- **`always`**: Every mutation receives feedback from the parent's worst evaluation items
+- **`failing_only`**: Only individuals below the fitness threshold receive feedback
+- **`adaptive`**: Starts without feedback, enables when fitness stagnates or diversity collapses
+
+#### Evaluator Requirements
+
+For oracle feedback to work effectively, your evaluators must populate the `reasoning` field in `EvalOutputItem`:
+
+```python
+EvalOutputItem(
+    id="item_123",
+    score=0.2,
+    reasoning="The response failed to address the user's question about pricing. "
+              "Instead, it provided generic product information."
+)
+```
+
+The reasoning should explain *why* an item scored poorly, not just the score itself. This explanation is then used to guide prompt mutations toward addressing the identified issues.
+
+#### Example Configuration
+
+```yaml
+optimizer:
+  prompt:
+    enabled: true
+    oracle_feedback_mode: "adaptive"
+    oracle_feedback_worst_n: 5
+    oracle_feedback_max_chars: 4000
+```
+
+> ### 🎯 Oracle Feedback Tuning
+>
+> **Mode Selection**
+> - Use `"never"` for baseline comparisons or when evaluators lack reasoning
+> - Use `"always"` when you have high-quality reasoning and want maximum guidance
+> - Use `"failing_only"` to focus feedback on struggling prompts
+> - Use `"adaptive"` for hands-off optimization that self-corrects when stuck
+>
+> **Reasoning Quality**
+> - Better reasoning = better mutations
+> - Ensure evaluators explain *why* items failed, not just *that* they failed
+> - Reasoning can be strings, dictionaries, or Pydantic models (all are converted to strings)
+>
+> **Character Limit**
+> - Default 4000 chars protects context window
+> - Increase for complex multi-evaluator setups
+> - Decrease if mutations become too verbose
+
 ---
 
 ### Outputs
 
 During GA prompt optimization, the optimizer saves:
 
-- `optimized_prompts_gen<N>.json`: Best prompt set after generation N.
+- `optimized_prompts_gen<N>.json`: Best prompt set after each generation.
 - `optimized_prompts.json`: Final best prompt set after all generations.
 - `ga_history_prompts.csv`: Per-individual fitness and metric history across generations.
 
@@ -565,9 +666,56 @@ This matrix visualization shows:
 - If accuracy is paramount: Select the highest accuracy configuration and accept the latency trade-off
 - For balanced performance: Pick a point in the middle of the Pareto front
 
+## Optimization Callbacks
+
+The optimization system provides a callback interface that allows observability providers to track optimization trials as structured experiments. Callbacks enable per-trial experiment isolation, parameter tracking, and prompt version management in observability platforms.
+
+### `OptimizerCallback` Protocol
+
+Any class implementing the following methods can be registered as an optimization callback:
+
+| Lifecycle Hook | When It Fires | What a Callback Can Do |
+| -------------- | ------------- | ---------------------- |
+| `pre_create_experiment(dataset_items)` | Before any trials run, after the dataset is loaded | Create a shared dataset for the entire optimization run in the provider |
+| `get_trial_project_name(trial_number)` | Before each trial's eval run starts | Return a per-trial project name and pre-create it in the provider |
+| `on_trial_end(result)` | After each trial completes | Link traces to dataset examples, attach feedback scores, record parameter configurations, push prompt versions |
+| `on_study_end(best_trial, total_trials)` | After all trials complete | Tag the best trial's artifacts (e.g., prompt commits), record a study summary |
+
+The `on_trial_end` and `on_study_end` callbacks receive a `TrialResult` object containing:
+
+- `trial_number`: The zero-indexed trial number.
+- `parameters`: A dictionary of parameter names to values used in this trial.
+- `metric_scores`: A dictionary of metric names to scores.
+- `is_best`: Whether this trial is the best so far.
+- `prompts`: A dictionary of parameter names to prompt text (for prompt GA trials).
+- `prompt_formats`: A dictionary of parameter names to template formats (`"f-string"`, `"jinja2"`, `"mustache"`).
+- `eval_result`: The `EvalResult` object with per-item scores and traces.
+
+### Registration
+
+Callbacks are registered via the `@register_optimizer_callback(config_type=...)` decorator, keyed to a telemetry exporter configuration type. When that exporter is configured in `general.telemetry.tracing`, the callback is automatically constructed and registered with no additional user configuration needed.
+
+For example, a provider registers its callback by decorating a factory function:
+
+```python
+from nat.cli.register_workflow import register_optimizer_callback
+
+@register_optimizer_callback(config_type=MyTelemetryExporter)
+def _build_my_optimizer_callback(config, *, dataset_name=None, **kwargs):
+    return MyOptimizationCallback(project=config.project, dataset_name=dataset_name)
+```
+
+When the user configures the corresponding telemetry exporter in their workflow YAML, the callback is created and registered automatically.
+
+### Built-in Implementation
+
+LangSmith implements this callback pattern with per-trial experiment projects, feedback scores, parameter metadata, and prompt repo version tracking. See the [LangSmith integration guide](../run-workflows/observe/observe.md?provider=LangSmith#provider-integration-guides){.external} for details on what LangSmith tracks during optimization.
+
+Other observability providers can implement the same `OptimizerCallback` protocol to add their own trial tracking during optimization.
+
 ## A Complete Example of Optimization
 
-For a complete example of using the optimizer, see the `email_phishing_analyzer` example in the `evaluation_and_profiling` section of the examples in the NeMo Agent toolkit repository.
+For a complete example of using the optimizer, see the `email_phishing_analyzer` example in the `evaluation_and_profiling` section of the examples in the NeMo Agent Toolkit repository.
 
 ## Best Practices and Tuning Guide
 

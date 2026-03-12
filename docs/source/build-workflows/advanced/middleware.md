@@ -19,14 +19,14 @@ limitations under the License.
 
 ## Overview
 
-Middleware provides a powerful mechanism for adding cross-cutting concerns to functions in the NeMo Agent toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), middleware wraps function calls with a four-phase pattern:
+Middleware provides a powerful mechanism for adding cross-cutting concerns to functions in the NeMo Agent Toolkit without modifying the function implementation itself. Like middleware in web frameworks (Express.js, FastAPI, etc.), middleware wraps function calls with a four-phase pattern:
 
 1. **Preprocess** - Inspect and modify inputs before calling next
 2. **Call Next** - Delegate to the next middleware or function
 3. **Postprocess** - Process, transform, or augment outputs
 4. **Continue** - Return or yield the final result
 
-Middleware components are first-class components in NeMo Agent toolkit, configured in YAML and built by the workflow builder, just like retrievers, [memory](../memory.md) providers, and other components.
+Middleware components are first-class components in NeMo Agent Toolkit, configured in YAML and built by the workflow builder, just like retrievers, [memory](../memory.md) providers, and other components.
 
 ## Key Concepts
 
@@ -774,7 +774,7 @@ Solution: Ensure the middleware is defined in the `middleware` section of your Y
 ```
 ModuleNotFoundError: No module named 'nat.middleware.register'
 ```
-Solution: Ensure the register module is imported. NeMo Agent toolkit automatically imports `nat.middleware.register` when importing `nat.middleware`.
+Solution: Ensure the register module is imported. NeMo Agent Toolkit automatically imports `nat.middleware.register` when importing `nat.middleware`.
 
 **Cache not working**
 - Check `enabled_mode` setting

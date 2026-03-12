@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Agent toolkit library, fully configured through a YAML file. It showcases the NeMo Agent toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
+This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Agent Toolkit library, fully configured through a YAML file. It showcases the NeMo Agent Toolkit plugin system and `Builder` to seamlessly integrate pre-built and custom tools into workflows.
 
 ## Table of Contents
 
@@ -28,11 +28,6 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Ag
   - [Install this Workflow:](#install-this-workflow)
   - [Set Up API Keys](#set-up-api-keys)
   - [Run the Workflow](#run-the-workflow)
-- [Deployment-Oriented Setup](#deployment-oriented-setup)
-  - [Build the Docker Image](#build-the-docker-image)
-  - [Run the Docker Container](#run-the-docker-container)
-  - [Test the API](#test-the-api)
-  - [Expected API Output](#expected-api-output)
 
 ---
 
@@ -41,18 +36,18 @@ This example demonstrates an end-to-end (E2E) agentic workflow using the NeMo Ag
 - **Custom Calculator Tools:** Demonstrates six tools - `calculator__add`, `calculator__subtract`, `calculator__multiply`, `calculator__divide`, `calculator__compare`, and `current_datetime` for mathematical operations and time-based comparisons.
 - **ReAct Agent Integration:** Uses a `react_agent` that performs reasoning between tool calls to solve complex mathematical queries requiring multiple steps.
 - **Multi-step Problem Solving:** Shows how an agent can break down complex questions like "Is the product of 2 * 4 greater than the current hour?" into sequential tool calls.
-- **Custom Function Registration:** Demonstrates the NeMo Agent toolkit plugin system for registering custom mathematical functions with proper validation and error handling.
+- **Custom Function Registration:** Demonstrates the NeMo Agent Toolkit plugin system for registering custom mathematical functions with proper validation and error handling.
 - **YAML-based Configuration:** Fully configurable workflow that showcases how to orchestrate multiple tools through simple configuration.
 
 ---
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow:
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/getting_started/simple_calculator
@@ -68,7 +63,7 @@ export OPENAI_API_KEY=<YOUR_API_KEY>  # OPTIONAL
 
 ### Run the Workflow
 
-Return to your original terminal, and run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Return to your original terminal, and run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 nat run --config_file examples/getting_started/simple_calculator/configs/config.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
@@ -78,49 +73,4 @@ nat run --config_file examples/getting_started/simple_calculator/configs/config.
 Note that the output is subject to the time of day when the workflow was run. For this example output, it was run in the afternoon.
 ```
 No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 15).
-```
-
-
-## Deployment-Oriented Setup
-
-For a production deployment, use Docker:
-
-### Build the Docker Image
-
-Prior to building the Docker image ensure that you have followed the steps in the [Installation and Setup](#installation-and-setup) section, and you are currently in the NeMo Agent toolkit virtual environment.
-
-From the root directory of the NeMo Agent toolkit repository, build the Docker image:
-
-```bash
-docker build --build-arg NAT_VERSION=$(python -m setuptools_scm) -t simple_calculator -f examples/getting_started/simple_calculator/Dockerfile .
-```
-
-### Run the Docker Container
-Deploy the container:
-
-```bash
-docker run -p 8000:8000 -p 6006:6006 -e NVIDIA_API_KEY -e OPENAI_API_KEY simple_calculator
-```
-
-Note, a phoenix telemetry service will be exposed at port 6006.
-
-### Test the API
-Use the following curl command to test the deployed API:
-
-```bash
-curl -X 'POST' \
-  'http://localhost:8000/generate' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{"input_message": "Is the product of 2 * 4 greater than the current hour of the day?"}'
-```
-
-### Expected API Output
-The API response should be similar to the following:
-
-```bash
-{
-  "input": "Is the product of 2 * 4 greater than the current hour of the day?",
-  "value": "No, the product of 2 * 4 (which is 8) is less than the current hour of the day (which is 16)."
-}
 ```

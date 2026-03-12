@@ -49,7 +49,6 @@ def _build_api_tree() -> Path:
 
     docs_dir = cur_dir.parent
     root_dir = docs_dir.parent
-    nat_dir = root_dir / "src" / "nat"
     plugins_dir = root_dir / "packages"
 
     build_dir = docs_dir / "build"
@@ -59,23 +58,20 @@ def _build_api_tree() -> Path:
     if api_tree.exists():
         shutil.rmtree(api_tree.absolute())
 
-    os.makedirs(api_tree.absolute())
+    os.makedirs(dest_dir.absolute())
 
-    shutil.copytree(nat_dir, dest_dir)
-    dest_plugins_dir = dest_dir / "plugins"
-
-    for sub_dir in (dest_dir, dest_plugins_dir):
-        with open(sub_dir / "__init__.py", "w", encoding="utf-8") as f:
-            f.write("")
+    with open(dest_dir / "__init__.py", "w", encoding="utf-8") as f:
+        f.write("")
 
     plugin_dirs = [Path(p) for p in glob.glob(f'{plugins_dir}/nvidia_nat_*')]
     for plugin_dir in plugin_dirs:
-        src_dir = plugin_dir / 'src/nat/plugins'
+        src_dir = plugin_dir / 'src/nat'
+        print(f"Copying {src_dir} to {dest_dir}")
         if src_dir.exists():
             for plugin_subdir in src_dir.iterdir():
                 if plugin_subdir.is_dir():
-                    dest_subdir = dest_plugins_dir / plugin_subdir.name
-                    shutil.copytree(plugin_subdir, dest_subdir)
+                    dest_subdir = dest_dir / plugin_subdir.name
+                    shutil.copytree(plugin_subdir, dest_subdir, dirs_exist_ok=True)
                     package_file = dest_subdir / "__init__.py"
                     if not package_file.exists():
                         with open(package_file, "w", encoding="utf-8") as f:
@@ -196,7 +192,8 @@ linkcheck_ignore = [
     r'https?://example\.com/mcp/?',
     r'http://custom-server',
     r'^\?provider=',
-    r'https://agent\.example\.com'
+    r'https://agent\.example\.com',
+    r'https://github\.com/NVIDIA/NeMo-Agent-Toolkit/(issues|pull)/'
 ]
 
 templates_path = ['_templates']
@@ -519,6 +516,43 @@ redirects = {
 
 if build_api_docs:
 
+    def _clean_inherited_docstring(docstring: str) -> str:
+        """Clean up inherited docstrings that use non-RST syntax.
+
+        Some base classes (e.g. LangChain) use MkDocs/Markdown conventions in
+        their docstrings.  When those docstrings are inherited by NAT classes,
+        autoapi copies them verbatim into RST pages where they cause parsing
+        errors.  This helper rewrites the raw docstring *before* RST generation
+        so the output is valid.
+        """
+        import re
+
+        # Remove MkDocs-style admonition blocks (with or without a quoted title).
+        # Match the header, an optional blank line, and all indented body lines.
+        docstring = re.sub(
+            r'^([ \t]*)!!!\s+\w+(?:\s+"[^"]*")?\s*\n(?:\1[ \t]+\S.*\n|\s*\n)*',
+            '',
+            docstring,
+            flags=re.MULTILINE,
+        )
+
+        # Unwrap continuation lines in Google-style parameter descriptions.
+        # A continuation is a more-indented, lowercase-starting line that
+        # immediately follows a ``param: description`` line and is not itself
+        # a new parameter.
+        prev: str | None = None
+        while docstring != prev:
+            prev = docstring
+            docstring = re.sub(
+                r'^([ \t]+)(\w[\w_]*:.+)\n([ \t]+)(?!\w[\w_]*:)([a-z].+)$',
+                lambda m: (m.group(1) + m.group(2).rstrip() + ' ' + m.group(4).strip()
+                           if len(m.group(3)) > len(m.group(1)) else m.group(0)),
+                docstring,
+                flags=re.MULTILINE,
+            )
+
+        return docstring
+
     def skip_pydantic_special_attrs(app: object,
                                     what: str,
                                     name: str,
@@ -531,6 +565,9 @@ if build_api_docs:
             if (not skip and ('pydantic.BaseModel' in bases or 'EndpointBase' in bases)
                     and PYDANTIC_DEFAULT_DOCSTRING in obj.docstring):
                 obj.docstring = ""
+
+        if obj.docstring and '!!!' in obj.docstring:
+            obj.docstring = _clean_inherited_docstring(obj.docstring)
 
         return skip
 

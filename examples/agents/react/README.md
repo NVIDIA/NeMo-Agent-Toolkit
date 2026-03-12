@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-A configurable ReAct agent. This agent leverages the NeMo Agent toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
+A configurable ReAct agent. This agent leverages the NeMo Agent Toolkit plugin system and `WorkflowBuilder` to integrate pre-built and custom tools into the workflow. Key elements are summarized below:
 
 ## Table of Contents
 
@@ -60,14 +60,14 @@ This architecture allows the ReAct agent to think step-by-step, use tools when n
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
-uv pip install -e .
+uv pip install -e examples/agents
 ```
 
 The `code_generation` and `wiki_search` tools are part of the `nvidia-nat[langchain]` package.  To install the package run the following command:
@@ -91,7 +91,7 @@ To see the ReAct agent used as a function within a workflow, alongside the Reaso
 This README primarily covers the former case, where the ReAct agent functions as the main workflow, in config.yml.
 For more details, refer to the [ReAct agent documentation](../../../docs/source/components/agents/react-agent/index.md) and the [Reasoning agent documentation](../../../docs/source/components/agents/reasoning-agent/index.md)
 
-Run the following command from the root of the NeMo Agent toolkit repo to execute this workflow with the specified input:
+Run the following command from the root of the NeMo Agent Toolkit repo to execute this workflow with the specified input:
 
 ```bash
 nat run --config_file=examples/agents/react/configs/config.yml --input "who was Djikstra?"
@@ -109,7 +109,7 @@ Tool's response:
 Edsger Wybe Dijkstra ( DYKE-strə; Dutch: [ˈɛtsxər ˈʋibə ˈdɛikstraː] ; 11 May 1930 – 6 August 2002) was a Dutch computer scientist, programmer, software engineer, mathematician, and science essayist.
 Born in Rotterdam in the Netherlands, Dijkstra studied mathematics and physics and then theoretical physics at the University of Leiden. Adriaan van Wijngaarden offered him a job as the first computer programmer in the Netherlands at the Mathematical Centre in Amsterdam, where he worked from 1952 until 1962. He formulated and solved the shortest path problem in 1956, and in 1960 developed the first compiler for the programming language ALGOL 60 in conjunction with colleague Jaap A. Zonneveld. In 1962 he moved to Eindhoven, and later to Nuenen, where he became a professor in the Mathematics Department at the Technische Hogeschool Eindhoven. In the late 1960s he built the THE multiprogramming system, which influence...
 ------------------------------
-2025-04-23 14:59:26,159 - nat.agent.react_agent.agent - INFO -
+2025-04-23 14:59:26,159 - nat.plugins.langchain.agent.react_agent.agent - INFO -
 ------------------------------
 [AGENT]
 Agent input: who was Djikstra?
@@ -126,7 +126,7 @@ Workflow Result:
 
 ### Starting the NeMo Agent Toolkit Server
 
-You can start the NeMo Agent toolkit server using the `nat serve` command with the appropriate configuration file.
+You can start the NeMo Agent Toolkit server using the `nat serve` command with the appropriate configuration file.
 
 **Starting the ReAct Agent Example Workflow**
 

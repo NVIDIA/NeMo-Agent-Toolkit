@@ -17,11 +17,11 @@ limitations under the License.
 
 # Using Local LLMs
 
-NeMo Agent toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
+NeMo Agent Toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
 
 ## Using NIM
 <!-- path-check-skip-next-line -->
-In the NeMo Agent toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://build.nvidia.com/nvidia/llama-3_1-nemotron-nano-4b-v1_1/) which is more likely to be runnable on a local workstation.
+In the NeMo Agent Toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://build.nvidia.com/nvidia/llama-3_1-nemotron-nano-4b-v1_1/) which is more likely to be runnable on a local workstation.
 
 Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
 
@@ -32,7 +32,7 @@ Regardless of the model you choose, the process is the same for downloading the 
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NeMo Agent toolkit and the simple web query example.
+First, ensure the current working directory is the root of the NeMo Agent Toolkit repository. Then, install NeMo Agent Toolkit and the simple web query example.
 
 ```bash
 uv pip install -e .
@@ -62,7 +62,7 @@ docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
 ### Running the NIM Containers
 
 :::{note}
-The `--gpus` flag is used to specify the GPUs to use for the LLM and embedding model. Each user's setup may vary, so adjust the commands to suit the system.
+The `--gpus` flag is used to specify the GPUs to use for the LLM and embedding model. The following commands assume the system is equipped with at least two GPUs, one for each model. Each user's setup may vary, so adjust the commands to suit the system.
 :::
 
 Run the LLM container listening on port 8000:
@@ -71,6 +71,7 @@ export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 mkdir -p "$LOCAL_NIM_CACHE"
 docker run -it --rm \
+    --runtime=nvidia \
     --gpus '"device=0"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
@@ -85,6 +86,7 @@ Open a new terminal and run the embedding model container, listening on port 800
 export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 docker run -it --rm \
+    --runtime=nvidia \
     --gpus '"device=1"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
@@ -141,14 +143,14 @@ nat run --config_file examples/documentation_guides/locally_hosted_llms/nim_conf
 
 vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getting_started/quickstart.html#openai-compatible-server) allowing us to re-use our existing OpenAI clients.
 
-If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. It is recommended to use a **separate** virtual environment for vLLM due to potential conflicts with NeMo Agent toolkit dependencies.
+If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. It is recommended to use a **separate** virtual environment for vLLM due to potential conflicts with NeMo Agent Toolkit dependencies.
 
 <!-- path-check-skip-next-line -->
 Similar to the previous example we will be using the same [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
 
 ### Install the Simple Web Query Example
 
-First, ensure the current working directory is the root of the NeMo Agent toolkit repository. Then, install NeMo Agent toolkit and the simple web query example.
+First, ensure the current working directory is the root of the NeMo Agent Toolkit repository. Then, install NeMo Agent Toolkit and the simple web query example.
 
 ```bash
 uv pip install -e .
@@ -159,7 +161,9 @@ uv pip install -e examples/getting_started/simple_web_query
 Similar to the NIM approach we will be running the LLM on the default port of 8000 and the embedding model on port 8001.
 
 :::{note}
-The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to use for the LLM and embedding model. Each user's setup may vary, so adjust the commands to suit the system.
+For this example we are using vLLM v0.16.0, the command line flags and configuration may differ for other versions, refer to the vLLM documentation for the version you are using.
+
+The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to use for the LLM and embedding model. The following commands assume a system with at least two GPUs. Each user's setup may vary, so adjust the commands to suit the system.
 :::
 
 In a terminal from within the vLLM environment, run the following command to serve the LLM:
@@ -169,11 +173,11 @@ CUDA_VISIBLE_DEVICES=0 vllm serve nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
 
 In a second terminal also from within the vLLM environment, run the following command to serve the embedding model:
 ```bash
-CUDA_VISIBLE_DEVICES=1 vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
+CUDA_VISIBLE_DEVICES=1 vllm serve --port 8001 --runner pooling --convert embed --pooler-config '{"pooling_type": "MEAN"}' ssmits/Qwen2-7B-Instruct-embed-base
 ```
 
 :::{note}
-The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#embedding) documentation.
+The `--pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/v0.16.0/models/supported_models.html#embedding) documentation.
 :::
 
 
@@ -221,7 +225,7 @@ nat run --config_file examples/documentation_guides/locally_hosted_llms/vllm_con
 
 ## Other Locally Hosted LLMs
 
-Any locally hosted LLM with an OpenAI-compatible API can be used with the NeMo Agent toolkit. The only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
+Any locally hosted LLM with an OpenAI-compatible API can be used with the NeMo Agent Toolkit. The only changes needed are to define the `base_url` for the LLM and embedding models, along with the names of the models to use.
 
 For example, to use the `gpt-oss-20b` model, the following configuration can be used:
 ```yaml

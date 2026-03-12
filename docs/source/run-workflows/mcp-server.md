@@ -19,7 +19,22 @@ limitations under the License.
 
 Model Context Protocol (MCP) is an open protocol developed by Anthropic that standardizes how applications provide context to [LLMs](../build-workflows/llms/index.md). You can read more about MCP [here](https://modelcontextprotocol.io/introduction).
 
-This guide will cover how to use NeMo Agent toolkit as an MCP Server to publish [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) using MCP. For more information on how to use NeMo Agent toolkit as an MCP Host with one or more MCP Clients, refer to [MCP Client](../build-workflows/mcp-client.md).
+This guide will cover how to use NeMo Agent Toolkit as an MCP Server to publish [tools](../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) using MCP. For more information on how to use NeMo Agent Toolkit as an MCP Host with one or more MCP Clients, refer to [MCP Client](../build-workflows/mcp-client.md).
+
+## Decision
+
+NeMo Agent Toolkit supports two MCP server runtimes. Both publish the workflow and its tools as MCP tools. Choose the runtime that matches your deployment stack:
+
+- Use `nat mcp serve` for the [MCP SDK server runtime](https://github.com/modelcontextprotocol/python-sdk).
+- Use `nat fastmcp server run` for the [FastMCP server runtime](https://github.com/jlowin/fastmcp). For MCP servers using the FastMCP server runtime, see [NeMo Agent Toolkit as a FastMCP Server](./fastmcp-server.md).
+
+## Installation
+
+Install the `nvidia-nat-mcp` package:
+
+```bash
+uv pip install nvidia-nat-mcp
+```
 
 ## MCP Server Usage
 
@@ -335,17 +350,17 @@ You can control the amount of detail using the `detail` query parameter:
 
 ## Integration with MCP Clients
 
-The NeMo Agent toolkit MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
+The NeMo Agent Toolkit MCP front-end implements the Model Context Protocol specification, making it compatible with any MCP client. This allows for seamless integration with various systems that support MCP, including:
 
 - MCP-compatible LLM frameworks
 - Other agent frameworks that support MCP
-- Custom applications including NeMo Agent toolkit applications that implement the MCP client specification
+- Custom applications including NeMo Agent Toolkit applications that implement the MCP client specification
 
 ### Example
-In this example, we will use NeMo Agent toolkit as both a MCP client and a MCP server.
+In this example, we will use NeMo Agent Toolkit as both a MCP client and a MCP server.
 
-1. Start the MCP server by following the instructions in the [MCP Server Usage](#mcp-server-usage) section. NeMo Agent toolkit will act as an MCP server and publish the calculator tools as MCP tools.
-2. Run the simple calculator workflow with the `config-mcp-client.yml` config file. NeMo Agent toolkit will act as an MCP client and connect to the MCP server started in the previous step to access the remote tools.
+1. Start the MCP server by following the instructions in the [MCP Server Usage](#mcp-server-usage) section. NeMo Agent Toolkit will act as an MCP server and publish the calculator tools as MCP tools.
+2. Run the simple calculator workflow with the `config-mcp-client.yml` config file. NeMo Agent Toolkit will act as an MCP client and connect to the MCP server started in the previous step to access the remote tools.
 ```bash
 nat run --config_file examples/MCP/simple_calculator_mcp/configs/config-mcp-client.yml --input "Is 2 times 2 greater than the current hour?"
 ```
@@ -380,7 +395,7 @@ This is useful for health checks and monitoring.
 
 ### Authentication Limitations
 - The `nat mcp serve` command currently starts an MCP server without built-in authentication. Server-side authentication is planned for a future release.
-- NeMo Agent toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) for more information.
+- NeMo Agent Toolkit workflows can still connect to protected third-party MCP servers through the MCP client auth provider. Refer to [MCP Authentication](../components/auth/mcp-auth/index.md) for more information.
 
 ### Local Development
 For local development, you can use `localhost` or `127.0.0.1` as the host (default). This limits access to your local machine only.

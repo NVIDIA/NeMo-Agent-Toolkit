@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-This example demonstrates how to use YAML configuration inheritance in the NeMo Agent toolkit to reduce duplication across similar configuration files.
+This example demonstrates how to use YAML configuration inheritance in the NeMo Agent Toolkit to reduce duplication across similar configuration files.
 
 ## Table of Contents
 
@@ -131,13 +131,13 @@ Configuration files can also reference base configurations in other directories 
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install the NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install the NeMo Agent Toolkit.
 
 ### Install Dependent Workflow
 
 This example relies on the calculator function group part of the `simple_calculator` example.
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/getting_started/simple_calculator
@@ -162,7 +162,7 @@ This example shows a simple calculator workflow with several configuration varia
 - **`config-with-tracing.yml`** - Variant with Weave tracing enabled
 - **`config-high-temp-debug.yml`** - Chained inheritance example (base → high-temp → high-temp-debug)
 
-From the root directory of the NeMo Agent toolkit library, run the workflow with different configuration variants:
+From the root directory of the NeMo Agent Toolkit library, run the workflow with different configuration variants:
 
 ```bash
 # Test basic inheritance

@@ -31,6 +31,9 @@ public/
 # and user settings will go in .vscode/
 .vscode/
 
+# Git worktrees
+.worktrees/
+
 ##### Do not alter the items below this line! #####
 ########## They are managed by a script! ##########
 

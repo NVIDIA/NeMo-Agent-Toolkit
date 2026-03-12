@@ -15,6 +15,7 @@
 # limitations under the License.
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -25,6 +26,7 @@ from datetime import date
 from slack_sdk import WebClient
 
 MAX_TEXT_LENGTH = 3000  # Slack message text limit
+BLOCK_LIMIT = 20  # Slack block limit -- actual limit is 50, but we will use a smaller limit to be safe
 
 logger = logging.getLogger()
 
@@ -106,6 +108,10 @@ def add_text(text: str, blocks: list[dict], plain_text: list[str]) -> None:
     plain_text.append(text)
 
 
+def chunk_items(items: list[typing.Any], chunk_size: int) -> list[list[typing.Any]]:
+    return [items[index:index + chunk_size] for index in range(0, len(items), chunk_size)]
+
+
 def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> ReportMessages:
     branch_name = os.environ.get("CI_COMMIT_BRANCH", "unknown")
     num_errors = junit_data['num_errors']
@@ -160,10 +166,84 @@ def build_messages(junit_data: dict[str, typing.Any], coverage_data: str) -> Rep
                           failure_blocks=failure_blocks)
 
 
+def parse_model_health(json_path: str) -> dict[str, typing.Any]:
+    """Read the structured JSON output from model_health_check.py."""
+    with open(json_path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def build_model_health_messages(health_data: dict[str, typing.Any]) -> ReportMessages:
+    """Build Slack messages from model health check results."""
+    branch_name = os.environ.get("CI_COMMIT_BRANCH", "unknown")
+
+    removed = health_data.get("removed", [])
+    down = health_data.get("down", [])
+    ok = health_data.get("ok", [])
+    num_failures = len(removed) + len(down)
+
+    plain_text: list[str] = []
+    blocks: list[dict] = []
+
+    summary_line = f"Model Health Check for `{branch_name}` - {date.today()}"
+    plain_text.append(summary_line + "\n")
+
+    if num_failures > 0:
+        formatted_summary_line = f"@nat-core-devs :rotating_light: {summary_line}"
+    else:
+        formatted_summary_line = summary_line
+
+    blocks.append(text_to_block(formatted_summary_line))
+    stats = "\n".join([
+        get_error_string(len(removed), "Removed"),
+        get_error_string(len(down), "Down"),
+        f"OK: {len(ok)}",
+        f"Total models: {len(removed) + len(down) + len(ok)}",
+    ])
+    add_text(stats, blocks, plain_text)
+
+    failure_blocks: list[dict] | None = None
+    failure_text: list[str] | None = None
+
+    if num_failures > 0:
+        failure_blocks = []
+        failure_text = []
+
+        if removed:
+            add_text(f"*Removed from catalog ({len(removed)}):*", failure_blocks, failure_text)
+            for entry in removed:
+                configs = "\n".join(f"  - {c}" for c in entry.get("configs", []))
+                add_text(f"`{entry.get('model', 'unknown')}` ({entry.get('type', 'unknown')})\n{configs}",
+                         failure_blocks,
+                         failure_text)
+            failure_blocks.append({"type": "divider"})
+
+        if down:
+            add_text(f"*Down ({len(down)}):*", failure_blocks, failure_text)
+            for entry in down:
+                status = entry.get("status", "?")
+                detail = entry.get("detail", "")
+                configs = "\n".join(f"  - {c}" for c in entry.get("configs", []))
+                model_name = entry.get('model', 'unknown')
+                model_type = entry.get('type', 'unknown')
+                msg = f"`{model_name}` ({model_type}) HTTP {status}: {detail}\n{configs}"
+                add_text(msg, failure_blocks, failure_text)
+
+        job_url = os.environ.get("CI_JOB_URL")
+        if job_url is not None:
+            failure_blocks.append({"type": "divider"})
+            add_text(f"Full details available at: {job_url}", failure_blocks, failure_text)
+
+    return ReportMessages(plain_text=plain_text,
+                          blocks=blocks,
+                          failure_text=failure_text,
+                          failure_blocks=failure_blocks)
+
+
 def main():
-    parser = argparse.ArgumentParser(description='Report test status to slack channel')
-    parser.add_argument('junit_file', type=str, help='JUnit XML file to parse')
-    parser.add_argument('coverage_file', type=str, help='Coverage report file to parse')
+    parser = argparse.ArgumentParser(description='Report test or model health status to slack channel')
+    parser.add_argument('junit_file', nargs='?', default=None, type=str, help='JUnit XML file to parse')
+    parser.add_argument('coverage_file', nargs='?', default=None, type=str, help='Coverage report file to parse')
+    parser.add_argument('--model-health-json', type=str, default=None, help='Model health check JSON results file')
 
     logging.basicConfig(level=logging.INFO)
 
@@ -176,21 +256,28 @@ def main():
 
     args = parser.parse_args()
 
+    has_test_args = args.junit_file is not None and args.coverage_file is not None
+    has_health_arg = args.model_health_json is not None
+
+    if not has_test_args and not has_health_arg:
+        parser.error("Provide either junit_file + coverage_file, or --model-health-json")
+
     return_code = 0
     try:
-        junit_data = parse_junit(args.junit_file)
-        coverage_data = parse_coverage(args.coverage_file)
-
-        report_messages = build_messages(junit_data, coverage_data)
+        if has_health_arg:
+            health_data = parse_model_health(args.model_health_json)
+            report_messages = build_model_health_messages(health_data)
+        else:
+            junit_data = parse_junit(args.junit_file)
+            coverage_data = parse_coverage(args.coverage_file)
+            report_messages = build_messages(junit_data, coverage_data)
     except Exception as e:
-        # Intentionally not using logger.exception to limit what we log in CI.
-        msg = f"Error: Failed to parse test results or coverage data: {e}"
+        msg = f"Error: Failed to parse report data: {e}"
         logger.error(msg)
         plain_text = []
         blocks = []
         add_text(msg, blocks, plain_text)
 
-        # Not using the failure fields here since this is not a test failure but a script failure.
         report_messages = ReportMessages(plain_text=plain_text, blocks=blocks, failure_text=None, failure_blocks=None)
         return_code = 1
 
@@ -203,10 +290,14 @@ def main():
     if report_messages.failure_text is not None:
         # Since potentially a large number of failures could occur, we will post them in a thread to the original
         # message to avoid spamming the channel.
-        client.chat_postMessage(channel=slack_channel,
-                                text="\n".join(report_messages.failure_text),
-                                blocks=report_messages.failure_blocks,
-                                thread_ts=response["ts"])
+        blocks_chunks = chunk_items(report_messages.failure_blocks or [], BLOCK_LIMIT)
+        text_chunks = chunk_items(report_messages.failure_text or [], BLOCK_LIMIT)
+
+        for blocks_chunk, text_chunk in zip(blocks_chunks, text_chunks):
+            client.chat_postMessage(channel=slack_channel,
+                                    text="\n".join(text_chunk),
+                                    blocks=blocks_chunk,
+                                    thread_ts=response["ts"])
 
     return return_code
 

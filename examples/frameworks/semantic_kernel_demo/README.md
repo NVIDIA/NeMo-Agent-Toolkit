@@ -31,19 +31,19 @@ A minimal example using Semantic Kernel showcasing a multi-agent travel planning
 
 ## Key Features
 
-- **Semantic Kernel Framework Integration:** Demonstrates NeMo Agent toolkit support for Microsoft's Semantic Kernel framework alongside other frameworks like LangChain/LangGraph.
+- **Semantic Kernel Framework Integration:** Demonstrates NeMo Agent Toolkit support for Microsoft's Semantic Kernel framework alongside other frameworks like LangChain/LangGraph.
 - **Multi-Agent Travel Planning:** Shows three specialized agents working together - an Itinerary Agent for schedule creation, a Budget Agent for cost management, and a Summarizer Agent for final formatting.
 - **Cross-Agent Coordination:** Demonstrates how different agents can collaborate on a complex task, with each agent contributing its specialized capabilities to the overall workflow.
 - **Long-Term Memory Integration:** Includes optional Mem0 platform integration for persistent memory, allowing agents to remember user preferences (like vegan dining or luxury hotel preferences) across sessions.
-- **OpenAI Model Support:** Showcases NeMo Agent toolkit compatibility with OpenAI models through the Semantic Kernel framework integration.
+- **OpenAI Model Support:** Showcases NeMo Agent Toolkit compatibility with OpenAI models through the Semantic Kernel framework integration.
 
 ## Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 
 ```bash
 uv pip install -e examples/frameworks/semantic_kernel_demo
@@ -59,7 +59,7 @@ export OPENAI_API_KEY=<YOUR_API_KEY>
 
 ## Adding Long-Term Memory
 
- With NeMo Agent toolkit, adding Long Term Memory (LTM) is as simple as adding a new section in the configuration file.
+ With NeMo Agent Toolkit, adding Long Term Memory (LTM) is as simple as adding a new section in the configuration file.
 
 Once you add the LTM configuration, export your Mem0 API key, which is a prerequisite for using the LTM service. To create an API key, refer to the instructions in the [Mem0 Platform Guide](https://docs.mem0.ai/platform/quickstart).
 

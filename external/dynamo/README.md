@@ -18,14 +18,14 @@ limitations under the License.
 # Dynamo Backend Setup Guide
 
 > [!NOTE]
-> ⚠️ **EXPERIMENTAL**: This integration between NVIDIA NeMo Agent toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
+> ⚠️ **EXPERIMENTAL**: This integration between NVIDIA NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice. We kindly ask that GitHub Issues are opened as bugs are issued quickly as features are subject to change.
 
 > [!TIP]
 > **Scope of This Guide**
 >
-> This document guides you through setting up and testing a NVIDIA NeMo Agent toolkit-compatible Dynamo inference server on a Linux/CUDA machine. By the end of this guide, you will be able to make `curl` requests to the endpoint and receive inference outputs from the Dynamo server.
+> This document guides you through setting up and testing a NVIDIA NeMo Agent Toolkit-compatible Dynamo inference server on a Linux/CUDA machine. By the end of this guide, you will be able to make `curl` requests to the endpoint and receive inference outputs from the Dynamo server.
 >
-> For **end-to-end integration with NeMo Agent toolkit workflows**, including detailed instructions and architectural considerations, see the [Dynamo Integration Examples](../../examples/dynamo_integration/README.md).
+> For **end-to-end integration with NeMo Agent Toolkit workflows**, including detailed instructions and architectural considerations, see the [Dynamo Integration Examples](../../examples/dynamo_integration/README.md).
 
 This guide covers setting up, running, and configuring the NVIDIA Dynamo backend for the React Benchmark Agent evaluations.
 
@@ -34,18 +34,19 @@ This guide covers setting up, running, and configuring the NVIDIA Dynamo backend
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
 3. [Starting Dynamo](#starting-dynamo)
-4. [Stopping Dynamo](#stopping-dynamo)
-5. [Testing the Integration](#testing-the-integration)
-6. [Monitoring](#monitoring)
-7. [Dynamic Prefix Headers](#dynamic-prefix-headers)
-8. [Configuration Reference](#configuration-reference)
-9. [Troubleshooting](#troubleshooting)
+4. [Building from Source](#building-from-source)
+5. [Stopping Dynamo](#stopping-dynamo)
+6. [Testing the Integration](#testing-the-integration)
+7. [Monitoring](#monitoring)
+8. [Dynamic Prefix Headers](#dynamic-prefix-headers)
+9. [Configuration Reference](#configuration-reference)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Overview
 
-Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. The scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../src/nat/llm/dynamo_llm.py) support for NeMo Agent toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NeMo Agent toolkit runtimes at scale. The following **Table** defines each script: 
+Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimization. The scope of the current integration is based around two core aspects. First, we have implemented a [Dynamo LLM](../../packages/nvidia_nat_core/src/nat/llm/dynamo_llm.py) support for NeMo Agent Toolkit inference on Dynamo runtimes. Second, we provide a set of startup scripts for NVIDIA Hopper and Blackwell GPU servers supporting NeMo Agent Toolkit runtimes at scale. The following **Table** defines each script:
 
 | Mode | Script | Description | Best For |
 |------|--------|-------------|----------|
@@ -181,7 +182,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 ### Platform Requirements
 
 > [!WARNING]
-> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/archive/0.7.0/reference/support-matrix.html) for full details.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/latest/getting-started/support-matrix) for full details.
 >
 > **Supported Platforms:**
 > - Ubuntu 22.04 / 24.04 (x86_64)
@@ -192,7 +193,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 > - ❌ macOS (Intel or Apple Silicon)
 > - ❌ Windows
 >
-> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
+> You do **not** need to install `ai-dynamo` or `ai-dynamo-runtime` packages locally. The Dynamo server runs inside pre-built Docker images from NGC (`nvcr.io/nvidia/ai-dynamo/sglang-runtime`), which include all necessary components. The NeMo Agent Toolkit Dynamo LLM client (`_type: dynamo`) is a pure HTTP client that works on any platform.
 
 ### Hardware Requirements
 
@@ -232,7 +233,7 @@ cd /path/to/NeMo-Agent-Toolkit
 uv venv "${HOME}/.venvs/nat_dynamo_eval" --python 3.13
 source "${HOME}/.venvs/nat_dynamo_eval/bin/activate"
 
-# install the NeMo Agent toolkit
+# install the NeMo Agent Toolkit
 uv pip install -e ".[langchain]"
 uv pip install -e examples/dynamo_integration/react_benchmark_agent
 ```
@@ -459,6 +460,79 @@ bash stop_dynamo.sh
 
 **Note**: Disaggregated mode uses NIXL for KV cache transfer between workers.
 
+---
+
+## Building from Source
+
+Instead of using pre-built NGC containers, you can build Dynamo runtime images directly from the [dynamo main branch](https://github.com/ai-dynamo/dynamo). This is useful for testing unreleased features or customizing the build.
+
+The startup scripts (`start_dynamo_optimized_thompson_hints_vllm.sh` and `start_dynamo_optimized_thompson_hints_sglang.sh`) support source-built images through two `.env` variables:
+
+- `DYNAMO_FROM_SOURCE=true` — enables source-build mode; forces use of `processor_multilru.py` and `router_multilru.py`
+- `DYNAMO_IMAGE` — the Docker image tag to build and use (for example, `dynamo-sglang-source:main`)
+
+Set these in your `.env` file:
+
+```bash
+DYNAMO_FROM_SOURCE=true
+DYNAMO_IMAGE="dynamo-sglang-source:main"   # or dynamo-vllm-source:main for vLLM
+```
+
+### Prerequisites for Building from Source
+
+The build requires the following system packages on Ubuntu:
+
+```bash
+sudo apt install -y build-essential libhwloc-dev libudev-dev pkg-config \
+    libclang-dev protobuf-compiler python3-dev cmake
+```
+
+### Building the SGLang Runtime Image
+
+Run the following commands from the root of the cloned dynamo repository:
+
+```bash
+cd /path/to/dynamo
+
+# Render the SGLang Dockerfile from templates
+python container/render.py --framework=sglang --target=runtime --output-short-filename
+
+# Build the image (takes 30–90 minutes on first build; subsequent builds use cache)
+docker build -t dynamo-sglang-source:main -f container/rendered.Dockerfile .
+```
+
+### Building the vLLM Runtime Image
+
+```bash
+cd /path/to/dynamo
+
+# Render the vLLM Dockerfile from templates
+python container/render.py --framework=vllm --target=runtime --output-short-filename
+
+# Build the image
+docker build -t dynamo-vllm-source:main -f container/rendered.Dockerfile .
+```
+
+### Running with the Source-Built Image
+
+Once the image is built, run the startup script as normal — it automatically picks up `DYNAMO_FROM_SOURCE` and `DYNAMO_IMAGE` from `.env`:
+
+```bash
+cd /path/to/NeMo-Agent-Toolkit/external/dynamo
+
+# SGLang
+bash start_dynamo_optimized_thompson_hints_sglang.sh > startup_output.txt 2>&1
+
+# vLLM
+bash start_dynamo_optimized_thompson_hints_vllm.sh > startup_output.txt 2>&1
+```
+
+If the image specified by `DYNAMO_IMAGE` does not exist, the script will print the exact build commands and exit with an error.
+
+> **Note**: The dynamo `main` branch targets a different SGLang/vLLM version than the pre-built NGC containers. Verify the bundled framework version after building with `docker run --rm <image> python -c "import sglang; print(sglang.__version__)"`.
+
+---
+
 ### Verifying the Integration
 
 After starting Dynamo with any of the above options, verify the integration is working.
@@ -500,7 +574,7 @@ bash test_dynamo_integration.sh
 - `DYNAMO_PORT` - Frontend port (default: `8099`)
 
 **Tests performed:**
-1. NeMo Agent toolkit environment is active
+1. NeMo Agent Toolkit environment is active
 2. Configuration files exist
 3. Dynamo frontend is responding on the configured port
 4. Basic chat completion request works
@@ -1109,7 +1183,7 @@ external/dynamo/                                # Dynamo backend
 | `./monitor_dynamo.sh` | Interactive monitoring |
 | `curl localhost:8099/health` | Health check |
 | `docker logs -f dynamo-sglang` | View logs |
-| `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml --input "..."` | Quick NeMo Agent toolkit validation |
+| `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_e2e_test.yml --input "..."` | Quick NeMo Agent Toolkit validation |
 | `nat run --config_file examples/dynamo_integration/react_benchmark_agent/configs/config_dynamo_prefix_e2e_test.yml --input "..."` | Test with prefix headers |
 
 ### Containers
@@ -1129,13 +1203,13 @@ external/dynamo/                                # Dynamo backend
 
 ## Next Steps
 
-Now that you have a running Dynamo server and can make `curl` requests to the endpoint, you're ready to integrate with NeMo Agent toolkit workflows.
+Now that you have a running Dynamo server and can make `curl` requests to the endpoint, you're ready to integrate with NeMo Agent Toolkit workflows.
 
 > [!TIP]
 > **Ready for Full Integration?**
 >
 > Visit the [Dynamo Integration Examples](../../examples/dynamo_integration/README.md) for:
-> - End-to-end workflow integration with NeMo Agent toolkit
+> - End-to-end workflow integration with NeMo Agent Toolkit
 > - Benchmark agent configurations and evaluation harnesses
 > - Performance analysis scripts and visualization tools
 > - Architectural deep-dives on toolkit-Dynamo integration patterns

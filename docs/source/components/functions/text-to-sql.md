@@ -17,7 +17,7 @@ limitations under the License.
 
 # Text-to-SQL with Vanna
 
-The NVIDIA NeMo Agent toolkit provides text-to-SQL capabilities through the `text2sql` and `execute_db_query` functions, powered by the Vanna framework with Databricks support and vector-based few-shot learning.
+The NVIDIA NeMo Agent Toolkit provides text-to-SQL capabilities through the `text2sql` and `execute_db_query` functions, powered by the Vanna framework with Databricks support and vector-based few-shot learning.
 
 ## Features
 
@@ -30,19 +30,34 @@ The NVIDIA NeMo Agent toolkit provides text-to-SQL capabilities through the `tex
 
 ## Installation
 
-The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent toolkit. If you have not yet installed the NeMo Agent toolkit, refer to the [Installation](../../get-started/installation.md) guide.
+The text-to-SQL plugin is distributed as a separate package that can be installed alongside the NeMo Agent Toolkit. If you have not yet installed the NeMo Agent Toolkit, refer to the [Installation](../../get-started/installation.md) guide.
 
-If you have performed a source code checkout, you can install this with the following command:
+If you have performed a source code checkout, you can install this with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
-uv pip install -e '.[vanna]'
+uv pip install -e ".[vanna]"
 ```
 
-If you have installed the NeMo Agent toolkit from a package, you can install this with the following command:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 uv pip install "nvidia-nat[vanna]"
 ```
+
+:::
+
+::::
+
 
 ## Quick Start
 
@@ -161,10 +176,10 @@ See `text2sql_training_config.yml` and `text2sql_config.yml` for reference.
 
 ### 4. Run the Workflow
 
-The following examples show how to use the text-to-SQL workflow with the NeMo Agent toolkit CLI or programmatically.
+The following examples show how to use the text-to-SQL workflow with the NeMo Agent Toolkit CLI or programmatically.
 
 ```bash
-# Using NeMo Agent toolkit CLI
+# Using NeMo Agent Toolkit CLI
 # If auto_training is set to true, training takes approximately 7 minutes depending on endpoints and network conditions.
 nat run --config_file packages/nvidia_nat_vanna/text2sql_training_config.yml --input "Retrieve the total number of customers."
 
@@ -459,7 +474,7 @@ general:
 ```
 
 Other features include:
-- Full integration with the NeMo Agent toolkit intermediate step tracking system
+- Full integration with the NeMo Agent Toolkit intermediate step tracking system
 - Better UI Display - Front-ends can now properly render intermediate steps
 - Parent Tracking - Each function call has a `parent_id` to group related steps
 
@@ -513,5 +528,5 @@ Error: Failed to connect to database
 For more information:
 - [Writing Custom Functions](../../extend/custom-components/custom-functions/functions.md) - Learn how to create your own functions
 - [Workflow Configuration](../../build-workflows/workflow-configuration.md) - Complete configuration reference
-- [Contributing Guidelines](../../resources/contributing/index.md) - How to contribute to the NeMo Agent toolkit
+- [Contributing Guidelines](../../resources/contributing/index.md) - How to contribute to the NeMo Agent Toolkit
 - [Support](../../resources/support.md) - Get help and support

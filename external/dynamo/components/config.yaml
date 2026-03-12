@@ -1,0 +1,78 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Thompson Sampling Router Configuration
+# ======================================
+#
+# This file contains all configurable parameters for the WorkloadAwareRouter.
+# Parameters can be overridden via CLI flags (see PARAMETERS.md for details).
+#
+# REQUIRED ENVIRONMENT VARIABLE:
+#   DYNAMO_WORKER_COMPONENT - Component name where backend workers register.
+#     - SGLang: "worker" (workers register at workers.worker.generate)
+#     - vLLM:   "backend" (workers register at workers.backend.generate)
+#
+# CLI Override Examples:
+#   python router.py --config config.yaml --affinity-base 0.5
+#   python router.py --config config.yaml --override affinity.reuse_weight=0.2
+#
+
+# Infrastructure settings
+infrastructure:
+  block_size: 16          # KV cache block size — must match DYNAMO_KV_BLOCK_SIZE in .env (env var overrides this)
+  router_type: kv         # Router type: "kv" (KV-aware) or "kv_load" (load-based)
+  min_workers: 1          # Minimum workers required before routing starts
+
+# Affinity settings - controls stickiness to same worker for prefix reuse
+affinity:
+  base: 0.30              # Base affinity bonus when staying on same worker (CLI: --affinity-base)
+  reuse_weight: 0.08      # Additional bonus per remaining request in session (was 0.15 — caused runaway stickiness with reuse_after=8+)
+  iat_weight: 0.20        # Bonus scaling based on inter-arrival time
+  sticky_load_floor: 0.01 # Minimum load modifier for sticky decisions (was 0.25 — still 10x above real load_mod=0.023 at queue=28, blocking all switches)
+
+# Exploration settings - controls explore vs exploit tradeoff
+exploration:
+  base_ts_weight: 0.10    # Weight for Thompson Sampling exploration term
+  temperature:
+    base: 1.0             # Base softmax temperature (CLI: --temp-base)
+    min: 0.15             # Minimum temperature (more greedy)
+    max: 2.0              # Maximum temperature (more random)
+
+# Switching cost - penalty for moving prefix to different worker
+switching_cost:
+  base: 0.10              # Base penalty for switching workers (was 0.20 — too costly to escape overloaded worker)
+  reuse_penalty: 0.04     # Additional penalty per remaining request (was 0.08)
+  iat_penalty: 0.03       # Additional penalty based on inter-arrival time (was 0.05)
+
+# Load balancing - how much to penalize busy workers
+load_balancing:
+  queue_penalty_weight: 1.50        # Weight for queue depth penalty (was 0.50 — queue depth is the strongest overload signal)
+  gpu_penalty_weight: 1.00          # Weight for GPU memory usage penalty
+  outstanding_work_weight: 0.45     # Weight for outstanding work penalty
+  job_gpu_coupling_weight: 0.40     # Coupling between job cost and GPU load
+  job_queue_coupling_weight: 0.20   # Coupling between job cost and queue depth
+
+# Prefill cost model - how to weight input sequence length
+prefill:
+  token_scale: 1024.0     # Normalization scale for token count
+  weight: 1.0             # Weight of prefill cost in total job cost
+
+# LinTS (Linear Thompson Sampling) learner parameters
+lints:
+  lambda: 1.0             # Ridge regression regularization strength
+  v: 0.25                 # Exploration variance in posterior sampling (CLI: --lints-v)
+  forget_rate: 0.995      # Exponential decay for old observations (0.995 = slow forget)
+
+# Feedback handling - delayed reward processing
+feedback:
+  timeout_seconds: 120.0          # Seconds to wait for feedback before timeout penalty
+  sweep_interval_seconds: 5.0     # How often to check for timed-out decisions
+  timeout_reward: 0.0             # Reward assigned to timed-out decisions (0.0 = bad)
+  latency_ema_alpha: 0.2          # EMA smoothing factor for latency baselines
+
+# Debug settings
+debug:
+  traces_enabled: false                     # Enable debug trace logging
+  trace_dir: /tmp/dynamo_router_traces      # Directory for trace files
+  buffer_size: 2000                         # In-memory trace buffer size
+

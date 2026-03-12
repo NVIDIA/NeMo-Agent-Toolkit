@@ -17,15 +17,73 @@
 
 # Migration Guide
 
-NeMo Agent toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
+NeMo Agent Toolkit is designed to be backwards compatible with the previous version of the toolkit except for changes documented on this page.
 
 Additionally, all new contributions should rely on the most recent version of the toolkit and not rely on any deprecated functionality.
 
-## Migrating to a new version of NeMo Agent toolkit
+## Migrating to a new version of NeMo Agent Toolkit
 
 It is strongly encouraged to migrate any existing code to the latest conventions and remove any deprecated functionality.
 
 ## Version Specific Changes
+
+### v1.5.0
+
+#### Removing Old Aliases and Transitional Packages
+
+NVIDIA NeMo Agent Toolkit 1.2 changed the name and API. Compatibility aliases and transitional packages were provided to reduce development friction. Since three releases have passed, compatibility aliases and transitional packages are now removed.
+
+- `aiqtoolkit` transitional package is removed. Use `nvidia-nat`.
+- All AIQ compatibility aliases have been removed.
+- {py:mod}`aiq` module is removed. Use {py:mod}`nat` instead.
+- The `aiq` command is removed. Use `nat` instead.
+
+#### Packaging Restructure
+
+- NeMo Agent Toolkit adds support for new libraries, frameworks, and integrations. With these added subpackages, conflicting dependencies have arisen.
+- `nvidia-nat` is now a meta-package. All code has been moved into `nvidia-nat-core`
+- All prior meta-packages have been removed.
+  - `nvidia-nat-all` (no replacement, though `nvidia-nat[most]` extra does exist)
+  - `nvidia-nat-ingestion` (no replacement; examples directly use dependencies)
+  - `nvidia-nat-profiling` (use `nvidia-nat[profiling]`)
+
+#### Evaluation Package Split
+
+Evaluation and profiling implementations moved out of core into the `nvidia-nat-eval` package.
+
+To migrate:
+- Install evaluation support when needed:
+  - `pip install "nvidia-nat[eval]"`
+  - `pip install nvidia-nat-eval`
+- Install profiling support when needed:
+  - `pip install "nvidia-nat[profiling]"`
+  - `pip install "nvidia-nat-eval[profiling]"`
+- Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
+- Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
+
+#### Import Path Changes
+
+For users migrating existing integrations, the primary import change is:
+- `nat.eval.*` -> `nat.plugins.eval.*`
+- `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
+- `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
+- `nat.eval.runtime_event_subscriber.pull_intermediate` -> `nat.builder.runtime_event_subscriber.pull_intermediate`
+
+For evaluation data models, prefer canonical core paths:
+- `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
+- `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
+- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.eval.profiler.callbacks.token_usage_base_model`)
+
+Internal module reorganization inside `nat.plugins.eval` is implementation detail and may change between releases.
+
+#### `nat.eval` Deprecation Shim
+
+Core provides a temporary compatibility shim for `nat.eval` imports.
+
+What to expect:
+- Importing from `nat.eval` emits a `UserWarning` that the path is deprecated.
+- The shim requires `nvidia-nat-eval` to be installed.
+- Update imports to externally supported `nat.plugins.eval.*` and `nat.data_models.*` paths now, because the shim will be removed in a future major release.
 
 ### v1.4.0
 

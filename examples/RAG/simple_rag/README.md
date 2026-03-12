@@ -29,25 +29,37 @@ This is a simple example RAG application to showcase how one can configure and u
 
 ## Table of Contents
 
-- [Key Features](#key-features)
-- [Quickstart: RAG with Milvus](#quickstart-rag-with-milvus)
-  - [Installation and Setup](#installation-and-setup)
-    - [Install this Workflow](#install-this-workflow)
-    - [Set Up Milvus](#set-up-milvus)
-    - [Set Up API Keys](#set-up-api-keys)
-    - [Bootstrap Data](#bootstrap-data)
-    - [Configure Your Agent](#configure-your-agent)
-    - [Run the Workflow](#run-the-workflow)
-- [Adding Long-Term Agent Memory](#adding-long-term-agent-memory)
-  - [Prerequisites](#prerequisites)
-  - [Adding Memory to the Agent](#adding-memory-to-the-agent)
-- [Adding Additional Tools](#adding-additional-tools)
-- [Using Test Time Compute](#using-test-time-compute)
+- [Simple RAG Example](#simple-rag-example)
+  - [Table of Contents](#table-of-contents)
+  - [Key Features](#key-features)
+  - [Quickstart: RAG with Milvus](#quickstart-rag-with-milvus)
+    - [Installation and Setup](#installation-and-setup)
+      - [Install this Workflow](#install-this-workflow)
+      - [Set Up Milvus](#set-up-milvus)
+      - [Set Up API Keys](#set-up-api-keys)
+      - [Bootstrap Data](#bootstrap-data)
+      - [Configure Your Agent](#configure-your-agent)
+      - [Run the Workflow](#run-the-workflow)
+  - [Adding Long-Term Agent Memory](#adding-long-term-agent-memory)
+    - [Prerequisites](#prerequisites)
+    - [Adding Memory to the Agent](#adding-memory-to-the-agent)
+  - [Adding Additional Tools](#adding-additional-tools)
+  - [Using Test Time Compute](#using-test-time-compute)
+  - [Advanced RAG with NVIDIA RAG](#advanced-rag-with-nvidia-rag)
+    - [What the Library Provides](#what-the-library-provides)
+    - [Prerequisites](#prerequisites-1)
+    - [Bootstrap Data](#bootstrap-data-1)
+    - [Key Capabilities](#key-capabilities)
+    - [Integration with NeMo Agent Toolkit Components](#integration-with-nemo-agent-toolkit-components)
+    - [RAG-Specific Configuration](#rag-specific-configuration)
+    - [Example Configuration](#example-configuration)
+    - [Run the Workflow](#run-the-workflow-1)
 
 ## Key Features
 
 - **Milvus Vector Database Integration:** Demonstrates the `milvus_retriever` component for storing and retrieving document embeddings from CUDA and MCP documentation.
 - **ReAct Agent with RAG:** Shows how a `react_agent` can use retriever tools to answer questions by searching through indexed documentation.
+- **Advanced RAG Pipeline with NVIDIA RAG:** Showcases enhanced retrieval with semantic reranking, query rewriting, confidence filtering, and structured citations.
 - **Long-term Memory with Mem0:** Includes integration with Mem0 platform for persistent memory, allowing the agent to remember user preferences across sessions.
 - **Multi-Collection Retrieval:** Demonstrates multiple retriever tools (`cuda_retriever_tool` and `mcp_retriever_tool`) for searching different knowledge bases.
 - **Additional Tool Integration:** Shows how to extend the RAG system with complementary tools like `tavily_internet_search` and `code_generation` for comprehensive question answering.
@@ -56,11 +68,11 @@ This is a simple example RAG application to showcase how one can configure and u
 
 ### Installation and Setup
 
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 #### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit library, run the following commands:
+From the root directory of the NeMo Agent Toolkit library, run the following commands:
 ```bash
 uv pip install -e examples/RAG/simple_rag
 ```
@@ -86,7 +98,7 @@ export NVIDIA_API_KEY=<YOUR API KEY HERE>
 
 #### Bootstrap Data
 
-In a new terminal, from the root of the NeMo Agent toolkit repository, run the provided bash script to store the data in a Milvus collection. By default the script will scrape a few pages from the CUDA documentation and store the data in a Milvus collection called `cuda_docs`. It will also pull a few pages of information about the Model Context Protocol (MCP) and store it in a collection called `mcp_docs`.
+In a new terminal, from the root of the NeMo Agent Toolkit repository, run the provided bash script to store the data in a Milvus collection. By default the script will scrape a few pages from the CUDA documentation and store the data in a Milvus collection called `cuda_docs`. It will also pull a few pages of information about the Model Context Protocol (MCP) and store it in a collection called `mcp_docs`.
 
 ```bash
 source .venv/bin/activate
@@ -115,7 +127,7 @@ options:
 
 #### Configure Your Agent
 
-Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/RAG/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of the NeMo Agent toolkit pre-built agent implementations such as the `react_agent`
+Configure your Agent to use the Milvus collections for RAG. We have pre-configured a configuration file for you in `examples/RAG/simple_rag/configs/milvus_rag_config.yml`. You can modify this file to point to your Milvus instance and collections or add tools to your agent. The agent, by default, is a `tool_calling` agent that can be used to interact with the retriever component. The configuration file is shown below. You can also modify your agent to be another one of the NeMo Agent Toolkit pre-built agent implementations such as the `react_agent`
 
     ```yaml
     retrievers:
@@ -188,7 +200,7 @@ export MEM0_API_KEY=<MEM0 API KEY HERE>
 ```
 
 ### Adding Memory to the Agent
-Adding the ability to add and retrieve long-term memory to the agent is just a matter of adding a `memory` section to the configuration file. The NeMo Agent toolkit built-in abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
+Adding the ability to add and retrieve long-term memory to the agent is just a matter of adding a `memory` section to the configuration file. The NeMo Agent Toolkit built-in abstractions for long term memory management allow agents to automatically interact with them as tools. We will use the following configuration file, which you can also find in the `configs` directory.
 
 ```yaml
 memory:
@@ -261,7 +273,7 @@ Notice in the configuration above that the only addition to the configuration th
 - The type of memory to use (`mem0_memory`)
 - The name of the memory (`saas_memory`)
 
-Then, we used native NeMo Agent toolkit functions for getting memory and adding memory to the agent. These functions are:
+Then, we used native NeMo Agent Toolkit functions for getting memory and adding memory to the agent. These functions are:
 - `add_memory`: This function is used to add any facts about user preferences to long term memory.
 - `get_memory`: This function is used to retrieve any facts about user preferences from long term memory.
 
@@ -355,4 +367,173 @@ Near the end of the output you should see the following lines indicating that th
 The final workflow result should look similar to the following:
 ```console
 ['CUDA and MCP are two distinct technologies with different purposes and cannot be directly compared. CUDA is a parallel computing platform and programming model, primarily used for compute-intensive tasks such as scientific simulations, data analytics, and machine learning, whereas MCP is an open protocol designed for providing context to Large Language Models (LLMs), particularly for natural language processing and other AI-related tasks. While they serve different purposes, CUDA and MCP share a common goal of enabling developers to create powerful and efficient applications. They are complementary technologies that can be utilized together in certain applications to achieve innovative outcomes, although their differences in design and functionality set them apart. In essence, CUDA focuses on parallel computing and is developed by NVIDIA, whereas MCP is focused on context provision for LLMs, making them unique in their respective fields but potentially synergistic in specific use cases.']
+```
+
+## Advanced RAG with NVIDIA RAG
+
+The NVIDIA RAG package (`nvidia_nat_rag`) integrates the [NVIDIA RAG Blueprint](https://github.com/NVIDIA-AI-Blueprints/rag) pipeline into NeMo Agent Toolkit.
+
+The library handles the complexity of multi-stage retrieval, semantic reranking, and query optimization, allowing you to focus on building your application rather than implementing RAG infrastructure.
+
+### What the Library Provides
+
+The `nvidia_nat_rag` package provides agent tools powered by the NVIDIA RAG pipeline.
+
+- **Multi-stage retrieval** with configurable candidate pools and reranking
+- **Semantic reranking** using NeMo Retriever models
+- **Query rewriting** via LLM-based query optimization
+- **Confidence filtering** to ensure result quality
+- **Structured citations** for source attribution
+- **Multi-collection search** across multiple knowledge bases
+
+All of these features are managed by the library and configured declaratively in YAML, with no custom code required.
+
+### Prerequisites
+
+Install the NVIDIA RAG package:
+```bash
+uv pip install -e packages/nvidia_nat_rag
+```
+
+### Bootstrap Data
+
+> [!IMPORTANT]
+> The NVIDIA RAG Library example uses a different embedding model (`nvidia/llama-3.2-nv-embedqa-1b-v2`) than the basic quickstart. If you have an existing `cuda_docs` collection from the quickstart, drop and re-ingest with the correct embedding model:
+
+```bash
+python scripts/langchain_web_ingest.py \
+    -n cuda_docs \
+    -e nvidia/llama-3.2-nv-embedqa-1b-v2 \
+    --drop_collection
+```
+
+### Key Capabilities
+
+The `nvidia_nat_rag` package orchestrates a multi-stage retrieval pipeline with the following capabilities:
+
+- **Two-stage retrieval:** Combines broad vector search (recall) with semantic reranking (precision) to surface the most relevant results
+- **Query rewriting:** LLM reformulates ambiguous or conversational queries before searching
+- **Confidence filtering:** Automatically filters out low-quality matches below a configurable threshold
+- **Structured citations:** Returns document metadata (name, relevance score) for source attribution
+
+### Integration with NeMo Agent Toolkit Components
+
+The `nvidia_nat_rag` package integrates with standard NeMo Agent toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The library references these components by name:
+
+```yaml
+function_groups:
+  cuda_qa:
+    _type: nat_rag
+    llm: nim_llm              # References llms.nim_llm
+    embedder: nim_embedder    # References embedders.nim_embedder
+    retriever: cuda_retriever # References retrievers.cuda_retriever
+```
+
+This means you can reuse existing NeMo Agent toolkit infrastructure definitions and swap in the RAG library without changing your LLM, embedder, or retriever configurations.
+
+### RAG-Specific Configuration
+
+The library adds configuration specific to the RAG pipeline. These fields differ from a standard NeMo Agent toolkit retriever setup:
+
+| Field | Purpose |
+|-------|---------|
+| `topic` | Description for agent tool selection |
+| `collection_names` | Milvus collections to search |
+| `reranker_top_k` | Number of results after reranking |
+| `rag_pipeline.enable_citations` | Include document metadata in results |
+| `rag_pipeline.default_confidence_threshold` | Filter low-confidence results |
+| `rag_pipeline.ranking.enable_reranker` | Enable semantic reranking |
+| `rag_pipeline.ranking.model_name` | Reranker model to use |
+| `rag_pipeline.query_rewriter.enabled` | Enable LLM query rewriting |
+
+### Example Configuration
+
+```yaml
+function_groups:
+  cuda_qa:
+    _type: nat_rag
+    include:
+      - search
+    llm: nim_llm
+    embedder: nim_embedder
+    retriever: cuda_retriever
+    topic: NVIDIA CUDA library
+    collection_names:
+      - cuda_docs
+    reranker_top_k: 10
+    rag_pipeline:
+      enable_citations: true
+      default_confidence_threshold: 0.25
+      ranking:
+        enable_reranker: true
+        model_name: nvidia/llama-3.2-nv-rerankqa-1b-v2
+      query_rewriter:
+        enabled: true
+```
+
+### Run the Workflow
+
+```bash
+nat run --config_file examples/RAG/simple_rag/configs/rag_library_mode_config.yml \
+    --input "How do I install CUDA"
+```
+
+The logs show the pipeline stages in action:
+
+```console
+INFO:nvidia_rag.rag_server.main:Setting top k as: 100.
+INFO:nvidia_rag.rag_server.main:Narrowing the collection from 100 results and further narrowing it to 10 with the reranker for search
+INFO:nvidia_rag.rag_server.main:Setting ranker top n as: 10.
+INFO:nvidia_rag.utils.vdb.milvus.milvus_vdb: Milvus Retrieval latency: 0.8911 seconds
+INFO:nvidia_rag.rag_server.main:    == Context reranker time: 5631.08 ms ==
+INFO:nvidia_rag.utils.common:Confidence threshold filtering: 10 -> 10 documents (threshold: 0.25)
+```
+
+The agent decides to search the knowledge base and retrieves grounded document excerpts:
+
+```console
+[AGENT]
+Agent input: How do I install CUDA
+Agent's thoughts:
+Thought: To answer the user's question about installing CUDA, I need to provide them with the correct steps and requirements.
+
+Action: cuda_search__search
+Action Input: {'query': 'CUDA installation steps'}
+```
+
+The search tool returns structured citations in JSON format:
+
+```console
+[AGENT]
+Calling tools: cuda_search__search
+Tool's input: {'query': 'CUDA installation steps'}
+Tool's response:
+{"total_results":10,"results":[{"document_id":"","content":"Note\nFor both native as well as cross development,
+the toolkit must be installed using the distribution-specific installer...
+Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads.
+Choose the platform you are using and download the NVIDIA CUDA Toolkit...
+...(truncated)"},...]}
+```
+
+The agent synthesizes a comprehensive, grounded response with specific commands for multiple platforms:
+
+```console
+['To install CUDA, you can follow these steps:
+
+1. Verify that you have a CUDA-capable GPU.
+2. Download the NVIDIA CUDA Toolkit from https://developer.nvidia.com/cuda-downloads.
+3. Install the NVIDIA CUDA Toolkit. The installation steps may vary depending on your operating system.
+4. Test that the installed software runs correctly and communicates with the hardware.
+
+For example, on Ubuntu, you can install CUDA using the following commands:
+# apt update
+# apt install cuda-toolkit
+
+On Windows, you can use the network installer or full installer.
+
+Additionally, you can use Conda to install CUDA:
+$ conda install cuda -c nvidia
+
+You can also use pip wheels:
+$ python3 -m pip install nvidia-cuda-runtime-cu12']
 ```

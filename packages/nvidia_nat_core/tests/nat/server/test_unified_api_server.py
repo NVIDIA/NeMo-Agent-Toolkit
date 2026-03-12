@@ -1,0 +1,1061 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import asyncio
+import datetime
+import json
+import os
+import re
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
+import httpx
+import pytest
+import pytest_asyncio
+import yaml
+from asgi_lifespan import LifespanManager
+from httpx import ASGITransport
+from pydantic import BaseModel
+from pydantic import ValidationError
+
+from nat.builder.context import Context
+from nat.data_models.api_server import ChatRequest
+from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChoice
+from nat.data_models.api_server import ChatResponseChunk
+from nat.data_models.api_server import ChatResponseChunkChoice
+from nat.data_models.api_server import ChoiceDelta
+from nat.data_models.api_server import ChoiceMessage
+from nat.data_models.api_server import Error
+from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import ObservabilityTraceContent
+from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponsePayloadOutput
+from nat.data_models.api_server import SystemIntermediateStepContent
+from nat.data_models.api_server import SystemResponseContent
+from nat.data_models.api_server import TextContent
+from nat.data_models.api_server import Usage
+from nat.data_models.api_server import WebSocketMessageType
+from nat.data_models.api_server import WebSocketObservabilityTraceMessage
+from nat.data_models.api_server import WebSocketSystemInteractionMessage
+from nat.data_models.api_server import WebSocketSystemIntermediateStepMessage
+from nat.data_models.api_server import WebSocketSystemResponseTokenMessage
+from nat.data_models.api_server import WebSocketUserInteractionResponseMessage
+from nat.data_models.api_server import WebSocketUserMessage
+from nat.data_models.interactive import BinaryHumanPromptOption
+from nat.data_models.interactive import HumanPromptBinary
+from nat.data_models.interactive import HumanPromptCheckbox
+from nat.data_models.interactive import HumanPromptDropdown
+from nat.data_models.interactive import HumanPromptNotification
+from nat.data_models.interactive import HumanPromptRadio
+from nat.data_models.interactive import HumanPromptText
+from nat.data_models.interactive import HumanResponseBinary
+from nat.data_models.interactive import HumanResponseCheckbox
+from nat.data_models.interactive import HumanResponseDropdown
+from nat.data_models.interactive import HumanResponseRadio
+from nat.data_models.interactive import HumanResponseText
+from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.interactive import MultipleChoiceOption
+from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+from nat.front_ends.fastapi.message_handler import UserInteraction
+from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
+from nat.front_ends.fastapi.message_validator import MessageValidator
+from nat.runtime.session import SessionManager
+from nat.test.functions import EchoFunctionConfig
+
+
+class AppConfig(BaseModel):
+    host: str
+    ws: str
+    port: int
+    config_filepath: str
+    input: str
+
+
+class EndpointConfig(BaseModel):
+    generate: str
+    chat: str
+    generate_stream: str
+    chat_stream: str
+
+
+class Config(BaseModel):
+    app: AppConfig
+    endpoint: EndpointConfig
+
+
+class TEST(BaseModel):
+    test: str = "TEST"
+
+
+# ======== Raw WebSocket Message Schemas ========
+user_message = {
+    "type": "user_message",
+    "schema_type": "chat",
+    "id": "string",
+    "conversation_id": "string",
+    "content": {
+        "messages": [{
+            "role": "user", "content": [{
+                "type": "text", "text": "What are these images?"
+            }]
+        }]
+    },
+    "timestamp": "string",
+    "user": {
+        "name": "string", "email": "string"
+    },
+    "security": {
+        "api_key": "string", "token": "string"
+    },
+    "error": {
+        "code": "unknown_error", "message": "string", "details": "object"
+    },
+    "schema_version": "string"
+}
+
+system_response_token_message_with_text_content = {
+    "type": "system_response_message",
+    "id": "token_001",
+    "thread_id": "thread_456",
+    "parent_id": "id from user message",
+    "content": {
+        "text": "Response token can be json, code block or plain text"
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:02Z"
+}
+system_response_token_message_with_error_content = {
+    "type": "error_message",
+    "id": "token_001",
+    "thread_id": "thread_456",
+    "parent_id": "id from user message",
+    "content": {
+        "code": "unknown_error", "message": "ValidationError", "details": "The provided email format is invalid."
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:02Z"
+}
+
+user_interaction_response_message = {
+    "type": "user_interaction_message",
+    "id": "string",
+    "thread_id": "string",
+    "parent_id": "string",
+    "conversation_id": "string",
+    "content": {
+        "messages": [{
+            "role": "user", "content": [{
+                "type": "text", "text": "What are these images?"
+            }]
+        }]
+    },
+    "timestamp": "string",
+    "user": {
+        "name": "string", "email": "string"
+    },
+    "security": {
+        "api_key": "string", "token": "string"
+    },
+    "error": {
+        "code": "unknown_error", "message": "string", "details": "object"
+    },
+    "schema_version": "string"
+}
+system_intermediate_step_message = {
+    "type": "system_intermediate_message",
+    "id": "step_789",
+    "thread_id": "thread_456",
+    "parent_id": "id from user message",
+    "intermediate_parent_id": "default",
+    "content": {
+        "name": "name of the step - example Query rephrasal",
+        "payload": "Step information, it can be json or code block or it can be plain text"
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:01Z"
+}
+
+system_interaction_text_message = {
+    "type": "system_interaction_message",
+    "id": "interaction_303",
+    "thread_id": "thread_456",
+    "parent_id": "id from user message",
+    "content": {
+        "input_type": "text", "text": "Ask anything.", "placeholder": "What can you do?", "required": True
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:03Z"
+}
+
+system_interaction_binary_choice_message = {
+    "type": "system_interaction_message",
+    "id": "interaction_304",
+    "thread_id": "thread_456",
+    "parent_id": "msg_123",
+    "content": {
+        "input_type": "binary_choice",
+        "text": "Should I continue or cancel?",
+        "options": [{
+            "id": "continue",
+            "label": "Continue",
+            "value": "continue",
+        }, {
+            "id": "cancel",
+            "label": "Cancel",
+            "value": "cancel",
+        }],
+        "required": True
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:03Z"
+}
+
+system_interaction_notification_message = {
+    "type": "system_interaction_message",
+    "id": "interaction_303",
+    "thread_id": "thread_456",
+    "parent_id": "id from user message",
+    "content": {
+        "input_type": "notification",
+        "text": "Processing starting, it'll take some time",
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:03Z"
+}
+
+system_interaction_multiple_choice_radio_message = {
+    "type": "system_interaction_message",
+    "id": "interaction_305",
+    "thread_id": "thread_456",
+    "parent_id": "msg_123",
+    "content": {
+        "input_type": "radio",
+        "text": "Please select your preferred notification method:",
+        "options": [{
+            "id": 'email', "label": "Email", "value": "email", "description": "Email notifications"
+        }, {
+            "id": 'sms', "label": "SMS", "value": "sms", "description": "SMS notifications"
+        }, {
+            "id": "push", "label": "Push Notification", "value": "push", "description": "Push notifications"
+        }],
+        "required": True
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:03Z"
+}
+
+system_interaction_multiple_choice_checkbox_message = {
+    "type": "system_interaction_message",
+    "id": "interaction_305",
+    "thread_id": "thread_456",
+    "parent_id": "msg_123",
+    "content": {
+        "input_type": "checkbox",
+        "text": "Please select your preferred notification method:",
+        "options": [{
+            "id": 'email', "label": "Email", "value": "email", "description": "Email notifications"
+        }, {
+            "id": 'sms', "label": "SMS", "value": "sms", "description": "SMS notifications"
+        }, {
+            "id": "push", "label": "Push Notification", "value": "push", "description": "Push notifications"
+        }],
+        "required": True
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:03Z"
+}
+system_interaction_multiple_choice_dropdown_message = {
+    "type": "system_interaction_message",
+    "id": "interaction_305",
+    "thread_id": "thread_456",
+    "parent_id": "msg_123",
+    "content": {
+        "input_type": "dropdown",
+        "text": "Please select your preferred notification method:",
+        "options": [{
+            "id": 'email', "label": "Email", "value": "email", "description": "Email notifications"
+        }, {
+            "id": 'sms', "label": "SMS", "value": "sms", "description": "SMS notifications"
+        }, {
+            "id": "push", "label": "Push Notification", "value": "push", "description": "Push notifications"
+        }],
+        "required": True
+    },
+    "status": "in_progress",
+    "timestamp": "2025-01-13T10:00:03Z"
+}
+
+observability_trace_message = {
+    "type": "observability_trace_message",
+    "id": "trace_001",
+    "parent_id": "msg_123",
+    "conversation_id": "conv_001",
+    "content": {
+        "observability_trace_id": "weave-trace-xyz"
+    },
+    "timestamp": "2025-01-13T10:00:05Z"
+}
+
+
+@pytest.fixture(name="config",
+                params=["server_config.yml", "legacy_server_config.yml"],
+                ids=["modern_endpoints", "legacy_endpoints"])
+def server_config(restore_environ, request: pytest.FixtureRequest) -> BaseModel:
+    config_file = request.param
+    file_path = __file__.replace("test_unified_api_server.py", config_file)
+    data = None
+    with open(file_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    os.environ["NAT_CONFIG_FILE"] = file_path
+    return Config(**data)
+
+
+@pytest_asyncio.fixture(name="client")
+async def client_fixture(config):
+    from nat.data_models.config import Config as AppConfig
+    app_config = AppConfig(workflow=EchoFunctionConfig())
+    front_end_worker = FastApiFrontEndPluginWorker(app_config)
+    fastapi_app = front_end_worker.build_app()
+
+    async with LifespanManager(fastapi_app) as manager:
+        transport = ASGITransport(app=manager.app)
+        async with httpx.AsyncClient(transport=transport,
+                                     base_url=f"http://{config.app.host}:{config.app.port}") as client:
+            yield client
+
+
+@pytest.mark.integration
+async def test_generate_endpoint(client: httpx.AsyncClient, config: Config):
+    """Tests generate endpoint to verify it responds successfully."""
+    input_message = {"message": f"{config.app.input}"}
+    response = await client.post(f"{config.endpoint.generate}", json=input_message)
+    assert response.status_code == 200
+
+
+async def test_generate_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the workflow raises, non-streaming generate returns 422 with Error JSON body."""
+    with patch("nat.front_ends.fastapi.routes.common_utils.generate_single_response") as mock_common_single, patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_single_response") as mock_interactive_single:
+        for mock_gen in (mock_common_single, mock_interactive_single):
+            mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+        input_message = {"message": "hello"}
+        response = await client.post(f"{config.endpoint.generate}", json=input_message)
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "workflow_error"
+    assert "No human prompt callback" in body["message"]
+    # NotImplementedError is returned for legacy endpoints
+    # ExecutionFailed is returned for modern endpoints
+    assert body["details"] in {"NotImplementedError", "ExecutionFailed"}
+
+
+@pytest.mark.integration
+async def test_generate_stream_endpoint(client: httpx.AsyncClient, config: Config):
+    """Tests generate stream endpoint to verify it responds successfully."""
+    input_message = {"message": f"{config.app.input}"}
+    response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
+    assert response.status_code == 200
+
+
+async def test_generate_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the streaming workflow raises, generate stream contains an Error chunk with code workflow_error."""
+
+    async def raising_gen(*args, **kwargs):
+        if False:
+            yield
+        raise NotImplementedError("No human prompt callback was registered.")
+
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen), patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_streaming_response", new=raising_gen):
+        input_message = {"message": "hello"}
+        response = await client.post(f"{config.endpoint.generate_stream}", json=input_message)
+    assert response.status_code == 200
+    assert "workflow_error" in response.text
+    data_match: re.Match[str] | None = re.search(r'"code"\s*:\s*"workflow_error"', response.text)
+    assert data_match is not None
+
+
+@pytest.mark.integration
+async def test_chat_endpoint(client: httpx.AsyncClient, config: Config):
+    """Tests chat endpoint to verify it responds successfully."""
+    input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
+    response = await client.post(f"{config.endpoint.chat}", json=input_message)
+    assert response.status_code == 200
+    validated_response = ChatResponse(**response.json())
+    assert isinstance(validated_response, ChatResponse)
+
+
+async def test_chat_endpoint_returns_error_body_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the workflow raises, non-streaming chat returns 422 with Error JSON body."""
+    with patch("nat.front_ends.fastapi.routes.common_utils.generate_single_response") as mock_common_single, patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_single_response") as mock_interactive_single:
+        for mock_gen in (mock_common_single, mock_interactive_single):
+            mock_gen.side_effect = NotImplementedError("No human prompt callback was registered.")
+        input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
+        response = await client.post(f"{config.endpoint.chat}", json=input_message)
+    assert response.status_code == 422
+    body = response.json()
+    assert body["code"] == "workflow_error"
+    assert "No human prompt callback" in body["message"]
+    assert body["details"] in {"NotImplementedError", "ExecutionFailed"}
+
+
+async def test_chat_stream_endpoint_yields_error_when_workflow_raises(client: httpx.AsyncClient, config: Config):
+    """When the streaming workflow raises, the stream contains an Error chunk with code workflow_error."""
+
+    async def raising_gen(*args, **kwargs):
+        if False:
+            yield
+        raise NotImplementedError("No human prompt callback was registered.")
+
+    with patch("nat.front_ends.fastapi.response_helpers.generate_streaming_response", new=raising_gen), patch(
+            "nat.front_ends.fastapi.http_interactive_runner.generate_streaming_response", new=raising_gen):
+        input_message = {"messages": [{"role": "user", "content": "hello"}], "use_knowledge_base": True}
+        response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
+    assert response.status_code == 200
+    assert "workflow_error" in response.text
+    data_match: re.Match[str] | None = re.search(r'"code"\s*:\s*"workflow_error"', response.text)
+    assert data_match is not None
+
+
+@pytest.mark.integration
+async def test_chat_stream_endpoint(client: httpx.AsyncClient, config: Config):
+    """Tests chat stream endpoint to verify it responds successfully."""
+    input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
+    response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
+    assert response.status_code == 200
+    # only match the explicit `data:` json response
+    data_match: re.Match[str] | None = re.search(r'\bdata:\s*(.[^\n]*)\n', response.text)
+    assert data_match is not None
+    data_match_dict: dict = json.loads(data_match.group(1))
+    validated_response = ChatResponseChunk(**data_match_dict)
+    assert isinstance(validated_response, ChatResponseChunk)
+
+
+@pytest.mark.integration
+async def test_chat_stream_endpoint_observability_trace_id_integration(client: httpx.AsyncClient, config: Config):
+    """Tests that chat stream endpoint sends observability_trace_id as a separate SSE event."""
+    input_message = {"messages": [{"role": "user", "content": f"{config.app.input}"}], "use_knowledge_base": True}
+
+    # Set the observability_trace_id directly on the ContextState's ContextVar
+    # This avoids breaking Context.get() which the workflow depends on
+    from nat.builder.context import ContextState
+    context_state = ContextState()
+    token = context_state.observability_trace_id.set("integration-stream-observability-id")
+
+    try:
+        response = await client.post(f"{config.endpoint.chat_stream}", json=input_message)
+        assert response.status_code == 200
+
+        # Verify the observability trace is sent as a separate SSE event
+        trace_match = re.search(r'observability_trace:\s*({[^}]+})', response.text)
+        assert trace_match is not None, "Expected observability_trace SSE event not found in stream"
+
+        trace_data = json.loads(trace_match.group(1))
+        assert trace_data.get("observability_trace_id") == "integration-stream-observability-id"
+
+        # Verify streaming data responses are valid ChatResponseChunk instances
+        data_match: re.Match[str] | None = re.search(r'\bdata:\s*(.[^\n]*)\n', response.text)
+        assert data_match is not None
+        data_match_dict: dict = json.loads(data_match.group(1))
+        validated_response = ChatResponseChunk(**data_match_dict)
+        assert isinstance(validated_response, ChatResponseChunk)
+    finally:
+        # Reset the ContextVar to avoid affecting other tests
+        context_state.observability_trace_id.reset(token)
+
+
+@pytest.mark.integration
+async def test_metadata_from_http_request_populates_all_request_attributes(client: httpx.AsyncClient,
+                                                                           config: Config) -> None:
+    captured: list = []
+
+    original = SessionManager.set_metadata_from_http_request
+
+    async def capture_metadata(self, request):
+        result = await original(self, request)
+        meta = Context.get().metadata
+        captured.append({
+            "method": meta.method,
+            "url_path": meta.url_path,
+            "url_scheme": meta.url_scheme,
+            "url_port": meta.url_port,
+            "client_host": meta.client_host,
+            "client_port": meta.client_port,
+            "headers": meta.headers,
+            "query_params": meta.query_params,
+            "path_params": meta.path_params,
+            "cookies": meta.cookies,
+            "payload": meta.payload,
+        })
+        return result
+
+    with patch(
+            "nat.runtime.session.SessionManager.set_metadata_from_http_request",
+            capture_metadata,
+    ):
+        response = await client.post(
+            f"{config.endpoint.generate}?tenant_id=abc&env=test",
+            json={"message": config.app.input},
+            headers={
+                "x-custom": "custom-value", "cookie": "session=xyz123; foo=bar"
+            },
+        )
+
+    assert response.status_code == 200
+    assert len(captured) == 1
+    meta = captured[0]
+    assert meta["method"] == "POST"
+    assert config.endpoint.generate in meta["url_path"]
+    assert meta["url_scheme"] == "http"
+    assert meta["url_port"] == 8000
+    assert meta["client_host"] is not None
+    assert meta["client_port"] is not None
+    assert meta["headers"] is not None
+    assert meta["headers"].get("x-custom") == "custom-value"
+    assert meta["query_params"] is not None
+    assert meta["query_params"].get("tenant_id") == "abc"
+    assert meta["query_params"].get("env") == "test"
+    assert meta["path_params"] is not None
+    assert meta["cookies"] is not None
+    assert meta["cookies"].get("session") == "xyz123"
+    assert meta["cookies"].get("foo") == "bar"
+    assert meta["payload"] is not None
+
+
+def test_metadata_from_websocket_populates_all_request_attributes() -> None:
+    """Unit test: set_metadata_from_websocket populates context metadata from a mock websocket."""
+    from unittest.mock import MagicMock
+
+    from nat.builder.context import ContextState
+    from nat.runtime.session import SessionManager
+    from nat.runtime.user_metadata import RequestAttributes
+
+    # Reset the ContextVar so we start with a fresh RequestAttributes,
+    # avoiding stale state from previous tests sharing the session-scoped event loop.
+    ContextState.get()._metadata.set(RequestAttributes())
+
+    mock_config = MagicMock()
+    mock_config.workflow = EchoFunctionConfig()
+    mock_builder = MagicMock()
+    sm = SessionManager(config=mock_config, shared_builder=mock_builder, entry_function=None)
+
+    mock_ws = MagicMock()
+    mock_ws.url.path = "/websocket"
+    mock_ws.url.port = 443
+    mock_ws.url.scheme = "ws"
+    mock_ws.headers = {"x-custom": "custom-value"}
+    mock_ws.query_params = {"tenant_id": "abc", "env": "test"}
+    mock_ws.path_params = {}
+    mock_ws.client = ("192.168.1.1", 12345)
+    mock_ws.cookies = {"session": "xyz123", "foo": "bar"}
+    mock_ws.scope = {"headers": []}
+
+    sm.set_metadata_from_websocket(
+        mock_ws,
+        user_message_id="msg-1",
+        conversation_id="conv-1",
+        pre_parsed_cookies={
+            "session": "xyz123", "foo": "bar"
+        },
+    )
+
+    meta = ContextState.get().metadata.get()
+    assert meta.url_path == "/websocket"
+    assert meta.url_scheme == "ws"
+    assert meta.url_port == 443
+    assert meta.client_host == "192.168.1.1"
+    assert meta.client_port == 12345
+    assert meta.headers is not None
+    assert meta.headers.get("x-custom") == "custom-value"
+    assert meta.query_params is not None
+    assert meta.query_params.get("tenant_id") == "abc"
+    assert meta.query_params.get("env") == "test"
+    assert meta.path_params is not None
+    assert meta.cookies is not None
+    assert meta.payload is None
+    assert meta.cookies.get("session") == "xyz123"
+    assert meta.cookies.get("foo") == "bar"
+
+
+async def test_valid_user_message():
+    """Validate raw message against approved message type WebSocketUserMessage"""
+    message_validator = MessageValidator()
+
+    message = await message_validator.validate_message(user_message)
+    assert isinstance(message, WebSocketUserMessage)
+
+
+async def test_valid_system_response_token_message():
+    """Validate raw message against approved message type WebSocketSystemResponseTokenMessage"""
+    message_validator = MessageValidator()
+
+    response_text_message = await message_validator.validate_message(system_response_token_message_with_text_content)
+    response_error_message = await message_validator.validate_message(system_response_token_message_with_error_content)
+    assert isinstance(response_text_message, WebSocketSystemResponseTokenMessage)
+    assert isinstance(response_error_message, WebSocketSystemResponseTokenMessage)
+
+
+async def test_valid_system_intermediate_step_message():
+    """Validate raw message against approved message type WebSocketSystemIntermediateStepMessage"""
+    message_validator = MessageValidator()
+
+    intermediate_step_message = await message_validator.validate_message(system_intermediate_step_message)
+    assert isinstance(intermediate_step_message, WebSocketSystemIntermediateStepMessage)
+
+
+async def test_valid_user_interaction_response_message():
+    """Validate raw message against approved message type WebSocketUserInteractionResponseMessage"""
+    message_validator = MessageValidator()
+
+    interaction_response_message = await message_validator.validate_message(user_interaction_response_message)
+    assert isinstance(interaction_response_message, WebSocketUserInteractionResponseMessage)
+
+
+async def test_valid_observability_trace_message():
+    """Validate raw message against approved message type WebSocketObservabilityTraceMessage"""
+    message_validator = MessageValidator()
+
+    trace_message = await message_validator.validate_message(observability_trace_message)
+    assert isinstance(trace_message, WebSocketObservabilityTraceMessage)
+    assert trace_message.content.observability_trace_id == "weave-trace-xyz"
+
+
+valid_system_interaction_messages = [
+    system_interaction_text_message,
+    system_interaction_binary_choice_message,
+    system_interaction_notification_message,
+    system_interaction_multiple_choice_radio_message,
+    system_interaction_multiple_choice_checkbox_message
+]
+
+
+@pytest.mark.parametrize("message", valid_system_interaction_messages)
+async def test_valid_system_interaction_message(message):
+    """Validate raw message against approved message type WebSocketSystemInteractionMessage"""
+    message_validator = MessageValidator()
+
+    system_interaction_message = await message_validator.validate_message(message)
+    assert isinstance(system_interaction_message, WebSocketSystemInteractionMessage)
+
+
+async def test_invalid_websocket_message():
+    """Validate raw message against approved message type listed in (WebSocketMessageType)
+    and return a system error response message with INVALID_MESSAGE error content if validation fails."""
+    message_validator = MessageValidator()
+    user_message["type"] = "invalid"
+    message = await message_validator.validate_message(user_message)
+    assert isinstance(message, WebSocketSystemResponseTokenMessage)
+    assert message.content.code == ErrorTypes.INVALID_MESSAGE
+
+
+nat_response_payload_output_test = ResponsePayloadOutput(payload="TEST")
+nat_chat_response_test = ChatResponse(id="default",
+                                      object="default",
+                                      created=datetime.datetime.now(datetime.UTC),
+                                      choices=[ChatResponseChoice(message=ChoiceMessage(), index=0)],
+                                      usage=Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0))
+nat_chat_response_chunk_test = ChatResponseChunk(id="default",
+                                                 choices=[ChatResponseChunkChoice(delta=ChoiceDelta(), index=0)],
+                                                 created=datetime.datetime.now(datetime.UTC))
+nat_response_intermediate_step_test = ResponseIntermediateStep(id="default", name="default", payload="default")
+
+validated_response_data_models = [
+    nat_response_payload_output_test, nat_chat_response_test, nat_chat_response_chunk_test
+]
+
+
+@pytest.mark.parametrize("data_model", validated_response_data_models)
+async def test_resolve_response_message_type_by_input_data(data_model: BaseModel):
+    """Resolve validated message type WebSocketMessageType.RESPONSE_MESSAGE from
+    ResponsePayloadOutput, ChatResponse, ChatResponseChunk input data."""
+    message_validator = MessageValidator()
+
+    message_type = await message_validator.resolve_message_type_by_data(data_model)
+    assert message_type == WebSocketMessageType.RESPONSE_MESSAGE
+
+
+async def test_resolve_intermediate_step_message_type_by_input_data():
+    """Resolve validated message type WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE from
+    ResponseIntermediateStep input data."""
+    message_validator = MessageValidator()
+
+    message_type = await message_validator.resolve_message_type_by_data(nat_response_intermediate_step_test)
+    assert message_type == WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE
+
+
+human_prompt_text_test = HumanPromptText(text="TEST", placeholder="TEST", required=True)
+human_prompt_notification = HumanPromptNotification(text="TEST")
+human_prompt_binary_choice_test = HumanPromptBinary(text="TEST",
+                                                    options=[BinaryHumanPromptOption(), BinaryHumanPromptOption()])
+human_prompt_radio_test = HumanPromptRadio(text="TEST", options=[MultipleChoiceOption()])
+human_prompt_checkbox_test = HumanPromptCheckbox(text="TEST", options=[MultipleChoiceOption()])
+human_prompt_dropdown_test = HumanPromptDropdown(text="TEST", options=[MultipleChoiceOption()])
+
+validated_interaction_prompt_data_models = [
+    human_prompt_text_test,
+    human_prompt_notification,
+    human_prompt_binary_choice_test,
+    human_prompt_radio_test,
+    human_prompt_checkbox_test,
+    human_prompt_dropdown_test
+]
+
+
+@pytest.mark.parametrize("data_model", validated_interaction_prompt_data_models)
+async def test_resolve_system_interaction_message_type_by_input_data(data_model: BaseModel):
+    """Resolve validated message type WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE from
+    HumanPromptBase input data."""
+    message_validator = MessageValidator()
+
+    message_type = await message_validator.resolve_message_type_by_data(data_model)
+    assert message_type == WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE
+
+
+async def test_resolve_error_message_type_by_invalid_input_data():
+    """Resolve validated message type WebSocketMessageType.ERROR_MESSAGE from
+    invalid input data."""
+    message_validator = MessageValidator()
+
+    message_type = await message_validator.resolve_message_type_by_data(TEST())
+    assert message_type == WebSocketMessageType.ERROR_MESSAGE
+
+
+async def test_resolve_error_message_type_by_error_data():
+    """Resolve WebSocketMessageType.ERROR_MESSAGE when data_model is Error."""
+    message_validator = MessageValidator()
+    err = Error(code=ErrorTypes.WORKFLOW_ERROR, message="msg", details="detail")
+    message_type = await message_validator.resolve_message_type_by_data(err)
+    assert message_type == WebSocketMessageType.ERROR_MESSAGE
+
+
+async def test_convert_data_to_message_content_returns_error_unchanged():
+    """convert_data_to_message_content returns Error instance as-is."""
+    message_validator = MessageValidator()
+    err = Error(code=ErrorTypes.WORKFLOW_ERROR, message="msg", details="detail")
+    content = await message_validator.convert_data_to_message_content(err)
+    assert content is err
+
+
+async def test_nat_response_to_websocket_message():
+    """Tests ResponsePayloadOutput can be converted to a WebSocketSystemResponseTokenMessage"""
+    message_validator = MessageValidator()
+
+    nat_response_content = await message_validator.convert_data_to_message_content(nat_response_payload_output_test)
+
+    nat_response_to_system_response = await message_validator.create_system_response_token_message(
+        message_id="TEST", parent_id="TEST", content=nat_response_content, status="in_progress")
+
+    assert isinstance(nat_response_content, SystemResponseContent)
+    assert isinstance(nat_response_to_system_response, WebSocketSystemResponseTokenMessage)
+
+
+async def test_nat_chat_response_to_websocket_message():
+    """Tests ChatResponse can be converted to a WebSocketSystemResponseTokenMessage"""
+    message_validator = MessageValidator()
+
+    nat_chat_response_content = await message_validator.convert_data_to_message_content(nat_chat_response_test)
+
+    nat_chat_response_to_system_response = await message_validator.create_system_response_token_message(
+        message_id="TEST", parent_id="TEST", content=nat_chat_response_content, status="in_progress")
+
+    assert isinstance(nat_chat_response_content, SystemResponseContent)
+    assert isinstance(nat_chat_response_to_system_response, WebSocketSystemResponseTokenMessage)
+
+
+async def test_chat_response_chunk_to_websocket_message():
+    """Tests ChatResponseChunk can be converted to a WebSocketSystemResponseTokenMessage"""
+    message_validator = MessageValidator()
+
+    nat_chat_repsonse_chunk_content = await message_validator.convert_data_to_message_content(
+        nat_chat_response_chunk_test)
+
+    nat_chat_repsonse_chunk_to_system_response = await message_validator.create_system_response_token_message(
+        message_id="TEST", parent_id="TEST", content=nat_chat_repsonse_chunk_content, status="in_progress")
+
+    assert isinstance(nat_chat_repsonse_chunk_content, SystemResponseContent)
+    assert isinstance(nat_chat_repsonse_chunk_to_system_response, WebSocketSystemResponseTokenMessage)
+
+
+async def test_nat_intermediate_step_to_websocket_message():
+    """Tests ResponseIntermediateStep can be converted to a WebSocketSystemIntermediateStepMessage"""
+    message_validator = MessageValidator()
+
+    nat_intermediate_step_content = await message_validator.convert_data_to_message_content(
+        nat_response_intermediate_step_test)
+
+    intermediate_step_content_to_message = await message_validator.create_system_intermediate_step_message(
+        message_id="TEST", parent_id="TEST", content=nat_intermediate_step_content, status="in_progress")
+
+    assert isinstance(nat_intermediate_step_content, SystemIntermediateStepContent)
+    assert isinstance(intermediate_step_content_to_message, WebSocketSystemIntermediateStepMessage)
+
+
+async def test_text_prompt_to_websocket_message_to_text_response():
+    message_validator = MessageValidator()
+
+    human_text_content = await message_validator.convert_data_to_message_content(human_prompt_text_test)
+
+    human_text_to_interaction_message = await message_validator.create_system_interaction_message(
+        message_id="TEST", parent_id="TEST", content=human_text_content, status="in_progress")
+
+    human_text_response_content = await message_validator.convert_text_content_to_human_response(
+        TextContent(), human_text_content)
+
+    assert isinstance(human_text_content, HumanPromptText)
+    assert isinstance(human_text_to_interaction_message, WebSocketSystemInteractionMessage)
+    assert isinstance(human_text_to_interaction_message.content, HumanPromptText)
+    assert isinstance(human_text_response_content, HumanResponseText)
+
+
+async def test_create_observability_trace_message():
+    """Tests ObservabilityTraceContent can be converted to a WebSocketObservabilityTraceMessage"""
+    message_validator = MessageValidator()
+
+    content = ObservabilityTraceContent(observability_trace_id="test-trace-123")
+
+    message = await message_validator.create_observability_trace_message(message_id="trace_msg_001",
+                                                                         parent_id="parent_123",
+                                                                         content=content)
+
+    assert isinstance(message, WebSocketObservabilityTraceMessage)
+    assert message.type == WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE
+    assert message.id == "trace_msg_001"
+    assert message.parent_id == "parent_123"
+    assert message.content.observability_trace_id == "test-trace-123"
+
+
+async def test_binary_choice_prompt_to_websocket_message_to_binary_choice_response():
+    message_validator = MessageValidator()
+
+    human_binary_choice_content = await message_validator.convert_data_to_message_content(
+        human_prompt_binary_choice_test)
+
+    human_binary_choice_to_interaction_message = await message_validator.create_system_interaction_message(
+        message_id="TEST", parent_id="TEST", content=human_binary_choice_content, status="in_progress")
+
+    human_text_response_content = await message_validator.convert_text_content_to_human_response(
+        TextContent(), human_binary_choice_content)
+
+    assert isinstance(human_binary_choice_content, HumanPromptBinary)
+    assert isinstance(human_binary_choice_to_interaction_message, WebSocketSystemInteractionMessage)
+    assert isinstance(human_binary_choice_to_interaction_message.content, HumanPromptBinary)
+    assert isinstance(human_text_response_content, HumanResponseBinary)
+
+
+async def test_radio_choice_prompt_to_websocket_message_to_radio_choice_response():
+    message_validator = MessageValidator()
+
+    human_radio_choice_content = await message_validator.convert_data_to_message_content(human_prompt_radio_test)
+
+    human_radio_choice_to_interaction_message = await message_validator.create_system_interaction_message(
+        message_id="TEST", parent_id="TEST", content=human_radio_choice_content, status="in_progress")
+
+    human_radio_response_content = await message_validator.convert_text_content_to_human_response(
+        TextContent(), human_radio_choice_content)
+
+    assert isinstance(human_radio_choice_content, HumanPromptRadio)
+    assert isinstance(human_radio_choice_to_interaction_message, WebSocketSystemInteractionMessage)
+    assert isinstance(human_radio_choice_to_interaction_message.content, HumanPromptRadio)
+    assert isinstance(human_radio_response_content, HumanResponseRadio)
+
+
+async def test_dropdown_choice_prompt_to_websocket_message_to_dropdown_choice_response():
+    message_validator = MessageValidator()
+
+    human_dropdown_choice_content = await message_validator.convert_data_to_message_content(human_prompt_dropdown_test)
+
+    human_dropdown_choice_to_interaction_message = await message_validator.create_system_interaction_message(
+        message_id="TEST", parent_id="TEST", content=human_dropdown_choice_content, status="in_progress")
+
+    human_dropdown_response_content = await message_validator.convert_text_content_to_human_response(
+        TextContent(), human_dropdown_choice_content)
+
+    assert isinstance(human_dropdown_choice_content, HumanPromptDropdown)
+    assert isinstance(human_dropdown_choice_to_interaction_message, WebSocketSystemInteractionMessage)
+    assert isinstance(human_dropdown_choice_to_interaction_message.content, HumanPromptDropdown)
+    assert isinstance(human_dropdown_response_content, HumanResponseDropdown)
+
+
+async def test_checkbox_choice_prompt_to_websocket_message_to_checkbox_choice_response():
+    message_validator = MessageValidator()
+
+    human_checkbox_choice_content = await message_validator.convert_data_to_message_content(human_prompt_checkbox_test)
+
+    human_checkbox_choice_to_interaction_message = await message_validator.create_system_interaction_message(
+        message_id="TEST", parent_id="TEST", content=human_checkbox_choice_content, status="in_progress")
+
+    human_checkbox_response_content = await message_validator.convert_text_content_to_human_response(
+        TextContent(), human_checkbox_choice_content)
+
+    assert isinstance(human_checkbox_choice_content, HumanPromptCheckbox)
+    assert isinstance(human_checkbox_choice_to_interaction_message, WebSocketSystemInteractionMessage)
+    assert isinstance(human_checkbox_choice_to_interaction_message.content, HumanPromptCheckbox)
+    assert isinstance(human_checkbox_response_content, HumanResponseCheckbox)
+
+
+async def test_websocket_error_message():
+    message_validator = MessageValidator()
+
+    try:
+        invalid_message_type = "invalid_message_type"
+        invalid_data_model = TEST()
+        message_schema: type[BaseModel] = await message_validator.get_message_schema_by_type(invalid_message_type)
+
+        content: BaseModel = await message_validator.convert_data_to_message_content(invalid_data_model)
+
+        if (issubclass(message_schema, Error)):
+            raise TypeError(f"TESTING MESSAGE ERROR PATH: {content}")
+
+        if (isinstance(content, Error)):
+            raise ValidationError(f"TESTING MESSAGE ERROR PATH: {content}")
+
+    except (ValidationError, TypeError, ValueError) as e:
+        message = await message_validator.create_system_response_token_message(
+            message_type=WebSocketMessageType.ERROR_MESSAGE,
+            content=Error(code=ErrorTypes.UNKNOWN_ERROR, message="Test message", details=str(e)))
+
+        assert isinstance(message, WebSocketSystemResponseTokenMessage)
+
+
+async def test_valid_openai_chat_request_fields():
+    """Test that ChatRequest accepts valid field structures"""
+    # Test with minimal required fields
+    minimal_request = {"messages": [{"role": "user", "content": "Hello"}]}
+
+    # Test with comprehensive valid fields
+    comprehensive_request = {
+        "messages": [{
+            "role": "user", "content": "Hello"
+        }],
+        "model": "gpt-4",
+        "temperature": 0.7,
+        "max_tokens": 100,
+        "top_p": 0.9,
+        "stream": False,
+        "stop": ["END"],
+        "frequency_penalty": 0.5,
+        "presence_penalty": 0.3,
+        "n": 1,
+        "user": "test_user",
+        "use_knowledge_base": True,  # Test extra fields are allowed
+        "custom_field": "should_be_allowed",
+        "another_custom": {
+            "nested": "value"
+        }
+    }
+
+    # Both should validate successfully
+    assert ChatRequest(**minimal_request)
+    assert ChatRequest(**comprehensive_request)
+
+
+async def test_invalid_openai_chat_request_fields():
+    """Test that ChatRequest raises ValidationError for improper payloads"""
+
+    with pytest.raises(ValidationError):
+        ChatRequest()
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"content": "Hello"}])
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "user"}])
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "user", "content": "Hello"}], temperature="not_a_number")
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "user", "content": "Hello"}], max_tokens="not_an_integer")
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=[{"role": "user", "content": "Hello"}], stream="not_a_boolean")
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages="not_a_list")
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=["not_a_dict"])
+
+    with pytest.raises(ValidationError):
+        ChatRequest(messages=None)
+
+
+async def test_hitl_callback_timeout_raises_when_no_response():
+    """When prompt has timeout and the response future is never completed, TimeoutError is raised."""
+    mock_socket = AsyncMock()
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+    handler.create_websocket_message = AsyncMock()
+    handler._message_validator = MagicMock()
+
+    prompt_content = HumanPromptText(text="Confirm?", required=True, placeholder="y", timeout=1)
+    prompt = InteractionPrompt(id="id", status="in_progress", timestamp="2025-01-01T00:00:00Z", content=prompt_content)
+
+    def make_user_interaction(**kwargs):
+        return UserInteraction.model_construct(**kwargs)
+
+    with patch("nat.front_ends.fastapi.message_handler.UserInteraction", side_effect=make_user_interaction):
+        with patch.object(WebSocketMessageHandler, "_HITL_TIMEOUT_GRACE_PERIOD_SECONDS", 0):
+            with pytest.raises(TimeoutError, match=r"HITL prompt timed out after 1s waiting for human response"):
+                await handler.human_interaction_callback(prompt)
+
+
+async def test_restore_execution_state_sends_prompt_with_remaining_timeout():
+    """On reconnect, re-sent prompt has timeout set to max(0, original_timeout - elapsed)."""
+    mock_socket = AsyncMock()
+    mock_socket.query_params = {"conversation_id": "conv1"}
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+    handler.create_websocket_message = AsyncMock()
+    handler._conversation_id = "conv1"
+
+    future: asyncio.Future = asyncio.get_running_loop().create_future()
+    prompt_content = HumanPromptText(text="Confirm?", required=True, placeholder="y", timeout=10)
+    disconnected_mock = MagicMock()
+    disconnected_mock._user_interaction = UserInteraction.model_construct(
+        future=future,
+        prompt_content=prompt_content,
+        started_at=0.0,
+    )
+    disconnected_mock._message_parent_id = "parent"
+    disconnected_mock._workflow_schema_type = "chat"
+    disconnected_mock._running_workflow_task = None
+    disconnected_mock._socket = mock_socket
+    mock_worker.get_conversation_handler.return_value = disconnected_mock
+
+    with patch("nat.front_ends.fastapi.message_handler.time.monotonic", return_value=3.0):
+        await handler._restore_execution_state()
+
+    handler.create_websocket_message.assert_called_once()
+    call_kwargs = handler.create_websocket_message.call_args[1]
+    sent_content = call_kwargs["data_model"]
+    assert sent_content.timeout == 7

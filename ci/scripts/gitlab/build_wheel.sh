@@ -24,34 +24,20 @@ GIT_TAG=$(get_git_tag)
 IS_TAGGED=$(is_current_commit_release_tagged)
 rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
-create_env group:dev extra:all
+create_env
 
-# Update internal dependencies to the current git tag
+# Set the version for the wheels based on GIT_TAG / SCM
 set_versions
 
 WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
 
-build_wheel . "nvidia-nat/${GIT_TAG}"
-
-
-# Build all examples with a pyproject.toml in the first directory below examples
-for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
-    # places all wheels flat under example
-    build_wheel ${NAT_EXAMPLE} "examples"
-done
+build_wheel . "nvidia-nat"
 
 # Build all packages with a pyproject.toml in the first directory below packages
 for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
     build_package_wheel ${NAT_PACKAGE}
 done
-
-if [[ "${BUILD_NAT_COMPAT}" == "true" ]]; then
-    WHEELS_DIR="${WHEELS_BASE_DIR}/nat"
-    for NAT_COMPAT_PACKAGE in "${NAT_COMPAT_PACKAGES[@]}"; do
-        build_package_wheel ${NAT_COMPAT_PACKAGE}
-    done
-fi
 
 # When we perform a release, the tag is created from the main branch, this triggers two CI pipelines.
 # The first for the main branch, and the second for the tag. Gitlab's internal package registry will reject uploads

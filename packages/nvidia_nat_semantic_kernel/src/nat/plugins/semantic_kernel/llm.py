@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from typing import TypeVar
 
 from nat.builder.builder import Builder
@@ -106,10 +107,14 @@ async def azure_openai_semantic_kernel(llm_config: AzureOpenAIModelConfig, _buil
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.SEMANTIC_KERNEL)
 async def openai_semantic_kernel(llm_config: OpenAIModelConfig, _builder: Builder):
 
+    from openai import AsyncOpenAI
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.SEMANTIC_KERNEL)
 
-    llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name)
+    api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
+    base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+    async with AsyncOpenAI(api_key=api_key, base_url=base_url) as async_client:
+        llm = OpenAIChatCompletion(ai_model_id=llm_config.model_name, async_client=async_client)
+        yield _patch_llm_based_on_config(llm, llm_config)

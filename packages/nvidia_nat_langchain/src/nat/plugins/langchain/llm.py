@@ -15,13 +15,21 @@
 # pylint: disable=unused-argument
 
 import logging
+import os
+from collections.abc import AsyncIterator
 from collections.abc import Sequence
+from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import TypeVar
+
+if TYPE_CHECKING:
+    import httpx
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import APITypeEnum
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
@@ -30,10 +38,12 @@ from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.huggingface_inference_llm import HuggingFaceInferenceLLMConfig
 from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.hooks import create_metadata_injection_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -139,15 +149,28 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
-    client = AzureChatOpenAI(
-        **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True),
-        api_version=llm_config.api_version,  # type: ignore[call-arg]
-    )
+    client_kwargs: dict = {}
+    if llm_config.request_timeout is not None:
+        client_kwargs["timeout"] = llm_config.request_timeout
+    http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
 
-    yield _patch_llm_based_on_config(client, llm_config)
+    try:
+        client = AzureChatOpenAI(
+            http_async_client=http_async_client,  # type: ignore[call-arg]
+            api_version=llm_config.api_version,  # type: ignore[call-arg]
+            **llm_config.model_dump(
+                exclude={"type", "thinking", "api_type", "api_version"},
+                by_alias=True,
+                exclude_none=True,
+                exclude_unset=True,
+            ),
+        )
+        if "http_async_client" in client.model_kwargs:
+            del client.model_kwargs["http_async_client"]
+
+        yield _patch_llm_based_on_config(client, llm_config)
+    finally:
+        await http_async_client.aclose()
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
@@ -176,38 +199,55 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
 
     from langchain_openai import ChatOpenAI
 
-    if llm_config.api_type == APITypeEnum.RESPONSES:
-        client = ChatOpenAI(stream_usage=True,
-                            use_responses_api=True,
-                            use_previous_response_id=True,
-                            **llm_config.model_dump(
-                                exclude={"type", "thinking", "api_type"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True,
-                            ))
-    else:
-        # If stream_usage is specified, it will override the default value of True.
-        client = ChatOpenAI(stream_usage=True,
-                            **llm_config.model_dump(
-                                exclude={"type", "thinking", "api_type"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True,
-                            ))
+    client_kwargs: dict = {}
+    if llm_config.request_timeout is not None:
+        client_kwargs["timeout"] = llm_config.request_timeout
+    http_async_client: httpx.AsyncClient = create_metadata_injection_client(**client_kwargs)
 
-    yield _patch_llm_based_on_config(client, llm_config)
+    config_dict = llm_config.model_dump(
+        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+        config_dict["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        config_dict["base_url"] = base_url
+
+    try:
+        if llm_config.api_type == APITypeEnum.RESPONSES:
+            client = ChatOpenAI(
+                http_async_client=http_async_client,  # type: ignore[call-arg]
+                stream_usage=True,
+                use_responses_api=True,  # type: ignore[call-arg]
+                use_previous_response_id=True,  # type: ignore[call-arg]
+                **config_dict)
+        else:
+            client = ChatOpenAI(
+                http_async_client=http_async_client,  # type: ignore[call-arg]
+                stream_usage=True,
+                **config_dict)
+        if "http_async_client" in client.model_kwargs:
+            del client.model_kwargs["http_async_client"]
+
+        yield _patch_llm_based_on_config(client, llm_config)
+    finally:
+        await http_async_client.aclose()
 
 
 @register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     """
-    Create a LangChain ChatOpenAI client for Dynamo with automatic prefix header injection.
+    Create a LangChain ChatOpenAI client for Dynamo with automatic agent hint injection.
 
-    This client injects Dynamo prefix headers at the HTTP transport level using httpx event hooks,
+    This client injects Dynamo routing hints via nvext.agent_hints at the HTTP transport level,
     enabling KV cache optimization and request routing.
     """
     from langchain_openai import ChatOpenAI
+
+    from nat.profiler.prediction_trie import load_prediction_trie
+    from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
     # Build config dict excluding Dynamo-specific and NAT-specific fields
     config_dict = llm_config.model_dump(
@@ -220,23 +260,38 @@ async def dynamo_langchain(llm_config: DynamoModelConfig, _builder: Builder):
     # Initialize http_async_client to None for proper cleanup
     http_async_client = None
 
+    # Load prediction trie if configured
+    prediction_lookup: PredictionTrieLookup | None = None
+    if llm_config.nvext_prediction_trie_path:
+        try:
+            trie_path = Path(llm_config.nvext_prediction_trie_path)
+            trie = load_prediction_trie(trie_path)
+            prediction_lookup = PredictionTrieLookup(trie)
+            logger.info("Loaded prediction trie from %s", llm_config.nvext_prediction_trie_path)
+        except FileNotFoundError:
+            logger.warning("Prediction trie file not found: %s", llm_config.nvext_prediction_trie_path)
+        except Exception as e:
+            logger.warning("Failed to load prediction trie: %s", e)
+
     try:
-        # If prefix_template is set, create a custom httpx client with Dynamo hooks
-        if llm_config.prefix_template is not None:
+        if llm_config.enable_nvext_hints:
             http_async_client = create_httpx_client_with_dynamo_hooks(
-                prefix_template=llm_config.prefix_template,
-                total_requests=llm_config.prefix_total_requests,
-                osl=llm_config.prefix_osl,
-                iat=llm_config.prefix_iat,
+                total_requests=llm_config.nvext_prefix_total_requests,
+                osl=llm_config.nvext_prefix_osl,
+                iat=llm_config.nvext_prefix_iat,
                 timeout=llm_config.request_timeout,
+                prediction_lookup=prediction_lookup,
+                cache_pin_type=llm_config.nvext_cache_pin_type,
+                cache_control_mode=llm_config.nvext_cache_control_mode,
+                max_sensitivity=llm_config.nvext_max_sensitivity,
             )
             config_dict["http_async_client"] = http_async_client
             logger.info(
-                "Dynamo prefix headers enabled: template=%s, total_requests=%d, osl=%s, iat=%s",
-                llm_config.prefix_template,
-                llm_config.prefix_total_requests,
-                llm_config.prefix_osl,
-                llm_config.prefix_iat,
+                "Dynamo agent hints enabled: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
+                llm_config.nvext_prefix_total_requests,
+                llm_config.nvext_prefix_osl,
+                llm_config.nvext_prefix_iat,
+                "loaded" if prediction_lookup else "disabled",
             )
 
         # Create the ChatOpenAI client
@@ -313,6 +368,67 @@ async def huggingface_langchain(llm_config: HuggingFaceConfig, _builder: Builder
                              run_manager: AsyncCallbackManagerForLLMRun | None = None,
                              stream: bool | None = None,
                              **kwargs: Any):
+            return await asyncio.to_thread(
+                self._generate,
+                messages,
+                stop,
+                run_manager.get_sync() if run_manager else None,
+                stream,
+                **kwargs,
+            )
+
+    client = AsyncChatHuggingFace(llm=llm)
+
+    yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=HuggingFaceInferenceLLMConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def huggingface_inference_langchain(llm_config: HuggingFaceInferenceLLMConfig,
+                                          _builder: Builder) -> AsyncIterator[Any]:
+    """LangChain client for HuggingFace Inference API.
+
+    Uses `langchain_huggingface.HuggingFaceEndpoint` for Serverless API,
+    Inference Endpoints, and TGI servers.
+    """
+    import asyncio
+
+    from langchain_core.callbacks.manager import AsyncCallbackManagerForLLMRun
+    from langchain_core.messages import BaseMessage
+    from langchain_huggingface import ChatHuggingFace
+    from langchain_huggingface import HuggingFaceEndpoint
+
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
+
+    endpoint_kwargs = {}
+    if llm_config.endpoint_url:
+        endpoint_kwargs["endpoint_url"] = llm_config.endpoint_url
+    else:
+        endpoint_kwargs["repo_id"] = llm_config.model_name
+
+    llm = HuggingFaceEndpoint(
+        **endpoint_kwargs,
+        huggingfacehub_api_token=get_secret_value(llm_config.api_key),
+        task="text-generation",
+        max_new_tokens=llm_config.max_new_tokens,
+        temperature=llm_config.temperature,
+        top_p=llm_config.top_p,
+        top_k=llm_config.top_k,
+        repetition_penalty=llm_config.repetition_penalty,
+        seed=llm_config.seed,
+        timeout=llm_config.timeout,
+    )
+
+    class AsyncChatHuggingFace(ChatHuggingFace):
+        """Adds async support for HuggingFaceEndpoint-backed chat models."""
+
+        async def _agenerate(
+            self,
+            messages: list[BaseMessage],
+            stop: list[str] | None = None,
+            run_manager: AsyncCallbackManagerForLLMRun | None = None,
+            stream: bool | None = None,
+            **kwargs: Any,
+        ):
             return await asyncio.to_thread(
                 self._generate,
                 messages,

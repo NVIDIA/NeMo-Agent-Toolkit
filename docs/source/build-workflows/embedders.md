@@ -18,12 +18,13 @@ An embedder, or [embedding model](https://www.nvidia.com/en-us/glossary/vector-d
 
 ## Supported Embedder Providers
 
-NeMo Agent toolkit supports the following embedder providers:
+NeMo Agent Toolkit supports the following embedder providers:
 | Provider | Type | Description |
 |----------|------|-------------|
 | [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
+| [Hugging Face](https://huggingface.co) | `huggingface` | Local sentence-transformers or remote Inference Endpoints (TEI) |
 
 ## Embedder Configuration
 
@@ -83,3 +84,39 @@ The Azure OpenAI embedder provider is defined by the {py:class}`~nat.embedder.az
 * `api_version` - The API version to use for the model
 * `azure_endpoint` - The Azure OpenAI endpoint to use for the model
 * `azure_deployment` - The name of the Azure OpenAI deployment to use
+
+### Hugging Face
+
+Hugging Face is an embedder provider that supports both local sentence-transformers models and remote TEI servers or Hugging Face Inference Endpoints. When `endpoint_url` is provided, embeddings are generated remotely. Otherwise, models are loaded and run locally.
+
+You can use the following environment variables to configure the Hugging Face embedder provider:
+
+* `HF_TOKEN` - The API token to access Hugging Face Inference resources
+
+The Hugging Face embedder provider is defined by the {py:class}`~nat.embedder.huggingface_embedder.HuggingFaceEmbedderConfig` class.
+
+* `model_name` - The Hugging Face model identifier (for example, `BAAI/bge-large-en-v1.5`). Required for local embeddings
+* `endpoint_url` - Endpoint URL for TEI server or Hugging Face Inference Endpoint. When set, uses remote embedding
+* `api_key` - The Hugging Face API token for authentication
+* `timeout` - Request timeout in seconds (default: `120.0`)
+* `device` - Device for local models: `cpu`, `cuda`, `mps`, or `auto` (default: `auto`)
+* `normalize_embeddings` - Whether to normalize embeddings to unit length (default: `true`)
+* `batch_size` - Batch size for embedding generation (default: `32`)
+* `max_seq_length` - Maximum sequence length for input text
+* `trust_remote_code` - Whether to trust remote code when loading models (default: `false`)
+
+```yaml
+embedders:
+  # Local sentence-transformers embedder
+  local_embedder:
+    _type: huggingface
+    model_name: sentence-transformers/all-MiniLM-L6-v2
+    device: auto
+    normalize_embeddings: true
+
+  # Remote TEI or Inference Endpoint embedder
+  tei_embedder:
+    _type: huggingface
+    endpoint_url: http://localhost:8081
+    api_key: ${HF_TOKEN}
+```

@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import asyncio
 
 from pydantic import Field
 
@@ -32,6 +33,10 @@ class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_s
     max_results: int = 3
     api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
                                            description="The API key for the Tavily service.")
+    max_retries: int = Field(default=3, description="Maximum number of retries for the search request")
+    search_depth: str = Field(
+        default="basic",
+        description="Depth for relevance vs latency tradeoff - 'basic', 'advanced', 'fast', or 'ultra-fast'")
 
 
 @register_function(config_type=TavilyInternetSearchToolConfig)
@@ -50,18 +55,40 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
         """This tool retrieves relevant contexts from web search (using Tavily) for the given question.
 
         Args:
-            question (str): The question to be answered.
+            question (str): The question to be answered. Will be truncated to 400 characters if longer.
 
         Returns:
             str: The web search results.
         """
+        # Tavily API requires queries under 400 characters
+        if len(question) > 400:
+            question = question[:397] + "..."
+
         # Search the web and get the requested amount of results
-        tavily_search = TavilySearch(max_results=tool_config.max_results)
-        search_docs = await tavily_search.ainvoke({'query': question})
-        # Format
-        web_search_results = "\n\n---\n\n".join(
-            [f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs["results"]])
-        return web_search_results
+        tavily_search = TavilySearch(max_results=tool_config.max_results, search_depth=tool_config.search_depth)
+
+        for attempt in range(tool_config.max_retries):
+            try:
+                search_docs = await tavily_search.ainvoke({"query": question})
+                # langchain_tavily may return a string error message instead of a dict
+                # (e.g. when ToolException is raised for zero-result queries), or a dict
+                # without a "results" key (e.g. {"detail": {"error": "Unauthorized"}} on
+                # auth failures). Guard against both to avoid crashing the workflow item.
+                if not isinstance(search_docs, dict) or "results" not in search_docs:
+                    return f"No web search results found for: {question}"
+                if not search_docs["results"]:
+                    return f"No web search results found for: {question}"
+                # Format
+                web_search_results = "\n\n---\n\n".join([
+                    f'<Document href="{doc["url"]}"/>\n{doc["content"]}\n</Document>' for doc in search_docs["results"]
+                ])
+                return web_search_results
+            except Exception:
+                # Return a graceful message instead of raising, so the agent can
+                # continue reasoning without web search rather than failing entirely.
+                if attempt == tool_config.max_retries - 1:
+                    return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
+                await asyncio.sleep(2**attempt)
 
     # Create a Generic NAT tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
