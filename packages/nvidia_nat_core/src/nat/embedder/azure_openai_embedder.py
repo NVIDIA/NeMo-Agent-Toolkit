@@ -23,9 +23,10 @@ from nat.cli.register_workflow import register_embedder_provider
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.ssl_verification_mixin import SSLVerificationMixin
 
 
-class AzureOpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="azure_openai"):
+class AzureOpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, SSLVerificationMixin, name="azure_openai"):
     """An Azure OpenAI embedder provider to be used with an embedder client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")

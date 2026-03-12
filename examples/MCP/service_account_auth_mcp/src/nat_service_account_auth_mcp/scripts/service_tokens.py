@@ -17,7 +17,7 @@ Example service token functions for demonstration purposes.
 
 In production environments, these functions would:
 - Fetch tokens from secure vaults (e.g., HashiCorp Vault, AWS Secrets Manager)
-- Use AIQContext to access request metadata
+- Use Context to access request metadata
 - Implement token caching and refresh logic
 - Handle errors and retries appropriately
 """

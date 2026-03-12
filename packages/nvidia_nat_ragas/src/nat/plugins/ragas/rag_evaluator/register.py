@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import logging
+from importlib import import_module
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -26,6 +28,7 @@ from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvaluatorLLMConfig
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 logger = logging.getLogger(__name__)
@@ -47,7 +50,12 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
     )
     input_obj_field: str | None = Field(
         default=None,
-        description="The field in the input object that contains the content to evaluate.",
+        description=("Legacy lane only: field in `input_obj` used as `user_input` for ragas scoring. "
+                     "ATIF lane derives `user_input` from trajectory."),
+    )
+    enable_atif_evaluator: bool = Field(
+        default=False,
+        description="Enable ATIF-native RAGAS evaluator lane. Disabled by default until rollout stabilization.",
     )
 
     @model_validator(mode="before")
@@ -88,22 +96,20 @@ class RagasEvaluatorConfig(EvaluatorLLMConfig, name="ragas"):
 
 @register_evaluator(config_type=RagasEvaluatorConfig)
 async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBuilder):
-    from ragas.metrics import Metric
 
-    def get_ragas_metric(metric_name: str) -> Metric | None:
-        """Fetch callable for RAGAS metric by name."""
-        try:
-            import ragas.metrics as ragas_metrics
-
-            return getattr(ragas_metrics, metric_name)
-        except ImportError as e:
-            message = f"Ragas metrics not found {e}."
-            logger.error(message)
-            raise ValueError(message) from e
-        except AttributeError as e:
-            message = f"Ragas metric {metric_name} not found {e}."
-            logger.exception(message)
-            return None
+    def get_ragas_metric(metric_name: str):
+        """Fetch metric constructor from the v0.4 collections namespace."""
+        module_names = ("ragas.metrics.collections", )
+        for module_name in module_names:
+            try:
+                module = import_module(module_name)
+            except ImportError:
+                continue
+            metric_ctor = getattr(module, metric_name, None)
+            if metric_ctor is not None:
+                return metric_ctor
+        raise ValueError(
+            f"Ragas metric '{metric_name}' was not found in supported namespaces: {', '.join(module_names)}")
 
     async def evaluate_fn(eval_input: EvalInput) -> EvalOutput:
         """Run RAGAS evaluation and return NAT eval output."""
@@ -112,28 +118,48 @@ async def register_ragas_evaluator(config: RagasEvaluatorConfig, builder: EvalBu
             return EvalOutput(average_score=0.0, eval_output_items=[])
         return await evaluator.evaluate(eval_input)
 
-    from .evaluate import RAGEvaluator
+    async def evaluate_atif_fn(atif_samples: AtifEvalSampleList) -> EvalOutput:
+        """Run ATIF-native RAGAS evaluation and return NAT eval output."""
+        if not atif_evaluator:
+            logger.warning("No ATIF evaluator found for RAGAS metrics.")
+            return EvalOutput(average_score=0.0, eval_output_items=[])
+        return await atif_evaluator.evaluate_atif_fn(atif_samples)
 
-    llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+    from .atif_evaluate import RAGAtifEvaluator
+    from .evaluate import RAGEvaluator
+    from .llm_adapter import NatLangChainRagasLLMAdapter
+
+    # Keep NAT's existing framework registry boundary (LangChain/LlamaIndex/etc.) and
+    # adapt to ragas locally. ragas' InstructorBaseRagasLLM is a library contract, not
+    # a NAT framework, so we avoid introducing a global LLMFrameworkEnum.RAGAS.
+    langchain_llm = await builder.get_llm(config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if config.do_auto_retry:
-        llm = patch_with_retry(
-            llm,
+        langchain_llm = patch_with_retry(
+            langchain_llm,
             retries=config.num_retries,
             retry_codes=config.retry_on_status_codes,
             retry_on_messages=config.retry_on_errors,
         )
+    ragas_llm = NatLangChainRagasLLMAdapter(llm_name=config.llm_name, langchain_llm=langchain_llm)
 
-    metrics = []
+    metric = None
     metric_name = config.metric_name
     metric_config = config.metric_config
     if not metric_config.skip:
         metric_callable = get_ragas_metric(metric_name)
-        if metric_callable:
-            kwargs = metric_config.kwargs or {}
-            metrics.append(metric_callable(**kwargs))
+        kwargs = metric_config.kwargs or {}
+        metric_params = inspect.signature(metric_callable).parameters
+        if "llm" in metric_params and "llm" not in kwargs:
+            kwargs["llm"] = ragas_llm
+        metric = metric_callable(**kwargs)
 
-    evaluator = RAGEvaluator(evaluator_llm=llm,
-                             metrics=metrics,
+    evaluator = RAGEvaluator(metric=metric,
                              max_concurrency=builder.get_max_concurrency(),
-                             input_obj_field=config.input_obj_field) if metrics else None
-    yield EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
+                             input_obj_field=config.input_obj_field) if metric else None
+    atif_evaluator = RAGAtifEvaluator(metric=metric, max_concurrency=builder.get_max_concurrency()) if (
+        metric and config.enable_atif_evaluator) else None
+
+    evaluator_info = EvaluatorInfo(config=config, evaluate_fn=evaluate_fn, description="Evaluator for RAGAS metrics")
+    if config.enable_atif_evaluator:
+        evaluator_info.evaluate_atif_fn = evaluate_atif_fn
+    yield evaluator_info

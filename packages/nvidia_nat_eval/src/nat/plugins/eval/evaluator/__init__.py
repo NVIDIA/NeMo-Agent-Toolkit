@@ -12,3 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from .atif_base_evaluator import AtifBaseEvaluator
+from .base_evaluator import BaseEvaluator
+
+__all__ = ["AtifBaseEvaluator", "BaseEvaluator"]

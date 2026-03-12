@@ -57,7 +57,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",
-  "ragas~=0.2.14",
+  "ragas~=0.4.0",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]

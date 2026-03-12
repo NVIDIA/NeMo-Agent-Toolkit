@@ -34,12 +34,12 @@ Set your API key as an environment variable:
 export LANGSMITH_API_KEY=<your-langsmith-api-key>
 ```
 
-## Step 1: Install the LangSmith Subpackage
+## Step 1: Install the LangChain Subpackage
 
-Install the LangSmith dependencies to enable tracing capabilities:
+Install the LangChain dependencies (which include LangSmith) to enable tracing capabilities:
 
 ```bash
-uv pip install -e ".[langsmith]"
+uv pip install -e '.[langchain]'
 ```
 
 ## Step 2: Modify Workflow Configuration
@@ -75,6 +75,16 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 
 As the workflow runs, telemetry data will start showing up in LangSmith.
 
+To override the LangSmith project name from the command line without editing the config file, use the `--override` flag:
+
+```bash
+nat run --config_file examples/observability/simple_calculator_observability/configs/config-langsmith.yml \
+  --override general.telemetry.tracing.langsmith.project <your_project_name> \
+  --input "What is 2 * 4?"
+```
+
+The `--override` flag accepts a dot-notation path into the YAML config hierarchy followed by the new value. It can be specified multiple times to override multiple fields.
+
 ## Step 4: View Traces in LangSmith
 
 - Open your browser and navigate to [LangSmith](https://smith.langchain.com/).
@@ -82,6 +92,22 @@ As the workflow runs, telemetry data will start showing up in LangSmith.
 - Inspect function execution details, latency, token counts, and other information for individual traces.
 
 ## Structured Evaluation Experiments
+
+:::{note}
+The `nat eval` command is provided by the evaluation package. If the command is not available, install the eval extra first:
+
+```bash
+uv pip install -e '.[eval]'
+```
+
+Or, for a package install:
+
+```bash
+uv pip install "nvidia-nat[eval]"
+```
+
+For more details, see [Agent Evaluation Prerequisites](../../improve-workflows/evaluate.md#prerequisites).
+:::
 
 LangSmith implements the [evaluation callback](../../improve-workflows/evaluate.md#evaluation-callbacks) pattern to create structured experiments in the LangSmith Datasets & Experiments UI. When you run `nat eval` with LangSmith tracing enabled, the following happens automatically:
 

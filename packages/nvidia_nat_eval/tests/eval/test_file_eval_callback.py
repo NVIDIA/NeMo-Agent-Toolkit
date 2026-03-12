@@ -88,6 +88,19 @@ def test_file_eval_callback_writes_workflow_output(eval_result, tmp_path):
     assert callback.workflow_output_file == output_file
 
 
+def test_file_eval_callback_writes_atif_workflow_output(eval_result, tmp_path):
+    """Test that FileEvalCallback writes workflow_output_atif.json when provided."""
+    eval_result.atif_workflow_output_json = '[{"item_id": 1, "trajectory": {"steps": []}}]'
+
+    callback = FileEvalCallback()
+    callback.on_eval_complete(eval_result)
+
+    output_file = tmp_path / "output" / "workflow_output_atif.json"
+    assert output_file.exists()
+    assert output_file.read_text() == eval_result.atif_workflow_output_json
+    assert callback.atif_workflow_output_file == output_file
+
+
 def test_file_eval_callback_writes_evaluator_outputs(eval_result, tmp_path):
     """Test that FileEvalCallback writes per-evaluator output files."""
     callback = FileEvalCallback()

@@ -68,6 +68,7 @@ opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
 profiler = ["nvidia-nat-profiler == {version}"]
 rag = ["nvidia-nat-rag == {version}"]
+ragas = ["nvidia-nat-ragas == {version}"]
 ragaai = ["nvidia-nat-ragaai == {version}"]
 mysql = ["nvidia-nat-mysql == {version}"]
 redis = ["nvidia-nat-redis == {version}"]
@@ -217,6 +218,7 @@ conflicts = [
     [{ extra = "rag" }, { extra = "autogen" }],
     [{ extra = "rag" }, { extra = "most" }],
 ]
+managed = true
 
 [tool.uv.sources]
 # Packages
