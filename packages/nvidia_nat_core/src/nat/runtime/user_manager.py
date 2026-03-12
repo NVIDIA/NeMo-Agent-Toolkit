@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 import typing
 from http.cookies import SimpleCookie
 
@@ -32,6 +33,8 @@ from nat.data_models.api_server import JwtAuthPayload
 from nat.data_models.user_info import BasicUserInfo
 from nat.data_models.user_info import JwtUserInfo
 from nat.data_models.user_info import UserInfo
+
+logger = logging.getLogger(__name__)
 
 
 class UserManager:
@@ -157,7 +160,9 @@ class UserManager:
                     name_str: str = name.decode("utf-8").lower()
                     value_str: str = value.decode("utf-8")
                 except Exception:
+                    logger.debug("Failed to decode WebSocket header, skipping", exc_info=True)
                     continue
+
                 if name_str == "cookie":
                     for key, morsel in SimpleCookie(value_str).items():
                         if key == SESSION_COOKIE_NAME:
