@@ -155,7 +155,9 @@ class UserManager:
                     name_str: str = name.decode("utf-8").lower()
                     value_str: str = value.decode("utf-8")
                 except Exception:
+                    logger.debug("Failed to decode WebSocket header, skipping", exc_info=True)
                     continue
+
                 if name_str == "cookie":
                     for key, morsel in SimpleCookie(value_str).items():
                         if key == SESSION_COOKIE_NAME:
