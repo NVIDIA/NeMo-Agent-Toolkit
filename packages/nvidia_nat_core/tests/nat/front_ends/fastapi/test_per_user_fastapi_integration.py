@@ -430,7 +430,7 @@ class TestPerUserMonitoringEndpoint:
             assert len(data["users"]) == 1
 
             user_metrics = data["users"][0]
-            assert user_metrics["user_id"] == "monitor_test_user"
+            assert user_metrics["user_id"]
 
             # Check session metrics
             assert "session" in user_metrics
@@ -452,18 +452,22 @@ class TestPerUserMonitoringEndpoint:
             alice_client.cookies.set("nat-session", "alice")
             await alice_client.post("/counter", json={"action": "increment"})
 
+            # Discover alice's resolved user_id from the monitor
+            all_resp = await alice_client.get("/monitor/users")
+            alice_uid: str = all_resp.json()["users"][0]["user_id"]
+
             async with AsyncClient(transport=ASGITransport(app=monitored_app), base_url="http://test") as bob_client:
                 bob_client.cookies.set("nat-session", "bob")
                 await bob_client.post("/counter", json={"action": "increment"})
 
                 # Filter for alice only
-                response = await alice_client.get("/monitor/users", params={"user_id": "alice"})
+                response = await alice_client.get("/monitor/users", params={"user_id": alice_uid})
                 assert response.status_code == 200
                 data = response.json()
 
                 assert data["total_active_users"] == 1
                 assert len(data["users"]) == 1
-                assert data["users"][0]["user_id"] == "alice"
+                assert data["users"][0]["user_id"] == alice_uid
 
                 # Filter for non-existent user
                 response = await alice_client.get("/monitor/users", params={"user_id": "nonexistent"})

@@ -74,7 +74,6 @@ class ContextState(metaclass=Singleton):
         self.workflow_trace_id: ContextVar[int | None] = ContextVar("workflow_trace_id", default=None)
         self.observability_trace_id: ContextVar[str | None] = ContextVar("observability_trace_id", default=None)
         self.input_message: ContextVar[typing.Any] = ContextVar("input_message", default=None)
-        self.user_manager: ContextVar[typing.Any] = ContextVar("user_manager", default=None)
         self.runtime_type: ContextVar[RuntimeTypeEnum] = ContextVar("runtime_type",
                                                                     default=RuntimeTypeEnum.RUN_OR_SERVE)
         self._metadata: ContextVar[RequestAttributes | None] = ContextVar("request_attributes", default=None)
@@ -158,20 +157,6 @@ class Context:
             str: The input message retrieved from the context state.
         """
         return self._context_state.input_message.get()
-
-    @property
-    def user_manager(self):
-        """
-        Retrieves the user manager instance from the current context state.
-
-        This property provides access to the user manager through the context
-        state, allowing interaction with user management functionalities.
-
-        Returns:
-            UserManager: The instance of the user manager retrieved from the
-                context state.
-        """
-        return self._context_state.user_manager.get()
 
     @property
     def metadata(self):

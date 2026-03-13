@@ -22,11 +22,14 @@ import unicodedata
 
 import click
 from colorama import Fore
+from pydantic import SecretStr
 
 from nat.data_models.interactive import HumanPromptModelType
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import HumanResponseText
 from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.user_info import BasicUserInfo
+from nat.data_models.user_info import UserInfo
 from nat.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 from nat.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
 from nat.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontEndPluginBase
@@ -115,12 +118,15 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         assert session_manager is not None, "Session manager must be provided"
         runner_outputs = None
 
+        run_user_id: str = UserInfo(
+            basic_user=BasicUserInfo(username="nat_run_user", password=SecretStr("nat_run_user"))).get_user_id()
+
         if (self.front_end_config.input_query):
 
             async def run_single_query(query):
 
                 async with session_manager.session(
-                        user_id=self.front_end_config.user_id,
+                        user_id=run_user_id,
                         user_input_callback=prompt_for_input_cli,
                         user_authentication_callback=self.auth_flow_handler.authenticate) as session:
                     async with session.run(query) as runner:
@@ -141,7 +147,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             # Run the workflow
             with open(self.front_end_config.input_file, encoding="utf-8") as f:
                 input_content = f.read()
-            async with session_manager.session(user_id=self.front_end_config.user_id) as session:
+            async with session_manager.session(user_id=run_user_id) as session:
                 async with session.run(input_content) as runner:
                     runner_outputs = await runner.result(to_type=str)
         else:
