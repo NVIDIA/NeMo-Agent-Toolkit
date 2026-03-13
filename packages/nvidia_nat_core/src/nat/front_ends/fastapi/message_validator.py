@@ -34,6 +34,8 @@ from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import SystemIntermediateStepContent
 from nat.data_models.api_server import SystemResponseContent
 from nat.data_models.api_server import TextContent
+from nat.data_models.api_server import WebSocketAuthMessage
+from nat.data_models.api_server import WebSocketAuthResponseMessage
 from nat.data_models.api_server import WebSocketMessageStatus
 from nat.data_models.api_server import WebSocketMessageType
 from nat.data_models.api_server import WebSocketObservabilityTraceMessage
@@ -70,6 +72,8 @@ class MessageValidator:
             WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE: WebSocketSystemIntermediateStepMessage,
             WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE: WebSocketSystemInteractionMessage,
             WebSocketMessageType.USER_INTERACTION_MESSAGE: WebSocketUserInteractionResponseMessage,
+            WebSocketMessageType.AUTH_MESSAGE: WebSocketAuthMessage,
+            WebSocketMessageType.AUTH_RESPONSE: WebSocketAuthResponseMessage,
             WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE: WebSocketObservabilityTraceMessage,
             WebSocketMessageType.ERROR_MESSAGE: WebSocketSystemResponseTokenMessage,
         }
