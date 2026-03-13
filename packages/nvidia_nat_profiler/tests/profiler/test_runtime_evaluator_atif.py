@@ -23,11 +23,11 @@ from nat.data_models.atif import ATIFStep
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.atif import Metrics
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
-from nat.plugins.profiler.runtime_evaluator.atif_evaluate import _iso_to_epoch
 from nat.plugins.profiler.runtime_evaluator.atif_evaluate import AverageLLMLatencyAtifEvaluator
 from nat.plugins.profiler.runtime_evaluator.atif_evaluate import AverageNumberOfLLMCallsAtifEvaluator
 from nat.plugins.profiler.runtime_evaluator.atif_evaluate import AverageTokensPerLLMEndAtifEvaluator
 from nat.plugins.profiler.runtime_evaluator.atif_evaluate import AverageWorkflowRuntimeAtifEvaluator
+from nat.plugins.profiler.runtime_evaluator.atif_evaluate import _iso_to_epoch
 
 
 def _make_sample(
@@ -197,7 +197,9 @@ async def test_evaluate_atif_item_invalid_span_timestamp_skips_step():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
-            extra={"span_event_timestamp": {"invalid": "dict"}},
+            extra={"span_event_timestamp": {
+                "invalid": "dict"
+            }},
         ),
     ]
     sample = _make_sample("bad-span", steps)

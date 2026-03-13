@@ -100,10 +100,7 @@ class AverageNumberOfLLMCallsAtifEvaluator(AtifBaseEvaluator):
         super().__init__(max_concurrency=max_concurrency)
 
     async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
-        num_calls = sum(
-            1 for step in sample.trajectory.steps
-            if step.source == "agent" and step.metrics is not None
-        )
+        num_calls = sum(1 for step in sample.trajectory.steps if step.source == "agent" and step.metrics is not None)
         return EvalOutputItem(
             id=sample.item_id,
             score=float(num_calls),
