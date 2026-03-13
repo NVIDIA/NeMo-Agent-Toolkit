@@ -221,7 +221,3 @@ def discover_and_register_plugins(plugin_type: PluginTypes):
 
             finally:
                 count += 1
-
-
-# Compatibility alias
-get_all_aiq_entrypoints_distro_mapping = get_all_entrypoints_distro_mapping

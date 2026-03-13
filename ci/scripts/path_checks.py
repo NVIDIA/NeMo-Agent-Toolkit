@@ -164,6 +164,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "run/serve",
     "search/edit/score/select",
     "size/time",
+    "SSL/TLS",
     "string/array",
     "string/object",
     "success/failure",
