@@ -91,41 +91,41 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 [project.optional-dependencies]
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`
 # Keep sorted!!!
-all = ["nvidia-nat-all"] # meta-package
-a2a = ["nvidia-nat-a2a"]
-adk = ["nvidia-nat-adk"]
-agno = ["nvidia-nat-agno"]
-autogen = ["nvidia-nat-autogen"]
-crewai = ["nvidia-nat-crewai"]
-data-flywheel = ["nvidia-nat-data-flywheel"]
-ingestion = ["nvidia-nat-ingestion"] # meta-package
-langchain = ["nvidia-nat-langchain"]
-llama-index = ["nvidia-nat-llama-index"]
-mcp = ["nvidia-nat-mcp"]
-mem0ai = ["nvidia-nat-mem0ai"]
-opentelemetry = ["nvidia-nat-opentelemetry"]
-phoenix = ["nvidia-nat-phoenix"]
-pii-defense = ["presidio-analyzer", "presidio-anonymizer"]
-profiling = ["nvidia-nat-profiling"] # meta-package
-ragaai = ["nvidia-nat-ragaai"]
-mysql = ["nvidia-nat-mysql"]
-redis = ["nvidia-nat-redis"]
-s3 = ["nvidia-nat-s3"]
-semantic-kernel = ["nvidia-nat-semantic-kernel"]
-strands = ["nvidia-nat-strands"]
+all = ["nvidia-nat-all == {version}"] # meta-package
+a2a = ["nvidia-nat-a2a == {version}"]
+adk = ["nvidia-nat-adk == {version}"]
+agno = ["nvidia-nat-agno == {version}"]
+autogen = ["nvidia-nat-autogen == {version}"]
+crewai = ["nvidia-nat-crewai == {version}"]
+data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
+ingestion = ["nvidia-nat-ingestion == {version}"] # meta-package
+langchain = ["nvidia-nat-langchain == {version}"]
+llama-index = ["nvidia-nat-llama-index == {version}"]
+mcp = ["nvidia-nat-mcp == {version}"]
+mem0ai = ["nvidia-nat-mem0ai == {version}"]
+opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
+phoenix = ["nvidia-nat-phoenix == {version}"]
+pii-defense = ["presidio-analyzer == {version}", "presidio-anonymizer == {version}"]
+profiling = ["nvidia-nat-profiling == {version}"] # meta-package
+ragaai = ["nvidia-nat-ragaai == {version}"]
+mysql = ["nvidia-nat-mysql == {version}"]
+redis = ["nvidia-nat-redis == {version}"]
+s3 = ["nvidia-nat-s3 == {version}"]
+semantic-kernel = ["nvidia-nat-semantic-kernel == {version}"]
+strands = ["nvidia-nat-strands == {version}"]
 telemetry = [
-  "nvidia-nat-data-flywheel",
-  "nvidia-nat-opentelemetry",
-  "nvidia-nat-phoenix",
-  "nvidia-nat-ragaai",
-  "nvidia-nat-weave",
+  "nvidia-nat-data-flywheel == {version}",
+  "nvidia-nat-opentelemetry == {version}",
+  "nvidia-nat-phoenix == {version}",
+  "nvidia-nat-ragaai == {version}",
+  "nvidia-nat-weave == {version}",
 ]
-test = ["nvidia-nat-test"]
-vanna = ["nvidia-nat-vanna"]
-weave = ["nvidia-nat-weave"]
-zep-cloud = ["nvidia-nat-zep-cloud"]
-openpipe-art = ["nvidia-nat-openpipe-art"]
-nemo-customizer = ["nvidia-nat-nemo-customizer"]
+test = ["nvidia-nat-test == {version}"]
+vanna = ["nvidia-nat-vanna == {version}"]
+weave = ["nvidia-nat-weave == {version}"]
+zep-cloud = ["nvidia-nat-zep-cloud == {version}"]
+openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
+nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
 
 examples = [
   "nat_adk_demo",
