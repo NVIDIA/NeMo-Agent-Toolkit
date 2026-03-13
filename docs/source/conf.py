@@ -184,6 +184,8 @@ numpydoc_class_members_toctree = False
 # mysql.com  reports a 403 when requested by linkcheck
 # api.service.com is a placeholder for a service example
 # Ignore example.com/mcp as it is inaccessible when building the docs
+# The way Github handles anchors into markdown files is not compatible with the way linkcheck handles them.
+# This allows us to continue to verify that the links are valid, but ignore the anchors.
 linkcheck_ignore = [
     r'http://localhost:\d+',
     r'https://localhost:\d+',
@@ -196,7 +198,8 @@ linkcheck_ignore = [
     r'https?://example\.com/mcp/?',
     r'http://custom-server',
     r'^\?provider=',
-    r'https://agent\.example\.com'
+    r'https://agent\.example\.com',
+    r"^https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/.*#.+$",
 ]
 
 templates_path = ['_templates']
