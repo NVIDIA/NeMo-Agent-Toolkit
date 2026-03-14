@@ -18,6 +18,21 @@ limitations under the License.
 # Changelog
 All notable changes to this project will be documented in this file.
 
+
+## [1.4.3] - 2026-03-13
+
+### 🐛 Bug Fixes
+* fix(release/1.4): specify explicit versions for the `nvidia-nat-all` meta package by @dagardner in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1801
+
+**Full Changelog**: https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare/v1.4.2...v1.4.3
+
+## [1.4.2] - 2026-03-13
+
+### 🐛 Bug Fixes
+* fix(release/1.4): specify explicit sub-package versions by @dagardner in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1800
+
+**Full Changelog**: https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare/v1.4.1...v1.4.2
+
 ## [1.4.1] - 2026-02-09
 
 ### 🐛 Bug Fixes

@@ -18,6 +18,20 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent toolkit](./index.md).
 
+## Release 1.4.3
+### Summary
+This is a patch release fixes sub-package versions for the `nvidia-nat[all]` meta package.
+
+### 🐛 Bug Fixes
+* fix(release/1.4): specify explicit versions for the `nvidia-nat-all` package by @dagardner in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1801
+
+## Release 1.4.2
+### Summary
+This is a patch release fixes sub-package versions.
+
+### 🐛 Bug Fixes
+* fix(release/1.4): specify explicit sub-package version by @dagardner in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/#1800
+
 ## Release 1.4.1
 ### Summary
 This is a patch release with a critical bug fix for Python 3.11 users and documentation updates for `nat serve` CLI flags.
