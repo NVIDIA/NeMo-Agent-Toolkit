@@ -60,6 +60,11 @@ def _epoch_to_iso(epoch: float) -> str:
     return datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC).isoformat()
 
 
+def _iso_to_epoch(timestamp: str) -> float:
+    """Convert an ISO 8601 timestamp to Unix epoch seconds."""
+    return datetime.datetime.fromisoformat(timestamp).timestamp()
+
+
 def _extract_tool_definitions(step: IntermediateStep) -> list[dict[str, Any]] | None:
     """Extract OpenAI-style tool definitions from an IntermediateStep's metadata."""
     if not isinstance(step.metadata, TraceMetadata):
@@ -277,11 +282,16 @@ class IntermediateStepToATIFConverter:
                 if ist.data and ist.data.output is not None:
                     final_output = _safe_str(ist.data.output)
                 last_agent_msg = ""
+                last_agent_ts: float | None = None
                 for s in reversed(atif_steps):
                     if s.source == "agent":
                         last_agent_msg = str(s.message)
+                        last_agent_ts = _iso_to_epoch(s.timestamp) if s.timestamp else None
                         break
-                if final_output and final_output != last_agent_msg:
+                should_emit_terminal_step = bool(final_output) and (
+                    final_output != last_agent_msg or
+                    (last_agent_ts is not None and ist.event_timestamp > last_agent_ts))
+                if should_emit_terminal_step:
                     extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                     atif_steps.append(
                         ATIFStep(
@@ -445,11 +455,16 @@ class ATIFStreamConverter:
             if ist.data and ist.data.output is not None:
                 final_output = _safe_str(ist.data.output)
             last_agent_msg = ""
+            last_agent_ts: float | None = None
             for s in reversed(self._emitted_steps):
                 if s.source == "agent":
                     last_agent_msg = str(s.message)
+                    last_agent_ts = _iso_to_epoch(s.timestamp) if s.timestamp else None
                     break
-            if final_output and final_output != last_agent_msg:
+            should_emit_terminal_step = bool(final_output) and (
+                final_output != last_agent_msg or
+                (last_agent_ts is not None and ist.event_timestamp > last_agent_ts))
+            if should_emit_terminal_step:
                 extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                 final_step = ATIFStep(
                     step_id=self._step_id,

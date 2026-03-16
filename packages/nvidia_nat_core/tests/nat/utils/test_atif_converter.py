@@ -14,6 +14,8 @@
 # limitations under the License.
 """Tests for the ATIF converter."""
 
+import datetime
+
 import pytest
 
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -33,6 +35,11 @@ from nat.utils.atif_converter import IntermediateStepToATIFConverter
 # ---------------------------------------------------------------------------
 
 _BASE_TIME = 1700000000.0
+
+
+def _epoch_to_iso(epoch: float) -> str:
+    """Convert Unix epoch to ISO 8601 string for assertions."""
+    return datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC).isoformat()
 
 
 def _make_step(
@@ -255,23 +262,31 @@ class TestBatchConverter:
         assert result.steps[2].message == "The answer is 4"
         assert result.steps[2].tool_calls is None
 
-        # No duplicate final step (workflow_end output == last LLM output)
-        assert len(result.steps) == 3
+        # Step 4: terminal workflow marker preserving WORKFLOW_END timestamp
+        assert result.steps[3].source == "agent"
+        assert result.steps[3].message == "The answer is 4"
+        assert result.steps[3].tool_calls is None
+        assert result.steps[3].timestamp == _epoch_to_iso(_BASE_TIME + 4.0)
+
+        assert len(result.steps) == 4
 
     def test_no_tool_trajectory(
         self,
         batch_converter: IntermediateStepToATIFConverter,
         no_tool_trajectory: list[IntermediateStep],
     ):
-        """Trajectory without tools produces user + single agent step."""
+        """Trajectory without tools preserves a terminal workflow marker."""
         result = batch_converter.convert(no_tool_trajectory)
 
-        assert len(result.steps) == 2
+        assert len(result.steps) == 3
         assert result.steps[0].source == "user"
         assert result.steps[0].message == "Say hello"
         assert result.steps[1].source == "agent"
         assert result.steps[1].message == "Hello!"
         assert result.steps[1].tool_calls is None
+        assert result.steps[2].source == "agent"
+        assert result.steps[2].message == "Hello!"
+        assert result.steps[2].timestamp == _epoch_to_iso(_BASE_TIME + 2.0)
 
     def test_multi_tool_single_turn(
         self,
@@ -281,8 +296,8 @@ class TestBatchConverter:
         """Multiple tool calls in one LLM turn are grouped correctly."""
         result = batch_converter.convert(multi_tool_trajectory)
 
-        # user + agent(with 2 tools) + final agent
-        assert len(result.steps) == 3
+        # user + agent(with 2 tools) + final agent + terminal marker
+        assert len(result.steps) == 4
         agent_with_tools = result.steps[1]
         assert len(agent_with_tools.tool_calls) == 2
         assert agent_with_tools.tool_calls[0].function_name == "stock_lookup"
@@ -359,7 +374,7 @@ class TestBatchConverter:
         assert result.final_metrics is not None
         assert result.final_metrics.total_prompt_tokens == 250  # 100 + 150
         assert result.final_metrics.total_completion_tokens == 50  # 20 + 30
-        assert result.final_metrics.total_steps == 2  # 2 agent steps
+        assert result.final_metrics.total_steps == 3  # 2 agent turns + terminal workflow marker
 
     def test_timestamps_are_iso(
         self,
