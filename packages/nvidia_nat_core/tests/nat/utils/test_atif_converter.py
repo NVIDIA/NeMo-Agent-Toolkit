@@ -346,7 +346,7 @@ class TestBatchConverter:
         result = batch_converter.convert(steps)
         agent_step = result.steps[1]
         assert agent_step.extra is not None
-        assert agent_step.extra.get("framework") == "langchain"
+        assert agent_step.extra["ancestry"]["framework"] == "langchain"
 
     def test_final_metrics(
         self,
@@ -491,17 +491,17 @@ class TestBatchConverter:
         # User step has profiling extra
         user_step = result.steps[0]
         assert user_step.extra is not None
-        assert user_step.extra.get("function_id") == "func-id-1"
-        assert user_step.extra.get("function_name") == "my_workflow"
+        assert user_step.extra["ancestry"]["function_ancestry"]["function_id"] == "func-id-1"
+        assert user_step.extra["ancestry"]["function_ancestry"]["function_name"] == "my_workflow"
 
-        # Agent step with tool call has nat_tool_ancestry (from TOOL_END)
+        # Agent step with tool call has tool_ancestry (from TOOL_END)
         agent_step = result.steps[1]
         assert agent_step.extra is not None
-        assert agent_step.extra.get("function_id") == "func-id-1"
-        assert agent_step.extra.get("nat_tool_ancestry") is not None
-        assert len(agent_step.extra["nat_tool_ancestry"]) == 1
-        assert agent_step.extra["nat_tool_ancestry"][0]["function_id"] == "func-id-1"
-        assert agent_step.extra["nat_tool_ancestry"][0]["function_name"] == "my_workflow"
+        assert agent_step.extra["ancestry"]["function_ancestry"]["function_id"] == "func-id-1"
+        assert agent_step.extra.get("tool_ancestry") is not None
+        assert len(agent_step.extra["tool_ancestry"]) == 1
+        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_id"] == "func-id-1"
+        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_name"] == "my_workflow"
 
     def test_agent_tool_definitions_populated(
         self,

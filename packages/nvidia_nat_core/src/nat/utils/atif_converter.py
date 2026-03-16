@@ -33,10 +33,12 @@ import uuid
 from typing import Any
 
 from nat.data_models.atif import ATIFAgentConfig
+from nat.data_models.atif import AtifAncestry
 from nat.data_models.atif import ATIFFinalMetrics
 from nat.data_models.atif import ATIFObservation
 from nat.data_models.atif import ATIFObservationResult
 from nat.data_models.atif import ATIFStep
+from nat.data_models.atif import AtifStepExtra
 from nat.data_models.atif import ATIFStepMetrics
 from nat.data_models.atif import ATIFToolCall
 from nat.data_models.atif import ATIFTrajectory
@@ -122,19 +124,23 @@ def _extract_user_input(value: Any) -> str:
     return str(value)
 
 
-def _profiling_extra_from_ist(ist: IntermediateStep) -> dict[str, Any]:
+def _atif_step_extra_from_ist(ist: IntermediateStep) -> dict[str, Any]:
     """Build step.extra dict for profiling metadata (function_ancestry, span_event_timestamp, framework)."""
-    extra: dict[str, Any] = {}
-    fa = ist.function_ancestry
-    extra["function_id"] = fa.function_id or "root"
-    extra["function_name"] = fa.function_name or "root"
-    extra["parent_function_id"] = fa.parent_id or ""
-    extra["parent_function_name"] = fa.parent_name or ""
-    if ist.payload.span_event_timestamp is not None:
-        extra["span_event_timestamp"] = ist.payload.span_event_timestamp
-    if ist.payload.framework is not None:
-        extra["framework"] = ist.payload.framework.value
-    return extra
+    ancestry = AtifAncestry(
+        function_ancestry=ist.function_ancestry,
+        span_event_timestamp=ist.payload.span_event_timestamp,
+        framework=ist.payload.framework.value if ist.payload.framework is not None else None,
+    )
+    return AtifStepExtra(ancestry=ancestry).model_dump(exclude_none=True)
+
+
+def _atif_ancestry_from_ist(ist: IntermediateStep) -> AtifAncestry:
+    """Build typed ATIF ancestry metadata from an IntermediateStep."""
+    return AtifAncestry(
+        function_ancestry=ist.function_ancestry,
+        span_event_timestamp=ist.payload.span_event_timestamp,
+        framework=ist.payload.framework.value if ist.payload.framework is not None else None,
+    )
 
 
 def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
@@ -180,8 +186,9 @@ class _PendingAgentTurn:
         self.metrics = metrics
         self.tool_calls: list[ATIFToolCall] = []
         self.observations: list[ATIFObservationResult] = []
+        self.ancestry: AtifAncestry | None = None
         self.extra: dict[str, Any] = {}
-        self.tool_ancestry: list[dict[str, Any]] = []
+        self.tool_ancestry: list[AtifAncestry] = []
 
 
 # ---------------------------------------------------------------------------
@@ -222,9 +229,13 @@ class IntermediateStepToATIFConverter:
             if pending is None:
                 return
             observation = ATIFObservation(results=pending.observations) if pending.observations else None
-            extra = dict(pending.extra) if pending.extra else {}
-            if pending.tool_ancestry:
-                extra["nat_tool_ancestry"] = pending.tool_ancestry
+            if pending.ancestry is None:
+                raise ValueError("Pending agent turn is missing required ATIF ancestry metadata")
+            step_extra = AtifStepExtra(
+                ancestry=pending.ancestry,
+                tool_ancestry=pending.tool_ancestry,
+                **pending.extra,
+            )
             atif_steps.append(
                 ATIFStep(
                     step_id=step_id,
@@ -235,7 +246,7 @@ class IntermediateStepToATIFConverter:
                     tool_calls=pending.tool_calls or None,
                     observation=observation,
                     metrics=pending.metrics,
-                    extra=extra or None,
+                    extra=step_extra.model_dump(exclude_none=True),
                 ))
             step_id += 1
             pending = None
@@ -253,7 +264,7 @@ class IntermediateStepToATIFConverter:
                     fn_name = ist.function_ancestry.function_name
                     if fn_name and fn_name != "root":
                         agent_config.name = fn_name
-                extra = _profiling_extra_from_ist(ist)
+                extra = _atif_step_extra_from_ist(ist)
                 atif_steps.append(
                     ATIFStep(
                         step_id=step_id,
@@ -276,7 +287,7 @@ class IntermediateStepToATIFConverter:
                         last_agent_msg = str(s.message)
                         break
                 if final_output and final_output != last_agent_msg:
-                    extra = _profiling_extra_from_ist(ist)
+                    extra = _atif_step_extra_from_ist(ist)
                     atif_steps.append(
                         ATIFStep(
                             step_id=step_id,
@@ -311,7 +322,7 @@ class IntermediateStepToATIFConverter:
                     model_name=ist.name,
                     metrics=metrics,
                 )
-                pending.extra.update(_profiling_extra_from_ist(ist))
+                pending.ancestry = _atif_ancestry_from_ist(ist)
                 continue
 
             if event_type == IntermediateStepType.TOOL_END:
@@ -327,9 +338,9 @@ class IntermediateStepToATIFConverter:
                 if pending is not None:
                     pending.tool_calls.append(tc)
                     pending.observations.append(obs)
-                    pending.tool_ancestry.append(_profiling_extra_from_ist(ist))
+                    pending.tool_ancestry.append(_atif_ancestry_from_ist(ist))
                 else:
-                    extra = _profiling_extra_from_ist(ist)
+                    extra = _atif_step_extra_from_ist(ist)
                     atif_steps.append(
                         ATIFStep(
                             step_id=step_id,
@@ -418,7 +429,7 @@ class ATIFStreamConverter:
             fn_name = ist.function_ancestry.function_name
             if fn_name and fn_name != "root":
                 self._agent_config.name = fn_name
-            extra = _profiling_extra_from_ist(ist)
+            extra = _atif_step_extra_from_ist(ist)
             step = ATIFStep(
                 step_id=self._step_id,
                 source="user",
@@ -444,7 +455,7 @@ class ATIFStreamConverter:
                     last_agent_msg = str(s.message)
                     break
             if final_output and final_output != last_agent_msg:
-                extra = _profiling_extra_from_ist(ist)
+                extra = _atif_step_extra_from_ist(ist)
                 final_step = ATIFStep(
                     step_id=self._step_id,
                     source="agent",
@@ -480,7 +491,7 @@ class ATIFStreamConverter:
                 model_name=ist.name,
                 metrics=metrics,
             )
-            self._pending.extra.update(_profiling_extra_from_ist(ist))
+            self._pending.ancestry = _atif_ancestry_from_ist(ist)
             return flushed
 
         if event_type == IntermediateStepType.TOOL_END:
@@ -496,10 +507,10 @@ class ATIFStreamConverter:
             if self._pending is not None:
                 self._pending.tool_calls.append(tc)
                 self._pending.observations.append(obs)
-                self._pending.tool_ancestry.append(_profiling_extra_from_ist(ist))
+                self._pending.tool_ancestry.append(_atif_ancestry_from_ist(ist))
                 return None
 
-            extra = _profiling_extra_from_ist(ist)
+            extra = _atif_step_extra_from_ist(ist)
             orphan_step = ATIFStep(
                 step_id=self._step_id,
                 source="agent",
@@ -558,9 +569,13 @@ class ATIFStreamConverter:
             return None
         pending = self._pending
         observation = ATIFObservation(results=pending.observations) if pending.observations else None
-        extra = dict(pending.extra) if pending.extra else {}
-        if pending.tool_ancestry:
-            extra["nat_tool_ancestry"] = pending.tool_ancestry
+        if pending.ancestry is None:
+            raise ValueError("Pending agent turn is missing required ATIF ancestry metadata")
+        step_extra = AtifStepExtra(
+            ancestry=pending.ancestry,
+            tool_ancestry=pending.tool_ancestry,
+            **pending.extra,
+        )
         step = ATIFStep(
             step_id=self._step_id,
             source="agent",
@@ -570,7 +585,7 @@ class ATIFStreamConverter:
             tool_calls=pending.tool_calls or None,
             observation=observation,
             metrics=pending.metrics,
-            extra=extra or None,
+            extra=step_extra.model_dump(exclude_none=True),
         )
         self._step_id += 1
         self._emitted_steps.append(step)
