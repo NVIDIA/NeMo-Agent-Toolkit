@@ -19,12 +19,11 @@ Verifies that choice.message.content (crewai >= 1.1.0) and
 choice.model_extra["message"] (older versions) are both handled correctly.
 """
 
-import time
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import MagicMock
 
+from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.crewai.crewai_callback_handler import CrewAIProfilerHandler
-from nat.utils.reactive.subject import Subject
 
 
 class _Message:
@@ -36,11 +35,14 @@ class _Message:
 
 
 class _NewStyleChoice:
-    """Choice with message as a proper attribute, empty model_extra."""
+    """Choice with message as a proper attribute, empty model_extra (crewai >= 1.1.0)."""
 
     def __init__(self, content):
         self.message = _Message(content)
         self.model_extra = {}
+
+    def model_dump(self):
+        return {"message": {"content": self.message.content, "role": self.message.role}}
 
 
 class _OldStyleChoice:
@@ -48,6 +50,9 @@ class _OldStyleChoice:
 
     def __init__(self, content):
         self.model_extra = {"message": {"content": content, "role": "assistant"}}
+
+    def model_dump(self):
+        return {"message": self.model_extra["message"]}
 
 
 class _TokenUsage:
@@ -57,6 +62,13 @@ class _TokenUsage:
         self.completion_tokens = 5
         self.total_tokens = 15
 
+    def model_dump(self):
+        return {
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "total_tokens": self.total_tokens
+        }
+
 
 def _make_output(choices):
     """Build a minimal mock LLM output with the given choices."""
@@ -64,64 +76,44 @@ def _make_output(choices):
         choices=choices,
         model="test-model",
         usage=_TokenUsage(),
+        model_extra={"usage": _TokenUsage()},
     )
 
 
-def test_new_style_choice_message_attribute(reactive_stream: Subject):
-    """choice.message.content is used when message is a proper attribute (crewai >= 1.1.0)."""
-    handler = CrewAIProfilerHandler()
-    handler._original_llm_call = lambda *a, **kw: _make_output([_NewStyleChoice("hello from new API")])
-
-    with patch.object(time, "time", side_effect=[100.0, 103.0]):
-        wrapped = handler._llm_call_monkey_patch()
-        result = wrapped(model="test", messages=[{"content": "prompt"}])
-
-    assert result.choices[0].message.content == "hello from new API"
-
-
-def test_old_style_choice_model_extra(reactive_stream: Subject):
-    """choice.model_extra['message'] is used when message lives in model_extra (older crewai)."""
-    handler = CrewAIProfilerHandler()
-    handler._original_llm_call = lambda *a, **kw: _make_output([_OldStyleChoice("hello from old API")])
-
-    with patch.object(time, "time", side_effect=[100.0, 103.0]):
-        wrapped = handler._llm_call_monkey_patch()
-        result = wrapped(model="test", messages=[{"content": "prompt"}])
-
-    assert result.choices[0].model_extra["message"]["content"] == "hello from old API"
-
-
-def test_multiple_choices_mixed_styles(reactive_stream: Subject):
-    """Multiple choices with different styles are all extracted."""
-    choices = [_NewStyleChoice("first"), _OldStyleChoice("second")]
+def _run_wrapped_call(choices):
+    """Run the monkey-patched LLM call with the given choices, return captured payloads."""
     handler = CrewAIProfilerHandler()
     handler._original_llm_call = lambda *a, **kw: _make_output(choices)
+    handler.step_manager = MagicMock()
 
-    results = []
-    _ = reactive_stream.subscribe(results.append)
+    wrapped = handler._llm_call_monkey_patch()
+    wrapped(model="test", messages=[{"content": "prompt"}])
 
-    with patch.object(time, "time", side_effect=[100.0, 103.0]):
-        wrapped = handler._llm_call_monkey_patch()
-        wrapped(model="test", messages=[{"content": "prompt"}])
-
-    # The LLM_END event should contain the concatenated output
-    llm_end_events = [r for r in results if r.event_type.value == "llm_end"]
-    assert len(llm_end_events) == 1
-    assert llm_end_events[0].data.output == "firstsecond"
+    payloads = [call.args[0] for call in handler.step_manager.push_intermediate_step.call_args_list]
+    llm_end = [p for p in payloads if p.event_type == IntermediateStepType.LLM_END]
+    assert len(llm_end) == 1
+    return llm_end[0]
 
 
-def test_choice_with_none_content(reactive_stream: Subject):
+def test_new_style_choice_message_attribute():
+    """choice.message.content is used when message is a proper attribute (crewai >= 1.1.0)."""
+    end_payload = _run_wrapped_call([_NewStyleChoice("hello from new API")])
+    assert end_payload.data.output == "hello from new API"
+
+
+def test_old_style_choice_model_extra():
+    """choice.model_extra['message'] is used when message lives in model_extra (older crewai)."""
+    end_payload = _run_wrapped_call([_OldStyleChoice("hello from old API")])
+    assert end_payload.data.output == "hello from old API"
+
+
+def test_multiple_choices_mixed_styles():
+    """Multiple choices with different styles are all extracted."""
+    end_payload = _run_wrapped_call([_NewStyleChoice("first"), _OldStyleChoice("second")])
+    assert end_payload.data.output == "firstsecond"
+
+
+def test_choice_with_none_content():
     """None content is handled gracefully without raising."""
-    handler = CrewAIProfilerHandler()
-    handler._original_llm_call = lambda *a, **kw: _make_output([_NewStyleChoice(None)])
-
-    results = []
-    _ = reactive_stream.subscribe(results.append)
-
-    with patch.object(time, "time", side_effect=[100.0, 103.0]):
-        wrapped = handler._llm_call_monkey_patch()
-        wrapped(model="test", messages=[{"content": "prompt"}])
-
-    llm_end_events = [r for r in results if r.event_type.value == "llm_end"]
-    assert len(llm_end_events) == 1
-    assert llm_end_events[0].data.output == ""
+    end_payload = _run_wrapped_call([_NewStyleChoice(None)])
+    assert end_payload.data.output == ""
