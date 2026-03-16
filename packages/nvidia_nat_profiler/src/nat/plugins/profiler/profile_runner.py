@@ -27,12 +27,10 @@ from pydantic import BaseModel
 from nat.data_models.atif import Trajectory
 from nat.data_models.evaluate_runtime import InferenceMetricsModel
 from nat.data_models.evaluate_runtime import ProfilerResults
-from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.profiler import ProfilerConfig
 from nat.plugins.profiler.atif_dataframe import create_dataframe_from_atif
 from nat.plugins.profiler.atif_dataframe import dataframe_to_profiler_traces
 from nat.plugins.profiler.forecasting.model_trainer import ModelTrainer
-from nat.utils.atif_converter import IntermediateStepToATIFConverter
 from nat.utils.type_converter import TypeConverter
 
 logger = logging.getLogger(__name__)
@@ -106,34 +104,18 @@ class ProfilerRunner:
                 min_ts = min(min_ts, span_min)
         return float(min_ts), float(max_ts)
 
-    def _normalize_to_trajectories(
-        self,
-        all_steps: list[list[IntermediateStep]] | list[Trajectory],
-    ) -> list[Trajectory]:
-        """Normalize input to list[Trajectory]. Converts IntermediateStep to ATIF when needed."""
-        if not all_steps:
-            return []
-        first = all_steps[0]
-        if hasattr(first, "steps") and hasattr(first, "agent"):
-            return list(all_steps)
-        converter = IntermediateStepToATIFConverter()
-        return [converter.convert(steps) for steps in all_steps]
-
     async def run(
         self,
-        all_steps: list[list[IntermediateStep]] | list[Trajectory],
+        all_steps: list[Trajectory],
     ) -> ProfilerResults:
         """
         Main entrypoint: Works on Input DataFrame generated from eval to fit forecasting model,
         writes out combined requests JSON, then computes and saves additional metrics,
         and optionally fits a forecasting model.
 
-        Accepts either list[list[IntermediateStep]] or list[Trajectory]. Uses ATIF
-        (Trajectory) internally; IntermediateStep input is converted to ATIF first.
-        Option C: create_dataframe_from_atif produces DataFrame; no ProfilerStep.
+        Accepts list[Trajectory] and uses ATIF internally.
         """
-        trajectories = self._normalize_to_trajectories(all_steps)
-        merged_df = create_dataframe_from_atif(trajectories)
+        merged_df = create_dataframe_from_atif(all_steps)
         self._df = merged_df
 
         # YAPF and Ruff disagree on these long imports; keep Ruff-stable formatting.

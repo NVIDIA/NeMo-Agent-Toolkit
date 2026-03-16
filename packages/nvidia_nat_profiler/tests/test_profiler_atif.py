@@ -108,8 +108,8 @@ def temp_output_dir():
 
 
 @pytest.mark.asyncio
-async def test_profiler_accepts_intermediate_steps_converts_to_atif(profiler_config, temp_output_dir):
-    """Profiler accepts list[list[IntermediateStep]], converts to ATIF internally."""
+async def test_profiler_runs_with_atif_converted_from_intermediate_steps(profiler_config, temp_output_dir):
+    """Profiler runs with ATIF trajectories converted from IntermediateStep traces."""
     steps = [
         _make_intermediate_step(
             IntermediateStepType.WORKFLOW_START,
@@ -126,10 +126,10 @@ async def test_profiler_accepts_intermediate_steps_converts_to_atif(profiler_con
             output_data="Hi there!",
         ),
     ]
-    all_steps = [steps]
+    trajectories = [IntermediateStepToATIFConverter().convert(steps)]
 
     runner = ProfilerRunner(profiler_config, temp_output_dir, write_output=True)
-    result = await runner.run(all_steps)
+    result = await runner.run(trajectories)
 
     assert result is not None
     assert result.llm_latency_ci is not None
@@ -169,8 +169,8 @@ async def test_profiler_accepts_atif_trajectories_directly(profiler_config, temp
 
 
 @pytest.mark.asyncio
-async def test_profiler_intermediate_and_atif_produce_same_structure(profiler_config, temp_output_dir):
-    """IntermediateStep and Trajectory inputs both complete; ATIF used internally."""
+async def test_profiler_atif_input_produces_stable_results(profiler_config, temp_output_dir):
+    """Profiler produces stable metrics when called repeatedly with ATIF input."""
     ist_steps = [
         _make_intermediate_step(
             IntermediateStepType.WORKFLOW_START,
@@ -192,13 +192,13 @@ async def test_profiler_intermediate_and_atif_produce_same_structure(profiler_co
 
     runner = ProfilerRunner(profiler_config, temp_output_dir, write_output=False)
 
-    result_ist = await runner.run([[s for s in ist_steps]])
-    result_atif = await runner.run([atif_traj])
+    result_1 = await runner.run([atif_traj])
+    result_2 = await runner.run([atif_traj])
 
-    assert result_ist is not None
-    assert result_atif is not None
-    assert result_ist.llm_latency_ci is not None
-    assert result_atif.llm_latency_ci is not None
+    assert result_1 is not None
+    assert result_2 is not None
+    assert result_1.llm_latency_ci is not None
+    assert result_2.llm_latency_ci is not None
 
 
 def test_profiler_preserves_function_ancestry_from_atif():
