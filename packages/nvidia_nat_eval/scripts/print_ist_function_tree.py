@@ -105,10 +105,7 @@ def _print_tree(nodes: dict[str, NodeStats]) -> None:
     for child_ids in by_parent.values():
         child_ids.sort(key=lambda fid: nodes[fid].function_name)
 
-    roots = [
-        fid for fid, node in nodes.items()
-        if (node.parent_id in (None, "", "root")) and fid != "root"
-    ]
+    roots = [fid for fid, node in nodes.items() if (node.parent_id in (None, "", "root")) and fid != "root"]
     roots.sort(key=lambda fid: nodes[fid].function_name)
 
     def rec(function_id: str, prefix: str, is_last: bool, visited: set[str]) -> None:
