@@ -82,15 +82,23 @@ def _run_live(kubeconfig_path: str | None) -> str:
     if kubeconfig_path:
         cmd_base.extend(["--kubeconfig", kubeconfig_path])
 
+    sections: list[str] = []
+
     # Get node status
     try:
         result = subprocess.run(
             [*cmd_base, "get", "nodes", "-o", "wide", "--no-headers"],
             capture_output=True, text=True, timeout=30, check=False,
         )
-        node_list = result.stdout.strip()
+        if result.returncode != 0:
+            sections.append(
+                "Error: kubectl failed while fetching node status\n"
+                f"```\n{(result.stderr or result.stdout).strip()}\n```"
+            )
+        else:
+            sections.append(f"## Node Status\n```\n{result.stdout.strip()}\n```")
     except subprocess.TimeoutExpired:
-        return "Error: kubectl timed out while fetching node status"
+        sections.append("Error: kubectl timed out while fetching node status")
 
     # Get node resource usage via top
     try:
@@ -98,14 +106,17 @@ def _run_live(kubeconfig_path: str | None) -> str:
             [*cmd_base, "top", "nodes", "--no-headers"],
             capture_output=True, text=True, timeout=30, check=False,
         )
-        node_top = result.stdout.strip()
+        if result.returncode != 0:
+            sections.append(
+                "Error: kubectl top failed\n"
+                f"```\n{(result.stderr or result.stdout).strip()}\n```"
+            )
+        else:
+            sections.append(f"## Node Resource Usage\n```\n{result.stdout.strip()}\n```")
     except subprocess.TimeoutExpired:
-        node_top = "Error: kubectl top timed out"
+        sections.append("Error: kubectl top timed out")
 
-    return (
-        f"## Node Status\n```\n{node_list}\n```\n\n"
-        f"## Node Resource Usage\n```\n{node_top}\n```"
-    )
+    return "\n\n".join(sections)
 
 
 def _get_default_healthy_response() -> str:

@@ -30,19 +30,24 @@ def log_header(text: str, dash_length: int = 80, level: int = logging.INFO) -> N
     logger.log(level, "-" * dash_length)
 
 
-def preload_offline_data(offline_data_path: str | None) -> None:
+def preload_offline_data(offline_data_path: str | None) -> int:
     """Load offline scenario data from a JSON file into memory.
 
     The JSON file should contain a list of scenario objects, each with a ``scenario_id``
     key and tool response data keyed by tool name.
+
+    Returns:
+        The number of scenarios loaded.
     """
+    _offline_data.clear()
+
     if offline_data_path is None:
-        return
+        return 0
 
     path = Path(offline_data_path)
     if not path.exists():
         logger.warning("Offline data file not found: %s", offline_data_path)
-        return
+        return 0
 
     with open(path, encoding="utf-8") as fh:
         scenarios = json.load(fh)
@@ -52,6 +57,7 @@ def preload_offline_data(offline_data_path: str | None) -> None:
         _offline_data[scenario_id] = scenario
 
     logger.info("Loaded %d offline scenarios from %s", len(_offline_data), offline_data_path)
+    return len(_offline_data)
 
 
 def get_offline_tool_response(scenario_id: str, tool_name: str) -> str | None:

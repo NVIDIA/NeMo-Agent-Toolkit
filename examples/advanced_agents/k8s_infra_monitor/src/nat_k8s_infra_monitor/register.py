@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+from pathlib import Path
 import typing
 
 from pydantic.fields import Field
@@ -37,6 +38,8 @@ from . import severity_classifier
 from . import utils
 from .prompts import K8S_INFRA_MONITOR_PROMPT
 
+DEFAULT_OFFLINE_DATA_PATH = str(Path(__file__).resolve().parent / "data" / "offline_scenarios.json")
+
 
 class K8sInfraMonitorWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="k8s_infra_monitor"):
     """
@@ -54,7 +57,7 @@ class K8sInfraMonitorWorkflowConfig(FunctionBaseConfig, OptimizableMixin, name="
     llm_name: LLMRef
     offline_mode: bool = Field(default=True, description="Whether to run in offline mode")
     offline_data_path: str | None = Field(
-        default="examples/advanced_agents/k8s_infra_monitor/data/offline_scenarios.json",
+        default=DEFAULT_OFFLINE_DATA_PATH,
         description="Path to the offline scenario dataset in JSON format",
     )
     agent_prompt: str = Field(
@@ -137,7 +140,9 @@ async def k8s_infra_monitor_workflow(config: K8sInfraMonitorWorkflowConfig, buil
 
     try:
         if config.offline_mode:
-            utils.preload_offline_data(offline_data_path=config.offline_data_path)
+            loaded = utils.preload_offline_data(offline_data_path=config.offline_data_path)
+            if loaded == 0:
+                raise FileNotFoundError(f"Offline dataset not found or empty: {config.offline_data_path}")
             utils.log_header("Running in offline mode", dash_length=120, level=logging.INFO)
         yield _response_fn
     except GeneratorExit:

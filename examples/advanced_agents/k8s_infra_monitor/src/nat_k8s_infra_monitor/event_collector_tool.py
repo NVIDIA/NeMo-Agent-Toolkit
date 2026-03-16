@@ -33,7 +33,7 @@ class EventCollectorToolConfig(FunctionBaseConfig, name="event_collector"):
 
     offline_mode: bool = Field(default=True, description="Whether to run in offline mode")
     kubeconfig_path: str | None = Field(default=None, description="Path to kubeconfig file")
-    event_limit: int = Field(default=50, description="Maximum number of recent events to retrieve")
+    event_limit: int = Field(default=50, gt=0, description="Maximum number of recent events to retrieve")
 
 
 @register_function(config_type=EventCollectorToolConfig)
@@ -93,13 +93,18 @@ def _run_live(kubeconfig_path: str | None, event_limit: int) -> str:
              "--no-headers"],
             capture_output=True, text=True, timeout=30, check=False,
         )
-        warnings = result.stdout.strip()
-        if warnings:
-            # Limit output
-            lines = warnings.split("\n")[:event_limit]
-            sections.append(f"## Warning Events ({len(lines)} most recent)\n```\n" + "\n".join(lines) + "\n```")
+        if result.returncode != 0:
+            sections.append(
+                "Error: kubectl failed while fetching warning events\n"
+                f"```\n{(result.stderr or result.stdout).strip()}\n```"
+            )
         else:
-            sections.append("## Warning Events\nNo warning events found.")
+            warnings = result.stdout.strip()
+            if warnings:
+                lines = warnings.split("\n")[:event_limit]
+                sections.append(f"## Warning Events ({len(lines)} most recent)\n```\n" + "\n".join(lines) + "\n```")
+            else:
+                sections.append("## Warning Events\nNo warning events found.")
     except subprocess.TimeoutExpired:
         sections.append("Error: kubectl timed out while fetching events")
 
@@ -117,9 +122,13 @@ def _run_live(kubeconfig_path: str | None, event_limit: int) -> str:
              "--no-headers"],
             capture_output=True, text=True, timeout=30, check=False,
         )
-        all_events = result.stdout.strip()
-        if all_events:
-            lines = all_events.split("\n")[:event_limit]
+        if result.returncode != 0:
+            sections.append(
+                "Error: kubectl failed while fetching recent events\n"
+                f"```\n{(result.stderr or result.stdout).strip()}\n```"
+            )
+        elif result.stdout.strip():
+            lines = result.stdout.strip().split("\n")[:event_limit]
             sections.append(
                 f"## Recent Events ({len(lines)} most recent)\n```\n" + "\n".join(lines) + "\n```"
             )

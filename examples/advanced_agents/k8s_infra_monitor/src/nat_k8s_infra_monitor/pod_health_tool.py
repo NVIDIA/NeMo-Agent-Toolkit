@@ -95,7 +95,13 @@ def _run_live(kubeconfig_path: str | None, namespaces: list[str] | None) -> str:
                     [*cmd_base, "get", "pods", "-n", ns, "-o", "wide", "--no-headers"],
                     capture_output=True, text=True, timeout=30, check=False,
                 )
-                sections.append(f"### Namespace: {ns}\n```\n{result.stdout.strip()}\n```")
+                if result.returncode != 0:
+                    sections.append(
+                        f"### Namespace: {ns}\nError: kubectl failed\n"
+                        f"```\n{(result.stderr or result.stdout).strip()}\n```"
+                    )
+                else:
+                    sections.append(f"### Namespace: {ns}\n```\n{result.stdout.strip()}\n```")
             except subprocess.TimeoutExpired:
                 sections.append(f"### Namespace: {ns}\nError: kubectl timed out")
     else:
@@ -105,11 +111,17 @@ def _run_live(kubeconfig_path: str | None, namespaces: list[str] | None) -> str:
                  "--field-selector=status.phase!=Running,status.phase!=Succeeded"],
                 capture_output=True, text=True, timeout=30, check=False,
             )
-            unhealthy = result.stdout.strip()
-            if unhealthy:
-                sections.append(f"## Unhealthy Pods\n```\n{unhealthy}\n```")
+            if result.returncode != 0:
+                sections.append(
+                    "Error: kubectl failed while fetching pod status\n"
+                    f"```\n{(result.stderr or result.stdout).strip()}\n```"
+                )
             else:
-                sections.append("## Unhealthy Pods\nNo unhealthy pods found across all namespaces.")
+                unhealthy = result.stdout.strip()
+                if unhealthy:
+                    sections.append(f"## Unhealthy Pods\n```\n{unhealthy}\n```")
+                else:
+                    sections.append("## Unhealthy Pods\nNo unhealthy pods found across all namespaces.")
         except subprocess.TimeoutExpired:
             sections.append("Error: kubectl timed out while fetching pod status")
 
@@ -122,16 +134,17 @@ def _run_live(kubeconfig_path: str | None, namespaces: list[str] | None) -> str:
              "{.restartCount}{' '}{end}{'\\n'}{end}"],
             capture_output=True, text=True, timeout=30, check=False,
         )
-        high_restarts = []
-        for line in result.stdout.strip().split("\n"):
-            parts = line.split()
-            if len(parts) >= 3:
-                ns, name = parts[0], parts[1]
-                restarts = [int(r) for r in parts[2:] if r.isdigit()]
-                if any(r > 5 for r in restarts):
-                    high_restarts.append(f"  {ns}/{name}: {max(restarts)} restarts")
-        if high_restarts:
-            sections.append("## High Restart Pods\n" + "\n".join(high_restarts))
+        if result.returncode == 0:
+            high_restarts = []
+            for line in result.stdout.strip().split("\n"):
+                parts = line.split()
+                if len(parts) >= 3:
+                    ns, name = parts[0], parts[1]
+                    restarts = [int(r) for r in parts[2:] if r.isdigit()]
+                    if any(r > 5 for r in restarts):
+                        high_restarts.append(f"  {ns}/{name}: {max(restarts)} restarts")
+            if high_restarts:
+                sections.append("## High Restart Pods\n" + "\n".join(high_restarts))
     except (subprocess.TimeoutExpired, ValueError):
         pass
 

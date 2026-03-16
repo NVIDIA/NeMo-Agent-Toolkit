@@ -34,10 +34,10 @@ class ResourcePressureToolConfig(FunctionBaseConfig, name="resource_pressure_che
     offline_mode: bool = Field(default=True, description="Whether to run in offline mode")
     kubeconfig_path: str | None = Field(default=None, description="Path to kubeconfig file")
     cpu_threshold_percent: int = Field(
-        default=80, description="CPU utilization threshold to flag as pressure"
+        default=80, ge=0, le=100, description="CPU utilization threshold to flag as pressure"
     )
     memory_threshold_percent: int = Field(
-        default=85, description="Memory utilization threshold to flag as pressure"
+        default=85, ge=0, le=100, description="Memory utilization threshold to flag as pressure"
     )
 
 
@@ -105,18 +105,24 @@ def _run_live(
              "{range .status.conditions[*]}{.type}={.status}{' '}{end}{'\\n'}{end}"],
             capture_output=True, text=True, timeout=30, check=False,
         )
-        conditions = result.stdout.strip()
-        pressure_nodes = []
-        for line in conditions.split("\n"):
-            if not line.strip():
-                continue
-            if any(cond in line for cond in ["MemoryPressure=True", "DiskPressure=True", "PIDPressure=True"]):
-                pressure_nodes.append(line)
-
-        if pressure_nodes:
-            sections.append("## Nodes Under Pressure\n" + "\n".join(f"- {n}" for n in pressure_nodes))
+        if result.returncode != 0:
+            sections.append(
+                "Error: kubectl failed while fetching node conditions\n"
+                f"```\n{(result.stderr or result.stdout).strip()}\n```"
+            )
         else:
-            sections.append("## Node Pressure Conditions\nNo nodes reporting pressure conditions.")
+            conditions = result.stdout.strip()
+            pressure_nodes = []
+            for line in conditions.split("\n"):
+                if not line.strip():
+                    continue
+                if any(cond in line for cond in ["MemoryPressure=True", "DiskPressure=True", "PIDPressure=True"]):
+                    pressure_nodes.append(line)
+
+            if pressure_nodes:
+                sections.append("## Nodes Under Pressure\n" + "\n".join(f"- {n}" for n in pressure_nodes))
+            else:
+                sections.append("## Node Pressure Conditions\nNo nodes reporting pressure conditions.")
     except subprocess.TimeoutExpired:
         sections.append("Error: kubectl timed out while fetching node conditions")
 
@@ -126,27 +132,33 @@ def _run_live(
             [*cmd_base, "top", "nodes"],
             capture_output=True, text=True, timeout=30, check=False,
         )
-        top_output = result.stdout.strip()
-        sections.append(f"## Node Resource Utilization\n```\n{top_output}\n```")
+        if result.returncode != 0:
+            sections.append(
+                "Error: kubectl top failed\n"
+                f"```\n{(result.stderr or result.stdout).strip()}\n```"
+            )
+        else:
+            top_output = result.stdout.strip()
+            sections.append(f"## Node Resource Utilization\n```\n{top_output}\n```")
 
-        # Parse and flag nodes exceeding thresholds
-        high_usage = []
-        for line in top_output.split("\n")[1:]:  # Skip header
-            parts = line.split()
-            if len(parts) >= 5:
-                node_name = parts[0]
-                try:
-                    cpu_pct = int(parts[2].rstrip("%"))
-                    mem_pct = int(parts[4].rstrip("%"))
-                    if cpu_pct > cpu_threshold:
-                        high_usage.append(f"  - {node_name}: CPU at {cpu_pct}% (threshold: {cpu_threshold}%)")
-                    if mem_pct > memory_threshold:
-                        high_usage.append(f"  - {node_name}: Memory at {mem_pct}% (threshold: {memory_threshold}%)")
-                except ValueError:
-                    continue
+            # Parse and flag nodes exceeding thresholds
+            high_usage = []
+            for line in top_output.split("\n")[1:]:  # Skip header
+                parts = line.split()
+                if len(parts) >= 5:
+                    node_name = parts[0]
+                    try:
+                        cpu_pct = int(parts[2].rstrip("%"))
+                        mem_pct = int(parts[4].rstrip("%"))
+                        if cpu_pct > cpu_threshold:
+                            high_usage.append(f"  - {node_name}: CPU at {cpu_pct}% (threshold: {cpu_threshold}%)")
+                        if mem_pct > memory_threshold:
+                            high_usage.append(f"  - {node_name}: Memory at {mem_pct}% (threshold: {memory_threshold}%)")
+                    except ValueError:
+                        continue
 
-        if high_usage:
-            sections.append("## Nodes Exceeding Thresholds\n" + "\n".join(high_usage))
+            if high_usage:
+                sections.append("## Nodes Exceeding Thresholds\n" + "\n".join(high_usage))
     except subprocess.TimeoutExpired:
         sections.append("Error: kubectl top timed out")
 
