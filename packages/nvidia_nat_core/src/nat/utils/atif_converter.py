@@ -124,16 +124,6 @@ def _extract_user_input(value: Any) -> str:
     return str(value)
 
 
-def _atif_step_extra_from_ist(ist: IntermediateStep) -> dict[str, Any]:
-    """Build step.extra dict for profiling metadata (function_ancestry, span_event_timestamp, framework)."""
-    ancestry = AtifAncestry(
-        function_ancestry=ist.function_ancestry,
-        span_event_timestamp=ist.payload.span_event_timestamp,
-        framework=ist.payload.framework.value if ist.payload.framework is not None else None,
-    )
-    return AtifStepExtra(ancestry=ancestry).model_dump(exclude_none=True)
-
-
 def _atif_ancestry_from_ist(ist: IntermediateStep) -> AtifAncestry:
     """Build typed ATIF ancestry metadata from an IntermediateStep."""
     return AtifAncestry(
@@ -141,6 +131,11 @@ def _atif_ancestry_from_ist(ist: IntermediateStep) -> AtifAncestry:
         span_event_timestamp=ist.payload.span_event_timestamp,
         framework=ist.payload.framework.value if ist.payload.framework is not None else None,
     )
+
+
+def _atif_step_extra_model_from_ist(ist: IntermediateStep) -> AtifStepExtra:
+    """Build typed ATIF step extra model from an IntermediateStep."""
+    return AtifStepExtra(ancestry=_atif_ancestry_from_ist(ist))
 
 
 def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
@@ -264,7 +259,7 @@ class IntermediateStepToATIFConverter:
                     fn_name = ist.function_ancestry.function_name
                     if fn_name and fn_name != "root":
                         agent_config.name = fn_name
-                extra = _atif_step_extra_from_ist(ist)
+                extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                 atif_steps.append(
                     ATIFStep(
                         step_id=step_id,
@@ -287,7 +282,7 @@ class IntermediateStepToATIFConverter:
                         last_agent_msg = str(s.message)
                         break
                 if final_output and final_output != last_agent_msg:
-                    extra = _atif_step_extra_from_ist(ist)
+                    extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                     atif_steps.append(
                         ATIFStep(
                             step_id=step_id,
@@ -340,7 +335,7 @@ class IntermediateStepToATIFConverter:
                     pending.observations.append(obs)
                     pending.tool_ancestry.append(_atif_ancestry_from_ist(ist))
                 else:
-                    extra = _atif_step_extra_from_ist(ist)
+                    extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                     atif_steps.append(
                         ATIFStep(
                             step_id=step_id,
@@ -429,7 +424,7 @@ class ATIFStreamConverter:
             fn_name = ist.function_ancestry.function_name
             if fn_name and fn_name != "root":
                 self._agent_config.name = fn_name
-            extra = _atif_step_extra_from_ist(ist)
+            extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
             step = ATIFStep(
                 step_id=self._step_id,
                 source="user",
@@ -455,7 +450,7 @@ class ATIFStreamConverter:
                     last_agent_msg = str(s.message)
                     break
             if final_output and final_output != last_agent_msg:
-                extra = _atif_step_extra_from_ist(ist)
+                extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                 final_step = ATIFStep(
                     step_id=self._step_id,
                     source="agent",
@@ -510,7 +505,7 @@ class ATIFStreamConverter:
                 self._pending.tool_ancestry.append(_atif_ancestry_from_ist(ist))
                 return None
 
-            extra = _atif_step_extra_from_ist(ist)
+            extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
             orphan_step = ATIFStep(
                 step_id=self._step_id,
                 source="agent",
