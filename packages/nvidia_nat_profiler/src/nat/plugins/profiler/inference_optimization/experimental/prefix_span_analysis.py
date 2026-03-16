@@ -321,9 +321,8 @@ def compute_coverage_and_duration(sequences_map: dict[int, list[PrefixCallNode]]
 # --------------------------------------------------------------------------------
 
 
-def prefixspan_subworkflow_with_text(
-    all_steps: list[list[IntermediateStep]] | pd.DataFrame,
-    min_support: int | float = 2,
+def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]] | pd.DataFrame,
+                                     min_support: int | float = 2,
                                      top_k: int = 10,
                                      min_coverage: float = 0.0,
                                      max_text_len: int = 700,

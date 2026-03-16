@@ -14,6 +14,7 @@
 # limitations under the License.
 """Tests for profiler ATIF path — uses ATIF (Trajectory) internally."""
 
+import math
 import tempfile
 from pathlib import Path
 
@@ -65,13 +66,11 @@ def _make_intermediate_step(
 
 def _make_usage(prompt: int = 50, completion: int = 10) -> UsageInfo:
     """Create UsageInfo with token counts."""
-    return UsageInfo(
-        token_usage=TokenUsageBaseModel(
-            prompt_tokens=prompt,
-            completion_tokens=completion,
-            total_tokens=prompt + completion,
-        ),
-    )
+    return UsageInfo(token_usage=TokenUsageBaseModel(
+        prompt_tokens=prompt,
+        completion_tokens=completion,
+        total_tokens=prompt + completion,
+    ), )
 
 
 @pytest.fixture
@@ -237,12 +236,10 @@ def test_create_dataframe_from_atif_emits_tool_end_rows():
                     ToolCall(tool_call_id="tc-1", function_name="calculator", arguments={"expr": "2+2"}),
                     ToolCall(tool_call_id="tc-2", function_name="validator", arguments={}),
                 ],
-                observation=Observation(
-                    results=[
-                        ObservationResult(source_call_id="tc-1", content="4"),
-                        ObservationResult(source_call_id="tc-2", content="ok"),
-                    ]
-                ),
+                observation=Observation(results=[
+                    ObservationResult(source_call_id="tc-1", content="4"),
+                    ObservationResult(source_call_id="tc-2", content="ok"),
+                ]),
             ),
         ],
     )
@@ -300,8 +297,7 @@ def test_create_dataframe_from_atif_emits_workflow_end_for_message_only_agent():
                 step_id=2,
                 source="agent",
                 message="Hello!",
-                timestamp="2024-01-01T12:00:01+00:00",
-                # No metrics, no tool_calls
+                timestamp="2024-01-01T12:00:01+00:00",  # No metrics, no tool_calls
             ),
         ],
     )
@@ -346,7 +342,7 @@ def test_dataframe_to_profiler_traces():
     assert "function_ancestry" in step
     assert "usage_info" in step
     total = step["usage_info"]["token_usage"]["total_tokens"]
-    assert total in (0, 60) or (total != total)  # 0, 60, or NaN for non-LLM rows
+    assert total in (0, 60) or math.isnan(total)  # 0, 60, or NaN for non-LLM rows
     obj = traces_obj[0][0]
     assert hasattr(obj, "event_type")
     assert hasattr(obj, "function_ancestry")

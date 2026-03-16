@@ -16,8 +16,6 @@
 import numpy as np
 import pandas as pd
 
-import pandas as pd
-
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.profiler.utils import create_standardized_dataframe
 
@@ -28,9 +26,7 @@ class LLMMetrics:
     """
 
     @staticmethod
-    def compute_profiling_metrics(
-        all_steps: list[list[IntermediateStep]] | pd.DataFrame,
-    ) -> pd.DataFrame:
+    def compute_profiling_metrics(all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> pd.DataFrame:
         """
         Compute and append the following columns to the provided DataFrame:
 

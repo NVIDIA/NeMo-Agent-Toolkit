@@ -168,8 +168,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                         parent_function_id=anc["parent_function_id"],
                         parent_function_name=anc["parent_function_name"],
                         span_event_timestamp=anc.get("span_event_timestamp"),
-                    )
-                )
+                    ))
                 continue
 
             if step.source == "agent":
@@ -177,11 +176,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
 
                 # 1) Emit TOOL_END per tool call
                 if step.tool_calls and step.observation:
-                    obs_by_id = {
-                        r.source_call_id: r
-                        for r in step.observation.results
-                        if r.source_call_id
-                    }
+                    obs_by_id = {r.source_call_id: r for r in step.observation.results if r.source_call_id}
                     for i, tc in enumerate(step.tool_calls):
                         obs = obs_by_id.get(tc.tool_call_id)
                         content = _observation_content_to_str(obs.content) if obs else ""
@@ -199,26 +194,18 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                                 parent_function_id=tool_anc["parent_function_id"],
                                 parent_function_name=tool_anc["parent_function_name"],
                                 span_event_timestamp=tool_anc.get("span_event_timestamp"),
-                            )
-                        )
+                            ))
 
                 # 2) Emit LLM_START/LLM_END if metrics present
-                if step.metrics and (
-                    (step.metrics.prompt_tokens or 0)
-                    + (step.metrics.completion_tokens or 0)
-                    + (step.metrics.cached_tokens or 0)
-                    > 0
-                ):
+                if step.metrics and ((step.metrics.prompt_tokens or 0) + (step.metrics.completion_tokens or 0) +
+                                     (step.metrics.cached_tokens or 0) > 0):
                     step_uuid = str(uuid.uuid4())
                     prompt = step.metrics.prompt_tokens or 0
                     completion = step.metrics.completion_tokens or 0
                     cached = step.metrics.cached_tokens or 0
                     total = prompt + completion + cached
-                    llm_start_ts = (
-                        step_anc["span_event_timestamp"]
-                        if step_anc.get("span_event_timestamp") is not None
-                        else ts
-                    )
+                    llm_start_ts = (step_anc["span_event_timestamp"]
+                                    if step_anc.get("span_event_timestamp") is not None else ts)
                     all_rows.append(
                         _row(
                             event_timestamp=llm_start_ts,
@@ -232,8 +219,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                             parent_function_id=step_anc["parent_function_id"],
                             parent_function_name=step_anc["parent_function_name"],
                             span_event_timestamp=step_anc.get("span_event_timestamp"),
-                        )
-                    )
+                        ))
                     all_rows.append(
                         _row(
                             event_timestamp=ts,
@@ -250,8 +236,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                             parent_function_id=step_anc["parent_function_id"],
                             parent_function_name=step_anc["parent_function_name"],
                             span_event_timestamp=step_anc.get("span_event_timestamp"),
-                        )
-                    )
+                        ))
 
                 # 3) Emit WORKFLOW_END for message-only (no tools) final answer
                 elif msg and not (step.tool_calls and step.observation):
@@ -266,8 +251,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                             parent_function_id=step_anc["parent_function_id"],
                             parent_function_name=step_anc["parent_function_name"],
                             span_event_timestamp=step_anc.get("span_event_timestamp"),
-                        )
-                    )
+                        ))
 
     if not all_rows:
         return pd.DataFrame()
@@ -311,7 +295,9 @@ def dataframe_to_profiler_traces(df: pd.DataFrame) -> tuple[list[list[dict[str, 
                 "span_event_timestamp": row.get("span_event_timestamp"),
                 "event_type": et,
                 "framework": row.get("framework"),
-                "payload": {"UUID": str(row.get("UUID", "") or "")},
+                "payload": {
+                    "UUID": str(row.get("UUID", "") or "")
+                },
                 "token_usage": {
                     "prompt_tokens": row.get("prompt_tokens") or 0,
                     "completion_tokens": row.get("completion_tokens") or 0,

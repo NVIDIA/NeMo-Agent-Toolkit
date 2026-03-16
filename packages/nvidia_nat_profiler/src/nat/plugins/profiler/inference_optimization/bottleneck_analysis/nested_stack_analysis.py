@@ -140,9 +140,7 @@ def build_call_tree_for_example(example_df: pd.DataFrame) -> list[CallNode]:
     return roots
 
 
-def build_call_tree_per_example(
-    all_steps: list[list[IntermediateStep]] | pd.DataFrame,
-) -> list[CallNode]:
+def build_call_tree_per_example(all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> list[CallNode]:
     """
     1) Group the DataFrame by example_number.
     2) For each example, build a separate stack-based call tree.

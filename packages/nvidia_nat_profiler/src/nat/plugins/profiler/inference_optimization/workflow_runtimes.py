@@ -22,8 +22,7 @@ from nat.plugins.profiler.utils import create_standardized_dataframe
 
 
 def compute_workflow_runtime_metrics(
-    all_steps: list[list[IntermediateStep]] | pd.DataFrame,
-) -> WorkflowRuntimeMetrics:
+    all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> WorkflowRuntimeMetrics:
     """
     Computes the p90, p95, and p99 of workflow runtime for each example_number.
 

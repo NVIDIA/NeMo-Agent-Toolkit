@@ -377,14 +377,12 @@ class TestBatchConverter:
                 name="gpt-4",
                 output_data="Hello",
                 timestamp_offset=1.0,
-                usage=UsageInfo(
-                    token_usage=TokenUsageBaseModel(
-                        prompt_tokens=10,
-                        completion_tokens=5,
-                        reasoning_tokens=100,
-                        total_tokens=115,
-                    ),
-                ),
+                usage=UsageInfo(token_usage=TokenUsageBaseModel(
+                    prompt_tokens=10,
+                    completion_tokens=5,
+                    reasoning_tokens=100,
+                    total_tokens=115,
+                ), ),
             ),
             _make_step(
                 IntermediateStepType.WORKFLOW_END,
@@ -414,14 +412,12 @@ class TestBatchConverter:
                 name="gpt-4",
                 output_data="Hello",
                 timestamp_offset=1.0,
-                usage=UsageInfo(
-                    token_usage=TokenUsageBaseModel(
-                        prompt_tokens=100,
-                        completion_tokens=20,
-                        cached_tokens=50,
-                        total_tokens=120,
-                    ),
-                ),
+                usage=UsageInfo(token_usage=TokenUsageBaseModel(
+                    prompt_tokens=100,
+                    completion_tokens=20,
+                    cached_tokens=50,
+                    total_tokens=120,
+                ), ),
             ),
             _make_step(
                 IntermediateStepType.WORKFLOW_END,

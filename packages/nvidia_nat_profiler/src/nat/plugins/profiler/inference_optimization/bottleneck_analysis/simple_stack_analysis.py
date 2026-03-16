@@ -37,9 +37,7 @@ from nat.plugins.profiler.utils import create_standardized_dataframe
 # ----------------------------------------------------------------------
 # Main Function
 # ----------------------------------------------------------------------
-def profile_workflow_bottlenecks(
-    all_steps: list[list[IntermediateStep]] | pd.DataFrame,
-) -> SimpleBottleneckReport:
+def profile_workflow_bottlenecks(all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> SimpleBottleneckReport:
     """
     Perform advanced bottleneck profiling on a workflow dataframe.
 

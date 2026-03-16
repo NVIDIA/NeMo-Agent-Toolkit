@@ -48,7 +48,6 @@ from nat.data_models.intermediate_step import TraceMetadata
 
 logger = logging.getLogger(__name__)
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

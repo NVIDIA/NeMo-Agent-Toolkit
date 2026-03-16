@@ -21,9 +21,8 @@ import statistics
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
-
 import pandas as pd
+from pydantic import BaseModel
 
 from nat.data_models.atif import Trajectory
 from nat.data_models.evaluate_runtime import InferenceMetricsModel
@@ -161,10 +160,9 @@ class ProfilerRunner:
         from nat.plugins.profiler.inference_optimization.workflow_runtimes import compute_workflow_runtime_metrics
 
         traces_dict, traces_obj = dataframe_to_profiler_traces(merged_df)
-        self.all_requests_data = [
-            {"request_number": i, "intermediate_steps": trace}
-            for i, trace in enumerate(traces_dict)
-        ]
+        self.all_requests_data = [{
+            "request_number": i, "intermediate_steps": trace
+        } for i, trace in enumerate(traces_dict)]
 
         # Write the final big JSON (all requests)
         if self.write_output:
