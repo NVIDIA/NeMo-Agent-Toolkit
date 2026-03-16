@@ -16,6 +16,7 @@
 
 import pytest
 
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -45,6 +46,7 @@ def _make_step(
     function_name: str = "my_workflow",
     usage: UsageInfo | None = None,
     step_uuid: str | None = None,
+    framework: LLMFrameworkEnum | None = None,
 ) -> IntermediateStep:
     """Create a minimal IntermediateStep for testing."""
     payload_kwargs: dict = {
@@ -57,6 +59,8 @@ def _make_step(
         payload_kwargs["usage_info"] = usage
     if step_uuid is not None:
         payload_kwargs["UUID"] = step_uuid
+    if framework is not None:
+        payload_kwargs["framework"] = framework
     if event_type.endswith("_END") and event_type != "LLM_NEW_TOKEN":
         payload_kwargs["span_event_timestamp"] = (_BASE_TIME + timestamp_offset - 0.5)
     return IntermediateStep(
@@ -313,6 +317,36 @@ class TestBatchConverter:
         """Explicit session_id is used in the output."""
         result = batch_converter.convert(simple_trajectory, session_id="my-session-123")
         assert result.session_id == "my-session-123"
+
+    def test_framework_in_extra(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+    ):
+        """Framework is included in step.extra when present in IntermediateStep."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Hi",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Hello!",
+                timestamp_offset=1.0,
+                usage=_make_usage(50, 10),
+                framework=LLMFrameworkEnum.LANGCHAIN,
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="Hello!",
+                timestamp_offset=2.0,
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.extra is not None
+        assert agent_step.extra.get("framework") == "langchain"
 
     def test_final_metrics(
         self,

@@ -207,6 +207,7 @@ def test_profiler_preserves_function_ancestry_from_atif():
                     "function_name": "my_workflow",
                     "parent_function_id": "",
                     "parent_function_name": "",
+                    "framework": "langchain",
                 },
             ),
         ],
@@ -214,6 +215,9 @@ def test_profiler_preserves_function_ancestry_from_atif():
     df = create_dataframe_from_atif([traj])
     assert "function_id" in df.columns
     assert (df["function_id"] == "workflow-123").all()
+    assert "framework" in df.columns
+    llm_rows = df[df["event_type"] == IntermediateStepType.LLM_END]
+    assert (llm_rows["framework"] == "langchain").all()
 
 
 def test_create_dataframe_from_atif_emits_tool_end_rows():

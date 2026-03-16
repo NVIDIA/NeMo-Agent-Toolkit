@@ -123,7 +123,7 @@ def _extract_user_input(value: Any) -> str:
 
 
 def _profiling_extra_from_ist(ist: IntermediateStep) -> dict[str, Any]:
-    """Build step.extra dict for profiling metadata (function_ancestry, span_event_timestamp)."""
+    """Build step.extra dict for profiling metadata (function_ancestry, span_event_timestamp, framework)."""
     extra: dict[str, Any] = {}
     fa = ist.function_ancestry
     extra["function_id"] = fa.function_id or "root"
@@ -132,6 +132,8 @@ def _profiling_extra_from_ist(ist: IntermediateStep) -> dict[str, Any]:
     extra["parent_function_name"] = fa.parent_name or ""
     if ist.payload.span_event_timestamp is not None:
         extra["span_event_timestamp"] = ist.payload.span_event_timestamp
+    if ist.payload.framework is not None:
+        extra["framework"] = ist.payload.framework.value
     return extra
 
 

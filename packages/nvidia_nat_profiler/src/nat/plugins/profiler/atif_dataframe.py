@@ -67,6 +67,7 @@ def _ancestry_from_extra(step: Any, tool_index: int | None = None) -> dict[str, 
                 "parent_function_id": anc.get("parent_function_id", ""),
                 "parent_function_name": anc.get("parent_function_name", ""),
                 "span_event_timestamp": anc.get("span_event_timestamp"),
+                "framework": anc.get("framework"),
             }
     return {
         "function_id": extra.get("function_id", "root"),
@@ -74,6 +75,7 @@ def _ancestry_from_extra(step: Any, tool_index: int | None = None) -> dict[str, 
         "parent_function_id": extra.get("parent_function_id", ""),
         "parent_function_name": extra.get("parent_function_name", ""),
         "span_event_timestamp": extra.get("span_event_timestamp"),
+        "framework": extra.get("framework"),
     }
 
 
@@ -168,6 +170,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                         parent_function_id=anc["parent_function_id"],
                         parent_function_name=anc["parent_function_name"],
                         span_event_timestamp=anc.get("span_event_timestamp"),
+                        framework=anc.get("framework"),
                     ))
                 continue
 
@@ -194,6 +197,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                                 parent_function_id=tool_anc["parent_function_id"],
                                 parent_function_name=tool_anc["parent_function_name"],
                                 span_event_timestamp=tool_anc.get("span_event_timestamp"),
+                                framework=tool_anc.get("framework"),
                             ))
 
                 # 2) Emit LLM_START/LLM_END if metrics present
@@ -219,6 +223,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                             parent_function_id=step_anc["parent_function_id"],
                             parent_function_name=step_anc["parent_function_name"],
                             span_event_timestamp=step_anc.get("span_event_timestamp"),
+                            framework=step_anc.get("framework"),
                         ))
                     all_rows.append(
                         _row(
@@ -236,6 +241,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                             parent_function_id=step_anc["parent_function_id"],
                             parent_function_name=step_anc["parent_function_name"],
                             span_event_timestamp=step_anc.get("span_event_timestamp"),
+                            framework=step_anc.get("framework"),
                         ))
 
                 # 3) Emit WORKFLOW_END for message-only (no tools) final answer
@@ -251,6 +257,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                             parent_function_id=step_anc["parent_function_id"],
                             parent_function_name=step_anc["parent_function_name"],
                             span_event_timestamp=step_anc.get("span_event_timestamp"),
+                            framework=step_anc.get("framework"),
                         ))
 
     if not all_rows:
