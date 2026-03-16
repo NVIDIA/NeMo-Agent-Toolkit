@@ -341,6 +341,43 @@ def test_create_dataframe_from_atif_emits_workflow_end_for_message_only_agent():
     assert wf_end["llm_text_output"].iloc[0] == "Hello!"
 
 
+def test_create_dataframe_from_atif_zero_token_metrics_still_emit_llm_rows():
+    """create_dataframe_from_atif emits LLM rows when metrics are present but token counts are zero."""
+    traj = Trajectory(
+        agent=Agent(name="test", version="0.0.0"),
+        steps=[
+            Step(
+                step_id=1,
+                source="user",
+                message="Say hello",
+                timestamp="2024-01-01T12:00:00+00:00",
+                extra=_extra(),
+            ),
+            Step(
+                step_id=2,
+                source="agent",
+                message="Hello!",
+                timestamp="2024-01-01T12:00:01+00:00",
+                model_name="gpt-4",
+                metrics=Metrics(prompt_tokens=0, completion_tokens=0, cached_tokens=0),
+                extra=_extra(),
+            ),
+        ],
+    )
+    df = create_dataframe_from_atif([traj])
+
+    event_types = df["event_type"].tolist()
+    assert IntermediateStepType.LLM_START in event_types
+    assert IntermediateStepType.LLM_END in event_types
+    assert IntermediateStepType.WORKFLOW_END not in event_types
+
+    llm_end = df[df["event_type"] == IntermediateStepType.LLM_END]
+    assert len(llm_end) == 1
+    assert llm_end["prompt_tokens"].iloc[0] == 0
+    assert llm_end["completion_tokens"].iloc[0] == 0
+    assert llm_end["total_tokens"].iloc[0] == 0
+
+
 def test_dataframe_to_profiler_traces():
     """dataframe_to_profiler_traces returns (traces_dict, traces_obj) with correct structure."""
     traj = Trajectory(

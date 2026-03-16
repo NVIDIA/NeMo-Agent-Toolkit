@@ -198,9 +198,8 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                                 framework=tool_anc.get("framework"),
                             ))
 
-                # 2) Emit LLM_START/LLM_END if metrics present
-                if step.metrics and ((step.metrics.prompt_tokens or 0) + (step.metrics.completion_tokens or 0) +
-                                     (step.metrics.cached_tokens or 0) > 0):
+                # 2) Emit LLM_START/LLM_END if metrics are present, even when all token counts are zero.
+                if step.metrics is not None:
                     step_uuid = str(uuid.uuid4())
                     prompt = step.metrics.prompt_tokens or 0
                     completion = step.metrics.completion_tokens or 0
