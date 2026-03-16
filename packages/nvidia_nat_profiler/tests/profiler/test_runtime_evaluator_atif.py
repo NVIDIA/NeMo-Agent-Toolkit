@@ -42,6 +42,20 @@ def _make_sample(
     return AtifEvalSample(item_id=item_id, trajectory=trajectory, metadata={})
 
 
+def _extra_with_span(span: object) -> dict:
+    return {
+        "ancestry": {
+            "function_ancestry": {
+                "function_id": "root",
+                "function_name": "root",
+                "parent_id": "",
+                "parent_name": "",
+            },
+            "span_event_timestamp": span,
+        }
+    }
+
+
 # --- _iso_to_epoch conversion (type conversion is critical path) ---
 
 
@@ -77,7 +91,7 @@ async def test_evaluate_atif_item_single_valid_latency():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=10, completion_tokens=20),
-            extra={"span_event_timestamp": "2024-01-01T12:00:00"},
+            extra=_extra_with_span("2024-01-01T12:00:00"),
         ),
     ]
     sample = _make_sample("item-1", steps)
@@ -99,14 +113,14 @@ async def test_evaluate_atif_item_multiple_latencies_averaged():
             source="agent",
             timestamp="2024-01-01T12:00:02",
             metrics=Metrics(prompt_tokens=1),
-            extra={"span_event_timestamp": "2024-01-01T12:00:00"},
+            extra=_extra_with_span("2024-01-01T12:00:00"),
         ),
         ATIFStep(
             step_id=2,
             source="agent",
             timestamp="2024-01-01T12:00:08",
             metrics=Metrics(prompt_tokens=1),
-            extra={"span_event_timestamp": "2024-01-01T12:00:04"},
+            extra=_extra_with_span("2024-01-01T12:00:04"),
         ),
     ]
     sample = _make_sample("item-2", steps)
@@ -177,7 +191,7 @@ async def test_evaluate_atif_item_timestamp_none_skips_step():
             source="agent",
             timestamp=None,
             metrics=Metrics(prompt_tokens=1),
-            extra={"span_event_timestamp": "2024-01-01T12:00:00"},
+            extra=_extra_with_span("2024-01-01T12:00:00"),
         ),
     ]
     sample = _make_sample("ts-none", steps)
@@ -197,9 +211,7 @@ async def test_evaluate_atif_item_invalid_span_timestamp_skips_step():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
-            extra={"span_event_timestamp": {
-                "invalid": "dict"
-            }},
+            extra=_extra_with_span({"invalid": "dict"}),
         ),
     ]
     sample = _make_sample("bad-span", steps)
@@ -218,7 +230,7 @@ async def test_evaluate_atif_item_mixed_valid_and_invalid_steps():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
-            extra={"span_event_timestamp": "2024-01-01T12:00:00"},
+            extra=_extra_with_span("2024-01-01T12:00:00"),
         ),
         ATIFStep(
             step_id=2,
@@ -250,7 +262,7 @@ async def test_evaluate_atif_fn_batch_aggregation():
                 source="agent",
                 timestamp="2024-01-01T12:00:02",
                 metrics=Metrics(prompt_tokens=1),
-                extra={"span_event_timestamp": "2024-01-01T12:00:00"},
+                extra=_extra_with_span("2024-01-01T12:00:00"),
             ),
         ],
     )
@@ -262,7 +274,7 @@ async def test_evaluate_atif_fn_batch_aggregation():
                 source="agent",
                 timestamp="2024-01-01T12:00:06",
                 metrics=Metrics(prompt_tokens=1),
-                extra={"span_event_timestamp": "2024-01-01T12:00:00"},
+                extra=_extra_with_span("2024-01-01T12:00:00"),
             ),
         ],
     )

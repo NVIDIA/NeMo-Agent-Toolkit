@@ -22,6 +22,8 @@ from typing import Any
 
 import pandas as pd
 
+from nat.data_models.atif import AtifAncestry
+from nat.data_models.atif import AtifStepExtra
 from nat.data_models.atif import Trajectory
 from nat.data_models.intermediate_step import IntermediateStepType
 
@@ -56,27 +58,23 @@ def _message_to_str(message: str | list | None) -> str:
 
 def _ancestry_from_extra(step: Any, tool_index: int | None = None) -> dict[str, Any]:
     """Extract profiling ancestry from step.extra. Returns defaults for missing fields."""
-    extra = getattr(step, "extra", None) or {}
+    step_extra = AtifStepExtra.model_validate(getattr(step, "extra"))
+
+    def to_flat(ancestry: AtifAncestry) -> dict[str, Any]:
+        return {
+            "function_id": ancestry.function_ancestry.function_id,
+            "function_name": ancestry.function_ancestry.function_name,
+            "parent_function_id": ancestry.function_ancestry.parent_id or "",
+            "parent_function_name": ancestry.function_ancestry.parent_name or "",
+            "span_event_timestamp": ancestry.span_event_timestamp,
+            "framework": ancestry.framework,
+        }
+
     if tool_index is not None:
-        tool_ancestry = extra.get("nat_tool_ancestry") or []
+        tool_ancestry = step_extra.tool_ancestry
         if tool_index < len(tool_ancestry):
-            anc = tool_ancestry[tool_index]
-            return {
-                "function_id": anc.get("function_id", "root"),
-                "function_name": anc.get("function_name", "root"),
-                "parent_function_id": anc.get("parent_function_id", ""),
-                "parent_function_name": anc.get("parent_function_name", ""),
-                "span_event_timestamp": anc.get("span_event_timestamp"),
-                "framework": anc.get("framework"),
-            }
-    return {
-        "function_id": extra.get("function_id", "root"),
-        "function_name": extra.get("function_name", "root"),
-        "parent_function_id": extra.get("parent_function_id", ""),
-        "parent_function_name": extra.get("parent_function_name", ""),
-        "span_event_timestamp": extra.get("span_event_timestamp"),
-        "framework": extra.get("framework"),
-    }
+            return to_flat(tool_ancestry[tool_index])
+    return to_flat(step_extra.ancestry)
 
 
 def _observation_content_to_str(content: Any) -> str:

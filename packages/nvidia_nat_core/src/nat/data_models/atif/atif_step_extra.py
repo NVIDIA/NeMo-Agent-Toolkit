@@ -16,8 +16,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -59,4 +57,3 @@ class AtifStepExtra(BaseModel):
         description=("Optional per-tool ancestry metadata aligned by index with `tool_calls` when a single agent "
                      "step contains multiple tool calls."),
     )
-

@@ -28,6 +28,19 @@ from nat.plugins.profiler.forecasting.models import RandomForestModel
 from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
+def _extra() -> dict:
+    return {
+        "ancestry": {
+            "function_ancestry": {
+                "function_id": "root",
+                "function_name": "root",
+                "parent_id": "",
+                "parent_name": "",
+            }
+        }
+    }
+
+
 @pytest.mark.parametrize("model_type, expected_model_class", [
     ("linear", LinearModel),
     ("randomforest", RandomForestModel),
@@ -78,6 +91,7 @@ def test_model_trainer_train_with_dataframe():
                 source="user",
                 message="Hi",
                 timestamp="2024-01-01T12:00:00+00:00",
+                extra=_extra(),
             ),
             Step(
                 step_id=2,
@@ -86,12 +100,14 @@ def test_model_trainer_train_with_dataframe():
                 timestamp="2024-01-01T12:00:01+00:00",
                 model_name="gpt-4",
                 metrics=Metrics(prompt_tokens=100, completion_tokens=20),
+                extra=_extra(),
             ),
             Step(
                 step_id=3,
                 source="user",
                 message="Again",
                 timestamp="2024-01-01T12:00:02+00:00",
+                extra=_extra(),
             ),
             Step(
                 step_id=4,
@@ -100,6 +116,7 @@ def test_model_trainer_train_with_dataframe():
                 timestamp="2024-01-01T12:00:03+00:00",
                 model_name="gpt-4",
                 metrics=Metrics(prompt_tokens=80, completion_tokens=15),
+                extra=_extra(),
             ),
         ],
     )

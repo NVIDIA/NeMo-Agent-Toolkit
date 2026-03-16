@@ -42,6 +42,27 @@ from nat.plugins.profiler.profile_runner import ProfilerRunner
 from nat.utils.atif_converter import IntermediateStepToATIFConverter
 
 
+def _extra(
+    function_id: str = "root",
+    function_name: str = "root",
+    parent_function_id: str = "",
+    parent_function_name: str = "",
+    framework: str | None = None,
+) -> dict:
+    """Build profiling extra metadata for ATIF steps."""
+    ancestry = {
+        "function_ancestry": {
+            "function_id": function_id,
+            "function_name": function_name,
+            "parent_id": parent_function_id,
+            "parent_name": parent_function_name,
+        },
+    }
+    if framework is not None:
+        ancestry["framework"] = framework
+    return {"ancestry": ancestry}
+
+
 def _make_intermediate_step(
     event_type: IntermediateStepType,
     *,
@@ -125,6 +146,7 @@ async def test_profiler_accepts_atif_trajectories_directly(profiler_config, temp
                 source="user",
                 message="What is 2+2?",
                 timestamp="2024-01-01T12:00:00+00:00",
+                extra=_extra(),
             ),
             Step(
                 step_id=2,
@@ -133,6 +155,7 @@ async def test_profiler_accepts_atif_trajectories_directly(profiler_config, temp
                 timestamp="2024-01-01T12:00:01+00:00",
                 model_name="gpt-4",
                 metrics=Metrics(prompt_tokens=100, completion_tokens=20),
+                extra=_extra(),
             ),
         ],
     )
@@ -188,12 +211,12 @@ def test_profiler_preserves_function_ancestry_from_atif():
                 source="user",
                 message="Hi",
                 timestamp="2024-01-01T12:00:00+00:00",
-                extra={
-                    "function_id": "workflow-123",
-                    "function_name": "my_workflow",
-                    "parent_function_id": "root",
-                    "parent_function_name": "",
-                },
+                extra=_extra(
+                    function_id="workflow-123",
+                    function_name="my_workflow",
+                    parent_function_id="root",
+                    parent_function_name="",
+                ),
             ),
             Step(
                 step_id=2,
@@ -202,13 +225,13 @@ def test_profiler_preserves_function_ancestry_from_atif():
                 timestamp="2024-01-01T12:00:01+00:00",
                 model_name="gpt-4",
                 metrics=Metrics(prompt_tokens=50, completion_tokens=10),
-                extra={
-                    "function_id": "workflow-123",
-                    "function_name": "my_workflow",
-                    "parent_function_id": "",
-                    "parent_function_name": "",
-                    "framework": "langchain",
-                },
+                extra=_extra(
+                    function_id="workflow-123",
+                    function_name="my_workflow",
+                    parent_function_id="",
+                    parent_function_name="",
+                    framework="langchain",
+                ),
             ),
         ],
     )
@@ -230,12 +253,14 @@ def test_create_dataframe_from_atif_emits_tool_end_rows():
                 source="user",
                 message="Calculate 2+2",
                 timestamp="2024-01-01T12:00:00+00:00",
+                extra=_extra(),
             ),
             Step(
                 step_id=2,
                 source="agent",
                 message="",
                 timestamp="2024-01-01T12:00:01+00:00",
+                extra=_extra(),
                 tool_calls=[
                     ToolCall(tool_call_id="tc-1", function_name="calculator", arguments={"expr": "2+2"}),
                     ToolCall(tool_call_id="tc-2", function_name="validator", arguments={}),
@@ -264,6 +289,7 @@ def test_create_dataframe_from_atif_includes_cached_tokens_in_total():
                 source="user",
                 message="Hi",
                 timestamp="2024-01-01T12:00:00+00:00",
+                extra=_extra(),
             ),
             Step(
                 step_id=2,
@@ -276,6 +302,7 @@ def test_create_dataframe_from_atif_includes_cached_tokens_in_total():
                     completion_tokens=20,
                     cached_tokens=50,
                 ),
+                extra=_extra(),
             ),
         ],
     )
@@ -296,12 +323,14 @@ def test_create_dataframe_from_atif_emits_workflow_end_for_message_only_agent():
                 source="user",
                 message="Say hello",
                 timestamp="2024-01-01T12:00:00+00:00",
+                extra=_extra(),
             ),
             Step(
                 step_id=2,
                 source="agent",
                 message="Hello!",
                 timestamp="2024-01-01T12:00:01+00:00",  # No metrics, no tool_calls
+                extra=_extra(),
             ),
         ],
     )
@@ -322,6 +351,7 @@ def test_dataframe_to_profiler_traces():
                 source="user",
                 message="Hi",
                 timestamp="2024-01-01T12:00:00+00:00",
+                extra=_extra(),
             ),
             Step(
                 step_id=2,
@@ -330,6 +360,7 @@ def test_dataframe_to_profiler_traces():
                 timestamp="2024-01-01T12:00:01+00:00",
                 model_name="gpt-4",
                 metrics=Metrics(prompt_tokens=50, completion_tokens=10),
+                extra=_extra(),
             ),
         ],
     )
