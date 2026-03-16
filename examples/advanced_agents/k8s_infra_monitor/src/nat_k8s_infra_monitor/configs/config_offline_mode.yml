@@ -1,0 +1,80 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+functions:
+  node_status_check:
+    _type: node_status_check
+    offline_mode: true
+  pod_health_check:
+    _type: pod_health_check
+    offline_mode: true
+  event_collector:
+    _type: event_collector
+    offline_mode: true
+    event_limit: 50
+  resource_pressure_check:
+    _type: resource_pressure_check
+    offline_mode: true
+    cpu_threshold_percent: 80
+    memory_threshold_percent: 85
+  severity_classifier:
+    _type: severity_classifier
+    llm_name: classifier_llm
+
+workflow:
+  _type: k8s_infra_monitor
+  tool_names:
+    - node_status_check
+    - pod_health_check
+    - event_collector
+    - resource_pressure_check
+  llm_name: monitor_agent_llm
+  offline_mode: true
+  offline_data_path: examples/advanced_agents/k8s_infra_monitor/data/offline_scenarios.json
+
+llms:
+  monitor_agent_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0
+    max_tokens: 16384
+
+  classifier_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0
+    max_tokens: 2048
+
+  nim_rag_eval_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    max_tokens: 8
+
+eval:
+  general:
+    output_dir: .tmp/nat/examples/advanced_agents/k8s_infra_monitor/output/
+    dataset:
+      _type: json
+      file_path: examples/advanced_agents/k8s_infra_monitor/data/eval_dataset.json
+  evaluators:
+    accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: nim_rag_eval_llm
+    groundedness:
+      _type: ragas
+      metric: ResponseGroundedness
+      llm_name: nim_rag_eval_llm

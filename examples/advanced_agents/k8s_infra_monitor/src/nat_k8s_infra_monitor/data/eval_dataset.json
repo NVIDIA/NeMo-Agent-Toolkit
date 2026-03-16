@@ -1,0 +1,17 @@
+[
+  {
+    "question": "{\"scenario_id\": \"node-not-ready\", \"query\": \"Worker node worker-2 appears to be down. Investigate the cluster health and identify the impact.\"}",
+    "answer": "warning: Worker node worker-2 is in NotReady state. Kubelet has stopped sending heartbeats (last seen 8m ago). Pods previously scheduled on worker-2 are being evicted or stuck in Pending. No cluster-wide outage — other nodes are healthy. Recommended: investigate kubelet logs on worker-2, check SSH connectivity, verify VM/hardware status.",
+    "label": "warning"
+  },
+  {
+    "question": "{\"scenario_id\": \"memory-pressure\", \"query\": \"Multiple pods are crashing in the ml-serving namespace. Check what is happening.\"}",
+    "answer": "critical: Worker-1 is under severe memory pressure (93% utilization, MemoryPressure=True). Multiple pods OOMKilled: inference-server, api-gateway, metrics-collector. The inference server is consuming excessive memory, triggering kernel OOM killer. Recommended: increase memory limits for the inference server deployment, consider moving ML workloads to a dedicated node with more RAM, or reduce model size.",
+    "label": "critical"
+  },
+  {
+    "question": "{\"scenario_id\": \"healthy-cluster\", \"query\": \"Run a routine health check on the Kubernetes cluster.\"}",
+    "answer": "informational: All 4 nodes are in Ready state. 68 pods running across 12 namespaces with no unhealthy pods detected. No warning events. Resource utilization is within normal thresholds across all nodes (highest: worker-1 at 53% memory). Cluster is operating normally.",
+    "label": "informational"
+  }
+]
