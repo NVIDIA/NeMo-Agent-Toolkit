@@ -52,7 +52,12 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
             end_ts = _iso_to_epoch(step.timestamp)
             ancestry = (step.extra or {}).get("ancestry")
             start_ts_raw = ancestry.get("span_event_timestamp") if isinstance(ancestry, dict) else None
-            start_ts = _iso_to_epoch(start_ts_raw) if isinstance(start_ts_raw, str) else None
+            if isinstance(start_ts_raw, (int, float)):
+                start_ts = float(start_ts_raw)
+            elif isinstance(start_ts_raw, str):
+                start_ts = _iso_to_epoch(start_ts_raw)
+            else:
+                start_ts = None
             if end_ts is not None and start_ts is not None:
                 latencies.append(max(0.0, end_ts - start_ts))
 
