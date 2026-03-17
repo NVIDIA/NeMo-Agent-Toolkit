@@ -15,7 +15,11 @@
 
 # forecasting/model_trainer.py
 
+from __future__ import annotations
+
 import logging
+
+import pandas as pd
 
 from nat.plugins.profiler.forecasting.config import DEFAULT_MODEL_TYPE
 from nat.plugins.profiler.forecasting.models import ForecastingBaseModel
@@ -55,21 +59,26 @@ class ModelTrainer:
         self.model_type = model_type
         self._model = create_model(self.model_type)
 
-    def train(self, raw_stats: list[list[IntermediatePropertyAdaptor]]) -> ForecastingBaseModel:
+    def train(self, raw_stats: list[list[IntermediatePropertyAdaptor]] | pd.DataFrame) -> ForecastingBaseModel:
         """
         Train the model using the `raw_stats` training data.
 
         Parameters
         ----------
-        raw_stats: list[list[IntermediatePropertyAdaptor]]
-            Stats collected by the profiler.
+        raw_stats: list[list[IntermediatePropertyAdaptor]] | pd.DataFrame
+            Stats collected by the profiler, or profiler DataFrame from create_dataframe_from_atif.
+            DataFrame input is only supported when model_type is "randomforest".
+            LinearModel requires list[list[IntermediatePropertyAdaptor]].
 
         Returns
         -------
         ForecastingBaseModel
             A fitted model.
         """
-
+        if isinstance(raw_stats, pd.DataFrame) and self.model_type == "linear":
+            raise ValueError(
+                "LinearModel does not support DataFrame input. "
+                "Use model_type='randomforest' for DataFrame training, or pass list[list[IntermediatePropertyAdaptor]]."
+            )
         self._model.fit(raw_stats)
-
         return self._model
