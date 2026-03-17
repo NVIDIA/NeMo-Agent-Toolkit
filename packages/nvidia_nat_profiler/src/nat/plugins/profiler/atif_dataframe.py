@@ -242,7 +242,7 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                         ))
 
                 # 3) Emit WORKFLOW_END for message-only (no tools) final answer
-                elif msg and not (step.tool_calls and step.observation):
+                elif msg and not step.tool_calls and not step.observation:
                     all_rows.append(
                         _row(
                             event_timestamp=ts,
