@@ -21,7 +21,6 @@ from unittest.mock import patch
 import pytest
 from pydantic import SecretStr
 
-from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.nim_llm import NIMModelConfig
@@ -36,10 +35,6 @@ from nat.plugins.crewai.llm import openai_crewai
 
 class TestNimCrewAI:
     """Tests for the nim_crewai wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self) -> Builder:
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def nim_cfg(self):
@@ -79,6 +74,15 @@ class TestNimCrewAI:
         assert os.environ["NVIDIA_NIM_API_KEY"] == "legacy-key"
         mock_llm.assert_called_once()
 
+    @patch("nat.plugins.crewai.llm._handle_litellm_verify_ssl")
+    @patch("crewai.LLM")
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    async def test_nim_verify_ssl_passed_to_handle(self, mock_llm, mock_handle_verify_ssl, verify_ssl, mock_builder):
+        """verify_ssl from config is passed to _handle_litellm_verify_ssl."""
+        nim_cfg = NIMModelConfig(model_name="test-nim", verify_ssl=verify_ssl)
+        async with nim_crewai(nim_cfg, mock_builder):
+            mock_handle_verify_ssl.assert_called_once_with(nim_cfg)
+
 
 # ---------------------------------------------------------------------------
 # OpenAI → CrewAI wrapper tests
@@ -87,10 +91,6 @@ class TestNimCrewAI:
 
 class TestOpenAICrewAI:
     """Tests for the openai_crewai wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self) -> Builder:
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def openai_cfg(self):
@@ -125,6 +125,15 @@ class TestOpenAICrewAI:
             async with openai_crewai(openai_cfg_responses, mock_builder):
                 pass
         mock_llm.assert_not_called()
+
+    @patch("nat.plugins.crewai.llm._handle_litellm_verify_ssl")
+    @patch("crewai.LLM")
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    async def test_openai_verify_ssl_passed_to_handle(self, mock_llm, mock_handle_verify_ssl, verify_ssl, mock_builder):
+        """verify_ssl from config is passed to _handle_litellm_verify_ssl."""
+        openai_cfg = OpenAIModelConfig(model_name="gpt-4o", verify_ssl=verify_ssl)
+        async with openai_crewai(openai_cfg, mock_builder):
+            mock_handle_verify_ssl.assert_called_once_with(openai_cfg)
 
 
 # ---------------------------------------------------------------------------

@@ -152,7 +152,7 @@ reviews:
         - `nvidia-nat-test` should likely be listed as an optional dependency in the `test` extra
         - A single dependency should be listed on each line and should always have a version specifier.
         - All dependencies should be listed under the `[tool.setuptools_dynamic_dependencies]` section
-        - Any dependency that is an NVIDIA NeMo Agent Toolkit package should be declared with a version constraint of `== {version}` 
+        - Any dependency that is an NVIDIA NeMo Agent Toolkit package should be declared with a version constraint of `== {version}`
 
     - path: "packages/nvidia_nat_core/pyproject.toml"
       instructions: >-
@@ -174,9 +174,9 @@ reviews:
         - Test functions should be named using the `test_` prefix, using snake_case.
         - Any frequently repeated code should be extracted into pytest fixtures.
         - Pytest fixtures should define the name argument when applying the pytest.fixture decorator. The fixture
-          function being decorated should be named using the `fixture_` prefix, using snake_case. Example:
-            @pytest.fixture(name="my_fixture")
-            def fixture_my_fixture():
+          function being decorated should be named using either a `fixture_` prefix or `_fixture` suffix, using snake_case. Example:
+            @pytest.fixture(name="my_custom_config")
+            def my_custom_config_fixture():
                 pass
         - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
           async runner - the decorator is unnecessary clutter.

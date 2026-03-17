@@ -40,6 +40,7 @@ from nat.plugins.mcp.client.client_config import MCPClientConfig
 from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
 from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
 from nat.plugins.mcp.utils import truncate_session_id
+from nat.runtime.session import SESSION_COOKIE_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -243,7 +244,7 @@ class MCPFunctionGroup(FunctionGroup):
                         # This path is for testing only and should not be used in production
                         session_id = self._get_random_session_id()
                     else:
-                        session_id = cookies.get("nat-session")
+                        session_id = cookies.get(SESSION_COOKIE_NAME)
 
             if not session_id:
                 # use default user id if allowed

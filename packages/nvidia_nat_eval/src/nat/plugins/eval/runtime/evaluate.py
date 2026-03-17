@@ -29,6 +29,7 @@ from uuid import uuid4
 
 import yaml
 from pydantic import BaseModel
+from pydantic import SecretStr
 from tqdm import tqdm
 
 from nat.builder.context import ContextState
@@ -45,6 +46,8 @@ from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.user_info import BasicUserInfo
+from nat.data_models.user_info import UserInfo
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
@@ -199,9 +202,11 @@ class EvaluationRun:
                 pre_span_id = _generate_nonzero_span_id()
                 self._item_span_ids[str(item.id)] = pre_span_id
 
-            user_id = self.config.user_id
+            eval_username: str = "nat_eval_user"
             if self.eval_config.general.per_input_user_id:
-                user_id += f"-{uuid4()}"
+                eval_username += f"-{uuid4()}"
+            eval_user_id: str = UserInfo(
+                basic_user=BasicUserInfo(username=eval_username, password=SecretStr("nat_eval_user"))).get_user_id()
 
             # Set the pre-generated span_id in the ContextVar BEFORE entering
             # the session/runner context. asyncio.create_task() copies ContextVars,
@@ -209,7 +214,7 @@ class EvaluationRun:
             ctx_state = ContextState.get()
             root_span_token = ctx_state._root_span_id.set(pre_span_id) if pre_span_id is not None else None
             try:
-                async with session_manager.session(user_id=user_id) as session:
+                async with session_manager.session(user_id=eval_user_id) as session:
                     async with session.run(item.input_obj) as runner:
                         if not session.workflow.has_single_output:
                             # raise an error if the workflow has multiple outputs
@@ -314,9 +319,7 @@ class EvaluationRun:
 
         from nat.plugins.profiler.profile_runner import ProfilerRunner
 
-        all_stats = []
-        for input_item in self.eval_input.eval_input_items:
-            all_stats.append(input_item.trajectory)
+        all_stats = [sample.trajectory for sample in self.atif_eval_samples]
 
         profiler_runner = ProfilerRunner(self.eval_config.general.profiler,
                                          self.eval_config.general.output_dir,
@@ -532,9 +535,6 @@ class EvaluationRun:
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
         if isinstance(evaluator, AtifEvaluator):
-            if not self.atif_eval_samples and self.eval_input is not None:
-                # Lazy-populate when run_single_evaluator is called outside run_and_evaluate.
-                self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
             harness_results = await self.evaluation_harness.evaluate({evaluator_name: evaluator},
                                                                      self.atif_eval_samples)
             eval_output = harness_results.get(evaluator_name)
@@ -582,9 +582,6 @@ class EvaluationRun:
 
         try:
             if atif_evaluators:
-                if not self.atif_eval_samples and self.eval_input is not None:
-                    # Lazy-populate for direct callers of run_evaluators.
-                    self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
                 harness_results = await self.evaluation_harness.evaluate(atif_evaluators, self.atif_eval_samples)
                 for evaluator_name, eval_output in harness_results.items():
                     self.evaluation_results.append((evaluator_name, eval_output))
@@ -826,14 +823,11 @@ class EvaluationRun:
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
                     evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
-                    needs_atif_samples = any(
-                        callable(getattr(evaluator, "evaluate_atif_fn", None)) for evaluator in evaluators.values()
-                        if evaluator is not None)
-                    write_atif_workflow_output = bool(self.eval_config.general.output
-                                                      and self.eval_config.general.output.write_atif_workflow_output)
-                    if needs_atif_samples or write_atif_workflow_output:
-                        # Build and cache ATIF trajectories when ATIF evaluators are present or ATIF workflow export is
-                        # explicitly requested.
+                    needs_atif = (self.eval_config.general.profiler
+                                  or any(isinstance(ev, AtifEvaluator) for ev in evaluators.values())
+                                  or (self.eval_config.general.output
+                                      and self.eval_config.general.output.write_atif_workflow_output))
+                    if needs_atif:
                         self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
                     else:
                         self.atif_eval_samples = []

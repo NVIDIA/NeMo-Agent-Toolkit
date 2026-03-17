@@ -23,6 +23,7 @@ from starlette.websockets import WebSocket
 
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
+from nat.runtime.session import SESSION_COOKIE_NAME
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
@@ -40,9 +41,10 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
             logger.warning("WebSocket: Rejected session ID with unsafe characters")
             await websocket.close(code=1008, reason="Invalid session ID")
             return
+
         if session_id:
             headers = list(websocket.scope.get("headers", []))
-            cookie_header = f"nat-session={session_id}"
+            cookie_header = f"{SESSION_COOKIE_NAME}={session_id}"
 
             cookie_exists = False
             existing_session_cookie = False
@@ -54,7 +56,7 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
                 cookie_exists = True
                 cookie_str = value.decode()
 
-                if "nat-session=" in cookie_str:
+                if f"{SESSION_COOKIE_NAME}=" in cookie_str:
                     existing_session_cookie = True
                     logger.info("WebSocket: Session cookie already present in headers (same-origin)")
                 else:

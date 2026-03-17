@@ -27,6 +27,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import FunctionRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 from nat.utils.type_utils import DecomposedType
 
 logger = logging.getLogger(__name__)
@@ -143,6 +144,7 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
     async def _sequential_function_execution(input_message):
         logger.debug(f"Executing sequential executor with tool list: {config.tool_list}")
 
+        profiler_config = {'callbacks': [LangchainProfilerHandler()]}
         tool_list: list[FunctionRef] = config.tool_list
         tool_input = input_message
         tool_response = None
@@ -152,16 +154,13 @@ async def sequential_execution(config: SequentialExecutorConfig, builder: Builde
             tool_execution_config = config.tool_execution_config.get(tool_name, None)
             logger.debug(f"Executing tool {tool_name} with input: {tool_input}")
             try:
-                if tool_execution_config:
-                    if tool_execution_config.use_streaming:
-                        output = ""
-                        async for chunk in tool.astream(tool_input):
-                            output += chunk.content
-                        tool_response = output
-                    else:
-                        tool_response = await tool.ainvoke(tool_input)
+                if tool_execution_config and tool_execution_config.use_streaming:
+                    output = ""
+                    async for chunk in tool.astream(tool_input, config=profiler_config):
+                        output += chunk.content
+                    tool_response = output
                 else:
-                    tool_response = await tool.ainvoke(tool_input)
+                    tool_response = await tool.ainvoke(tool_input, config=profiler_config)
             except SequentialExecutorExit as e:
                 # Tool explicitly requested early exit - always return the message
                 logger.info(f"Tool {tool_name} requested early exit: {e.message}")

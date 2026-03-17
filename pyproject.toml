@@ -222,6 +222,7 @@ conflicts = [
     [{ extra = "rag" }, { extra = "autogen" }],
     [{ extra = "rag" }, { extra = "most" }],
 ]
+managed = true
 
 [tool.uv.sources]
 # Packages
@@ -349,7 +350,7 @@ extend-ignore = [
 combine-as-imports = true
 default-section = "third-party"
 force-single-line = true
-known-first-party = ["aiq", "nat", "nat_*", "_utils"]
+known-first-party = ["nat", "nat_*", "_utils"]
 known-third-party = [
   "agno",
   "autogen",

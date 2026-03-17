@@ -107,11 +107,6 @@ class TestStrandsToolWrapper:
         func.input_schema = DummyInput
         return func
 
-    @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock()
-
     @patch("nat.plugins.strands.tool_wrapper.NATFunctionAgentTool")
     def test_strands_tool_wrapper_creation(self, mock_nat_tool, mock_function, mock_builder):
         """Test that strands_tool_wrapper creates NATFunctionAgentTool."""

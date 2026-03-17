@@ -28,6 +28,7 @@ from nat.data_models.profiler import ProfilerConfig
 from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.plugins.profiler.profile_runner import ProfilerRunner
 from nat.profiler.prediction_trie import load_prediction_trie
+from nat.utils.atif_converter import IntermediateStepToATIFConverter
 
 
 @pytest.fixture(name="sample_traces")
@@ -80,8 +81,9 @@ async def test_profiler_generates_prediction_trie(sample_traces):
             prediction_trie=PredictionTrieConfig(enable=True),
         )
 
+        trajectories = [IntermediateStepToATIFConverter().convert(trace) for trace in sample_traces]
         runner = ProfilerRunner(config, output_dir)
-        await runner.run(sample_traces)
+        await runner.run(trajectories)
 
         trie_path = output_dir / "prediction_trie.json"
         assert trie_path.exists()

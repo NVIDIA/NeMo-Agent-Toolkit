@@ -29,11 +29,9 @@ from typing import cast
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.builder import EvalBuilder
-from nat.builder.builder import UserManagerHolder
 from nat.builder.child_builder import ChildBuilder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.component_utils import build_dependency_sequence
-from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -1383,10 +1381,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError(f"Middleware `{middleware_name}` not found")
 
         return self._middleware[middleware_name].config
-
-    @override
-    def get_user_manager(self):
-        return UserManagerHolder(context=Context(self._context_state))
 
     async def add_telemetry_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
         """Add an configured telemetry exporter to the builder.

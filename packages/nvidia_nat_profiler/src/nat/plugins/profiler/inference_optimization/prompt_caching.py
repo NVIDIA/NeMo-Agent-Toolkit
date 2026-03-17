@@ -13,6 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Sequence
+
+import pandas as pd
+
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.profiler.inference_optimization.data_models import CommonPrefixesOutput
 from nat.plugins.profiler.inference_optimization.data_models import FrameworkLLMPrefixData
@@ -87,7 +91,7 @@ def collect_prefixes_iterative(root: dict, total_calls: int) -> list[dict]:
 # -----------------------------------------------------------
 # 3. Main Function
 # -----------------------------------------------------------
-def get_common_prefixes(all_steps: list[list[IntermediateStep]],
+def get_common_prefixes(all_steps: Sequence[Sequence[IntermediateStep]] | pd.DataFrame,
                         min_call_percentage: float = 0.0) -> CommonPrefixesOutput:
     """
     Given a pandas DataFrame with columns 'framework', 'llm_name',
@@ -107,8 +111,10 @@ def get_common_prefixes(all_steps: list[list[IntermediateStep]],
     Sorting: primarily by prefix length (descending),
              secondarily by frequency (descending).
     """
-    # Validate necessary columns
-    df = create_standardized_dataframe(all_steps)
+    if isinstance(all_steps, pd.DataFrame):
+        df = all_steps
+    else:
+        df = create_standardized_dataframe(all_steps)
 
     required_cols = {'framework', 'llm_name', 'llm_text_input'}
     if not required_cols.issubset(df.columns):
