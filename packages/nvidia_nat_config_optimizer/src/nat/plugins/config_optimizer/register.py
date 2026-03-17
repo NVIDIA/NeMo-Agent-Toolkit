@@ -18,15 +18,15 @@ import asyncio
 from collections.abc import AsyncIterator
 
 from nat.cli.register_workflow import register_optimizer
-from nat.plugins.config_optimizer.parameters.base import BaseParameterOptimizer
-from nat.plugins.config_optimizer.parameters.optimizer import optimize_parameters
-from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import GAPromptOptimizer
 from nat.data_models.config import Config
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import GAPromptOptimizationConfig
-from nat.data_models.optimizer import OptunaParameterOptimizationConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.data_models.optimizer import OptunaParameterOptimizationConfig
+from nat.plugins.config_optimizer.parameters.base import BaseParameterOptimizer
+from nat.plugins.config_optimizer.parameters.optimizer import optimize_parameters
+from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import GAPromptOptimizer
 
 
 class _ParameterOptimizerRunner(BaseParameterOptimizer):
@@ -51,7 +51,8 @@ class _ParameterOptimizerRunner(BaseParameterOptimizer):
         )
 
 
-async def _parameter_optimizer_build(config: OptunaParameterOptimizationConfig, ) -> AsyncIterator[_ParameterOptimizerRunner]:
+async def _parameter_optimizer_build(
+    config: OptunaParameterOptimizationConfig, ) -> AsyncIterator[_ParameterOptimizerRunner]:
     yield _ParameterOptimizerRunner()
 
 

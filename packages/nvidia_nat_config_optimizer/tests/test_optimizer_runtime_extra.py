@@ -13,14 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from pydantic import BaseModel
 
-from nat.plugins.config_optimizer.optimizer_runtime import optimize_config
 from nat.data_models.optimizer import GAPromptOptimizationConfig
-from nat.data_models.optimizer import OptunaParameterOptimizationConfig
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.data_models.optimizer import OptunaParameterOptimizationConfig
+from nat.plugins.config_optimizer.optimizer_runtime import optimize_config
 
 
 class _DummyConfig(BaseModel):

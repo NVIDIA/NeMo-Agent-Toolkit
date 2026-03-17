@@ -29,6 +29,12 @@ from typing import Any
 from pydantic import BaseModel
 
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.config import Config
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.optimizable import SearchSpace
+from nat.data_models.optimizer import OptimizerConfig
+from nat.data_models.optimizer import OptimizerRunConfig
+from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.plugins.config_optimizer.eval_runtime_loader import load_evaluation_run
 from nat.plugins.config_optimizer.prompts.base import BasePromptOptimizer
 from nat.plugins.config_optimizer.prompts.ga_individual import Individual
@@ -37,12 +43,6 @@ from nat.plugins.config_optimizer.prompts.oracle_feedback import check_adaptive_
 from nat.plugins.config_optimizer.prompts.oracle_feedback import extract_worst_reasoning
 from nat.plugins.config_optimizer.prompts.oracle_feedback import should_inject_feedback
 from nat.plugins.config_optimizer.update_helpers import apply_suggestions
-from nat.data_models.config import Config
-from nat.data_models.evaluate_runtime import EvaluationRunConfig
-from nat.data_models.optimizable import SearchSpace
-from nat.data_models.optimizer import OptimizerConfig
-from nat.data_models.optimizer import OptimizerRunConfig
-from nat.experimental.decorators.experimental_warning_decorator import experimental
 
 if TYPE_CHECKING:
     from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
@@ -583,10 +583,8 @@ class GAPromptOptimizer(BasePromptOptimizer):
                             return ind
                     return curr_pop[-1]
                 else:
-                    raise ValueError(
-                        f"Invalid ga_selection_method: {selection_method!r}. "
-                        "Must be 'tournament' or 'roulette'."
-                    )
+                    raise ValueError(f"Invalid ga_selection_method: {selection_method!r}. "
+                                     "Must be 'tournament' or 'roulette'.")
 
             population = await _initial_population()
             history_rows: list[dict[str, Any]] = []

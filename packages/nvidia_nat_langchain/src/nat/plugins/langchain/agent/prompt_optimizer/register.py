@@ -58,8 +58,7 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
     except ImportError as exc:
         raise ImportError(
             "nvidia-nat-config-optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
-            "Or install the full toolkit: pip install nvidia-nat[config-optimizer]"
-        ) from exc
+            "Or install the full toolkit: pip install nvidia-nat[config-optimizer]") from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -134,8 +133,7 @@ async def prompt_recombiner_function(config: PromptRecombinerConfig, builder: Bu
     except ImportError as exc:
         raise ImportError(
             "nvidia-nat-config-optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
-            "Or install the full toolkit: pip install nvidia-nat[config-optimizer]"
-        ) from exc
+            "Or install the full toolkit: pip install nvidia-nat[config-optimizer]") from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 

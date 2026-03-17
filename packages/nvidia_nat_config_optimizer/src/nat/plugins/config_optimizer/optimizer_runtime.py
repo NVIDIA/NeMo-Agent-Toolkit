@@ -19,10 +19,10 @@ import logging
 from pydantic import BaseModel
 
 from nat.cli.type_registry import GlobalTypeRegistry
-from nat.plugins.config_optimizer import register  # noqa: F401 - trigger optimizer registration
-from nat.plugins.config_optimizer.optimizable_utils import walk_optimizables
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
+from nat.plugins.config_optimizer import register  # noqa: F401 - trigger optimizer registration
+from nat.plugins.config_optimizer.optimizable_utils import walk_optimizables
 from nat.runtime.loader import load_config
 
 logger = logging.getLogger(__name__)

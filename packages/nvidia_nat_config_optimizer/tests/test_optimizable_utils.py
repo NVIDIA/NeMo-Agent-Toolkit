@@ -18,10 +18,10 @@ import logging
 import pytest
 from pydantic import BaseModel
 
-from nat.plugins.config_optimizer.optimizable_utils import walk_optimizables
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
+from nat.plugins.config_optimizer.optimizable_utils import walk_optimizables
 
 
 class InnerModel(BaseModel):
