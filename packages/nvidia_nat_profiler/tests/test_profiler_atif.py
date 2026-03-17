@@ -107,7 +107,6 @@ def temp_output_dir():
         yield Path(tmp)
 
 
-@pytest.mark.asyncio
 async def test_profiler_runs_with_atif_converted_from_intermediate_steps(profiler_config, temp_output_dir):
     """Profiler runs with ATIF trajectories converted from IntermediateStep traces."""
     steps = [
@@ -135,7 +134,6 @@ async def test_profiler_runs_with_atif_converted_from_intermediate_steps(profile
     assert result.llm_latency_ci is not None
 
 
-@pytest.mark.asyncio
 async def test_profiler_accepts_atif_trajectories_directly(profiler_config, temp_output_dir):
     """Profiler accepts list[Trajectory] and uses ATIF internally."""
     traj = Trajectory(
@@ -168,7 +166,6 @@ async def test_profiler_accepts_atif_trajectories_directly(profiler_config, temp
     assert result.llm_latency_ci is not None
 
 
-@pytest.mark.asyncio
 async def test_profiler_atif_input_produces_stable_results(profiler_config, temp_output_dir):
     """Profiler produces stable metrics when called repeatedly with ATIF input."""
     ist_steps = [
