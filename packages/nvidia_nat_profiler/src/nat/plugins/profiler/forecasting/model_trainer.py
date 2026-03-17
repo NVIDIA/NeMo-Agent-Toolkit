@@ -67,11 +67,18 @@ class ModelTrainer:
         ----------
         raw_stats: list[list[IntermediatePropertyAdaptor]] | pd.DataFrame
             Stats collected by the profiler, or profiler DataFrame from create_dataframe_from_atif.
+            DataFrame input is only supported when model_type is "randomforest".
+            LinearModel requires list[list[IntermediatePropertyAdaptor]].
 
         Returns
         -------
         ForecastingBaseModel
             A fitted model.
         """
+        if isinstance(raw_stats, pd.DataFrame) and self.model_type == "linear":
+            raise ValueError(
+                "LinearModel does not support DataFrame input. "
+                "Use model_type='randomforest' for DataFrame training, or pass list[list[IntermediatePropertyAdaptor]]."
+            )
         self._model.fit(raw_stats)
         return self._model

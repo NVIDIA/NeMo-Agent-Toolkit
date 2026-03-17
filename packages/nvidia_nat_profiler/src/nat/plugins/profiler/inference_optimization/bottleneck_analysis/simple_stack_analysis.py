@@ -25,6 +25,8 @@ We pair start/end events by UUID, compute operation durations,
 then analyze concurrency and produce a summary report.
 """
 
+from collections.abc import Sequence
+
 import numpy as np
 import pandas as pd
 
@@ -37,7 +39,8 @@ from nat.plugins.profiler.utils import create_standardized_dataframe
 # ----------------------------------------------------------------------
 # Main Function
 # ----------------------------------------------------------------------
-def profile_workflow_bottlenecks(all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> SimpleBottleneckReport:
+def profile_workflow_bottlenecks(
+        all_steps: Sequence[Sequence[IntermediateStep]] | pd.DataFrame) -> SimpleBottleneckReport:
     """
     Perform advanced bottleneck profiling on a workflow dataframe.
 
@@ -56,16 +59,21 @@ def profile_workflow_bottlenecks(all_steps: list[list[IntermediateStep]] | pd.Da
         Contains detailed stats per operation and a textual summary of top bottlenecks.
     """
     if isinstance(all_steps, pd.DataFrame):
-        df = all_steps
+        df = all_steps.copy()
     else:
         df = create_standardized_dataframe(all_steps)
     # -------------------------------------------------------------
-    # 1) Separate events by operation type and match start/end
+    # 1) Validate schema and separate events by operation type
     # -------------------------------------------------------------
     required_cols = {"event_type", "UUID", "event_timestamp"}
     missing_cols = required_cols - set(df.columns)
     if missing_cols:
         raise ValueError(f"DataFrame missing required columns: {missing_cols}")
+    event_types = df["event_type"].astype(str)
+    if event_types.str.startswith("LLM_").any() and "llm_name" not in df.columns:
+        raise ValueError("DataFrame with LLM events must have 'llm_name' column.")
+    if event_types.str.startswith("TOOL_").any() and "tool_name" not in df.columns:
+        raise ValueError("DataFrame with TOOL events must have 'tool_name' column.")
 
     # We'll unify LLM and TOOL operations into a single set, with:
     #   operation_type = 'LLM' or 'TOOL'
@@ -95,34 +103,25 @@ def profile_workflow_bottlenecks(all_steps: list[list[IntermediateStep]] | pd.Da
     grouped = dfc.groupby("UUID", as_index=False, group_keys=True)
 
     for uuid_val, group_df in grouped:
-        if len(group_df) < 2:
-            # Possibly incomplete or single event, skip
-            continue
-
-        # We might have multiple events with the same UUID, but typically we expect:
-        #   LLM_START, LLM_END (or TOOL_START, TOOL_END).
-        # Sort by timestamp
         group_df = group_df.sort_values("event_timestamp")
-
-        # Identify operation_type from the first row's event_type
         first_event_type = group_df["event_type"].iloc[0]
         operation_type = get_operation_info(first_event_type)
         if not operation_type:
-            # unknown or not LLM_/TOOL_
             continue
 
-        # We'll attempt to find the start row and the end row
-        # Usually there's exactly 1 start, 1 end
         start_rows = group_df[group_df["event_type"] == f"{operation_type}_START"]
         end_rows = group_df[group_df["event_type"] == f"{operation_type}_END"]
 
-        if len(start_rows) == 0 or len(end_rows) == 0:
-            # No matching start/end
+        if len(end_rows) == 0:
             continue
 
-        # We'll just take the earliest start and the latest end for the entire group.
-        start_time = start_rows["event_timestamp"].min()
-        end_time = end_rows["event_timestamp"].max()
+        end_time = float(end_rows["event_timestamp"].max())
+        if len(start_rows) > 0:
+            start_time = float(start_rows["event_timestamp"].min())
+        else:
+            # END-only (e.g. ATIF TOOL_END without TOOL_START): use span_event_timestamp.
+            span_ts = end_rows["span_event_timestamp"].dropna()
+            start_time = float(span_ts.min()) if len(span_ts) else end_time
         duration = end_time - start_time
 
         # For the name, we pick 'llm_name' or 'tool_name' depending on operation_type

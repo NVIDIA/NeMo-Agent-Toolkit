@@ -58,7 +58,7 @@ def _message_to_str(message: str | list | None) -> str:
 
 def _ancestry_from_extra(step: Any, tool_index: int | None = None) -> dict[str, Any]:
     """Extract profiling ancestry from step.extra. Returns defaults for missing fields."""
-    step_extra = AtifStepExtra.model_validate(getattr(step, "extra"))
+    step_extra = AtifStepExtra.model_validate(step.extra)
 
     def to_flat(ancestry: AtifAncestry) -> dict[str, Any]:
         return {
@@ -275,6 +275,13 @@ def _dict_to_step(d: dict[str, Any]) -> Any:
     return SimpleNamespace(**{k: wrap(v) for k, v in d.items()})
 
 
+def _safe_scalar(val: Any, default: Any) -> Any:
+    """Return default if val is NaN or None; otherwise val."""
+    if val is None or (isinstance(val, float) and pd.isna(val)):
+        return default
+    return val
+
+
 def dataframe_to_profiler_traces(df: pd.DataFrame) -> tuple[list[list[dict[str, Any]]], list[list[Any]]]:
     """
     Convert DataFrame to traces for JSON output and PredictionTrieBuilder.
@@ -292,41 +299,44 @@ def dataframe_to_profiler_traces(df: pd.DataFrame) -> tuple[list[list[dict[str, 
         steps_dict = []
         for _, row in group.iterrows():
             et = row.get("event_type")
-            fn_name = str(row.get("function_name") or "root")
-            parent_fn_name = str(row.get("parent_function_name") or "")
+            fn_name = str(_safe_scalar(row.get("function_name"), "root"))
+            parent_fn_name = str(_safe_scalar(row.get("parent_function_name"), ""))
+            pt = _safe_scalar(row.get("prompt_tokens"), 0)
+            ct = _safe_scalar(row.get("completion_tokens"), 0)
+            tt = _safe_scalar(row.get("total_tokens"), 0)
             step_dict = {
-                "event_timestamp": float(row.get("event_timestamp", 0)),
-                "span_event_timestamp": row.get("span_event_timestamp"),
+                "event_timestamp": float(_safe_scalar(row.get("event_timestamp"), 0)),
+                "span_event_timestamp": _safe_scalar(row.get("span_event_timestamp"), None),
                 "event_type": et,
-                "framework": row.get("framework"),
+                "framework": _safe_scalar(row.get("framework"), None),
                 "payload": {
-                    "UUID": str(row.get("UUID", "") or "")
+                    "UUID": str(_safe_scalar(row.get("UUID"), "")),
                 },
                 "token_usage": {
-                    "prompt_tokens": row.get("prompt_tokens") or 0,
-                    "completion_tokens": row.get("completion_tokens") or 0,
-                    "total_tokens": row.get("total_tokens") or 0,
+                    "prompt_tokens": int(pt) if pt is not None else 0,
+                    "completion_tokens": int(ct) if ct is not None else 0,
+                    "total_tokens": int(tt) if tt is not None else 0,
                 },
-                "llm_text_input": str(row.get("llm_text_input") or ""),
-                "llm_text_output": str(row.get("llm_text_output") or ""),
-                "llm_text_chunk": str(row.get("llm_new_token") or ""),
-                "llm_name": str(row.get("llm_name") or ""),
-                "tool_name": str(row.get("tool_name") or ""),
+                "llm_text_input": str(_safe_scalar(row.get("llm_text_input"), "")),
+                "llm_text_output": str(_safe_scalar(row.get("llm_text_output"), "")),
+                "llm_text_chunk": str(_safe_scalar(row.get("llm_new_token"), "")),
+                "llm_name": str(_safe_scalar(row.get("llm_name"), "")),
+                "tool_name": str(_safe_scalar(row.get("tool_name"), "")),
                 "function_name": fn_name,
-                "function_id": str(row.get("function_id") or "root"),
+                "function_id": str(_safe_scalar(row.get("function_id"), "root")),
                 "parent_function_name": parent_fn_name,
-                "parent_function_id": str(row.get("parent_function_id") or ""),
+                "parent_function_id": str(_safe_scalar(row.get("parent_function_id"), "")),
                 "function_ancestry": {
                     "function_name": fn_name,
-                    "function_id": str(row.get("function_id") or "root"),
+                    "function_id": str(_safe_scalar(row.get("function_id"), "root")),
                     "parent_name": parent_fn_name,
-                    "parent_id": str(row.get("parent_function_id") or ""),
+                    "parent_id": str(_safe_scalar(row.get("parent_function_id"), "")),
                 },
                 "usage_info": {
                     "token_usage": {
-                        "prompt_tokens": row.get("prompt_tokens") or 0,
-                        "completion_tokens": row.get("completion_tokens") or 0,
-                        "total_tokens": row.get("total_tokens") or 0,
+                        "prompt_tokens": int(pt) if pt is not None else 0,
+                        "completion_tokens": int(ct) if ct is not None else 0,
+                        "total_tokens": int(tt) if tt is not None else 0,
                     },
                 },
             }

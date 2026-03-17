@@ -822,8 +822,15 @@ class EvaluationRun:
 
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
-                    self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
                     evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                    needs_atif = (self.eval_config.general.profiler
+                                  or any(isinstance(ev, AtifEvaluator) for ev in evaluators.values())
+                                  or (self.eval_config.general.output
+                                      and self.eval_config.general.output.write_atif_workflow_output))
+                    if needs_atif:
+                        self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+                    else:
+                        self.atif_eval_samples = []
 
                     # Evaluate
                     await self.run_evaluators(evaluators)

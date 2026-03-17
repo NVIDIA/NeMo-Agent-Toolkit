@@ -491,7 +491,7 @@ class TestBatchConverter:
         agent_with_tools = result.steps[1]
         assert agent_with_tools.tool_calls is not None
         assert agent_with_tools.observation is not None
-        for tc, obs in zip(agent_with_tools.tool_calls, agent_with_tools.observation.results):
+        for tc, obs in zip(agent_with_tools.tool_calls, agent_with_tools.observation.results, strict=True):
             assert obs.source_call_id == tc.tool_call_id
             assert tc.tool_call_id.startswith("call_")
 
@@ -700,7 +700,7 @@ class TestStreamConverter:
         stream_result = stream_conv.get_trajectory()
 
         assert len(stream_result.steps) == len(batch_result.steps)
-        for s_step, b_step in zip(stream_result.steps, batch_result.steps):
+        for s_step, b_step in zip(stream_result.steps, batch_result.steps, strict=True):
             assert s_step.source == b_step.source
             assert s_step.message == b_step.message
             if b_step.tool_calls:

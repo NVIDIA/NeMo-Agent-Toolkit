@@ -105,6 +105,29 @@ async def test_evaluate_atif_item_single_valid_latency():
     assert result.reasoning["latencies"] == pytest.approx([5.0], abs=1e-4)
 
 
+async def test_evaluate_atif_item_numeric_span_timestamp():
+    """span_event_timestamp as float (epoch seconds) is accepted and used for latency."""
+    # span=0.0, timestamp="1970-01-01T00:00:02Z" (2s UTC) => 2s latency
+    steps = [
+        ATIFStep(
+            step_id=1,
+            source="agent",
+            timestamp="1970-01-01T00:00:02Z",
+            metrics=Metrics(prompt_tokens=10, completion_tokens=20),
+            extra=_extra_with_span(0.0),
+        ),
+    ]
+    sample = _make_sample("item-numeric", steps)
+    evaluator = AverageLLMLatencyAtifEvaluator()
+
+    result = await evaluator.evaluate_atif_item(sample)
+
+    assert result.id == "item-numeric"
+    assert result.score == pytest.approx(2.0, abs=1e-4)
+    assert result.reasoning["num_llm_calls"] == 1
+    assert result.reasoning["latencies"] == pytest.approx([2.0], abs=1e-4)
+
+
 async def test_evaluate_atif_item_multiple_latencies_averaged():
     """Multiple agent steps with valid timestamps yield correct average."""
     steps = [

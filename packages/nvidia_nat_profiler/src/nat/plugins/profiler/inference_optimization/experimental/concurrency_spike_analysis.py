@@ -362,7 +362,22 @@ def concurrency_spike_analysis(
     all_steps: list[list[IntermediateStep]] | pd.DataFrame,
     concurrency_spike_threshold: int | None = None,
 ) -> ConcurrencyAnalysisResult:
-    """
+    """Analyze concurrency spikes across workflow executions.
+
+    Args:
+        all_steps: Either a list of lists of IntermediateStep (one list per example),
+            or a pre-built pandas DataFrame with required columns: framework, llm_name,
+            llm_text_input, llm_text_output, event_timestamp, event_type, UUID,
+            example_number, prompt_tokens, completion_tokens, total_tokens.
+            When given a list, create_standardized_dataframe is called first.
+        concurrency_spike_threshold: Optional threshold for spike detection. If None,
+            defaults to ceil(p90 concurrency).
+
+    Returns:
+        ConcurrencyAnalysisResult containing distribution, percentiles, spike intervals,
+        correlation stats, and a textual report.
+
+    Steps:
     1) Build per-example call trees (no cross-example nesting).
     2) Compute concurrency distribution & concurrency segments across *all* calls.
     3) Derive concurrency percentiles (p50, p90, p95, p99).

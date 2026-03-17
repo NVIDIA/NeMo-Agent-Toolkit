@@ -26,7 +26,7 @@ class LLMMetrics:
     """
 
     @staticmethod
-    def compute_profiling_metrics(all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> pd.DataFrame:
+    def compute_profiling_metrics(all_steps: list[list[IntermediateStep]] | pd.DataFrame) -> pd.DataFrame:
         """
         Compute and append the following columns to the provided DataFrame:
 
@@ -76,6 +76,10 @@ class LLMMetrics:
         """
         if isinstance(all_steps, pd.DataFrame):
             df = all_steps.copy()
+            required = {"example_number", "event_timestamp", "event_type", "function_name", "UUID", "completion_tokens"}
+            missing = required - set(df.columns)
+            if missing:
+                raise ValueError(f"DataFrame input missing required columns: {missing}")
         else:
             df = create_standardized_dataframe(all_steps)
 

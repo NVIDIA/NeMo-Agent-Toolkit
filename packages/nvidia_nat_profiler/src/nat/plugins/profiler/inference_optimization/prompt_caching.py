@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Sequence
+
 import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
@@ -89,7 +91,7 @@ def collect_prefixes_iterative(root: dict, total_calls: int) -> list[dict]:
 # -----------------------------------------------------------
 # 3. Main Function
 # -----------------------------------------------------------
-def get_common_prefixes(all_steps: list[list[IntermediateStep]],
+def get_common_prefixes(all_steps: Sequence[Sequence[IntermediateStep]] | pd.DataFrame,
                         min_call_percentage: float = 0.0) -> CommonPrefixesOutput:
     """
     Given a pandas DataFrame with columns 'framework', 'llm_name',

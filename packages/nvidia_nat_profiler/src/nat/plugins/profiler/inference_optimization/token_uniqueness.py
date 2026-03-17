@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import re
+from collections.abc import Sequence
 
 import numpy as np
 import pandas as pd
@@ -28,7 +29,7 @@ from nat.plugins.profiler.utils import create_standardized_dataframe
 # 1. Main Function
 # ----------------------------------------------------------------
 def compute_inter_query_token_uniqueness_by_llm(
-    all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> LLMUniquenessMetricsByLLM:
+    all_steps: Sequence[Sequence[IntermediateStep]] | pd.DataFrame, ) -> LLMUniquenessMetricsByLLM:
     """
     Computes p90, p95, and p99 of 'new words added' between consecutive llm_start events,
     grouped by (llm_name, example_number).

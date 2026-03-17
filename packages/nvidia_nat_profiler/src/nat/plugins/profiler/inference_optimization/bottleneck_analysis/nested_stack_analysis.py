@@ -140,8 +140,20 @@ def build_call_tree_for_example(example_df: pd.DataFrame) -> list[CallNode]:
     return roots
 
 
-def build_call_tree_per_example(all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> list[CallNode]:
-    """
+def build_call_tree_per_example(all_steps: list[list[IntermediateStep]] | pd.DataFrame) -> list[CallNode]:
+    """Build per-example call trees from intermediate steps or a DataFrame.
+
+    Accepts either a list of intermediate step lists (one per example) or a pre-built
+    DataFrame. When given a list, it is first converted via create_standardized_dataframe.
+
+    Args:
+        all_steps: Either a list of intermediate step lists (one per example) or a
+            DataFrame with required columns: example_number, event_type, UUID, event_timestamp.
+
+    Returns:
+        A list of top-level CallNode objects from all examples.
+
+    Steps:
     1) Group the DataFrame by example_number.
     2) For each example, build a separate stack-based call tree.
     3) Return a combined list of all top-level calls from all examples.
@@ -454,7 +466,8 @@ def multi_example_call_profiling(
     3. Return a NestedCallProfilingResult with concurrency distribution, node metrics, top bottlenecks, and textual
        report. Optionally saves a Gantt chart.
 
-    :param all_steps: Intermediate steps for each example.
+    :param all_steps: Either a list of intermediate step lists (one per example) or a
+        DataFrame with columns: example_number, event_type, UUID, event_timestamp.
     :param output_dir: Directory path to save gantt_chart.png (if provided)
     :return: NestedCallProfilingResult (pydantic)
     """

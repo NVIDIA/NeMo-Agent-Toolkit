@@ -94,14 +94,14 @@ def _make_usage(prompt: int = 50, completion: int = 10) -> UsageInfo:
     ), )
 
 
-@pytest.fixture
-def profiler_config():
+@pytest.fixture(name="profiler_config")
+def fixture_profiler_config():
     """Minimal profiler config."""
     return ProfilerConfig()
 
 
-@pytest.fixture
-def temp_output_dir():
+@pytest.fixture(name="temp_output_dir")
+def fixture_temp_output_dir():
     """Temporary directory for profiler output."""
     with tempfile.TemporaryDirectory() as tmp:
         yield Path(tmp)
@@ -194,8 +194,7 @@ async def test_profiler_atif_input_produces_stable_results(profiler_config, temp
 
     assert result_1 is not None
     assert result_2 is not None
-    assert result_1.llm_latency_ci is not None
-    assert result_2.llm_latency_ci is not None
+    assert result_1.llm_latency_ci == result_2.llm_latency_ci
 
 
 def test_profiler_preserves_function_ancestry_from_atif():

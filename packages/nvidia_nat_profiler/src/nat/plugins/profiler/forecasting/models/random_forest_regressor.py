@@ -229,25 +229,33 @@ class RandomForestModel(ForecastingBaseModel):
         return samples
 
     def _extract_from_dataframe(self, df: pd.DataFrame) -> tuple[list[np.ndarray], int]:
-        """Extract (all_run_data, matrix_length) from profiler DataFrame. seconds_between_calls=0."""
-        all_run_data = []
-        call_stack_sizes = []
+        """Extract (all_run_data, matrix_length) from profiler DataFrame."""
+        all_run_data: list[list[list[float]]] = []
+        call_stack_sizes: list[int] = []
         for _, group in df.groupby("example_number", sort=True):
-            run_data = []
+            run_data: list[list[float]] = []
             group = group.sort_values("event_timestamp")
+            prev_ts: float | None = None
             for _, row in group.iterrows():
                 et = row.get("event_type")
                 et_val = et.value if hasattr(et, "value") else str(et)
                 if et_val == "LLM_END":
+                    ts = float(row.get("event_timestamp", 0) or 0)
+                    seconds_between = (ts - prev_ts) if prev_ts is not None else 0.0
+                    prev_ts = ts
                     run_data.append([
-                        0,  # seconds_between_calls (not in ATIF)
-                        row.get("prompt_tokens") or 0,
-                        row.get("completion_tokens") or 0,
+                        seconds_between,
+                        int(row.get("prompt_tokens") or 0),
+                        int(row.get("completion_tokens") or 0),
                     ])
-            all_run_data.append(run_data)
-            call_stack_sizes.append(len(run_data))
+            if run_data:
+                all_run_data.append(run_data)
+                call_stack_sizes.append(len(run_data))
+        if not all_run_data:
+            raise ValueError("DataFrame contains no forecastable LLM_END rows. "
+                             "Filter out tool-only or zero-token traces before training.")
         arrs = [np.array(run) for run in all_run_data]
-        matrix_length = math.ceil(sum(call_stack_sizes) / len(call_stack_sizes)) if call_stack_sizes else 3
+        matrix_length = math.ceil(sum(call_stack_sizes) / len(call_stack_sizes))
         return arrs, matrix_length
 
     def _extract_token_usage_meta(self, all_requests_data: list[list[IntermediatePropertyAdaptor]]):

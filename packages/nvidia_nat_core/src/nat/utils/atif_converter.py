@@ -25,7 +25,7 @@ This module provides:
 
 from __future__ import annotations
 
-__all__ = ["IntermediateStepToATIFConverter", "ATIFStreamConverter"]
+__all__ = ["ATIFStreamConverter", "IntermediateStepToATIFConverter"]
 
 import datetime
 import logging
@@ -288,9 +288,9 @@ class IntermediateStepToATIFConverter:
                         last_agent_msg = str(s.message)
                         last_agent_ts = _iso_to_epoch(s.timestamp) if s.timestamp else None
                         break
-                should_emit_terminal_step = bool(final_output) and (
-                    final_output != last_agent_msg or
-                    (last_agent_ts is not None and ist.event_timestamp > last_agent_ts))
+                should_emit_terminal_step = bool(final_output) and (final_output != last_agent_msg or
+                                                                    (last_agent_ts is not None
+                                                                     and ist.event_timestamp > last_agent_ts))
                 if should_emit_terminal_step:
                     extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                     atif_steps.append(
@@ -461,9 +461,9 @@ class ATIFStreamConverter:
                     last_agent_msg = str(s.message)
                     last_agent_ts = _iso_to_epoch(s.timestamp) if s.timestamp else None
                     break
-            should_emit_terminal_step = bool(final_output) and (
-                final_output != last_agent_msg or
-                (last_agent_ts is not None and ist.event_timestamp > last_agent_ts))
+            should_emit_terminal_step = bool(final_output) and (final_output != last_agent_msg or
+                                                                (last_agent_ts is not None
+                                                                 and ist.event_timestamp > last_agent_ts))
             if should_emit_terminal_step:
                 extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                 final_step = ATIFStep(
