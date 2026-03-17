@@ -94,6 +94,26 @@ To migrate:
   - `pip install nvidia-nat-profiler`
   - `pip install nvidia-nat-security`
 
+#### Config Optimizer Package Extraction (Breaking)
+
+Optimizer ownership now lives in the optional `nvidia-nat-config-optimizer` package.
+
+This is a breaking change:
+- The `nat optimize` command is no longer owned by core and is only available when `nvidia-nat-config-optimizer` is installed.
+- Optimizer implementation modules moved from core paths into `nat.plugins.config_optimizer.*`.
+- The `nvidia-nat[optimizer]` extra has been renamed to `nvidia-nat[config-optimizer]`.
+
+To migrate:
+- Install config optimizer support when needed:
+  - `pip install "nvidia-nat[config-optimizer]"`
+  - `pip install nvidia-nat-config-optimizer`
+- Update optimizer imports:
+  - `nat.parameter_optimization.prompt_optimizer` => `nat.plugins.config_optimizer.prompts.ga_prompt_optimizer`
+  - `nat.parameter_optimization.parameter_optimizer` => `nat.plugins.config_optimizer.parameters.optimizer`
+  - `nat.parameter_optimization.optimizer_runtime` => `nat.plugins.config_optimizer.optimizer_runtime`
+- Keep optimizer callbacks at their core path:
+  - `nat.profiler.parameter_optimization.optimizer_callbacks`
+
 ### v1.5.0
 
 #### Removing Old Aliases and Transitional Packages
@@ -126,7 +146,6 @@ To migrate:
   - `pip install "nvidia-nat[profiling]"`
   - `pip install "nvidia-nat-eval[profiling]"`
 - Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
-- Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
 
 #### Import Path Changes
 
@@ -134,12 +153,6 @@ For users migrating existing integrations, the primary import change is (old => 
 
 - `nat.eval.*` => `nat.plugins.eval.*`
 - `nat.profiler.*` => `nat.plugins.eval.profiler.*`
-- `nat.parameter_optimization.prompt_optimizer` => `nat.plugins.config_optimizer.prompts.ga_prompt_optimizer` (in `nvidia-nat-config-optimizer` package)
-- `nat.parameter_optimization.parameter_optimizer` => `nat.plugins.config_optimizer.parameters.optimizer` (in `nvidia-nat-config-optimizer` package)
-- `nat.parameter_optimization.optimizer_runtime` => `nat.plugins.config_optimizer.optimizer_runtime` (in `nvidia-nat-config-optimizer` package)
-- Optimizer callbacks (`OptimizerCallbackManager`, `TrialResult`) remain in `nat.profiler.parameter_optimization.optimizer_callbacks` (in `nvidia-nat-core`)
-
-**Config optimizer extra rename (breaking):** The `nvidia-nat[optimizer]` extra has been renamed to `nvidia-nat[config-optimizer]` for consistency with the package name. Update install commands: `pip install nvidia-nat[config-optimizer]`.
 - `nat.eval.runtime_event_subscriber.pull_intermediate` => `nat.builder.runtime_event_subscriber.pull_intermediate`
 
 For evaluation data models, prefer canonical core paths:
