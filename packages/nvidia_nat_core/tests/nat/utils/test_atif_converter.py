@@ -51,6 +51,9 @@ def _make_step(
     timestamp_offset: float = 0.0,
     parent_id: str = "root",
     function_name: str = "my_workflow",
+    function_id: str = "func-id-1",
+    function_parent_id: str | None = None,
+    function_parent_name: str | None = None,
     usage: UsageInfo | None = None,
     step_uuid: str | None = None,
     framework: LLMFrameworkEnum | None = None,
@@ -74,7 +77,9 @@ def _make_step(
         parent_id=parent_id,
         function_ancestry=InvocationNode(
             function_name=function_name,
-            function_id="func-id-1",
+            function_id=function_id,
+            parent_id=function_parent_id,
+            parent_name=function_parent_name,
         ),
         payload=IntermediateStepPayload(**payload_kwargs),
     )
@@ -517,6 +522,58 @@ class TestBatchConverter:
         assert len(agent_step.extra["tool_ancestry"]) == 1
         assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_id"] == "func-id-1"
         assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_name"] == "my_workflow"
+
+    def test_rich_paths_are_populated(self, batch_converter: IntermediateStepToATIFConverter):
+        """Rich lineage paths are populated in step.extra."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="What is 2^4?",
+                timestamp_offset=0.0,
+                function_name="root",
+                function_id="root",
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="I'll call power_of_two",
+                timestamp_offset=1.0,
+                usage=_make_usage(10, 5),
+                function_name="react_agent",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+            _make_step(
+                IntermediateStepType.TOOL_END,
+                name="calculator__multiply",
+                input_data={"a": 4, "b": 4},
+                output_data="16",
+                timestamp_offset=2.0,
+                step_uuid="tool-uuid-rich-path",
+                function_name="calculator__multiply",
+                function_id="fn-1",
+                function_parent_id="wf-1",
+                function_parent_name="react_agent",
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="16",
+                timestamp_offset=3.0,
+                function_name="react_agent",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.extra is not None
+        assert agent_step.extra.get("step_ancestry_path") is not None
+        assert [n["function_id"] for n in agent_step.extra["step_ancestry_path"]] == ["root", "wf-1"]
+        assert agent_step.extra.get("tool_ancestry_paths") is not None
+        assert len(agent_step.extra["tool_ancestry_paths"]) == 1
+        assert [n["function_id"] for n in agent_step.extra["tool_ancestry_paths"][0]] == ["root", "wf-1", "fn-1"]
 
     def test_agent_tool_definitions_populated(
         self,
