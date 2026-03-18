@@ -31,8 +31,8 @@ from nat.data_models.config import Config
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
-from nat.data_models.optimizer import PromptOptimizerInputSchema
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.data_models.optimizer import PromptOptimizerInputSchema
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.plugins.config_optimizer.eval_runtime_loader import load_evaluation_run
 from nat.plugins.config_optimizer.prompts.base import BasePromptOptimizer
