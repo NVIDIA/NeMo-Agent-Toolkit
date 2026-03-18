@@ -31,7 +31,7 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
    - {py:class}`~nat.data_models.optimizer.OptunaParameterOptimizationConfig`: Built-in config for Optuna-based numeric parameter optimization.
 
 * **Optimizer ABCs**
-   - {py:class}`~nat.plugins.config_optimizer.prompts.base.BasePromptOptimizer`: Abstract base class for prompt optimization strategies. Requires implementing an async `run()` method that persists optimized prompts to disk; the in-memory Config is left unchanged.
+   - {py:class}`~nat.plugins.config_optimizer.prompts.base.BasePromptOptimizer`: Abstract base class for prompt optimization strategies. Requires implementing an async `run()` method that persists optimized prompts to disk; the in-memory config is left unchanged.
    - {py:class}`~nat.plugins.config_optimizer.parameters.base.BaseParameterOptimizer`: Abstract base class for parameter optimization strategies. Requires implementing an async `run()` method that returns an optimized `Config`.
 
 * **Registration**
