@@ -18,3 +18,6 @@
 
 # Import register module to ensure registration happens
 from . import register  # noqa: F401
+from .register import TokenExtractor, register_token_extractor
+
+__all__ = ["TokenExtractor", "register_token_extractor"]
