@@ -31,6 +31,7 @@ from langchain_core.runnables import Runnable
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.runtime import DEFAULT_RUNTIME
 
 logger = logging.getLogger(__name__)
 
@@ -80,11 +81,10 @@ class BaseAgent(ABC):
         self.detailed_logs = detailed_logs
         self.log_response_max_chars = log_response_max_chars
         self.graph = None
+        self._runnable_config = RunnableConfig(callbacks=self.callbacks,
+                                               configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
-    async def _stream_llm(self,
-                          runnable: Any,
-                          inputs: dict[str, Any],
-                          config: RunnableConfig | None = None) -> AIMessage:
+    async def _stream_llm(self, runnable: Any, inputs: dict[str, Any]) -> AIMessage:
         """
         Stream from LLM runnable. Retry logic is handled automatically by the underlying LLM client.
 
@@ -94,21 +94,29 @@ class BaseAgent(ABC):
             The LLM runnable (prompt | llm or similar)
         inputs : Dict[str, Any]
             The inputs to pass to the runnable
-        config : RunnableConfig | None
-            The config to pass to the runnable (should include callbacks)
 
         Returns
         -------
         AIMessage
             The LLM response
         """
-        output_message = []
-        async for event in runnable.astream(inputs, config=config):
-            output_message.append(event.content)
+        content_parts = []
+        reasoning_parts = []
+        async for event in runnable.astream(inputs, config=self._runnable_config):
+            content_parts.append(event.content)
+            extra = getattr(event, 'additional_kwargs', None)
+            if isinstance(extra, dict):
+                reasoning = extra.get('reasoning_content', '')
+                if reasoning:
+                    reasoning_parts.append(reasoning)
 
-        return AIMessage(content="".join(output_message))
+        additional_kwargs: dict[str, Any] = {}
+        if reasoning_parts:
+            additional_kwargs['reasoning_content'] = "".join(reasoning_parts)
 
-    async def _call_llm(self, llm: Runnable, inputs: dict[str, Any], config: RunnableConfig | None = None) -> AIMessage:
+        return AIMessage(content="".join(content_parts), additional_kwargs=additional_kwargs)
+
+    async def _call_llm(self, llm: Runnable, inputs: dict[str, Any]) -> AIMessage:
         """
         Call the LLM directly. Retry logic is handled automatically by the underlying LLM client.
 
@@ -118,22 +126,16 @@ class BaseAgent(ABC):
             The LLM runnable (prompt | llm or similar)
         inputs : dict[str, Any]
             The inputs to pass to the runnable
-        config : RunnableConfig | None
-            The config to pass to the runnable (should include callbacks)
 
         Returns
         -------
         AIMessage
             The LLM response
         """
-        response = await llm.ainvoke(inputs, config=config)
+        response = await llm.ainvoke(inputs, config=self._runnable_config)
         return AIMessage(content=str(response.content))
 
-    async def _call_tool(self,
-                         tool: BaseTool,
-                         tool_input: dict[str, Any] | str,
-                         config: RunnableConfig | None = None,
-                         max_retries: int = 3) -> ToolMessage:
+    async def _call_tool(self, tool: BaseTool, tool_input: dict[str, Any] | str, max_retries: int = 3) -> ToolMessage:
         """
         Call a tool with retry logic and error handling.
 
@@ -143,8 +145,6 @@ class BaseAgent(ABC):
             The tool to call
         tool_input : Union[Dict[str, Any], str]
             The input to pass to the tool
-        config : RunnableConfig | None
-            The config to pass to the tool
         max_retries : int
             Maximum number of retry attempts (default: 3)
 
@@ -157,7 +157,7 @@ class BaseAgent(ABC):
 
         for attempt in range(1, max_retries + 1):
             try:
-                response = await tool.ainvoke(tool_input, config=config)
+                response = await tool.ainvoke(tool_input, config=self._runnable_config)
 
                 # Handle empty responses
                 if response is None or (isinstance(response, str) and response == ""):

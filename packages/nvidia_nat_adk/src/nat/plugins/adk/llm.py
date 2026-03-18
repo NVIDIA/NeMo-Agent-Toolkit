@@ -24,6 +24,7 @@ from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import _handle_litellm_verify_ssl  # ADK uses litellm under the hood
 from nat.utils.responses_api import validate_no_responses_api
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,16 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
 
     config_dict = config.model_dump(
         exclude={
-            "type", "max_retries", "thinking", "azure_endpoint", "azure_deployment", "model_name", "model", "api_type"
+            "api_type",
+            "azure_deployment",
+            "azure_endpoint",
+            "max_retries",
+            "model",
+            "model_name",
+            "request_timeout",
+            "thinking",
+            "type",
+            "verify_ssl"
         },
         by_alias=True,
         exclude_none=True,
@@ -51,8 +61,11 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
     )
     if config.azure_endpoint:
         config_dict["api_base"] = config.azure_endpoint
+    if config.request_timeout is not None:
+        config_dict["timeout"] = config.request_timeout
 
     config_dict["api_version"] = config.api_version
+    _handle_litellm_verify_ssl(config)
 
     yield LiteLlm(f"azure/{config.azure_deployment}", **config_dict)
 
@@ -63,8 +76,9 @@ async def litellm_adk(litellm_config: LiteLlmModelConfig, _builder: Builder):
 
     validate_no_responses_api(litellm_config, LLMFrameworkEnum.ADK)
 
+    _handle_litellm_verify_ssl(litellm_config)
     yield LiteLlm(**litellm_config.model_dump(
-        exclude={"type", "max_retries", "thinking", "api_type"},
+        exclude={"api_type", "max_retries", "thinking", "type", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -92,13 +106,15 @@ async def nim_adk(config: NIMModelConfig, _builder: Builder):
         os.environ["NVIDIA_NIM_API_KEY"] = api_key
 
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
+        exclude={"api_type", "base_url", "max_retries", "model", "model_name", "thinking", "type", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
     )
     if config.base_url:
         config_dict["api_base"] = config.base_url
+
+    _handle_litellm_verify_ssl(config)
 
     yield LiteLlm(f"nvidia_nim/{config.model_name}", **config_dict)
 
@@ -116,7 +132,17 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
+        exclude={
+            "api_type",
+            "base_url",
+            "max_retries",
+            "model",
+            "model_name",
+            "request_timeout",
+            "thinking",
+            "type",
+            "verify_ssl"
+        },
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -126,40 +152,33 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
         config_dict["api_key"] = api_key
     if (base_url := config.base_url or os.getenv("OPENAI_BASE_URL")):
         config_dict["api_base"] = base_url
+    if config.request_timeout is not None:
+        config_dict["timeout"] = config.request_timeout
+
+    _handle_litellm_verify_ssl(config)
 
     yield LiteLlm(config.model_name, **config_dict)
 
 
 @register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.ADK)
 async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
-    """Create and yield a Google ADK LiteLlm client for Dynamo with prefix header support.
+    """Create and yield a Google ADK LiteLlm client for Dynamo with nvext.agent_hints support.
 
-    This client configures Dynamo routing hints via LiteLLM's extra_headers parameter.
-    Unlike the LangChain implementation which injects headers per-request via httpx hooks,
-    LiteLLM sets headers at initialization time.
-
-    For dynamic prefix IDs (e.g., per-evaluation-question), use the DynamoPrefixContext class::
-
-        from nat.llm.dynamo_llm import DynamoPrefixContext
-
-        DynamoPrefixContext.set("my-prefix-id")
-        # ... run LLM calls ...
-        DynamoPrefixContext.clear()
-
-        # Or use the context manager:
-        with DynamoPrefixContext.scope("my-prefix-id"):
-            # ... run LLM calls ...
-
-    Note: The context variable approach requires custom integration as LiteLLM's headers
-    are static. For full dynamic prefix ID support, consider using the LangChain client.
+    When ``enable_nvext_hints`` is True, this client injects Dynamo routing hints via
+    nvext.agent_hints in the request body using a custom httpx transport wrapped in an
+    AsyncOpenAI client. This gives the same per-request hint injection as the LangChain
+    implementation, including dynamic prefix IDs via DynamoPrefixContext.
 
     Args:
         config (DynamoModelConfig): The configuration for the Dynamo model.
         _builder (Builder): The NAT builder instance.
     """
-    import uuid
+    import os
 
     from google.adk.models.lite_llm import LiteLlm
+    from openai import AsyncOpenAI
+
+    from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks
 
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
@@ -182,27 +201,15 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
-    # Build Dynamo prefix headers if prefix_template is configured and headers are enabled
-    if config.prefix_template is not None and not config.disable_headers:
-        # Generate a static prefix ID for this LLM instance
-        # For dynamic prefix IDs, users should use the LangChain client or manage sessions manually
-        unique_id = uuid.uuid4().hex[:16]
-        prefix_id = config.prefix_template.format(uuid=unique_id)
+    async with _create_httpx_client_with_dynamo_hooks(config) as http_client:
 
-        extra_headers = {
-            "x-prefix-id": prefix_id,
-            "x-prefix-total-requests": str(config.prefix_total_requests),
-            "x-prefix-osl": str(config.prefix_osl),
-            "x-prefix-iat": str(config.prefix_iat),
-        }
-        config_dict["extra_headers"] = extra_headers
+        api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
+        base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
 
-        logger.info(
-            "Dynamo prefix headers configured for ADK: prefix_id=%s, total_requests=%d, osl=%s, iat=%s",
-            prefix_id,
-            config.prefix_total_requests,
-            config.prefix_osl,
-            config.prefix_iat,
+        openai_client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=http_client,
         )
-
-    yield LiteLlm(config.model_name, **config_dict)
+        config_dict["client"] = openai_client
+        yield LiteLlm(config.model_name, **config_dict)

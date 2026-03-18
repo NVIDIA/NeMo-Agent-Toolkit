@@ -19,8 +19,8 @@ from pathlib import Path
 
 import pytest
 
-from nat.eval.evaluate import EvaluationRun
-from nat.eval.evaluate import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.test.utils import locate_example_config
 from nat.test.utils import validate_workflow_output
 
@@ -88,7 +88,7 @@ async def test_eval():
     import nat_simple_web_query_eval
 
     # Get config dynamically
-    config_file: Path = locate_example_config(nat_simple_web_query_eval, "eval_config.yml")
+    config_file: Path = locate_example_config(nat_simple_web_query_eval, "eval_config_llama33.yml")
 
     # Create the configuration object for running the evaluation, single rep using the eval config in eval_config.yml
     # WIP: skip test if eval config is not present

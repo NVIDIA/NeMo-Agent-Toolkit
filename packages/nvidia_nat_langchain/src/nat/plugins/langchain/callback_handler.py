@@ -35,11 +35,13 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import ToolDetails
+from nat.data_models.intermediate_step import ToolParameters
 from nat.data_models.intermediate_step import ToolSchema
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
-from nat.profiler.callbacks.base_callback_class import BaseProfilerCallback
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.data_models.profiler_callback import BaseProfilerCallback
+from nat.data_models.token_usage import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -52,11 +54,28 @@ def _extract_tools_schema(invocation_params: dict) -> list:
             try:
                 tools_schema.append(ToolSchema(**tool))
             except Exception:
-                logger.debug(
-                    "Failed to parse tool schema from invocation params: %s. \n This "
-                    "can occur when the LLM server has native tools and can be ignored if "
-                    "using the responses API.",
-                    tool)
+                # Handle non-OpenAI tool formats (e.g. Anthropic: top-level name/description/input_schema)
+                try:
+                    input_schema = tool.get("input_schema") or {}
+                    tools_schema.append(
+                        ToolSchema(
+                            type="function",
+                            function=ToolDetails(
+                                name=tool["name"],
+                                description=tool.get("description", ""),
+                                parameters=ToolParameters(
+                                    properties=input_schema.get("properties", {}),
+                                    required=input_schema.get("required", []),
+                                    additionalProperties=input_schema.get("additionalProperties", False),
+                                ),
+                            ),
+                        ))
+                except (KeyError, TypeError, AttributeError):
+                    logger.exception(
+                        "Failed to parse tool schema from invocation params: %s. \n This "
+                        "can occur when the LLM server has native tools and can be ignored if "
+                        "using the responses API.",
+                        tool)
 
     return tools_schema
 

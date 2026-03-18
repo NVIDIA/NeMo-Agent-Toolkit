@@ -23,17 +23,59 @@ NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. I
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the [`profiling`](./profiler.md) sub-package to use the `nat eval` command.
+In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`. Install the evaluation extra package with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
 
-If you are installing from source, you can install the sub-package by running the following command from the root directory of the NeMo Agent Toolkit repository:
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e '.[profiling]'
+uv pip install -e ".[eval]"
 ```
 
-If you are installing from a package, you can install the sub-package by running the following command:
+:::
+
+:::{tab-item} package
+:sync: package
+
 ```bash
-uv pip install "nvidia-nat[profiling]"
+uv pip install "nvidia-nat-eval"
 ```
+
+:::
+
+::::
+
+
+If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install the profiler package as well:
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
+```bash
+uv pip install -e ".[profiler]"
+```
+
+:::
+
+:::{tab-item} package
+:sync: package
+
+```bash
+uv pip install "nvidia-nat-profiler"
+```
+
+:::
+
+::::
+
 
 ## Evaluating a Workflow
 To evaluate a workflow, you can use the `nat eval` command. The `nat eval` command takes a workflow configuration file as input. It runs the workflow using the dataset specified in the configuration file. The workflow output is then evaluated using the evaluators specified in the configuration file.
@@ -361,10 +403,31 @@ The contents of the file have been `snipped` for brevity.
 You can visualize the evaluation results using the Weights and Biases (W&B) Weave dashboard.
 
 ### Step 1: Install the Weave plugin
-To install the Weave plugin, run:
+To install the Weave plugin, with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
 ```bash
-uv pip install -e '.[weave]'
+uv pip install -e ".[weave]"
 ```
+
+:::
+
+:::{tab-item} package
+:sync: package
+
+```bash
+uv pip install "nvidia-nat[weave]"
+```
+
+:::
+
+::::
 
 ### Step 2: Enable logging to Weave in the configuration file
 Edit your evaluation config, for example:
@@ -407,6 +470,46 @@ To compare multiple runs, select the desired runs and click the `Compare` button
 To inspect results for individual dataset entries, go to the `Dataset Results` tab. You can select any available metric to compare per-metric scores.
 ![Weave Eval Dataset Results](../_static/weave_eval_dataset_results.png)
 Note: Plotting metrics for individual dataset entries is only available across two runs.
+
+## Evaluation Callbacks
+
+The evaluation system provides a callback interface that allows observability providers to hook into the evaluation lifecycle. Callbacks enable providers to create structured experiments, link workflow runs to dataset examples, and attach evaluator scores in their respective platforms.
+
+### `EvalCallback` Protocol
+
+Any class implementing the following methods can be registered as an evaluation callback:
+
+| Lifecycle Hook | When It Fires | What a Callback Can Do |
+| -------------- | ------------- | ---------------------- |
+| `on_dataset_loaded(dataset_name, items)` | After the eval dataset is loaded, before any workflow runs begin | Create a dataset or experiment in the observability provider, map eval items to provider-specific examples |
+| `on_eval_complete(result)` | After all items are evaluated and scores are computed | Link workflow traces to dataset examples, attach evaluator scores as feedback, record metadata |
+
+The `on_eval_complete` callback receives an `EvalResult` object containing:
+
+- `metric_scores`: A dictionary of evaluator names to average scores across all dataset entries.
+- `items`: A list of `EvalResultItem` objects, each containing the item's input, expected output, actual output, per-evaluator scores, and reasoning.
+
+### Registration
+
+Callbacks are registered via the `@register_eval_callback(config_type=...)` decorator, keyed to a telemetry exporter configuration type. When that exporter is configured in `general.telemetry.tracing`, the callback is automatically constructed and registered with no additional user configuration needed.
+
+For example, a provider registers its callback by decorating a factory function:
+
+```python
+from nat.cli.register_workflow import register_eval_callback
+
+@register_eval_callback(config_type=MyTelemetryExporter)
+def _build_my_eval_callback(config, **kwargs):
+    return MyEvaluationCallback(project=config.project)
+```
+
+When the user configures the corresponding telemetry exporter in their workflow YAML, the callback is created and registered automatically.
+
+### Built-in Implementation
+
+LangSmith implements this callback pattern to create structured experiments in the LangSmith Datasets & Experiments UI. See the [LangSmith integration guide](../run-workflows/observe/observe-workflow-with-langsmith.md){.external} for details on what LangSmith tracks during evaluation.
+
+Other observability providers can implement the same `EvalCallback` protocol to add their own experiment tracking during evaluation.
 
 
 ## Evaluating Remote Workflows
@@ -494,9 +597,9 @@ eval:
 
 For unstructured entries, the entire dictionary is the input to the workflow
 but the libraries don't know the individual columns. The input and the workflow output
-goes through evaluation, where evaluators, such as swe-bench evaluator, handle
+goes through evaluation, where custom evaluators can handle
 unstructured entries. The following is an example configuration for
-the swe-bench evaluator:
+an unstructured dataset:
 ```yaml
 eval:
   general:
@@ -581,8 +684,8 @@ The example dataset `simple_calculator_nested.json` is a nested JSON file with q
 def extract_nested_questions(file_path: Path, difficulty: str = None, max_rows: int = None) -> EvalInput:
 ```
 
-{py:class}`~nat.eval.evaluator.evaluator_model.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
-{py:class}`~nat.eval.evaluator.evaluator_model.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
+{py:class}`~nat.data_models.evaluator.EvalInput` is a Pydantic model that contains a list of `EvalInputItem` objects.
+{py:class}`~nat.data_models.evaluator.EvalInputItem` is a Pydantic model that contains the fields for an item in the dataset.
 The custom dataset parser function should fill the following fields in the `EvalInputItem` object:
 - `id`: The id of the item. Every item in the dataset must have a unique id of type `str` or `int`.
 - `input_obj`: This is the question.
@@ -644,7 +747,10 @@ nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/
 NeMo Agent Toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate workflows using the public Ragas API.
 - `trajectory` - An evaluator to run and evaluate the LangChain/LangGraph agent trajectory.
-- `swe_bench` - An evaluator to run and evaluate the workflow on the SWE-Bench dataset.
+- `tunable_rag_evaluator` - A customizable LLM evaluator for flexible RAG workflow evaluation.
+- `langsmith` - Built-in `openevals` evaluators (e.g., `exact_match`, `levenshtein_distance`).
+- `langsmith_custom` - Import any LangSmith-compatible evaluator by Python dotted path.
+- `langsmith_judge` - LLM-as-judge evaluator powered by `openevals`.
 
 #### Ragas Evaluator
 [Ragas](https://docs.ragas.io/) is an open-source evaluation framework that enables end-to-end
@@ -694,27 +800,6 @@ eval:
       _type: trajectory
       llm_name: nim_trajectory_eval_llm
 ```
-
-#### Swe-benchmark Evaluator
-Workflows can use the swe-bench evaluator to solve swe-bench problems. To evaluate the patch, generated by the workflow, install the repository and run the `PASS_TO_PASS` and `FAIL_TO_PASS` tests.
-
-**Example:**
-```yaml
-eval:
-  general:
-    dataset:
-      _type: parquet
-      file_path: hf://datasets/princeton-nlp/SWE-bench_Lite/data/test-00000-of-00001.parquet
-      id_key: instance_id
-      structure: # For swe-bench the entire row is the input
-        disable: true
-
-  evaluators:
-    swe_bench:
-      _type: swe_bench
-      run_id: nat_1
-```
-The swe-bench evaluator uses unstructured dataset entries. The entire row is provided as input to the workflow.
 
 #### Tunable RAG Evaluator
 The tunable RAG evaluator is a customizable LLM evaluator that allows for flexible evaluation of RAG workflows.
@@ -778,6 +863,144 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 ```bash
 nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
 ```
+
+#### LangSmith Evaluators
+
+NeMo Agent Toolkit integrates with [LangSmith](https://docs.smith.langchain.com/) and [OpenEvals](https://github.com/langchain-ai/openevals) to provide three evaluator types. To use these evaluators, install the LangChain integration package with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
+```bash
+uv pip install -e ".[langchain]"
+```
+
+:::
+
+:::{tab-item} package
+:sync: package
+
+```bash
+uv pip install "nvidia-nat[langchain]"
+```
+
+:::
+
+::::
+
+
+##### Built-in `openevals` Evaluator
+
+Uses a built-in `openevals` evaluator selected by short name. Available evaluators: `exact_match`, `levenshtein_distance`.
+
+**Example:**
+```yaml
+eval:
+  evaluators:
+    exact:
+      _type: langsmith
+      evaluator: exact_match
+```
+
+To pass additional dataset fields to the evaluator (beyond the standard inputs/outputs/reference_outputs), use `extra_fields`. Keys are the `kwarg` names passed to the evaluator; values are the field names looked up in the dataset entry:
+
+```yaml
+eval:
+  general:
+    dataset:
+      pass_full_entry: true
+  evaluators:
+    match_with_context:
+      _type: langsmith
+      evaluator: exact_match
+      extra_fields:
+        context: retrieved_context
+```
+
+:::{note}
+`extra_fields` requires `pass_full_entry: true` in the dataset configuration so that the full dataset entry is available to the evaluator.
+:::
+
+##### Custom Evaluator
+
+Imports any LangSmith-compatible evaluator by Python dotted path. The calling convention is auto-detected:
+
+- **RunEvaluator class** — subclasses of `langsmith.evaluation.evaluator.RunEvaluator`
+- **`(run, example)` function** — receives synthetic LangSmith `Run` and `Example` objects
+- **`(inputs, outputs, reference_outputs)` function** — `openevals`-style keyword arguments
+
+**Example:**
+```yaml
+eval:
+  evaluators:
+    my_evaluator:
+      _type: langsmith_custom
+      evaluator: my_package.evaluators.my_function
+```
+
+`extra_fields` is supported for evaluators using the `(inputs, outputs, reference_outputs)` convention.
+
+##### LLM-as-Judge Evaluator
+
+Uses `openevals` `create_llm_as_judge` to score workflow outputs with a judge LLM. Supports prebuilt prompts from `openevals` (e.g., `correctness`, `hallucination`) and custom prompt templates.
+
+**Important:** The judge LLM must support structured output (JSON schema mode). Models that do not support structured output will produce parsing errors.
+
+**Example with a prebuilt prompt:**
+```yaml
+eval:
+  evaluators:
+    correctness:
+      _type: langsmith_judge
+      prompt: correctness
+      llm_name: judge_llm
+      feedback_key: correctness
+```
+
+**Example with a custom prompt and scoring options:**
+```yaml
+eval:
+  evaluators:
+    custom_judge:
+      _type: langsmith_judge
+      prompt: >
+        You are evaluating whether the answer addresses the user's question.
+        Inputs: {inputs}
+        Outputs: {outputs}
+        Reference: {reference_outputs}
+      llm_name: judge_llm
+      feedback_key: relevance
+      continuous: true
+      use_reasoning: true
+```
+
+| Parameter | Default | Description |
+| --------- | ------- | ----------- |
+| `prompt` | *(required)* | Prebuilt `openevals` prompt name (e.g., `correctness`) or a custom f-string template. |
+| `llm_name` | *(required)* | Name of the judge LLM defined in the `llms:` section of the workflow configuration. |
+| `feedback_key` | `score` | Metric name in evaluation output. |
+| `continuous` | `false` | If true, score is a float between 0 and 1. Mutually exclusive with `choices`. |
+| `choices` | `null` | Explicit list of allowed score values (e.g., `[0, 0.5, 1]`). Mutually exclusive with `continuous`. |
+| `use_reasoning` | `true` | Whether the judge provides chain-of-thought reasoning. |
+| `system` | `null` | Optional system message added to the beginning of the prompt. |
+| `few_shot_examples` | `null` | List of few-shot examples to calibrate the judge. Each entry should have `inputs`, `outputs`, `score`, and optionally `reasoning`. |
+| `output_schema` | `null` | Python dotted path to a TypedDict or Pydantic model for custom structured output. |
+| `score_field` | `score` | Dot-notation path to the score in custom `output_schema` results. Only used when `output_schema` is set. |
+| `judge_kwargs` | `null` | Additional keyword arguments forwarded to `create_llm_as_judge`. Must not overlap with typed fields. |
+| `extra_fields` | `null` | Maps evaluator arguments to dataset field names (requires `pass_full_entry: true`). |
+
+The `langsmith_judge` evaluator also inherits retry configuration from `RetryMixin`:
+
+| Parameter | Default | Description |
+| --------- | ------- | ----------- |
+| `do_auto_retry` | `true` | Automatically retry on transient errors. |
+| `num_retries` | `5` | Number of retry attempts. |
+| `retry_on_status_codes` | `[429, 500, 502, 503, 504]` | HTTP status codes that trigger retry. |
+| `retry_on_errors` | `["Too Many Requests", "429"]` | Error messages that trigger retry. |
 
 ### Adding Custom Evaluators
 You can add custom evaluators to evaluate the workflow output. To add a custom evaluator, you need to implement the evaluator and register it with the NeMo Agent Toolkit evaluator system. See the [Custom Evaluator](../extend/custom-components/custom-evaluator.md) documentation for more information.

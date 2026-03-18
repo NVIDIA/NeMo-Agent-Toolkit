@@ -34,12 +34,13 @@ This guide covers setting up, running, and configuring the NVIDIA Dynamo backend
 1. [Overview](#overview)
 2. [Prerequisites](#prerequisites)
 3. [Starting Dynamo](#starting-dynamo)
-4. [Stopping Dynamo](#stopping-dynamo)
-5. [Testing the Integration](#testing-the-integration)
-6. [Monitoring](#monitoring)
-7. [Dynamic Prefix Headers](#dynamic-prefix-headers)
-8. [Configuration Reference](#configuration-reference)
-9. [Troubleshooting](#troubleshooting)
+4. [Building from Source](#building-from-source)
+5. [Stopping Dynamo](#stopping-dynamo)
+6. [Testing the Integration](#testing-the-integration)
+7. [Monitoring](#monitoring)
+8. [Dynamic Prefix Headers](#dynamic-prefix-headers)
+9. [Configuration Reference](#configuration-reference)
+10. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -181,7 +182,7 @@ Dynamo is NVIDIA's high-performance LLM serving platform with KV cache optimizat
 ### Platform Requirements
 
 > [!WARNING]
-> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/getting-started/support-matrix) for full details.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/latest/resources/support-matrix) for full details.
 >
 > **Supported Platforms:**
 > - Ubuntu 22.04 / 24.04 (x86_64)
@@ -458,6 +459,79 @@ bash stop_dynamo.sh
 **Startup time**: ~5 minutes (both workers must initialize)
 
 **Note**: Disaggregated mode uses NIXL for KV cache transfer between workers.
+
+---
+
+## Building from Source
+
+Instead of using pre-built NGC containers, you can build Dynamo runtime images directly from the [dynamo main branch](https://github.com/ai-dynamo/dynamo). This is useful for testing unreleased features or customizing the build.
+
+The startup scripts (`start_dynamo_optimized_thompson_hints_vllm.sh` and `start_dynamo_optimized_thompson_hints_sglang.sh`) support source-built images through two `.env` variables:
+
+- `DYNAMO_FROM_SOURCE=true` — enables source-build mode; forces use of `processor_multilru.py` and `router_multilru.py`
+- `DYNAMO_IMAGE` — the Docker image tag to build and use (for example, `dynamo-sglang-source:main`)
+
+Set these in your `.env` file:
+
+```bash
+DYNAMO_FROM_SOURCE=true
+DYNAMO_IMAGE="dynamo-sglang-source:main"   # or dynamo-vllm-source:main for vLLM
+```
+
+### Prerequisites for Building from Source
+
+The build requires the following system packages on Ubuntu:
+
+```bash
+sudo apt install -y build-essential libhwloc-dev libudev-dev pkg-config \
+    libclang-dev protobuf-compiler python3-dev cmake
+```
+
+### Building the SGLang Runtime Image
+
+Run the following commands from the root of the cloned dynamo repository:
+
+```bash
+cd /path/to/dynamo
+
+# Render the SGLang Dockerfile from templates
+python container/render.py --framework=sglang --target=runtime --output-short-filename
+
+# Build the image (takes 30–90 minutes on first build; subsequent builds use cache)
+docker build -t dynamo-sglang-source:main -f container/rendered.Dockerfile .
+```
+
+### Building the vLLM Runtime Image
+
+```bash
+cd /path/to/dynamo
+
+# Render the vLLM Dockerfile from templates
+python container/render.py --framework=vllm --target=runtime --output-short-filename
+
+# Build the image
+docker build -t dynamo-vllm-source:main -f container/rendered.Dockerfile .
+```
+
+### Running with the Source-Built Image
+
+Once the image is built, run the startup script as normal — it automatically picks up `DYNAMO_FROM_SOURCE` and `DYNAMO_IMAGE` from `.env`:
+
+```bash
+cd /path/to/NeMo-Agent-Toolkit/external/dynamo
+
+# SGLang
+bash start_dynamo_optimized_thompson_hints_sglang.sh > startup_output.txt 2>&1
+
+# vLLM
+bash start_dynamo_optimized_thompson_hints_vllm.sh > startup_output.txt 2>&1
+```
+
+If the image specified by `DYNAMO_IMAGE` does not exist, the script will print the exact build commands and exit with an error.
+
+> **Note**: The dynamo `main` branch targets a different SGLang/vLLM version than the pre-built NGC containers. Verify the bundled framework version after building with `docker run --rm <image> python -c "import sglang; print(sglang.__version__)"`.
+
+---
 
 ### Verifying the Integration
 

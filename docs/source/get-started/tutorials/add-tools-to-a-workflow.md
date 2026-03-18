@@ -114,7 +114,7 @@ Adding individual web pages to a workflow can be cumbersome, especially when dea
 The `tavily_internet_search` tool is part of the `nvidia-nat[langchain]` package, to install the package run:
 ```bash
 # local package install from source
-uv pip install -e '.[langchain]'
+uv pip install -e ".[langchain]"
 ```
 
 Prior to using the `tavily_internet_search` tool, create an account at [`tavily.com`](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:

@@ -117,10 +117,20 @@ class Runner:
 
         # Create reactive event stream
         self._context_state.event_stream.set(Subject())
-        self._context_state.active_function.set(InvocationNode(
-            function_name="root",
-            function_id="root",
-        ))
+
+        # Cross-workflow observability: use parent_id/parent_name when this workflow is a child
+        workflow_parent_id = self._context_state.workflow_parent_id.get()
+        workflow_parent_name = self._context_state.workflow_parent_name.get()
+        root_parent_id = workflow_parent_id if workflow_parent_id else "root"
+        self._context_state.active_function.set(
+            InvocationNode(
+                function_name="root",
+                function_id="root",
+                parent_id=workflow_parent_id,
+                parent_name=workflow_parent_name,
+            ))
+        # So the root workflow step's parent_id is workflow_parent_id when provided
+        self._context_state.active_span_id_stack.set([root_parent_id])
 
         self._runtime_type_token = self._context_state.runtime_type.set(self._runtime_type)
 

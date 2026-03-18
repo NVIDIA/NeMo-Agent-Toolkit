@@ -13,56 +13,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """
-Dynamo LLM provider with automatic prefix hint injection for KV cache optimization.
+Dynamo LLM provider with automatic nvext.agent_hints and nvnext.cache_control injection for KV cache optimization.
 
-This module provides a specialized OpenAI-compatible LLM that sends Dynamo prefix hints
-for optimal KV cache management and request routing. The prefix parameters are optimizable
-via the NAT optimizer.
+This module provides a specialized OpenAI-compatible LLM that sends Dynamo routing
+hints for optimal KV cache management and request routing. The hint parameters are
+optimizable via the NAT optimizer.
 
 The implementation uses a custom httpx transport to inject hints at the HTTP level,
-making it framework-agnostic (works with LangChain, LlamaIndex, etc.).
+making it framework-agnostic (works with LangChain, LlamaIndex, ADK).
 
-Transport Mechanisms
---------------------
+Transport Mechanism
+-------------------
 
-This module supports two transport mechanisms for routing hints, used simultaneously
-for maximum compatibility:
+All routing hints are injected into **nvext.agent_hints** (dict in the request body).
+The default Dynamo frontend passes this through to the preprocessed request, and our
+custom ``processor.py`` reads the routing fields directly from ``agent_hints``.
 
-1. **HTTP Headers** (``x-prefix-*``): For the generalized Thompson Sampling setup
-   that uses custom ``frontend.py`` which reads headers directly.
+Standard Dynamo fields (``latency_sensitivity``, ``osl``, ``priority``) are consumed
+by Dynamo's built-in router and engine scheduler. Custom fields (``prefix_id``,
+``total_requests``, ``iat``) are consumed by our custom ``processor.py``.
 
-2. **nvext.agent_hints** (in request body): For the optimized Thompson Sampling setup
-   that uses the default Dynamo frontend with custom ``processor.py`` which reads
-   agent_hints from the preprocessed request. *This is the preferred mechanism.*
+nvext Hint Parameters
+---------------------
 
-Dynamo Prefix Parameters
--------------------------
+nvext_prefix_osl (Output Sequence Length)
+    Expected output tokens for response length hinting. Raw integer value is always
+    sent in ``nvext.agent_hints``. Accepts categorical strings (LOW/MEDIUM/HIGH) for
+    backward compatibility, which are converted to representative token counts
+    (128/512/2048).
 
-prefix_osl (Output Sequence Length)
-    Expected output tokens for response length hinting. By default, the raw
-    integer value is sent. When ``prefix_use_raw_values`` is False, values are
-    converted to categories:
+nvext_prefix_iat (Inter-Arrival Time)
+    Expected inter-arrival time in milliseconds. Raw integer value is always sent in
+    ``nvext.agent_hints``. Accepts categorical strings (LOW/MEDIUM/HIGH) for backward
+    compatibility, which are converted to representative millisecond values
+    (50/250/750).
 
-    - < 256 tokens: LOW (decode_cost=1.0, short responses)
-    - < 1024 tokens: MEDIUM (decode_cost=2.0, typical responses)
-    - >= 1024 tokens: HIGH (decode_cost=3.0, long responses)
-
-    Accepts categorical strings (LOW/MEDIUM/HIGH) for backward compatibility,
-    which are converted to representative token counts (128/512/2048).
-
-prefix_iat (Inter-Arrival Time)
-    Expected inter-arrival time in milliseconds. By default, the raw integer
-    value is sent. When ``prefix_use_raw_values`` is False, values are converted
-    to categories:
-
-    - < 100ms: LOW (iat_factor=1.5, rapid bursts, high worker stickiness)
-    - < 500ms: MEDIUM (iat_factor=1.0, normal pacing)
-    - >= 500ms: HIGH (iat_factor=0.6, slow requests, more exploration)
-
-    Accepts categorical strings (LOW/MEDIUM/HIGH) for backward compatibility,
-    which are converted to representative millisecond values (50/250/750).
-
-prefix_total_requests
+nvext_prefix_total_requests
     Expected requests per conversation:
 
     - Higher values increase KV cache affinity and worker stickiness
@@ -71,18 +57,23 @@ prefix_total_requests
 
 import json
 import logging
+import threading
 import uuid
+import warnings
 from collections.abc import Iterator
+from contextlib import asynccontextmanager
 from contextlib import contextmanager
 from contextvars import ContextVar
+from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING
-from typing import Literal
 
 import httpx
 
 if TYPE_CHECKING:
     from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
+from pydantic import AliasChoices
 from pydantic import Field
 from pydantic import field_validator
 
@@ -94,12 +85,8 @@ from nat.cli.register_workflow import register_llm_provider
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import SearchSpace
 from nat.llm.openai_llm import OpenAIModelConfig
-from nat.llm.utils.constants import LLMHeaderPrefix
 
 logger = logging.getLogger(__name__)
-
-# Define valid prefix hint values
-PrefixLevel = Literal["LOW", "MEDIUM", "HIGH"]
 
 # Representative token counts for categorical levels (midpoint of ranges):
 # LOW: 128 tokens (midpoint of 0-256 range)
@@ -112,41 +99,37 @@ _OSL_CATEGORY_TO_INT: dict[str, int] = {"LOW": 128, "MEDIUM": 512, "HIGH": 2048}
 # HIGH: 750ms (midpoint of 500-1000ms range)
 _IAT_CATEGORY_TO_INT: dict[str, int] = {"LOW": 50, "MEDIUM": 250, "HIGH": 750}
 
-# =============================================================================
-# CATEGORY CONVERSION HELPERS
-# =============================================================================
+# Fallback when Context is unavailable (e.g. outside a workflow run).
+# Mid-range default on the [0, max_sensitivity] scale.
+_DEFAULT_LATENCY_SENSITIVITY: int = 2
 
 
-def _output_tokens_to_osl(output_tokens: float) -> PrefixLevel:
+class CachePinType(StrEnum):
+    """Cache pinning strategy for KV cache entries.
+
+    Controls how aggressively the Dynamo KV cache retains entries for a prefix:
+
+    - EPHEMERAL: Cache entries auto-expire after a computed TTL of inactivity.
+      TTL is ``total_requests * iat`` (the estimated total conversation
+      duration in milliseconds), giving the expected time span over which
+      this prefix's cache entries should be retained before eviction.
     """
-    Convert predicted output tokens to OSL category.
 
-    Thresholds:
-        - < 256 tokens: LOW (short responses)
-        - < 1024 tokens: MEDIUM (typical responses)
-        - >= 1024 tokens: HIGH (long responses)
+    EPHEMERAL = "ephemeral"
+
+
+class CacheControlMode(StrEnum):
+    """Controls when ``nvext.cache_control`` is injected into requests.
+
+    - ALWAYS: Inject on every request (refreshes TTL each turn).
+    - FIRST_ONLY: Inject only on the first request per prefix_id, pinning
+      the system prompt when it is first established in the KV cache.
+      Subsequent requests benefit from prefix matching without re-pinning
+      the growing conversation context.
     """
-    if output_tokens < 256:
-        return "LOW"
-    if output_tokens < 1024:
-        return "MEDIUM"
-    return "HIGH"
 
-
-def _interarrival_ms_to_iat(interarrival_ms: float) -> PrefixLevel:
-    """
-    Convert predicted interarrival time to IAT category.
-
-    Thresholds:
-        - < 100ms: LOW (rapid bursts, high worker stickiness)
-        - < 500ms: MEDIUM (normal pacing)
-        - >= 500ms: HIGH (slow requests, more exploration)
-    """
-    if interarrival_ms < 100:
-        return "LOW"
-    if interarrival_ms < 500:
-        return "MEDIUM"
-    return "HIGH"
+    ALWAYS = "always"
+    FIRST_ONLY = "first_only"
 
 
 # =============================================================================
@@ -300,34 +283,40 @@ class DynamoPrefixContext(metaclass=Singleton):
 
 class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     """
-    A Dynamo LLM provider with automatic prefix hint injection for KV cache optimization.
+    A Dynamo LLM provider with automatic nvext.agent_hints and nvext.cache_control injection for KV cache optimization.
 
-    This is a specialized OpenAI-compatible LLM that sends Dynamo prefix hints
-    for optimal KV cache management and request routing. Prefix hints are enabled
-    by default using the template "nat-dynamo-{uuid}". The prefix routing parameters
-    (prefix_total_requests, prefix_osl, prefix_iat) are optimizable via the NAT optimizer.
+    This is a specialized OpenAI-compatible LLM that sends Dynamo routing hints
+    for optimal KV cache management and request routing. Hints are injected when
+    ``enable_nvext_hints`` is True. The hint parameters (nvext_prefix_total_requests,
+    nvext_prefix_osl, nvext_prefix_iat) are optimizable via the NAT optimizer.
 
-    Hints are sent via both HTTP headers (``x-prefix-*``) and ``nvext.agent_hints``
-    in the request body for compatibility with different Dynamo setups:
+    All hints are sent via ``nvext.agent_hints`` in the request body. Standard Dynamo
+    fields (``latency_sensitivity``, ``osl``, ``priority``) are consumed by Dynamo's
+    built-in router and engine scheduler. Custom fields (``prefix_id``,
+    ``total_requests``, ``iat``) are consumed by the custom ``processor.py``.
 
-    - **Generalized Thompson Sampling** (custom frontend.py): Reads HTTP headers
-    - **Optimized Thompson Sampling** (default frontend + processor.py): Reads nvext.agent_hints
-
-    To disable prefix hints, set prefix_template to null/None in your config.
+    To disable hints, set ``enable_nvext_hints: false`` in your config (the default).
     """
 
     # =========================================================================
-    # DYNAMO PREFIX PARAMETERS
+    # NVEXT HINT PARAMETERS
     # =========================================================================
 
-    prefix_template: str | None = Field(
-        default="nat-dynamo-{uuid}",
-        description="Template for prefix ID. The {uuid} placeholder will be replaced with a unique ID. "
-        "Prefix headers are sent by default for KV cache optimization. "
-        "Set to null/None to disable prefix header injection.",
+    enable_nvext_hints: bool = Field(
+        default=False,
+        description="When True, inject nvext.agent_hints and nvext.cache_control "
+        "into requests via a custom httpx transport. "
+        "When False (default), no routing hints are injected.",
     )
 
-    prefix_total_requests: int = OptimizableField(
+    nvext_prefix_id_template: str | None = Field(
+        default="nat-dynamo-{uuid}",
+        description="Template for prefix ID. The {uuid} placeholder will be replaced with a unique ID. "
+        "Currently unused by the transport (prefix IDs come from DynamoPrefixContext), "
+        "but retained for configuration reference.",
+    )
+
+    nvext_prefix_total_requests: int = OptimizableField(
         default=10,
         ge=1,
         le=50,
@@ -336,20 +325,20 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
                      "Lower values allow more load balancing across workers."),
         space=SearchSpace(low=1, high=20, step=5))
 
-    prefix_osl: int = OptimizableField(
+    nvext_prefix_osl: int = OptimizableField(
         default=512,
         ge=1,
         description="Expected output tokens for response length hinting (Output Sequence Length). "
-        "Raw integer value is sent by default. Accepts categorical strings "
+        "Raw integer value is sent in nvext.agent_hints. Accepts categorical strings "
         "(LOW/MEDIUM/HIGH) for backward compatibility (mapped to 128/512/2048).",
         space=SearchSpace(low=64, high=4096, step=64),
     )
 
-    prefix_iat: int = OptimizableField(
+    nvext_prefix_iat: int = OptimizableField(
         default=250,
         ge=1,
         description="Expected inter-arrival time in milliseconds for request pacing. "
-        "Raw integer value is sent by default. Accepts categorical strings "
+        "Raw integer value is sent in nvext.agent_hints. Accepts categorical strings "
         "(LOW/MEDIUM/HIGH) for backward compatibility (mapped to 50/250/750).",
         space=SearchSpace(low=10, high=1000, step=50),
     )
@@ -360,31 +349,46 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
         description="HTTP request timeout in seconds for LLM requests.",
     )
 
-    prefix_use_raw_values: bool = Field(
-        default=True,
-        description="When True, send raw integer values for OSL (output tokens) and IAT (interarrival ms) "
-        "in headers and nvext.agent_hints. When False, convert to categorical LOW/MEDIUM/HIGH.",
-    )
-
-    prediction_trie_path: str | None = Field(
+    nvext_prediction_trie_path: str | None = Field(
         default=None,
+        validation_alias=AliasChoices("nvext_prediction_trie_path", "prediction_trie_path"),
         description="Path to prediction_trie.json file. When set, predictions are "
-        "looked up and used to override both HTTP headers and nvext.agent_hints for each LLM call.",
+        "looked up and used to override nvext.agent_hints for each LLM call.",
     )
 
-    disable_headers: bool = Field(
-        default=True,
-        description="If True, do not inject Dynamo prefix hints as HTTP headers. "
-        "Hints will still be injected via nvext.agent_hints in the request body if prefix_template is set.",
+    nvext_cache_pin_type: CachePinType | None = Field(
+        default=CachePinType.EPHEMERAL,
+        description="Cache pinning strategy for KV cache entries. "
+        "When set, injects nvext.cache_control with the pin type and a TTL "
+        "computed as total_requests * iat (estimated conversation duration in ms). "
+        "Set to null/None to disable cache control hints.",
+    )
+
+    nvext_cache_control_mode: CacheControlMode = Field(
+        default=CacheControlMode.ALWAYS,
+        description="Controls when nvext.cache_control is injected. "
+        "'always' injects on every request (refreshes TTL each turn). "
+        "'first_only' injects only on the first request per prefix_id, "
+        "pinning the system prompt when it is first established in the KV cache.",
+    )
+
+    nvext_max_sensitivity: int = Field(
+        default=1000,
+        ge=1,
+        validation_alias=AliasChoices("nvext_max_sensitivity", "max_sensitivity"),
+        description="Maximum latency sensitivity value used to compute request priority. "
+        "Priority is the integer complement: priority = max_sensitivity - latency_sensitivity. "
+        "Lower priority values indicate higher priority requests.",
     )
 
     # =========================================================================
     # VALIDATORS (backward compatibility: categorical strings -> integers)
     # =========================================================================
 
-    @field_validator("prefix_osl", mode="before")
+    @field_validator("nvext_prefix_osl", mode="before")
     @classmethod
-    def _coerce_prefix_osl(cls, v: object) -> int:
+    def _coerce_nvext_prefix_osl(cls, v: object) -> int:
+        """Convert categorical OSL strings (LOW/MEDIUM/HIGH) to representative token counts."""
         if isinstance(v, int):
             return v
         if isinstance(v, str):
@@ -393,15 +397,21 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
                 return _OSL_CATEGORY_TO_INT[upper]
             raise ValueError(f"Invalid OSL value '{v}'. Must be an integer >= 1 "
                              f"or one of: {', '.join(_OSL_CATEGORY_TO_INT.keys())}")
-        raise TypeError(f"prefix_osl must be int or str, got {type(v)}")
+        raise TypeError(f"nvext_prefix_osl must be int or str, got {type(v)}")
 
-    @field_validator("prefix_iat", mode="before")
+    @field_validator("nvext_prefix_iat", mode="before")
     @classmethod
-    def _coerce_prefix_iat(cls, v: object) -> object:
+    def _coerce_nvext_prefix_iat(cls, v: object) -> int:
         """Convert categorical IAT strings (LOW/MEDIUM/HIGH) to representative millisecond values."""
-        if isinstance(v, str) and v.upper() in _IAT_CATEGORY_TO_INT:
-            return _IAT_CATEGORY_TO_INT[v.upper()]
-        return v
+        if isinstance(v, int):
+            return v
+        if isinstance(v, str):
+            upper = v.upper()
+            if upper in _IAT_CATEGORY_TO_INT:
+                return _IAT_CATEGORY_TO_INT[upper]
+            raise ValueError(f"Invalid IAT value '{v}'. Must be an integer >= 1 "
+                             f"or one of: {', '.join(_IAT_CATEGORY_TO_INT.keys())}")
+        raise TypeError(f"nvext_prefix_iat must be int or str, got {type(v)}")
 
     # =========================================================================
     # UTILITY METHODS
@@ -426,14 +436,16 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
             )
         """
         return frozenset({
-            "prefix_template",
-            "prefix_total_requests",
-            "prefix_osl",
-            "prefix_iat",
-            "prefix_use_raw_values",
+            "enable_nvext_hints",
+            "nvext_prefix_id_template",
+            "nvext_prefix_total_requests",
+            "nvext_prefix_osl",
+            "nvext_prefix_iat",
             "request_timeout",
-            "prediction_trie_path",
-            "disable_headers",
+            "nvext_prediction_trie_path",
+            "nvext_cache_pin_type",
+            "nvext_cache_control_mode",
+            "nvext_max_sensitivity",
         })
 
 
@@ -444,14 +456,17 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
 class _DynamoTransport(httpx.AsyncBaseTransport):
     """
-    Custom transport wrapper that injects both HTTP headers and nvext.agent_hints.
+    Custom transport wrapper that injects all routing hints into nvext.agent_hints.
 
     This approach is more reliable than event hooks because it modifies the request
-    BEFORE httpx's internal state machine processes it. It supports both transport
-    mechanisms simultaneously for maximum compatibility:
+    BEFORE httpx's internal state machine processes it.
 
-    - HTTP headers (``x-prefix-*``): For generalized Thompson Sampling setup
-    - nvext.agent_hints: For optimized Thompson Sampling setup (preferred)
+    All hints are placed in a single ``nvext.agent_hints`` dict:
+
+    - Standard Dynamo fields (``latency_sensitivity``, ``osl``, ``priority``): consumed
+      by Dynamo's built-in router and engine scheduler.
+    - Custom routing fields (``prefix_id``, ``total_requests``, ``iat``): consumed by
+      the custom ``processor.py`` for Thompson Sampling worker selection.
     """
 
     def __init__(
@@ -461,48 +476,63 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         osl: int,
         iat: int,
         prediction_lookup: "PredictionTrieLookup | None" = None,
-        use_raw_values: bool = True,
-        disable_headers: bool = True,
+        cache_pin_type: CachePinType | None = CachePinType.EPHEMERAL,
+        cache_control_mode: CacheControlMode = CacheControlMode.ALWAYS,
+        max_sensitivity: int = 1000,
     ):
         self._transport = transport
         self._total_requests = total_requests
         self._osl = osl
         self._iat = iat
         self._prediction_lookup = prediction_lookup
-        self._use_raw_values = use_raw_values
-        self._disable_headers = disable_headers
+        self._cache_pin_type = cache_pin_type
+        self._cache_control_mode = cache_control_mode
+        self._max_sensitivity = max_sensitivity
+        # Per-prefix call counter so call_index advances across requests
+        # for the same prefix_id (keyed by prefix_id string).
+        self._call_counts: dict[str, int] = {}
+        self._call_counts_lock = threading.Lock()
+
+        if cache_pin_type is not None:
+            warnings.warn(
+                f"nvext.cache_control is configured (type={cache_pin_type.value}). cache_control requires "
+                "sglang >v0.5.9 with hierarchical cache enabled. Parameters will be "
+                "sent but may be silently ignored by the backend. "
+                "See https://github.com/sgl-project/sglang/pull/18941",
+                stacklevel=2,
+            )
 
     async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
         # Get prefix ID from context (supports depth-awareness and overrides)
         prefix_id = DynamoPrefixContext.get()
 
-        # Get latency sensitivity from context (defaults to MEDIUM)
+        # Get latency sensitivity from context.
+        # Context.latency_sensitivity is typed as int; coerce
+        # defensively in case a subclass or mock returns a float.
         try:
             ctx = Context.get()
-            latency_sensitivity = str(ctx.latency_sensitivity.value)
+            latency_sensitivity = int(ctx.latency_sensitivity)
         except Exception:
-            # If context not available or latency_sensitivity not implemented yet, default to MEDIUM
-            latency_sensitivity = "MEDIUM"
+            latency_sensitivity = _DEFAULT_LATENCY_SENSITIVITY
 
         # Initialize with static config values (always integers)
         total_requests = self._total_requests
         osl_raw = self._osl
         iat_raw = self._iat
 
+        # Read the tentative per-prefix call index for prediction trie lookups.
+        # The counter is committed to _call_counts only after the request is
+        # confirmed eligible for injection (see below), so non-injectable requests
+        # (non-POST, empty body, invalid JSON, non-dict body) do not consume the
+        # FIRST_ONLY slot.
+        with self._call_counts_lock:
+            call_index = self._call_counts.get(prefix_id, 0) + 1
+
         # Check for prediction override
         if self._prediction_lookup is not None:
             try:
-                from nat.llm.prediction_context import get_call_tracker
-
                 ctx = Context.get()
                 path = ctx.function_path
-
-                # Get call index for current parent function
-                call_index = 1
-                active_fn = ctx.active_function
-                if active_fn and active_fn.function_id != "root":
-                    tracker = get_call_tracker()
-                    call_index = tracker.counts.get(active_fn.function_id, 1)
 
                 # Look up prediction
                 prediction = self._prediction_lookup.find(path, call_index)
@@ -513,14 +543,25 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
                     osl_raw = int(prediction.output_tokens.p90)
                     iat_raw = int(prediction.interarrival_ms.mean)
 
+                    # Auto-assign latency sensitivity from profiler data
+                    # Only if prediction has it AND no manual @latency_sensitive decorator is active
+                    if prediction.latency_sensitivity is not None:
+                        try:
+                            ctx = Context.get()
+                            if not ctx.has_manual_latency_sensitivity:
+                                latency_sensitivity = prediction.latency_sensitivity
+                        except Exception:
+                            pass
+
                     logger.debug(
                         "Overriding hints from prediction: path=%s, call_index=%d, "
-                        "total_requests=%d, osl_raw=%d, iat_raw=%d",
+                        "total_requests=%d, osl_raw=%d, iat_raw=%d, latency_sensitivity=%s",
                         path,
                         call_index,
                         total_requests,
                         osl_raw,
                         iat_raw,
+                        latency_sensitivity,
                     )
                 else:
                     logger.debug(
@@ -532,62 +573,110 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
             except Exception:
                 logger.exception("Failed to lookup prediction")
 
-        # Compute final values for headers/body
-        if self._use_raw_values:
-            osl_value: int | str = osl_raw
-            iat_value: int | str = iat_raw
-        else:
-            osl_value = _output_tokens_to_osl(osl_raw)
-            iat_value = _interarrival_ms_to_iat(iat_raw)
-
         headers = dict(request.headers)
-        if not self._disable_headers:
-            # Headers always need strings
-            headers[f"{LLMHeaderPrefix.DYNAMO}-id"] = prefix_id
-            headers[f"{LLMHeaderPrefix.DYNAMO}-total-requests"] = str(total_requests)
-            headers[f"{LLMHeaderPrefix.DYNAMO}-osl"] = str(osl_value)
-            headers[f"{LLMHeaderPrefix.DYNAMO}-iat"] = str(iat_value)
-            headers[f"{LLMHeaderPrefix.DYNAMO}-latency-sensitivity"] = latency_sensitivity
 
-        # Modify body to inject nvext.agent_hints (if JSON POST request)
+        # Modify body to inject nvext.agent_hints (if JSON POST request).
+        #
+        # All routing hints live in a single nvext.agent_hints dict:
+        #   Standard Dynamo AgentHints fields (dynamo/lib/llm/src/protocols/openai/nvext.rs):
+        #     latency_sensitivity  — queue ordering in Dynamo's built-in router
+        #     osl                  — output token hint for resource estimation (u32 integer)
+        #     priority             — engine scheduler priority (vLLM: lower=higher; SGLang: configurable)
+        #   Custom processor.py fields:
+        #     prefix_id            — KV cache prefix identity for worker stickiness
+        #     total_requests       — expected session length for reuse_budget computation
+        #     iat                  — inter-arrival time in ms (always raw integer)
         content = request.content
         if request.method == "POST" and content:
             try:
                 body = json.loads(content.decode("utf-8", errors="replace"))
                 if isinstance(body, dict):
-                    # Build agent_hints dict (int or str depending on raw mode)
-                    agent_hints = {
-                        "prefix_id": prefix_id,
-                        "total_requests": total_requests,
-                        "osl": osl_value,
-                        "iat": iat_value,
-                        "latency_sensitivity": latency_sensitivity,
-                    }
+                    # ---- Validate all agent_hints fields before injection ----
+                    #
+                    # Config-level Pydantic validation covers static values for osl, iat, and
+                    # total_requests. Prediction trie overrides bypass Pydantic, so we guard
+                    # those here too. latency_sensitivity comes entirely from Context (not a
+                    # config field) so it is only validated here.
 
-                    # Add/merge nvext.agent_hints
+                    # total_requests must be a positive integer.
+                    if total_requests < 1:
+                        raise ValueError(f"total_requests must be >= 1, got {total_requests}")
+
+                    # osl_raw must be a positive integer (Dynamo AgentHints.osl is u32).
+                    if osl_raw < 1:
+                        raise ValueError(f"osl must be >= 1, got {osl_raw}")
+
+                    # iat_raw must be positive (used as TTL denominator and router weight).
+                    if iat_raw < 1:
+                        raise ValueError(f"iat must be >= 1, got {iat_raw}")
+
+                    # latency_sensitivity must be in [0, max_sensitivity].
+                    if latency_sensitivity < 0:
+                        raise ValueError(f"latency_sensitivity ({latency_sensitivity}) must be >= 0")
+                    if latency_sensitivity > self._max_sensitivity:
+                        raise ValueError(f"latency_sensitivity ({latency_sensitivity}) exceeds "
+                                         f"max_sensitivity ({self._max_sensitivity}). "
+                                         f"Increase max_sensitivity or lower latency_sensitivity.")
+
+                    # priority is fully derived from validated inputs — no separate check needed.
+                    # (lower number = higher priority for vLLM; SGLang is configurable)
+                    priority = self._max_sensitivity - latency_sensitivity
+
                     if "nvext" not in body:
                         body["nvext"] = {}
                     if not isinstance(body["nvext"], dict):
                         body["nvext"] = {}
 
+                    agent_hints = {
+                        "latency_sensitivity": float(latency_sensitivity),
+                        "osl": osl_raw,
+                        "priority": priority,
+                        "prefix_id": prefix_id,
+                        "total_requests": total_requests,
+                        "iat": iat_raw,
+                    }
                     existing = body["nvext"].get("agent_hints", {})
                     if not isinstance(existing, dict):
                         existing = {}
-
-                    # Our hints take precedence over existing
                     body["nvext"]["agent_hints"] = {**existing, **agent_hints}
 
-                    # Re-encode
+                    # Commit the per-prefix counter now that the request is
+                    # confirmed eligible for injection.
+                    with self._call_counts_lock:
+                        self._call_counts[prefix_id] = call_index
+
+                    # Inject cache_control for KV cache lifetime management.
+                    # TTL = total_requests * iat_raw (ms): estimated total conversation
+                    # duration before the cache entry should auto-expire.
+                    # Formatted as "<N>m" (whole minutes) or "<N>s", rounded up.
+                    #
+                    # When cache_control_mode is FIRST_ONLY, only inject on the
+                    # first request per prefix_id — pinning the system prompt when
+                    # it is first established in the KV cache.
+                    should_pin = (self._cache_pin_type is not None
+                                  and (self._cache_control_mode == CacheControlMode.ALWAYS or
+                                       (self._cache_control_mode == CacheControlMode.FIRST_ONLY and call_index == 1)))
+                    if should_pin:
+                        ttl_ms = total_requests * iat_raw
+                        ttl_seconds = max(1, -(-ttl_ms // 1000))  # ceil division
+                        if ttl_seconds >= 60 and ttl_seconds % 60 == 0:
+                            ttl_str = f"{ttl_seconds // 60}m"
+                        else:
+                            ttl_str = f"{ttl_seconds}s"
+                        body["nvext"]["cache_control"] = {
+                            "type": self._cache_pin_type.value,
+                            "ttl": ttl_str,
+                        }
+
                     content = json.dumps(body).encode("utf-8")
                     headers["content-length"] = str(len(content))
 
-                    logger.debug("Injected nvext.agent_hints: %s (body size: %d bytes)",
-                                 body["nvext"]["agent_hints"],
+                    logger.debug("Injected nvext.agent_hints=%s (body size: %d bytes)",
+                                 body["nvext"].get("agent_hints"),
                                  len(content))
             except (json.JSONDecodeError, UnicodeDecodeError) as e:
                 logger.debug("Could not inject nvext.agent_hints: %s", e)
 
-        # Create new request with modified headers and content
         new_request = httpx.Request(
             method=request.method,
             url=request.url,
@@ -599,8 +688,8 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         logger.debug("Injected Dynamo hints: prefix_id=%s, total_requests=%d, osl=%s, iat=%s, latency_sensitivity=%s",
                      prefix_id,
                      total_requests,
-                     osl_value,
-                     iat_value,
+                     osl_raw,
+                     iat_raw,
                      latency_sensitivity)
 
         return await self._transport.handle_async_request(new_request)
@@ -615,61 +704,67 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 # =============================================================================
 
 
-def create_httpx_client_with_dynamo_hooks(
-    prefix_template: str | None,
-    total_requests: int,
-    osl: int,
-    iat: int,
-    timeout: float = 600.0,
-    prediction_lookup: "PredictionTrieLookup | None" = None,
-    use_raw_values: bool = True,
-    disable_headers: bool = True,
-) -> "httpx.AsyncClient":
+@asynccontextmanager
+async def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "httpx.AsyncClient":
     """
-    Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
+    Create an httpx.AsyncClient, when `config.enable_nvext_hints` is True, Dynamo hint injection via custom transport
+    is added.
 
-    This client can be passed to the OpenAI SDK to inject hints at the HTTP level,
-    making it framework-agnostic. Hints are injected via both HTTP headers and
-    nvext.agent_hints in the request body for maximum compatibility:
-
-    - HTTP headers (``x-prefix-*``): For generalized Thompson Sampling setup
-    - nvext.agent_hints: For optimized Thompson Sampling setup (preferred)
+    This client can be passed to the OpenAI SDK or wrapped in an AsyncOpenAI client
+    for use with LiteLLM/ADK. All hints are injected into ``nvext.agent_hints``
+    in the request body.
 
     Args:
-        prefix_template: Template string with {uuid} placeholder (unused, kept for API compat)
-        total_requests: Expected number of requests for this prefix
-        osl: Expected output tokens (raw integer value)
-        iat: Expected inter-arrival time in milliseconds (raw integer value)
-        timeout: HTTP request timeout in seconds
-        prediction_lookup: Optional PredictionTrieLookup for dynamic hint injection
-        use_raw_values: When True send raw integers; when False convert to LOW/MEDIUM/HIGH
-        disable_headers: If True, do not inject hints as HTTP headers (still injects nvext.agent_hints)
+        config: LLM Config
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.
     """
     import httpx
 
-    # Note: prefix_template is kept for API compatibility but no longer used.
-    # Prefix IDs are now managed by DynamoPrefixContext with depth-awareness.
-    _ = prefix_template
+    from nat.llm.utils.http_client import async_http_client
 
-    # Create base transport and wrap with custom transport
-    base_transport = httpx.AsyncHTTPTransport()
-    dynamo_transport = _DynamoTransport(
-        transport=base_transport,
-        total_requests=total_requests,
-        osl=osl,
-        iat=iat,
-        prediction_lookup=prediction_lookup,
-        use_raw_values=use_raw_values,
-        disable_headers=disable_headers,
-    )
+    http_client_kwargs = {}
+    if config.enable_nvext_hints:
+        from nat.profiler.prediction_trie import load_prediction_trie
+        from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
-    return httpx.AsyncClient(
-        transport=dynamo_transport,
-        timeout=httpx.Timeout(timeout),
-    )
+        prediction_lookup: PredictionTrieLookup | None = None
+        if config.nvext_prediction_trie_path:
+            try:
+                trie_path = Path(config.nvext_prediction_trie_path)
+                trie = load_prediction_trie(trie_path)
+                prediction_lookup = PredictionTrieLookup(trie)
+                logger.info("Loaded prediction trie from %s", config.nvext_prediction_trie_path)
+            except FileNotFoundError:
+                logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
+            except Exception:
+                logger.exception("Failed to load prediction trie")
+
+        # Create base transport and wrap with custom transport
+        base_transport = httpx.AsyncHTTPTransport(verify=config.verify_ssl)
+        dynamo_transport = _DynamoTransport(
+            transport=base_transport,
+            total_requests=config.nvext_prefix_total_requests,
+            osl=config.nvext_prefix_osl,
+            iat=config.nvext_prefix_iat,
+            prediction_lookup=prediction_lookup,
+            cache_pin_type=config.nvext_cache_pin_type,
+            cache_control_mode=config.nvext_cache_control_mode,
+            max_sensitivity=config.nvext_max_sensitivity,
+        )
+
+        http_client_kwargs["transport"] = dynamo_transport
+        logger.info(
+            "Dynamo agent hints enabled: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
+            config.nvext_prefix_total_requests,
+            config.nvext_prefix_osl,
+            config.nvext_prefix_iat,
+            "loaded" if config.nvext_prediction_trie_path else "disabled",
+        )
+
+    async with async_http_client(llm_config=config, **http_client_kwargs) as client:
+        yield client
 
 
 # =============================================================================
@@ -684,5 +779,5 @@ async def dynamo_llm(config: DynamoModelConfig, _builder: Builder):
     """Register the Dynamo LLM provider."""
     yield LLMProviderInfo(
         config=config,
-        description="A Dynamo-optimized model with automatic prefix headers for KV cache management.",
+        description="A Dynamo-optimized model with automatic nvext.agent_hints injection for KV cache management.",
     )

@@ -19,11 +19,14 @@ from collections.abc import AsyncGenerator
 
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.api_server import ResponseATIFStep
+from nat.data_models.api_server import ResponseATIFTrajectory
 from nat.data_models.api_server import ResponseIntermediateStep
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import ResponseSerializable
 from nat.data_models.step_adaptor import StepAdaptorConfig
 from nat.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate
+from nat.front_ends.fastapi.intermediate_steps_subscriber import pull_intermediate_atif
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.runtime.session import Session
 from nat.utils.producer_consumer_queue import AsyncIOProducerConsumerQueue
@@ -36,6 +39,8 @@ async def generate_streaming_response_as_str(payload: typing.Any,
                                              step_adaptor: StepAdaptor = StepAdaptor(StepAdaptorConfig()),
                                              result_type: type | None = None,
                                              output_type: type | None = None) -> AsyncGenerator[str]:
+
+    from nat.data_models.api_server import ChatResponseChunk
 
     try:
         async for item in generate_streaming_response(payload,
@@ -50,6 +55,11 @@ async def generate_streaming_response_as_str(payload: typing.Any,
             else:
                 raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                                  str(type(item)))
+
+        # Emit OpenAI-compatible stream termination: a final chunk with finish_reason="stop" and [DONE] sentinel
+        if output_type is ChatResponseChunk:
+            yield ChatResponseChunk.create_streaming_chunk("", finish_reason="stop").get_stream_data()
+            yield "data: [DONE]\n\n"
     except Exception as e:
         yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()
 
@@ -187,5 +197,76 @@ async def generate_streaming_response_full_as_str(payload: typing.Any,
             else:
                 raise ValueError("Unexpected item type in stream. Expected ChatResponseSerializable, got: " +
                                  str(type(item)))
+    except Exception as e:
+        yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()
+
+
+async def generate_streaming_response_atif(payload: typing.Any,
+                                           *,
+                                           session: Session,
+                                           streaming: bool,
+                                           result_type: type | None = None,
+                                           output_type: type | None = None) -> AsyncGenerator[ResponseSerializable]:
+    """Stream ATIF steps by converting raw IntermediateSteps on-the-fly.
+
+    Each yielded item is either a ``ResponseATIFStep`` (one per completed
+    agent turn) or a ``ResponsePayloadOutput`` (the final workflow result).
+    A ``ResponseATIFTrajectory`` summary is emitted at the very end.
+    """
+    from nat.utils.atif_converter import ATIFStreamConverter
+
+    converter = ATIFStreamConverter()
+
+    async with session.run(payload) as runner:
+        q: AsyncIOProducerConsumerQueue[ResponseSerializable] = AsyncIOProducerConsumerQueue()
+
+        intermediate_complete = await pull_intermediate_atif(q, converter)
+
+        async def pull_result():
+            try:
+                if session.workflow.has_streaming_output and streaming:
+                    async for chunk in runner.result_stream(to_type=output_type):
+                        await q.put(chunk)
+                else:
+                    result = await runner.result(to_type=result_type)
+                    await q.put(runner.convert(result, output_type))
+
+                await intermediate_complete.wait()
+            finally:
+                await q.close()
+
+        try:
+            task: asyncio.Task = asyncio.create_task(pull_result())
+
+            async for item in q:
+                if isinstance(item, (ResponseATIFStep, ResponseATIFTrajectory)):
+                    yield item
+                elif isinstance(item, ResponseSerializable):
+                    yield item
+                else:
+                    yield ResponsePayloadOutput(payload=item)
+
+            await task
+        finally:
+            await q.close()
+
+
+async def generate_streaming_response_atif_as_str(payload: typing.Any,
+                                                  *,
+                                                  session: Session,
+                                                  streaming: bool,
+                                                  result_type: type | None = None,
+                                                  output_type: type | None = None) -> AsyncGenerator[str]:
+    """String-serialized variant of ``generate_streaming_response_atif``."""
+    try:
+        async for item in generate_streaming_response_atif(payload,
+                                                           session=session,
+                                                           streaming=streaming,
+                                                           result_type=result_type,
+                                                           output_type=output_type):
+            if isinstance(item, ResponseSerializable):
+                yield item.get_stream_data()
+            else:
+                raise ValueError("Unexpected item type in ATIF stream: " + str(type(item)))
     except Exception as e:
         yield Error(code=ErrorTypes.WORKFLOW_ERROR, message=str(e), details=type(e).__name__).model_dump_json()

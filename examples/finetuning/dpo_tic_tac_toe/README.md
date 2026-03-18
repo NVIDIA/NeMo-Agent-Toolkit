@@ -121,7 +121,7 @@ Set the following environment variables:
 # NGC API key for NeMo services
 export NGC_API_KEY="your-ngc-api-key"
 
-# HuggingFace token (if required by datastore)
+# Hugging Face token (if required by datastore)
 export HF_TOKEN="your-hf-token"
 
 # OpenAI-compatible API key for inference

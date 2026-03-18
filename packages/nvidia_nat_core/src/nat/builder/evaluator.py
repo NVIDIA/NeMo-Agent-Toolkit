@@ -15,14 +15,17 @@
 
 from collections.abc import Callable
 
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvaluatorBaseConfig
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalOutput
 
 
 class EvaluatorInfo:
 
-    def __init__(self, *, config: EvaluatorBaseConfig, evaluate_fn: Callable[[EvalInput], EvalOutput],
+    def __init__(self,
+                 *,
+                 config: EvaluatorBaseConfig,
+                 evaluate_fn: Callable[[EvalInput], EvalOutput] | None = None,
                  description: str):
         self.config = config
         self.evaluate_fn = evaluate_fn

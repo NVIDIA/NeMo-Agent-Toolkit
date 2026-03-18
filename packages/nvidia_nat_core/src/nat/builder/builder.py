@@ -22,7 +22,6 @@ from contextvars import ContextVar
 from pathlib import Path
 
 from nat.authentication.interfaces import AuthProviderBase
-from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
@@ -71,15 +70,6 @@ if typing.TYPE_CHECKING:
     from nat.experimental.test_time_compute.models.strategy_base import StrategyBase
 
 _current_builder_context: ContextVar["Builder | None"] = ContextVar("current_builder", default=None)
-
-
-class UserManagerHolder:
-
-    def __init__(self, context: Context) -> None:
-        self._context = context
-
-    def get_id(self):
-        return self._context.user_manager.get_id()
 
 
 class Builder(ABC):
@@ -726,15 +716,6 @@ class Builder(ABC):
 
         Returns:
             The configuration for the TTC strategy
-        """
-        pass
-
-    @abstractmethod
-    def get_user_manager(self) -> UserManagerHolder:
-        """Get the user manager holder.
-
-        Returns:
-            The user manager holder instance
         """
         pass
 

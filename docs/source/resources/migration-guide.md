@@ -27,6 +27,150 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.6.0
+
+#### User Identity Resolution
+
+User identity is now resolved by a centralized `UserManager` component. The following changes apply:
+
+- **User IDs are now UUID v5 hashes.** Previously, user IDs were raw credential strings (cookie values, JWT claim values). They are now deterministic UUID v5 values derived from the credential. User IDs are opaque routing keys — no downstream code depends on a specific format.
+- **JWT claim precedence corrected to RFC 7519.** The previous precedence (`name > email > preferred_username > sub`) was non-standard. The new precedence is `sub > email > preferred_username` per [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519) and [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims). Users whose identity was previously resolved from the `name` claim will be assigned a new `user_id` based on `sub` after upgrade.
+- **`Security` model removed from WebSocket messages.** The `Security` Pydantic model and the `security` field on `WebSocketUserMessage` and `WebSocketUserInteractionResponseMessage` have been removed. User identity is now resolved via the `auth_message` flow or from connection headers. See [User Identity Resolution](../components/auth/user-identity.md) for details.
+#### Evaluator Package Split (Breaking)
+
+As part of dependency reduction, evaluator ownership is being moved out of `nvidia-nat-eval` and into framework-specific packages.
+
+- `trajectory` evaluator moved to `nvidia-nat-langchain`.
+- `tunable_rag_evaluator` moved to `nvidia-nat-langchain`.
+- `ragas` evaluator moved to `nvidia-nat-ragas`.
+- Performance evaluators moved to `nvidia-nat-profiler`:
+  - `avg_llm_latency`
+  - `avg_workflow_runtime`
+  - `avg_num_llm_calls`
+  - `avg_tokens_per_llm_end`
+- `nvidia-nat-eval` no longer includes a direct `ragas` dependency.
+- `swe_bench` evaluator has been removed (no replacement package in this release).
+
+This is a breaking change:
+- `nvidia-nat-eval` no longer owns these built-in evaluator implementations.
+- `nvidia-nat-langchain` now imports evaluator base contracts from `nvidia-nat-eval`.
+- If `nvidia-nat-langchain` is installed without `nvidia-nat-eval`, LangChain evaluator registration imports can fail.
+
+To migrate:
+- Install both packages when using these evaluators:
+  - `pip install nvidia-nat-eval nvidia-nat-langchain`
+- Install the RAGAS evaluator package when using `_type: ragas`:
+  - `pip install nvidia-nat-ragas`
+- Install the profiler package when using performance evaluators or profiling workflows:
+  - `pip install nvidia-nat-profiler`
+  - Note: the previous dependency group name `nvidia-nat-profiling` is now `nvidia-nat-profiler`.
+- Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`, `avg_llm_latency`, `avg_workflow_runtime`, `avg_num_llm_calls`, `avg_tokens_per_llm_end`).
+- Remove any `_type: swe_bench` evaluator entries from evaluation configurations.
+- If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
+
+#### Eval Exporter Callback Split
+
+Eval metric exporting now uses generic eval-callback hooks owned by `nvidia-nat-eval`, while provider-specific implementations live in provider packages.
+
+- Weave eval metric export callback now lives in `nvidia-nat-weave`.
+- `nvidia-nat-eval` no longer hard-couples directly to Weave internals for eval metric publishing.
+- If a telemetry exporter is configured but its eval callback provider package is missing, `nvidia-nat-eval` now logs a warning and continues evaluation without exporter publishing.
+
+To migrate:
+- Install the matching provider package for configured telemetry exporters (for Weave: `pip install nvidia-nat-weave`).
+- Keep existing telemetry exporter config names unchanged (for example `_type: weave`).
+
+#### Eval CLI Command Package Split
+
+CLI command ownership is now aligned to package domains:
+
+- `nat eval` is provided by `nvidia-nat-eval`.
+- `nat sizing` is provided by `nvidia-nat-profiler`.
+- `nat red-team` is provided by `nvidia-nat-security`.
+
+To migrate:
+- Install command-specific packages as needed:
+  - `pip install nvidia-nat-eval`
+  - `pip install nvidia-nat-profiler`
+  - `pip install nvidia-nat-security`
+
+#### Configuration Optimizer Package Extraction (Breaking)
+
+Optimizer ownership now lives in the optional `nvidia-nat-config-optimizer` package.
+
+This is a breaking change:
+- The `nat optimize` command is no longer owned by core and is only available when `nvidia-nat-config-optimizer` is installed.
+- Optimizer implementation modules moved from core paths into `nat.plugins.config_optimizer.*`.
+- The `nvidia-nat[optimizer]` extra has been renamed to `nvidia-nat[config-optimizer]`.
+
+To migrate:
+- Install config optimizer support when needed:
+  - `pip install "nvidia-nat[config-optimizer]"`
+  - `pip install nvidia-nat-config-optimizer`
+- Update optimizer imports:
+  - `nat.parameter_optimization.prompt_optimizer` => `nat.plugins.config_optimizer.prompts.ga_prompt_optimizer`
+  - `nat.parameter_optimization.parameter_optimizer` => `nat.plugins.config_optimizer.parameters.optimizer`
+  - `nat.parameter_optimization.optimizer_runtime` => `nat.plugins.config_optimizer.optimizer_runtime`
+- Keep optimizer callbacks at their core path:
+  - `nat.profiler.parameter_optimization.optimizer_callbacks`
+
+### v1.5.0
+
+#### Removing Old Aliases and Transitional Packages
+
+NVIDIA NeMo Agent Toolkit 1.2 changed the name and API. Compatibility aliases and transitional packages were provided to reduce development friction. Since three releases have passed, compatibility aliases and transitional packages are now removed.
+
+- `aiqtoolkit` transitional package is removed. Use `nvidia-nat`.
+- All AIQ compatibility aliases have been removed.
+- {py:mod}`aiq` module is removed. Use {py:mod}`nat` instead.
+- The `aiq` command is removed. Use `nat` instead.
+
+#### Packaging Restructure
+
+- NeMo Agent Toolkit adds support for new libraries, frameworks, and integrations. With these added subpackages, conflicting dependencies have arisen.
+- `nvidia-nat` is now a meta-package. All code has been moved into `nvidia-nat-core`
+- All prior meta-packages have been removed.
+  - `nvidia-nat-all` (no replacement, though `nvidia-nat[most]` extra does exist)
+  - `nvidia-nat-ingestion` (no replacement; examples directly use dependencies)
+  - `nvidia-nat-profiling` (use `nvidia-nat[profiling]`)
+
+#### Evaluation Package Split
+
+Evaluation and profiling implementations moved out of core into the `nvidia-nat-eval` package.
+
+To migrate:
+- Install evaluation support when needed:
+  - `pip install "nvidia-nat[eval]"`
+  - `pip install nvidia-nat-eval`
+- Install profiling support when needed:
+  - `pip install "nvidia-nat[profiling]"`
+  - `pip install "nvidia-nat-eval[profiling]"`
+- Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
+
+#### Import Path Changes
+
+For users migrating existing integrations, the primary import change is (old => new):
+
+- `nat.eval.*` => `nat.plugins.eval.*`
+- `nat.profiler.*` => `nat.plugins.eval.profiler.*` (except `nat.profiler.parameter_optimization.*`, which remains in core)
+- `nat.eval.runtime_event_subscriber.pull_intermediate` => `nat.builder.runtime_event_subscriber.pull_intermediate`
+
+For evaluation data models, prefer canonical core paths:
+- `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
+- `nat.data_models.evaluate_runtime` for `EvaluationRunConfig` / `EvaluationRunOutput`
+- `nat.data_models.token_usage.TokenUsageBaseModel` for token usage counters (replaces `nat.plugins.eval.profiler.callbacks.token_usage_base_model`)
+
+Internal module reorganization inside `nat.plugins.eval` is implementation detail and may change between releases.
+
+#### `nat.eval` Deprecation Shim
+
+Core provides a temporary compatibility shim for `nat.eval` imports.
+
+What to expect:
+- Importing from `nat.eval` emits a `UserWarning` that the path is deprecated.
+- The shim requires `nvidia-nat-eval` to be installed.
+- Update imports to externally supported `nat.plugins.eval.*` and `nat.data_models.*` paths now, because the shim will be removed in a future major release.
+
 ### v1.4.0
 
 #### Weave Trace Identifier Namespace

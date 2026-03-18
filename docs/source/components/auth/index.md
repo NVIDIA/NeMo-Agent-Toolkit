@@ -20,6 +20,7 @@ limitations under the License.
 ```{toctree}
 :titlesonly:
 
+User Identity Resolution <./user-identity.md>
 Authentication Provider API <./api-authentication.md>
 MCP Authentication <./mcp-auth/index.md>
 A2A Authentication <./a2a-auth.md>

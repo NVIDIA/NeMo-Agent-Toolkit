@@ -22,6 +22,9 @@ Tests the following:
 4. Cleanup of session managers
 """
 
+import typing
+from collections.abc import AsyncGenerator
+
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport
@@ -39,6 +42,9 @@ from nat.data_models.config import GeneralConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
+
+if typing.TYPE_CHECKING:
+    from fastapi import FastAPI
 
 
 # ============= Test Schemas =============
@@ -128,6 +134,32 @@ def create_per_user_workflow_config() -> Config:
                                       workflow=FastApiFrontEndConfig.EndpointBase(
                                           path="/counter", method="POST", description="Per-user counter endpoint"))
     return Config(general=GeneralConfig(front_end=front_end), workflow=PerUserCounterWorkflowConfig(initial_value=0))
+
+
+async def _create_managed_app(config: Config) -> AsyncGenerator["FastAPI"]:
+    """Helper to create a FastApiFrontEndPluginWorker and app with proper lifespan management."""
+    worker = FastApiFrontEndPluginWorker(config)
+    app = worker.build_app()
+
+    async with LifespanManager(app):
+        yield app
+        await worker.cleanup_session_managers()
+
+
+@pytest.fixture(name="app")
+async def app_fixture() -> AsyncGenerator["FastAPI"]:
+    """Fixture to create a FastApiFrontEndPluginWorker with shared workflow."""
+    config = create_shared_workflow_config()
+    async for app in _create_managed_app(config):
+        yield app
+
+
+@pytest.fixture(name="per_user_app")
+async def per_user_app_fixture() -> AsyncGenerator["FastAPI"]:
+    """Fixture to create a FastApiFrontEndPluginWorker with per-user workflow."""
+    config = create_per_user_workflow_config()
+    async for app in _create_managed_app(config):
+        yield app
 
 
 # ============= Tests =============
@@ -223,106 +255,83 @@ class TestSessionManagerCleanup:
 class TestSharedWorkflowEndpoint:
     """Tests for HTTP endpoints with shared workflow."""
 
-    async def test_post_endpoint_shared_workflow(self):
+    async def test_post_endpoint_shared_workflow(self, app: "FastAPI"):
         """Test POST endpoint with shared workflow."""
-        config = create_shared_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/generate", json={"message": "hello"})
 
-        # Use LifespanManager to properly trigger lifespan events (route registration)
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response = await client.post("/generate", json={"message": "hello"})
+            assert response.status_code == 200
+            data = response.json()
+            assert data["response"] == "echo: hello"
 
-                assert response.status_code == 200
-                data = response.json()
-                assert data["response"] == "echo: hello"
-
-    async def test_multiple_requests_shared_workflow(self):
+    async def test_multiple_requests_shared_workflow(self, app: "FastAPI"):
         """Test multiple requests share the same workflow."""
-        config = create_shared_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response1 = await client.post("/generate", json={"message": "first"})
+            response2 = await client.post("/generate", json={"message": "second"})
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response1 = await client.post("/generate", json={"message": "first"})
-                response2 = await client.post("/generate", json={"message": "second"})
-
-                assert response1.status_code == 200
-                assert response2.status_code == 200
-                assert response1.json()["response"] == "echo: first"
-                assert response2.json()["response"] == "echo: second"
+            assert response1.status_code == 200
+            assert response2.status_code == 200
+            assert response1.json()["response"] == "echo: first"
+            assert response2.json()["response"] == "echo: second"
 
 
 class TestPerUserWorkflowEndpoint:
     """Tests for HTTP endpoints with per-user workflow."""
 
-    async def test_post_endpoint_per_user_workflow(self):
+    async def test_post_endpoint_per_user_workflow(self, per_user_app: "FastAPI"):
         """Test POST endpoint with per-user workflow."""
-        config = create_per_user_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                # Set session cookie on client
-                client.cookies.set("nat-session", "user123")
-                response = await client.post("/counter", json={"action": "get"})
+        async with AsyncClient(transport=ASGITransport(app=per_user_app), base_url="http://test") as client:
+            # Set session cookie on client
+            client.cookies.set("nat-session", "user123")
+            response = await client.post("/counter", json={"action": "get"})
 
-                assert response.status_code == 200
-                data = response.json()
-                assert data["count"] == 0
+            assert response.status_code == 200
+            data = response.json()
+            assert data["count"] == 0
 
-    async def test_per_user_isolation(self):
+    async def test_per_user_isolation(self, per_user_app: "FastAPI"):
         """Test that different users have isolated state."""
-        config = create_per_user_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
 
-        async with LifespanManager(app):
-            # Use separate clients for different users to properly isolate cookies
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as alice_client:
-                alice_client.cookies.set("nat-session", "alice")
+        # Use separate clients for different users to properly isolate cookies
+        async with AsyncClient(transport=ASGITransport(app=per_user_app), base_url="http://test") as alice_client:
+            alice_client.cookies.set("nat-session", "alice")
 
-                async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as bob_client:
-                    bob_client.cookies.set("nat-session", "bob")
+            async with AsyncClient(transport=ASGITransport(app=per_user_app), base_url="http://test") as bob_client:
+                bob_client.cookies.set("nat-session", "bob")
 
-                    # User 1 increments counter twice
-                    await alice_client.post("/counter", json={"action": "increment"})
-                    response1 = await alice_client.post("/counter", json={"action": "increment"})
-                    assert response1.json()["count"] == 2
+                # User 1 increments counter twice
+                await alice_client.post("/counter", json={"action": "increment"})
+                response1 = await alice_client.post("/counter", json={"action": "increment"})
+                assert response1.json()["count"] == 2
 
-                    # User 2 should have fresh counter at 0
-                    response2 = await bob_client.post("/counter", json={"action": "get"})
-                    assert response2.json()["count"] == 0
+                # User 2 should have fresh counter at 0
+                response2 = await bob_client.post("/counter", json={"action": "get"})
+                assert response2.json()["count"] == 0
 
-                    # User 2 increments once
-                    response3 = await bob_client.post("/counter", json={"action": "increment"})
-                    assert response3.json()["count"] == 1
+                # User 2 increments once
+                response3 = await bob_client.post("/counter", json={"action": "increment"})
+                assert response3.json()["count"] == 1
 
-                    # User 1 counter should still be at 2
-                    response4 = await alice_client.post("/counter", json={"action": "get"})
-                    assert response4.json()["count"] == 2
+                # User 1 counter should still be at 2
+                response4 = await alice_client.post("/counter", json={"action": "get"})
+                assert response4.json()["count"] == 2
 
-    async def test_per_user_state_persists_across_requests(self):
+    async def test_per_user_state_persists_across_requests(self, per_user_app: "FastAPI"):
         """Test that per-user state persists across multiple requests."""
-        config = create_per_user_workflow_config()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                client.cookies.set("nat-session", "persistent_user")
+        async with AsyncClient(transport=ASGITransport(app=per_user_app), base_url="http://test") as client:
+            client.cookies.set("nat-session", "persistent_user")
 
-                # Increment 5 times
-                for i in range(5):
-                    response = await client.post("/counter", json={"action": "increment"})
-                    assert response.json()["count"] == i + 1
+            # Increment 5 times
+            for i in range(5):
+                response = await client.post("/counter", json={"action": "increment"})
+                assert response.json()["count"] == i + 1
 
-                # Final get should show 5
-                response = await client.post("/counter", json={"action": "get"})
-                assert response.json()["count"] == 5
+            # Final get should show 5
+            response = await client.post("/counter", json={"action": "get"})
+            assert response.json()["count"] == 5
 
 
 class TestSessionManagerSchemas:
@@ -378,120 +387,107 @@ def create_per_user_workflow_config_with_monitoring() -> Config:
 class TestPerUserMonitoringEndpoint:
     """Tests for the /monitor/users endpoint."""
 
-    async def test_monitor_endpoint_disabled_by_default(self):
+    @pytest.fixture(name="monitored_app")
+    async def monitored_app_fixture(self) -> AsyncGenerator["FastAPI"]:
+        """Fixture to create a FastApiFrontEndPluginWorker with per-user workflow."""
+        config = create_per_user_workflow_config_with_monitoring()
+        async for app in _create_managed_app(config):
+            yield app
+
+    async def test_monitor_endpoint_disabled_by_default(self, per_user_app: "FastAPI"):
         """Test that monitoring endpoint is not available when disabled."""
-        config = create_per_user_workflow_config()  # monitoring disabled by default
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
+        async with AsyncClient(transport=ASGITransport(app=per_user_app), base_url="http://test") as client:
+            response = await client.get("/monitor/users")
+            # Endpoint should not exist
+            assert response.status_code == 404
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response = await client.get("/monitor/users")
-                # Endpoint should not exist
-                assert response.status_code == 404
-
-    async def test_monitor_endpoint_enabled(self):
+    async def test_monitor_endpoint_enabled(self, monitored_app: "FastAPI"):
         """Test that monitoring endpoint is available when enabled."""
-        config = create_per_user_workflow_config_with_monitoring()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
+        async with AsyncClient(transport=ASGITransport(app=monitored_app), base_url="http://test") as client:
+            response = await client.get("/monitor/users")
+            assert response.status_code == 200
+            data = response.json()
+            assert "timestamp" in data
+            assert "total_active_users" in data
+            assert "users" in data
+            assert data["total_active_users"] == 0
+            assert data["users"] == []
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                response = await client.get("/monitor/users")
-                assert response.status_code == 200
-                data = response.json()
-                assert "timestamp" in data
-                assert "total_active_users" in data
-                assert "users" in data
-                assert data["total_active_users"] == 0
-                assert data["users"] == []
-
-    async def test_monitor_endpoint_shows_active_users(self):
+    async def test_monitor_endpoint_shows_active_users(self, monitored_app: "FastAPI"):
         """Test that monitoring endpoint shows metrics for active users."""
-        config = create_per_user_workflow_config_with_monitoring()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
+        async with AsyncClient(transport=ASGITransport(app=monitored_app), base_url="http://test") as client:
+            # Create some user activity first
+            client.cookies.set("nat-session", "monitor_test_user")
+            await client.post("/counter", json={"action": "increment"})
+            await client.post("/counter", json={"action": "increment"})
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                # Create some user activity first
-                client.cookies.set("nat-session", "monitor_test_user")
-                await client.post("/counter", json={"action": "increment"})
-                await client.post("/counter", json={"action": "increment"})
+            # Now check monitoring endpoint
+            response = await client.get("/monitor/users")
+            assert response.status_code == 200
+            data = response.json()
 
-                # Now check monitoring endpoint
-                response = await client.get("/monitor/users")
+            assert data["total_active_users"] == 1
+            assert len(data["users"]) == 1
+
+            user_metrics = data["users"][0]
+            assert user_metrics["user_id"]
+
+            # Check session metrics
+            assert "session" in user_metrics
+            assert user_metrics["session"]["ref_count"] >= 0
+
+            # Check request metrics
+            assert "requests" in user_metrics
+            assert user_metrics["requests"]["total_requests"] == 2
+
+        # Check memory metrics
+        assert "memory" in user_metrics
+        assert "per_user_functions_count" in user_metrics["memory"]
+
+    async def test_monitor_endpoint_filter_by_user_id(self, monitored_app: "FastAPI"):
+        """Test that monitoring endpoint can filter by user_id."""
+
+        # Create activity for two users
+        async with AsyncClient(transport=ASGITransport(app=monitored_app), base_url="http://test") as alice_client:
+            alice_client.cookies.set("nat-session", "alice")
+            await alice_client.post("/counter", json={"action": "increment"})
+
+            # Discover alice's resolved user_id from the monitor
+            all_resp = await alice_client.get("/monitor/users")
+            alice_uid: str = all_resp.json()["users"][0]["user_id"]
+
+            async with AsyncClient(transport=ASGITransport(app=monitored_app), base_url="http://test") as bob_client:
+                bob_client.cookies.set("nat-session", "bob")
+                await bob_client.post("/counter", json={"action": "increment"})
+
+                # Filter for alice only
+                response = await alice_client.get("/monitor/users", params={"user_id": alice_uid})
                 assert response.status_code == 200
                 data = response.json()
 
                 assert data["total_active_users"] == 1
                 assert len(data["users"]) == 1
+                assert data["users"][0]["user_id"] == alice_uid
 
-                user_metrics = data["users"][0]
-                assert user_metrics["user_id"] == "monitor_test_user"
+                # Filter for non-existent user
+                response = await alice_client.get("/monitor/users", params={"user_id": "nonexistent"})
+                assert response.status_code == 200
+                data = response.json()
+                assert data["total_active_users"] == 0
+                assert data["users"] == []
 
-                # Check session metrics
-                assert "session" in user_metrics
-                assert user_metrics["session"]["ref_count"] >= 0
-
-                # Check request metrics
-                assert "requests" in user_metrics
-                assert user_metrics["requests"]["total_requests"] == 2
-
-                # Check memory metrics
-                assert "memory" in user_metrics
-                assert "per_user_functions_count" in user_metrics["memory"]
-
-    async def test_monitor_endpoint_filter_by_user_id(self):
-        """Test that monitoring endpoint can filter by user_id."""
-        config = create_per_user_workflow_config_with_monitoring()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
-
-        async with LifespanManager(app):
-            # Create activity for two users
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as alice_client:
-                alice_client.cookies.set("nat-session", "alice")
-                await alice_client.post("/counter", json={"action": "increment"})
-
-                async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as bob_client:
-                    bob_client.cookies.set("nat-session", "bob")
-                    await bob_client.post("/counter", json={"action": "increment"})
-
-                    # Filter for alice only
-                    response = await alice_client.get("/monitor/users", params={"user_id": "alice"})
-                    assert response.status_code == 200
-                    data = response.json()
-
-                    assert data["total_active_users"] == 1
-                    assert len(data["users"]) == 1
-                    assert data["users"][0]["user_id"] == "alice"
-
-                    # Filter for non-existent user
-                    response = await alice_client.get("/monitor/users", params={"user_id": "nonexistent"})
-                    assert response.status_code == 200
-                    data = response.json()
-                    assert data["total_active_users"] == 0
-                    assert data["users"] == []
-
-    async def test_monitor_endpoint_tracks_errors(self):
+    async def test_monitor_endpoint_tracks_errors(self, monitored_app: "FastAPI"):
         """Test that monitoring endpoint tracks error counts."""
         # This test would require a workflow that can produce errors
         # For now, we just verify the error_count field exists
-        config = create_per_user_workflow_config_with_monitoring()
-        worker = FastApiFrontEndPluginWorker(config)
-        app = worker.build_app()
+        async with AsyncClient(transport=ASGITransport(app=monitored_app), base_url="http://test") as client:
+            client.cookies.set("nat-session", "error_test_user")
+            await client.post("/counter", json={"action": "get"})
 
-        async with LifespanManager(app):
-            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-                client.cookies.set("nat-session", "error_test_user")
-                await client.post("/counter", json={"action": "get"})
+            response = await client.get("/monitor/users")
+            data = response.json()
 
-                response = await client.get("/monitor/users")
-                data = response.json()
-
-                assert len(data["users"]) == 1
-                assert "error_count" in data["users"][0]["requests"]
-                # No errors in this simple case
-                assert data["users"][0]["requests"]["error_count"] == 0
+            assert len(data["users"]) == 1
+            assert "error_count" in data["users"][0]["requests"]
+            # No errors in this simple case
+            assert data["users"][0]["requests"]["error_count"] == 0

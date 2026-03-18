@@ -26,6 +26,7 @@ from nat.cli.register_workflow import register_embedder_provider
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.ssl_verification_mixin import SSLVerificationMixin
 
 allowed_truncate_values = ["NONE", "START", "END"]
 
@@ -39,7 +40,7 @@ def option_in_allowed_values(v):
 TruncationOption = typing.Annotated[str, AfterValidator(option_in_allowed_values)]
 
 
-class NIMEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="nim"):
+class NIMEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, SSLVerificationMixin, name="nim"):
     """A NVIDIA Inference Microservice (NIM) embedder provider to be used with an embedder client."""
 
     api_key: OptionalSecretStr = Field(default=None, description="NVIDIA API key to interact with hosted NIM.")
@@ -50,6 +51,7 @@ class NIMEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="nim"):
     truncate: TruncationOption = Field(default="NONE",
                                        description=("The truncation strategy if the input on the "
                                                     "server side if it's too large."))
+    dimensions: int | None = Field(default=None, description="Embedding output dimensions.")
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
 

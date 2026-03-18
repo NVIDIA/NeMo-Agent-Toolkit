@@ -26,30 +26,33 @@ The NeMo Agent Toolkit uses a flexible, plugin-based observability system that p
 
 These features enable developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
 
-
-### Compatibility with Previous Versions
-As of v1.2, the span exporter exports attributes names prefixed with `nat` by default. In prior releases the attribute names were prefixed with `aiq`, to retain compatibility the `NAT_SPAN_PREFIX` environment variable can be set to `aiq`:
-```bash
-export NAT_SPAN_PREFIX=aiq
-```
-
 ## Installation
 
 The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras.
 
-If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands:
+If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
 # Install specific telemetry extras
-uv pip install -e '.[data-flywheel]'
-uv pip install -e '.[opentelemetry]'
-uv pip install -e '.[phoenix]'
-uv pip install -e '.[weave]'
+uv pip install -e ".[data-flywheel]"
+uv pip install -e ".[opentelemetry]"
+uv pip install -e ".[phoenix]"
+uv pip install -e ".[weave]"
 # Note: conflicts with .[strands] and .[adk]
-uv pip install -e '.[ragaai]'
+uv pip install -e ".[ragaai]"
 ```
 
-If you have not installed the NeMo Agent Toolkit from source, you can install package extras with the following commands:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 # Install specific telemetry extras
@@ -60,6 +63,11 @@ uv pip install "nvidia-nat[weave]"
 # Note: conflicts with nvidia-nat[strands] and nvidia-nat[adk]
 uv pip install "nvidia-nat[ragaai]"
 ```
+
+:::
+
+::::
+
 
 ## Available Tracing Exporters
 
@@ -73,7 +81,7 @@ The following table lists each exporter with its supported features and configur
 | [Dynatrace](https://dynatrace.com/) | [Observing with Dynatrace](?provider=Dynatrace#provider-integration-guides){.external} | Logging, Tracing |
 | [Galileo](https://galileo.ai/) | [Observing with Galileo](?provider=Galileo#provider-integration-guides){.external} | Logging, Tracing |
 | [Langfuse](https://langfuse.com/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
-| [LangSmith](https://www.langchain.com/langsmith) | Refer to the `examples/observability/simple_calculator_observability` example for usage details| Logging, Tracing |
+| [LangSmith](https://www.langchain.com/langsmith) | [Observing with LangSmith](?provider=LangSmith#provider-integration-guides){.external} | Logging, Tracing, Evaluation Metrics |
 | [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/) | [Observing with OTel Collector](?provider=OTel-collector#provider-integration-guides){.external} | Logging, Tracing |
 | [Patronus](https://www.patronus.ai/) | Refer to the `examples/observability/simple_calculator_observability` example for usage details | Logging, Tracing |
 | [Phoenix](https://phoenix.arize.com/) | [Observing with Phoenix](?provider=Phoenix#provider-integration-guides){.external} | Logging, Tracing |
@@ -177,8 +185,8 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 #### Integration Components
 
-- **{py:class}`nat.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
-- **{py:class}`~nat.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
+- **{py:class}`nat.plugins.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
+- **{py:class}`~nat.plugins.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 
@@ -224,6 +232,13 @@ For complete information about developing and integrating custom telemetry expor
 
   :::
 
+  :::{tab-item} LangSmith
+  :sync: LangSmith
+
+    :::{include} ./observe-workflow-with-langsmith.md
+
+  :::
+
   :::{tab-item} OTel Collector
   :sync: OTel-collector
 
@@ -247,3 +262,60 @@ For complete information about developing and integrating custom telemetry expor
 
 ::::
 
+## Cross-Workflow Observability
+
+When one workflow invokes another (for example, by calling a remote workflow over HTTP or by running a child workflow programmatically), you can link the trace of the child workflow to the parent so that observability backends show a single, connected tree instead of separate traces.
+
+### Specifying Parent When Running a Workflow Programmatically
+
+If you run a workflow from code using a session, pass `parent_id` and `parent_name` into `session.run()`. The toolkit uses these to set the root of the intermediate steps of the child workflow so the first step has the correct parent.
+
+```python
+async with session_manager.session() as session:
+    async with session.run(
+        prompt,
+        parent_id="parent-step-uuid",
+        parent_name="Caller Workflow",
+    ) as runner:
+        result = await runner.result(to_type=str)
+```
+
+- **`parent_id`**: The step ID of the parent (for example, the current workflow step or span that is invoking the child). The root workflow step of the child run is emitted with this as its parent.
+- **`parent_name`**: Optional display name for the parent (for example, the workflow or function name). The function ancestry of the root uses this as the parent name for observability.
+
+### HTTP Headers When Triggering a Workflow
+
+When a workflow is triggered over HTTP (such as a POST to `/generate/full`), the server reads request headers to set the parent for that run. If present, they are applied before the workflow starts so the root step has the correct parent.
+
+| Header | Description |
+| ------ | ----------- |
+| `workflow-parent-id` | Step ID of the parent. The root workflow step is emitted with this as its parent. |
+| `workflow-parent-name` | Optional display name for the parent (workflow or function name). |
+
+Example with curl:
+
+```bash
+curl -X POST http://localhost:8000/generate/full \
+  -H "workflow-parent-id: <parent-step-id>" \
+  -H "workflow-parent-name: Parent Workflow Name" \
+  -H "Content-Type: application/json" \
+  -d '{"input_message": "..."}'
+```
+
+Use these headers when the caller (orchestrator, API gateway, or another workflow) has a step or span ID and wants the child workflow to appear under that step in traces.
+
+### Replaying Intermediate Steps from a Remote Workflow
+
+When your workflow calls a remote workflow (for example, by calling its `/generate/full` endpoint) and receives intermediate step data in the response, you can push those steps into the observability stream of the current run. That way, the steps of the remote workflow appear as part of the same trace tree.
+
+Use the {py:meth}`~nat.builder.intermediate_step_manager.IntermediateStepManager.push_intermediate_steps` method from any code that runs inside the current workflow context. Pass the list of intermediate steps (for example, parsed from the remote response); they are injected into the event stream of the current run. The parent of the replayed root step is determined by how the remote was invoked: set `workflow-parent-id` and `workflow-parent-name` headers when calling the remote, or use `session.run(parent_id=..., parent_name=...)` when running a child workflow programmatically, so the trace tree links correctly.
+
+```python
+from nat.builder.context import Context
+
+# After calling a remote workflow (for example, /generate/full) and parsing
+# the response into a list of IntermediateStep:
+Context.get().intermediate_step_manager.push_intermediate_steps(remote_intermediate_steps)
+```
+
+This is useful when you call a remote workflow and want its steps to appear under the trace of the current workflow in your observability backend, so you get one connected tree for the full request.

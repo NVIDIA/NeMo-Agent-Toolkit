@@ -39,22 +39,6 @@ from nat.retriever.models import RetrieverOutput
 
 
 @pytest.fixture
-def mock_builder():
-    """Create a mock builder with all required methods."""
-    builder = Mock()
-    builder._functions = {}
-    builder.get_llm = AsyncMock()
-    builder.get_embedder = AsyncMock()
-    builder.get_retriever = AsyncMock()
-    builder.get_memory_client = AsyncMock()
-    builder.get_object_store_client = AsyncMock()
-    builder.get_auth_provider = AsyncMock()
-    builder.get_function = AsyncMock()
-    builder.get_function_config = Mock()
-    return builder
-
-
-@pytest.fixture
 def mock_function():
     """Create a mock NAT Function instance."""
     func = Mock(spec=Function)
@@ -500,3 +484,28 @@ def test_unregister_component_method_raises_error_if_not_registered():
 
     with pytest.raises(ValueError, match=r"'fake__method' is not registered"):
         middleware.unregister(fake_registered)
+
+
+# ==================== WorkflowBuilder Integration Tests ====================
+
+
+async def test_dynamic_middleware_patches_workflow_builder():
+    """DynamicFunctionMiddleware patches persist on the builder used by the workflow."""
+    from nat.builder.builder import Builder
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.cli.register_workflow import register_middleware
+
+    class _PatchTestConfig(DynamicMiddlewareConfig, name="_patch_regression_test"):
+        pass
+
+    @register_middleware(config_type=_PatchTestConfig)
+    async def _patch_test_middleware(config: _PatchTestConfig, builder: Builder):
+        yield DynamicFunctionMiddleware(config=config, builder=builder)
+
+    config = _PatchTestConfig(register_llms=True)
+
+    async with WorkflowBuilder() as builder:
+        middleware = await builder.add_middleware("patch_test", config)
+
+        assert isinstance(middleware, DynamicFunctionMiddleware)
+        assert builder.get_llm == middleware._discover_and_register_llm

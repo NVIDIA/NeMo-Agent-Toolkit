@@ -123,6 +123,18 @@ def _stop_process(proc: subprocess.Popen) -> None:
     show_default=True,
     help="Minimum seconds between restarts after a reload.",
 )
+@click.option(
+    "--reload-include-glob",
+    type=str,
+    multiple=True,
+    help="Glob patterns to include for reload triggers (repeatable).",
+)
+@click.option(
+    "--reload-exclude-glob",
+    type=str,
+    multiple=True,
+    help="Glob patterns to exclude from reload triggers (repeatable).",
+)
 @click.pass_context
 def fastmcp_server_dev(
     ctx: click.Context,
@@ -132,6 +144,8 @@ def fastmcp_server_dev(
     watch_path: tuple[Path, ...],
     reload_debounce: int,
     reload_cooldown: float,
+    reload_include_glob: tuple[str, ...],
+    reload_exclude_glob: tuple[str, ...],
 ) -> None:
     """Developer-focused FastMCP server runner with reload support."""
     base_cmd = _resolve_nat_cli_command() + ["fastmcp", "serve", "--config_file", str(config_file)]
@@ -158,7 +172,10 @@ def fastmcp_server_dev(
     cooldown_seconds = max(0.0, reload_cooldown)
     try:
         debounce_ms = max(0, reload_debounce)
-        for _changes in iter_file_changes(watch_paths, debounce_ms=debounce_ms):
+        for _changes in iter_file_changes(watch_paths,
+                                          debounce_ms=debounce_ms,
+                                          include_globs=reload_include_glob,
+                                          exclude_globs=reload_exclude_glob):
             if time.monotonic() - last_restart_at < cooldown_seconds:
                 continue
             click.echo("Change detected. Restarting FastMCP server...")

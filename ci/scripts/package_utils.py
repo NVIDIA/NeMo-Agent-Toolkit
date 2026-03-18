@@ -59,4 +59,10 @@ def pypi_license(name: str, version: str | None = None) -> str:
     if (lic := (info.get("license") or "").strip()):
         candidates.append(lic)
 
-    return typing.cast(str, min(candidates, key=len, default="(License not found)"))
+    text = typing.cast(str, min(candidates, key=len, default="(License not found)"))
+
+    # Escape dangerous characters
+    dangerous_chars = ('=', '+', '-', '@', '\t', '\r')
+    if text.startswith(dangerous_chars):
+        text = f"'{text}"
+    return text

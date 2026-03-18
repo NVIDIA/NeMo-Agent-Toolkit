@@ -27,6 +27,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import _handle_litellm_verify_ssl  # crewAI uses litellm under the hood
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -96,13 +97,28 @@ async def azure_openai_crewai(llm_config: AzureOpenAIModelConfig, _builder: Buil
     if model is None:
         raise ValueError("Azure model deployment is not set")
 
+    config_dict = llm_config.model_dump(
+        exclude={
+            "type",
+            "api_key",
+            "azure_endpoint",
+            "azure_deployment",
+            "thinking",
+            "api_type",
+            "api_version",
+            "request_timeout"
+        },
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
+    if llm_config.request_timeout is not None:
+        config_dict["timeout"] = llm_config.request_timeout
+
+    _handle_litellm_verify_ssl(llm_config)
+
     client = LLM(
-        **llm_config.model_dump(
-            exclude={"type", "api_key", "azure_endpoint", "azure_deployment", "thinking", "api_type", "api_version"},
-            by_alias=True,
-            exclude_none=True,
-            exclude_unset=True,
-        ),
+        **config_dict,
         model=model,
         api_version=llm_config.api_version,
     )
@@ -122,6 +138,8 @@ async def nim_crewai(llm_config: NIMModelConfig, _builder: Builder):
         nvidia_api_key = os.getenv("NVIDIA_API_KEY")
         if nvidia_api_key is not None:
             os.environ["NVIDIA_NIM_API_KEY"] = nvidia_api_key
+
+    _handle_litellm_verify_ssl(llm_config)
 
     client = LLM(
         **llm_config.model_dump(
@@ -144,16 +162,20 @@ async def openai_crewai(llm_config: OpenAIModelConfig, _builder: Builder):
     validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
 
     config_dict = llm_config.model_dump(
-        exclude={"type", "thinking", "api_type", "api_key", "base_url"},
+        exclude={"type", "thinking", "api_type", "api_key", "base_url", "request_timeout"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
     )
 
+    _handle_litellm_verify_ssl(llm_config)
+
     if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
         config_dict["api_key"] = api_key
     if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
         config_dict["base_url"] = base_url
+    if llm_config.request_timeout is not None:
+        config_dict["timeout"] = llm_config.request_timeout
 
     client = LLM(**config_dict)
 
@@ -166,6 +188,8 @@ async def litellm_crewai(llm_config: LiteLlmModelConfig, _builder: Builder):
     from crewai import LLM
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.CREWAI)
+
+    _handle_litellm_verify_ssl(llm_config)
 
     client = LLM(**llm_config.model_dump(
         exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))

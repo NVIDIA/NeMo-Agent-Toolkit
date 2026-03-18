@@ -32,7 +32,6 @@ from nat.builder.context import Context
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.llm.dynamo_llm import DynamoPrefixContext
-from nat.llm.dynamo_llm import LLMHeaderPrefix
 from nat.llm.dynamo_llm import _DynamoTransport
 from nat.profiler.prediction_trie import load_prediction_trie
 from nat.profiler.prediction_trie import save_prediction_trie
@@ -58,10 +57,10 @@ def create_test_trie() -> PredictionTrieNode:
         output_tokens=PredictionMetrics(sample_count=10, mean=100.0, p50=90.0, p90=150.0, p95=180.0),
     )
 
-    # Agent at call 3: 0 remaining
+    # Agent at call 3: last call (1 remaining including this one, no further requests expected)
     call_3_prediction = LLMCallPrediction(
-        remaining_calls=PredictionMetrics(sample_count=10, mean=0.0, p50=0.0, p90=0.0, p95=0.0),
-        interarrival_ms=PredictionMetrics(sample_count=10, mean=0.0, p50=0.0, p90=0.0, p95=0.0),
+        remaining_calls=PredictionMetrics(sample_count=10, mean=1.0, p50=1.0, p90=1.0, p95=1.0),
+        interarrival_ms=PredictionMetrics(sample_count=10, mean=100.0, p50=100.0, p90=100.0, p95=100.0),
         output_tokens=PredictionMetrics(sample_count=10, mean=80.0, p50=75.0, p90=120.0, p95=140.0),
     )
 
@@ -111,14 +110,13 @@ async def test_e2e_prediction_headers_injected_correctly():
         mock_transport = MagicMock()
         mock_transport.handle_async_request = AsyncMock(return_value=mock_response)
 
-        # Create transport with prediction lookup (default use_raw_values=True)
+        # Create transport with prediction lookup
         transport = _DynamoTransport(
             transport=mock_transport,
             total_requests=10,
             osl=512,
             iat=250,
             prediction_lookup=lookup,
-            disable_headers=False,
         )
 
         ctx = Context.get()
@@ -132,6 +130,8 @@ async def test_e2e_prediction_headers_injected_correctly():
 
         with ctx.push_active_function("my_workflow", input_data=None):
             with ctx.push_active_function("react_agent", input_data=None):
+                import json
+
                 # Simulate first LLM call
                 step_manager.push_intermediate_step(
                     IntermediateStepPayload(
@@ -144,12 +144,12 @@ async def test_e2e_prediction_headers_injected_correctly():
                 await transport.handle_async_request(request1)
 
                 modified_request1 = mock_transport.handle_async_request.call_args[0][0]
-                prefix = f"{LLMHeaderPrefix.DYNAMO}"
+                hints1 = json.loads(modified_request1.content)["nvext"]["agent_hints"]
 
                 # Call 1 raw predictions: remaining_calls.mean=2.0, output_tokens.p90=200, interarrival_ms.mean=500
-                assert modified_request1.headers[f"{prefix}-total-requests"] == "2"
-                assert modified_request1.headers[f"{prefix}-osl"] == "200"
-                assert modified_request1.headers[f"{prefix}-iat"] == "500"
+                assert hints1["total_requests"] == 2
+                assert hints1["osl"] == 200
+                assert hints1["iat"] == 500
 
                 # Simulate second LLM call
                 step_manager.push_intermediate_step(
@@ -163,11 +163,12 @@ async def test_e2e_prediction_headers_injected_correctly():
                 await transport.handle_async_request(request2)
 
                 modified_request2 = mock_transport.handle_async_request.call_args[0][0]
+                hints2 = json.loads(modified_request2.content)["nvext"]["agent_hints"]
 
                 # Call 2 raw predictions: remaining_calls.mean=1.0, output_tokens.p90=150, interarrival_ms.mean=300
-                assert modified_request2.headers[f"{prefix}-total-requests"] == "1"
-                assert modified_request2.headers[f"{prefix}-osl"] == "150"
-                assert modified_request2.headers[f"{prefix}-iat"] == "300"
+                assert hints2["total_requests"] == 1
+                assert hints2["osl"] == 150
+                assert hints2["iat"] == 300
 
                 # Simulate third LLM call
                 step_manager.push_intermediate_step(
@@ -181,10 +182,11 @@ async def test_e2e_prediction_headers_injected_correctly():
                 await transport.handle_async_request(request3)
 
                 modified_request3 = mock_transport.handle_async_request.call_args[0][0]
+                hints3 = json.loads(modified_request3.content)["nvext"]["agent_hints"]
 
-                # Call 3 raw predictions: remaining_calls.mean=0.0, output_tokens.p90=120, interarrival_ms.mean=0
-                assert modified_request3.headers[f"{prefix}-total-requests"] == "0"
-                assert modified_request3.headers[f"{prefix}-osl"] == "120"
+                # Call 3 raw predictions: remaining_calls.mean=1.0, output_tokens.p90=120
+                assert hints3["total_requests"] == 1
+                assert hints3["osl"] == 120
 
         DynamoPrefixContext.clear()
 
@@ -205,7 +207,6 @@ async def test_e2e_fallback_to_root():
         osl=512,
         iat=250,
         prediction_lookup=lookup,
-        disable_headers=False,
     )
 
     ctx = Context.get()
@@ -218,6 +219,8 @@ async def test_e2e_fallback_to_root():
     DynamoPrefixContext.set("e2e-fallback")
 
     with ctx.push_active_function("unknown_workflow", input_data=None):
+        import json
+
         step_manager.push_intermediate_step(
             IntermediateStepPayload(
                 UUID="llm-unknown",
@@ -229,14 +232,13 @@ async def test_e2e_fallback_to_root():
         await transport.handle_async_request(request)
 
         modified_request = mock_transport.handle_async_request.call_args[0][0]
-        prefix = f"{LLMHeaderPrefix.DYNAMO}"
+        hints = json.loads(modified_request.content)["nvext"]["agent_hints"]
 
         # Should fall back to root aggregated predictions (raw values)
         # remaining_calls.mean=1.0, output_tokens.p90=160, interarrival_ms.mean=400
-        assert f"{prefix}-total-requests" in modified_request.headers
-        assert modified_request.headers[f"{prefix}-total-requests"] == "1"
-        assert modified_request.headers[f"{prefix}-osl"] == "160"
-        assert modified_request.headers[f"{prefix}-iat"] == "400"
+        assert hints["total_requests"] == 1
+        assert hints["osl"] == 160
+        assert hints["iat"] == 400
 
     DynamoPrefixContext.clear()
 
@@ -257,7 +259,6 @@ async def test_e2e_multiple_calls_in_same_context():
         osl=512,
         iat=250,
         prediction_lookup=lookup,
-        disable_headers=False,
     )
 
     ctx = Context.get()
@@ -271,6 +272,8 @@ async def test_e2e_multiple_calls_in_same_context():
 
     with ctx.push_active_function("my_workflow", input_data=None):
         with ctx.push_active_function("react_agent", input_data=None):
+            import json
+
             # First LLM call in this context
             step_manager.push_intermediate_step(
                 IntermediateStepPayload(
@@ -283,10 +286,10 @@ async def test_e2e_multiple_calls_in_same_context():
             await transport.handle_async_request(request1)
 
             modified_request1 = mock_transport.handle_async_request.call_args[0][0]
-            prefix = f"{LLMHeaderPrefix.DYNAMO}"
+            hints1 = json.loads(modified_request1.content)["nvext"]["agent_hints"]
 
             # First call should use call_index=1 predictions
-            assert modified_request1.headers[f"{prefix}-total-requests"] == "2"
+            assert hints1["total_requests"] == 2
 
             # Second LLM call in the SAME context
             step_manager.push_intermediate_step(
@@ -300,9 +303,10 @@ async def test_e2e_multiple_calls_in_same_context():
             await transport.handle_async_request(request2)
 
             modified_request2 = mock_transport.handle_async_request.call_args[0][0]
+            hints2 = json.loads(modified_request2.content)["nvext"]["agent_hints"]
 
             # Second call should use call_index=2 predictions
-            assert modified_request2.headers[f"{prefix}-total-requests"] == "1"
+            assert hints2["total_requests"] == 1
 
             # Third LLM call in the SAME context
             step_manager.push_intermediate_step(
@@ -316,8 +320,9 @@ async def test_e2e_multiple_calls_in_same_context():
             await transport.handle_async_request(request3)
 
             modified_request3 = mock_transport.handle_async_request.call_args[0][0]
+            hints3 = json.loads(modified_request3.content)["nvext"]["agent_hints"]
 
-            # Third call should use call_index=3 predictions
-            assert modified_request3.headers[f"{prefix}-total-requests"] == "0"
+            # Third call should use call_index=3 predictions (remaining_calls.mean=1)
+            assert hints3["total_requests"] == 1
 
     DynamoPrefixContext.clear()

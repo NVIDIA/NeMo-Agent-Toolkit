@@ -49,7 +49,7 @@ Currently this agent supports evaluation exclusively for the [Galileo Agent Lead
 ### Software Requirements
 
 > [!WARNING]
-> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/getting-started/support-matrix) for full details.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/latest/resources/support-matrix) for full details.
 >
 > **Supported Platforms:**
 > - Ubuntu 22.04 / 24.04 (x86_64)
@@ -178,7 +178,7 @@ See [Dynamo Setup Guide](../../../external/dynamo/README.md) for detailed config
 <!-- path-check-skip-begin -->
 ```bash
 cd ../../examples/dynamo_integration
-export HF_TOKEN=<your_huggingface_token>
+export HF_TOKEN=your_huggingface_token
 
 python scripts/download_agent_leaderboard_v2.py --domains banking
 ```

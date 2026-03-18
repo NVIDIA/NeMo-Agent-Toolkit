@@ -529,6 +529,43 @@ async def test_connection_established_flag():
     assert client._connection_established is False
 
 
+async def test_is_connected_lifecycle():
+    """Test that is_connected reflects the full client lifecycle."""
+    client = MockMCPClient(transport="streamable-http")
+
+    assert client.is_connected is False
+
+    async with client:
+        assert client.is_connected is True
+
+    assert client.is_connected is False
+
+
+async def test_is_connected_false_after_reconnect_failure():
+    """Test that is_connected is False when reconnect exhausts all attempts."""
+    client = MockMCPClient(
+        transport="streamable-http",
+        reconnect_enabled=True,
+        reconnect_max_attempts=1,
+        reconnect_initial_backoff=0.01,
+        reconnect_max_backoff=0.02,
+    )
+
+    client.connect_should_fail = True
+    client.connect_failure_count = 2
+
+    async def always_fail():
+        raise ConnectionError("Always fails")
+
+    client.list_tools_side_effect = always_fail
+
+    async with client:
+        assert client.is_connected is True
+        with pytest.raises(MCPConnectionError):
+            await client.get_tools()
+        assert client.is_connected is False
+
+
 class TestMCPToolClient:
     """Test the MCPToolClient basic functionality."""
 

@@ -33,11 +33,12 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[langchain,llama-index,mcp,profiling,test] == {version}",
+  "nvidia-nat[langchain,llama-index,mcp,profiler,ragas,test] == {version}",
   "nat_alert_triage_agent",
   "nat_simple_calculator",
   "ipython~=8.31",
   "ipykernel",
+  "nbclient~=0.10",
   "python-dotenv[cli]~=1.1.1",
 ]
 

@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""ABC for parameter optimizers."""
+
+from abc import ABC
+from abc import abstractmethod
+
+from nat.data_models.config import Config
+from nat.data_models.optimizable import SearchSpace
+from nat.data_models.optimizer import OptimizerConfig
+from nat.data_models.optimizer import OptimizerRunConfig
+
+
+class BaseParameterOptimizer(ABC):
+    """Interface that all parameter optimization strategies must implement.
+
+    Parameter optimizers run first in the optimization pipeline. They receive
+    the original ``base_cfg`` and return a new config with the best numeric
+    parameters applied. Implementations may also return a tuple
+    ``(Config, dict, int)`` for ``(tuned_cfg, best_params, n_trials)``.
+
+    Unlike :class:`~nat.plugins.config_optimizer.prompts.base.BasePromptOptimizer`,
+    this interface returns a ``Config`` (or tuple including it). The config
+    is not mutated; a new instance is produced with suggested values applied.
+    """
+
+    @abstractmethod
+    async def run(
+        self,
+        *,
+        base_cfg: Config,
+        full_space: dict[str, SearchSpace],
+        optimizer_config: OptimizerConfig,
+        opt_run_config: OptimizerRunConfig,
+    ) -> Config:
+        """Run parameter optimization and return the tuned config (or tuple)."""
+        ...

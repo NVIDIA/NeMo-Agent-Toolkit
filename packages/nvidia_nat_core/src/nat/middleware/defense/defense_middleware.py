@@ -32,6 +32,7 @@ from pydantic import Field
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
+from nat.middleware.common import TargetLocation
 from nat.middleware.function_middleware import FunctionMiddleware
 
 logger = logging.getLogger(__name__)
@@ -77,11 +78,8 @@ class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
         "If None, defense applies to all functions. "
         "Examples: 'my_calculator', 'my_calculator.divide', 'llm_agent.generate'")
 
-    target_location: Literal["input", "output"] = Field(
-        default="output",
-        description=("Whether to analyze function input or output. "
-                     "'output' analyzes after function call, 'input' analyzes before function call. "
-                     "Not all defense types support both locations."))
+    target_location: TargetLocation = Field(default=TargetLocation.OUTPUT,
+                                            description="Whether to analyze function input or output.")
 
     target_field: str | None = Field(
         default=None,
@@ -103,7 +101,7 @@ class DefenseMiddleware(FunctionMiddleware):
 
     This base class provides:
 
-    * Common configuration fields (action, check_input, check_output, llm_wrapper_type)
+    * Common configuration fields (action, target_location, llm_wrapper_type)
     * Helper methods for LLM loading (for LLM-based defenses)
     * Access to builder for any resources needed
 

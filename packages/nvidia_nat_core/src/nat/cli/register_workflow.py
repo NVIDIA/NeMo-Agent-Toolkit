@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Callable
 from contextlib import asynccontextmanager
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -46,6 +48,8 @@ from nat.cli.type_registry import MiddlewareBuildCallableT
 from nat.cli.type_registry import MiddlewareRegisteredCallableT
 from nat.cli.type_registry import ObjectStoreBuildCallableT
 from nat.cli.type_registry import ObjectStoreRegisteredCallableT
+from nat.cli.type_registry import OptimizerBuildCallableT
+from nat.cli.type_registry import OptimizerRegisteredCallableT
 from nat.cli.type_registry import RegisteredLoggingMethod
 from nat.cli.type_registry import RegisteredTelemetryExporter
 from nat.cli.type_registry import RegisteredToolWrapper
@@ -83,6 +87,7 @@ from nat.data_models.llm import LLMBaseConfigT
 from nat.data_models.memory import MemoryBaseConfigT
 from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfigT
+from nat.data_models.optimizer import OptimizerStrategyBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfigT
 from nat.data_models.ttc_strategy import TTCStrategyBaseConfigT
@@ -519,6 +524,36 @@ def register_evaluator(config_type: type[EvaluatorBaseConfigT]):
     return register_evaluator_inner
 
 
+def register_optimizer(config_type: type[OptimizerStrategyBaseConfigT]):
+    """Register an optimizer strategy for a given config type.
+
+    The decorated function must be an async generator that yields a runner
+    with an async run() method. The runtime resolves the strategy from
+    cfg.optimizer.numeric or cfg.optimizer.prompt type.
+    """
+
+    def register_optimizer_inner(
+        fn: OptimizerBuildCallableT[OptimizerStrategyBaseConfigT],
+    ) -> OptimizerRegisteredCallableT[OptimizerStrategyBaseConfigT]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredOptimizerInfo
+
+        context_manager_fn = asynccontextmanager(fn)
+
+        discovery_metadata = DiscoveryMetadata.from_config_type(config_type=config_type,
+                                                                component_type=ComponentEnum.OPTIMIZER)
+
+        GlobalTypeRegistry.get().register_optimizer(
+            RegisteredOptimizerInfo(full_type=config_type.full_type,
+                                    config_type=config_type,
+                                    build_fn=context_manager_fn,
+                                    discovery_metadata=discovery_metadata))
+
+        return context_manager_fn
+
+    return register_optimizer_inner
+
+
 def register_dataset_loader(config_type: type[EvalDatasetBaseConfigT]):
 
     def register_dataset_loader_inner(
@@ -775,3 +810,41 @@ def register_registry_handler(config_type: type[RegistryHandlerBaseConfigT]):
         return context_manager_fn
 
     return register_registry_handler_inner
+
+
+def register_eval_callback(
+    config_type: type[TelemetryExporterConfigT], ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Register an eval callback factory for a telemetry exporter config type.
+
+    The decorated function receives the exporter config and returns an ``EvalCallback``.
+    """
+
+    def register_inner(fn: Callable[..., Any]) -> Callable[..., Any]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredEvalCallback
+
+        GlobalTypeRegistry.get().register_eval_callback(RegisteredEvalCallback(config_type=config_type, factory_fn=fn))
+
+        return fn
+
+    return register_inner
+
+
+def register_optimizer_callback(
+    config_type: type[TelemetryExporterConfigT], ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """Register an optimizer callback factory for a telemetry exporter config type.
+
+    The decorated function receives the exporter config (and optional keyword
+    arguments such as ``dataset_name``) and returns an ``OptimizerCallback``.
+    """
+
+    def register_inner(fn: Callable[..., Any]) -> Callable[..., Any]:
+        from .type_registry import GlobalTypeRegistry
+        from .type_registry import RegisteredOptimizerCallback
+
+        GlobalTypeRegistry.get().register_optimizer_callback(
+            RegisteredOptimizerCallback(config_type=config_type, factory_fn=fn))
+
+        return fn
+
+    return register_inner

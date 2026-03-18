@@ -79,6 +79,8 @@ from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.middleware import MiddlewareBaseConfigT
 from nat.data_models.object_store import ObjectStoreBaseConfig
 from nat.data_models.object_store import ObjectStoreBaseConfigT
+from nat.data_models.optimizer import OptimizerStrategyBaseConfig
+from nat.data_models.optimizer import OptimizerStrategyBaseConfigT
 from nat.data_models.registry_handler import RegistryHandlerBaseConfig
 from nat.data_models.registry_handler import RegistryHandlerBaseConfigT
 from nat.data_models.retriever import RetrieverBaseConfig
@@ -117,6 +119,7 @@ LLMProviderBuildCallableT = Callable[[LLMBaseConfigT, Builder], AsyncIterator[LL
 LoggingMethodBuildCallableT = Callable[[LoggingMethodConfigT, Builder], AsyncIterator[Handler]]
 MemoryBuildCallableT = Callable[[MemoryBaseConfigT, Builder], AsyncIterator[MemoryEditor]]
 ObjectStoreBuildCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AsyncIterator[ObjectStore]]
+OptimizerBuildCallableT = Callable[[OptimizerStrategyBaseConfigT], AsyncIterator[typing.Any]]
 RegistryHandlerBuildCallableT = Callable[[RegistryHandlerBaseConfigT], AsyncIterator[AbstractRegistryHandler]]
 RetrieverClientBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[typing.Any]]
 RetrieverProviderBuildCallableT = Callable[[RetrieverBaseConfigT, Builder], AsyncIterator[RetrieverProviderInfo]]
@@ -147,6 +150,7 @@ LLMProviderRegisteredCallableT = Callable[[LLMBaseConfigT, Builder], AbstractAsy
 LoggingMethodRegisteredCallableT = Callable[[LoggingMethodConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
 MemoryRegisteredCallableT = Callable[[MemoryBaseConfigT, Builder], AbstractAsyncContextManager[MemoryEditor]]
 ObjectStoreRegisteredCallableT = Callable[[ObjectStoreBaseConfigT, Builder], AbstractAsyncContextManager[ObjectStore]]
+OptimizerRegisteredCallableT = Callable[[OptimizerStrategyBaseConfigT], AbstractAsyncContextManager[typing.Any]]
 RegistryHandlerRegisteredCallableT = Callable[[RegistryHandlerBaseConfigT],
                                               AbstractAsyncContextManager[AbstractRegistryHandler]]
 RetrieverClientRegisteredCallableT = Callable[[RetrieverBaseConfigT, Builder], AbstractAsyncContextManager[typing.Any]]
@@ -193,6 +197,22 @@ class RegisteredInfo(BaseModel, typing.Generic[TypedBaseModelT]):
 class RegisteredTelemetryExporter(RegisteredInfo[TelemetryExporterBaseConfig]):
 
     build_fn: TeleExporterRegisteredCallableT = Field(repr=False)
+
+
+class RegisteredEvalCallback(BaseModel):
+    """Registered factory for creating eval callbacks tied to a telemetry exporter config type."""
+
+    model_config = ConfigDict(frozen=True)
+    config_type: type[TelemetryExporterBaseConfig]
+    factory_fn: Callable[..., typing.Any] = Field(repr=False)
+
+
+class RegisteredOptimizerCallback(BaseModel):
+    """Registered factory for creating optimizer callbacks tied to a telemetry exporter config type."""
+
+    model_config = ConfigDict(frozen=True)
+    config_type: type[TelemetryExporterBaseConfig]
+    factory_fn: Callable[..., typing.Any] = Field(repr=False)
 
 
 class RegisteredLoggingMethod(RegisteredInfo[LoggingBaseConfig]):
@@ -352,6 +372,14 @@ class RegisteredEvaluatorInfo(RegisteredInfo[EvaluatorBaseConfig]):
     build_fn: EvaluatorRegisteredCallableT = Field(repr=False)
 
 
+class RegisteredOptimizerInfo(RegisteredInfo[OptimizerStrategyBaseConfig]):
+    """
+    Represents a registered optimizer strategy e.g. GA prompt optimizer, Optuna parameter optimizer.
+    """
+
+    build_fn: OptimizerRegisteredCallableT = Field(repr=False)
+
+
 class RegisteredDatasetLoaderInfo(RegisteredInfo[EvalDatasetBaseConfig]):
     """Represents a registered Dataset Loader, e.g. json, csv, parquet, etc."""
 
@@ -464,6 +492,9 @@ class TypeRegistry:
         # Evaluators
         self._registered_evaluator_infos: dict[type[EvaluatorBaseConfig], RegisteredEvaluatorInfo] = {}
 
+        # Optimizers
+        self._registered_optimizer_infos: dict[type[OptimizerStrategyBaseConfig], RegisteredOptimizerInfo] = {}
+
         # Dataset Loaders
         self._registered_dataset_loader_infos: dict[type[EvalDatasetBaseConfig], RegisteredDatasetLoaderInfo] = {}
 
@@ -499,6 +530,12 @@ class TypeRegistry:
 
         # Packages
         self._registered_packages: dict[str, RegisteredPackage] = {}
+
+        # Eval Callbacks (keyed by telemetry exporter config type)
+        self._registered_eval_callbacks: dict[type[TelemetryExporterBaseConfig], RegisteredEvalCallback] = {}
+
+        # Optimizer Callbacks (keyed by telemetry exporter config type)
+        self._registered_optimizer_callbacks: dict[type[TelemetryExporterBaseConfig], RegisteredOptimizerCallback] = {}
 
         self._registration_changed_hooks: list[Callable[[], None]] = []
         self._registration_changed_hooks_active: bool = True
@@ -553,6 +590,37 @@ class TypeRegistry:
     def get_registered_telemetry_exporters(self) -> list[RegisteredInfo[TelemetryExporterBaseConfig]]:
 
         return list(self._registered_telemetry_exporters.values())
+
+    def register_eval_callback(self, registration: RegisteredEvalCallback):
+
+        if (registration.config_type in self._registered_eval_callbacks):
+            raise ValueError(f"An eval callback with the same config type `{registration.config_type}` has already "
+                             "been registered.")
+
+        self._registered_eval_callbacks[registration.config_type] = registration
+
+    def get_eval_callback(self, config_type: type[TelemetryExporterBaseConfig]) -> RegisteredEvalCallback:
+
+        try:
+            return self._registered_eval_callbacks[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered eval callback for config `{config_type}`.") from err
+
+    def register_optimizer_callback(self, registration: RegisteredOptimizerCallback):
+
+        if (registration.config_type in self._registered_optimizer_callbacks):
+            raise ValueError(
+                f"An optimizer callback with the same config type `{registration.config_type}` has already "
+                "been registered.")
+
+        self._registered_optimizer_callbacks[registration.config_type] = registration
+
+    def get_optimizer_callback(self, config_type: type[TelemetryExporterBaseConfig]) -> RegisteredOptimizerCallback:
+
+        try:
+            return self._registered_optimizer_callbacks[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered optimizer callback for config `{config_type}`.") from err
 
     def register_logging_method(self, registration: RegisteredLoggingMethod):
 
@@ -904,6 +972,28 @@ class TypeRegistry:
 
         return list(self._registered_evaluator_infos.values())
 
+    def register_optimizer(self, info: RegisteredOptimizerInfo):
+
+        if (info.config_type in self._registered_optimizer_infos):
+            raise ValueError(f"An Optimizer with the same config type `{info.config_type}` has already been "
+                             "registered.")
+
+        self._registered_optimizer_infos[info.config_type] = info
+
+        self._registration_changed()
+
+    def get_optimizer(self, config_type: type[OptimizerStrategyBaseConfig]) -> RegisteredOptimizerInfo:
+
+        try:
+            return self._registered_optimizer_infos[config_type]
+        except KeyError as err:
+            raise KeyError(f"Could not find a registered Optimizer for config `{config_type}`. "
+                           f"Registered configs: {set(self._registered_optimizer_infos.keys())}") from err
+
+    def get_registered_optimizers(self) -> list[RegisteredInfo[OptimizerStrategyBaseConfig]]:
+
+        return list(self._registered_optimizer_infos.values())
+
     def register_dataset_loader(self, info: RegisteredDatasetLoaderInfo):
 
         if (info.config_type in self._registered_dataset_loader_infos):
@@ -1138,6 +1228,9 @@ class TypeRegistry:
         if component_type == ComponentEnum.EVALUATOR:
             return self._registered_evaluator_infos
 
+        if component_type == ComponentEnum.OPTIMIZER:
+            return self._registered_optimizer_infos
+
         if component_type == ComponentEnum.DATASET_LOADER:
             return self._registered_dataset_loader_infos
 
@@ -1210,6 +1303,9 @@ class TypeRegistry:
         if component_type == ComponentEnum.EVALUATOR:
             return [i.static_type() for i in self._registered_evaluator_infos]
 
+        if component_type == ComponentEnum.OPTIMIZER:
+            return [i.static_type() for i in self._registered_optimizer_infos]
+
         if component_type == ComponentEnum.DATASET_LOADER:
             return [i.static_type() for i in self._registered_dataset_loader_infos]
 
@@ -1272,6 +1368,9 @@ class TypeRegistry:
 
         if issubclass(cls, EvaluatorBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_evaluators())
+
+        if issubclass(cls, OptimizerStrategyBaseConfig):
+            return self._do_compute_annotation(cls, self.get_registered_optimizers())
 
         if issubclass(cls, FrontEndBaseConfig):
             return self._do_compute_annotation(cls, self.get_registered_front_ends())

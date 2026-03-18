@@ -25,12 +25,13 @@ from typing import Any
 
 from pydantic import Field
 
+from nat.middleware.common import TargetLocation
 from nat.middleware.defense.defense_middleware import DefenseMiddleware
 from nat.middleware.defense.defense_middleware import DefenseMiddlewareConfig
 from nat.middleware.defense.defense_middleware_data_models import PIIAnalysisResult
-from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationContext
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +47,6 @@ class PIIDefenseMiddlewareConfig(DefenseMiddlewareConfig, name="pii_defense"):
     - 'partial_compliance': Detect and log PII, but allow content to pass through
     - 'refusal': Block content if PII detected (hard stop)
     - 'redirection': Replace PII with anonymized placeholders (e.g., <EMAIL_ADDRESS>)
-
-    Note: Only output analysis is currently supported (target_location='output').
     """
 
     llm_name: str | None = Field(default=None, description="Not used for PII defense (Presidio is rule-based)")
@@ -67,7 +66,6 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     """PII Defense Middleware using Microsoft Presidio.
 
     Detects PII in function outputs using Presidio's rule-based entity recognition.
-    Only output analysis is currently supported (``target_location='output'``).
 
     See https://github.com/microsoft/presidio for more information about Presidio.
 
@@ -83,11 +81,6 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         self.config: PIIDefenseMiddlewareConfig = config
         self._analyzer = None
         self._anonymizer = None
-
-        # PII Defense only supports output analysis
-        if config.target_location == "input":
-            raise ValueError("PIIDefenseMiddleware only supports target_location='output'. "
-                             "Input analysis is not yet supported.")
 
         logger.info(f"PIIDefenseMiddleware initialized: "
                     f"action={config.action}, entities={config.entities}, "
@@ -154,7 +147,6 @@ class PIIDefenseMiddleware(DefenseMiddleware):
     def _process_pii_detection(
         self,
         value: Any,
-        location: str,
         context: FunctionMiddlewareContext,
     ) -> Any:
         """Process PII detection and sanitization for a given value.
@@ -166,9 +158,8 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         - Applying sanitized value back to original structure
 
         Args:
-            value: The value to analyze (input or output)
-            location: Either "input" or "output" (for logging)
-            context: Function context metadata
+            value: The value to analyze.
+            context: Function context metadata.
 
         Returns:
             The value after PII handling (may be unchanged, sanitized, or raise exception)
@@ -176,23 +167,22 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         # Extract field from value if target_field is specified
         content_to_analyze, field_info = self._extract_field_from_value(value)
 
-        logger.info("PIIDefenseMiddleware: Checking %s %s for %s",
-                    f"field '{self.config.target_field}'" if field_info else "entire",
-                    location,
+        logger.info("PIIDefenseMiddleware: Checking %s function output for %s",
+                    f"field '{self.config.target_field}' of" if field_info else "entire",
                     context.name)
         # Analyze for PII (convert to string for Presidio)
         content_text = str(content_to_analyze)
         analysis_result = self._analyze_content(content_text)
 
         if not analysis_result.pii_detected:
-            logger.info("PIIDefenseMiddleware: Verified %s of %s: No PII detected", location, context.name)
+            logger.info("PIIDefenseMiddleware: %s function output verified: No PII detected", context.name)
             return value
 
         # PII detected - handle based on action
         entities = analysis_result.entities
         # Build entities string efficiently without intermediate list
         entities_str = ", ".join(f"{k}({len(v)})" for k, v in entities.items())
-        sanitized_content = self._handle_threat(content_to_analyze, analysis_result, context, location, entities_str)
+        sanitized_content = self._handle_threat(content_to_analyze, analysis_result, context, entities_str)
 
         # If field was extracted, apply sanitized value back to original structure
         if field_info is not None:
@@ -206,7 +196,6 @@ class PIIDefenseMiddleware(DefenseMiddleware):
         content: Any,
         analysis_result: PIIAnalysisResult,
         context: FunctionMiddlewareContext,
-        location: str,
         entities_str: str,
     ) -> Any:
         """Handle detected PII threat based on configured action.
@@ -215,20 +204,18 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             content: The content with PII
             analysis_result: Detection result from Presidio
             context: Function context
-            location: Either "input" or "output" (for logging)
             entities_str: String representation of detected entities
 
         Returns:
             Handled content (anonymized, original, or raises exception for refusal)
         """
         if self.config.action == "refusal":
-            logger.error("PII Defense refusing %s of %s: %s", location, context.name, entities_str)
-            raise ValueError(f"PII detected in {location}: {entities_str}. Output refused.")
+            logger.error("PII Defense refusing function output of %s: %s", context.name, entities_str)
+            raise ValueError(f"PII detected in function output: {entities_str}. Function output refused.")
 
         elif self.config.action == "redirection":
-            logger.warning("PII Defense detected PII in %s of %s: %s", location, context.name, entities_str)
-            logger.info("PII Defense anonymizing %s for %s", location, context.name)
-            str(content)
+            logger.warning("PII Defense detected PII in function output of %s: %s", context.name, entities_str)
+            logger.info("PII Defense anonymizing function output of %s", context.name)
             anonymized_content = analysis_result.anonymized_text
 
             # Convert anonymized_text back to original type if needed
@@ -245,47 +232,35 @@ class PIIDefenseMiddleware(DefenseMiddleware):
             return redirected_value
 
         else:  # action == "partial_compliance"
-            logger.warning("PII Defense detected PII in %s of %s: %s", location, context.name, entities_str)
+            logger.warning("PII Defense detected PII in %s function result: %s", context.name, entities_str)
             return content  # No modification, just log
 
-    async def function_middleware_invoke(
-        self,
-        *args: Any,
-        call_next: CallNext,
-        context: FunctionMiddlewareContext,
-        **kwargs: Any,
-    ) -> Any:
-        """Intercept function calls to detect and anonymize PII in inputs or outputs.
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Detect and anonymize PII in function output after execution.
 
         Args:
-            args: Positional arguments passed to the function (first arg is typically the input value).
-            call_next: Function to call the next middleware or the actual function.
-            context: Context containing function metadata.
-            kwargs: Keyword arguments passed to the function.
+            context: Invocation context with function metadata and output.
 
         Returns:
-            The function result, with PII anonymized if action='redirection'.
+            Modified context if output was processed, None to pass through.
         """
-        value = args[0] if args else None
+        if self.config.target_location != TargetLocation.OUTPUT:
+            return None
 
         # Check if this defense should apply to this function
-        if not self._should_apply_defense(context.name):
-            logger.debug("PIIDefenseMiddleware: Skipping %s (not targeted)", context.name)
-            return await call_next(value, *args[1:], **kwargs)
+        func_ctx: FunctionMiddlewareContext = context.function_context
+        if not self._should_apply_defense(func_ctx.name):
+            logger.debug("PIIDefenseMiddleware: Skipping %s (not targeted)", func_ctx.name)
+            return None
 
         try:
-            # Call the actual function
-            result = await call_next(value, *args[1:], **kwargs)
-
-            # Handle output analysis (only output is supported)
-            result = self._process_pii_detection(result, "output", context)
-
-            return result
-
+            # Handle function output analysis
+            context.output = self._process_pii_detection(context.output, func_ctx)
+            return context
         except Exception:
             logger.error(
                 "Failed to apply PII defense to function %s",
-                context.name,
+                func_ctx.name,
                 exc_info=True,
             )
             raise
@@ -332,9 +307,9 @@ class PIIDefenseMiddleware(DefenseMiddleware):
                     yield chunk
                     accumulated_chunks.append(chunk)
 
-            # Analyze the full output for PII
+            # Analyze the full function output for PII
             full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
-            processed_output = self._process_pii_detection(full_output, "output", context)
+            processed_output = self._process_pii_detection(full_output, context)
 
             processed_str = str(processed_output)
             if self.config.action == "redirection" and processed_str != full_output:

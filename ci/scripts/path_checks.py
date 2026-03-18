@@ -41,10 +41,6 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/advanced_agents/alert_triage_agent/data/",
     ),
     (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability",
-    ),
-    (
         r"^examples/config_inheritance/README.md",
         r"^examples/getting_started/simple_calculator",
     ),
@@ -65,16 +61,16 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_calculator_eval/data/",
     ),
     (
-        r"^examples/evaluation_and_profiling/swe_bench/.*configs/",
-        r"^examples/evaluation_and_profiling/swe_bench/data/",
-    ),
-    (
         r"^examples/evaluation_and_profiling/simple_calculator_eval/.*configs/",
         r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
     ),
     (
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs",
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*/workflow_to_csv.py",
+    ),
+    (
+        r"^examples/observability/simple_calculator_observability/.*configs/",
+        r"^examples/getting_started/simple_calculator/",
     ),
     (
         r"^examples/MCP/simple_calculator_mcp/README.md",
@@ -168,6 +164,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "run/serve",
     "search/edit/score/select",
     "size/time",
+    "SSL/TLS",
     "string/array",
     "string/object",
     "success/failure",
@@ -191,7 +188,10 @@ ALLOWLISTED_WORDS: set[str] = {
     "microsoft/[Pp]hi.*",
     "ssmits/[Qq]wen.*",
     "Qwen/Qwen.*",
-    "deepseek-ai/deepseek-.*",  #
+    "deepseek-ai/deepseek-.*",
+    "BAAI/bge.*",
+    "sentence-transformers/.*",
+    "meta-llama/.*",  #
     # MIME types
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones

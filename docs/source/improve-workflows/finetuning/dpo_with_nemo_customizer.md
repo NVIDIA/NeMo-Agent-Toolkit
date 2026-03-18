@@ -112,7 +112,7 @@ This approach enables automated preference data collection without manual labeli
 │  │  │                  NeMo Customizer Trainer Adapter                 │   ││
 │  │  │                                                                  │   ││
 │  │  │  1. Convert trajectories to JSONL format                         │   ││
-│  │  │  2. Upload dataset to NeMo Datastore (via HuggingFace Hub API)   │   ││
+│  │  │  2. Upload dataset to NeMo Datastore (via Hugging Face Hub API)  │   ││
 │  │  │  3. Submit customization job to NeMo Customizer                  │   ││
 │  │  │  4. Monitor job progress until completion                        │   ││
 │  │  │  5. Optionally deploy trained model                              │   ││
@@ -163,7 +163,7 @@ This provides:
 
 1. **NeMo Microservices Platform (NMP)**: Access to a deployed NeMo Customizer instance
 2. **Entity Store**: For managing datasets, models, and jobs
-3. **Datastore**: For storing training datasets (accessed via HuggingFace Hub API)
+3. **Datastore**: For storing training datasets (accessed via Hugging Face Hub API)
 
 ## Configuration
 
@@ -380,7 +380,7 @@ trainer_adapters:
 |-------|------|---------|-------------|
 | `entity_host` | `str` | **required** | Base URL for NeMo Entity Store (e.g., `https://nmp.example.com`). |
 | `datastore_host` | `str` | **required** | Base URL for NeMo Datastore (e.g., `https://datastore.example.com`). |
-| `hf_token` | `str` | `""` | HuggingFace token for datastore authentication. Can be empty if not required. |
+| `hf_token` | `str` | `""` | Hugging Face token for datastore authentication. Can be empty if not required. |
 
 #### Namespace and Dataset
 
@@ -612,7 +612,7 @@ The trainer adapter converts trajectories and submits to NeMo Customizer:
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
 │  │  Upload to NeMo Datastore:                                            │  │
 │  │                                                                       │  │
-│  │  1. Create dataset repo via HuggingFace Hub API                       │  │
+│  │  1. Create dataset repo via Hugging Face Hub API                       │  │
 │  │  2. Register dataset in Entity Store                                  │  │
 │  │  3. Upload training_file.jsonl and validation_file.jsonl              │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
@@ -831,7 +831,7 @@ trainer_adapters:
    curl https://datastore.example.com/health
    ```
 
-2. Check authentication (HuggingFace token if required)
+2. Check authentication (Hugging Face token if required)
 
 3. Verify network connectivity and firewall rules
 

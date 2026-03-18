@@ -22,7 +22,7 @@ limitations under the License.
 > ⚠️ **EXPERIMENTAL**: This integration between NeMo Agent Toolkit and Dynamo is experimental and under active development. APIs, configurations, and features may change without notice.
 
 > [!WARNING]
-> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/getting-started/support-matrix) for full details.
+> **This example requires a Linux system with an NVIDIA GPU.** See the [Dynamo Support Matrix](https://docs.nvidia.com/dynamo/latest/resources/support-matrix) for full details.
 >
 > **Supported Platforms:**
 > - Ubuntu 22.04 / 24.04 (x86_64)
@@ -120,10 +120,10 @@ cp .env.example .env
 vi .env # update the environment variables then source
 [ -f .env ] && source .env || { echo "Warning: .env not found" >&2; false; }
 
-# 4. Download the dataset (requires HuggingFace account)
+# 4. Download the dataset (requires Hugging Face account)
 python scripts/download_agent_leaderboard_v2.py --domains banking
 
-# 5. Download the model weights (requires HuggingFace account)
+# 5. Download the model weights (requires Hugging Face account)
 mkdir -p "$(dirname "$DYNAMO_MODEL_DIR")"
 hf download meta-llama/Llama-3.3-70B-Instruct --local-dir "$DYNAMO_MODEL_DIR"
 
