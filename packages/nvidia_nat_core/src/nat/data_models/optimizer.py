@@ -40,6 +40,14 @@ class OptimizerMetric(BaseModel):
     weight: float = Field(description="Weight of the metric in the optimization process.", default=1.0)
 
 
+class PromptOptimizerInputSchema(BaseModel):
+    """Input schema for prompt optimizer mutator/recombiner helper functions."""
+
+    original_prompt: str
+    objective: str
+    oracle_feedback: str | None = None
+
+
 class SamplerType(StrEnum):
     BAYESIAN = "bayesian"
     GRID = "grid"

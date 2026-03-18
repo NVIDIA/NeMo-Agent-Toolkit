@@ -21,6 +21,7 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.optimizer import PromptOptimizerInputSchema
 
 
 class PromptOptimizerConfig(FunctionBaseConfig, name="prompt_init"):
@@ -52,13 +53,6 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
     except ImportError as exc:
         raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
                           "This error can be resolve by installing \"nvidia-nat[langchain]\".") from exc
-
-    try:
-        from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
-    except ImportError as exc:
-        raise ImportError(
-            "nvidia-nat-config-optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
-            "Or install the full toolkit: pip install nvidia-nat[config-optimizer]") from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
@@ -127,13 +121,6 @@ async def prompt_recombiner_function(config: PromptRecombinerConfig, builder: Bu
     except ImportError as exc:
         raise ImportError("langchain-core is not installed. Please install it to use MultiLLMPlanner.\n"
                           "This error can be resolve by installing \"nvidia-nat[langchain]\".") from exc
-
-    try:
-        from nat.plugins.config_optimizer.prompts.ga_prompt_optimizer import PromptOptimizerInputSchema
-    except ImportError as exc:
-        raise ImportError(
-            "nvidia-nat-config-optimizer is not installed. Install it with: pip install nvidia-nat-config-optimizer\n"
-            "Or install the full toolkit: pip install nvidia-nat[config-optimizer]") from exc
 
     llm = await builder.get_llm(config.optimizer_llm, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
