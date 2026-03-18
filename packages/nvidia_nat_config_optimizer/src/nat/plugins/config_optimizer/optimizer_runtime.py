@@ -13,15 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import inspect
 import logging
 
 from pydantic import BaseModel
 
+from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.optimizer import OptimizerRunConfig
 from nat.experimental.decorators.experimental_warning_decorator import experimental
-from nat.parameter_optimization.optimizable_utils import walk_optimizables
-from nat.parameter_optimization.parameter_optimizer import optimize_parameters
-from nat.parameter_optimization.prompt_optimizer import optimize_prompts
+from nat.plugins.config_optimizer import register  # noqa: F401 - trigger optimizer registration
+from nat.plugins.config_optimizer.optimizable_utils import walk_optimizables
 from nat.runtime.loader import load_config
 
 logger = logging.getLogger(__name__)
@@ -146,25 +147,46 @@ async def optimize_config(opt_run_config: OptimizerRunConfig):
     best_numeric_params: dict = {}
     _numeric_trial_count = 0
     if base_cfg.optimizer.numeric.enabled:
-        tuned_cfg, best_numeric_params, _numeric_trial_count = optimize_parameters(
-            base_cfg=base_cfg,
-            full_space=full_space,
-            optimizer_config=base_cfg.optimizer,
-            opt_run_config=opt_run_config,
-            callback_manager=callback_manager,
-        )
+        registry = GlobalTypeRegistry.get()
+        numeric_info = registry.get_optimizer(type(base_cfg.optimizer.numeric))
+        async with numeric_info.build_fn(base_cfg.optimizer.numeric) as runner:
+            numeric_run_kwargs = dict(
+                base_cfg=base_cfg,
+                full_space=full_space,
+                optimizer_config=base_cfg.optimizer,
+                opt_run_config=opt_run_config,
+            )
+            runner_run_params = inspect.signature(runner.run).parameters
+            if "callback_manager" in runner_run_params:
+                numeric_run_kwargs["callback_manager"] = callback_manager
+
+            result = await runner.run(**numeric_run_kwargs)
+            if isinstance(result, tuple):
+                tuned_cfg, best_numeric_params, _numeric_trial_count = result
+            else:
+                tuned_cfg = result
 
     # ---------------- 4. prompt optimization ------------- #
     if base_cfg.optimizer.prompt.enabled:
-        await optimize_prompts(
-            base_cfg=tuned_cfg,
-            full_space=full_space,
-            optimizer_config=base_cfg.optimizer,
-            opt_run_config=opt_run_config,
-            callback_manager=callback_manager,
-            trial_number_offset=_numeric_trial_count,
-            frozen_params=best_numeric_params,
-        )
+        registry = GlobalTypeRegistry.get()
+        prompt_info = registry.get_optimizer(type(base_cfg.optimizer.prompt))
+        async with prompt_info.build_fn(base_cfg.optimizer.prompt) as runner:
+            prompt_run_kwargs = dict(
+                base_cfg=tuned_cfg,
+                full_space=full_space,
+                optimizer_config=base_cfg.optimizer,
+                opt_run_config=opt_run_config,
+            )
+            runner_run_params = inspect.signature(runner.run).parameters
+            if "callback_manager" in runner_run_params:
+                prompt_run_kwargs["callback_manager"] = callback_manager
+            if "trial_number_offset" in runner_run_params:
+                prompt_run_kwargs["trial_number_offset"] = _numeric_trial_count
+            if "frozen_params" in runner_run_params:
+                prompt_run_kwargs["frozen_params"] = best_numeric_params
+            prompt_result = await runner.run(**prompt_run_kwargs)
+            if prompt_result is not None:
+                tuned_cfg = prompt_result
 
     logger.info("All optimization phases complete.")
     return tuned_cfg

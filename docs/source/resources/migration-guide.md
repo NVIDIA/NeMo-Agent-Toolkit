@@ -29,6 +29,13 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ### v1.6.0
 
+#### User Identity Resolution
+
+User identity is now resolved by a centralized `UserManager` component. The following changes apply:
+
+- **User IDs are now UUID v5 hashes.** Previously, user IDs were raw credential strings (cookie values, JWT claim values). They are now deterministic UUID v5 values derived from the credential. User IDs are opaque routing keys — no downstream code depends on a specific format.
+- **JWT claim precedence corrected to RFC 7519.** The previous precedence (`name > email > preferred_username > sub`) was non-standard. The new precedence is `sub > email > preferred_username` per [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519) and [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html#StandardClaims). Users whose identity was previously resolved from the `name` claim will be assigned a new `user_id` based on `sub` after upgrade.
+- **`Security` model removed from WebSocket messages.** The `Security` Pydantic model and the `security` field on `WebSocketUserMessage` and `WebSocketUserInteractionResponseMessage` have been removed. User identity is now resolved via the `auth_message` flow or from connection headers. See [User Identity Resolution](../components/auth/user-identity.md) for details.
 #### Evaluator Package Split (Breaking)
 
 As part of dependency reduction, evaluator ownership is being moved out of `nvidia-nat-eval` and into framework-specific packages.
@@ -87,6 +94,26 @@ To migrate:
   - `pip install nvidia-nat-profiler`
   - `pip install nvidia-nat-security`
 
+#### Configuration Optimizer Package Extraction (Breaking)
+
+Optimizer ownership now lives in the optional `nvidia-nat-config-optimizer` package.
+
+This is a breaking change:
+- The `nat optimize` command is no longer owned by core and is only available when `nvidia-nat-config-optimizer` is installed.
+- Optimizer implementation modules moved from core paths into `nat.plugins.config_optimizer.*`.
+- The `nvidia-nat[optimizer]` extra has been renamed to `nvidia-nat[config-optimizer]`.
+
+To migrate:
+- Install config optimizer support when needed:
+  - `pip install "nvidia-nat[config-optimizer]"`
+  - `pip install nvidia-nat-config-optimizer`
+- Update optimizer imports:
+  - `nat.parameter_optimization.prompt_optimizer` => `nat.plugins.config_optimizer.prompts.ga_prompt_optimizer`
+  - `nat.parameter_optimization.parameter_optimizer` => `nat.plugins.config_optimizer.parameters.optimizer`
+  - `nat.parameter_optimization.optimizer_runtime` => `nat.plugins.config_optimizer.optimizer_runtime`
+- Keep optimizer callbacks at their core path:
+  - `nat.profiler.parameter_optimization.optimizer_callbacks`
+
 ### v1.5.0
 
 #### Removing Old Aliases and Transitional Packages
@@ -119,15 +146,14 @@ To migrate:
   - `pip install "nvidia-nat[profiling]"`
   - `pip install "nvidia-nat-eval[profiling]"`
 - Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
-- Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
 
 #### Import Path Changes
 
-For users migrating existing integrations, the primary import change is:
-- `nat.eval.*` -> `nat.plugins.eval.*`
-- `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
-- `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
-- `nat.eval.runtime_event_subscriber.pull_intermediate` -> `nat.builder.runtime_event_subscriber.pull_intermediate`
+For users migrating existing integrations, the primary import change is (old => new):
+
+- `nat.eval.*` => `nat.plugins.eval.*`
+- `nat.profiler.*` => `nat.plugins.eval.profiler.*` (except `nat.profiler.parameter_optimization.*`, which remains in core)
+- `nat.eval.runtime_event_subscriber.pull_intermediate` => `nat.builder.runtime_event_subscriber.pull_intermediate`
 
 For evaluation data models, prefer canonical core paths:
 - `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`

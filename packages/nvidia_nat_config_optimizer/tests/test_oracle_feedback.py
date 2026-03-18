@@ -19,13 +19,17 @@ Tests cover feedback extraction, formatting, injection logic, adaptive triggers,
 and type conversions for various reasoning formats.
 """
 
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
-from nat.parameter_optimization.oracle_feedback import _reasoning_to_string
-from nat.parameter_optimization.oracle_feedback import build_oracle_feedback
-from nat.parameter_optimization.oracle_feedback import check_adaptive_triggers
-from nat.parameter_optimization.oracle_feedback import extract_worst_reasoning
-from nat.parameter_optimization.oracle_feedback import should_inject_feedback
+import pytest
+from pydantic import ValidationError
+
+from nat.data_models.optimizer import GAPromptOptimizationConfig
+from nat.plugins.config_optimizer.prompts.oracle_feedback import _reasoning_to_string
+from nat.plugins.config_optimizer.prompts.oracle_feedback import build_oracle_feedback
+from nat.plugins.config_optimizer.prompts.oracle_feedback import check_adaptive_triggers
+from nat.plugins.config_optimizer.prompts.oracle_feedback import extract_worst_reasoning
+from nat.plugins.config_optimizer.prompts.oracle_feedback import should_inject_feedback
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
+from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
 
 
 class TestBuildOracleFeedback:
@@ -385,3 +389,42 @@ class TestExtractWorstReasoning:
         )
         # For minimize, high score is worst
         assert "High score" in result[0]
+
+
+class TestGAPromptOptimizationConfigValidation:
+    """Validation tests for GAPromptOptimizationConfig oracle feedback fields."""
+
+    def test_oracle_feedback_worst_n_zero_rejected(self):
+        """oracle_feedback_worst_n must be >= 1."""
+        with pytest.raises(ValidationError) as exc_info:
+            GAPromptOptimizationConfig(oracle_feedback_worst_n=0)
+        assert "oracle_feedback_worst_n" in str(exc_info.value)
+
+    def test_oracle_feedback_mode_invalid_rejected(self):
+        """oracle_feedback_mode must be one of never, always, failing_only, adaptive."""
+        with pytest.raises(ValidationError) as exc_info:
+            GAPromptOptimizationConfig(oracle_feedback_mode="invalid_mode")
+        assert "oracle_feedback_mode" in str(exc_info.value)
+
+    def test_oracle_feedback_fitness_threshold_out_of_range_rejected(self):
+        """oracle_feedback_fitness_threshold must be in [0, 1]."""
+        with pytest.raises(ValidationError) as exc_info:
+            GAPromptOptimizationConfig(oracle_feedback_fitness_threshold=1.5)
+        assert "oracle_feedback_fitness_threshold" in str(exc_info.value)
+
+    def test_oracle_feedback_diversity_threshold_out_of_range_rejected(self):
+        """oracle_feedback_diversity_threshold must be in [0, 1]."""
+        with pytest.raises(ValidationError) as exc_info:
+            GAPromptOptimizationConfig(oracle_feedback_diversity_threshold=-0.1)
+        assert "oracle_feedback_diversity_threshold" in str(exc_info.value)
+
+    def test_valid_oracle_feedback_config_accepted(self):
+        """Valid oracle feedback config is accepted."""
+        cfg = GAPromptOptimizationConfig(
+            oracle_feedback_mode="always",
+            oracle_feedback_worst_n=5,
+            oracle_feedback_fitness_threshold=0.3,
+            oracle_feedback_diversity_threshold=0.5,
+        )
+        assert cfg.oracle_feedback_mode == "always"
+        assert cfg.oracle_feedback_worst_n == 5
