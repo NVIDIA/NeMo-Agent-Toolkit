@@ -15,11 +15,10 @@
 
 import logging
 import re
+from typing import TYPE_CHECKING
 from typing import Any
 
 import langsmith
-
-from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
 
 from .langsmith_evaluation_callback import _LS_RETRY_DELAY_S
 from .langsmith_evaluation_callback import _backfill_feedback_for_unlinked_items
@@ -31,6 +30,9 @@ from .langsmith_evaluation_callback import _retry_unlinked_references
 from .langsmith_evaluation_callback import _span_id_to_langsmith_run_id
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
 
 
 class LangSmithOptimizationCallback:

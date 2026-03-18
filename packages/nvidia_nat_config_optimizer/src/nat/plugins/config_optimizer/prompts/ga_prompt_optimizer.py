@@ -26,14 +26,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import Any
 
-from pydantic import BaseModel
-
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.data_models.config import Config
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.optimizer import OptimizerConfig
 from nat.data_models.optimizer import OptimizerRunConfig
+from nat.data_models.optimizer import PromptOptimizerInputSchema
 from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.plugins.config_optimizer.eval_runtime_loader import load_evaluation_run
 from nat.plugins.config_optimizer.prompts.base import BasePromptOptimizer
@@ -121,12 +120,6 @@ def _on_prompt_study_end(
         ),
         total_trials=trial_number_offset + generations * pop_size,
     )
-
-
-class PromptOptimizerInputSchema(BaseModel):
-    original_prompt: str
-    objective: str
-    oracle_feedback: str | None = None
 
 
 @experimental(feature_name="Optimizer")
