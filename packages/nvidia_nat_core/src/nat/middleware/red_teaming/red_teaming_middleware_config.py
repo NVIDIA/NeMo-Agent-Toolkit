@@ -21,6 +21,7 @@ from typing import Literal
 from pydantic import Field
 
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
+from nat.middleware.common import TargetLocation
 
 
 class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming"):
@@ -79,8 +80,8 @@ class RedTeamingMiddlewareConfig(FunctionMiddlewareBaseConfig, name="red_teaming
                      "'append_middle' (insert at middle sentence)"),
     )
 
-    target_location: Literal["input", "output"] = Field(
-        default="input",
+    target_location: TargetLocation = Field(
+        default=TargetLocation.INPUT,
         description="Whether to attack the function's input or output",
     )
 

@@ -852,6 +852,46 @@ async def test_tool_node_none_input(mock_react_agent):
     assert response.content == tool_input_none
 
 
+async def test_tool_node_python_none_literal_uses_structured_fallback(mock_react_agent):
+    """Test Python-literal input with `None` is parsed to structured input."""
+    tool_input_python_none = "{'query': 'search term', 'task_id': None, 'context_id': None}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_python_none, log='test')])
+
+    response = await mock_react_agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    # The parser should recover a dict and the mock tool receives the "query" field value.
+    assert response.content == "search term"
+
+
+async def test_tool_node_python_none_literal_normalization_disabled_uses_raw_string(mock_config_react_agent,
+                                                                                    mock_llm,
+                                                                                    mock_tool):
+    """Test Python-literal input with `None` stays raw string when normalization is disabled."""
+    tools = [mock_tool('Tool A'), mock_tool('Tool B')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+
+    agent = ReActAgentGraph(llm=mock_llm,
+                            prompt=prompt,
+                            tools=tools,
+                            detailed_logs=mock_config_react_agent.verbose,
+                            normalize_tool_input_quotes=False)
+
+    tool_input_python_none = "{'query': 'search term', 'task_id': None, 'context_id': None}"
+    mock_state = ReActGraphState(
+        agent_scratchpad=[AgentAction(tool='Tool A', tool_input=tool_input_python_none, log='test')])
+
+    response = await agent.tool_node(mock_state)
+    response = response.tool_responses[-1]
+
+    assert isinstance(response, ToolMessage)
+    assert response.name == "Tool A"
+    assert response.content == tool_input_python_none
+
+
 async def test_tool_node_nested_json_with_single_quotes(mock_react_agent):
     """Test that complex nested JSON with single quotes is normalized correctly."""
     # Complex nested JSON with single quotes - doesn't have a "query" field so would return the full dict

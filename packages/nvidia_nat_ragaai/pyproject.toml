@@ -16,7 +16,7 @@
 
 [build-system]
 build-backend = "setuptools.build_meta"
-requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+requires = ["setuptools>=64,<82", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 
 
 [tool.setuptools.packages.find]
@@ -58,6 +58,8 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "nvidia-nat-opentelemetry == {version}",
   "ragaai-catalyst~=2.2",
+  # ragaai-catalyst depends on the deprecated pkg_resources module which was removed in setuptools 82
+  "setuptools>=64,<82",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -66,7 +68,7 @@ test = [
 ]
 
 [tool.uv]
-build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
+build-constraint-dependencies = ["setuptools>=64,<82", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
 

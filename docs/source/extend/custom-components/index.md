@@ -32,6 +32,7 @@ MCP Server Worker <./mcp-server.md>
 Memory Provider <./memory.md>
 Object Store Provider <./object-store.md>
 Telemetry Exporter <./telemetry-exporters.md>
+Optimizer <./optimizer.md>
 Gated Fields <./gated-fields.md>
 Finetuning Harness <./finetuning.md>
 ```

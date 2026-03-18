@@ -27,13 +27,14 @@ from typing import Any
 
 from pydantic import Field
 
+from nat.middleware.common import TargetLocation
 from nat.middleware.defense.defense_middleware import DefenseMiddleware
 from nat.middleware.defense.defense_middleware import DefenseMiddlewareConfig
 from nat.middleware.defense.defense_middleware_data_models import ContentAnalysisResult
 from nat.middleware.defense.defense_middleware_data_models import GuardResponseResult
-from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationContext
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +46,6 @@ class ContentSafetyGuardMiddlewareConfig(DefenseMiddlewareConfig, name="content_
 
     Actions: partial_compliance (log warning but allow), refusal (block content),
     or redirection (replace with polite refusal message).
-
-    Note: Only output analysis is currently supported (target_location='output').
     """
 
     llm_name: str = Field(description="Name of the guard model LLM (must be defined in llms section)")
@@ -58,8 +57,6 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     This middleware analyzes content using guard models (e.g., NVIDIA Nemoguard, Qwen Guard)
     that return "Safe" or "Unsafe" classifications. The middleware extracts safety categories
     when unsafe content is detected.
-
-    Only output analysis is currently supported (``target_location='output'``).
 
     Streaming Behavior:
         For 'refusal' and 'redirection' actions, chunks are buffered and checked
@@ -79,11 +76,6 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Store config with correct type for linter
         self.config: ContentSafetyGuardMiddlewareConfig = config
         self._llm = None  # Lazy loaded LLM
-
-        # Content Safety Guard only supports output analysis
-        if config.target_location == "input":
-            raise ValueError("ContentSafetyGuardMiddleware only supports target_location='output'. "
-                             "Input analysis is not yet supported.")
 
     async def _get_llm(self):
         """Lazy load the guard model LLM when first needed."""
@@ -288,7 +280,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
                        ", ".join(categories) if categories else "none")
 
         if action == "refusal":
-            logger.error("Content Safety Guard refusing output of %s", context.name)
+            logger.error("Content Safety Guard refusing function output of %s", context.name)
             raise ValueError("Content blocked by safety policy")
 
         elif action == "redirection":
@@ -301,7 +293,6 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
     async def _process_content_safety_detection(
         self,
         value: Any,
-        location: str,
         context: FunctionMiddlewareContext,
         original_input: Any = None,
     ) -> Any:
@@ -311,8 +302,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         and applying sanitized value back to original structure.
 
         Args:
-            value: The value to analyze (input or output).
-            location: Either input or output (for logging).
+            value: The value to analyze.
             context: Function context metadata.
             original_input: Original function input (for output analysis context).
 
@@ -322,9 +312,8 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
         # Extract field from value if target_field is specified
         content_to_analyze, field_info = self._extract_field_from_value(value)
 
-        logger.info("ContentSafetyGuardMiddleware: Checking %s %s for %s",
-                    f"field '{self.config.target_field}'" if field_info else "entire",
-                    location,
+        logger.info("ContentSafetyGuardMiddleware: Checking %s function output for %s",
+                    f"field '{self.config.target_field}' of" if field_info else "entire",
                     context.name)
         analysis_result = await self._analyze_content(content_to_analyze,
                                                       original_input=original_input,
@@ -332,12 +321,11 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
 
         if not analysis_result.should_refuse:
             # Content is safe, return original value
-            logger.info("ContentSafetyGuardMiddleware: Verified %s of %s as safe", location, context.name)
+            logger.info("ContentSafetyGuardMiddleware: %s function output verified as safe", context.name)
             return value
 
         # Unsafe content detected - handle based on action
-        logger.warning("ContentSafetyGuardMiddleware: Blocking %s for %s (unsafe content detected)",
-                       location,
+        logger.warning("ContentSafetyGuardMiddleware: Blocking %s function output (unsafe content detected)",
                        context.name)
         sanitized_content = await self._handle_threat(content_to_analyze, analysis_result, context)
 
@@ -348,43 +336,33 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             # No field extraction - return sanitized content directly
             return sanitized_content
 
-    async def function_middleware_invoke(self,
-                                         *args: Any,
-                                         call_next: CallNext,
-                                         context: FunctionMiddlewareContext,
-                                         **kwargs: Any) -> Any:
-        """Apply content safety guard check to function invocation.
-
-        This is the core logic for content safety guard defense - each defense implements
-        its own invoke/stream based on its specific strategy.
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Analyze function output for content safety after execution.
 
         Args:
-            args: Positional arguments passed to the function (first arg is typically the input value).
-            call_next: Next middleware/function to call.
-            context: Function metadata (provides context state).
-            kwargs: Keyword arguments passed to the function.
+            context: Invocation context with function metadata and output.
 
         Returns:
-            Function output (potentially blocked or sanitized).
+            Modified context if output was processed, None to pass through.
         """
-        value = args[0] if args else None
+        if self.config.target_location != TargetLocation.OUTPUT:
+            return None
 
         # Check if defense should apply to this function
-        if not self._should_apply_defense(context.name):
-            logger.debug("ContentSafetyGuardMiddleware: Skipping %s (not targeted)", context.name)
-            return await call_next(value, *args[1:], **kwargs)
+        func_ctx: FunctionMiddlewareContext = context.function_context
+        if not self._should_apply_defense(func_ctx.name):
+            logger.debug("ContentSafetyGuardMiddleware: Skipping %s (not targeted)", func_ctx.name)
+            return None
 
         try:
-            # Call the function
-            output = await call_next(value, *args[1:], **kwargs)
-
-            # Handle output analysis (only output is supported)
-            output = await self._process_content_safety_detection(output, "output", context, original_input=value)
-
-            return output
-
+            # Handle function output analysis
+            original_input = context.original_args[0] if context.original_args else None
+            context.output = await self._process_content_safety_detection(context.output,
+                                                                          func_ctx,
+                                                                          original_input=original_input)
+            return context
         except Exception as e:
-            logger.error("Failed to apply content safety guard to function %s: %s", context.name, e, exc_info=True)
+            logger.error("Failed to apply content safety guard to function %s: %s", func_ctx.name, e, exc_info=True)
             raise
 
     async def function_middleware_stream(self,
@@ -430,10 +408,7 @@ class ContentSafetyGuardMiddleware(DefenseMiddleware):
             # Join chunks efficiently (only convert to string if needed)
             full_output = "".join(chunk if isinstance(chunk, str) else str(chunk) for chunk in accumulated_chunks)
 
-            processed_output = await self._process_content_safety_detection(full_output,
-                                                                            "output",
-                                                                            context,
-                                                                            original_input=value)
+            processed_output = await self._process_content_safety_detection(full_output, context, original_input=value)
 
             processed_str = str(processed_output)
             if self.config.action == "redirection" and processed_str != full_output:

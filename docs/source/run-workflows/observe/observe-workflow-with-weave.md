@@ -33,15 +33,36 @@ Under the "Account" section, you can find your API key. Click on the "Show" butt
 export WANDB_API_KEY=<your_api_key>
 ```
 
-### Step 1: Install the Weave plugin
+## Step 1: Install the Weave plugin
 
-To install the Weave plugin, run the following:
+To install the Weave plugin, run one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
-uv pip install -e '.[weave]'
+uv pip install -e ".[weave]"
 ```
 
-### Step 2: Install the Workflow
+:::
+
+:::{tab-item} package
+:sync: package
+
+```bash
+uv pip install "nvidia-nat[weave]"
+```
+
+:::
+
+::::
+
+
+## Step 2: Install the Workflow
 
 Pick an example from the list of available workflows. In this guide, we will be using the `simple_calculator` example.
 
@@ -49,7 +70,7 @@ Pick an example from the list of available workflows. In this guide, we will be 
 uv pip install -e examples/observability/simple_calculator_observability
 ```
 
-### Step 3: Modify Workflow Configuration
+## Step 3: Modify Workflow Configuration
 
 Update your workflow configuration file to include the weave telemetry settings. For example, `examples/observability/simple_calculator_observability/configs/config-weave.yml` has the following weave settings:
 
@@ -69,7 +90,7 @@ This setup enables logging trace data to W&B weave. The weave integration only r
 | `project` | The name of your W&B Weave project | `"nat-demo"` |
 | `entity` (deprecated) | Your W&B username or team name | `"your-wandb-username-or-teamname"` |
 
-### Step 4: Run Your Workflow
+## Step 4: Run Your Workflow
 Install `simple_calculator` example using the instructions in the `examples/observability/simple_calculator_observability/README.md` guide.
 Run the workflow using `config-weave.yml` configuration file:
 
@@ -79,13 +100,13 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 
 If it is your first time running the workflow, you will be prompted to login to W&B Weave.
 
-### Step 5: View Traces Data in Weave Dashboard
+## Step 5: View Traces Data in Weave Dashboard
 
 As the workflow runs, you will find a Weave URL (starting with a 🍩 emoji). Click on the URL to access your logged trace timeline.
 
 Note how the integration captures not only the `nat` intermediate steps but also the underlying framework. This is because [Weave has integrations](https://weave-docs.wandb.ai/guides/integrations/) with many of your favorite frameworks.
 
-### Step 6: Redacting Sensitive Data
+## Step 6: Redacting Sensitive Data
 
 When tracing LLM workflows, you may be processing sensitive information like personal identifiers, credit card numbers, or API keys. NeMo Agent Toolkit Weave integration supports automatic redaction of Personally Identifiable Information (PII) and sensitive keys from your traces.
 
@@ -154,6 +175,24 @@ general:
 ```
 
 The `WeaveFastAPIPluginWorker` registers the `/feedback` endpoint when Weave telemetry is configured. For more details on the feedback API, see the [API Server Endpoints](../../reference/rest-api/api-server-endpoints.md#feedback-endpoint) documentation.
+
+## User Attribution
+
+To associate traces and feedback with a specific user, set one or more of the following fields on the NeMo Agent Toolkit context metadata from within your authentication callback: `trace_user_name`, `trace_user_email`, or `trace_user_id`. These `trace_`-prefixed fields are an explicit opt-in, so general identity fields set on the metadata for other purposes will not affect Weave attribution.
+
+Any fields that are set will be written to the Weave call summary. When a user submits feedback through the `/feedback` endpoint, the first available value is used in priority order (`trace_user_name` → `trace_user_email` → `trace_user_id`), falling back to `anonymous`. 
+
+The following example shows how to set these fields from within an authentication callback:
+
+```python
+from nat.runtime.context import Context
+
+def my_auth_callback(request):
+    user_info = authenticate(request)  # returns user data from your identity provider
+    context = Context.get()
+    context.metadata.trace_user_name = user_info.get("name")
+    context.metadata.trace_user_email = user_info.get("email")
+```
 
 ## Resources
 

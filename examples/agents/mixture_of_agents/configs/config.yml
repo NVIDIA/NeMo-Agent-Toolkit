@@ -20,6 +20,9 @@ llms:
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.2
     max_tokens: 250
+    chat_template_kwargs:
+      enable_thinking: false
+
   agent_executor:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b

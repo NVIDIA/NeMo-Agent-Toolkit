@@ -23,7 +23,7 @@ from nat.llm.dynamo_llm import CacheControlMode
 from nat.llm.dynamo_llm import CachePinType
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.dynamo_llm import DynamoPrefixContext
-from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks
 
 # ---------------------------------------------------------------------------
 # DynamoModelConfig Tests
@@ -409,82 +409,92 @@ class TestDynamoPrefixContext:
 
 
 class TestCreateHttpxClient:
-    """Tests for create_httpx_client_with_dynamo_hooks."""
+    """Tests for _create_httpx_client_with_dynamo_hooks."""
 
-    def test_uses_custom_timeout(self):
-        """Test that the function uses the provided timeout."""
-        client = create_httpx_client_with_dynamo_hooks(
-            total_requests=10,
-            osl=512,
-            iat=250,
-            timeout=120.0,
-        )
+    async def test_uses_custom_timeout(self):
+        """Test that the function uses the provided timeout from config."""
+        config = DynamoModelConfig(model_name="test", request_timeout=120.0)
+        async with _create_httpx_client_with_dynamo_hooks(config) as client:
+            assert client.timeout.connect == 120.0
+            assert client.timeout.read == 120.0
+            assert client.timeout.write == 120.0
 
-        assert client.timeout.connect == 120.0
-        assert client.timeout.read == 120.0
-        assert client.timeout.write == 120.0
-
-    def test_uses_default_timeout(self):
+    async def test_uses_default_timeout(self):
         """Test that the function uses default timeout when not specified."""
-        client = create_httpx_client_with_dynamo_hooks(
-            total_requests=10,
-            osl=512,
-            iat=250,
-        )
+        config = DynamoModelConfig(model_name="test")
+        async with _create_httpx_client_with_dynamo_hooks(config) as client:
+            assert client.timeout.connect == 600.0
 
-        assert client.timeout.connect == 600.0
-
-    def test_creates_client_with_custom_transport(self):
-        """Test that create_httpx_client_with_dynamo_hooks uses _DynamoTransport."""
+    async def test_creates_client_with_custom_transport(self):
+        """Test that _create_httpx_client_with_dynamo_hooks uses _DynamoTransport when enable_nvext_hints=True."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = create_httpx_client_with_dynamo_hooks(
-            total_requests=7,
-            osl=2048,
-            iat=50,
-            timeout=120.0,
-            prediction_lookup=None,
+        config = DynamoModelConfig(
+            model_name="test",
+            enable_nvext_hints=True,
+            nvext_prefix_total_requests=7,
+            nvext_prefix_osl=2048,
+            nvext_prefix_iat=50,
+            request_timeout=120.0,
         )
+        async with _create_httpx_client_with_dynamo_hooks(config) as client:
+            # Verify client uses custom transport
+            assert isinstance(client._transport, _DynamoTransport)
 
-        # Verify client uses custom transport
-        assert isinstance(client._transport, _DynamoTransport)
+            # Verify transport has correct values
+            assert client._transport._total_requests == 7
+            assert client._transport._osl == 2048
+            assert client._transport._iat == 50
+            assert client._transport._cache_pin_type == CachePinType.EPHEMERAL
 
-        # Verify transport has correct values
-        assert client._transport._total_requests == 7
-        assert client._transport._osl == 2048
-        assert client._transport._iat == 50
-        assert client._transport._cache_pin_type == CachePinType.EPHEMERAL
+            # Verify timeout
+            assert client.timeout.read == 120.0
 
-        # Verify timeout
-        assert client.timeout.read == 120.0
-
-    def test_creates_client_with_cache_pin_type_none(self):
-        """Test that create_httpx_client_with_dynamo_hooks passes cache_pin_type=None through."""
+    async def test_creates_client_with_cache_pin_type_none(self):
+        """Test that _create_httpx_client_with_dynamo_hooks passes cache_pin_type=None through."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = create_httpx_client_with_dynamo_hooks(
-            total_requests=10,
-            osl=512,
-            iat=250,
-            cache_pin_type=None,
+        config = DynamoModelConfig(
+            model_name="test",
+            enable_nvext_hints=True,
+            nvext_cache_pin_type=None,
         )
+        async with _create_httpx_client_with_dynamo_hooks(config) as client:
+            assert isinstance(client._transport, _DynamoTransport)
+            assert client._transport._cache_pin_type is None
 
-        assert isinstance(client._transport, _DynamoTransport)
-        assert client._transport._cache_pin_type is None
-
-    def test_creates_client_with_cache_control_mode_first_only(self):
-        """Test that create_httpx_client_with_dynamo_hooks passes cache_control_mode through."""
+    async def test_creates_client_with_cache_control_mode_first_only(self):
+        """Test that _create_httpx_client_with_dynamo_hooks passes cache_control_mode through."""
         from nat.llm.dynamo_llm import _DynamoTransport
 
-        client = create_httpx_client_with_dynamo_hooks(
-            total_requests=10,
-            osl=512,
-            iat=250,
-            cache_control_mode=CacheControlMode.FIRST_ONLY,
+        config = DynamoModelConfig(
+            model_name="test",
+            enable_nvext_hints=True,
+            nvext_cache_control_mode=CacheControlMode.FIRST_ONLY,
         )
+        async with _create_httpx_client_with_dynamo_hooks(config) as client:
+            assert isinstance(client._transport, _DynamoTransport)
+            assert client._transport._cache_control_mode == CacheControlMode.FIRST_ONLY
 
-        assert isinstance(client._transport, _DynamoTransport)
-        assert client._transport._cache_control_mode == CacheControlMode.FIRST_ONLY
+    @pytest.mark.parametrize(
+        "config,expected_verify",
+        [
+            (DynamoModelConfig(model_name="test"), True),
+            (DynamoModelConfig(model_name="test", verify_ssl=True), True),
+            (DynamoModelConfig(model_name="test", verify_ssl=False), False),
+        ],
+        ids=["default_verify_ssl", "verify_ssl_true", "verify_ssl_false"],
+    )
+    async def test_verify_ssl_passed_to_client(self,
+                                               config: DynamoModelConfig,
+                                               expected_verify: bool,
+                                               mock_httpx_async_client):
+        """Verify that verify_ssl from config is passed to the underlying httpx.AsyncClient as verify."""
+        async with _create_httpx_client_with_dynamo_hooks(config):
+            pass
+        mock_httpx_async_client.assert_called_once()
+        call_kwargs = mock_httpx_async_client.call_args.kwargs
+        assert call_kwargs["verify"] is expected_verify
 
 
 # ---------------------------------------------------------------------------

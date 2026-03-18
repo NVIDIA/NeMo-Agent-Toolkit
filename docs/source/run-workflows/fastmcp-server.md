@@ -75,6 +75,21 @@ nat fastmcp server dev --config_file examples/getting_started/simple_calculator/
   --watch-path examples/getting_started/simple_calculator/src
 ```
 
+By default, developer mode ignores common noisy files such as `*.log`, `*.tmp`, and `*.temp`.
+To further control which changes trigger reloads, use include and exclude globs:
+
+- `--reload-include-glob` narrows reloads to matching paths.
+- `--reload-exclude-glob` removes matches from that set.
+- When include globs are provided, they take precedence over default excludes.
+
+```bash
+nat fastmcp server dev --config_file examples/getting_started/simple_calculator/configs/config.yml \
+  --watch-path examples/getting_started/simple_calculator/src \
+  --reload-include-glob "*.py" \
+  --reload-include-glob "*.yml" \
+  --reload-exclude-glob "*.log"
+```
+
 ### Generating MCP Client Configuration Snippets
 
 Use `nat fastmcp server install` to generate MCP client configuration snippets for a FastMCP server. This command does not modify your environment.
@@ -117,7 +132,8 @@ You can publish a subset of tools using the `--tool_names` flag:
 
 ```bash
 nat fastmcp server run --config_file examples/getting_started/simple_calculator/configs/config.yml \
-  --tool_names calculator
+  --tool_names calculator__multiply \
+  --tool_names calculator__divide
 ```
 
 ### Mounting at Custom Paths

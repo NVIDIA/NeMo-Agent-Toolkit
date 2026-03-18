@@ -41,10 +41,6 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/advanced_agents/alert_triage_agent/data/",
     ),
     (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability",
-    ),
-    (
         r"^examples/config_inheritance/README.md",
         r"^examples/getting_started/simple_calculator",
     ),
@@ -63,10 +59,6 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     (
         r"^examples/evaluation_and_profiling/simple_calculator_eval/.*configs/",
         r"^examples/evaluation_and_profiling/simple_calculator_eval/data/",
-    ),
-    (
-        r"^examples/evaluation_and_profiling/swe_bench/.*configs/",
-        r"^examples/evaluation_and_profiling/swe_bench/data/",
     ),
     (
         r"^examples/evaluation_and_profiling/simple_calculator_eval/.*configs/",
@@ -172,6 +164,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "run/serve",
     "search/edit/score/select",
     "size/time",
+    "SSL/TLS",
     "string/array",
     "string/object",
     "success/failure",

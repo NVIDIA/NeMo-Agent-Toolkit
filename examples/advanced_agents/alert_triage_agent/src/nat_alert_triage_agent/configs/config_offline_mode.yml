@@ -73,33 +73,32 @@ llms:
   ata_agent_llm:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
-    temperature: 0.2
-    max_tokens: 2048
+    temperature: 0
+    max_tokens: 16384
 
   tool_reasoning_llm:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
-    temperature: 0.2
-    top_p: 0.7
-    max_tokens: 2048
+    temperature: 0
+    max_tokens: 16384
 
   telemetry_metrics_analysis_agent_llm:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0
-    max_tokens: 2048
+    max_tokens: 16384
 
   maintenance_check_llm:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0
-    max_tokens: 2048
+    max_tokens: 16384
 
   categorizer_llm:
     _type: nim
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0
-    max_tokens: 2048
+    max_tokens: 16384
 
   nim_rag_eval_llm:
     _type: nim

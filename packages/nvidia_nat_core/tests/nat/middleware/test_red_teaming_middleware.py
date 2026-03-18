@@ -423,6 +423,6 @@ async def test_multiple_field_matches_with_error_strategy():
 )
 def test_string_placement_modes(placement, original, expected):
     """Test all payload placement modes for string values."""
-    middleware = RedTeamingMiddleware(attack_payload="PAYLOAD", payload_placement=placement)
+    middleware = RedTeamingMiddleware(attack_payload="PAYLOAD", payload_placement=placement, target_location="input")
     result = middleware._apply_payload_to_function_value(original)
     assert result == expected

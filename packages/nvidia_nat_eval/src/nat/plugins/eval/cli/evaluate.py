@@ -27,6 +27,16 @@ from nat.plugins.eval.runtime.evaluate import EvaluationRun
 logger = logging.getLogger(__name__)
 
 
+def _get_missing_eval_callback_install_hint(exporter_config) -> str | None:
+    """Return install guidance for exporter configs that support eval callbacks."""
+    class_name = type(exporter_config).__name__
+    install_hints = {
+        "WeaveTelemetryExporter": "pip install nvidia-nat-weave",
+        "LangsmithTelemetryExporter": "pip install nvidia-nat-langchain",
+    }
+    return install_hints.get(class_name)
+
+
 @click.group(name=__name__, invoke_without_command=True, help="Evaluate a workflow with the specified dataset.")
 @click.option(
     "--config_file",
@@ -103,10 +113,15 @@ def write_tabular_output(eval_run_output: EvaluationRunOutput):
     # Print header with workflow status and runtime
     workflow_status = "INTERRUPTED" if eval_run_output.workflow_interrupted else "COMPLETED"
     total_runtime = eval_run_output.usage_stats.total_runtime if eval_run_output.usage_stats else 0.0
+    workflow_output_files = ["workflow_output.json"]
+    if eval_run_output.workflow_output_file:
+        atif_workflow_output = eval_run_output.workflow_output_file.parent / "workflow_output_atif.json"
+        if atif_workflow_output.exists():
+            workflow_output_files.append("workflow_output_atif.json")
 
     click.echo("")
     click.echo(click.style("=== EVALUATION SUMMARY ===", fg="bright_blue", bold=True))
-    click.echo(f"Workflow Status: {workflow_status} (workflow_output.json)")
+    click.echo(f"Workflow Status: {workflow_status} ({', '.join(workflow_output_files)})")
     click.echo(f"Total Runtime: {total_runtime:.2f}s")
 
     # Include profiler stats if available
@@ -160,8 +175,8 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
     """Build callback manager from registered eval callbacks matching the tracing config."""
     try:
         from nat.cli.type_registry import GlobalTypeRegistry
-        from nat.eval.eval_callbacks import EvalCallbackManager
         from nat.observability.utils.tracing_utils import get_tracing_configs
+        from nat.plugins.eval.eval_callbacks import EvalCallbackManager
         from nat.runtime.loader import load_config as _load_cfg
 
         loaded = _load_cfg(config.config_file) if isinstance(config.config_file, Path) else config.config_file
@@ -176,6 +191,13 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
             try:
                 registered = registry.get_eval_callback(type(exporter_config))
             except KeyError:
+                install_hint = _get_missing_eval_callback_install_hint(exporter_config)
+                if install_hint:
+                    logger.warning(
+                        "No eval export callback is registered for tracing exporter '%s'. "
+                        "Continuing without eval metric export for this provider. Install with: %s",
+                        type(exporter_config).__name__,
+                        install_hint)
                 continue
             cb = registered.factory_fn(exporter_config)
             manager.register(cb)
@@ -196,7 +218,13 @@ def _build_eval_callback_manager(config: EvaluationRunConfig):
 
 
 async def run_and_evaluate(config: EvaluationRunConfig):
-    callback_manager = _build_eval_callback_manager(config)
+    from nat.plugins.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+
+    callback_manager = _build_eval_callback_manager(config) or EvalCallbackManager()
+
+    if config.write_output:
+        callback_manager.register(FileEvalCallback())
 
     # Run evaluation
     eval_runner = EvaluationRun(config=config, callback_manager=callback_manager)

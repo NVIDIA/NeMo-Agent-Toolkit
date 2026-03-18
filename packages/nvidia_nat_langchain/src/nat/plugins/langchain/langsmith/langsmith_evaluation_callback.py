@@ -19,7 +19,7 @@ from typing import Any
 
 import langsmith
 
-from nat.eval.eval_callbacks import EvalResult
+from nat.plugins.eval.eval_callbacks import EvalResult
 
 logger = logging.getLogger(__name__)
 

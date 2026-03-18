@@ -13,16 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
-#
-# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
-# property and proprietary rights in and to this material, related
-# documentation and any modifications thereto. Any use, reproduction,
-# disclosure or distribution of this material and related documentation
-# without an express license agreement from NVIDIA CORPORATION or
-# its affiliates is strictly prohibited.
-
 
 # The purpose of this function is to allow loading the current directory as a module. This allows relative imports and
 # more specifically `..common` to function correctly
@@ -41,19 +31,6 @@ def run_cli():
     from nat.cli.entrypoint import cli
 
     cli(obj={}, auto_envvar_prefix='NAT', show_default=True, prog_name="nat")
-
-
-def run_cli_aiq_compat():
-    "Entrypoint for the `aiq` compatibility command"
-    import warnings
-
-    # Warn with a UserWarning since DeprecationWarnings are not shown by default
-    warnings.warn(
-        "The 'aiq' command is deprecated and will be removed in a future release. "
-        "Please use the 'nat' command instead.",
-        UserWarning,
-        stacklevel=2)
-    run_cli()
 
 
 if __name__ == '__main__':

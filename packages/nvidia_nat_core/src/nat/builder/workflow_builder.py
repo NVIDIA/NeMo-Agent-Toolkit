@@ -29,11 +29,9 @@ from typing import cast
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
 from nat.builder.builder import EvalBuilder
-from nat.builder.builder import UserManagerHolder
 from nat.builder.child_builder import ChildBuilder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.component_utils import build_dependency_sequence
-from nat.builder.context import Context
 from nat.builder.context import ContextState
 from nat.builder.embedder import EmbedderProviderInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -93,8 +91,8 @@ from nat.observability.exporter.base_exporter import BaseExporter
 from nat.utils.type_utils import override
 
 try:
-    from nat.plugins.eval.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
-    from nat.plugins.eval.profiler.utils import detect_llm_frameworks_in_build_fn
+    from nat.plugins.profiler.decorators.framework_wrapper import chain_wrapped_build_fn
+    from nat.plugins.profiler.utils import detect_llm_frameworks_in_build_fn
 except ImportError:
 
     def detect_llm_frameworks_in_build_fn(registration) -> list[LLMFrameworkEnum]:
@@ -1338,9 +1336,8 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
         try:
             middleware_info = self._registry.get_middleware(type(config))
 
-            with ChildBuilder.use(config, self) as inner_builder:
-                middleware_instance = await self._get_exit_stack().enter_async_context(
-                    middleware_info.build_fn(config, inner_builder))
+            middleware_instance = await self._get_exit_stack().enter_async_context(
+                middleware_info.build_fn(config, self))
 
             self._middleware[name] = ConfiguredMiddleware(config=config, instance=middleware_instance)
 
@@ -1384,10 +1381,6 @@ class WorkflowBuilder(Builder, AbstractAsyncContextManager):
             raise ValueError(f"Middleware `{middleware_name}` not found")
 
         return self._middleware[middleware_name].config
-
-    @override
-    def get_user_manager(self):
-        return UserManagerHolder(context=Context(self._context_state))
 
     async def add_telemetry_exporter(self, name: str, config: TelemetryExporterBaseConfig) -> None:
         """Add an configured telemetry exporter to the builder.

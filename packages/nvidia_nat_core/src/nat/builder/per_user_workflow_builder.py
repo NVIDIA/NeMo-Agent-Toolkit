@@ -24,7 +24,6 @@ from typing import cast
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
-from nat.builder.builder import UserManagerHolder
 from nat.builder.child_builder import ChildBuilder
 from nat.builder.component_utils import WORKFLOW_COMPONENT_NAME
 from nat.builder.component_utils import build_dependency_sequence
@@ -536,10 +535,6 @@ class PerUserWorkflowBuilder(Builder, AbstractAsyncContextManager):
                                       pipeline_type: PipelineTypeEnum,
                                       stage_type: StageTypeEnum) -> TTCStrategyBaseConfig:
         return await self._shared_builder.get_ttc_strategy_config(strategy_name, pipeline_type, stage_type)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._shared_builder.get_user_manager()
 
     @override
     async def add_middleware(self, name: str | MiddlewareRef, config: MiddlewareBaseConfig) -> Middleware:
