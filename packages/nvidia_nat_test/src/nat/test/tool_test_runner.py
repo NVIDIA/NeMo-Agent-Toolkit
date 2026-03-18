@@ -303,12 +303,6 @@ class MockBuilder(Builder):
         """Mock implementation for object store config."""
         return ObjectStoreBaseConfig()
 
-    def get_user_manager(self):
-        """Mock implementation."""
-        mock_user = MagicMock()
-        mock_user.get_id = MagicMock(return_value="test_user")
-        return mock_user
-
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
         """Mock implementation."""
         return FunctionDependencies()

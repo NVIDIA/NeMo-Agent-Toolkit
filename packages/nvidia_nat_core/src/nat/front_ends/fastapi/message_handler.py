@@ -28,6 +28,7 @@ from pydantic import ValidationError
 from starlette.websockets import WebSocketDisconnect
 
 from nat.authentication.interfaces import FlowHandlerBase
+from nat.data_models.api_server import AuthMessageStatus
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
@@ -40,6 +41,8 @@ from nat.data_models.api_server import SystemResponseContent
 from nat.data_models.api_server import TextContent
 from nat.data_models.api_server import UserMessageContentRoleType
 from nat.data_models.api_server import UserMessages
+from nat.data_models.api_server import WebSocketAuthMessage
+from nat.data_models.api_server import WebSocketAuthResponseMessage
 from nat.data_models.api_server import WebSocketMessageStatus
 from nat.data_models.api_server import WebSocketMessageType
 from nat.data_models.api_server import WebSocketObservabilityTraceMessage
@@ -54,10 +57,12 @@ from nat.data_models.interactive import HumanPromptNotification
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import HumanResponseNotification
 from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.user_info import UserInfo
 from nat.front_ends.fastapi.message_validator import MessageValidator
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 from nat.runtime.session import SessionManager
+from nat.runtime.user_manager import UserManager
 
 if typing.TYPE_CHECKING:
     from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -96,6 +101,7 @@ class WebSocketMessageHandler:
         self._workflow_schema_type: str | None = None
         self._user_interaction: UserInteraction | None = None
         self._pending_observability_trace: ResponseObservabilityTrace | None = None
+        self._user_id: str | None = None
 
         self._flow_handler: FlowHandlerBase | None = None
 
@@ -119,7 +125,7 @@ class WebSocketMessageHandler:
         self._message_parent_id = message.id
         self._workflow_schema_type = message.schema_type
         self._conversation_id = message.conversation_id
-        self._user_message_payload: dict[str, Any] = message.model_dump(exclude={"security"})
+        self._user_message_payload: dict[str, Any] = message.model_dump()
         if self._conversation_id:
             self._worker.set_conversation_handler(self._conversation_id, self)
 
@@ -185,6 +191,9 @@ class WebSocketMessageHandler:
                 if (isinstance(validated_message, WebSocketUserMessage)):
                     await self.process_workflow_request(validated_message)
 
+                elif (isinstance(validated_message, WebSocketAuthMessage)):
+                    await self._process_auth_message(validated_message)
+
                 elif (isinstance(validated_message, WebSocketUserInteractionResponseMessage)):
                     user_content = await self._process_websocket_user_interaction_response_message(validated_message)
                     assert self._user_interaction is not None
@@ -211,6 +220,26 @@ class WebSocketMessageHandler:
                     if isinstance(attachment, TextContent):
                         return attachment
         raise ValueError("No user text content found in messages.")
+
+    async def _process_auth_message(self, message: WebSocketAuthMessage) -> None:
+        """Resolve user identity from an auth message payload and store the user_id."""
+        try:
+            user_info: UserInfo = UserManager._from_auth_payload(message.payload)
+            self._user_id = user_info.get_user_id()
+            response: WebSocketAuthResponseMessage = WebSocketAuthResponseMessage(
+                status=AuthMessageStatus.SUCCESS,
+                user_id=self._user_id,
+            )
+        except Exception as exc:
+            response = WebSocketAuthResponseMessage(
+                status=AuthMessageStatus.ERROR,
+                payload=Error(
+                    code=ErrorTypes.USER_AUTH_ERROR,
+                    message="Authentication failed",
+                    details=str(exc),
+                ),
+            )
+        await self._socket.send_json(response.model_dump())
 
     async def _process_websocket_user_interaction_response_message(
             self, user_content: WebSocketUserInteractionResponseMessage) -> TextContent:
@@ -412,7 +441,8 @@ class WebSocketMessageHandler:
 
         try:
             auth_callback = self._flow_handler.authenticate if self._flow_handler else None
-            async with self._session_manager.session(user_message_id=user_message_id,
+            async with self._session_manager.session(user_id=self._user_id,
+                                                     user_message_id=user_message_id,
                                                      conversation_id=conversation_id,
                                                      http_connection=self._socket,
                                                      user_input_callback=self.human_interaction_callback,
