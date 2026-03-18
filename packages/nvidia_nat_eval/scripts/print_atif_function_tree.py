@@ -69,6 +69,11 @@ def _iter_trajectories(payload: Any) -> list[tuple[str, dict[str, Any]]]:
     raise ValueError("Unsupported ATIF JSON shape. Expected trajectory or eval-sample payload.")
 
 
+def _label_id(label: str) -> str:
+    """Extract the ID portion from a normalized label like item=4."""
+    return label.split("=", 1)[1] if "=" in label else label
+
+
 def _add_ancestry(nodes: dict[str, NodeStats], fn: dict[str, Any], from_tool: bool) -> None:
     function_id = str(fn.get("function_id") or "")
     function_name = str(fn.get("function_name") or "")
@@ -102,6 +107,106 @@ def _build_nodes(trajectory: dict[str, Any]) -> dict[str, NodeStats]:
             if isinstance(tool_ancestry, dict):
                 _add_ancestry(nodes, tool_ancestry.get("function_ancestry") or {}, from_tool=True)
     return nodes
+
+
+def _extract_nested_tool_chain(step: dict[str, Any], tool_name: str) -> list[str]:
+    """Infer nested tool calls from NAT function end events within a step."""
+    extra = step.get("extra") or {}
+    nat_events = extra.get("nat_events") or []
+
+    names: list[str] = []
+    for event in nat_events:
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") != "FUNCTION_END":
+            continue
+        name = event.get("name")
+        if isinstance(name, str) and name and name != "<workflow>":
+            names.append(name)
+
+    # FUNCTION_END events are emitted leaf-first. Reverse to parent-first and
+    # deduplicate while preserving order.
+    ordered = list(dict.fromkeys(reversed(names)))
+    if ordered and ordered[0] == tool_name:
+        ordered = ordered[1:]
+    return ordered
+
+
+def _build_execution_graph(trajectory: dict[str, Any]) -> tuple[dict[str, set[str]], dict[str, int]]:
+    """
+    Build an inferred execution graph:
+    root -> <workflow> -> <llm:model> -> tool -> nested tools.
+    """
+    edges: dict[str, set[str]] = defaultdict(set)
+    seen_counts: dict[str, int] = defaultdict(int)
+
+    workflow_node = "<workflow>"
+    edges["root"].add(workflow_node)
+    seen_counts[workflow_node] += 1
+
+    for step in trajectory.get("steps", []):
+        if not isinstance(step, dict):
+            continue
+        if step.get("source") != "agent":
+            continue
+
+        parent_node = workflow_node
+        model_name = step.get("model_name")
+        if isinstance(model_name, str) and model_name:
+            llm_node = f"<llm:{model_name}>"
+            edges[workflow_node].add(llm_node)
+            seen_counts[llm_node] += 1
+            parent_node = llm_node
+
+        tool_calls = step.get("tool_calls") or []
+        for tool_call in tool_calls:
+            if not isinstance(tool_call, dict):
+                continue
+            tool_name = tool_call.get("function_name")
+            if not isinstance(tool_name, str) or not tool_name:
+                continue
+
+            # Start with the selected tool, then append inferred nested calls.
+            chain = [tool_name, *_extract_nested_tool_chain(step, tool_name)]
+            prev = parent_node
+            for node in chain:
+                edges[prev].add(node)
+                seen_counts[node] += 1
+                prev = node
+
+    return edges, seen_counts
+
+
+def _build_execution_chains(trajectory: dict[str, Any]) -> list[list[str]]:
+    """Build per-occurrence execution chains for explicit sequence visualization."""
+    chains: list[list[str]] = []
+    workflow_node = "<workflow>"
+
+    for step in trajectory.get("steps", []):
+        if not isinstance(step, dict) or step.get("source") != "agent":
+            continue
+
+        model_name = step.get("model_name")
+        llm_node = f"<llm:{model_name}>" if isinstance(model_name, str) and model_name else None
+        if llm_node:
+            chains.append([workflow_node, llm_node])
+
+        tool_calls = step.get("tool_calls") or []
+        for tool_call in tool_calls:
+            if not isinstance(tool_call, dict):
+                continue
+            tool_name = tool_call.get("function_name")
+            if not isinstance(tool_name, str) or not tool_name:
+                continue
+
+            chain = [workflow_node]
+            if llm_node:
+                chain.append(llm_node)
+            chain.append(tool_name)
+            chain.extend(_extract_nested_tool_chain(step, tool_name))
+            chains.append(chain)
+
+    return chains
 
 
 def _print_tree(nodes: dict[str, NodeStats]) -> None:
@@ -160,25 +265,98 @@ def _print_tree(nodes: dict[str, NodeStats]) -> None:
         rec(root_id, "", i == len(remaining_roots) - 1, set())
 
 
+def _print_execution_tree(edges: dict[str, set[str]], seen_counts: dict[str, int]) -> None:
+    """Print the inferred execution graph as a readable tree."""
+    print("root")
+
+    def rec(node: str, prefix: str, is_last: bool, visited: set[str]) -> None:
+        branch = "└─ " if is_last else "├─ "
+        if node in visited:
+            print(f"{prefix}{branch}<cycle> [{node}]")
+            return
+
+        visited = set(visited)
+        visited.add(node)
+        count = seen_counts.get(node, 0)
+        count_suffix = f" (seen={count})" if count else ""
+        print(f"{prefix}{branch}{node}{count_suffix}")
+
+        children = sorted(edges.get(node, set()))
+        child_prefix = prefix + ("   " if is_last else "│  ")
+        for idx, child in enumerate(children):
+            rec(child, child_prefix, idx == len(children) - 1, visited)
+
+    roots = sorted(edges.get("root", set()))
+    for idx, root_node in enumerate(roots):
+        rec(root_node, "", idx == len(roots) - 1, set())
+
+
+def _print_execution_sequence_tree(chains: list[list[str]]) -> None:
+    """Print each execution occurrence as an explicit branch."""
+    print("root")
+    if not chains:
+        return
+
+    for i, chain in enumerate(chains, start=1):
+        run_branch = "└─ " if i == len(chains) else "├─ "
+        print(f"{run_branch}run_{i}")
+        prefix = "   " if i == len(chains) else "│  "
+        for j, node in enumerate(chain):
+            node_branch = "└─ " if j == len(chain) - 1 else "├─ "
+            print(f"{prefix}{node_branch}{node}")
+            prefix += "   " if j == len(chain) - 1 else "│  "
+
+
 def main() -> None:
     """Parse the input JSON and print the ATIF function ancestry tree."""
     parser = argparse.ArgumentParser(description="Print ATIF function ancestry tree from workflow_output_atif.json")
     parser.add_argument("input_json", type=Path, help="Path to ATIF workflow output JSON")
+    parser.add_argument(
+        "--view",
+        choices=["ancestry", "execution", "execution_sequence"],
+        default="ancestry",
+        help=("Tree view type. 'ancestry' uses recorded ancestry metadata. "
+              "'execution' shows an aggregated runtime chain graph. "
+              "'execution_sequence' lists each runtime occurrence as its own branch."),
+    )
+    parser.add_argument(
+        "--item-id",
+        help="Only print a specific item_id (for example: 3).",
+    )
     args = parser.parse_args()
 
     payload = _load_json(args.input_json)
     trajectories = _iter_trajectories(payload)
+
+    if args.item_id is not None:
+        trajectories = [(label, t) for (label, t) in trajectories if _label_id(label) == str(args.item_id)]
+        if not trajectories:
+            print(f"No trajectory found for item_id={args.item_id}")
+            return
 
     for idx, (label, trajectory) in enumerate(trajectories):
         if idx > 0:
             print()
         session_id = trajectory.get("session_id", "unknown-session")
         print(f"=== {label} | mode=atif | session_id={session_id} ===")
-        nodes = _build_nodes(trajectory)
-        if not nodes:
-            print("No ancestry metadata found in step.extra.")
-            continue
-        _print_tree(nodes)
+        if args.view == "execution":
+            edges, seen_counts = _build_execution_graph(trajectory)
+            if not edges:
+                print("No execution metadata found in trajectory steps.")
+                continue
+            _print_execution_tree(edges, seen_counts)
+        elif args.view == "execution_sequence":
+            chains = _build_execution_chains(trajectory)
+            if not chains:
+                print("No execution metadata found in trajectory steps.")
+                continue
+            _print_execution_sequence_tree(chains)
+        else:
+            nodes = _build_nodes(trajectory)
+            if not nodes:
+                print("No ancestry metadata found in step.extra.")
+                continue
+            _print_tree(nodes)
 
 
 if __name__ == "__main__":

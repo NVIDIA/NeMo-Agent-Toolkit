@@ -61,4 +61,5 @@ eval:
   evaluators:
     trajectory_eval:
       _type: trajectory
+      enable_atif_evaluator: true
       llm_name: eval_llm
