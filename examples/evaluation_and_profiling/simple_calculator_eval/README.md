@@ -77,3 +77,23 @@ The evaluation generates comprehensive metrics including:
 - **Question-by-Question Analysis**: Detailed breakdown of individual responses
 - **Performance Metrics**: Overall quality assessments
 - **Error Analysis**: Identification of common failure patterns
+
+### Running Nested Trajectory Evaluation
+
+Evaluate a workflow that performs a nested tool call (`power_of_two` -> `calculator__multiply`) and inspect how it appears in the ATIF trajectory output:
+
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml
+```
+
+This command:
+- Uses `examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_of_two.json`
+- Runs the built-in `trajectory` evaluator
+- Writes workflow trajectories to `.tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json`
+
+To inspect the call hierarchy from the generated ATIF file:
+
+```bash
+python packages/nvidia_nat_eval/scripts/print_atif_function_tree.py \
+  .tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json
+```

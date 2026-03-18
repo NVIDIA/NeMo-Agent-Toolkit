@@ -41,3 +41,6 @@ dependencies = [
 [tool.uv.sources]
 nvidia-nat = { path = "../../..", editable = true }
 nat_simple_calculator = { path = "../../getting_started/simple_calculator", editable = true }
+
+[project.entry-points."nat.components"]
+nat_simple_calculator_eval = "nat_simple_calculator_eval.register"
