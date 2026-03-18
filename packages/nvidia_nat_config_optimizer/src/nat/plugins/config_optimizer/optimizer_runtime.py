@@ -184,7 +184,9 @@ async def optimize_config(opt_run_config: OptimizerRunConfig):
                 prompt_run_kwargs["trial_number_offset"] = _numeric_trial_count
             if "frozen_params" in runner_run_params:
                 prompt_run_kwargs["frozen_params"] = best_numeric_params
-            await runner.run(**prompt_run_kwargs)
+            prompt_result = await runner.run(**prompt_run_kwargs)
+            if prompt_result is not None:
+                tuned_cfg = prompt_result
 
     logger.info("All optimization phases complete.")
     return tuned_cfg

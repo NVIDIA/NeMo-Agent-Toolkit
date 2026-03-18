@@ -95,10 +95,6 @@ class GAPromptOptimizationConfig(PromptOptimizationConfig, name="ga"):
         description="Number of generations to evolve in GA prompt optimization.",
         default=15,
     )
-    ga_offspring_size: int | None = Field(
-        description="Number of offspring to produce per generation. Defaults to population_size - elitism.",
-        default=None,
-    )
     ga_crossover_rate: float = Field(
         description="Probability of applying crossover during reproduction.",
         default=0.8,

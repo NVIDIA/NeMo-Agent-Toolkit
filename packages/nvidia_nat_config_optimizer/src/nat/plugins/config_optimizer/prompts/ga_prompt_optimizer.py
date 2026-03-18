@@ -433,9 +433,6 @@ class GAPromptOptimizer(BasePromptOptimizer):
         pop_size = max(2, int(prompt_cfg.ga_population_size))
         generations = max(1, int(prompt_cfg.ga_generations))
         elitism = max(0, int(prompt_cfg.ga_elitism))
-        # I am removing the offspring_size dead code. It needs to be brought back later once we
-        # have a proper implementation.
-        # offspring_size = prompt_cfg.ga_offspring_size or max(0, pop_size - elitism)
         crossover_rate = float(prompt_cfg.ga_crossover_rate)
         mutation_rate = float(prompt_cfg.ga_mutation_rate)
         selection_method = prompt_cfg.ga_selection_method
@@ -569,7 +566,9 @@ class GAPromptOptimizer(BasePromptOptimizer):
                 if selection_method == "tournament":
                     return self._tournament_select(curr_pop, tournament_size)
                 elif selection_method == "roulette":
-                    total = (sum(max(ind.scalar_fitness or 0.0, 0.0) for ind in curr_pop) or 1.0)
+                    total = sum(max(ind.scalar_fitness or 0.0, 0.0) for ind in curr_pop)
+                    if total <= 0.0:
+                        return random.choice(curr_pop)
                     r = random.random() * total
                     acc = 0.0
                     for ind in curr_pop:

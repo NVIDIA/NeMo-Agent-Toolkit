@@ -152,7 +152,7 @@ To migrate:
 For users migrating existing integrations, the primary import change is (old => new):
 
 - `nat.eval.*` => `nat.plugins.eval.*`
-- `nat.profiler.*` => `nat.plugins.eval.profiler.*`
+- `nat.profiler.*` => `nat.plugins.eval.profiler.*` (except `nat.profiler.parameter_optimization.*`, which remains in core)
 - `nat.eval.runtime_event_subscriber.pull_intermediate` => `nat.builder.runtime_event_subscriber.pull_intermediate`
 
 For evaluation data models, prefer canonical core paths:

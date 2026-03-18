@@ -118,3 +118,54 @@ async def test_optimize_config_calls_numeric_and_prompt(monkeypatch):
     assert out is cfg
     assert calls["numeric"] == 1
     assert calls["prompt"] == 1
+
+
+async def test_optimize_config_propagates_prompt_runner_return(monkeypatch):
+    """When prompt runner returns a Config, runtime propagates it as the final result."""
+    cfg = _DummyConfig()
+    cfg.optimizer.numeric.enabled = False
+    cfg.optimizer.prompt.enabled = True
+
+    returned_cfg = _DummyConfig()
+    returned_cfg.optimizer.numeric.enabled = False
+    returned_cfg.optimizer.prompt.enabled = True
+
+    from contextlib import asynccontextmanager
+
+    from nat.plugins.config_optimizer import optimizer_runtime as rt
+
+    monkeypatch.setattr(rt, "walk_optimizables", lambda _cfg: {"x": object()}, raising=True)
+
+    class _FakePromptRunner:
+
+        async def run(self, **kwargs):  # noqa: ANN001, ARG002
+            return returned_cfg
+
+    def _fake_build_prompt(_config):
+
+        @asynccontextmanager
+        async def _cm():
+            yield _FakePromptRunner()
+
+        return _cm()
+
+    from nat.cli.type_registry import GlobalTypeRegistry
+    from nat.cli.type_registry import RegisteredOptimizerInfo
+    from nat.data_models.discovery_metadata import DiscoveryMetadata
+
+    registry = GlobalTypeRegistry.get()
+    prompt_info = RegisteredOptimizerInfo(
+        full_type="test/ga",
+        config_type=GAPromptOptimizationConfig,
+        build_fn=lambda c: _fake_build_prompt(c),
+        discovery_metadata=DiscoveryMetadata(),
+    )
+    monkeypatch.setattr(
+        registry,
+        "_registered_optimizer_infos",
+        {GAPromptOptimizationConfig: prompt_info},
+    )
+
+    run = OptimizerRunConfig(config_file=cfg, dataset=None, result_json_path="$", endpoint=None)
+    out = await optimize_config(run)
+    assert out is returned_cfg

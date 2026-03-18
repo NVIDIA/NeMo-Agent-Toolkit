@@ -55,10 +55,11 @@ adk = ["nvidia-nat-adk == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
 app = ["nvidia-nat-app == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
+config-optimizer = ["nvidia-nat-config-optimizer == {version}"]
 core = ["nvidia-nat-core == {version}"]
 crewai = ["nvidia-nat-crewai == {version}"]
-eval = ["nvidia-nat-eval == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
+eval = ["nvidia-nat-eval == {version}"]
 fastmcp = ["nvidia-nat-fastmcp == {version}"]
 langchain = ["nvidia-nat-langchain == {version}"]
 llama-index = ["nvidia-nat-llama-index == {version}"]
@@ -66,7 +67,6 @@ mcp = ["nvidia-nat-mcp == {version}"]
 mem0ai = ["nvidia-nat-mem0ai == {version}"]
 nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
 openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
-config-optimizer = ["nvidia-nat-config-optimizer == {version}"]
 opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
 profiler = ["nvidia-nat-profiler == {version}"]
@@ -95,6 +95,7 @@ most = [
   "nvidia-nat-agno == {version}",
   "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
+  "nvidia-nat-config-optimizer == {version}",
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
@@ -106,7 +107,6 @@ most = [
   "nvidia-nat-mem0ai == {version}",
   "nvidia-nat-mysql == {version}",
   "nvidia-nat-nemo-customizer == {version}",
-  "nvidia-nat-config-optimizer == {version}",
   "nvidia-nat-opentelemetry == {version}",
   "nvidia-nat-phoenix == {version}",
   "nvidia-nat-profiler == {version}",

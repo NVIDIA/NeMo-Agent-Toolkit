@@ -337,7 +337,6 @@ optimizer:
     prompt_recombination_function: "prompt_recombiner"  # optional
     ga_population_size: 16
     ga_generations: 8
-    ga_offspring_size: 12        # optional; defaults to pop_size - elitism
     ga_crossover_rate: 0.7
     ga_mutation_rate: 0.2
     ga_elitism: 2
@@ -371,7 +370,6 @@ This is the main configuration object for the optimizer.
 -   `prompt.enabled: bool`: Enable GA-based prompt optimization. Defaults to `false`.
 -   `prompt.ga_population_size: int`: Population size for GA prompt optimization. Larger populations increase diversity but cost more per generation. Defaults to `10`.
 -   `prompt.ga_generations: int`: Number of generations for GA prompt optimization. Replaces `n_trials_prompt`. Defaults to `5`.
--   `prompt.ga_offspring_size: int | null`: Number of offspring produced per generation. If `null`, defaults to `ga_population_size - ga_elitism`.
 -   `prompt.ga_crossover_rate: float`: Probability of recombination between two parents for each prompt parameter. Defaults to `0.7`.
 -   `prompt.ga_mutation_rate: float`: Probability of mutating a child's prompt parameter using the LLM optimizer. Defaults to `0.1`.
 -   `prompt.ga_elitism: int`: Number of elite individuals copied unchanged to the next generation. Defaults to `1`.
@@ -448,7 +446,7 @@ This section explains how the GA evolves prompt parameters when `do_prompt_optim
    - Selection: choose parents using `ga_selection_method` (`tournament` with `ga_tournament_size`, or `roulette`).
    - Crossover: with probability `ga_crossover_rate`, recombine two parent prompts for a parameter using `prompt_recombination_function` (if provided), otherwise pick from a parent.
    - Mutation: with probability `ga_mutation_rate`, apply `prompt_population_init_function` to mutate the child's parameter.
-   - Repeat until the new population reaches `ga_population_size` (or `ga_offspring_size` offspring plus elites).
+   - Repeat until the new population reaches `ga_population_size`.
 6. Repeat steps 2–5 for `ga_generations` generations.
 
 All LLM calls and evaluations are executed asynchronously with a concurrency limit of `ga_parallel_evaluations`.

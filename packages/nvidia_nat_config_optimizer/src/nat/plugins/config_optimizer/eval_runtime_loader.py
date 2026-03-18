@@ -22,7 +22,7 @@ def load_evaluation_run() -> type:
     try:
         from nat.plugins.eval.runtime.evaluate import EvaluationRun
         return EvaluationRun
-    except ImportError as exc:
+    except ModuleNotFoundError as exc:
         raise RuntimeError(
             "The `nat optimize` command requires evaluation support from `nvidia-nat-eval`. "
             "Install it with `uv pip install nvidia-nat-eval` (or `pip install nvidia-nat-eval`).") from exc
