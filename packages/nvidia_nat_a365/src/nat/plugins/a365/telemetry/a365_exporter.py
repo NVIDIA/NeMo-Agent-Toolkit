@@ -25,6 +25,10 @@ from microsoft_agents_a365.observability.core.exporters.agent365_exporter import
 
 from nat.builder.context import ContextState
 from nat.plugins.a365.exceptions import A365AuthenticationError, A365SDKError
+from nat.plugins.a365.telemetry.register import (
+    _get_token_extractor,
+    _raise_no_bearer_token,
+)
 from nat.plugins.opentelemetry.otel_span import OtelSpan
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 from opentelemetry.sdk.trace import Event as OtelEvent
@@ -157,8 +161,12 @@ class A365OtelExporter(OtelSpanExporter):
         token_cache=None,
         auth_ref=None,
         builder=None,
+        token_extractor=None,
     ):
         """Initialize the A365 exporter."""
+        self._token_extractor = (
+            token_extractor if token_extractor is not None else _get_token_extractor(None)
+        )
         super().__init__(
             context_state=context_state,
             batch_size=batch_size,
@@ -213,22 +221,9 @@ class A365OtelExporter(OtelSpanExporter):
                 auth_result = await auth_provider.authenticate(user_id=user_id)
                 if not auth_result.credentials:
                     raise A365AuthenticationError("No credentials available from auth provider")
-                from nat.data_models.authentication import BearerTokenCred, HeaderCred
-                from nat.authentication.interfaces import AUTHORIZATION_HEADER
-                token = None
-                for cred in auth_result.credentials:
-                    if isinstance(cred, BearerTokenCred):
-                        token = cred.token.get_secret_value()
-                        break
-                    if isinstance(cred, HeaderCred) and cred.name == AUTHORIZATION_HEADER:
-                        hv = cred.value.get_secret_value()
-                        token = hv[7:] if hv.startswith("Bearer ") else hv
-                        break
+                token = self._token_extractor(auth_result)
                 if token is None:
-                    raise A365AuthenticationError(
-                        f"No bearer token in credentials. "
-                        f"Types: {[type(c).__name__ for c in auth_result.credentials]}"
-                    )
+                    _raise_no_bearer_token(auth_result)
                 self._token_cache.update_token(token, auth_result.token_expires_at)
                 self._auth_provider = auth_provider
             except Exception as e:
@@ -262,22 +257,7 @@ class A365OtelExporter(OtelSpanExporter):
                 logger.warning("Token refresh failed: no credentials available")
                 return
 
-            from nat.data_models.authentication import BearerTokenCred, HeaderCred
-            from nat.authentication.interfaces import AUTHORIZATION_HEADER
-
-            token: str | None = None
-            for cred in auth_result.credentials:
-                if isinstance(cred, BearerTokenCred):
-                    token = cred.token.get_secret_value()
-                    break
-                elif isinstance(cred, HeaderCred) and cred.name == AUTHORIZATION_HEADER:
-                    header_value = cred.value.get_secret_value()
-                    if header_value.startswith("Bearer "):
-                        token = header_value[7:]  # Remove "Bearer " prefix
-                    else:
-                        token = header_value
-                    break
-
+            token = self._token_extractor(auth_result)
             if token is None:
                 logger.warning(
                     f"No bearer token found in refreshed credentials. "

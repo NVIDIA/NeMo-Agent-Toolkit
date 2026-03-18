@@ -17,6 +17,10 @@
 import logging
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from typing import TYPE_CHECKING, Protocol
+
+if TYPE_CHECKING:
+    from nat.data_models.authentication import AuthResult
 
 from pydantic import Field
 
@@ -25,22 +29,33 @@ from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
-from nat.plugins.a365.exceptions import A365AuthenticationError
+from nat.plugins.a365.exceptions import A365AuthenticationError, A365ConfigurationError
 
 logger = logging.getLogger(__name__)
 
+# --- Pluggable token extractor (interface + dependency injection) ---
 
-def _extract_token_from_auth_result(auth_result) -> str:
-    """Extract bearer token from AuthResult credentials.
+_TOKEN_EXTRACTOR_SUPPORTED = (
+    "BearerTokenCred or HeaderCred(Authorization)"
+)
 
-    Args:
-        auth_result: AuthResult from auth provider
 
-    Returns:
-        Bearer token string
+class TokenExtractor(Protocol):
+    """Callable that extracts a bearer token from NAT's AuthResult.
 
-    Raises:
-        A365AuthenticationError: If no bearer token found in credentials
+    Used when the default (BearerTokenCred or HeaderCred(Authorization)) does not
+    match your auth provider's credential shape. Register a custom extractor with
+    register_token_extractor(name, callable) and set token_extractor=name in config.
+    """
+
+    def __call__(self, auth_result: "AuthResult") -> str | None: ...
+
+
+def _default_token_extractor(auth_result: "AuthResult") -> str | None:
+    """Default extractor: BearerTokenCred or HeaderCred(Authorization).
+
+    Returns the bearer token string, or None if neither credential type is present.
+    Caller should raise A365AuthenticationError with a clear message when None.
     """
     from nat.data_models.authentication import BearerTokenCred, HeaderCred
     from nat.authentication.interfaces import AUTHORIZATION_HEADER
@@ -48,16 +63,50 @@ def _extract_token_from_auth_result(auth_result) -> str:
     for cred in auth_result.credentials:
         if isinstance(cred, BearerTokenCred):
             return cred.token.get_secret_value()
-        elif isinstance(cred, HeaderCred) and cred.name == AUTHORIZATION_HEADER:
-            header_value = cred.value.get_secret_value()
-            # Strip "Bearer " prefix if present
-            if header_value.startswith("Bearer "):
-                return header_value[7:]  # Remove "Bearer " prefix
-            return header_value
+        if isinstance(cred, HeaderCred) and cred.name == AUTHORIZATION_HEADER:
+            raw = cred.value.get_secret_value()
+            return raw[7:] if raw.startswith("Bearer ") else raw
+    return None
 
+
+_TOKEN_EXTRACTOR_REGISTRY: dict[str, Callable[["AuthResult"], str | None]] = {
+    "default": _default_token_extractor,
+}
+
+
+def register_token_extractor(name: str, extractor: Callable[["AuthResult"], str | None]) -> None:
+    """Register a custom token extractor for A365 telemetry.
+
+    Use when your auth provider returns credentials in a shape the default extractor
+    does not understand (e.g. a new NAT credential type). Then set
+    token_extractor=\"name\" in your a365 telemetry exporter config.
+
+    Args:
+        name: Name to use in config (e.g. \"my_provider\").
+        extractor: Callable (AuthResult) -> str | None. Return the bearer token or None.
+    """
+    _TOKEN_EXTRACTOR_REGISTRY[name] = extractor
+
+
+def _get_token_extractor(name: str | None) -> Callable[["AuthResult"], str | None]:
+    if name is None or name == "default":
+        return _default_token_extractor
+    if name not in _TOKEN_EXTRACTOR_REGISTRY:
+        raise A365ConfigurationError(
+            f"Unknown token_extractor '{name}'. "
+            f"Registered: {sorted(_TOKEN_EXTRACTOR_REGISTRY.keys())}. "
+            f"Use register_token_extractor(name, callable) to add custom extractors."
+        )
+    return _TOKEN_EXTRACTOR_REGISTRY[name]
+
+
+def _raise_no_bearer_token(auth_result: "AuthResult") -> None:
+    """Raise A365AuthenticationError with a clear message when no token could be extracted."""
+    found = [type(c).__name__ for c in auth_result.credentials]
     raise A365AuthenticationError(
-        f"No bearer token found in auth provider credentials. "
-        f"Found credential types: {[type(c).__name__ for c in auth_result.credentials]}"
+        f"No bearer token from auth provider. "
+        f"Supported (default): {_TOKEN_EXTRACTOR_SUPPORTED}. "
+        f"Found credential types: {found}"
     )
 
 
@@ -163,7 +212,10 @@ async def _create_token_resolver_from_auth_ref(
     if not auth_result.credentials:
         raise A365AuthenticationError("No credentials available from auth provider")
 
-    token = _extract_token_from_auth_result(auth_result)
+    extractor = _get_token_extractor(None)
+    token = extractor(auth_result)
+    if token is None:
+        _raise_no_bearer_token(auth_result)
     expires_at = auth_result.token_expires_at
 
     token_cache = _TokenCache(token, expires_at)
@@ -180,12 +232,22 @@ async def _create_token_resolver_from_auth_ref(
 
 
 class A365TelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="a365"):
-    """A telemetry exporter to transmit traces to Microsoft Agent 365 backend."""
+    """A telemetry exporter to transmit traces to Microsoft Agent 365 backend.
+
+    Auth: the referenced auth provider should return a bearer token via
+    BearerTokenCred or HeaderCred(Authorization). For other credential shapes,
+    register a custom token extractor with register_token_extractor(name, callable)
+    and set token_extractor=name.
+    """
 
     agent_id: str = Field(description="The Agent 365 agent ID")
     tenant_id: str = Field(description="The Azure tenant ID")
     token_resolver: AuthenticationRef = Field(
         description="Reference to NAT auth provider for token resolution (e.g., 'a365_auth')"
+    )
+    token_extractor: str | None = Field(
+        default=None,
+        description="Optional name of a registered token extractor. Default uses BearerTokenCred or HeaderCred(Authorization)."
     )
     cluster_category: str = Field(
         default="prod",
@@ -215,6 +277,8 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
     """
     from nat.plugins.a365.telemetry.a365_exporter import A365OtelExporter
 
+    token_extractor_fn = _get_token_extractor(config.token_extractor)
+
     # Defer auth: do not call get_auth_provider here (not available yet in __aenter__).
     token_cache = _TokenCache(None, None)
 
@@ -236,6 +300,7 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
         token_cache=token_cache,
         auth_ref=config.token_resolver,
         builder=builder,
+        token_extractor=token_extractor_fn,
         cluster_category=config.cluster_category,
         use_s2s_endpoint=config.use_s2s_endpoint,
         suppress_invoke_agent_input=config.suppress_invoke_agent_input,
