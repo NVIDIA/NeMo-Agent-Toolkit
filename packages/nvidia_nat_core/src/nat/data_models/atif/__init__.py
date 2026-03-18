@@ -25,6 +25,8 @@ provided so that existing NAT code continues to work without import changes.
 """
 
 from nat.data_models.atif.agent import Agent
+from nat.data_models.atif.atif_step_extra import AtifAncestry
+from nat.data_models.atif.atif_step_extra import AtifStepExtra
 from nat.data_models.atif.content import ContentPart
 from nat.data_models.atif.content import ImageSource
 from nat.data_models.atif.final_metrics import FinalMetrics
@@ -73,6 +75,8 @@ __all__ = [
     "Metrics",
     "Observation",
     "ObservationResult",
+    "AtifAncestry",
+    "AtifStepExtra",
     "Step",
     "SubagentTrajectoryRef",
     "ToolCall",

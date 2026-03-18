@@ -43,7 +43,9 @@ documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
 source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 [tool.setuptools_dynamic_dependencies]
-dependencies = ["nvidia-nat-core == {version}"]
+dependencies = [
+  "nvidia-nat-core == {version}",
+]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`
@@ -53,10 +55,11 @@ adk = ["nvidia-nat-adk == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
 app = ["nvidia-nat-app == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
+config-optimizer = ["nvidia-nat-config-optimizer == {version}"]
 core = ["nvidia-nat-core == {version}"]
 crewai = ["nvidia-nat-crewai == {version}"]
-eval = ["nvidia-nat-eval == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
+eval = ["nvidia-nat-eval == {version}"]
 fastmcp = ["nvidia-nat-fastmcp == {version}"]
 langchain = ["nvidia-nat-langchain == {version}"]
 llama-index = ["nvidia-nat-llama-index == {version}"]
@@ -92,6 +95,7 @@ most = [
   "nvidia-nat-agno == {version}",
   "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
+  "nvidia-nat-config-optimizer == {version}",
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
@@ -237,6 +241,7 @@ nvidia-nat-llama-index = { path = "packages/nvidia_nat_llama_index", editable = 
 nvidia-nat-mcp = { path = "packages/nvidia_nat_mcp", editable = true }
 nvidia-nat-mem0ai = { path = "packages/nvidia_nat_mem0ai", editable = true }
 nvidia-nat-nemo-customizer = { path = "packages/nvidia_nat_nemo_customizer", editable = true }
+nvidia-nat-config-optimizer = { path = "packages/nvidia_nat_config_optimizer", editable = true }
 nvidia-nat-openpipe-art = { path = "packages/nvidia_nat_openpipe_art", editable = true }
 nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
