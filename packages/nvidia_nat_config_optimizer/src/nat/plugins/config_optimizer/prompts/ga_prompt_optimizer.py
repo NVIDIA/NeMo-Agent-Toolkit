@@ -573,7 +573,9 @@ class GAPromptOptimizer(BasePromptOptimizer):
                 if selection_method == "tournament":
                     return self._tournament_select(curr_pop, tournament_size)
                 elif selection_method == "roulette":
-                    total = (sum(max(ind.scalar_fitness or 0.0, 0.0) for ind in curr_pop) or 1.0)
+                    total = sum(max(ind.scalar_fitness or 0.0, 0.0) for ind in curr_pop)
+                    if total <= 0.0:
+                        return random.choice(curr_pop)
                     r = random.random() * total
                     acc = 0.0
                     for ind in curr_pop:

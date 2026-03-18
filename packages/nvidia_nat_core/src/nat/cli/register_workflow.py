@@ -525,6 +525,12 @@ def register_evaluator(config_type: type[EvaluatorBaseConfigT]):
 
 
 def register_optimizer(config_type: type[OptimizerStrategyBaseConfigT]):
+    """Register an optimizer strategy for a given config type.
+
+    The decorated function must be an async generator that yields a runner
+    with an async run() method. The runtime resolves the strategy from
+    cfg.optimizer.numeric or cfg.optimizer.prompt type.
+    """
 
     def register_optimizer_inner(
         fn: OptimizerBuildCallableT[OptimizerStrategyBaseConfigT],

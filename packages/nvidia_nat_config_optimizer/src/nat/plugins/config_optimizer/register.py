@@ -52,7 +52,7 @@ class _ParameterOptimizerRunner(BaseParameterOptimizer):
 
 
 async def _parameter_optimizer_build(
-    config: OptunaParameterOptimizationConfig, ) -> AsyncIterator[_ParameterOptimizerRunner]:
+    _config: OptunaParameterOptimizationConfig, ) -> AsyncIterator[_ParameterOptimizerRunner]:
     yield _ParameterOptimizerRunner()
 
 
@@ -62,7 +62,7 @@ async def register_numeric_optimizer(config: OptunaParameterOptimizationConfig):
         yield runner
 
 
-async def _ga_prompt_optimizer_build(config: GAPromptOptimizationConfig, ) -> AsyncIterator[GAPromptOptimizer]:
+async def _ga_prompt_optimizer_build(_config: GAPromptOptimizationConfig, ) -> AsyncIterator[GAPromptOptimizer]:
     yield GAPromptOptimizer()
 
 
