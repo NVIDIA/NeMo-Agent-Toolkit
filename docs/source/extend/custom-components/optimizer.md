@@ -25,21 +25,21 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
 
 ## Key Interfaces
 
-* **Config Base Classes**
-   - {py:class}`~nat.data_models.optimizer.OptimizerStrategyBaseConfig`: Base class that all optimizer strategy configs must extend. Provides an `enabled` field and integrates with the NeMo Agent Toolkit type registry.
-   - {py:class}`~nat.data_models.optimizer.PromptOptimizationConfig`: Base for prompt optimization strategy configs. Adds `prompt_population_init_function` and `prompt_recombination_function` fields.
+* **Configuration Base Classes**
+   - {py:class}`~nat.data_models.optimizer.OptimizerStrategyBaseConfig`: Base class that all optimizer strategy configuration models must extend. Provides an `enabled` field and integrates with the NeMo Agent Toolkit type registry.
+   - {py:class}`~nat.data_models.optimizer.PromptOptimizationConfig`: Base for prompt optimization strategy configuration models. Adds `prompt_population_init_function` and `prompt_recombination_function` fields.
    - {py:class}`~nat.data_models.optimizer.OptunaParameterOptimizationConfig`: Built-in config for Optuna-based numeric/enum parameter optimization.
 
 * **Optimizer ABCs**
    - {py:class}`~nat.plugins.config_optimizer.prompts.base.BasePromptOptimizer`: Abstract base class for prompt optimization strategies. Requires implementing an async `run()` method that optimizes prompts in-place.
-   - {py:class}`~nat.plugins.config_optimizer.parameters.base.BaseParameterOptimizer`: Abstract base class for parameter optimization strategies. Requires implementing an async `run()` method that returns an optimized `Config`.
+   - {py:class}`~nat.plugins.config_optimizer.parameters.base.BaseParameterOptimizer`: Abstract base class for parameter optimization strategies. Requires implementing an async `run()` method that returns an optimized configuration.
 
 * **Registration**
    - {py:deco}`~nat.cli.register_workflow.register_optimizer`: Decorator that registers an optimizer strategy with the global type registry so the optimizer runtime can resolve the strategy from the type of `cfg.optimizer.numeric` or `cfg.optimizer.prompt`.
 
 ## Adding a Custom Prompt Optimizer
 
-### 1. Define a Config Class
+### 1. Define a config class
 
 Create a config class extending {py:class}`~nat.data_models.optimizer.PromptOptimizationConfig` with a unique `name`:
 
@@ -147,7 +147,7 @@ await optimize_config(
 
 The pattern is the same, but parameter optimizers extend {py:class}`~nat.plugins.config_optimizer.parameters.base.BaseParameterOptimizer` and return an optimized {py:class}`~nat.data_models.config.Config`:
 
-### 1. Define a Config Class
+### 1. Define a config class
 
 ```python
 from pydantic import Field

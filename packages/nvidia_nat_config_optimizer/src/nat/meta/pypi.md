@@ -17,9 +17,9 @@ limitations under the License.
 
 ![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
-# NVIDIA NeMo Agent Toolkit Config Optimizer Subpackage
+# NVIDIA NeMo Agent Toolkit Configuration Optimizer Subpackage
 
-Subpackage for workflow config and prompt optimization in NeMo Agent Toolkit.
+Subpackage for workflow configuration and prompt optimization in NeMo Agent Toolkit.
 
 This package provides optimization-specific components under `nat.plugins.config_optimizer`, including GA prompt optimization and Optuna-based parameter optimization.
 

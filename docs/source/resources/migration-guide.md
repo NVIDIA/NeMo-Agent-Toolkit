@@ -94,7 +94,7 @@ To migrate:
   - `pip install nvidia-nat-profiler`
   - `pip install nvidia-nat-security`
 
-#### Config Optimizer Package Extraction (Breaking)
+#### Configuration Optimizer Package Extraction (Breaking)
 
 Optimizer ownership now lives in the optional `nvidia-nat-config-optimizer` package.
 
