@@ -94,6 +94,26 @@ To migrate:
   - `pip install nvidia-nat-profiler`
   - `pip install nvidia-nat-security`
 
+#### Configuration Optimizer Package Extraction (Breaking)
+
+Optimizer ownership now lives in the optional `nvidia-nat-config-optimizer` package.
+
+This is a breaking change:
+- The `nat optimize` command is no longer owned by core and is only available when `nvidia-nat-config-optimizer` is installed.
+- Optimizer implementation modules moved from core paths into `nat.plugins.config_optimizer.*`.
+- The `nvidia-nat[optimizer]` extra has been renamed to `nvidia-nat[config-optimizer]`.
+
+To migrate:
+- Install config optimizer support when needed:
+  - `pip install "nvidia-nat[config-optimizer]"`
+  - `pip install nvidia-nat-config-optimizer`
+- Update optimizer imports:
+  - `nat.parameter_optimization.prompt_optimizer` => `nat.plugins.config_optimizer.prompts.ga_prompt_optimizer`
+  - `nat.parameter_optimization.parameter_optimizer` => `nat.plugins.config_optimizer.parameters.optimizer`
+  - `nat.parameter_optimization.optimizer_runtime` => `nat.plugins.config_optimizer.optimizer_runtime`
+- Keep optimizer callbacks at their core path:
+  - `nat.profiler.parameter_optimization.optimizer_callbacks`
+
 ### v1.5.0
 
 #### Removing Old Aliases and Transitional Packages
@@ -126,15 +146,14 @@ To migrate:
   - `pip install "nvidia-nat[profiling]"`
   - `pip install "nvidia-nat-eval[profiling]"`
 - Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
-- Keep using `nat optimize` from core, but note that it now requires `nvidia-nat-eval` at runtime for evaluation execution.
 
 #### Import Path Changes
 
-For users migrating existing integrations, the primary import change is:
-- `nat.eval.*` -> `nat.plugins.eval.*`
-- `nat.profiler.*` -> `nat.plugins.eval.profiler.*`
-- `nat.profiler.parameter_optimization.*` -> `nat.parameter_optimization.*`
-- `nat.eval.runtime_event_subscriber.pull_intermediate` -> `nat.builder.runtime_event_subscriber.pull_intermediate`
+For users migrating existing integrations, the primary import change is (old => new):
+
+- `nat.eval.*` => `nat.plugins.eval.*`
+- `nat.profiler.*` => `nat.plugins.eval.profiler.*` (except `nat.profiler.parameter_optimization.*`, which remains in core)
+- `nat.eval.runtime_event_subscriber.pull_intermediate` => `nat.builder.runtime_event_subscriber.pull_intermediate`
 
 For evaluation data models, prefer canonical core paths:
 - `nat.data_models.evaluator` for `EvalInput*` / `EvalOutput*`
