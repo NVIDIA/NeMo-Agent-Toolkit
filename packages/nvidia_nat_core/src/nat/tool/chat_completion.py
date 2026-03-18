@@ -99,9 +99,7 @@ async def register_chat_completion(config: ChatCompletionConfig, builder: Builde
                 output_text = response.text() if hasattr(response, "text") else str(response.content)
 
             # Approximate usage for API compatibility
-            prompt_tokens = sum(
-                len(str(m.content).split()) for m in message.messages
-            )
+            prompt_tokens = sum(len(str(m.content).split()) for m in message.messages)
             completion_tokens = len(output_text.split()) if output_text else 0
             total_tokens = prompt_tokens + completion_tokens
             usage = Usage(
@@ -124,11 +122,9 @@ async def register_chat_completion(config: ChatCompletionConfig, builder: Builde
                     last_content = last if isinstance(last, str) else str(last)
             except Exception:
                 pass
-            return (
-                f"I apologize, but I encountered an error while processing your "
-                f"query: '{last_content}'. Please try rephrasing your question or try "
-                f"again later. Error: {str(e)}"
-            )
+            return (f"I apologize, but I encountered an error while processing your "
+                    f"query: '{last_content}'. Please try rephrasing your question or try "
+                    f"again later. Error: {str(e)}")
 
     yield FunctionInfo.from_fn(
         _chat_completion,
