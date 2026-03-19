@@ -23,7 +23,11 @@ from pydantic import Field
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
 from nat.cli.register_workflow import register_function_group
+from nat.cli.register_workflow import register_middleware
 from nat.data_models.function import FunctionGroupBaseConfig
+
+from nat_retail_agent.input_guard_middleware import InputGuardMiddleware
+from nat_retail_agent.input_guard_middleware import InputGuardMiddlewareConfig
 
 # ============================================================================
 # Data Models for Customer Data
@@ -414,3 +418,20 @@ async def retail_tools(_config: RetailToolsConfig, _builder: Builder) -> AsyncGe
     )
 
     yield group
+
+
+@register_middleware(config_type=InputGuardMiddlewareConfig)
+async def input_guard_middleware(
+    config: InputGuardMiddlewareConfig,
+    builder: Builder,
+) -> AsyncGenerator[InputGuardMiddleware, None]:
+    """Build an Input Guard middleware from configuration.
+
+    Args:
+        config: The input guard middleware configuration
+        builder: The workflow builder used to resolve the LLM
+
+    Yields:
+        A configured Input Guard middleware instance
+    """
+    yield InputGuardMiddleware(config=config, builder=builder)
