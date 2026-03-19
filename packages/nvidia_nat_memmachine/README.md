@@ -44,42 +44,30 @@ uv pip install -e packages/nvidia_nat_memmachine
 
 This section is optional. Only follow these steps if you want to run a **local** MemMachine instance. If you use a hosted MemMachine instance, configure `base_url` (and any auth) in your workflow config and skip this section.
 
-### Step 1: Install MemMachine Server (local instance only)
+### Step 1: Configure MemMachine
+
+Before starting the server, edit `examples/memory/memmachine/configuration.yml` and replace the `<OPENAI_API_KEY>` (or AWS) placeholders with your actual API keys.
+
+### Step 2: Start the MemMachine Server
+
+Start MemMachine (along with its PostgreSQL and Neo4j dependencies) using Docker Compose:
 
 ```bash
-pip install memmachine-server
+docker compose -f examples/deploy/docker-compose.memmachine.yml up -d
 ```
 
-### Step 2: Run the Configuration Wizard
+This starts:
+- **PostgreSQL** (with pgvector) — vector and relational storage
+- **Neo4j** — graph memory backend
+- **MemMachine** — the memory server, exposed on `http://localhost:8095`
 
-Before starting the server, you need to configure MemMachine using the interactive configuration wizard:
+Ensure Docker is installed and running before executing this command. See the [Docker Installation Guide](https://docs.docker.com/engine/install/) if needed.
+
+To stop the server:
 
 ```bash
-memmachine-configure
+docker compose -f examples/deploy/docker-compose.memmachine.yml down
 ```
-
-The wizard will guide you through setting up:
-
-- **Neo4j Database**: Option to install Neo4j automatically or provide connection details for an existing instance. If you enter nothing, Neo4j is installed on your local disk by default.
-- **Large Language Model (LLM) Provider**: Choose from supported providers like OpenAI, AWS Bedrock, or Ollama
-- **Model Selection**: Select specific LLM and embedding models. The default is OpenAI with `gpt-4o-mini` and `text-embedding-3-small`.
-- **API Keys and Credentials**: Input necessary API keys for your selected LLM provider
-- **Server Settings**: Configure server host and port. The default is `localhost:8080` but it is recommended to bind to port `8095` as `8080` is a commonly used port.
-
-**Note**: 
-- The wizard installs Neo4j and Java automatically when you choose to install Neo4j (platform-specific: Windows uses ZIP, macOS uses brew, Linux uses tar.gz)
-- The wizard uses Neo4j as the vector database and SQLite as the relational database by default
-- The configuration file will be generated at `<HOME>/.config/memmachine/cfg.yml`
-
-### Step 3: Start the MemMachine Server
-
-After completing the configuration wizard, start the server:
-
-```bash
-memmachine-server
-```
-
-The server will start on `http://localhost:8080` by default (or the port you configured with the configuration wizard).
 
 For more details, see the [MemMachine Documentation](https://docs.memmachine.ai/).
 
@@ -97,6 +85,7 @@ memory:
 
 ## Additional Resources
 
+- [Example Notebook](../../examples/memory/memmachine/memmachine_memory_example.ipynb)
 - [MemMachine Documentation](https://docs.memmachine.ai/)
 - [NeMo Agent toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/)
 

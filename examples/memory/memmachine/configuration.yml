@@ -1,0 +1,96 @@
+logging:
+  path: mem-machine.log
+  level: info #| debug | error
+
+episode_store:
+  database: profile_storage
+
+episodic_memory:
+  long_term_memory:
+    embedder: openai_embedder
+    reranker: my_reranker_id
+    vector_graph_store: my_storage_id
+  short_term_memory:
+    llm_model: openai_model
+    message_capacity: 64000
+
+semantic_memory:
+  llm_model: openai_model
+  embedding_model: openai_embedder
+  database: profile_storage
+  config_database: profile_storage
+
+session_manager:
+  database: profile_storage
+
+prompt:
+  session:
+  - profile_prompt
+
+resources:
+  databases:
+    profile_storage:
+      provider: postgres
+      config:
+        host: postgres
+        port: 5432
+        user: memmachine
+        password: memmachine_password
+        db_name: memmachine
+    my_storage_id:
+      provider: neo4j
+      config:
+        uri: 'bolt://neo4j:7687'
+        username: neo4j
+        password: neo4j_password
+    sqlite_test:
+      provider: sqlite
+      config:
+        path: sqlite_test.db
+  embedders:
+    openai_embedder:
+      provider: openai
+      config:
+        model: "text-embedding-3-small"
+        api_key: <OPENAI_API_KEY>
+        dimensions: 1536
+    aws_embedder_id:
+      provider: 'amazon-bedrock'
+      config:
+        region: "us-west-2"
+        aws_access_key_id: <AWS_ACCESS_KEY_ID>
+        aws_secret_access_key: <AWS_SECRET_ACCESS_KEY>
+        model_id: "amazon.titan-embed-text-v2:0"
+        similarity_metric: "cosine"
+  language_models:
+    openai_model:
+      provider: openai-responses
+      config:
+        model: "gpt-4o-mini"
+        api_key: <OPENAI_API_KEY>
+        base_url: "https://api.openai.com/v1"
+    aws_model:
+      provider: "amazon-bedrock"
+      config:
+        region: "us-west-2"
+        aws_access_key_id: <AWS_ACCESS_KEY_ID>
+        aws_secret_access_key: <AWS_SECRET_ACCESS_KEY>
+        model_id: "openai.gpt-oss-20b-1:0"
+  rerankers:
+    my_reranker_id:
+      provider: "rrf-hybrid"
+      config:
+        reranker_ids:
+          - id_ranker_id
+          - bm_ranker_id
+    id_ranker_id:
+      provider: "identity"
+    bm_ranker_id:
+      provider: "bm25"
+    aws_reranker_id:
+      provider: "amazon-bedrock"
+      config:
+        region: "us-west-2"
+        aws_access_key_id: <AWS_ACCESS_KEY_ID>
+        aws_secret_access_key: <AWS_SECRET_ACCESS_KEY>
+        model_id: "amazon.rerank-v1:0"

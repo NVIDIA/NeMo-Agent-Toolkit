@@ -37,6 +37,7 @@ This directory contains configurations for running services used by the examples
 - **MySQL:** Includes `docker-compose.mysql.yml` for running a MySQL server for object store examples.
 - **Phoenix Observability:** Includes `docker-compose.phoenix.yml` for running Phoenix observability server to monitor and debug workflows.
 - **Redis Service:** Includes `docker-compose.redis.yml` for running Redis memory backend with Redis Insight for memory-based examples.
+- **MemMachine:** Includes `docker-compose.memmachine.yml` for running MemMachine with PostgreSQL (pgvector) and Neo4j for context memory examples.
 
 
 ## Available Services
@@ -46,6 +47,7 @@ This directory contains configurations for running services used by the examples
 - **`mysql`**: `docker-compose.mysql.yml`
 - **`phoenix`**: `docker-compose.phoenix.yml`
 - **`redis`**: `docker-compose.redis.yml`
+- **`memmachine`**: `docker-compose.memmachine.yml`
 
 ## Installation and Setup
 
@@ -89,6 +91,14 @@ To start Redis (required for memory and object store examples):
 docker compose -f examples/deploy/docker-compose.redis.yml up -d
 ```
 
+To start MemMachine (for context memory examples):
+
+> **Before starting:** edit `examples/memory/memmachine/configuration.yml` and replace the `<OPENAI_API_KEY>` (or AWS) placeholders with your actual API keys.
+
+```bash
+docker compose -f examples/deploy/docker-compose.memmachine.yml up -d
+```
+
 ### Stopping Services
 
 To stop the Milvus service:
@@ -114,4 +124,9 @@ docker compose -f examples/deploy/docker-compose.phoenix.yml down
 To stop the Redis service:
 ```bash
 docker compose -f examples/deploy/docker-compose.redis.yml down
+```
+
+To stop the MemMachine service:
+```bash
+docker compose -f examples/deploy/docker-compose.memmachine.yml down
 ```
