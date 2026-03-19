@@ -50,21 +50,21 @@ class AtifStepExtra(BaseModel):
 
     ancestry: AtifAncestry = Field(
         ...,
-        description="Deprecated step-level ancestry metadata for ATIF processing.",
+        description="Step-level ancestry metadata for ATIF step context.",
     )
     tool_ancestry: list[AtifAncestry] = Field(
         default_factory=list,
-        description=("Deprecated per-tool ancestry metadata aligned by index with `tool_calls` when a single agent "
-                     "step contains multiple tool calls."),
+        description=("Per-tool ancestry metadata aligned by index with `tool_calls` for observed invocation "
+                     "lineage reconstruction."),
     )
     step_ancestry_path: list[InvocationNode] | None = Field(
         default=None,
         min_length=1,
-        description=("Canonical root-to-leaf ancestry path for the current step context. This is the primary "
-                     "lineage field for step-level reconstruction."),
+        description=("Optional derived root-to-leaf ancestry path for step context. "
+                     "Provided as a convenience helper for consumers."),
     )
     tool_ancestry_paths: list[list[InvocationNode]] | None = Field(
         default=None,
-        description=("Canonical root-to-leaf ancestry path per tool call, aligned by index with `tool_calls` "
-                     "when present."),
+        description=("Optional derived root-to-leaf ancestry path per tool call, aligned by index with "
+                     "`tool_calls` when present. Provided as a convenience helper for consumers."),
     )

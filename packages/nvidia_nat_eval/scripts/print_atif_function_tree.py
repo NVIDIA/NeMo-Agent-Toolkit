@@ -135,6 +135,7 @@ def _add_path(nodes: dict[str, NodeStats], path: list[dict[str, Any]], from_tool
 
 
 def _build_nodes(trajectory: dict[str, Any]) -> dict[str, NodeStats]:
+    """Build node stats from convenience path fields in `step.extra`."""
     nodes: dict[str, NodeStats] = {}
     for step in trajectory.get("steps", []):
         if not isinstance(step, dict):
@@ -144,6 +145,37 @@ def _build_nodes(trajectory: dict[str, Any]) -> dict[str, NodeStats]:
             _add_path(nodes, step_path, from_tool=False)
         for tool_path in tool_paths:
             _add_path(nodes, tool_path, from_tool=True)
+    return nodes
+
+
+def _build_nodes_from_required_ancestry(trajectory: dict[str, Any]) -> dict[str, NodeStats]:
+    """Build node stats from required ancestry fields in `step.extra`.
+
+    This uses:
+    - `extra.ancestry.function_ancestry`
+    - `extra.tool_ancestry[].function_ancestry`
+    """
+    nodes: dict[str, NodeStats] = {}
+    for step in trajectory.get("steps", []):
+        if not isinstance(step, dict):
+            continue
+        extra = step.get("extra") or {}
+        if not isinstance(extra, dict):
+            continue
+
+        ancestry = extra.get("ancestry")
+        if isinstance(ancestry, dict):
+            fn = ancestry.get("function_ancestry")
+            if isinstance(fn, dict):
+                _add_ancestry(nodes, fn, from_tool=False)
+
+        for tool_ancestry in extra.get("tool_ancestry") or []:
+            if not isinstance(tool_ancestry, dict):
+                continue
+            fn = tool_ancestry.get("function_ancestry")
+            if isinstance(fn, dict):
+                _add_ancestry(nodes, fn, from_tool=True)
+
     return nodes
 
 
@@ -376,9 +408,13 @@ def main() -> None:
     parser.add_argument("input_json", type=Path, help="Path to ATIF workflow output JSON")
     parser.add_argument(
         "--view",
-        choices=["ancestry", "execution", "execution_sequence"],
+        choices=["ancestry", "ancestry_paths", "ancestry_required", "ancestry_compare", "execution",
+                 "execution_sequence"],
         default="ancestry",
-        help=("Tree view type. 'ancestry' uses path-based ancestry metadata. "
+        help=("Tree view type. 'ancestry'/'ancestry_compare' prints both convenience path-based and required "
+              "ancestry trees for A/B comparison. "
+              "'ancestry_paths' uses convenience path-based ancestry metadata only. "
+              "'ancestry_required' uses required ancestry fields (`ancestry`, `tool_ancestry`) only. "
               "'execution' shows an aggregated path graph. "
               "'execution_sequence' lists each path occurrence as its own branch."),
     )
@@ -415,11 +451,46 @@ def main() -> None:
                 continue
             _print_execution_sequence_tree(chains)
         else:
-            nodes = _build_nodes(trajectory)
-            if not nodes:
-                print("No path ancestry metadata found in step.extra.")
+            if args.view in ("ancestry", "ancestry_compare", "ancestry_paths"):
+                path_nodes = _build_nodes(trajectory)
+            else:
+                path_nodes = {}
+            if args.view in ("ancestry", "ancestry_compare", "ancestry_required"):
+                required_nodes = _build_nodes_from_required_ancestry(trajectory)
+            else:
+                required_nodes = {}
+
+            if args.view in ("ancestry_paths",):
+                if not path_nodes:
+                    print("No convenience path ancestry metadata found in step.extra.")
+                    continue
+                print("--- convenience_paths ---")
+                _print_tree(path_nodes)
                 continue
-            _print_tree(nodes)
+
+            if args.view in ("ancestry_required",):
+                if not required_nodes:
+                    print("No required ancestry metadata (`ancestry`, `tool_ancestry`) found in step.extra.")
+                    continue
+                print("--- required_ancestry ---")
+                _print_tree(required_nodes)
+                continue
+
+            # Compare/default mode: print both trees for easy A/B visual diff.
+            if not path_nodes and not required_nodes:
+                print("No ancestry metadata found in step.extra.")
+                continue
+            print("--- convenience_paths ---")
+            if path_nodes:
+                _print_tree(path_nodes)
+            else:
+                print("(missing)")
+            print()
+            print("--- required_ancestry ---")
+            if required_nodes:
+                _print_tree(required_nodes)
+            else:
+                print("(missing)")
 
 
 if __name__ == "__main__":

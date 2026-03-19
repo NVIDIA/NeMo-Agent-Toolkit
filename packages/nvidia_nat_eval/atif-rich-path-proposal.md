@@ -66,7 +66,11 @@ runtime-specific side channels:
 
 ## Final Trajectory Schema
 
-Add optional fields to `Step.extra`:
+Canonical lineage should be represented by parent-linked, time-ordered invocation
+records in `tool_calls` (all observed invocations), with optional path helpers in
+`Step.extra` for migration convenience.
+
+Optional helper fields in `Step.extra`:
 
 - `step_ancestry_path: list[InvocationNode] | None`
 - `tool_ancestry_paths: list[list[InvocationNode]]`
@@ -90,10 +94,19 @@ LLM-selected top-level tool calls.
 - Ordering should be deterministic and based on invocation start time
   (`span_event_timestamp` preferred, `event_timestamp` fallback).
 
+### Canonical Lineage Source
+
+- Canonical source of lineage truth is `tool_calls` invocation records with:
+  - stable invocation identity (`tool_call_id`)
+  - parent-linked ancestry metadata
+  - deterministic start-time ordering
+- Path fields are optional, derived convenience views for consumers that prefer
+  precomputed root-to-leaf chains.
+
 ### Canonicality rules
 
-- `tool_ancestry_paths` is the canonical lineage field for tool-driven execution.
-- `step_ancestry_path` is the canonical lineage field for step context.
+- `tool_calls` (all observed invocations) is the canonical tool-lineage surface.
+- `tool_ancestry_paths` and `step_ancestry_path` are optional derived helpers.
 - Legacy summary fields are optional and non-canonical.
 
 ### Why this shape is final
@@ -170,17 +183,18 @@ If `step_ancestry_path` is present:
 
 ## Release Position
 
-This release treats path fields as the target schema for trajectory lineage.
-Compatibility fields may remain temporarily, but new consumers should read
-`step_ancestry_path` and `tool_ancestry_paths` first.
+This release treats all-observed, parent-linked invocation records in
+`tool_calls` as the target lineage model. Path fields may remain as transitional
+helpers, but consumers should be able to reconstruct lineage directly from
+invocation records.
 
 ## Consumer Impact
 
 Tree/analysis tools can implement deterministic reconstruction:
 
-1. Use `tool_ancestry_paths` and `step_ancestry_path`
-2. Optionally derive legacy summary fields from path leaves
-3. If paths are absent, show partial structure
+1. Use `tool_calls` + aligned ancestry metadata as primary lineage input
+2. Optionally use `tool_ancestry_paths` / `step_ancestry_path` when present
+3. Derive legacy summary fields from invocation records or paths
 
 This supports stable behavior for:
 
@@ -197,8 +211,8 @@ This supports stable behavior for:
 ## Next Steps
 
 1. Socialize schema proposal upstream for feedback
-2. Implement model changes with path fields as primary lineage representation
-3. Update converter/projection to populate paths for each tool call
-4. Update scripts/profilers/evaluators to consume path fields first
-5. Add tests focused on nested lineage reconstruction via path fields
+2. Implement and validate all-observed invocation semantics for `tool_calls`
+3. Keep path fields as optional derived outputs during migration
+4. Update scripts/profilers/evaluators to consume invocation records first
+5. Add tests for nested lineage reconstruction from invocation records (with and without paths)
 
