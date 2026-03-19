@@ -183,9 +183,14 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             model_output = []
             try:
                 for choice in output.choices:
-                    msg = choice.model_extra["message"]
-                    content = msg.get('content', "")
-                    model_output.append("" if content is None else str(content))
+                    if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                        content = choice.message.content or ""
+                    elif hasattr(choice, 'model_extra') and 'message' in choice.model_extra:
+                        msg = choice.model_extra["message"]
+                        content = msg.get('content', "") or ""
+                    else:
+                        content = ""
+                    model_output.append(str(content))
             except Exception as e:
                 logger.exception("Error getting model output: %s", e)
 
