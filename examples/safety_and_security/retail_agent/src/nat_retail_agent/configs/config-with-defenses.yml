@@ -39,13 +39,12 @@ llms:
     max_new_tokens: 128
     device: auto
 
-  # Guard model for pre-tool input verification (~8B parameters, requires ~16-20GB VRAM with float16)
+  # Guard model for pre-tool input verification (NIM endpoint)
   pre_tool_guard_llm:
-    _type: huggingface
-    model_name: Qwen/Qwen3Guard-Gen-8B
+    _type: nim
+    model_name: nvidia/llama-3.1-nemotron-safety-guard-8b-v3
     temperature: 0.0
-    max_new_tokens: 256
-    device: auto
+    max_tokens: 256
 
 # Defense middleware configurations
 middleware:
