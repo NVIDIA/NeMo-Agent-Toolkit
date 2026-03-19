@@ -90,6 +90,7 @@ This command:
 - Uses `examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_of_two.json`
 - Runs the built-in `trajectory` evaluator
 - Writes workflow trajectories to `.tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json`
+- Writes raw intermediate steps to `.tmp/nat/examples/simple_calculator/nested-eval/raw_intermediate_steps.jsonl`
 
 To inspect the call hierarchy from the generated ATIF file:
 
@@ -116,4 +117,26 @@ root
 └─ run_3
    ├─ <workflow>
    │  └─ <llm:nvidia/nemotron-3-nano-30b-a3b>
+```
+
+### Running Branching Nested Trajectory Evaluation
+
+Evaluate a workflow where one top-level tool (`power_branch`) fans out to two internal tools (`square_via_multiply` and `cube_via_multiply_chain`) and each branch calls `calculator__multiply`.
+
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-branching-nested-trajectory-eval.yml
+```
+
+This command:
+- Uses `examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_branch.json`
+- Runs the built-in `trajectory` evaluator
+- Writes trajectories to `.tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json`
+
+To inspect one input item:
+
+```bash
+python packages/nvidia_nat_eval/scripts/print_atif_function_tree.py \
+  .tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json \
+  --view execution_sequence \
+  --item-id 1
 ```

@@ -547,7 +547,9 @@ class TestBatchConverter:
             _make_step(
                 IntermediateStepType.TOOL_END,
                 name="calculator__multiply",
-                input_data={"a": 4, "b": 4},
+                input_data={
+                    "a": 4, "b": 4
+                },
                 output_data="16",
                 timestamp_offset=2.0,
                 step_uuid="tool-uuid-rich-path",

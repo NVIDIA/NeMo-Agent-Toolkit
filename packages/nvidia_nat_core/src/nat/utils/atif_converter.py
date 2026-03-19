@@ -171,11 +171,10 @@ def _build_ancestry_path(node: InvocationNode, index: dict[str, InvocationNode])
         parent = index.get(current.parent_id)
         if parent is None:
             inferred_parent_name = current.parent_name or ("root" if current.parent_id == "root" else current.parent_id)
-            path_reverse.append(
-                InvocationNode(
-                    function_id=current.parent_id,
-                    function_name=inferred_parent_name,
-                ))
+            path_reverse.append(InvocationNode(
+                function_id=current.parent_id,
+                function_name=inferred_parent_name,
+            ))
             break
 
         current = parent
@@ -241,7 +240,8 @@ class _PendingAgentTurn:
         self.observed_invocations: list[_ObservedInvocation] = []
 
 
-def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateStep,
+def _record_observed_invocation(pending: _PendingAgentTurn,
+                                ist: IntermediateStep,
                                 invocation_index: dict[str, InvocationNode]) -> None:
     """Record an observed invocation as a tool_call + observation pair."""
     tool_name = ist.name or "unknown_tool"
@@ -418,7 +418,10 @@ class IntermediateStepToATIFConverter:
                 if pending is not None:
                     _record_observed_invocation(pending, ist, invocation_index)
                 else:
-                    orphan_pending = _PendingAgentTurn(message="", timestamp=ist.event_timestamp, model_name=None, metrics=None)
+                    orphan_pending = _PendingAgentTurn(message="",
+                                                       timestamp=ist.event_timestamp,
+                                                       model_name=None,
+                                                       metrics=None)
                     orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
                     orphan_pending.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, invocation_index)
                     _record_observed_invocation(orphan_pending, ist, invocation_index)
