@@ -575,6 +575,134 @@ class TestBatchConverter:
         assert len(agent_step.extra["tool_ancestry_paths"]) == 1
         assert [n["function_id"] for n in agent_step.extra["tool_ancestry_paths"][0]] == ["root", "wf-1", "fn-1"]
 
+    def test_tool_paths_include_nested_internal_functions(self, batch_converter: IntermediateStepToATIFConverter):
+        """Nested internal function lineage is encoded in `tool_ancestry_paths`."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="What is 3^2?",
+                timestamp_offset=0.0,
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Call power_of_two",
+                timestamp_offset=1.0,
+                usage=_make_usage(10, 5),
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+            _make_step(
+                IntermediateStepType.TOOL_END,
+                name="power_of_two",
+                input_data={"number": 3},
+                output_data="9",
+                timestamp_offset=2.0,
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+                step_uuid="tool-power-uuid",
+            ),
+            _make_step(
+                IntermediateStepType.FUNCTION_END,
+                name="calculator__multiply",
+                output_data="9",
+                timestamp_offset=2.1,
+                function_name="calculator__multiply",
+                function_id="fn-mul",
+                function_parent_id="fn-power",
+                function_parent_name="power_of_two",
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="9",
+                timestamp_offset=3.0,
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.tool_calls is not None
+        assert agent_step.tool_calls[0].function_name == "power_of_two"
+        assert agent_step.extra is not None
+        assert agent_step.extra.get("tool_ancestry_paths") is not None
+        tool_path_ids = [node["function_id"] for node in agent_step.extra["tool_ancestry_paths"][0]]
+        tool_path_names = [node["function_name"] for node in agent_step.extra["tool_ancestry_paths"][0]]
+        assert tool_path_ids == ["root", "wf-1", "fn-power", "fn-mul"]
+        assert tool_path_names == ["root", "<workflow>", "power_of_two", "calculator__multiply"]
+
+    def test_observed_invocations_ordered_by_span_start(self, batch_converter: IntermediateStepToATIFConverter):
+        """Observed invocations are ordered by span start, not end arrival."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Run branch calls",
+                timestamp_offset=0.0,
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Calling branch",
+                timestamp_offset=1.0,
+                usage=_make_usage(10, 5),
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+            _make_step(
+                IntermediateStepType.FUNCTION_END,
+                name="branch_b_tool",
+                output_data="B",
+                timestamp_offset=2.0,  # ends first
+                function_name="branch_b_tool",
+                function_id="fn-b",
+                function_parent_id="wf-1",
+                function_parent_name="<workflow>",
+            ),
+            _make_step(
+                IntermediateStepType.FUNCTION_END,
+                name="branch_a_tool",
+                output_data="A",
+                timestamp_offset=2.1,  # ends later
+                function_name="branch_a_tool",
+                function_id="fn-a",
+                function_parent_id="wf-1",
+                function_parent_name="<workflow>",
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="done",
+                timestamp_offset=3.0,
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+        ]
+        # Force start-time ordering opposite to end-time ordering.
+        steps[2].payload.span_event_timestamp = _BASE_TIME + 1.9  # branch_b starts later
+        steps[3].payload.span_event_timestamp = _BASE_TIME + 1.2  # branch_a starts earlier
+
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.tool_calls is not None
+        assert [tc.function_name for tc in agent_step.tool_calls] == ["branch_a_tool", "branch_b_tool"]
+
     def test_agent_tool_definitions_populated(
         self,
         batch_converter: IntermediateStepToATIFConverter,

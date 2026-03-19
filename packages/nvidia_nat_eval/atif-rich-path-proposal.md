@@ -77,6 +77,19 @@ Add optional fields to `Step.extra`:
 - `tool_ancestry_paths[i]`: ordered root-to-leaf path for `tool_calls[i]`
 - leaf should represent the deepest known callable context for that tool call
 
+### Tool Invocation Semantics
+
+To preserve runtime behavior comparable to `IntermediateStep`, `tool_calls` should
+represent **all observed tool/function invocations** in a step, not only
+LLM-selected top-level tool calls.
+
+- Each observed invocation occurrence should produce one `tool_calls` entry.
+- Repeated calls to the same tool/function should appear multiple times.
+- `tool_ancestry_paths[i]` must align with `tool_calls[i]` and represent that
+  invocation occurrence's root-to-leaf lineage.
+- Ordering should be deterministic and based on invocation start time
+  (`span_event_timestamp` preferred, `event_timestamp` fallback).
+
 ### Canonicality rules
 
 - `tool_ancestry_paths` is the canonical lineage field for tool-driven execution.

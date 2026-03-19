@@ -162,6 +162,44 @@ def _path_to_labels(path: list[dict[str, Any]]) -> list[str]:
     return labels
 
 
+def _extract_tool_call_names(step: dict[str, Any]) -> list[str]:
+    """Extract tool call names from a step in order."""
+    names: list[str] = []
+    for tool_call in step.get("tool_calls") or []:
+        if not isinstance(tool_call, dict):
+            continue
+        name = tool_call.get("function_name")
+        if isinstance(name, str) and name:
+            names.append(name)
+    return names
+
+
+def _build_step_tool_chain(step: dict[str, Any], tool_idx: int, tool_name: str) -> list[str]:
+    """Build one execution chain for a tool call from path metadata + tool call data."""
+    step_path, tool_paths = _iter_step_paths(step)
+    chain = _path_to_labels(step_path)
+
+    model_name = step.get("model_name")
+    if isinstance(model_name, str) and model_name:
+        llm_label = f"<llm:{model_name}>"
+        if not chain or chain[-1] != llm_label:
+            chain.append(llm_label)
+
+    # If tool path has deeper lineage than step path, append only the delta.
+    if tool_idx < len(tool_paths):
+        tool_labels = _path_to_labels(tool_paths[tool_idx])
+        prefix_len = len(_path_to_labels(step_path))
+        for label in tool_labels[prefix_len:]:
+            if not chain or chain[-1] != label:
+                chain.append(label)
+
+    # Ensure the explicit tool call is represented even when tool path is shallow.
+    if not chain or chain[-1] != tool_name:
+        chain.append(tool_name)
+
+    return chain
+
+
 def _build_execution_graph(trajectory: dict[str, Any]) -> tuple[dict[str, set[str]], dict[str, int]]:
     """Build an aggregated execution graph from canonical path lists."""
     edges: dict[str, set[str]] = defaultdict(set)
@@ -171,21 +209,31 @@ def _build_execution_graph(trajectory: dict[str, Any]) -> tuple[dict[str, set[st
     for step in trajectory.get("steps", []):
         if not isinstance(step, dict):
             continue
-        step_path, tool_paths = _iter_step_paths(step)
-        all_paths = []
-        if step_path:
-            all_paths.append(step_path)
-        all_paths.extend(tool_paths)
+        step_path, _ = _iter_step_paths(step)
 
-        for path in all_paths:
-            labels = _path_to_labels(path)
-            if not labels:
-                continue
-            edges[root_node].add(labels[0])
-            for label in labels:
+        step_labels = _path_to_labels(step_path)
+        model_name = step.get("model_name")
+        if isinstance(model_name, str) and model_name:
+            llm_label = f"<llm:{model_name}>"
+            if not step_labels or step_labels[-1] != llm_label:
+                step_labels = [*step_labels, llm_label]
+
+        if step_labels:
+            edges[root_node].add(step_labels[0])
+            for label in step_labels:
                 seen_counts[label] += 1
-            for idx in range(1, len(labels)):
-                edges[labels[idx - 1]].add(labels[idx])
+            for idx in range(1, len(step_labels)):
+                edges[step_labels[idx - 1]].add(step_labels[idx])
+
+        for tool_idx, tool_name in enumerate(_extract_tool_call_names(step)):
+            tool_chain = _build_step_tool_chain(step, tool_idx, tool_name)
+            if not tool_chain:
+                continue
+            edges[root_node].add(tool_chain[0])
+            for label in tool_chain:
+                seen_counts[label] += 1
+            for idx in range(1, len(tool_chain)):
+                edges[tool_chain[idx - 1]].add(tool_chain[idx])
 
     return edges, seen_counts
 
@@ -200,12 +248,25 @@ def _build_execution_chains(trajectory: dict[str, Any]) -> list[list[str]]:
         step_path, tool_paths = _iter_step_paths(step)
         if step_path:
             labels = _path_to_labels(step_path)
+            model_name = step.get("model_name")
+            if isinstance(model_name, str) and model_name:
+                llm_label = f"<llm:{model_name}>"
+                if not labels or labels[-1] != llm_label:
+                    labels.append(llm_label)
             if labels:
                 chains.append(labels)
-        for tool_path in tool_paths:
-            labels = _path_to_labels(tool_path)
-            if labels:
-                chains.append(labels)
+
+        tool_names = _extract_tool_call_names(step)
+        if tool_names:
+            for idx, tool_name in enumerate(tool_names):
+                labels = _build_step_tool_chain(step, idx, tool_name)
+                if labels:
+                    chains.append(labels)
+        else:
+            for tool_path in tool_paths:
+                labels = _path_to_labels(tool_path)
+                if labels:
+                    chains.append(labels)
 
     return chains
 

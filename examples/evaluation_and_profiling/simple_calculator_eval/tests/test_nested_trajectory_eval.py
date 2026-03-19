@@ -69,8 +69,8 @@ async def test_nested_trajectory_eval_emits_power_of_two_and_multiply(tmp_path: 
     assert isinstance(payload, list) and payload, "ATIF workflow output is empty"
 
     saw_power_of_two_tool_call = False
-    saw_power_of_two_function_end = False
-    saw_calculator_multiply_function_end = False
+    saw_power_of_two_in_tool_path = False
+    saw_calculator_multiply_in_tool_path = False
 
     for item in payload:
         if not isinstance(item, dict):
@@ -86,15 +86,15 @@ async def test_nested_trajectory_eval_emits_power_of_two_and_multiply(tmp_path: 
                     saw_power_of_two_tool_call = True
 
             extra = step.get("extra") or {}
-            for event in extra.get("nat_events") or []:
-                if not isinstance(event, dict) or event.get("type") != "FUNCTION_END":
+            for path in extra.get("tool_ancestry_paths") or []:
+                if not isinstance(path, list):
                     continue
-                event_name = event.get("name")
-                if event_name == "power_of_two":
-                    saw_power_of_two_function_end = True
-                if event_name == "calculator__multiply":
-                    saw_calculator_multiply_function_end = True
+                names = [node.get("function_name") for node in path if isinstance(node, dict)]
+                if "power_of_two" in names:
+                    saw_power_of_two_in_tool_path = True
+                if "calculator__multiply" in names:
+                    saw_calculator_multiply_in_tool_path = True
 
     assert saw_power_of_two_tool_call, "Expected at least one tool call to power_of_two"
-    assert saw_power_of_two_function_end, "Expected FUNCTION_END event for power_of_two"
-    assert saw_calculator_multiply_function_end, "Expected FUNCTION_END event for calculator__multiply"
+    assert saw_power_of_two_in_tool_path, "Expected power_of_two in tool_ancestry_paths"
+    assert saw_calculator_multiply_in_tool_path, "Expected calculator__multiply in tool_ancestry_paths"
