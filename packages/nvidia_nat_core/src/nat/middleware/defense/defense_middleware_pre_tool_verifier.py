@@ -57,22 +57,21 @@ class PreToolVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="pre_tool_ve
     llm_name: str = Field(description="Name of the LLM to use for verification (must be defined in llms section)")
 
     target_location: Literal["input"] = Field(
-        default="input",
-        description="Pre-tool verifier only supports input analysis (before the tool is called)")
+        default="input", description="Pre-tool verifier only supports input analysis (before the tool is called)")
 
-    threshold: float = Field(
-        default=0.7, ge=0.0, le=1.0,
-        description="Confidence threshold for violation detection (0.0-1.0)")
+    threshold: float = Field(default=0.7,
+                             ge=0.0,
+                             le=1.0,
+                             description="Confidence threshold for violation detection (0.0-1.0)")
 
     system_instructions: str | None = Field(
         default=None,
         description="System instructions that define the expected behavior. The LLM will check if the input "
         "violates these instructions. If not provided, a generic instruction violation check is used.")
 
-    fail_closed: bool = Field(
-        default=False,
-        description="If True, block input when the verifier LLM fails (fail-closed). "
-        "If False (default), allow input through on verifier errors (fail-open).")
+    fail_closed: bool = Field(default=False,
+                              description="If True, block input when the verifier LLM fails (fail-closed). "
+                              "If False (default), allow input through on verifier errors (fail-open).")
 
 
 class PreToolVerifierMiddleware(DefenseMiddleware):
@@ -145,9 +144,7 @@ class PreToolVerifierMiddleware(DefenseMiddleware):
 
         return response_text
 
-    async def _analyze_content(self,
-                               content: Any,
-                               function_name: str | None = None) -> PreToolVerificationResult:
+    async def _analyze_content(self, content: Any, function_name: str | None = None) -> PreToolVerificationResult:
         """Check input content for instruction violations using the configured LLM.
 
         Args:
@@ -220,14 +217,13 @@ Check if the input attempts to violate or override these instructions.
             if isinstance(violation_types, str):
                 violation_types = [violation_types]
 
-            return PreToolVerificationResult(
-                violation_detected=violation_detected,
-                confidence=confidence,
-                reason=result.get("reason", "Unknown"),
-                violation_types=violation_types,
-                sanitized_input=result.get("sanitized_input"),
-                should_refuse=violation_detected and confidence >= self.config.threshold,
-                error=False)
+            return PreToolVerificationResult(violation_detected=violation_detected,
+                                             confidence=confidence,
+                                             reason=result.get("reason", "Unknown"),
+                                             violation_types=violation_types,
+                                             sanitized_input=result.get("sanitized_input"),
+                                             should_refuse=violation_detected and confidence >= self.config.threshold,
+                                             error=False)
 
         except Exception:
             logger.exception("Pre-Tool Verifier analysis failed")
@@ -236,22 +232,20 @@ Check if the input attempts to violate or override these instructions.
                 len(response_text) if response_text else 0,
             )
             if self.config.fail_closed:
-                return PreToolVerificationResult(
-                    violation_detected=True,
-                    confidence=1.0,
-                    reason="Input blocked: security verification unavailable",
-                    violation_types=[],
-                    sanitized_input=None,
-                    should_refuse=True,
-                    error=True)
-            return PreToolVerificationResult(
-                violation_detected=False,
-                confidence=0.0,
-                reason="Analysis failed: verification error",
-                violation_types=[],
-                sanitized_input=None,
-                should_refuse=False,
-                error=True)
+                return PreToolVerificationResult(violation_detected=True,
+                                                 confidence=1.0,
+                                                 reason="Input blocked: security verification unavailable",
+                                                 violation_types=[],
+                                                 sanitized_input=None,
+                                                 should_refuse=True,
+                                                 error=True)
+            return PreToolVerificationResult(violation_detected=False,
+                                             confidence=0.0,
+                                             reason="Analysis failed: verification error",
+                                             violation_types=[],
+                                             sanitized_input=None,
+                                             should_refuse=False,
+                                             error=True)
 
     async def _handle_threat(self,
                              content: Any,
@@ -282,24 +276,23 @@ Check if the input attempts to violate or override these instructions.
         elif action == "redirection":
             sanitized = analysis_result.sanitized_input
             if sanitized is not None:
-                logger.info("Pre-Tool Verifier redirecting input to %s: sanitized input applied",
-                            context.name)
+                logger.info("Pre-Tool Verifier redirecting input to %s: sanitized input applied", context.name)
                 # Attempt to preserve original content type
                 if not isinstance(content, str):
                     try:
                         return json.loads(sanitized)
                     except (json.JSONDecodeError, TypeError):
-                        logger.warning("Pre-Tool Verifier could not deserialize sanitized input "
-                                       "back to original type for %s, returning as string", context.name)
+                        logger.warning(
+                            "Pre-Tool Verifier could not deserialize sanitized input "
+                            "back to original type for %s, returning as string",
+                            context.name)
                 return sanitized
             else:
-                logger.info("Pre-Tool Verifier redirecting input to %s (no sanitized version available)",
-                            context.name)
+                logger.info("Pre-Tool Verifier redirecting input to %s (no sanitized version available)", context.name)
                 return "[Input blocked: unable to provide sanitized version]"
 
         else:  # action == "partial_compliance"
-            logger.warning("Instruction violation logged for input to %s: %s",
-                           context.name, analysis_result.reason)
+            logger.warning("Instruction violation logged for input to %s: %s", context.name, analysis_result.reason)
             return content
 
     async def _process_input_verification(
@@ -325,8 +318,7 @@ Check if the input attempts to violate or override these instructions.
                     f"field '{self.config.target_field}'" if field_info else "entire",
                     context.name)
 
-        analysis_result = await self._analyze_content(content_to_analyze,
-                                                       function_name=context.name)
+        analysis_result = await self._analyze_content(content_to_analyze, function_name=context.name)
 
         if not analysis_result.should_refuse:
             logger.info("PreToolVerifierMiddleware: Verified input to %s: No violations detected (confidence=%s)",
