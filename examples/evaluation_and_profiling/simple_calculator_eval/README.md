@@ -97,26 +97,8 @@ To inspect the call hierarchy from the generated ATIF file:
 ```bash
 python packages/nvidia_nat_eval/scripts/print_atif_function_tree.py \
   .tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json \
-  --view execution_sequence \
+  --view ancestry_required \
   --item-id 1
-```
-
-Sample output:
-
-```text
-=== item=1 | mode=atif | session_id=builtins.int:1 ===
-root
-├─ run_1
-│  ├─ <workflow>
-│  │  └─ <llm:nvidia/nemotron-3-nano-30b-a3b>
-├─ run_2
-│  ├─ <workflow>
-│  │  ├─ <llm:nvidia/nemotron-3-nano-30b-a3b>
-│  │  │  ├─ power_of_two
-│  │  │  │  └─ calculator__multiply
-└─ run_3
-   ├─ <workflow>
-   │  └─ <llm:nvidia/nemotron-3-nano-30b-a3b>
 ```
 
 ### Running Branching Nested Trajectory Evaluation
@@ -137,6 +119,6 @@ To inspect one input item:
 ```bash
 python packages/nvidia_nat_eval/scripts/print_atif_function_tree.py \
   .tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json \
-  --view execution_sequence \
+  --view ancestry_required \
   --item-id 1
 ```

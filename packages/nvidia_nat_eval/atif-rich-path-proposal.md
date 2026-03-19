@@ -12,207 +12,189 @@ Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
-limitations und
+limitations under the License.
 -->
 
-# ATIF Rich Path Proposal
+# ATIF `Step.extra` Lineage Contract
 
-## Context
+## Purpose
 
-For nested workflow behavior analysis, the current ATIF payload can require implementation-specific metadata to recover a full call tree (for example, internal nested calls such as `power_of_two -> calculator__multiply`).
+This document explains the lineage fields implemented in
+`packages/nvidia_nat_core/src/nat/data_models/atif/atif_step_extra.py` and
+defines a concrete path to upstreaming this contract into `AtifStep`.
 
-The goal is to provide a richer, upstream-friendly structure that allows deterministic tree reconstruction from ATIF alone.
+This is intended to be a shareable reference for:
 
-## Problem Statement
+- runtime and converter maintainers
+- profiler and evaluator maintainers
+- upstream ATIF schema reviewers
 
-Current ATIF `Step.extra` has:
+## Source of Truth
 
-- `ancestry`: one step-level ancestry object
-- `tool_ancestry`: one ancestry object per top-level tool call
+The data model is defined in:
 
-This is often sufficient for top-level call structure, but can be insufficient for internal nested call structure when:
+- `AtifAncestry` in `atif_step_extra.py`
+- `AtifStepExtra` in `atif_step_extra.py`
 
-- multiple nested internal calls occur inside one tool execution
-- nested internals do not map one-to-one to `tool_calls`
-- downstream consumers need a canonical parent-child chain without runtime-specific event logs
+The converter currently emits this model into ATIF `Step.extra`, and downstream
+tools consume it for tree reconstruction and lineage analysis.
 
-## Goals
+## Sample Trace
 
-- Represent full nested ancestry in a vendor-neutral way
-- Keep ATIF payload self-contained for offline analysis
-- Minimize schema complexity for upstream acceptance
+For a visual example of nested lineage rendered via the NAT observability module, see:
+`docs/source/_static/nat_nested_trace.png`.
 
-## Trajectory Use Requirements
+This trace complements the sample artifact below and illustrates how a flat
+`tool_calls` sequence can still represent nested ancestry via aligned lineage
+metadata.
 
-The canonical trajectory must support all of the following uses without requiring
-runtime-specific side channels:
+## Data Model
 
-1. Tree reconstruction for debugging
-   - Render `workflow -> llm/tool -> nested tool/function` for one item.
-2. Evaluator inputs
-   - Provide enough structure for trajectory quality evaluators and step-level reasoning.
-3. Profiler lineage and timing
-   - Support call attribution, parent-child lineage, and timing-based analysis.
-4. Training trajectory builders
-   - Allow filtering/selecting subsets by function path and role.
-5. Security and policy filters
-   - Allow extraction/filtering of relevant calls and outputs by function path.
-6. Deterministic offline analysis
-   - Given one trajectory artifact, reconstruct execution path consistently.
-7. Dual-publish migration
-   - Serve as ATIF-native projection from IntermediateStep stream during migration.
-8. ATIF-native observability export
-   - Enable span tree reconstruction and exporter output directly from ATIF trajectory data.
+### `AtifAncestry`
 
-## Final Trajectory Schema
+`AtifAncestry` represents one lineage record.
 
-Canonical lineage should be represented by parent-linked, time-ordered invocation
-records in `tool_calls` (all observed invocations), with optional path helpers in
-`Step.extra` for migration convenience.
+- `function_ancestry: InvocationNode` (required)
+  - Callable ancestry node for this record.
+- `span_event_timestamp: float | None` (optional)
+  - Start timestamp used for deterministic ordering and timing analysis.
+- `framework: str | None` (optional)
+  - Runtime/framework label (for example, `langchain`).
 
-Optional helper fields in `Step.extra`:
+### `AtifStepExtra`
 
-- `step_ancestry_path: list[InvocationNode] | None`
-- `tool_ancestry_paths: list[list[InvocationNode]]`
+`AtifStepExtra` is the lineage payload inside `Step.extra`.
 
-### Semantics
+- `ancestry: AtifAncestry` (required, canonical)
+  - Step-level lineage context.
+- `tool_ancestry: list[AtifAncestry]` (canonical)
+  - Per-invocation lineage entries aligned by index with `tool_calls`.
+- `step_ancestry_path: list[InvocationNode] | None` (optional helper)
+  - Derived root-to-leaf step path.
+- `tool_ancestry_paths: list[list[InvocationNode]] | None` (optional helper)
+  - Derived root-to-leaf path per `tool_calls[i]`.
 
-- `step_ancestry_path`: ordered root-to-leaf path for the step context
-- `tool_ancestry_paths[i]`: ordered root-to-leaf path for `tool_calls[i]`
-- leaf should represent the deepest known callable context for that tool call
+`AtifStepExtra` uses `extra="allow"` so new metadata can coexist without
+breaking readers.
 
-### Tool Invocation Semantics
+## Canonical Contract
 
-To preserve runtime behavior comparable to `IntermediateStep`, `tool_calls` should
-represent **all observed tool/function invocations** in a step, not only
-LLM-selected top-level tool calls.
+Canonical lineage should be reconstructed from:
 
-- Each observed invocation occurrence should produce one `tool_calls` entry.
-- Repeated calls to the same tool/function should appear multiple times.
-- `tool_ancestry_paths[i]` must align with `tool_calls[i]` and represent that
-  invocation occurrence's root-to-leaf lineage.
-- Ordering should be deterministic and based on invocation start time
-  (`span_event_timestamp` preferred, `event_timestamp` fallback).
+- `tool_calls` (all observed invocation occurrences)
+- `extra.ancestry`
+- `extra.tool_ancestry`
 
-### Canonical Lineage Source
+These helper fields are optional and non-canonical:
 
-- Canonical source of lineage truth is `tool_calls` invocation records with:
-  - stable invocation identity (`tool_call_id`)
-  - parent-linked ancestry metadata
-  - deterministic start-time ordering
-- Path fields are optional, derived convenience views for consumers that prefer
-  precomputed root-to-leaf chains.
+- `extra.step_ancestry_path`
+- `extra.tool_ancestry_paths`
 
-### Canonicality rules
+`step_ancestry_path` and `tool_ancestry_paths` are optional, experimental
+migration aids and are expected to be dropped from the schema once consumers
+fully rely on canonical invocation records.
 
-- `tool_calls` (all observed invocations) is the canonical tool-lineage surface.
-- `tool_ancestry_paths` and `step_ancestry_path` are optional derived helpers.
-- Legacy summary fields are optional and non-canonical.
+## Producer Requirements
 
-### Why this shape is final
+Producers should satisfy these requirements:
 
-- Uses existing ancestry primitive (`InvocationNode`)
-- Generic across runtimes/frameworks
-- Easy for tree renderers and profilers to consume
-- Avoids adding runtime-specific event objects to core schema
+1. `tool_calls` is a flat list that includes all observed tool/function
+   invocations, not only top-level model-selected calls.
+2. `tool_ancestry[i]` corresponds to `tool_calls[i]`.
+3. Invocation order is deterministic and based on start time
+   (`span_event_timestamp` preferred).
+4. Repeated calls to the same function are emitted as distinct invocation
+   entries.
 
-## Example
+### Call Identity Mapping
 
-```json
-{
-  "step_ancestry_path": [
-    {
-      "function_id": "root",
-      "function_name": "root"
-    },
-    {
-      "function_id": "wf-1",
-      "function_name": "<workflow>",
-      "parent_id": "root",
-      "parent_name": "root"
-    },
-    {
-      "function_id": "llm-1",
-      "function_name": "nvidia/nemotron-3-nano-30b-a3b",
-      "parent_id": "wf-1",
-      "parent_name": "<workflow>"
-    }
-  ],
-  "tool_ancestry_paths": [
-    [
-      {
-        "function_id": "root",
-        "function_name": "root"
-      },
-      {
-        "function_id": "wf-1",
-        "function_name": "<workflow>",
-        "parent_id": "root",
-        "parent_name": "root"
-      },
-      {
-        "function_id": "tool-1",
-        "function_name": "power_of_two",
-        "parent_id": "wf-1",
-        "parent_name": "<workflow>"
-      },
-      {
-        "function_id": "fn-1",
-        "function_name": "calculator__multiply",
-        "parent_id": "tool-1",
-        "parent_name": "power_of_two"
-      }
-    ]
-  ]
-}
-```
+For each invocation occurrence at index `i`:
+
+- `tool_calls[i].tool_call_id` is the call instance identifier in `tool_calls`.
+- `observation.results[*].source_call_id` should equal that `tool_call_id` for
+  the corresponding observation payload.
+- `tool_ancestry[i].function_ancestry.function_id` is the callable node identity
+  for lineage (function/workflow node), not the call instance ID.
+
+Practical relationship:
+
+- `tool_call_id` and `source_call_id` identify one execution instance.
+- `function_id` identifies which callable node executed.
+- Multiple tool calls can share the same `function_id` while each keeps a unique
+  `tool_call_id`/`source_call_id` pair.
+
+Reference sample ATIF artifact:
+`examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/workflow_output_atif.json`.
+
+## Consumer Requirements
+
+Consumers should implement lineage reads in this order:
+
+1. Use `tool_calls` + `tool_ancestry` as the primary source.
+2. Use `ancestry` for step-level context.
+3. Treat path helper fields as optional convenience only.
+
+Helper paths, when present, are root-to-leaf chains and must not be required for
+correctness.
 
 ## Validation Invariants
 
-If `tool_ancestry_paths` is present:
+### Canonical invariants
 
-- Length must match `tool_calls` length
-- Every path must be non-empty
-- Parent-child consistency should hold within each path where IDs are provided
-- Path ordering is root to leaf
+- `len(tool_ancestry)` matches `len(tool_calls)` for emitted invocation lineage.
+- Index alignment is stable (`tool_calls[i]` maps to `tool_ancestry[i]`).
 
-If `step_ancestry_path` is present:
+### Helper-path invariants (if present)
 
-- Path must be non-empty
-- Path ordering must be root to leaf
+- `step_ancestry_path` is non-empty and root-to-leaf.
+- `tool_ancestry_paths` length equals `len(tool_calls)`.
+- Every `tool_ancestry_paths[i]` path is non-empty and root-to-leaf.
 
-## Release Position
+## Upstreaming Path to `AtifStep`
 
-This release treats all-observed, parent-linked invocation records in
-`tool_calls` as the target lineage model. Path fields may remain as transitional
-helpers, but consumers should be able to reconstruct lineage directly from
-invocation records.
+## Phase 1: Standardize lineage semantics
 
-## Consumer Impact
+Upstream the canonical semantics first:
 
-Tree/analysis tools can implement deterministic reconstruction:
+- step-level lineage record
+- per-invocation lineage aligned with `tool_calls`
+- deterministic ordering expectations
 
-1. Use `tool_calls` + aligned ancestry metadata as primary lineage input
-2. Optionally use `tool_ancestry_paths` / `step_ancestry_path` when present
-3. Derive legacy summary fields from invocation records or paths
+Do not make helper path fields part of the canonical upstream contract.
 
-This supports stable behavior for:
+## Phase 2: Dual-read compatibility
 
-- execution tree scripts
-- profiler lineage views
-- trajectory debugging workflows
+During transition:
 
-## Open Questions
+- producers continue writing current `extra` fields
+- consumers prioritize canonical reads and keep helper-path fallback
 
-- Should path nodes include optional `kind` (workflow/llm/tool/function) for easier rendering?
-- Should leaf alignment with `tool_calls[i].function_name` be strict or best-effort?
-- Is `step_ancestry_path` needed initially, or only `tool_ancestry_paths`?
+This phase avoids breaking existing artifacts and tools.
 
-## Next Steps
+## Phase 3: Promote lineage to first-class `AtifStep` fields
 
-1. Socialize schema proposal upstream for feedback
-2. Implement and validate all-observed invocation semantics for `tool_calls`
-3. Keep path fields as optional derived outputs during migration
-4. Update scripts/profilers/evaluators to consume invocation records first
-5. Add tests for nested lineage reconstruction from invocation records (with and without paths)
+Add typed lineage field(s) directly to `AtifStep` with wire-compatible mapping
+from current `extra` payload. Keep backward compatibility by accepting legacy
+`extra` lineage during the migration window.
 
+## Phase 4: Remove helper paths
+
+After consumers are canonical-only:
+
+- stop emitting `step_ancestry_path` and `tool_ancestry_paths`
+- keep canonical lineage behavior unchanged
+
+## Acceptance Criteria for Upstreaming
+
+Upstreaming is complete when all of the following are true:
+
+- deterministic lineage tree reconstruction from one ATIF artifact
+- no runtime-specific side-channel dependency
+- stable invocation mapping (`tool_calls[i]` to lineage record `i`)
+- profiler and evaluator scenarios work without helper paths
+
+## Recommended Implementation Guidance
+
+- New consumers should implement canonical lineage reads immediately.
+- Existing helper-path readers should add canonical fallback now.
+- Producers should avoid introducing new dependencies on helper-path fields.
