@@ -19,6 +19,14 @@
 # This configuration writes ATIF workflow output so you can inspect how nested
 # tool calls are represented in trajectory steps.
 
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: simple_calculator_nested_eval
+
 function_groups:
   calculator:
     _type: calculator

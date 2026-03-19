@@ -194,6 +194,13 @@ def _path_to_labels(path: list[dict[str, Any]]) -> list[str]:
     return labels
 
 
+def _label_function_name(label: str) -> str:
+    """Extract function name from a display label."""
+    if " [" in label and label.endswith("]"):
+        return label.rsplit(" [", 1)[0]
+    return label
+
+
 def _extract_tool_call_names(step: dict[str, Any]) -> list[str]:
     """Extract tool call names from a step in order."""
     names: list[str] = []
@@ -226,7 +233,8 @@ def _build_step_tool_chain(step: dict[str, Any], tool_idx: int, tool_name: str) 
                 chain.append(label)
 
     # Ensure the explicit tool call is represented even when tool path is shallow.
-    if not chain or chain[-1] != tool_name:
+    has_tool_name = any(_label_function_name(label) == tool_name for label in chain)
+    if not has_tool_name:
         chain.append(tool_name)
 
     return chain
@@ -408,8 +416,9 @@ def main() -> None:
     parser.add_argument("input_json", type=Path, help="Path to ATIF workflow output JSON")
     parser.add_argument(
         "--view",
-        choices=["ancestry", "ancestry_paths", "ancestry_required", "ancestry_compare", "execution",
-                 "execution_sequence"],
+        choices=[
+            "ancestry", "ancestry_paths", "ancestry_required", "ancestry_compare", "execution", "execution_sequence"
+        ],
         default="ancestry",
         help=("Tree view type. 'ancestry'/'ancestry_compare' prints both convenience path-based and required "
               "ancestry trees for A/B comparison. "
@@ -460,7 +469,7 @@ def main() -> None:
             else:
                 required_nodes = {}
 
-            if args.view in ("ancestry_paths",):
+            if args.view in ("ancestry_paths", ):
                 if not path_nodes:
                     print("No convenience path ancestry metadata found in step.extra.")
                     continue
@@ -468,7 +477,7 @@ def main() -> None:
                 _print_tree(path_nodes)
                 continue
 
-            if args.view in ("ancestry_required",):
+            if args.view in ("ancestry_required", ):
                 if not required_nodes:
                     print("No required ancestry metadata (`ancestry`, `tool_ancestry`) found in step.extra.")
                     continue

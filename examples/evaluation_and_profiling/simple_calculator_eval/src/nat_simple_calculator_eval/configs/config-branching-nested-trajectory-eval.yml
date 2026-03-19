@@ -17,6 +17,15 @@
 #   react_agent -> power_branch -> {square_via_multiply, cube_via_multiply_chain}
 # and both internal branches call calculator__multiply.
 
+# install arize-phoenix and run `phoenix serve` before launching
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: simple_calculator_branching_nested_eval
+
 function_groups:
   calculator:
     _type: calculator
