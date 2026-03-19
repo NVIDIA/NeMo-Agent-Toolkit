@@ -96,115 +96,116 @@ def _add_ancestry(nodes: dict[str, NodeStats], fn: dict[str, Any], from_tool: bo
         nodes[function_id].seen_in_step_ancestry += 1
 
 
+def _normalize_path_nodes(raw_path: Any) -> list[dict[str, Any]]:
+    """Return validated path nodes from a raw path value."""
+    if not isinstance(raw_path, list):
+        return []
+    return [n for n in raw_path if isinstance(n, dict)]
+
+
+def _iter_step_paths(step: dict[str, Any]) -> tuple[list[dict[str, Any]], list[list[dict[str, Any]]]]:
+    """Extract canonical step/tool ancestry paths from `step.extra`."""
+    extra = step.get("extra") or {}
+    if not isinstance(extra, dict):
+        return [], []
+
+    step_path = _normalize_path_nodes(extra.get("step_ancestry_path"))
+
+    tool_paths: list[list[dict[str, Any]]] = []
+    raw_tool_paths = extra.get("tool_ancestry_paths")
+    if isinstance(raw_tool_paths, list):
+        for raw_path in raw_tool_paths:
+            path_nodes = _normalize_path_nodes(raw_path)
+            if path_nodes:
+                tool_paths.append(path_nodes)
+
+    return step_path, tool_paths
+
+
+def _add_path(nodes: dict[str, NodeStats], path: list[dict[str, Any]], from_tool: bool) -> None:
+    """Add all nodes from one ancestry path to aggregated stats."""
+    for idx, fn in enumerate(path):
+        if idx > 0:
+            # Enforce parent relationship from path adjacency when possible.
+            prev = path[idx - 1]
+            fn = dict(fn)
+            fn.setdefault("parent_id", prev.get("function_id"))
+            fn.setdefault("parent_name", prev.get("function_name"))
+        _add_ancestry(nodes, fn, from_tool=from_tool)
+
+
 def _build_nodes(trajectory: dict[str, Any]) -> dict[str, NodeStats]:
     nodes: dict[str, NodeStats] = {}
     for step in trajectory.get("steps", []):
-        extra = step.get("extra") or {}
-        ancestry = extra.get("ancestry")
-        if isinstance(ancestry, dict):
-            _add_ancestry(nodes, ancestry.get("function_ancestry") or {}, from_tool=False)
-        for tool_ancestry in extra.get("tool_ancestry") or []:
-            if isinstance(tool_ancestry, dict):
-                _add_ancestry(nodes, tool_ancestry.get("function_ancestry") or {}, from_tool=True)
+        if not isinstance(step, dict):
+            continue
+        step_path, tool_paths = _iter_step_paths(step)
+        if step_path:
+            _add_path(nodes, step_path, from_tool=False)
+        for tool_path in tool_paths:
+            _add_path(nodes, tool_path, from_tool=True)
     return nodes
 
 
-def _extract_nested_tool_chain(step: dict[str, Any], tool_name: str) -> list[str]:
-    """Infer nested tool calls from NAT function end events within a step."""
-    extra = step.get("extra") or {}
-    nat_events = extra.get("nat_events") or []
-
-    names: list[str] = []
-    for event in nat_events:
-        if not isinstance(event, dict):
+def _path_to_labels(path: list[dict[str, Any]]) -> list[str]:
+    """Convert path nodes to stable display labels."""
+    labels: list[str] = []
+    for node in path:
+        function_id = str(node.get("function_id") or "")
+        function_name = str(node.get("function_name") or "")
+        if not function_id or not function_name:
             continue
-        if event.get("type") != "FUNCTION_END":
+        if function_id == "root":
+            # Skip explicit root node; the printer already has a synthetic root.
             continue
-        name = event.get("name")
-        if isinstance(name, str) and name and name != "<workflow>":
-            names.append(name)
-
-    # FUNCTION_END events are emitted leaf-first. Reverse to parent-first and
-    # deduplicate while preserving order.
-    ordered = list(dict.fromkeys(reversed(names)))
-    if ordered and ordered[0] == tool_name:
-        ordered = ordered[1:]
-    return ordered
+        labels.append(f"{function_name} [{function_id}]")
+    return labels
 
 
 def _build_execution_graph(trajectory: dict[str, Any]) -> tuple[dict[str, set[str]], dict[str, int]]:
-    """
-    Build an inferred execution graph:
-    root -> <workflow> -> <llm:model> -> tool -> nested tools.
-    """
+    """Build an aggregated execution graph from canonical path lists."""
     edges: dict[str, set[str]] = defaultdict(set)
     seen_counts: dict[str, int] = defaultdict(int)
-
-    workflow_node = "<workflow>"
-    edges["root"].add(workflow_node)
-    seen_counts[workflow_node] += 1
+    root_node = "__root__"
 
     for step in trajectory.get("steps", []):
         if not isinstance(step, dict):
             continue
-        if step.get("source") != "agent":
-            continue
+        step_path, tool_paths = _iter_step_paths(step)
+        all_paths = []
+        if step_path:
+            all_paths.append(step_path)
+        all_paths.extend(tool_paths)
 
-        parent_node = workflow_node
-        model_name = step.get("model_name")
-        if isinstance(model_name, str) and model_name:
-            llm_node = f"<llm:{model_name}>"
-            edges[workflow_node].add(llm_node)
-            seen_counts[llm_node] += 1
-            parent_node = llm_node
-
-        tool_calls = step.get("tool_calls") or []
-        for tool_call in tool_calls:
-            if not isinstance(tool_call, dict):
+        for path in all_paths:
+            labels = _path_to_labels(path)
+            if not labels:
                 continue
-            tool_name = tool_call.get("function_name")
-            if not isinstance(tool_name, str) or not tool_name:
-                continue
-
-            # Start with the selected tool, then append inferred nested calls.
-            chain = [tool_name, *_extract_nested_tool_chain(step, tool_name)]
-            prev = parent_node
-            for node in chain:
-                edges[prev].add(node)
-                seen_counts[node] += 1
-                prev = node
+            edges[root_node].add(labels[0])
+            for label in labels:
+                seen_counts[label] += 1
+            for idx in range(1, len(labels)):
+                edges[labels[idx - 1]].add(labels[idx])
 
     return edges, seen_counts
 
 
 def _build_execution_chains(trajectory: dict[str, Any]) -> list[list[str]]:
-    """Build per-occurrence execution chains for explicit sequence visualization."""
+    """Build per-occurrence execution chains from canonical path lists."""
     chains: list[list[str]] = []
-    workflow_node = "<workflow>"
 
     for step in trajectory.get("steps", []):
-        if not isinstance(step, dict) or step.get("source") != "agent":
+        if not isinstance(step, dict):
             continue
-
-        model_name = step.get("model_name")
-        llm_node = f"<llm:{model_name}>" if isinstance(model_name, str) and model_name else None
-        if llm_node:
-            chains.append([workflow_node, llm_node])
-
-        tool_calls = step.get("tool_calls") or []
-        for tool_call in tool_calls:
-            if not isinstance(tool_call, dict):
-                continue
-            tool_name = tool_call.get("function_name")
-            if not isinstance(tool_name, str) or not tool_name:
-                continue
-
-            chain = [workflow_node]
-            if llm_node:
-                chain.append(llm_node)
-            chain.append(tool_name)
-            chain.extend(_extract_nested_tool_chain(step, tool_name))
-            chains.append(chain)
+        step_path, tool_paths = _iter_step_paths(step)
+        if step_path:
+            labels = _path_to_labels(step_path)
+            if labels:
+                chains.append(labels)
+        for tool_path in tool_paths:
+            labels = _path_to_labels(tool_path)
+            if labels:
+                chains.append(labels)
 
     return chains
 
@@ -267,6 +268,7 @@ def _print_tree(nodes: dict[str, NodeStats]) -> None:
 
 def _print_execution_tree(edges: dict[str, set[str]], seen_counts: dict[str, int]) -> None:
     """Print the inferred execution graph as a readable tree."""
+    root_key = "__root__"
     print("root")
 
     def rec(node: str, prefix: str, is_last: bool, visited: set[str]) -> None:
@@ -286,7 +288,7 @@ def _print_execution_tree(edges: dict[str, set[str]], seen_counts: dict[str, int
         for idx, child in enumerate(children):
             rec(child, child_prefix, idx == len(children) - 1, visited)
 
-    roots = sorted(edges.get("root", set()))
+    roots = sorted(edges.get(root_key, set()))
     for idx, root_node in enumerate(roots):
         rec(root_node, "", idx == len(roots) - 1, set())
 
@@ -315,9 +317,9 @@ def main() -> None:
         "--view",
         choices=["ancestry", "execution", "execution_sequence"],
         default="ancestry",
-        help=("Tree view type. 'ancestry' uses recorded ancestry metadata. "
-              "'execution' shows an aggregated runtime chain graph. "
-              "'execution_sequence' lists each runtime occurrence as its own branch."),
+        help=("Tree view type. 'ancestry' uses path-based ancestry metadata. "
+              "'execution' shows an aggregated path graph. "
+              "'execution_sequence' lists each path occurrence as its own branch."),
     )
     parser.add_argument(
         "--item-id",
@@ -342,19 +344,19 @@ def main() -> None:
         if args.view == "execution":
             edges, seen_counts = _build_execution_graph(trajectory)
             if not edges:
-                print("No execution metadata found in trajectory steps.")
+                print("No path metadata found in trajectory steps.")
                 continue
             _print_execution_tree(edges, seen_counts)
         elif args.view == "execution_sequence":
             chains = _build_execution_chains(trajectory)
             if not chains:
-                print("No execution metadata found in trajectory steps.")
+                print("No path metadata found in trajectory steps.")
                 continue
             _print_execution_sequence_tree(chains)
         else:
             nodes = _build_nodes(trajectory)
             if not nodes:
-                print("No ancestry metadata found in step.extra.")
+                print("No path ancestry metadata found in step.extra.")
                 continue
             _print_tree(nodes)
 
