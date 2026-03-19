@@ -219,6 +219,7 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
 
         # Determine the default value based on whether the field is required
         default_value = field_properties.get("default")
+        has_explicit_null_default = "default" in field_properties and default_value is None
 
         if field_name in required_fields:
             # Field is required - use explicit default if provided, otherwise use ... to enforce presence
@@ -232,6 +233,10 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
             # Field is optional - use explicit default if provided, otherwise None
             if default_value is None:
                 default_value = None
+            # MCP schemas sometimes set default to null without declaring null in the type.
+            # Treat explicit null defaults as nullable for validation compatibility.
+            if has_explicit_null_default and not has_null:
+                field_type = field_type | None
             # Make the type optional if no default was provided and not already nullable
             if "default" not in field_properties and not has_null:
                 field_type = field_type | None

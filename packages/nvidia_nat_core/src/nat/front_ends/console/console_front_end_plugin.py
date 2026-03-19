@@ -15,22 +15,51 @@
 
 import asyncio
 import logging
+import re
 import select
 import sys
+import unicodedata
 
 import click
 from colorama import Fore
+from pydantic import SecretStr
 
 from nat.data_models.interactive import HumanPromptModelType
 from nat.data_models.interactive import HumanResponse
 from nat.data_models.interactive import HumanResponseText
 from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.user_info import BasicUserInfo
+from nat.data_models.user_info import UserInfo
 from nat.front_ends.console.authentication_flow_handler import ConsoleAuthenticationFlowHandler
 from nat.front_ends.console.console_front_end_config import ConsoleFrontEndConfig
 from nat.front_ends.simple_base.simple_front_end_plugin_base import SimpleFrontEndPluginBase
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
+
+_RE_UNICODE_WHITESPACE = re.compile(r'[\u00a0\u2000-\u200a\u202f\u205f\u3000]')
+_RE_ZERO_WIDTH = re.compile(r'[\u200b-\u200d\u2060\ufeff]')
+_RE_UNICODE_DASHES = re.compile(r'[\u2010-\u2015\ufe58\ufe63\uff0d]')
+_RE_SINGLE_QUOTES = re.compile(r'[\u2018\u2019\u201a\u201b]')
+_RE_DOUBLE_QUOTES = re.compile(r'[\u201c\u201d\u201e\u201f]')
+
+
+def _normalize_unicode(text: str) -> str:
+    """Replace common Unicode whitespace and punctuation with ASCII equivalents for clean console display."""
+    text = _RE_UNICODE_WHITESPACE.sub(' ', text)
+    text = _RE_ZERO_WIDTH.sub('', text)
+    text = _RE_UNICODE_DASHES.sub('-', text)
+    text = _RE_SINGLE_QUOTES.sub("'", text)
+    text = _RE_DOUBLE_QUOTES.sub('"', text)
+    text = text.replace('\u2026', '...')
+    return unicodedata.normalize('NFKC', text)
+
+
+def _format_output(runner_outputs) -> str:
+    """Format workflow outputs as human-readable text with normalized Unicode."""
+    if isinstance(runner_outputs, list):
+        return "\n".join(_normalize_unicode(str(item)) for item in runner_outputs)
+    return _normalize_unicode(str(runner_outputs))
 
 
 async def prompt_for_input_cli(question: InteractionPrompt) -> HumanResponse:
@@ -89,12 +118,15 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         assert session_manager is not None, "Session manager must be provided"
         runner_outputs = None
 
+        run_user_id: str = UserInfo(
+            basic_user=BasicUserInfo(username="nat_run_user", password=SecretStr("nat_run_user"))).get_user_id()
+
         if (self.front_end_config.input_query):
 
             async def run_single_query(query):
 
                 async with session_manager.session(
-                        user_id=self.front_end_config.user_id,
+                        user_id=run_user_id,
                         user_input_callback=prompt_for_input_cli,
                         user_authentication_callback=self.auth_flow_handler.authenticate) as session:
                     async with session.run(query) as runner:
@@ -115,7 +147,7 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
             # Run the workflow
             with open(self.front_end_config.input_file, encoding="utf-8") as f:
                 input_content = f.read()
-            async with session_manager.session(user_id=self.front_end_config.user_id) as session:
+            async with session_manager.session(user_id=run_user_id) as session:
                 async with session.run(input_content) as runner:
                     runner_outputs = await runner.result(to_type=str)
         else:
@@ -125,10 +157,12 @@ class ConsoleFrontEndPlugin(SimpleFrontEndPluginBase[ConsoleFrontEndConfig]):
         prefix = f"{line}\n{Fore.GREEN}Workflow Result:\n"
         suffix = f"{Fore.RESET}\n{line}"
 
-        logger.info(f"{prefix}%s{suffix}", runner_outputs)
+        display_output = _format_output(runner_outputs)
+
+        logger.info(f"{prefix}%s{suffix}", display_output)
 
         # (handler is a stream handler) => (level > INFO)
         effective_level_too_high = all(
             type(h) is not logging.StreamHandler or h.level > logging.INFO for h in logging.getLogger().handlers)
         if effective_level_too_high:
-            print(f"{prefix}{runner_outputs}{suffix}")
+            print(f"{prefix}{display_output}{suffix}")

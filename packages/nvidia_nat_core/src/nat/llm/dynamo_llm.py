@@ -59,10 +59,13 @@ import json
 import logging
 import threading
 import uuid
+import warnings
 from collections.abc import Iterator
+from contextlib import asynccontextmanager
 from contextlib import contextmanager
 from contextvars import ContextVar
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import httpx
@@ -70,6 +73,7 @@ import httpx
 if TYPE_CHECKING:
     from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
 
+from pydantic import AliasChoices
 from pydantic import Field
 from pydantic import field_validator
 
@@ -347,6 +351,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
 
     nvext_prediction_trie_path: str | None = Field(
         default=None,
+        validation_alias=AliasChoices("nvext_prediction_trie_path", "prediction_trie_path"),
         description="Path to prediction_trie.json file. When set, predictions are "
         "looked up and used to override nvext.agent_hints for each LLM call.",
     )
@@ -370,6 +375,7 @@ class DynamoModelConfig(OpenAIModelConfig, name="dynamo"):
     nvext_max_sensitivity: int = Field(
         default=1000,
         ge=1,
+        validation_alias=AliasChoices("nvext_max_sensitivity", "max_sensitivity"),
         description="Maximum latency sensitivity value used to compute request priority. "
         "Priority is the integer complement: priority = max_sensitivity - latency_sensitivity. "
         "Lower priority values indicate higher priority requests.",
@@ -486,6 +492,15 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
         # for the same prefix_id (keyed by prefix_id string).
         self._call_counts: dict[str, int] = {}
         self._call_counts_lock = threading.Lock()
+
+        if cache_pin_type is not None:
+            warnings.warn(
+                f"nvext.cache_control is configured (type={cache_pin_type.value}). cache_control requires "
+                "sglang >v0.5.9 with hierarchical cache enabled. Parameters will be "
+                "sent but may be silently ignored by the backend. "
+                "See https://github.com/sgl-project/sglang/pull/18941",
+                stacklevel=2,
+            )
 
     async def handle_async_request(self, request: "httpx.Request") -> "httpx.Response":
         # Get prefix ID from context (supports depth-awareness and overrides)
@@ -689,55 +704,67 @@ class _DynamoTransport(httpx.AsyncBaseTransport):
 # =============================================================================
 
 
-def create_httpx_client_with_dynamo_hooks(
-    total_requests: int,
-    osl: int,
-    iat: int,
-    timeout: float = 600.0,
-    prediction_lookup: "PredictionTrieLookup | None" = None,
-    cache_pin_type: CachePinType | None = CachePinType.EPHEMERAL,
-    cache_control_mode: CacheControlMode = CacheControlMode.ALWAYS,
-    max_sensitivity: int = 1000,
-) -> "httpx.AsyncClient":
+@asynccontextmanager
+async def _create_httpx_client_with_dynamo_hooks(config: DynamoModelConfig) -> "httpx.AsyncClient":
     """
-    Create an httpx.AsyncClient with Dynamo hint injection via custom transport.
+    Create an httpx.AsyncClient, when `config.enable_nvext_hints` is True, Dynamo hint injection via custom transport
+    is added.
 
     This client can be passed to the OpenAI SDK or wrapped in an AsyncOpenAI client
     for use with LiteLLM/ADK. All hints are injected into ``nvext.agent_hints``
     in the request body.
 
     Args:
-        total_requests: Expected number of requests for this prefix
-        osl: Expected output tokens (raw integer, always sent as int in agent_hints)
-        iat: Expected inter-arrival time in ms (raw integer, always sent as int)
-        timeout: HTTP request timeout in seconds
-        prediction_lookup: Optional PredictionTrieLookup for dynamic hint injection
-        cache_pin_type: Cache pinning strategy. When set, injects nvext.cache_control with TTL. Set to None to disable.
-        cache_control_mode: When to inject cache_control: 'always' or 'first_only' per prefix.
-        max_sensitivity: Maximum latency sensitivity for computing priority
+        config: LLM Config
 
     Returns:
         An httpx.AsyncClient configured with Dynamo hint injection.
     """
     import httpx
 
-    # Create base transport and wrap with custom transport
-    base_transport = httpx.AsyncHTTPTransport()
-    dynamo_transport = _DynamoTransport(
-        transport=base_transport,
-        total_requests=total_requests,
-        osl=osl,
-        iat=iat,
-        prediction_lookup=prediction_lookup,
-        cache_pin_type=cache_pin_type,
-        cache_control_mode=cache_control_mode,
-        max_sensitivity=max_sensitivity,
-    )
+    from nat.llm.utils.http_client import async_http_client
 
-    return httpx.AsyncClient(
-        transport=dynamo_transport,
-        timeout=httpx.Timeout(timeout),
-    )
+    http_client_kwargs = {}
+    if config.enable_nvext_hints:
+        from nat.profiler.prediction_trie import load_prediction_trie
+        from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
+
+        prediction_lookup: PredictionTrieLookup | None = None
+        if config.nvext_prediction_trie_path:
+            try:
+                trie_path = Path(config.nvext_prediction_trie_path)
+                trie = load_prediction_trie(trie_path)
+                prediction_lookup = PredictionTrieLookup(trie)
+                logger.info("Loaded prediction trie from %s", config.nvext_prediction_trie_path)
+            except FileNotFoundError:
+                logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
+            except Exception:
+                logger.exception("Failed to load prediction trie")
+
+        # Create base transport and wrap with custom transport
+        base_transport = httpx.AsyncHTTPTransport(verify=config.verify_ssl)
+        dynamo_transport = _DynamoTransport(
+            transport=base_transport,
+            total_requests=config.nvext_prefix_total_requests,
+            osl=config.nvext_prefix_osl,
+            iat=config.nvext_prefix_iat,
+            prediction_lookup=prediction_lookup,
+            cache_pin_type=config.nvext_cache_pin_type,
+            cache_control_mode=config.nvext_cache_control_mode,
+            max_sensitivity=config.nvext_max_sensitivity,
+        )
+
+        http_client_kwargs["transport"] = dynamo_transport
+        logger.info(
+            "Dynamo agent hints enabled: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
+            config.nvext_prefix_total_requests,
+            config.nvext_prefix_osl,
+            config.nvext_prefix_iat,
+            "loaded" if config.nvext_prediction_trie_path else "disabled",
+        )
+
+    async with async_http_client(llm_config=config, **http_client_kwargs) as client:
+        yield client
 
 
 # =============================================================================

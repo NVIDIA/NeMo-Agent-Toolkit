@@ -460,8 +460,8 @@ class FunctionInfo:
 
                 async def _convert_input_pydantic(value: input_schema) -> final_single_fn_desc.output_type:
 
-                    # Unpack the pydantic model into the arguments
-                    return await saved_final_single_fn(**value.model_dump())
+                    # Unpack the pydantic model into the arguments, preserving nested model types
+                    return await saved_final_single_fn(**{k: getattr(value, k) for k in type(value).model_fields})
 
                 final_single_fn = _convert_input_pydantic
 
@@ -503,8 +503,8 @@ class FunctionInfo:
                 async def _convert_input_pydantic_stream(
                         value: input_schema) -> AsyncGenerator[final_stream_fn_desc.output_type]:
 
-                    # Unpack the pydantic model into the arguments
-                    async for m in saved_final_stream_fn(**value.model_dump()):
+                    # Unpack the pydantic model into the arguments, preserving nested model types
+                    async for m in saved_final_stream_fn(**{k: getattr(value, k) for k in type(value).model_fields}):
                         yield m
 
                 final_stream_fn = _convert_input_pydantic_stream

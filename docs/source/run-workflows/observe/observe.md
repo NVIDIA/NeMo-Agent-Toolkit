@@ -30,19 +30,29 @@ These features enable developers to test their workflows locally and integrate o
 
 The core observability features (console and file logging) are included by default. For advanced telemetry features like OpenTelemetry and Phoenix tracing, you need to install the optional telemetry extras.
 
-If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands:
+If you have already installed the NeMo Agent Toolkit from source, you can install package extras with the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
 
 ```bash
 # Install specific telemetry extras
-uv pip install -e '.[data-flywheel]'
-uv pip install -e '.[opentelemetry]'
-uv pip install -e '.[phoenix]'
-uv pip install -e '.[weave]'
+uv pip install -e ".[data-flywheel]"
+uv pip install -e ".[opentelemetry]"
+uv pip install -e ".[phoenix]"
+uv pip install -e ".[weave]"
 # Note: conflicts with .[strands] and .[adk]
-uv pip install -e '.[ragaai]'
+uv pip install -e ".[ragaai]"
 ```
 
-If you have not installed the NeMo Agent Toolkit from source, you can install package extras with the following commands:
+:::
+
+:::{tab-item} package
+:sync: package
 
 ```bash
 # Install specific telemetry extras
@@ -53,6 +63,11 @@ uv pip install "nvidia-nat[weave]"
 # Note: conflicts with nvidia-nat[strands] and nvidia-nat[adk]
 uv pip install "nvidia-nat[ragaai]"
 ```
+
+:::
+
+::::
+
 
 ## Available Tracing Exporters
 
@@ -170,8 +185,8 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 #### Integration Components
 
-- **{py:class}`nat.plugins.eval.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
-- **{py:class}`~nat.plugins.eval.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
+- **{py:class}`nat.plugins.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
+- **{py:class}`~nat.plugins.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 

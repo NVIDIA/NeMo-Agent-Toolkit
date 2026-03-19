@@ -68,11 +68,29 @@ calculator__compare
 
 3. Run the workflow:
 
+If you installed this example using `uv pip install -e examples/MCP/simple_calculator_fastmcp`, the `mcp-server-time` dependency is already available. If you did not install the example package, install it manually:
+
+```bash
+uv pip install mcp-server-time
+```
+
 ```bash
 nat run --config_file examples/MCP/simple_calculator_fastmcp/configs/config-mcp-client.yml --input "Is the product of 2 * 4 greater than the current hour of the day?"
 ```
 
 The client configuration is in `examples/MCP/simple_calculator_fastmcp/configs/config-mcp-client.yml`.
+
+## Expose Selected Tools
+
+To expose only specific tools from the workflow, use `--tool_names` when starting the server:
+
+<!-- path-check-skip-begin -->
+```bash
+nat fastmcp server run --config_file examples/getting_started/simple_calculator/configs/config.yml \
+  --tool_names calculator__multiply \
+  --tool_names calculator__divide
+```
+<!-- path-check-skip-end -->
 
 ## Related Examples
 - `examples/MCP/simple_calculator_fastmcp_protected/`: Protected FastMCP calculator example

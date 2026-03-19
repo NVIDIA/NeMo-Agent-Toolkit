@@ -54,7 +54,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
 - **[Platform Integrations](#platform-integrations)**
   - [Dynamo Integration](#dynamo-integration)
   - [Retrieval Augmented Generation (RAG)](#retrieval-augmented-generation-rag)
-  - [Safety and Security](#safety-and-security)
+  - [NeMo Agent Toolkit Safety and Security](#nemo-agent-toolkit-safety-and-security)
 - [Documentation Guide Files](#documentation-guide-files)
   - [Locally Hosted LLMs](#locally-hosted-llms)
   - [Workflow Artifacts](#workflow-artifacts)
@@ -102,7 +102,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Advanced Agents
 - **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/README.md)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases. **[🛑 Advanced]**
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/README.md)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization **[🟨 Intermediate]**
-- **[`profiler_agent`](advanced_agents/profiler_agent/README.md)**: Performance profiling agent for analyzing NeMo Agent Toolkit workflow performance and bottlenecks using Phoenix observability server with comprehensive metrics collection and analysis **[🟨 Intermediate]**
 - **[`vulnerability_analysis_blueprint`](advanced_agents/vulnerability_analysis_blueprint/README.md)**: Blueprint documentation for vulnerability analysis agents **[🛑 Advanced]**
 
 ### Configuration
@@ -111,6 +110,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 ### Control Flow
 - **[`router_agent`](control_flow/router_agent/README.md)**: Configurable Router Agent that analyzes incoming requests and directly routes them to the most appropriate branch (other agents, functions or tools) based on request content **[🟢 Beginner]**
 - **[`sequential_executor`](control_flow/sequential_executor/README.md)**: Linear tool execution pipeline that chains multiple functions together where each function's output becomes the input for the next function, with optional type compatibility checking and error handling **[🟢 Beginner]**
+- **[`parallel_executor`](control_flow/parallel_executor/README.md)**: Sequential workflow with a custom parallel fan-out and fan-in stage that executes independent branches concurrently and merges outputs with partial failure handling **[🟢 Beginner]**
 - **[`hybrid_control_flow`](control_flow/hybrid_control_flow/README.md)**: Demonstrates how to compose router agent and sequential executor control flow patterns together, showing routing to sequential executors, calling router agents from sequential executors, and routing to nested router agents **[🟢 Beginner]**
 
 ### Custom Functions
@@ -171,7 +171,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`email_phishing_analyzer`](evaluation_and_profiling/email_phishing_analyzer/README.md)**: Evaluation and profiling configurations for the email phishing analyzer example **[🟨 Intermediate]**
 - **[`simple_calculator_eval`](evaluation_and_profiling/simple_calculator_eval/README.md)**: Evaluation and profiling configurations based on the basic simple calculator example **[🟨 Intermediate]**
 - **[`simple_web_query_eval`](evaluation_and_profiling/simple_web_query_eval/README.md)**: Evaluation and profiling configurations based on the basic simple web query example **[🟨 Intermediate]**
-- **[`swe_bench`](evaluation_and_profiling/swe_bench/README.md)**: Software engineering benchmark system for evaluating AI models on real-world coding tasks **[🛑 Advanced]**
 
 ### Finetuning
 - **[`dpo_tic_tac_toe`](finetuning/dpo_tic_tac_toe/README.md)**: Demonstrates how to use the NeMo Agent Toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer **[🛑 Advanced]**
@@ -188,8 +187,8 @@ _See the [Dynamo Integration README](dynamo_integration/README.md) for additiona
 ### Retrieval Augmented Generation (RAG)
 - **[`simple_rag`](RAG/simple_rag/README.md)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform **[🛑 Advanced]**
 
-### Safety and Security
-- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Outlines the features of the Safety and Security Engine (NASSE) included in NVIDIA NeMo Agent Toolkit and demonstrates its capabilities by assessing and improving the safety and security posture of an example Retail Agent **[🛑 Advanced]**
+### NeMo Agent Toolkit Safety and Security
+- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Demonstrates the NeMo Agent Toolkit Safety and Security capabilities by assessing and improving the security posture of an example Retail Agent **[🛑 Advanced]**
 
 ## Documentation Guide Files
 

@@ -24,10 +24,12 @@ from jsonpath_ng import parse
 from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
+from nat.middleware.common import TargetLocation
 from nat.middleware.defense.defense_middleware import DefenseMiddleware
 from nat.middleware.defense.defense_middleware import DefenseMiddlewareConfig
 from nat.middleware.defense.defense_middleware import MultipleTargetFieldMatchesError
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationContext
 
 
 class _TestOutputModel(BaseModel):
@@ -40,35 +42,24 @@ class _TestOutputModel(BaseModel):
 class _TestDefenseMiddleware(DefenseMiddleware):
     """Concrete implementation for testing base class methods."""
 
-    async def function_middleware_invoke(self, value, call_next, context):
-        """Test implementation that extracts fields from output and stores them for verification."""
-        # Check if defense should apply
-        if not self._should_apply_defense(context.name):
-            return await call_next(value)
-
-        # Call next to get output
-        output = await call_next(value)
-
-        # Extract field from output if target_field is specified
-        content, field_info = self._extract_field_from_value(output)
-
-        # Store extracted content for test verification
-        self._last_extracted_content = content
-        self._last_field_info = field_info
-
-        # Return output
-        return output
-
-    async def function_middleware_stream(self, value, call_next, _context):
-        """Dummy implementation."""
-        async for item in call_next(value):
-            yield item
-
     def __init__(self, config: DefenseMiddlewareConfig, builder):
-        """Initialize test middleware."""
         super().__init__(config, builder)
         self._last_extracted_content = None
         self._last_field_info = None
+
+    async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
+        """Test implementation that extracts fields from output and stores them for verification."""
+        if self.config.target_location != TargetLocation.OUTPUT:
+            return None
+
+        func_ctx: FunctionMiddlewareContext = context.function_context
+        if not self._should_apply_defense(func_ctx.name):
+            return None
+
+        content, field_info = self._extract_field_from_value(context.output)
+        self._last_extracted_content = content
+        self._last_field_info = field_info
+        return context
 
 
 @pytest.fixture(name="mock_builder")
@@ -449,7 +440,7 @@ class TestDefenseMiddlewareEndToEnd:
                                             single_output_schema=_TestOutputModel,
                                             stream_output_schema=type(None))
 
-        await middleware.function_middleware_invoke(10.0, mock_call_next, context)
+        await middleware.function_middleware_invoke(10.0, call_next=mock_call_next, context=context)
 
         # Verify field was extracted
         assert middleware._last_extracted_content == 42.0
@@ -477,7 +468,7 @@ class TestDefenseMiddlewareEndToEnd:
                                             single_output_schema=NestedOutput,
                                             stream_output_schema=type(None))
 
-        await middleware.function_middleware_invoke({}, mock_call_next, context)
+        await middleware.function_middleware_invoke({}, call_next=mock_call_next, context=context)
 
         # Verify deeply nested field was extracted
         assert middleware._last_extracted_content == "Hello world"
@@ -498,7 +489,7 @@ class TestDefenseMiddlewareEndToEnd:
                                             single_output_schema=_TestOutputModel,
                                             stream_output_schema=type(None))
 
-        await middleware.function_middleware_invoke(10.0, mock_call_next, context)
+        await middleware.function_middleware_invoke(10.0, call_next=mock_call_next, context=context)
 
         # Defense should not apply, so no field extraction should occur
         assert middleware._last_extracted_content is None
@@ -526,7 +517,7 @@ class TestDefenseMiddlewareEndToEnd:
                                             single_output_schema=MultiFieldOutput,
                                             stream_output_schema=type(None))
 
-        await middleware.function_middleware_invoke({}, mock_call_next, context)
+        await middleware.function_middleware_invoke({}, call_next=mock_call_next, context=context)
 
         # Verify all fields were extracted as a list
         assert middleware._last_extracted_content == [10.0, 20.0, 30.0]
@@ -555,7 +546,7 @@ class TestDefenseMiddlewareEndToEnd:
                                             single_output_schema=MultiFieldOutput,
                                             stream_output_schema=type(None))
 
-        await middleware.function_middleware_invoke({}, mock_call_next, context)
+        await middleware.function_middleware_invoke({}, call_next=mock_call_next, context=context)
 
         # Verify only first field was extracted
         assert middleware._last_extracted_content == 10.0
@@ -586,7 +577,7 @@ class TestDefenseMiddlewareEndToEnd:
 
         # Defense middleware catches ValueError and analyzes entire value instead
         # (unlike red teaming which raises the error)
-        await middleware.function_middleware_invoke({}, mock_call_next, context)
+        await middleware.function_middleware_invoke({}, call_next=mock_call_next, context=context)
 
         # Should fall back to analyzing entire value when error strategy encounters multiple matches
         assert middleware._last_extracted_content == output_value
@@ -607,7 +598,7 @@ class TestDefenseMiddlewareEndToEnd:
                                             single_output_schema=str,
                                             stream_output_schema=type(None))
 
-        await middleware.function_middleware_invoke({}, mock_call_next, context)
+        await middleware.function_middleware_invoke({}, call_next=mock_call_next, context=context)
 
         # Should extract entire value when no target_field
         assert middleware._last_extracted_content == "simple string output"

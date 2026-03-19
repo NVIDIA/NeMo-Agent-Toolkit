@@ -62,7 +62,7 @@ docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
 ### Running the NIM Containers
 
 :::{note}
-The `--gpus` flag is used to specify the GPUs to use for the LLM and embedding model. Each user's setup may vary, so adjust the commands to suit the system.
+The `--gpus` flag is used to specify the GPUs to use for the LLM and embedding model. The following commands assume the system is equipped with at least two GPUs, one for each model. Each user's setup may vary, so adjust the commands to suit the system.
 :::
 
 Run the LLM container listening on port 8000:
@@ -71,6 +71,7 @@ export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 mkdir -p "$LOCAL_NIM_CACHE"
 docker run -it --rm \
+    --runtime=nvidia \
     --gpus '"device=0"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
@@ -85,6 +86,7 @@ Open a new terminal and run the embedding model container, listening on port 800
 export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 docker run -it --rm \
+    --runtime=nvidia \
     --gpus '"device=1"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
@@ -159,7 +161,9 @@ uv pip install -e examples/getting_started/simple_web_query
 Similar to the NIM approach we will be running the LLM on the default port of 8000 and the embedding model on port 8001.
 
 :::{note}
-The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to use for the LLM and embedding model. Each user's setup may vary, so adjust the commands to suit the system.
+For this example we are using vLLM v0.16.0, the command line flags and configuration may differ for other versions, refer to the vLLM documentation for the version you are using.
+
+The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to use for the LLM and embedding model. The following commands assume a system with at least two GPUs. Each user's setup may vary, so adjust the commands to suit the system.
 :::
 
 In a terminal from within the vLLM environment, run the following command to serve the LLM:
@@ -169,11 +173,11 @@ CUDA_VISIBLE_DEVICES=0 vllm serve nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
 
 In a second terminal also from within the vLLM environment, run the following command to serve the embedding model:
 ```bash
-CUDA_VISIBLE_DEVICES=1 vllm serve --task embed --override-pooler-config '{"pooling_type": "MEAN"}' --port 8001 ssmits/Qwen2-7B-Instruct-embed-base
+CUDA_VISIBLE_DEVICES=1 vllm serve --port 8001 --runner pooling --convert embed --pooler-config '{"pooling_type": "MEAN"}' ssmits/Qwen2-7B-Instruct-embed-base
 ```
 
 :::{note}
-The `--override-pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/latest/models/supported_models.html#embedding) documentation.
+The `--pooler-config` flag is taken from the [vLLM Supported Models](https://docs.vllm.ai/en/v0.16.0/models/supported_models.html#embedding) documentation.
 :::
 
 
@@ -232,3 +236,9 @@ llms:
     base_url: "http://localhost:8000/v1"
     model_name: gpt-oss-20b
 ```
+
+## Self-signed SSL/TLS Certificates
+
+If your locally hosted LLM is served over HTTPS with a self-signed certificate, you may encounter SSL verification errors when NeMo Agent Toolkit tries to communicate with the model. To bypass SSL verification, you can set the `verify_ssl` parameter to `false` in the configuration for the LLM and embedding models. This is currently supported for the following LLM and embedder types:
+- LLMs: `azure_openai`, `dynamo`, `litellm`, `nim`, `openai`
+- Embedders: `azure_openai`, `openai`, `nim`

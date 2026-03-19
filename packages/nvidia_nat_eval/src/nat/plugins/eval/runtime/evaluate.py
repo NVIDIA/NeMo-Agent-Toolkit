@@ -14,10 +14,12 @@
 # limitations under the License.
 
 import asyncio
+import inspect
 import json
 import logging
 import shutil
-import warnings
+from collections.abc import Awaitable
+from contextlib import nullcontext
 from datetime import UTC
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +29,7 @@ from uuid import uuid4
 
 import yaml
 from pydantic import BaseModel
+from pydantic import SecretStr
 from tqdm import tqdm
 
 from nat.builder.context import ContextState
@@ -42,14 +45,22 @@ from nat.data_models.evaluate_runtime import UsageStatsLLM
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvalOutput
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.user_info import BasicUserInfo
+from nat.data_models.user_info import UserInfo
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
+from nat.plugins.eval.eval_callbacks import EvalCallbackManager
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
+from nat.plugins.eval.evaluator.atif_evaluator import LegacyEvaluator
+from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
-from nat.plugins.eval.utils.weave_eval import WeaveEvaluationIntegration
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
-    from nat.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.eval_callbacks import EvalCallbackManager
+    from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
+    from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 
 logger = logging.getLogger(__name__)
 
@@ -71,30 +82,23 @@ class EvaluationRun:
 
         # Run-specific configuration
         self.config: EvaluationRunConfig = config
-        self.callback_manager = callback_manager
+        self.callback_manager: EvalCallbackManager = callback_manager or EvalCallbackManager()
+        if self.config.write_output:
+            from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+            if not any(isinstance(cb, FileEvalCallback) for cb in self.callback_manager._callbacks):
+                # Keep direct `EvaluationRun(...)` behavior consistent with CLI usage.
+                self.callback_manager.register(FileEvalCallback())
         self.eval_config: EvalConfig | None = None
         self.effective_config: Config | None = None  # Stores the complete config after applying overrides
 
         # Helpers
         self.intermediate_step_adapter: IntermediateStepAdapter = IntermediateStepAdapter()
-
-        # Create evaluation trace context
-        try:
-            from nat.plugins.eval.utils.eval_trace_ctx import WeaveEvalTraceContext
-            with warnings.catch_warnings():
-                # Ignore deprecation warnings being triggered by weave. https://github.com/wandb/weave/issues/3666
-                warnings.filterwarnings("ignore",
-                                        category=DeprecationWarning,
-                                        message=r"`sentry_sdk\.Hub` is deprecated")
-
-                self.eval_trace_context = WeaveEvalTraceContext()
-        except Exception:
-            from nat.plugins.eval.utils.eval_trace_ctx import EvalTraceContext
-            self.eval_trace_context = EvalTraceContext()
-
-        self.weave_eval: WeaveEvaluationIntegration = WeaveEvaluationIntegration(self.eval_trace_context)
+        from nat.plugins.eval.runtime.atif_adapter import EvalAtifAdapter
+        self.atif_adapter = EvalAtifAdapter()
+        self.evaluation_harness = EvaluationHarness()
         # Metadata
         self.eval_input: EvalInput | None = None
+        self.atif_eval_samples: AtifEvalSampleList = []
         self.workflow_interrupted: bool = False
 
         # evaluation_results is list of tuples (evaluator_name, EvalOutput)
@@ -125,22 +129,22 @@ class EvaluationRun:
 
     def _compute_usage_stats(self, item: EvalInputItem):
         """Compute usage stats for a single item using the intermediate steps"""
-        # get the prompt and completion tokens from the intermediate steps
-        from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
-        steps = [IntermediatePropertyAdaptor.from_intermediate_step(step) for step in item.trajectory]
         usage_stats_per_llm = {}
         total_tokens = 0
-        for step in steps:
-            if step.event_type == "LLM_END":
-                llm_name = step.llm_name
+        for step in item.trajectory:
+            if step.event_type == IntermediateStepType.LLM_END:
+                llm_name = step.name or step.function_ancestry.function_name or "unknown"
                 if llm_name not in usage_stats_per_llm:
                     usage_stats_per_llm[llm_name] = UsageStatsLLM()
-                usage_stats_per_llm[llm_name].prompt_tokens += step.token_usage.prompt_tokens
-                usage_stats_per_llm[llm_name].completion_tokens += step.token_usage.completion_tokens
-                usage_stats_per_llm[llm_name].total_tokens += step.token_usage.total_tokens
-                usage_stats_per_llm[llm_name].reasoning_tokens += step.token_usage.reasoning_tokens
-                usage_stats_per_llm[llm_name].cached_tokens += step.token_usage.cached_tokens
-                total_tokens += step.token_usage.total_tokens
+
+                token_usage = step.usage_info.token_usage if step.usage_info else None
+                if token_usage is not None:
+                    usage_stats_per_llm[llm_name].prompt_tokens += token_usage.prompt_tokens
+                    usage_stats_per_llm[llm_name].completion_tokens += token_usage.completion_tokens
+                    usage_stats_per_llm[llm_name].total_tokens += token_usage.total_tokens
+                    usage_stats_per_llm[llm_name].reasoning_tokens += token_usage.reasoning_tokens
+                    usage_stats_per_llm[llm_name].cached_tokens += token_usage.cached_tokens
+                    total_tokens += token_usage.total_tokens
 
         # find min and max event timestamps
         if item.trajectory:
@@ -155,10 +159,10 @@ class EvaluationRun:
         # find llm latency by calculating p95 of all llm calls
         llm_latencies = []
         previous_llm_start_time = None
-        for step in steps:
-            if step.event_type == "LLM_START":
+        for step in item.trajectory:
+            if step.event_type == IntermediateStepType.LLM_START:
                 previous_llm_start_time = step.event_timestamp
-            elif step.event_type == "LLM_END" and previous_llm_start_time is not None:
+            elif step.event_type == IntermediateStepType.LLM_END and previous_llm_start_time is not None:
                 llm_latencies.append(step.event_timestamp - previous_llm_start_time)
                 previous_llm_start_time = None
 
@@ -204,9 +208,11 @@ class EvaluationRun:
                 pre_span_id = _generate_nonzero_span_id()
                 self._item_span_ids[str(item.id)] = pre_span_id
 
-            user_id = self.config.user_id
+            eval_username: str = "nat_eval_user"
             if self.eval_config.general.per_input_user_id:
-                user_id += f"-{uuid4()}"
+                eval_username += f"-{uuid4()}"
+            eval_user_id: str = UserInfo(
+                basic_user=BasicUserInfo(username=eval_username, password=SecretStr("nat_eval_user"))).get_user_id()
 
             # Set the pre-generated span_id in the ContextVar BEFORE entering
             # the session/runner context. asyncio.create_task() copies ContextVars,
@@ -214,7 +220,7 @@ class EvaluationRun:
             ctx_state = ContextState.get()
             root_span_token = ctx_state._root_span_id.set(pre_span_id) if pre_span_id is not None else None
             try:
-                async with session_manager.session(user_id=user_id) as session:
+                async with session_manager.session(user_id=eval_user_id) as session:
                     async with session.run(item.input_obj) as runner:
                         if not session.workflow.has_single_output:
                             # raise an error if the workflow has multiple outputs
@@ -299,6 +305,9 @@ class EvaluationRun:
                             except Exception:
                                 logger.exception("Failed to write incremental checkpoint for item %s", item.id)
                         # END INCREMENTAL CHECKPOINTING
+                        if self.callback_manager:
+                            self.callback_manager.on_prediction(item=item, output=output)
+                            await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
             finally:
                 if root_span_token is not None:
                     ctx_state._root_span_id.reset(root_span_token)
@@ -341,6 +350,11 @@ class EvaluationRun:
                     await asyncio.to_thread(self._write_checkpoint_item, checkpoint_file, item_dict)
             except Exception:
                 logger.exception("Failed to write remote checkpoint items")
+        for item in self.eval_input.eval_input_items:
+            usage_stats_item = self._compute_usage_stats(item)
+            if self.callback_manager:
+                self.callback_manager.on_prediction(item=item, output=item.output_obj)
+                await self.callback_manager.a_on_usage_stats(item=item, usage_stats_item=usage_stats_item)
 
     async def profile_workflow(self) -> ProfilerResults:
         """
@@ -351,11 +365,9 @@ class EvaluationRun:
             logger.info("Profiler is not enabled. Skipping profiling.")
             return ProfilerResults()
 
-        from nat.plugins.eval.profiler.profile_runner import ProfilerRunner
+        from nat.plugins.profiler.profile_runner import ProfilerRunner
 
-        all_stats = []
-        for input_item in self.eval_input.eval_input_items:
-            all_stats.append(input_item.trajectory)
+        all_stats = [sample.trajectory for sample in self.atif_eval_samples]
 
         profiler_runner = ProfilerRunner(self.eval_config.general.profiler,
                                          self.eval_config.general.output_dir,
@@ -419,6 +431,14 @@ class EvaluationRun:
                 shutil.rmtree(dir_to_delete)
             except Exception as e:
                 logger.exception("Failed to delete old job directory: %s: %s", dir_to_delete, e)
+
+    def get_file_exporter(self) -> "FileEvalCallback | None":
+        """Return the registered ``FileEvalCallback``, if any."""
+        from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
+        for cb in self.callback_manager._callbacks:
+            if isinstance(cb, FileEvalCallback):
+                return cb
+        return None
 
     def write_configuration(self) -> None:
         """Save the configuration used for this evaluation run to the output directory.
@@ -524,6 +544,15 @@ class EvaluationRun:
         self.workflow_output_file = workflow_output_file
         logger.info("Workflow output written to %s", workflow_output_file)
 
+        output_config = self.eval_config.general.output
+        if output_config and output_config.write_atif_workflow_output:
+            atif_workflow_output_file = self.eval_config.general.output_dir / "workflow_output_atif.json"
+            atif_workflow_output = json.dumps([sample.model_dump(mode="json") for sample in self.atif_eval_samples],
+                                              indent=2)
+            with open(atif_workflow_output_file, "w", encoding="utf-8") as f:
+                f.write(atif_workflow_output)
+            logger.info("ATIF workflow output written to %s", atif_workflow_output_file)
+
         # Write the output of each evaluator to a separate json file
         for evaluator_name, eval_output in self.evaluation_results:
             output_file = self.eval_config.general.output_dir / f"{evaluator_name}_output.json"
@@ -546,35 +575,80 @@ class EvaluationRun:
                    "You can re-execute evaluation for incomplete results by running "
                    "`eval` with the --skip_completed_entries flag.")
             logger.warning(msg)
-
-        self.weave_eval.log_summary(self.usage_stats, self.evaluation_results, profiler_results)
+        if self.callback_manager:
+            self.callback_manager.on_eval_summary(usage_stats=self.usage_stats,
+                                                  evaluation_results=self.evaluation_results,
+                                                  profiler_results=profiler_results)
 
     async def run_single_evaluator(self, evaluator_name: str, evaluator: Any):
         """Run a single evaluator and store its results."""
-        try:
-            eval_output = await evaluator.evaluate_fn(self.eval_input)
+        if isinstance(evaluator, AtifEvaluator):
+            harness_results = await self.evaluation_harness.evaluate({evaluator_name: evaluator},
+                                                                     self.atif_eval_samples)
+            eval_output = harness_results.get(evaluator_name)
+            if eval_output is None:
+                return
             self.evaluation_results.append((evaluator_name, eval_output))
+            if self.callback_manager:
+                await self.callback_manager.a_on_evaluator_score(eval_output=eval_output, evaluator_name=evaluator_name)
+            return
+        await self._run_single_legacy_evaluator(evaluator_name, evaluator)
 
-            await self.weave_eval.alog_score(eval_output, evaluator_name)
+    async def _run_single_legacy_evaluator(self, evaluator_name: str, evaluator: Any):
+        """Run one evaluator through the legacy `evaluate_fn` lane."""
+        try:
+            evaluate_fn = getattr(evaluator, "evaluate_fn", None)
+            if not isinstance(evaluator, LegacyEvaluator):
+                raise TypeError(f"Evaluator '{evaluator_name}' is missing callable evaluate_fn and evaluate_atif_fn")
+            eval_result = evaluate_fn(self.eval_input)
+            if not inspect.isawaitable(eval_result):
+                raise TypeError(f"Evaluator '{evaluator_name}' evaluate_fn must return an awaitable")
+            eval_output = await eval_result
+            self.evaluation_results.append((evaluator_name, eval_output))
+            if self.callback_manager:
+                await self.callback_manager.a_on_evaluator_score(eval_output=eval_output, evaluator_name=evaluator_name)
         except Exception as e:
             logger.exception("An error occurred while running evaluator %s: %s", evaluator_name, e)
 
     async def run_evaluators(self, evaluators: dict[str, Any]):
         """Run all configured evaluators asynchronously."""
-        tasks = [self.run_single_evaluator(name, evaluator) for name, evaluator in evaluators.items() if evaluator]
+        atif_evaluators: dict[str, AtifEvaluator] = {}
+        legacy_evaluators: dict[str, LegacyEvaluator] = {}
+        for name, evaluator in evaluators.items():
+            if not evaluator:
+                continue
+            if isinstance(evaluator, AtifEvaluator):
+                atif_evaluators[name] = evaluator
+            elif isinstance(evaluator, LegacyEvaluator):
+                legacy_evaluators[name] = evaluator
+            else:
+                logger.warning("Skipping evaluator %s: missing ATIF and legacy evaluator interfaces", name)
 
-        if not tasks:
+        if not atif_evaluators and not legacy_evaluators:
             logger.warning("All evaluators were empty or invalid.")
             return
 
         try:
-            await asyncio.gather(*tasks)
+            if atif_evaluators:
+                harness_results = await self.evaluation_harness.evaluate(atif_evaluators, self.atif_eval_samples)
+                for evaluator_name, eval_output in harness_results.items():
+                    self.evaluation_results.append((evaluator_name, eval_output))
+                    if self.callback_manager:
+                        await self.callback_manager.a_on_evaluator_score(eval_output=eval_output,
+                                                                         evaluator_name=evaluator_name)
+
+            if legacy_evaluators:
+                tasks: list[Awaitable[None]] = [
+                    self._run_single_legacy_evaluator(evaluator_name=name, evaluator=evaluator)
+                    for name, evaluator in legacy_evaluators.items()
+                ]
+                await asyncio.gather(*tasks)
         except Exception as e:
             logger.error("An error occurred while running evaluators: %s", e)
             raise
         finally:
-            # Finish prediction loggers in Weave
-            await self.weave_eval.afinish_loggers()
+            if self.callback_manager:
+                await self.callback_manager.a_on_export_flush()
 
     def apply_overrides(self):
         from nat.cli.cli_utils.config_override import load_and_override_config
@@ -627,12 +701,23 @@ class EvaluationRun:
         except Exception as e:
             logger.warning("Failed to wait for local export tasks: %s", e)
 
-    def _on_eval_complete(self) -> None:
+    def _on_eval_complete(self, dataset_handler: DatasetHandler | None = None) -> None:
         """Build an EvalResult from collected data and fire the on_eval_complete callback."""
-        if not (self.callback_manager and self.evaluation_results):
+        if not self.evaluation_results:
             return
         try:
-            from nat.eval.eval_callbacks import build_eval_result
+            from nat.plugins.eval.eval_callbacks import build_eval_result
+
+            workflow_output_json: str | None = None
+            atif_workflow_output_json: str | None = None
+            if dataset_handler is not None and self.eval_input is not None:
+                step_filter = (self.eval_config.general.output.workflow_output_step_filter
+                               if self.eval_config and self.eval_config.general.output else None)
+                workflow_output_json = dataset_handler.publish_eval_input(self.eval_input, step_filter)
+                if self.eval_config.general.output and self.eval_config.general.output.write_atif_workflow_output:
+                    atif_workflow_output_json = json.dumps(
+                        [sample.model_dump(mode="json") for sample in self.atif_eval_samples], indent=2)
+
             scores = {name: output.average_score for name, output in self.evaluation_results}
             result = build_eval_result(
                 eval_input_items=self.eval_input.eval_input_items,
@@ -640,6 +725,11 @@ class EvaluationRun:
                 metric_scores=scores,
                 usage_stats=self.usage_stats,
                 item_span_ids=self._item_span_ids,
+                workflow_output_json=workflow_output_json,
+                atif_workflow_output_json=atif_workflow_output_json,
+                run_config=self.config,
+                effective_config=self.effective_config,
+                output_dir=(self.eval_config.general.output_dir if self.eval_config else None),
             )
             self.callback_manager.on_eval_complete(result)
         except Exception:
@@ -715,7 +805,7 @@ class EvaluationRun:
                                          adjust_dataset_size=self.config.adjust_dataset_size,
                                          custom_pre_eval_process_function=custom_pre_eval_process_function)
         self.eval_input = dataset_handler.get_eval_input_from_dataset(self.config.dataset)
-        if self.callback_manager and self.eval_input.eval_input_items:
+        if self.eval_input.eval_input_items:
             try:
                 file_path = getattr(dataset_config, 'file_path', 'nat-eval-dataset')
                 dataset_name = Path(file_path).stem if file_path else 'nat-eval-dataset'
@@ -723,6 +813,15 @@ class EvaluationRun:
                                                         items=self.eval_input.eval_input_items)
             except Exception:
                 logger.warning("Failed to fire on_dataset_loaded callback", exc_info=True)
+
+        if self.callback_manager:
+            try:
+                self.callback_manager.on_eval_started(workflow_alias=workflow_alias,
+                                                      eval_input=self.eval_input,
+                                                      config=config,
+                                                      job_id=job_id)
+            except Exception:
+                logger.warning("Failed to initialize eval export callbacks", exc_info=True)
         if not self.eval_input.eval_input_items:
             logger.info("Dataset is empty. Nothing to evaluate.")
             return EvaluationRunOutput(workflow_output_file=self.workflow_output_file,
@@ -753,10 +852,8 @@ class EvaluationRun:
 
         # Run workflow and evaluate
         async with WorkflowEvalBuilder.from_config(config=config) as eval_workflow:
-            # Initialize Weave integration
-            self.weave_eval.initialize_logger(workflow_alias, self.eval_input, config, job_id=job_id)
-
-            with self.eval_trace_context.evaluation_context():
+            eval_context = self.callback_manager.evaluation_context() if self.callback_manager else nullcontext()
+            with eval_context:
                 # Run workflow
                 local_session_manager: SessionManager | None = None
                 try:
@@ -773,16 +870,22 @@ class EvaluationRun:
 
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
+                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
+                    needs_atif = (self.eval_config.general.profiler
+                                  or any(isinstance(ev, AtifEvaluator) for ev in evaluators.values())
+                                  or (self.eval_config.general.output
+                                      and self.eval_config.general.output.write_atif_workflow_output))
+                    if needs_atif:
+                        self.atif_eval_samples = self.atif_adapter.build_samples(self.eval_input)
+                    else:
+                        self.atif_eval_samples = []
 
                     # Evaluate
-                    evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
                     await self.run_evaluators(evaluators)
 
                     # Wait for all trace export tasks to complete (local workflows only)
                     if session_manager and not self.config.endpoint:
                         await self.wait_for_all_export_tasks_local(session_manager, timeout=self.config.export_timeout)
-
-                    self._on_eval_complete()
                 finally:
                     if local_session_manager is not None:
                         await local_session_manager.shutdown()
@@ -798,8 +901,23 @@ class EvaluationRun:
         else:
             self.usage_stats.total_runtime = 0.0
 
-        # Publish the results
-        self.publish_output(dataset_handler, profiler_results)
+        # Fire eval-complete callbacks (including FileEvalCallback for file export)
+        self._on_eval_complete(dataset_handler)
+
+        if self.workflow_interrupted:
+            msg = ("Workflow execution was interrupted due to an error. The results may be incomplete. "
+                   "You can re-execute evaluation for incomplete results by running "
+                   "`eval` with the --skip_completed_entries flag.")
+            logger.warning(msg)
+
+        # Retrieve file paths written by FileEvalCallback (if registered)
+        file_exporter = self.get_file_exporter()
+        if file_exporter is not None:
+            self.workflow_output_file = file_exporter.workflow_output_file
+            self.evaluator_output_files = file_exporter.evaluator_output_files
+            self.config_original_file = file_exporter.config_original_file
+            self.config_effective_file = file_exporter.config_effective_file
+            self.config_metadata_file = file_exporter.config_metadata_file
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:

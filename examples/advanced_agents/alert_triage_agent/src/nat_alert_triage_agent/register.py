@@ -24,7 +24,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.plugins.eval.profiler.decorators.function_tracking import track_function
+from nat.plugins.profiler.decorators.function_tracking import track_function
 from nat.data_models.optimizable import OptimizableMixin
 
 # flake8: noqa
@@ -136,7 +136,17 @@ async def alert_triage_agent_workflow(config: AlertTriageAgentWorkflowConfig, bu
 
         # Process alert through agent since no maintenance is occurring
         output = await agent_executor.ainvoke({"messages": [HumanMessage(content=input_message)]})
-        result = output["messages"][-1].content
+        raw_result = output["messages"][-1].content
+        if isinstance(raw_result, str):
+            result = raw_result.strip()
+        else:
+            result = ""
+
+        if not result:
+            utils.logger.warning("Agent returned empty triage report (input_length=%d)", len(input_message))
+            result = ("The agent was unable to generate a triage report for this alert. "
+                      "This may indicate the LLM model is insufficient for the task complexity. "
+                      "Consider using a larger model (e.g. meta/llama-3.3-70b-instruct).\n\n")
 
         # Determine and append root cause category
         root_cause = await categorizer_tool.arun(result)
