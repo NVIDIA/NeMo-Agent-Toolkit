@@ -37,7 +37,7 @@ This directory contains configurations for running services used by the examples
 - **MySQL:** Includes `docker-compose.mysql.yml` for running a MySQL server for object store examples.
 - **Phoenix Observability:** Includes `docker-compose.phoenix.yml` for running Phoenix observability server to monitor and debug workflows.
 - **Redis Service:** Includes `docker-compose.redis.yml` for running Redis memory backend with Redis Insight for memory-based examples.
-- **MemMachine:** Includes `docker-compose.memmachine.yml` for running MemMachine with PostgreSQL (pgvector) and Neo4j for context memory examples.
+- **MemMachine:** Includes `docker-compose.memmachine.yml` for running MemMachine with PostgreSQL and Neo4j for context memory examples.
 
 
 ## Available Services

@@ -57,7 +57,7 @@ docker compose -f examples/deploy/docker-compose.memmachine.yml up -d
 ```
 
 This starts:
-- **PostgreSQL** (with pgvector) — vector and relational storage
+- **PostgreSQL** — vector and relational storage
 - **Neo4j** — graph memory backend
 - **MemMachine** — the memory server, exposed on `http://localhost:8095`
 

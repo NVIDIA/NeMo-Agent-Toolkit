@@ -19,7 +19,7 @@ limitations under the License.
 
 **Complexity:** 🟨 Intermediate
 
-This example demonstrates how to use [MemMachine](https://docs.memmachine.ai/) as a long-term memory backend for NeMo Agent Toolkit agents. MemMachine provides unified episodic and semantic memory management backed by PostgreSQL (pgvector) and Neo4j.
+This example demonstrates how to use [MemMachine](https://docs.memmachine.ai/) as a long-term memory backend for NeMo Agent Toolkit agents. MemMachine provides unified episodic and semantic memory management backed by PostgreSQL and Neo4j.
 
 ## Table of Contents
 
