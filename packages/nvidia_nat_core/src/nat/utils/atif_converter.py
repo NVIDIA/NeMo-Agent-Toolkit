@@ -88,6 +88,29 @@ def _safe_str(value: Any) -> str:
     return str(value)
 
 
+def _extract_tool_error(output: Any) -> dict[str, str] | None:
+    """Extract error metadata from a tool output for ``step.extra["tool_errors"]``."""
+    # TODO: return a model instead of a plain dict once ATIF spec adds error support
+    status: str | None = getattr(output, "status", None) or (output.get("status") if isinstance(output, dict) else None)
+    if status != "error":
+        return None
+    content: str = (getattr(output, "content", None) or (output.get("content") if isinstance(output, dict) else None)
+                    or _safe_str(output))
+    error_type: str = "Unknown"
+    error_message: str = content
+    if ":" in content:
+        candidate: str = content.split(":", 1)[0].strip()
+        if candidate.isidentifier():
+            error_type = candidate
+            error_message = content.split(":", 1)[1].strip()
+    return {
+        "error": content,
+        "error_type": error_type,
+        "error_message": error_message,
+        "status": "error",
+    }
+
+
 def _extract_user_input(value: Any) -> str:
     """Extract the user-facing input text from a workflow start payload.
 
@@ -278,15 +301,26 @@ class IntermediateStepToATIFConverter:
                 tool_name = ist.name or "unknown_tool"
                 tool_input: dict[str, Any] = {}
                 tool_output = ""
+                raw_output: Any = None
+
                 if ist.data:
                     tool_input = _parse_tool_arguments(ist.data.input)
-                    tool_output = _safe_str(ist.data.output)
+                    raw_output = ist.data.output
+                    tool_output = _safe_str(raw_output)
                 call_id = f"call_{ist.UUID}"
                 tc = ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input)
                 obs = ATIFObservationResult(source_call_id=call_id, content=tool_output)
+                tool_error: dict[str, str] | None = _extract_tool_error(raw_output)
+
+                if tool_error is not None:
+                    tool_error["tool"] = tool_name
+                extra: dict[str, Any] | None = ({"tool_errors": [tool_error]} if tool_error else None)
+
                 if pending is not None:
                     pending.tool_calls.append(tc)
                     pending.observations.append(obs)
+                    if tool_error:
+                        pending.extra.setdefault("tool_errors", []).append(tool_error)
                 else:
                     atif_steps.append(
                         ATIFStep(
@@ -296,6 +330,7 @@ class IntermediateStepToATIFConverter:
                             timestamp=_epoch_to_iso(ist.event_timestamp),
                             tool_calls=[tc],
                             observation=ATIFObservation(results=[obs]),
+                            extra=extra,
                         ))
                     step_id += 1
                 continue
@@ -434,17 +469,25 @@ class ATIFStreamConverter:
             tool_name = ist.name or "unknown_tool"
             tool_input: dict[str, Any] = {}
             tool_output = ""
+            raw_output: Any = None
             if ist.data:
                 tool_input = _parse_tool_arguments(ist.data.input)
-                tool_output = _safe_str(ist.data.output)
+                raw_output = ist.data.output
+                tool_output = _safe_str(raw_output)
             call_id = f"call_{ist.UUID}"
             tc = ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input)
             obs = ATIFObservationResult(source_call_id=call_id, content=tool_output)
+            tool_error: dict[str, str] | None = _extract_tool_error(raw_output)
+            if tool_error is not None:
+                tool_error["tool"] = tool_name
             if self._pending is not None:
                 self._pending.tool_calls.append(tc)
                 self._pending.observations.append(obs)
+                if tool_error:
+                    self._pending.extra.setdefault("tool_errors", []).append(tool_error)
                 return None
 
+            extra: dict[str, Any] | None = ({"tool_errors": [tool_error]} if tool_error else None)
             orphan_step = ATIFStep(
                 step_id=self._step_id,
                 source="agent",
@@ -452,6 +495,7 @@ class ATIFStreamConverter:
                 timestamp=_epoch_to_iso(ist.event_timestamp),
                 tool_calls=[tc],
                 observation=ATIFObservation(results=[obs]),
+                extra=extra,
             )
             self._step_id += 1
             self._emitted_steps.append(orphan_step)
