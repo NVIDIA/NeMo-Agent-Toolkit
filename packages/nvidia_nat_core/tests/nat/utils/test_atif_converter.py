@@ -14,9 +14,12 @@
 # limitations under the License.
 """Tests for the ATIF converter."""
 
+import datetime
+
 import pytest
 from langchain_core.messages import ToolMessage
 
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
@@ -35,6 +38,11 @@ from nat.utils.atif_converter import IntermediateStepToATIFConverter
 _BASE_TIME = 1700000000.0
 
 
+def _epoch_to_iso(epoch: float) -> str:
+    """Convert Unix epoch to ISO 8601 string for assertions."""
+    return datetime.datetime.fromtimestamp(epoch, tz=datetime.UTC).isoformat()
+
+
 def _make_step(
     event_type: IntermediateStepType,
     *,
@@ -46,6 +54,7 @@ def _make_step(
     function_name: str = "my_workflow",
     usage: UsageInfo | None = None,
     step_uuid: str | None = None,
+    framework: LLMFrameworkEnum | None = None,
 ) -> IntermediateStep:
     """Create a minimal IntermediateStep for testing."""
     payload_kwargs: dict = {
@@ -58,6 +67,8 @@ def _make_step(
         payload_kwargs["usage_info"] = usage
     if step_uuid is not None:
         payload_kwargs["UUID"] = step_uuid
+    if framework is not None:
+        payload_kwargs["framework"] = framework
     if event_type.endswith("_END") and event_type != "LLM_NEW_TOKEN":
         payload_kwargs["span_event_timestamp"] = (_BASE_TIME + timestamp_offset - 0.5)
     return IntermediateStep(
@@ -252,23 +263,31 @@ class TestBatchConverter:
         assert result.steps[2].message == "The answer is 4"
         assert result.steps[2].tool_calls is None
 
-        # No duplicate final step (workflow_end output == last LLM output)
-        assert len(result.steps) == 3
+        # Step 4: terminal workflow marker preserving WORKFLOW_END timestamp
+        assert result.steps[3].source == "agent"
+        assert result.steps[3].message == "The answer is 4"
+        assert result.steps[3].tool_calls is None
+        assert result.steps[3].timestamp == _epoch_to_iso(_BASE_TIME + 4.0)
+
+        assert len(result.steps) == 4
 
     def test_no_tool_trajectory(
         self,
         batch_converter: IntermediateStepToATIFConverter,
         no_tool_trajectory: list[IntermediateStep],
     ):
-        """Trajectory without tools produces user + single agent step."""
+        """Trajectory without tools preserves a terminal workflow marker."""
         result = batch_converter.convert(no_tool_trajectory)
 
-        assert len(result.steps) == 2
+        assert len(result.steps) == 3
         assert result.steps[0].source == "user"
         assert result.steps[0].message == "Say hello"
         assert result.steps[1].source == "agent"
         assert result.steps[1].message == "Hello!"
         assert result.steps[1].tool_calls is None
+        assert result.steps[2].source == "agent"
+        assert result.steps[2].message == "Hello!"
+        assert result.steps[2].timestamp == _epoch_to_iso(_BASE_TIME + 2.0)
 
     def test_multi_tool_single_turn(
         self,
@@ -278,8 +297,8 @@ class TestBatchConverter:
         """Multiple tool calls in one LLM turn are grouped correctly."""
         result = batch_converter.convert(multi_tool_trajectory)
 
-        # user + agent(with 2 tools) + final agent
-        assert len(result.steps) == 3
+        # user + agent(with 2 tools) + final agent + terminal marker
+        assert len(result.steps) == 4
         agent_with_tools = result.steps[1]
         assert len(agent_with_tools.tool_calls) == 2
         assert agent_with_tools.tool_calls[0].function_name == "stock_lookup"
@@ -315,6 +334,36 @@ class TestBatchConverter:
         result = batch_converter.convert(simple_trajectory, session_id="my-session-123")
         assert result.session_id == "my-session-123"
 
+    def test_framework_in_extra(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+    ):
+        """Framework is included in step.extra when present in IntermediateStep."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Hi",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Hello!",
+                timestamp_offset=1.0,
+                usage=_make_usage(50, 10),
+                framework=LLMFrameworkEnum.LANGCHAIN,
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="Hello!",
+                timestamp_offset=2.0,
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.extra is not None
+        assert agent_step.extra["ancestry"]["framework"] == "langchain"
+
     def test_final_metrics(
         self,
         batch_converter: IntermediateStepToATIFConverter,
@@ -326,7 +375,7 @@ class TestBatchConverter:
         assert result.final_metrics is not None
         assert result.final_metrics.total_prompt_tokens == 250  # 100 + 150
         assert result.final_metrics.total_completion_tokens == 50  # 20 + 30
-        assert result.final_metrics.total_steps == 2  # 2 agent steps
+        assert result.final_metrics.total_steps == 3  # 2 agent turns + terminal workflow marker
 
     def test_timestamps_are_iso(
         self,
@@ -361,6 +410,157 @@ class TestBatchConverter:
         restored = ATIFTrajectory.model_validate_json(json_str)
         assert len(restored.steps) == len(result.steps)
         assert restored.schema_version == "ATIF-v1.6"
+
+    def test_metrics_include_reasoning_tokens(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+    ):
+        """reasoning_tokens from UsageInfo is mapped to metrics.extra."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Hi",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Hello",
+                timestamp_offset=1.0,
+                usage=UsageInfo(token_usage=TokenUsageBaseModel(
+                    prompt_tokens=10,
+                    completion_tokens=5,
+                    reasoning_tokens=100,
+                    total_tokens=115,
+                ), ),
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="Hello",
+                timestamp_offset=2.0,
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.metrics is not None
+        assert agent_step.metrics.extra is not None
+        assert agent_step.metrics.extra.get("reasoning_tokens") == 100
+
+    def test_metrics_include_cached_tokens(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+    ):
+        """cached_tokens from UsageInfo is mapped to metrics."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Hi",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Hello",
+                timestamp_offset=1.0,
+                usage=UsageInfo(token_usage=TokenUsageBaseModel(
+                    prompt_tokens=100,
+                    completion_tokens=20,
+                    cached_tokens=50,
+                    total_tokens=120,
+                ), ),
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="Hello",
+                timestamp_offset=2.0,
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.metrics is not None
+        assert agent_step.metrics.cached_tokens == 50
+        assert result.final_metrics is not None
+        assert result.final_metrics.total_cached_tokens == 50
+
+    def test_tool_call_id_and_observation_source_match(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+        simple_trajectory: list[IntermediateStep],
+    ):
+        """tool_call_id and observation source_call_id are linked correctly."""
+        result = batch_converter.convert(simple_trajectory)
+        agent_with_tools = result.steps[1]
+        assert agent_with_tools.tool_calls is not None
+        assert agent_with_tools.observation is not None
+        for tc, obs in zip(agent_with_tools.tool_calls, agent_with_tools.observation.results, strict=True):
+            assert obs.source_call_id == tc.tool_call_id
+            assert tc.tool_call_id.startswith("call_")
+
+    def test_profiling_extra_populated(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+        simple_trajectory: list[IntermediateStep],
+    ):
+        """step.extra contains function_ancestry for profiling."""
+        result = batch_converter.convert(simple_trajectory)
+
+        # User step has profiling extra
+        user_step = result.steps[0]
+        assert user_step.extra is not None
+        assert user_step.extra["ancestry"]["function_ancestry"]["function_id"] == "func-id-1"
+        assert user_step.extra["ancestry"]["function_ancestry"]["function_name"] == "my_workflow"
+
+        # Agent step with tool call has tool_ancestry (from TOOL_END)
+        agent_step = result.steps[1]
+        assert agent_step.extra is not None
+        assert agent_step.extra["ancestry"]["function_ancestry"]["function_id"] == "func-id-1"
+        assert agent_step.extra.get("tool_ancestry") is not None
+        assert len(agent_step.extra["tool_ancestry"]) == 1
+        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_id"] == "func-id-1"
+        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_name"] == "my_workflow"
+
+    def test_agent_tool_definitions_populated(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+    ):
+        """tool_definitions from TraceMetadata.tools_schema is mapped to agent."""
+        from nat.data_models.intermediate_step import ToolDetails
+        from nat.data_models.intermediate_step import ToolParameters
+        from nat.data_models.intermediate_step import ToolSchema
+        from nat.data_models.intermediate_step import TraceMetadata
+
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Hi",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="I'll use a tool",
+                timestamp_offset=1.0,
+                usage=_make_usage(50, 10),
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="I'll use a tool",
+                timestamp_offset=2.0,
+            ),
+        ]
+        tool_schema = ToolSchema(
+            type="function",
+            function=ToolDetails(
+                name="weather",
+                description="Get weather",
+                parameters=ToolParameters(properties={}),
+            ),
+        )
+        steps[1].payload.metadata = TraceMetadata(tools_schema=[tool_schema])
+        result = batch_converter.convert(steps)
+        assert result.agent.tool_definitions is not None
+        assert len(result.agent.tool_definitions) == 1
+        assert result.agent.tool_definitions[0]["function"]["name"] == "weather"
 
 
 # ---------------------------------------------------------------------------
@@ -501,7 +701,7 @@ class TestStreamConverter:
         stream_result = stream_conv.get_trajectory()
 
         assert len(stream_result.steps) == len(batch_result.steps)
-        for s_step, b_step in zip(stream_result.steps, batch_result.steps):
+        for s_step, b_step in zip(stream_result.steps, batch_result.steps, strict=True):
             assert s_step.source == b_step.source
             assert s_step.message == b_step.message
             if b_step.tool_calls:

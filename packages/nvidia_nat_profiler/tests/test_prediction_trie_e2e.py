@@ -28,6 +28,7 @@ from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.plugins.profiler.profile_runner import ProfilerRunner
 from nat.profiler.prediction_trie import load_prediction_trie
 from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
+from nat.utils.atif_converter import IntermediateStepToATIFConverter
 
 
 def make_agent_trace(agent_name: str, num_llm_calls: int, base_timestamp: float) -> list[IntermediateStep]:
@@ -97,8 +98,9 @@ async def test_e2e_prediction_trie_workflow():
             base_metrics=True,
             prediction_trie=PredictionTrieConfig(enable=True),
         )
+        trajectories = [IntermediateStepToATIFConverter().convert(trace) for trace in traces]
         runner = ProfilerRunner(config, output_dir)
-        await runner.run(traces)
+        await runner.run(trajectories)
 
         # Load trie
         trie_path = output_dir / "prediction_trie.json"
