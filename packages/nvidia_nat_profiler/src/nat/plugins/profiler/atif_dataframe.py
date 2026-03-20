@@ -60,21 +60,24 @@ def _ancestry_from_extra(step: Any, tool_index: int | None = None) -> dict[str, 
     """Extract profiling ancestry from step.extra. Returns defaults for missing fields."""
     step_extra = AtifStepExtra.model_validate(step.extra)
 
-    def to_flat(ancestry: AtifAncestry) -> dict[str, Any]:
+    def to_flat(ancestry: AtifAncestry, span_event_timestamp: float | None) -> dict[str, Any]:
         return {
             "function_id": ancestry.function_ancestry.function_id,
             "function_name": ancestry.function_ancestry.function_name,
             "parent_function_id": ancestry.function_ancestry.parent_id or "",
             "parent_function_name": ancestry.function_ancestry.parent_name or "",
-            "span_event_timestamp": ancestry.span_event_timestamp,
+            "span_event_timestamp": span_event_timestamp,
             "framework": ancestry.framework,
         }
 
     if tool_index is not None:
         tool_ancestry = step_extra.tool_ancestry
         if tool_index < len(tool_ancestry):
-            return to_flat(tool_ancestry[tool_index])
-    return to_flat(step_extra.ancestry)
+            tool_invocations = step_extra.tool_invocations or []
+            tool_start_ts = tool_invocations[tool_index].start_timestamp if tool_index < len(tool_invocations) else None
+            return to_flat(tool_ancestry[tool_index], tool_start_ts)
+    step_start_ts = step_extra.invocation.start_timestamp if step_extra.invocation is not None else None
+    return to_flat(step_extra.ancestry, step_start_ts)
 
 
 def _observation_content_to_str(content: Any) -> str:

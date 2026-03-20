@@ -32,14 +32,33 @@ class AtifAncestry(BaseModel):
         ...,
         description="Function ancestry for the event represented by this metadata entry.",
     )
-    span_event_timestamp: float | None = Field(
-        default=None,
-        description=("Start timestamp of the span for an END event. For step-level ancestry this is the step span "
-                     "start; for tool ancestry entries this is the tool span start."),
-    )
     framework: str | None = Field(
         default=None,
         description="Optional LLM framework identifier (for example, `langchain`).",
+    )
+
+
+class AtifInvocationInfo(BaseModel):
+    """Invocation timing metadata embedded in ATIF ``Step.extra``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start_timestamp: float = Field(
+        ...,
+        description="Invocation start timestamp in epoch seconds.",
+    )
+    end_timestamp: float = Field(
+        ...,
+        description="Invocation end timestamp in epoch seconds.",
+    )
+    invocation_id: str | None = Field(
+        default=None,
+        description=("Optional stable invocation identifier for correlation (for example, "
+                     "`tool_call_id` for tool invocations)."),
+    )
+    status: str | None = Field(
+        default=None,
+        description="Optional terminal status for the invocation (for example, `completed`, `error`).",
     )
 
 
@@ -52,11 +71,22 @@ class AtifStepExtra(BaseModel):
         ...,
         description="Step-level ancestry metadata for ATIF step context.",
     )
+    invocation: AtifInvocationInfo | None = Field(
+        default=None,
+        description="Optional step-level invocation timing metadata.",
+    )
     tool_ancestry: list[AtifAncestry] = Field(
         default_factory=list,
         description=("Per-tool ancestry metadata aligned by index with `tool_calls` for observed invocation "
                      "lineage reconstruction."),
     )
+    tool_invocations: list[AtifInvocationInfo] | None = Field(
+        default=None,
+        description=("Optional per-tool invocation timing metadata aligned by index with `tool_calls` when "
+                     "present."),
+    )
+
+    # Experimental helper fields for migration, will be removed so don't use for any purpose other than troubleshooting
     step_ancestry_path: list[InvocationNode] | None = Field(
         default=None,
         min_length=1,

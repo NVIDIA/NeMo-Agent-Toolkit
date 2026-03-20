@@ -36,6 +36,7 @@ from typing import Any
 from nat.data_models.atif import ATIFAgentConfig
 from nat.data_models.atif import AtifAncestry
 from nat.data_models.atif import ATIFFinalMetrics
+from nat.data_models.atif import AtifInvocationInfo
 from nat.data_models.atif import ATIFObservation
 from nat.data_models.atif import ATIFObservationResult
 from nat.data_models.atif import ATIFStep
@@ -135,14 +136,26 @@ def _atif_ancestry_from_ist(ist: IntermediateStep) -> AtifAncestry:
     """Build typed ATIF ancestry metadata from an IntermediateStep."""
     return AtifAncestry(
         function_ancestry=ist.function_ancestry,
-        span_event_timestamp=ist.payload.span_event_timestamp,
         framework=ist.payload.framework.value if ist.payload.framework is not None else None,
+    )
+
+
+def _atif_invocation_from_ist(ist: IntermediateStep, *, invocation_id: str | None = None) -> AtifInvocationInfo:
+    """Build typed ATIF invocation timing metadata from an IntermediateStep."""
+    start_ts = ist.payload.span_event_timestamp if ist.payload.span_event_timestamp is not None else ist.event_timestamp
+    return AtifInvocationInfo(
+        start_timestamp=start_ts,
+        end_timestamp=ist.event_timestamp,
+        invocation_id=invocation_id,
     )
 
 
 def _atif_step_extra_model_from_ist(ist: IntermediateStep) -> AtifStepExtra:
     """Build typed ATIF step extra model from an IntermediateStep."""
-    return AtifStepExtra(ancestry=_atif_ancestry_from_ist(ist))
+    return AtifStepExtra(
+        ancestry=_atif_ancestry_from_ist(ist),
+        invocation=_atif_invocation_from_ist(ist),
+    )
 
 
 def _index_invocation_node(index: dict[str, InvocationNode], node: InvocationNode) -> None:
@@ -223,6 +236,7 @@ class _ObservedInvocation:
     tool_call: ATIFToolCall
     observation: ATIFObservationResult
     ancestry: AtifAncestry
+    invocation: AtifInvocationInfo
     ancestry_path: list[InvocationNode]
 
 
@@ -235,6 +249,7 @@ class _PendingAgentTurn:
         self.model_name = model_name
         self.metrics = metrics
         self.ancestry: AtifAncestry | None = None
+        self.invocation: AtifInvocationInfo | None = None
         self.step_ancestry_path: list[InvocationNode] | None = None
         self.extra: dict[str, Any] = {}
         self.observed_invocations: list[_ObservedInvocation] = []
@@ -257,6 +272,7 @@ def _record_observed_invocation(pending: _PendingAgentTurn,
             tool_call=ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input),
             observation=ATIFObservationResult(source_call_id=call_id, content=tool_output),
             ancestry=_atif_ancestry_from_ist(ist),
+            invocation=_atif_invocation_from_ist(ist, invocation_id=call_id),
             ancestry_path=_build_ancestry_path(ist.function_ancestry, invocation_index),
         ))
 
@@ -304,12 +320,15 @@ class IntermediateStepToATIFConverter:
             observations = [obs.observation for obs in sorted_invocations]
             observation = ATIFObservation(results=observations) if observations else None
             tool_ancestry = [obs.ancestry for obs in sorted_invocations]
+            tool_invocations = [obs.invocation for obs in sorted_invocations] or None
             tool_ancestry_paths = [obs.ancestry_path for obs in sorted_invocations] or None
             if pending.ancestry is None:
                 raise ValueError("Pending agent turn is missing required ATIF ancestry metadata")
             step_extra = AtifStepExtra(
                 ancestry=pending.ancestry,
+                invocation=pending.invocation,
                 tool_ancestry=tool_ancestry,
+                tool_invocations=tool_invocations,
                 step_ancestry_path=pending.step_ancestry_path,
                 tool_ancestry_paths=tool_ancestry_paths,
                 **pending.extra,
@@ -411,6 +430,7 @@ class IntermediateStepToATIFConverter:
                     metrics=metrics,
                 )
                 pending.ancestry = _atif_ancestry_from_ist(ist)
+                pending.invocation = _atif_invocation_from_ist(ist)
                 pending.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, invocation_index)
                 continue
 
@@ -428,6 +448,7 @@ class IntermediateStepToATIFConverter:
                     invocation = orphan_pending.observed_invocations[0]
                     step_extra = _atif_step_extra_model_from_ist(ist)
                     step_extra.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, invocation_index)
+                    step_extra.tool_invocations = [invocation.invocation]
                     step_extra.tool_ancestry_paths = [invocation.ancestry_path]
                     step_extra.tool_ancestry = [invocation.ancestry]
                     extra = step_extra.model_dump(exclude_none=True)
@@ -593,6 +614,7 @@ class ATIFStreamConverter:
                 metrics=metrics,
             )
             self._pending.ancestry = _atif_ancestry_from_ist(ist)
+            self._pending.invocation = _atif_invocation_from_ist(ist)
             self._pending.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, self._invocation_index)
             return flushed
 
@@ -608,6 +630,7 @@ class ATIFStreamConverter:
             invocation = orphan_pending.observed_invocations[0]
             step_extra = _atif_step_extra_model_from_ist(ist)
             step_extra.step_ancestry_path = orphan_pending.step_ancestry_path
+            step_extra.tool_invocations = [invocation.invocation]
             step_extra.tool_ancestry = [invocation.ancestry]
             step_extra.tool_ancestry_paths = [invocation.ancestry_path]
             extra = step_extra.model_dump(exclude_none=True)
@@ -673,12 +696,15 @@ class ATIFStreamConverter:
         observations = [obs.observation for obs in sorted_invocations]
         observation = ATIFObservation(results=observations) if observations else None
         tool_ancestry = [obs.ancestry for obs in sorted_invocations]
+        tool_invocations = [obs.invocation for obs in sorted_invocations] or None
         tool_ancestry_paths = [obs.ancestry_path for obs in sorted_invocations] or None
         if pending.ancestry is None:
             raise ValueError("Pending agent turn is missing required ATIF ancestry metadata")
         step_extra = AtifStepExtra(
             ancestry=pending.ancestry,
+            invocation=pending.invocation,
             tool_ancestry=tool_ancestry,
+            tool_invocations=tool_invocations,
             step_ancestry_path=pending.step_ancestry_path,
             tool_ancestry_paths=tool_ancestry_paths,
             **pending.extra,
