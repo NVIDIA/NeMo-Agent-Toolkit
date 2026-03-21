@@ -284,11 +284,6 @@ def test_extract_tools_schema_empty_and_none():
     assert _extract_tools_schema(None) == []
 
 
-# ---------------------------------------------------------------------------
-# on_tool_error tests
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture(name="handler_and_stats")
 def fixture_handler_and_stats(
     reactive_stream: Subject, ) -> tuple[LangchainProfilerHandler, list[IntermediateStepPayload]]:

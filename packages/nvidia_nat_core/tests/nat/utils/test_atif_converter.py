@@ -708,11 +708,6 @@ class TestStreamConverter:
                 assert len(s_step.tool_calls) == len(b_step.tool_calls)
 
 
-# ---------------------------------------------------------------------------
-# Tool error → ATIF conversion tests
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture(name="error_trajectory")
 def fixture_error_trajectory() -> list[IntermediateStep]:
     """Trajectory with one successful and one failed tool call."""

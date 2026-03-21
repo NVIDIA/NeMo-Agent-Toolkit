@@ -12,12 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for ToolFailureEvaluator model population.
-
-Validates that ToolFailureReasoning, ToolSummary, and _ToolCall are correctly
-populated from both the legacy IntermediateStep lane and the ATIF lane, and
-that error detection correctly distinguishes failures from successes.
-"""
+"""Unit tests for ToolFailureEvaluator."""
 
 from __future__ import annotations
 
@@ -39,7 +34,7 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.eval.tool_failure_evaluator.evaluator import ToolFailureEvaluator
-from nat.plugins.eval.tool_failure_evaluator.models import ToolFailureReasoning
+from nat.plugins.eval.tool_failure_evaluator.models import _ToolFailureReasoning
 
 _DUMMY_ANCESTRY: InvocationNode = InvocationNode(function_id="f-0", function_name="test_fn")
 
@@ -107,10 +102,8 @@ def evaluator_fixture() -> ToolFailureEvaluator:
     return ToolFailureEvaluator()
 
 
-class TestLegacyLaneModelPopulation:
-    """Verify ToolFailureReasoning, ToolSummary, and _ToolCall are correctly
-    populated from legacy IntermediateStep trajectories.
-    """
+class TestEvaluateIntermediateStepTrajectory:
+    """Tests for evaluating IntermediateStep trajectories."""
 
     async def test_empty_trajectory_produces_default_reasoning(self, evaluator: ToolFailureEvaluator):
         """An empty trajectory should yield default ToolFailureReasoning with
@@ -118,7 +111,7 @@ class TestLegacyLaneModelPopulation:
         """
         result = await evaluator.evaluate_item(_eval_input("empty", []))
 
-        reasoning: ToolFailureReasoning = result.reasoning
+        reasoning: _ToolFailureReasoning = result.reasoning
         assert reasoning.total_tool_calls == 0
         assert reasoning.failed_tool_calls == 0
         assert reasoning.failed_tools == []
@@ -136,7 +129,7 @@ class TestLegacyLaneModelPopulation:
         ]
         result = await evaluator.evaluate_item(_eval_input("fail", trajectory))
 
-        reasoning: ToolFailureReasoning = result.reasoning
+        reasoning: _ToolFailureReasoning = result.reasoning
         assert reasoning.total_tool_calls == 2
         assert reasoning.failed_tool_calls == 2
         assert reasoning.failed_tools == ["lookup"]
@@ -146,8 +139,8 @@ class TestLegacyLaneModelPopulation:
         assert summary.tool_name == "lookup"
         assert summary.total_calls == 2
         assert summary.failed_calls == 2
-        assert len(summary.attempts) == 2
-        for attempt in summary.attempts:
+        assert len(summary.failed_attempts) == 2
+        for attempt in summary.failed_attempts:
             assert attempt.error == "ValueError: bad input"
             assert attempt.output is None
 
@@ -163,7 +156,7 @@ class TestLegacyLaneModelPopulation:
         ]
         result = await evaluator.evaluate_item(_eval_input("mixed", trajectory))
 
-        reasoning: ToolFailureReasoning = result.reasoning
+        reasoning: _ToolFailureReasoning = result.reasoning
         assert reasoning.total_tool_calls == 2
         assert reasoning.failed_tool_calls == 1
         assert reasoning.failed_tools == ["lookup"]
@@ -173,7 +166,7 @@ class TestLegacyLaneModelPopulation:
         assert reasoning.per_tool_summary[0].tool_name == "lookup"
 
     async def test_same_tool_mixed_results_filters_attempts_to_failures_only(self, evaluator: ToolFailureEvaluator):
-        """When a single tool has both successes and failures, ToolSummary.attempts
+        """When a single tool has both successes and failures, ToolSummary.failed_attempts
         should contain only the failed _ToolCall entries while total_calls reflects all.
         """
         trajectory = [
@@ -184,13 +177,13 @@ class TestLegacyLaneModelPopulation:
         ]
         result = await evaluator.evaluate_item(_eval_input("filter", trajectory))
 
-        reasoning: ToolFailureReasoning = result.reasoning
+        reasoning: _ToolFailureReasoning = result.reasoning
         summary = reasoning.per_tool_summary[0]
         assert summary.total_calls == 2
         assert summary.failed_calls == 1
-        assert len(summary.attempts) == 1
-        assert summary.attempts[0].error == "boom"
-        assert summary.attempts[0].input == {"q": "bad"}
+        assert len(summary.failed_attempts) == 1
+        assert summary.failed_attempts[0].error == "boom"
+        assert summary.failed_attempts[0].input == {"q": "bad"}
 
     async def test_none_data_on_step_is_not_treated_as_error(self, evaluator: ToolFailureEvaluator):
         """A TOOL_END step with data=None should count as a call but not a failure."""
@@ -220,10 +213,8 @@ class TestLegacyLaneModelPopulation:
         assert result.reasoning.per_tool_summary[0].tool_name == "unknown"
 
 
-class TestAtifLaneModelPopulation:
-    """Verify ToolFailureReasoning, ToolSummary, and _ToolCall are correctly
-    populated from ATIF trajectories using each error detection path.
-    """
+class TestEvaluateAtifTrajectory:
+    """Tests for evaluating ATIF trajectories."""
 
     async def test_error_detected_via_extra_tool_errors(self, evaluator: ToolFailureEvaluator):
         """Structured error metadata in step.extra['tool_errors'] should populate
@@ -242,11 +233,11 @@ class TestAtifLaneModelPopulation:
         ]
         result = await evaluator.evaluate_atif_item(_atif_sample("extra", steps))
 
-        reasoning: ToolFailureReasoning = result.reasoning
+        reasoning: _ToolFailureReasoning = result.reasoning
         assert reasoning.failed_tool_calls == 1
         assert reasoning.failed_tools == ["lookup"]
-        assert reasoning.per_tool_summary[0].attempts[0].error == "ValueError: Column not found"
-        assert reasoning.per_tool_summary[0].attempts[0].input == {"query": "q1"}
+        assert reasoning.per_tool_summary[0].failed_attempts[0].error == "ValueError: Column not found"
+        assert reasoning.per_tool_summary[0].failed_attempts[0].input == {"query": "q1"}
 
     async def test_error_detected_via_stringified_tool_message_dict(self, evaluator: ToolFailureEvaluator):
         """A Python dict literal with status='error' in the observation content
@@ -262,7 +253,7 @@ class TestAtifLaneModelPopulation:
         result = await evaluator.evaluate_atif_item(_atif_sample("parsed", steps))
 
         assert result.reasoning.failed_tool_calls == 1
-        assert result.reasoning.per_tool_summary[0].attempts[0].error == "TimeoutError: timed out"
+        assert result.reasoning.per_tool_summary[0].failed_attempts[0].error == "TimeoutError: timed out"
 
     async def test_error_detected_via_raw_error_pattern(self, evaluator: ToolFailureEvaluator):
         """Observation content matching 'XyzError: ...' should be detected as a
@@ -274,7 +265,7 @@ class TestAtifLaneModelPopulation:
         result = await evaluator.evaluate_atif_item(_atif_sample("pattern", steps))
 
         assert result.reasoning.failed_tool_calls == 1
-        assert result.reasoning.per_tool_summary[0].attempts[0].error == "RuntimeError: internal failure"
+        assert result.reasoning.per_tool_summary[0].failed_attempts[0].error == "RuntimeError: internal failure"
 
     async def test_extra_tool_errors_takes_priority_over_observation_pattern(self, evaluator: ToolFailureEvaluator):
         """When both extra['tool_errors'] and a raw error pattern match, the
@@ -292,7 +283,7 @@ class TestAtifLaneModelPopulation:
         ]
         result = await evaluator.evaluate_atif_item(_atif_sample("priority", steps))
 
-        assert result.reasoning.per_tool_summary[0].attempts[0].error == "ValueError: from extra"
+        assert result.reasoning.per_tool_summary[0].failed_attempts[0].error == "ValueError: from extra"
 
     async def test_mixed_success_and_failure_populates_only_failing_tool(self, evaluator: ToolFailureEvaluator):
         """With one successful and one failing tool, only the failing tool

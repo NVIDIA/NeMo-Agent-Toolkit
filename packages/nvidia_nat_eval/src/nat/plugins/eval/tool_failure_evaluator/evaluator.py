@@ -29,9 +29,9 @@ from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 
-from .models import ToolFailureReasoning
-from .models import ToolSummary
 from .models import _ToolCall
+from .models import _ToolFailureReasoning
+from .models import _ToolSummary
 
 
 class ToolFailureEvaluator(BaseEvaluator, AtifBaseEvaluator):
@@ -47,7 +47,7 @@ class ToolFailureEvaluator(BaseEvaluator, AtifBaseEvaluator):
     async def evaluate_item(self, item: EvalInputItem) -> EvalOutputItem:
         """Evaluate a single item's legacy trajectory for tool failures."""
         if not item.trajectory:
-            return EvalOutputItem(id=item.id, score=1.0, reasoning=ToolFailureReasoning())
+            return EvalOutputItem(id=item.id, score=1.0, reasoning=_ToolFailureReasoning())
 
         total_tool_calls: int = 0
         failed_tool_calls: int = 0
@@ -71,17 +71,17 @@ class ToolFailureEvaluator(BaseEvaluator, AtifBaseEvaluator):
                 failed_tool_calls += 1
 
         score: float = self._success_rate(total_tool_calls, failed_tool_calls)
-        per_tool_summary: list[ToolSummary] = [
-            ToolSummary(
+        per_tool_summary: list[_ToolSummary] = [
+            _ToolSummary(
                 tool_name=name,
                 total_calls=len(attempts),
                 failed_calls=failed_count,
-                attempts=[a for a in attempts if a.error is not None],
+                failed_attempts=[a for a in attempts if a.error is not None],
             ) for name, attempts in calls_by_tool.items()
             if (failed_count := sum(1 for a in attempts if a.error is not None)) > 0
         ]
         failed_tools: list[str] = [ts.tool_name for ts in per_tool_summary]
-        reasoning: ToolFailureReasoning = ToolFailureReasoning(
+        reasoning: _ToolFailureReasoning = _ToolFailureReasoning(
             total_tool_calls=total_tool_calls,
             failed_tool_calls=failed_tool_calls,
             failed_tools=failed_tools,
@@ -154,17 +154,17 @@ class ToolFailureEvaluator(BaseEvaluator, AtifBaseEvaluator):
                     failed_tool_calls += 1
 
         score: float = self._success_rate(total_tool_calls, failed_tool_calls)
-        per_tool_summary: list[ToolSummary] = [
-            ToolSummary(
+        per_tool_summary: list[_ToolSummary] = [
+            _ToolSummary(
                 tool_name=name,
                 total_calls=len(attempts),
                 failed_calls=failed_count,
-                attempts=[a for a in attempts if a.error is not None],
+                failed_attempts=[a for a in attempts if a.error is not None],
             ) for name, attempts in calls_by_tool.items()
             if (failed_count := sum(1 for a in attempts if a.error is not None)) > 0
         ]
         failed_tools: list[str] = [ts.tool_name for ts in per_tool_summary]
-        reasoning: ToolFailureReasoning = ToolFailureReasoning(
+        reasoning: _ToolFailureReasoning = _ToolFailureReasoning(
             total_tool_calls=total_tool_calls,
             failed_tool_calls=failed_tool_calls,
             failed_tools=failed_tools,

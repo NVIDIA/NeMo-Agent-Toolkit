@@ -30,26 +30,26 @@ class _ToolCall(BaseModel):
     error: str | None = Field(default=None, description="Error string if failed, None if succeeded.")
 
 
-class ToolSummary(BaseModel):
+class _ToolSummary(BaseModel):
     """Complete health and attempt data for a single tool."""
 
     tool_name: str = Field(description="Name of the tool.")
     total_calls: int = Field(default=0, description="Total number of calls to this tool.")
     failed_calls: int = Field(default=0, description="Number of calls that returned an error.")
-    attempts: list[_ToolCall] = Field(
+    failed_attempts: list[_ToolCall] = Field(
         default_factory=list,
-        description="Ordered list of every call to this tool.",
+        description="Ordered list of failed calls to this tool.",
     )
 
 
-class ToolFailureReasoning(BaseModel):
+class _ToolFailureReasoning(BaseModel):
     """Complete reasoning payload returned by the tool failure evaluator."""
 
     total_tool_calls: int = Field(default=0, description="Total tool calls in the trajectory.")
     failed_tool_calls: int = Field(default=0, description="Total tool calls that errored.")
     failed_tools: list[str] = Field(default_factory=list, description="Names of tools that had at least one failure.")
     score: float = Field(default=1.0, description="Overall success rate (0.0-1.0).")
-    per_tool_summary: list[ToolSummary] = Field(
+    per_tool_summary: list[_ToolSummary] = Field(
         default_factory=list,
         description="Per-tool health summary with attempt history.",
     )

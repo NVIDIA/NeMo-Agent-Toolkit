@@ -14,13 +14,9 @@
 # limitations under the License.
 
 from .evaluator import ToolFailureEvaluator
-from .models import ToolFailureReasoning
-from .models import ToolSummary
 from .register import ToolFailureEvaluatorConfig
 
 __all__ = [
     "ToolFailureEvaluator",
     "ToolFailureEvaluatorConfig",
-    "ToolFailureReasoning",
-    "ToolSummary",
 ]
