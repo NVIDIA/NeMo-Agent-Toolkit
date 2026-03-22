@@ -26,7 +26,6 @@ from uuid import uuid4
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
-from langchain_core.messages import ToolMessage
 from langchain_core.outputs import ChatGeneration
 from langchain_core.outputs import LLMResult
 
@@ -37,6 +36,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import ToolDetails
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.data_models.intermediate_step import ToolParameters
 from nat.data_models.intermediate_step import ToolSchema
 from nat.data_models.intermediate_step import TraceMetadata
@@ -385,14 +385,11 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         """Handle tool errors and create an intermediate step for the failure."""
         run_id_str: str = str(run_id)
         tool_name: str = self._run_id_to_tool_name.get(run_id_str, "") or kwargs.get("name") or ""
-        tool_call_id: str = kwargs.get("tool_call_id") or tool_name
-        error_content: str = f"{type(error).__name__}: {error!s}"
 
-        output: ToolMessage = ToolMessage(
-            content=error_content,
-            name=tool_name,
-            tool_call_id=tool_call_id,
-            status="error",
+        output: ToolErrorData = ToolErrorData(
+            content=f"{type(error).__name__}: {error!s}",
+            error_type=type(error).__name__,
+            error_message=str(error),
         )
 
         stats: IntermediateStepPayload = IntermediateStepPayload(
@@ -401,12 +398,10 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
             framework=LLMFrameworkEnum.LANGCHAIN,
             name=tool_name,
             UUID=run_id_str,
-            metadata=TraceMetadata(tool_outputs=output),
             usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
             data=StreamEventData(
                 input=self._run_id_to_tool_input.get(run_id_str, ""),
                 output=output,
-                payload=output,
             ),
         )
 

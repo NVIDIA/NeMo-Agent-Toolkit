@@ -47,9 +47,9 @@ class _ToolFailureReasoning(BaseModel):
 
     total_tool_calls: int = Field(default=0, description="Total tool calls in the trajectory.")
     failed_tool_calls: int = Field(default=0, description="Total tool calls that errored.")
-    failed_tools: list[str] = Field(default_factory=list, description="Names of tools that had at least one failure.")
+    failed_tools: list[str] | None = Field(default=None, description="Names of tools that had at least one failure.")
     score: float = Field(default=1.0, description="Overall success rate (0.0-1.0).")
-    per_tool_summary: list[_ToolSummary] = Field(
-        default_factory=list,
+    per_tool_summary: list[_ToolSummary] | None = Field(
+        default=None,
         description="Per-tool health summary with attempt history.",
     )

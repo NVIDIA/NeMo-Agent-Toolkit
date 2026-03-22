@@ -18,10 +18,10 @@ import logging
 from uuid import uuid4
 
 import pytest
-from langchain_core.messages import ToolMessage
 
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 from nat.plugins.langchain.callback_handler import _extract_tools_schema
 from nat.utils.reactive.subject import Subject
@@ -314,21 +314,21 @@ def _get_tool_end(stats: list[IntermediateStepPayload]) -> IntermediateStepPaylo
 
 
 class TestOnToolError:
-    """Verify on_tool_error produces correct ToolMessage and IntermediateStepPayload."""
+    """Verify on_tool_error produces correct ToolErrorData and IntermediateStepPayload."""
 
-    async def test_produces_error_tool_message(self, handler_and_stats):
-        """Constructs a ToolMessage with error status, parsed exception content, and tool name."""
+    async def test_produces_tool_error_data(self, handler_and_stats):
+        """Constructs a ToolErrorData with parsed exception content."""
         handler, stats = handler_and_stats
         run_id: str = str(uuid4())
         await _simulate_tool_start(handler, run_id, "lookup", "some query")
         await handler.on_tool_error(ValueError("Column 'revenue' not found"), run_id=run_id)
 
         payload: IntermediateStepPayload = _get_tool_end(stats)
-        output: ToolMessage = payload.data.output
-        assert isinstance(output, ToolMessage)
-        assert output.status == "error"
-        assert output.name == "lookup"
+        output: ToolErrorData = payload.data.output
+        assert isinstance(output, ToolErrorData)
         assert output.content == "ValueError: Column 'revenue' not found"
+        assert output.error_type == "ValueError"
+        assert output.error_message == "Column 'revenue' not found"
 
     async def test_populates_intermediate_step_from_tool_start(self, handler_and_stats):
         """Emitted TOOL_END payload inherits the tool name and input from the preceding ``on_tool_start`` call."""

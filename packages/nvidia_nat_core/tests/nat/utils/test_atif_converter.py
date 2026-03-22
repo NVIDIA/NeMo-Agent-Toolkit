@@ -17,7 +17,6 @@
 import datetime
 
 import pytest
-from langchain_core.messages import ToolMessage
 
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.atif import ATIFTrajectory
@@ -25,6 +24,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.token_usage import TokenUsageBaseModel
@@ -711,11 +711,10 @@ class TestStreamConverter:
 @pytest.fixture(name="error_trajectory")
 def fixture_error_trajectory() -> list[IntermediateStep]:
     """Trajectory with one successful and one failed tool call."""
-    error_output: ToolMessage = ToolMessage(
+    error_output: ToolErrorData = ToolErrorData(
         content="ValueError: bad input",
-        name="failing_tool",
-        tool_call_id="failing_tool",
-        status="error",
+        error_type="ValueError",
+        error_message="bad input",
     )
     return [
         _make_step(IntermediateStepType.WORKFLOW_START, input_data="Do something", timestamp_offset=0.0),
@@ -753,49 +752,20 @@ class TestToolErrorATIFConversion:
         agent_step = result.steps[1]
         errors: list = agent_step.extra["tool_errors"]
         assert len(errors) == 1
-        assert set(errors[0].keys()) == {"tool", "error", "error_type", "error_message", "status"}
+        assert set(errors[0].keys()) == {"tool", "error", "error_type", "error_message"}
 
     def test_error_dict_values_are_parsed_from_content(
         self,
         batch_converter: IntermediateStepToATIFConverter,
         error_trajectory: list[IntermediateStep],
     ):
-        """The error dict splits the exception type from the message and preserves the full error string."""
+        """The error dict preserves the full error string and parsed fields."""
         result: ATIFTrajectory = batch_converter.convert(error_trajectory)
         entry: dict = result.steps[1].extra["tool_errors"][0]
         assert entry["tool"] == "failing_tool"
-        assert entry["status"] == "error"
         assert entry["error"] == "ValueError: bad input"
         assert entry["error_type"] == "ValueError"
         assert entry["error_message"] == "bad input"
-
-    def test_error_dict_falls_back_to_unknown_type(self):
-        """Error content without a parseable exception type defaults to 'Unknown'."""
-        error_output: ToolMessage = ToolMessage(
-            content="something went wrong",
-            name="broken_tool",
-            tool_call_id="broken_tool",
-            status="error",
-        )
-        trajectory: list[IntermediateStep] = [
-            _make_step(IntermediateStepType.WORKFLOW_START, input_data="q", timestamp_offset=0.0),
-            _make_step(IntermediateStepType.LLM_END,
-                       name="gpt-4",
-                       output_data="calling",
-                       timestamp_offset=1.0,
-                       usage=_make_usage(10, 5)),
-            _make_step(IntermediateStepType.TOOL_END,
-                       name="broken_tool",
-                       input_data={},
-                       output_data=error_output,
-                       timestamp_offset=2.0,
-                       step_uuid="tool-broken"),
-            _make_step(IntermediateStepType.WORKFLOW_END, output_data="done", timestamp_offset=3.0),
-        ]
-        result: ATIFTrajectory = IntermediateStepToATIFConverter().convert(trajectory)
-        entry: dict = result.steps[1].extra["tool_errors"][0]
-        assert entry["error_type"] == "Unknown"
-        assert entry["error_message"] == "something went wrong"
 
     def test_successful_tool_has_no_tool_errors(
         self,

@@ -46,6 +46,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.data_models.intermediate_step import TraceMetadata
 
 logger = logging.getLogger(__name__)
@@ -99,29 +100,6 @@ def _safe_str(value: Any) -> str:
     if value is None:
         return ""
     return str(value)
-
-
-def _extract_tool_error(output: Any) -> dict[str, str] | None:
-    """Extract error metadata from a tool output for ``step.extra["tool_errors"]``."""
-    # TODO: return a model instead of a plain dict once ATIF spec adds error support
-    status: str | None = getattr(output, "status", None) or (output.get("status") if isinstance(output, dict) else None)
-    if status != "error":
-        return None
-    content: str = (getattr(output, "content", None) or (output.get("content") if isinstance(output, dict) else None)
-                    or _safe_str(output))
-    error_type: str = "Unknown"
-    error_message: str = content
-    if ":" in content:
-        candidate: str = content.split(":", 1)[0].strip()
-        if candidate.isidentifier():
-            error_type = candidate
-            error_message = content.split(":", 1)[1].strip()
-    return {
-        "error": content,
-        "error_type": error_type,
-        "error_message": error_message,
-        "status": "error",
-    }
 
 
 def _extract_user_input(value: Any) -> str:
@@ -366,11 +344,15 @@ class IntermediateStepToATIFConverter:
                 call_id = f"call_{ist.UUID}"
                 tc = ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input)
                 obs = ATIFObservationResult(source_call_id=call_id, content=tool_output)
-                tool_error: dict[str, str] | None = _extract_tool_error(raw_output)
 
-                if tool_error is not None:
-                    tool_error["tool"] = tool_name
-                extra: dict[str, Any] | None = ({"tool_errors": [tool_error]} if tool_error else None)
+                tool_error: dict[str, str] | None = None
+                if isinstance(raw_output, ToolErrorData):
+                    tool_error = {
+                        "tool": tool_name,
+                        "error": raw_output.content,
+                        "error_type": raw_output.error_type,
+                        "error_message": raw_output.error_message,
+                    }
 
                 if pending is not None:
                     pending.tool_calls.append(tc)
@@ -379,7 +361,7 @@ class IntermediateStepToATIFConverter:
                         pending.extra.setdefault("tool_errors", []).append(tool_error)
                     pending.tool_ancestry.append(_atif_ancestry_from_ist(ist))
                 else:
-                    extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
+                    extra: dict[str, Any] = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
                     if tool_error:
                         extra.setdefault("tool_errors", []).append(tool_error)
                     atif_steps.append(
@@ -552,9 +534,16 @@ class ATIFStreamConverter:
             call_id = f"call_{ist.UUID}"
             tc = ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input)
             obs = ATIFObservationResult(source_call_id=call_id, content=tool_output)
-            tool_error: dict[str, str] | None = _extract_tool_error(raw_output)
-            if tool_error is not None:
-                tool_error["tool"] = tool_name
+
+            tool_error: dict[str, str] | None = None
+            if isinstance(raw_output, ToolErrorData):
+                tool_error = {
+                    "tool": tool_name,
+                    "error": raw_output.content,
+                    "error_type": raw_output.error_type,
+                    "error_message": raw_output.error_message,
+                }
+
             if self._pending is not None:
                 self._pending.tool_calls.append(tc)
                 self._pending.observations.append(obs)
@@ -563,7 +552,7 @@ class ATIFStreamConverter:
                 self._pending.tool_ancestry.append(_atif_ancestry_from_ist(ist))
                 return None
 
-            extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
+            extra: dict[str, Any] = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
             if tool_error:
                 extra.setdefault("tool_errors", []).append(tool_error)
             orphan_step = ATIFStep(

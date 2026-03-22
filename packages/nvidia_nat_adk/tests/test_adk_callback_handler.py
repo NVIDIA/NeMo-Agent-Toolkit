@@ -23,6 +23,7 @@ import pytest
 
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import LLMFrameworkEnum
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.data_models.profiler_callback import BaseProfilerCallback
 from nat.plugins.adk.callback_handler import ADKProfilerHandler
 
@@ -219,29 +220,33 @@ async def test_tool_use_monkey_patch_functionality(handler, mock_context):
 
 @pytest.mark.asyncio
 async def test_tool_use_monkey_patch_with_exception(handler, mock_context):
-    """Test tool use monkey patch handles exceptions properly."""
-    # Create a mock tool instance
+    """When a tool raises an exception, TOOL_END event contains ToolErrorData with parsed error details."""
     mock_tool_instance = MagicMock()
-    mock_tool_instance.name = "test_tool"
+    mock_tool_instance.name = "lookup_tool"
 
-    # Create mock original function that raises an exception
-    mock_original_func = AsyncMock(side_effect=Exception("Tool error"))
+    mock_original_func = AsyncMock(side_effect=ValueError("Column 'revenue' not found"))
     handler._original_tool_call = mock_original_func
 
-    # Get the wrapped function
     wrapped_func = handler._tool_use_monkey_patch()
 
-    # Test that exception is re-raised
-    with pytest.raises(Exception, match="Tool error"):
+    with pytest.raises(ValueError, match="Column 'revenue' not found"):
         await wrapped_func(mock_tool_instance, "arg1")
 
-    # Verify original function was called
     mock_original_func.assert_called_once()
 
-    # Verify start event was still pushed
-    assert mock_context.push_intermediate_step.call_count >= 1
+    assert mock_context.push_intermediate_step.call_count == 2
     start_call = mock_context.push_intermediate_step.call_args_list[0][0][0]
     assert start_call.event_type == IntermediateStepType.TOOL_START
+
+    end_call = mock_context.push_intermediate_step.call_args_list[1][0][0]
+    assert end_call.event_type == IntermediateStepType.TOOL_END
+    assert end_call.name == "lookup_tool"
+    assert isinstance(end_call.data.output, ToolErrorData)
+
+    error_data: ToolErrorData = end_call.data.output
+    assert error_data.content == "ValueError: Column 'revenue' not found"
+    assert error_data.error_type == "ValueError"
+    assert error_data.error_message == "Column 'revenue' not found"
 
 
 @pytest.mark.asyncio

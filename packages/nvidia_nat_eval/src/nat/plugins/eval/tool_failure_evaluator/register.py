@@ -18,36 +18,25 @@ from pydantic import Field
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvaluatorBaseConfig
-
-from .evaluator import ToolFailureEvaluator
 
 
 class ToolFailureEvaluatorConfig(EvaluatorBaseConfig, name="tool_failure"):  # type: ignore[call-arg]
     """Tool failure evaluator configuration."""
 
     max_concurrency: int = Field(default=8, description="Max concurrency for evaluation.")
-    enable_atif_evaluator: bool = Field(
-        default=False,
-        description="Enable ATIF-native evaluation lane alongside the legacy lane.",
-    )
 
 
 @register_evaluator(config_type=ToolFailureEvaluatorConfig)
 async def register_tool_failure_evaluator(config: ToolFailureEvaluatorConfig, builder: EvalBuilder):
     """Register the tool failure evaluator."""
-    evaluator: ToolFailureEvaluator = ToolFailureEvaluator(max_concurrency=config.max_concurrency
-                                                           or builder.get_max_concurrency(), )
+    from .evaluator import ToolFailureEvaluator
 
-    async def evaluate_fn(eval_input) -> EvalOutput:
-        return await evaluator.evaluate(eval_input)
+    max_concurrency = config.max_concurrency or builder.get_max_concurrency()
+    evaluator = ToolFailureEvaluator(max_concurrency=max_concurrency)
 
-    evaluator_info: EvaluatorInfo = EvaluatorInfo(
+    yield EvaluatorInfo(
         config=config,
-        evaluate_fn=evaluate_fn,
+        evaluate_fn=evaluator.evaluate,
         description="Tool call success rate (1.0 = no failures)",
     )
-    if config.enable_atif_evaluator:
-        evaluator_info.evaluate_atif_fn = evaluator.evaluate_atif_fn
-    yield evaluator_info

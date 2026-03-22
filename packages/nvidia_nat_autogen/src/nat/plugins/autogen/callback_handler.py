@@ -45,6 +45,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.profiler_callback import BaseProfilerCallback
@@ -557,15 +558,18 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
             except Exception:
                 logger.debug("Error getting tool name")
 
-            # Extract tool input
-            tool_input = ""
+            # Extract tool input from args
+            # run_json signature: (self, args: Mapping[str, Any], cancellation_token, call_id=None)
+            # args[0] = self (tool instance)
+            # args[1] = args (the tool arguments as a Mapping)
+            tool_input: dict[str, Any] = {}
             try:
                 if len(args) > 1:
-                    call_data = args[1]
-                    if hasattr(call_data, "kwargs"):
-                        tool_input = str(call_data.kwargs)
-                    elif isinstance(call_data, dict):
-                        tool_input = str(call_data.get("kwargs", {}))
+                    tool_args = args[1]
+                    if isinstance(tool_args, dict):
+                        tool_input = dict(tool_args)
+                    elif hasattr(tool_args, "items"):
+                        tool_input = dict(tool_args)
             except Exception:
                 logger.debug("Error extracting tool input")
 
@@ -590,14 +594,18 @@ class AutoGenProfilerHandler(BaseProfilerCallback):
                 output = await original_func(*args, **kwargs)
             except Exception as e:
                 logger.error("Tool execution failed: %s", e)
+                tool_error: ToolErrorData = ToolErrorData(
+                    content=f"{type(e).__name__}: {e!s}",
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                )
                 handler.step_manager.push_intermediate_step(
                     IntermediateStepPayload(
                         event_type=IntermediateStepType.TOOL_END,
                         span_event_timestamp=time.time(),
                         framework=LLMFrameworkEnum.AUTOGEN,
                         name=tool_name,
-                        data=StreamEventData(input=tool_input, output=str(e)),
-                        metadata=TraceMetadata(error=str(e)),
+                        data=StreamEventData(input=tool_input, output=tool_error),
                         usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
                         UUID=start_uuid,
                     ))

@@ -748,6 +748,7 @@ NeMo Agent Toolkit provides the following built-in evaluator:
 - `ragas` - An evaluator to run and evaluate workflows using the public Ragas API.
 - `trajectory` - An evaluator to run and evaluate the LangChain/LangGraph agent trajectory.
 - `tunable_rag_evaluator` - A customizable LLM evaluator for flexible RAG workflow evaluation.
+- `tool_failure` - An evaluator to analyze tool call success rates and surface structured error details.
 - `langsmith` - Built-in `openevals` evaluators (e.g., `exact_match`, `levenshtein_distance`).
 - `langsmith_custom` - Import any LangSmith-compatible evaluator by Python dotted path.
 - `langsmith_judge` - LLM-as-judge evaluator powered by `openevals`.
@@ -862,6 +863,57 @@ Note: In your evaluation dataset, make sure that the `answer` field is a descrip
 **Sample Usage:**
 ```bash
 nat eval --config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
+```
+
+#### Tool Failure Evaluator
+The `tool_failure` evaluator analyzes tool call success rates and surfaces structured error details from workflow execution. This evaluator is useful for debugging tool reliability issues and understanding which tools are failing and why.
+
+The evaluator processes the workflow's intermediate steps to detect tool errors and calculates a success rate for each dataset entry. It provides detailed breakdowns of failed tool calls, including error messages, tool inputs, and outputs.
+
+**Example:**
+```yaml
+eval:
+  evaluators:
+    tool_failures:
+      _type: tool_failure
+      max_concurrency: 4
+```
+
+The evaluator produces the following output for each dataset entry:
+- **score**: Tool call success rate calculated as `(total_calls - failed_calls) / total_calls`. A score of 1.0 indicates all tool calls succeeded, while 0.0 indicates all failed.
+- **reasoning**: A structured breakdown containing:
+  - `total_tool_calls`: Total number of tool calls made during workflow execution
+  - `failed_tool_calls`: Number of tool calls that encountered errors
+  - `failed_tools`: List of tool names that failed (null if no failures)
+  - `per_tool_summary`: Detailed breakdown for each failing tool, including:
+    - Tool name
+    - Number of failed attempts
+    - List of failed calls with tool inputs, outputs, and error details
+
+**Sample Output:**
+```json
+{
+  "id": "1",
+  "score": 0.75,
+  "reasoning": {
+    "total_tool_calls": 4,
+    "failed_tool_calls": 1,
+    "failed_tools": ["database_query"],
+    "per_tool_summary": [
+      {
+        "tool_name": "database_query",
+        "failed_count": 1,
+        "attempts": [
+          {
+            "tool_input": "{\"query\": \"SELECT * FROM users\"}",
+            "tool_output": null,
+            "error": "DatabaseConnectionError: Connection timeout"
+          }
+        ]
+      }
+    ]
+  }
+}
 ```
 
 #### LangSmith Evaluators

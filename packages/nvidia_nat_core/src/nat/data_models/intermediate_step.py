@@ -68,6 +68,14 @@ class IntermediateStepState(StrEnum):
     END = "END"
 
 
+class ToolErrorData(BaseModel):
+    """ToolErrorData is a data model that represents the output field in a TOOL_END event when an error occurs."""
+
+    content: str = Field(description="Full error string, e.g. 'ValueError: Column not found'")
+    error_type: str = Field(description="Exception type, e.g. 'ValueError'")
+    error_message: str = Field(description="Error message without type, e.g. 'Column not found'")
+
+
 class StreamEventData(BaseModel):
     """
     StreamEventData is a data model that represents the data field in an streaming event.
