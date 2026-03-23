@@ -17,6 +17,7 @@ import asyncio
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.common import SerializableSecretStr
@@ -39,7 +40,7 @@ class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_s
         description="Depth for relevance vs latency tradeoff - 'basic', 'advanced', 'fast', or 'ultra-fast'")
 
 
-@register_function(config_type=TavilyInternetSearchToolConfig)
+@register_function(config_type=TavilyInternetSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, builder: Builder):
     import os
 
