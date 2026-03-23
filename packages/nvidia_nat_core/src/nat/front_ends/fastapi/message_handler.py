@@ -279,12 +279,14 @@ class WebSocketMessageHandler:
                 self._running_workflow_task.cancel()
                 self._running_workflow_task = None
 
+            _conversation_id = self._conversation_id
+
             def _done_callback(_task: asyncio.Task):
                 if self._running_workflow_task is _task:
                     self._running_workflow_task = None
-                if self._running_workflow_task is None and self._conversation_id and \
-                   self._worker.get_conversation_handler(self._conversation_id) is self:
-                    self._worker.remove_conversation_handler(self._conversation_id)
+                if self._running_workflow_task is None and _conversation_id and \
+                   self._worker.get_conversation_handler(_conversation_id) is self:
+                    self._worker.remove_conversation_handler(_conversation_id)
 
             self._running_workflow_task = asyncio.create_task(
                 self._run_workflow(payload=message_content,
