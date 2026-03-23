@@ -494,4 +494,5 @@ class WebSocketMessageHandler:
                 if self._pending_observability_trace is not None:
                     await self.create_websocket_message(data_model=self._pending_observability_trace,
                                                         message_type=WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE)
-                    self._pending_observability_trace = None
+
+            self._pending_observability_trace = None
