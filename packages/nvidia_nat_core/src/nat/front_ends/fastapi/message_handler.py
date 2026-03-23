@@ -277,6 +277,10 @@ class WebSocketMessageHandler:
 
             if self._running_workflow_task is not None:
                 self._running_workflow_task.cancel()
+                try:
+                    await self._running_workflow_task
+                except (asyncio.CancelledError, Exception):
+                    pass
                 self._running_workflow_task = None
 
             _conversation_id = self._conversation_id
