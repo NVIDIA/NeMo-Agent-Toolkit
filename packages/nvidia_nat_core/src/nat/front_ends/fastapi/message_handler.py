@@ -272,18 +272,20 @@ class WebSocketMessageHandler:
             self._initialize_workflow_request(user_message_as_validated_type)
             message_content: typing.Any = await self._process_websocket_user_message(user_message_as_validated_type)
 
-            if self._running_workflow_task is not None and not self._running_workflow_task.done():
-                self._running_workflow_task.cancel()
-            self._running_workflow_task = None
-
-            def _done_callback(_task: asyncio.Task):
-                self._running_workflow_task = None
-                if self._conversation_id:
-                    if self._worker.get_conversation_handler(self._conversation_id) is self:
-                        self._worker.remove_conversation_handler(self._conversation_id)
-
             if self._workflow_schema_type is None:
                 raise RuntimeError("Workflow schema type is not initialized")
+
+            if self._running_workflow_task is not None:
+                self._running_workflow_task.cancel()
+                self._running_workflow_task = None
+
+            def _done_callback(_task: asyncio.Task):
+                if self._running_workflow_task is _task:
+                    self._running_workflow_task = None
+                if self._running_workflow_task is None and self._conversation_id and \
+                   self._worker.get_conversation_handler(self._conversation_id) is self:
+                    self._worker.remove_conversation_handler(self._conversation_id)
+
             self._running_workflow_task = asyncio.create_task(
                 self._run_workflow(payload=message_content,
                                    user_message_id=self._message_parent_id,
