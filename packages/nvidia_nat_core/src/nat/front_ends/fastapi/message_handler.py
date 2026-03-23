@@ -491,14 +491,16 @@ class WebSocketMessageHandler:
                                                 status=WebSocketMessageStatus.IN_PROGRESS)
 
         finally:
-            if not _cancelled:
-                await self.create_websocket_message(data_model=SystemResponseContent(),
-                                                    message_type=WebSocketMessageType.RESPONSE_MESSAGE,
-                                                    status=WebSocketMessageStatus.COMPLETE)
+            try:
+                if not _cancelled:
+                    await self.create_websocket_message(data_model=SystemResponseContent(),
+                                                        message_type=WebSocketMessageType.RESPONSE_MESSAGE,
+                                                        status=WebSocketMessageStatus.COMPLETE)
 
-                # Send observability trace after completion message
-                if self._pending_observability_trace is not None:
-                    await self.create_websocket_message(data_model=self._pending_observability_trace,
-                                                        message_type=WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE)
-
-            self._pending_observability_trace = None
+                    # Send observability trace after completion message
+                    if self._pending_observability_trace is not None:
+                        await self.create_websocket_message(
+                            data_model=self._pending_observability_trace,
+                            message_type=WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE)
+            finally:
+                self._pending_observability_trace = None
