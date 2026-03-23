@@ -376,7 +376,8 @@ def catalyst_dataset_name_fixture(catalyst_project_name: str, project_name: str)
 
     from ragaai_catalyst import Dataset
     ds = Dataset(catalyst_project_name)
-    if dataset_name in ds.list_datasets():
+    datasets = ds.list_datasets()
+    if datasets and dataset_name in datasets:
         ds.delete_dataset(dataset_name)
 
 

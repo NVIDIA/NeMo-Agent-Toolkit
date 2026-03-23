@@ -173,7 +173,6 @@ class TestPluginLoaderIntegration:
         "finetune",
         "info",
         "object-store",
-        "red-team",
         "registry",
         "start",
         "uninstall",
