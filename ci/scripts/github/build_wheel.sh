@@ -76,6 +76,10 @@ for whl in "${MOVED_WHEELS[@]}"; do
         UV_PIP_OUT=$(uv pip install -q --prerelease=allow --find-links "${WHEELS_BASE_DIR}" "${whl}" 2>&1)
         INSTALL_RESULT=$?
 
+        # Report the packages in the environment regardless of install success
+        rapids-logger "Installed wheel ${whl} with Python ${pyver}, pip install exit code ${INSTALL_RESULT}, installed packages:"
+        uv pip list
+
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
             rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver}"
             echo "${UV_PIP_OUT}"
