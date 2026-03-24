@@ -24,6 +24,7 @@ from fastapi import Request
 from fastapi.responses import HTMLResponse
 
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import build_auth_redirect_success_html
 
 if TYPE_CHECKING:
     from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
@@ -80,7 +81,11 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
         finally:
             await worker._remove_flow(state)
 
-        return HTMLResponse(content=AUTH_REDIRECT_SUCCESS_HTML,
+        if flow_state.config and not flow_state.config.use_popup_auth:
+            success_html = build_auth_redirect_success_html(flow_state.return_url)
+        else:
+            success_html = AUTH_REDIRECT_SUCCESS_HTML
+        return HTMLResponse(content=success_html,
                             status_code=200,
                             headers={
                                 "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"

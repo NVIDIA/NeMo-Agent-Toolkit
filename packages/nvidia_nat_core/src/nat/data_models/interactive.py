@@ -161,6 +161,9 @@ class _HumanPromptOAuthConsent(HumanPromptBase):
     the consent flow.
     """
     input_type: typing.Literal[HumanPromptModelType.OAUTH_CONSENT] = HumanPromptModelType.OAUTH_CONSENT
+    use_popup: bool = Field(default=True,
+                            description="When True the UI should open the OAuth URL in a popup window. "
+                            "When False the UI should navigate the current tab to the OAuth URL.")
 
 
 class HumanPromptBinary(HumanPromptBase):
