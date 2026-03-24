@@ -70,4 +70,5 @@ def build_auth_redirect_success_html(return_url: str | None = None) -> str:
     Returns:
         An HTML string for the post-authentication redirect page.
     """
-    return _AUTH_REDIRECT_SUCCESS_HTML_SAME_PAGE_TEMPLATE.replace("RETURN_URL_PLACEHOLDER", json.dumps(return_url))
+    safe_json = json.dumps(return_url).replace('<', '\\u003c').replace('>', '\\u003e').replace('/', '\\u002f')
+    return _AUTH_REDIRECT_SUCCESS_HTML_SAME_PAGE_TEMPLATE.replace("RETURN_URL_PLACEHOLDER", safe_json)
