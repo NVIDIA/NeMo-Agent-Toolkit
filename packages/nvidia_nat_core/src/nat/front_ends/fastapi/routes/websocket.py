@@ -72,7 +72,11 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
             websocket.scope["headers"] = headers
 
         async with WebSocketMessageHandler(websocket, session_manager, worker.get_step_adaptor(), worker) as handler:
-            flow_handler = WebSocketAuthenticationFlowHandler(worker._add_flow, worker._remove_flow, handler)
+            origin = websocket.headers.get("origin")
+            flow_handler = WebSocketAuthenticationFlowHandler(worker._add_flow,
+                                                              worker._remove_flow,
+                                                              handler,
+                                                              return_url=origin)
             handler.set_flow_handler(flow_handler)
             await handler.run()
 
