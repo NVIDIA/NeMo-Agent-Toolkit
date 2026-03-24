@@ -92,7 +92,7 @@ for whl in "${MOVED_WHEELS[@]}"; do
 
         # Report the packages in the environment regardless of install success
         rapids-logger "Installed wheel ${whl} with Python ${pyver}, pip install exit code ${INSTALL_RESULT}"
-        uv pip list --format json > ${PIP_REPORTS_DIR}/$(basename "${whl}" .whl)_py${pyver}_packages.json
+        uv pip list --format json > "${PIP_REPORTS_DIR}/$(basename "${whl}" .whl)_py${pyver}_packages.json"
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
             rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver}"
