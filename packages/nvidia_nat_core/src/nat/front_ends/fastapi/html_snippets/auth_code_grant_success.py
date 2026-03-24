@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
+
 AUTH_REDIRECT_SUCCESS_HTML = """
 <!DOCTYPE html>
 <html>
@@ -33,3 +35,39 @@ AUTH_REDIRECT_SUCCESS_HTML = """
 </body>
 </html>
 """
+
+_AUTH_REDIRECT_SUCCESS_HTML_SAME_PAGE_TEMPLATE = """\
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Complete</title>
+    <script>
+        (function () {
+            var returnTo = RETURN_URL_PLACEHOLDER;
+            if (returnTo) {
+                window.location.replace(returnTo);
+            } else {
+                window.history.back();
+            }
+        })();
+    </script>
+</head>
+<body>
+    <p>Authentication complete. Redirecting&hellip;</p>
+</body>
+</html>
+"""
+
+
+def build_auth_redirect_success_html(return_url: str | None = None) -> str:
+    """Build the same-page authentication success HTML page.
+
+    Args:
+        return_url: The URL to redirect to after successful authentication. When
+            provided the page navigates there immediately; otherwise it falls back
+            to ``window.history.back()``.
+
+    Returns:
+        An HTML string for the post-authentication redirect page.
+    """
+    return _AUTH_REDIRECT_SUCCESS_HTML_SAME_PAGE_TEMPLATE.replace("RETURN_URL_PLACEHOLDER", json.dumps(return_url))

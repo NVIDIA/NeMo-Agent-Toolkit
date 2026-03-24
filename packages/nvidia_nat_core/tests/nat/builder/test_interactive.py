@@ -25,6 +25,7 @@ from nat.data_models.interactive import HumanPromptModelType
 from nat.data_models.interactive import HumanPromptText
 from nat.data_models.interactive import HumanResponseText
 from nat.data_models.interactive import InteractionPrompt
+from nat.data_models.interactive import _HumanPromptOAuthConsent
 
 # ------------------------------------------------------------------------------
 # Tests for Interactive Data Models
@@ -151,3 +152,29 @@ def test_human_prompt_base_timeout_validation_gt_zero():
         HumanPromptText(text="x", required=True, timeout=0)
     with pytest.raises(ValidationError):
         HumanPromptText(text="x", required=True, timeout=-1)
+
+
+# ------------------------------------------------------------------------------
+# Tests for _HumanPromptOAuthConsent
+# ------------------------------------------------------------------------------
+
+
+def test_human_prompt_oauth_consent_defaults():
+    """_HumanPromptOAuthConsent defaults: input_type is OAUTH_CONSENT and use_popup is True."""
+    prompt = _HumanPromptOAuthConsent(text="https://auth.example.com/authorize")
+    assert prompt.input_type == HumanPromptModelType.OAUTH_CONSENT
+    assert prompt.use_popup is True
+
+
+def test_human_prompt_oauth_consent_use_popup_false():
+    """_HumanPromptOAuthConsent accepts use_popup=False for same-tab auth flow."""
+    prompt = _HumanPromptOAuthConsent(text="https://auth.example.com/authorize", use_popup=False)
+    assert prompt.use_popup is False
+    assert prompt.input_type == HumanPromptModelType.OAUTH_CONSENT
+
+
+def test_human_prompt_oauth_consent_text_preserved():
+    """_HumanPromptOAuthConsent stores the authorization URL in the text field."""
+    url = "https://auth.example.com/authorize?client_id=abc&state=xyz"
+    prompt = _HumanPromptOAuthConsent(text=url)
+    assert prompt.text == url

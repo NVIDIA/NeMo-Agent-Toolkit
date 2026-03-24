@@ -1,0 +1,48 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import build_auth_redirect_success_html
+
+
+def test_auth_redirect_success_html_popup_closes_window():
+    """AUTH_REDIRECT_SUCCESS_HTML (popup variant) notifies opener and closes the window."""
+    assert "window.opener?.postMessage" in AUTH_REDIRECT_SUCCESS_HTML
+    assert "window.close()" in AUTH_REDIRECT_SUCCESS_HTML
+
+
+def test_build_auth_redirect_success_html_with_return_url():
+    """build_auth_redirect_success_html embeds a JSON-encoded return URL in the script."""
+    return_url = "http://localhost:3000"
+    html = build_auth_redirect_success_html(return_url)
+    assert json.dumps(return_url) in html
+    assert "window.location.replace" in html
+    assert "window.history.back()" in html
+
+
+def test_build_auth_redirect_success_html_without_return_url():
+    """build_auth_redirect_success_html uses window.history.back() when return_url is None."""
+    html = build_auth_redirect_success_html(None)
+    assert json.dumps(None) in html
+    assert "window.history.back()" in html
+
+
+def test_build_auth_redirect_success_html_return_url_special_chars():
+    """build_auth_redirect_success_html correctly encodes URLs containing special characters."""
+    return_url = 'http://example.com/path?foo=bar&baz="quoted"'
+    html = build_auth_redirect_success_html(return_url)
+    assert json.dumps(return_url) in html
