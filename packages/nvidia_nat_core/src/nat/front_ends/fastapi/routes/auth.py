@@ -14,6 +14,7 @@
 # limitations under the License.
 """OAuth callback route registration."""
 
+import html
 import logging
 from typing import TYPE_CHECKING
 
@@ -23,6 +24,7 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_cancelled import build_auth_redirect_cancelled_html
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import build_auth_redirect_success_html
 
@@ -38,12 +40,31 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
     async def redirect_uri(request: Request):
         """Handle the redirect URI for OAuth2 authentication."""
         state = request.query_params.get("state")
+        error = request.query_params.get("error")
 
         async with worker._outstanding_flows_lock:
             if not state or state not in worker._outstanding_flows:
                 return HTMLResponse("Invalid state. Please restart the authentication process.", status_code=400)
 
             flow_state = worker._outstanding_flows[state]
+
+        # The OAuth provider returned an error (e.g. user denied consent).
+        # Signal the waiting workflow and redirect the browser back to the UI.
+        if error:
+            error_description = request.query_params.get("error_description", "")
+            logger.info("OAuth authorisation denied for state %s: %s (%s)", state, error, error_description)
+            if not flow_state.future.done():
+                flow_state.future.set_exception(RuntimeError(f"Authorisation denied: {error} ({error_description})"))
+            await worker._remove_flow(state)
+            if flow_state.return_url:
+                return HTMLResponse(content=build_auth_redirect_cancelled_html(flow_state.return_url),
+                                    status_code=200,
+                                    headers={
+                                        "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                    })
+            return HTMLResponse(html.escape(f"Authorization denied: {error}"),
+                                status_code=400,
+                                headers={"Cache-Control": "no-cache"})
 
         config = flow_state.config
         verifier = flow_state.verifier
