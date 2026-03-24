@@ -73,10 +73,12 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
 
         async with WebSocketMessageHandler(websocket, session_manager, worker.get_step_adaptor(), worker) as handler:
             origin = websocket.headers.get("origin")
+            allowed_origins = worker.front_end_config.cors.allow_origins or []
+            return_url = origin if origin and origin in allowed_origins else None
             flow_handler = WebSocketAuthenticationFlowHandler(worker._add_flow,
                                                               worker._remove_flow,
                                                               handler,
-                                                              return_url=origin)
+                                                              return_url=return_url)
             handler.set_flow_handler(flow_handler)
             await handler.run()
 
