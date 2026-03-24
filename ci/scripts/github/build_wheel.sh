@@ -21,6 +21,8 @@ GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITHUB_SCRIPT_DIR}/common.sh
 WHEELS_BASE_DIR="${WORKSPACE_TMP}/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
+PIP_REPORTS_DIR="${WORKSPACE_TMP}/pip_reports"
+mkdir -p "${PIP_REPORTS_DIR}"
 
 GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"
@@ -78,7 +80,7 @@ for whl in "${MOVED_WHEELS[@]}"; do
 
         # Report the packages in the environment regardless of install success
         rapids-logger "Installed wheel ${whl} with Python ${pyver}, pip install exit code ${INSTALL_RESULT}, installed packages:"
-        uv pip list
+        uv pip list --format json > ${PIP_REPORTS_DIR}/$(basename "${whl}" .whl)_py${pyver}_packages.json
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
             rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver}"
