@@ -45,7 +45,9 @@ _AUTH_REDIRECT_SUCCESS_HTML_SAME_PAGE_TEMPLATE = """\
         (function () {
             var returnTo = RETURN_URL_PLACEHOLDER;
             if (returnTo) {
-                window.location.replace(returnTo);
+                var url = new URL(returnTo);
+                url.searchParams.set('oauth_auth_completed', 'true');
+                window.location.replace(url.toString());
             } else {
                 window.history.back();
             }
@@ -64,8 +66,9 @@ def build_auth_redirect_success_html(return_url: str | None = None) -> str:
 
     Args:
         return_url: The URL to redirect to after successful authentication. When
-            provided the page navigates there immediately; otherwise it falls back
-            to ``window.history.back()``.
+            provided the page navigates there immediately with an ``oauth_auth_completed``
+            query parameter so the UI can distinguish a successful return from the user
+            pressing back; otherwise it falls back to ``window.history.back()``.
 
     Returns:
         An HTML string for the post-authentication redirect page.
