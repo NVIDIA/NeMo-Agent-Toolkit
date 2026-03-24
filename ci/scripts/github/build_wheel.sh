@@ -62,6 +62,10 @@ install_python_versions
 function create_package_report_tarball() {
     local tarball_path="${WORKSPACE_TMP}/package_listings.tar.bz2"
     tar -cjf "${tarball_path}" -C "${PIP_REPORTS_DIR}" .
+
+    # Clean out the reports directory, in CI this doesn't have an impact, but if running locally it prevents old
+    # reports from being included in future tarballs
+    rm -rf "${PIP_REPORTS_DIR}"
     echo "${tarball_path}"
 }
 
