@@ -59,6 +59,14 @@ deactivate
 TEMP_INSTALL_LOCATION="${WORKSPACE_TMP}/wheel_test_env"
 install_python_versions
 
+function create_package_report_tarball() {
+    local tarball_path="${WORKSPACE_TMP}/package_listings.tar.bz2"
+    tar -cjf "${tarball_path}" -C "${PIP_REPORTS_DIR}" .
+    echo "${tarball_path}"
+}
+
+trap create_package_report_tarball EXIT
+
 for whl in "${MOVED_WHEELS[@]}"; do
 
     for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
