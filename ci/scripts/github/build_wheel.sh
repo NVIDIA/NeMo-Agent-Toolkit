@@ -133,3 +133,5 @@ for whl in "${MOVED_WHEELS[@]}"; do
         rm -rf "${TEMP_INSTALL_LOCATION}"
     done
 done
+
+exit 0
