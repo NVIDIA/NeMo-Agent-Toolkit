@@ -57,7 +57,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "crewai>=0.193.2,<1.0.0",
-  "litellm~=1.74",
+  "litellm>=1.74,<1.82.7",  # pin to known-good version
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
