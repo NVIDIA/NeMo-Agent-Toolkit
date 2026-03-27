@@ -151,6 +151,19 @@ def openai_api_key_fixture(fail_missing: bool):
                                 fail_missing=fail_missing)
 
 
+@pytest.fixture(name="oci_nemotron_endpoint", scope='session')
+def oci_nemotron_endpoint_fixture(fail_missing: bool) -> Generator[dict[str, str], None, None]:
+    """
+    Use for integration tests that require an OCI-hosted Nemotron OpenAI-compatible endpoint.
+    """
+    yield require_env_variables(
+        varnames=["OCI_NEMOTRON_BASE_URL", "OCI_NEMOTRON_MODEL"],
+        reason="OCI Nemotron integration tests require the `OCI_NEMOTRON_BASE_URL` and "
+        "`OCI_NEMOTRON_MODEL` environment variables to be defined.",
+        fail_missing=fail_missing,
+    )
+
+
 @pytest.fixture(name="nvidia_api_key", scope='session')
 def nvidia_api_key_fixture(fail_missing: bool):
     """
