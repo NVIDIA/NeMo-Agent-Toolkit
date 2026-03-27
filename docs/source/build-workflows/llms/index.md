@@ -28,6 +28,7 @@ NVIDIA NeMo Agent Toolkit supports the following LLM providers:
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [AWS Bedrock](https://aws.amazon.com/bedrock/) | `aws_bedrock` | AWS Bedrock API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
+| [OCI Generative AI](https://docs.oracle.com/en-us/iaas/Content/generative-ai/home.htm) | `oci` | OCI Generative AI via the OCI SDK-backed `langchain-oci` integration |
 | [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
 | [Hugging Face](https://huggingface.co) | `huggingface` | Hugging Face API |
 | [Hugging Face Inference](https://huggingface.co/docs/api-inference) | `huggingface_inference` | Hugging Face Inference API, Endpoints, and TGI |
@@ -52,6 +53,15 @@ llms:
   azure_openai_llm:
     _type: azure_openai
     azure_deployment: gpt-4o-mini
+  oci_llm:
+    _type: oci
+    model_name: nvidia/Llama-3.1-Nemotron-Nano-8B-v1
+    region: us-chicago-1
+    compartment_id: ocid1.compartment.oc1..example
+    auth_type: API_KEY
+    auth_profile: DEFAULT
+    auth_file_location: ~/.oci/config
+    provider: meta
   litellm_llm:
     _type: litellm
     model_name: gpt-4o
@@ -117,6 +127,39 @@ The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_l
 * `base_url` - The base URL to use for the model
 * `credentials_profile_name` - The credentials profile name to use for the model
 * `max_retries` - The maximum number of retries for the request
+
+### OCI Generative AI
+
+You can use the following fields to configure the OCI Generative AI LLM provider:
+
+* `region` - OCI region for the Generative AI service (defaults to `us-chicago-1`). The service endpoint is derived automatically.
+* `endpoint` - Optional explicit endpoint URL. Overrides the region-derived endpoint when set.
+* `compartment_id` - The OCI compartment OCID used for inference requests
+* `auth_type` - OCI SDK auth mode such as `API_KEY`, `SECURITY_TOKEN`, `INSTANCE_PRINCIPAL`, or `RESOURCE_PRINCIPAL`
+* `auth_profile` - OCI config profile name for file-backed auth
+* `auth_file_location` - Path to the OCI config file
+* `provider` - Optional provider override such as `meta`, `google`, `cohere`, or `openai`
+
+The OCI Generative AI LLM provider is defined by the {py:class}`~nat.llm.oci_llm.OCIModelConfig` class.
+
+* `model_name` - The name of the model to use
+* `region` - OCI region (defaults to `us-chicago-1`). The endpoint is derived from `https://inference.generativeai.{region}.oci.oraclecloud.com`.
+* `endpoint` - Optional explicit endpoint URL. Overrides the region-derived endpoint.
+* `compartment_id` - OCI compartment OCID
+* `auth_type` - OCI SDK auth type
+* `auth_profile` - OCI profile name for file-backed auth
+* `auth_file_location` - Path to the OCI config file
+* `provider` - Optional OCI provider override such as `meta`, `google`, `cohere`, or `openai`
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_tokens` - The maximum number of tokens to generate
+* `seed` - The seed to use for the model
+* `max_retries` - The maximum number of retries for the request
+* `request_timeout` - HTTP request timeout in seconds
+
+:::{note}
+This provider targets OCI Generative AI through the OCI SDK-backed `langchain-oci` path and does not enable the Responses API.
+:::
 
 ### Azure OpenAI
 

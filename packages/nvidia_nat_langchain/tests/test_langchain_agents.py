@@ -134,6 +134,35 @@ async def test_azure_openai_langchain_agent(api_version: str | None):
 
 
 @pytest.mark.integration
+@pytest.mark.usefixtures("oci_nemotron_endpoint")
+async def test_oci_hosted_nemotron_openai_compatible_agent():
+    """
+    Test an OCI-hosted Nemotron endpoint exposed through an OpenAI-compatible route.
+    """
+    prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
+
+    llm_config = OpenAIModelConfig(
+        model_name=os.environ["OCI_NEMOTRON_MODEL"],
+        base_url=os.environ["OCI_NEMOTRON_BASE_URL"],
+        api_key=os.environ.get("OCI_NEMOTRON_API_KEY", "unused"),
+        temperature=0.0,
+        max_tokens=64,
+    )
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("oci_nemotron_llm", llm_config)
+        llm = await builder.get_llm("oci_nemotron_llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+        agent = prompt | llm
+
+        response = await agent.ainvoke({"input": "Reply with exactly OCI_NEMOTRON_OK"})
+        assert isinstance(response, AIMessage)
+        assert response.content is not None
+        assert isinstance(response.content, str)
+        assert "OCI_NEMOTRON_OK" in response.content
+
+
+@pytest.mark.integration
 @pytest.mark.usefixtures("azure_openai_keys")
 async def test_azure_openai_react_e2e(test_data_dir: str):
     from nat.test.utils import run_workflow

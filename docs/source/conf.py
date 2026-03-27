@@ -379,6 +379,8 @@ redirects = {
         '/extend/custom-components/gated-fields.html',
     'extend/integrating-aws-bedrock-models':
         '/components/integrations/integrating-aws-bedrock-models.html',
+    'extend/integrating-oci-generative-ai-models':
+        '/components/integrations/integrating-oci-generative-ai-models.html',
     'extend/memory':
         '/extend/custom-components/memory.html',
     'extend/object-store':
