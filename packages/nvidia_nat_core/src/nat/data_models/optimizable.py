@@ -13,14 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from typing import Any
 from typing import Generic
 from typing import Literal
+from typing import Protocol
 from typing import TypeVar
 
 import numpy as np
-from optuna import Trial
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -28,6 +30,39 @@ from pydantic import model_validator
 from pydantic_core import PydanticUndefined
 
 T = TypeVar("T", int, float, bool, str)
+
+
+class SuggestableTrial(Protocol):
+    """Protocol for trial-like objects used by SearchSpace.suggest().
+
+    Satisfied by optuna.Trial when nvidia-nat-config-optimizer is installed.
+    Allows core to remain free of the optuna dependency.
+    """
+
+    def suggest_categorical(self, name: str, choices: Sequence[Any]) -> Any:
+        ...
+
+    def suggest_int(
+        self,
+        name: str,
+        low: int,
+        high: int,
+        *,
+        log: bool = False,
+        step: int | None = None,
+    ) -> int:
+        ...
+
+    def suggest_float(
+        self,
+        name: str,
+        low: float,
+        high: float,
+        *,
+        log: bool = False,
+        step: float | None = None,
+    ) -> float:
+        ...
 
 
 # --------------------------------------------------------------------- #
@@ -78,8 +113,8 @@ class SearchSpace(BaseModel, Generic[T]):
 
         return self
 
-    # Helper for Optuna Trials
-    def suggest(self, trial: Trial, name: str):
+    # Helper for trial-like objects (e.g. optuna.Trial when config_optimizer is used)
+    def suggest(self, trial: SuggestableTrial, name: str) -> Any:
         if self.is_prompt:
             raise ValueError("Prompt optimization not currently supported using Optuna. "
                              "Use the genetic algorithm implementation instead.")
