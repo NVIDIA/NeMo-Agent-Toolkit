@@ -29,6 +29,7 @@ from nat.middleware.defense.defense_middleware_pre_tool_verifier import PreToolV
 from nat.middleware.middleware import FunctionMiddlewareContext
 
 _MAX_CONTENT_LENGTH = 32000
+_STRIDE = _MAX_CONTENT_LENGTH // 2  # 50% overlap — injections ≤ _STRIDE chars are guaranteed full coverage
 
 
 class _TestInput(BaseModel):
@@ -74,10 +75,16 @@ def _make_llm_response(violation: bool,
 
 
 class TestAnalyzeContentChunking:
-    """Tests for the content chunking behavior in _analyze_content."""
+    """Tests for the sliding-window analysis behavior in _analyze_content.
+
+    With _MAX_CONTENT_LENGTH=32000 and _STRIDE=16000 (50% overlap):
+      - 64000 chars  → range(0, 64000, 16000) → 4 windows
+      - 80000 chars  → range(0, 80000, 16000) → 5 windows
+      - 96000 chars  → range(0, 96000, 16000) → 6 windows
+    """
 
     async def test_short_content_single_llm_call(self, mock_builder, middleware_context):
-        """Content within limit is analyzed with a single LLM call."""
+        """Content within limit is analyzed with a single LLM call (no windowing)."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
@@ -92,8 +99,8 @@ class TestAnalyzeContentChunking:
         assert not result.violation_detected
         assert not result.should_refuse
 
-    async def test_long_content_split_into_multiple_chunks(self, mock_builder, middleware_context):
-        """Content exceeding limit is split and each chunk analyzed separately."""
+    async def test_long_content_uses_sliding_windows(self, mock_builder, middleware_context):
+        """Content exceeding limit is analyzed using overlapping sliding windows."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
@@ -101,23 +108,26 @@ class TestAnalyzeContentChunking:
         mock_llm.ainvoke = AsyncMock(return_value=_make_llm_response(False, confidence=0.1))
         middleware._llm = mock_llm
 
-        # 2.5x the limit => 3 chunks
+        # 2.5x the limit → 5 overlapping windows
         long_content = "a" * int(_MAX_CONTENT_LENGTH * 2.5)
         result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
 
-        assert mock_llm.ainvoke.call_count == 3
+        assert mock_llm.ainvoke.call_count == 5
         assert not result.violation_detected
 
-    async def test_malicious_payload_in_middle_chunk_detected(self, mock_builder, middleware_context):
-        """A violation hidden in the middle of long content is detected (was vulnerable before fix)."""
+    async def test_malicious_payload_in_middle_window_detected(self, mock_builder, middleware_context):
+        """A violation in any window of long content is detected."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
-        # chunk 0: clean, chunk 1: malicious (middle), chunk 2: clean
+        # 96000 chars → 6 windows; window 2 carries the violation
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(True, confidence=0.95, reason="prompt injection detected"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(False, confidence=0.1, reason="clean"),
         ])
         middleware._llm = mock_llm
@@ -125,21 +135,24 @@ class TestAnalyzeContentChunking:
         long_content = "a" * (_MAX_CONTENT_LENGTH * 3)
         result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
 
-        assert mock_llm.ainvoke.call_count == 3
+        assert mock_llm.ainvoke.call_count == 6
         assert result.violation_detected
         assert result.should_refuse
         assert result.confidence == 0.95
         assert "prompt injection detected" in result.reason
 
-    async def test_violation_in_last_chunk_detected(self, mock_builder, middleware_context):
-        """A violation in the last chunk is detected."""
+    async def test_violation_in_last_window_detected(self, mock_builder, middleware_context):
+        """A violation in the last sliding window is detected."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
+        # 64000 chars → 4 windows; last window carries the violation
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(False, confidence=0.1, reason="clean"),
-            _make_llm_response(True, confidence=0.85, reason="jailbreak in last chunk"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(True, confidence=0.85, reason="jailbreak in last window"),
         ])
         middleware._llm = mock_llm
 
@@ -148,17 +161,20 @@ class TestAnalyzeContentChunking:
 
         assert result.violation_detected
         assert result.should_refuse
-        assert "jailbreak in last chunk" in result.reason
+        assert "jailbreak in last window" in result.reason
 
-    async def test_no_violation_in_any_chunk_returns_clean(self, mock_builder, middleware_context):
-        """When all chunks are clean, result is clean."""
+    async def test_no_violation_in_any_window_returns_clean(self, mock_builder, middleware_context):
+        """When all sliding windows are clean, the result is clean."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
+        # 64000 chars → 4 windows, all clean
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(False, confidence=0.2, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
         ])
         middleware._llm = mock_llm
 
@@ -168,15 +184,18 @@ class TestAnalyzeContentChunking:
         assert not result.violation_detected
         assert not result.should_refuse
 
-    async def test_chunked_max_confidence_taken(self, mock_builder, middleware_context):
-        """Aggregated confidence is the maximum across all chunks."""
+    async def test_windowed_max_confidence_taken(self, mock_builder, middleware_context):
+        """Aggregated confidence is the maximum across all windows."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance", threshold=0.7)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
+        # 64000 chars → 4 windows; windows 0 and 1 have violations at different confidences
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(True, confidence=0.75, reason="low confidence violation"),
             _make_llm_response(True, confidence=0.95, reason="high confidence violation"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
         ])
         middleware._llm = mock_llm
 
@@ -185,15 +204,18 @@ class TestAnalyzeContentChunking:
 
         assert result.confidence == 0.95
 
-    async def test_chunked_violation_types_deduplicated(self, mock_builder, middleware_context):
-        """Violation types from all chunks are merged without duplicates."""
+    async def test_windowed_violation_types_deduplicated(self, mock_builder, middleware_context):
+        """Violation types from all windows are merged without duplicates."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
+        # 64000 chars → 4 windows; windows 0 and 1 report overlapping type sets
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(True, confidence=0.8, violation_types=["prompt_injection", "jailbreak"]),
             _make_llm_response(True, confidence=0.8, violation_types=["jailbreak", "social_engineering"]),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
         ])
         middleware._llm = mock_llm
 
@@ -203,34 +225,21 @@ class TestAnalyzeContentChunking:
         assert set(result.violation_types) == {"prompt_injection", "jailbreak", "social_engineering"}
         assert len(result.violation_types) == 3
 
-    async def test_chunked_sanitized_input_reconstructed(self, mock_builder, middleware_context):
-        """Sanitized input is reconstructed by concatenating sanitized/original chunks."""
+    async def test_windowed_sanitized_input_always_none(self, mock_builder, middleware_context):
+        """sanitized_input is always None for multi-window content.
+
+        Overlapping windows make it impossible to reconstruct a sanitized version of the
+        original input, so we always return None regardless of what individual windows report.
+        """
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="redirection", threshold=0.7)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
-        clean_chunk = "a" * _MAX_CONTENT_LENGTH
         mock_llm = AsyncMock()
+        # 64000 chars → 4 windows; window 1 reports a violation with a sanitized version
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(True, confidence=0.9, reason="violation", sanitized="sanitized_part"),
-        ])
-        middleware._llm = mock_llm
-
-        long_content = "a" * (_MAX_CONTENT_LENGTH * 2)
-        result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
-
-        assert result.violation_detected
-        # First chunk is clean => original; second chunk is sanitized
-        assert result.sanitized_input == clean_chunk + "sanitized_part"
-
-    async def test_chunked_sanitized_input_none_when_chunk_missing_sanitization(self, mock_builder, middleware_context):
-        """sanitized_input is None when a violating chunk provides no sanitized version."""
-        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="redirection", threshold=0.7)
-        middleware = PreToolVerifierMiddleware(config, mock_builder)
-
-        mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(side_effect=[
-            _make_llm_response(True, confidence=0.9, reason="violation", sanitized=None),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(False, confidence=0.1, reason="clean"),
         ])
         middleware._llm = mock_llm
@@ -241,16 +250,20 @@ class TestAnalyzeContentChunking:
         assert result.violation_detected
         assert result.sanitized_input is None
 
-    async def test_chunked_reasons_combined(self, mock_builder, middleware_context):
-        """Reasons from all violating chunks are combined with semicolons."""
+    async def test_windowed_reasons_combined(self, mock_builder, middleware_context):
+        """Reasons from all violating windows are combined with semicolons."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
+        # 96000 chars → 6 windows; windows 0 and 4 carry violations
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(True, confidence=0.8, reason="reason A"),
             _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(True, confidence=0.9, reason="reason B"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
         ])
         middleware._llm = mock_llm
 
@@ -260,15 +273,57 @@ class TestAnalyzeContentChunking:
         assert "reason A" in result.reason
         assert "reason B" in result.reason
 
-    async def test_chunked_error_in_one_chunk_propagates(self, mock_builder, middleware_context):
-        """An error in any chunk sets error=True on the aggregated result."""
+    async def test_malicious_payload_split_at_old_boundary_detected(self, mock_builder, middleware_context):
+        """A directive split at the old disjoint-chunk boundary is caught by the overlapping window.
+
+        With stride=_STRIDE, window 1 starts at _STRIDE and ends at _STRIDE+_MAX_CONTENT_LENGTH,
+        so it spans the position _MAX_CONTENT_LENGTH that was previously a hard boundary.
+        Any injection straddling that boundary is fully visible in window 1.
+        """
+        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
+        middleware = PreToolVerifierMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        # 64000 chars → 4 windows:
+        #   window 0: [0 : 32000]            - clean (only left side of old boundary)
+        #   window 1: [16000 : 48000]         - VIOLATION (spans old boundary at 32000)
+        #   window 2: [32000 : 64000]         - clean (only right side of old boundary)
+        #   window 3: [48000 : 64000] (short) - clean
+        mock_llm.ainvoke = AsyncMock(side_effect=[
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(True, confidence=0.9, reason="injection spanning old boundary"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+        ])
+        middleware._llm = mock_llm
+
+        long_content = "a" * (_MAX_CONTENT_LENGTH * 2)
+        result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
+
+        assert mock_llm.ainvoke.call_count == 4
+
+        # Verify window 1 was passed content starting at _STRIDE (spans the old boundary)
+        window1_messages = mock_llm.ainvoke.call_args_list[1][0][0]
+        window1_user_content = window1_messages[1]["content"]
+        expected_window1 = "a" * _MAX_CONTENT_LENGTH  # content[_STRIDE : _STRIDE + _MAX_CONTENT_LENGTH]
+        assert expected_window1 in window1_user_content
+
+        assert result.violation_detected
+        assert result.should_refuse
+        assert result.confidence == 0.9
+        assert result.sanitized_input is None
+
+    async def test_windowed_error_in_one_window_propagates(self, mock_builder, middleware_context):
+        """An error in any window sets error=True on the aggregated result."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance", fail_closed=False)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
-        # First chunk raises an exception, second succeeds
+        # 64000 chars → 4 windows; window 0 fails, rest succeed
         mock_llm.ainvoke = AsyncMock(side_effect=[
             Exception("LLM failure"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(False, confidence=0.1, reason="clean"),
         ])
         middleware._llm = mock_llm
