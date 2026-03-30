@@ -156,28 +156,26 @@ Upstream the canonical semantics first:
 - per-invocation lineage aligned with `tool_calls`
 - deterministic ordering expectations
 
-Do not make helper path fields part of the canonical upstream contract.
+Do not add non-canonical convenience fields to the upstream contract.
 
-## Phase 2: Dual-read compatibility
+## Phase 2: Transition compatibility
 
 During transition:
 
 - producers continue writing current `extra` fields
-- consumers prioritize canonical reads and keep compatibility fallback where needed
+- consumers prioritize canonical reads during rollout
 
 This phase avoids breaking existing artifacts and tools.
 
 ## Phase 3: Promote lineage to first-class `AtifStep` fields
 
 Add typed lineage field(s) directly to `AtifStep` with wire-compatible mapping
-from current `extra` payload. Keep backward compatibility by accepting legacy
-`extra` lineage during the migration window.
+from current `extra` payload.
 
-## Phase 4: Remove helper paths
+## Phase 4: Stabilize canonical schema
 
-After consumers are canonical-only:
+After consumers are canonical:
 
-- remove compatibility-only helper fields
 - keep canonical lineage and invocation behavior unchanged
 
 ## Acceptance Criteria for Upstreaming
@@ -193,4 +191,4 @@ Upstreaming is complete when all of the following are true:
 
 - New consumers should implement canonical lineage reads immediately.
 - Existing consumers should migrate to canonical invocation metadata reads.
-- Producers should avoid introducing new dependencies on compatibility helper fields.
+- Producers should avoid introducing non-canonical fields.
