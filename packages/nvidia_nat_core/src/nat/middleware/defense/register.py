@@ -26,6 +26,8 @@ from nat.middleware.defense.defense_middleware_output_verifier import OutputVeri
 from nat.middleware.defense.defense_middleware_output_verifier import OutputVerifierMiddlewareConfig
 from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddleware
 from nat.middleware.defense.defense_middleware_pii import PIIDefenseMiddlewareConfig
+from nat.middleware.defense.defense_middleware_pre_tool_verifier import PreToolVerifierMiddleware
+from nat.middleware.defense.defense_middleware_pre_tool_verifier import PreToolVerifierMiddlewareConfig
 
 
 @register_middleware(config_type=ContentSafetyGuardMiddlewareConfig)
@@ -80,3 +82,21 @@ async def pii_defense_middleware(
     """
     # Pass the builder and config, Presidio will be loaded lazily
     yield PIIDefenseMiddleware(config=config, builder=builder)
+
+
+@register_middleware(config_type=PreToolVerifierMiddlewareConfig)
+async def pre_tool_verifier_middleware(
+    config: PreToolVerifierMiddlewareConfig,
+    builder: Builder,
+) -> AsyncGenerator[PreToolVerifierMiddleware, None]:
+    """Build a Pre-Tool Verifier middleware from configuration.
+
+    Args:
+        config: The Pre-Tool Verifier middleware configuration
+        builder: The workflow builder used to resolve the LLM
+
+    Yields:
+        A configured Pre-Tool Verifier middleware instance
+    """
+    # Pass the builder and config, LLM will be loaded lazily
+    yield PreToolVerifierMiddleware(config=config, builder=builder)
