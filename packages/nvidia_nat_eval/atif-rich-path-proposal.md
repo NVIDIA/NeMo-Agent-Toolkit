@@ -56,10 +56,21 @@ metadata.
 
 - `function_ancestry: InvocationNode` (required)
   - Callable ancestry node for this record.
-- `span_event_timestamp: float | None` (optional)
-  - Start timestamp used for deterministic ordering and timing analysis.
 - `framework: str | None` (optional)
   - Runtime/framework label (for example, `langchain`).
+
+### `AtifInvocationInfo`
+
+`AtifInvocationInfo` represents one invocation occurrence with timing metadata.
+
+- `start_timestamp: float` (required)
+  - Invocation start timestamp in epoch seconds.
+- `end_timestamp: float` (required)
+  - Invocation end timestamp in epoch seconds.
+- `invocation_id: str | None` (optional)
+  - Optional stable invocation identifier for correlation.
+- `status: str | None` (optional)
+  - Optional terminal status for the invocation.
 
 ### `AtifStepExtra`
 
@@ -67,12 +78,12 @@ metadata.
 
 - `ancestry: AtifAncestry` (required, canonical)
   - Step-level lineage context.
+- `invocation: AtifInvocationInfo | None` (canonical)
+  - Step-level invocation timing metadata.
 - `tool_ancestry: list[AtifAncestry]` (canonical)
   - Per-invocation lineage entries aligned by index with `tool_calls`.
-- `step_ancestry_path: list[InvocationNode] | None` (optional helper)
-  - Derived root-to-leaf step path.
-- `tool_ancestry_paths: list[list[InvocationNode]] | None` (optional helper)
-  - Derived root-to-leaf path per `tool_calls[i]`.
+- `tool_invocations: list[AtifInvocationInfo] | None` (canonical)
+  - Per-tool invocation timing entries aligned by index with `tool_calls`.
 
 `AtifStepExtra` uses `extra="allow"` so new metadata can coexist without
 breaking readers.
@@ -84,15 +95,7 @@ Canonical lineage should be reconstructed from:
 - `tool_calls` (all observed invocation occurrences)
 - `extra.ancestry`
 - `extra.tool_ancestry`
-
-These helper fields are optional and non-canonical:
-
-- `extra.step_ancestry_path`
-- `extra.tool_ancestry_paths`
-
-`step_ancestry_path` and `tool_ancestry_paths` are optional, experimental
-migration aids and are expected to be dropped from the schema once consumers
-fully rely on canonical invocation records.
+- `extra.invocation` and `extra.tool_invocations` for timing metadata
 
 ## Producer Requirements
 
@@ -101,9 +104,9 @@ Producers should satisfy these requirements:
 1. `tool_calls` is a flat list that includes all observed tool/function
    invocations, not only top-level model-selected calls.
 2. `tool_ancestry[i]` corresponds to `tool_calls[i]`.
-3. Invocation order is deterministic and based on start time
-   (`span_event_timestamp` preferred).
-4. Repeated calls to the same function are emitted as distinct invocation
+3. `tool_invocations[i]` corresponds to `tool_calls[i]` when timing metadata is emitted.
+4. Invocation order is deterministic and based on start time.
+5. Repeated calls to the same function are emitted as distinct invocation
    entries.
 
 ### Call Identity Mapping
@@ -131,11 +134,8 @@ Reference sample ATIF artifact:
 Consumers should implement lineage reads in this order:
 
 1. Use `tool_calls` + `tool_ancestry` as the primary source.
-2. Use `ancestry` for step-level context.
-3. Treat path helper fields as optional convenience only.
-
-Helper paths, when present, are root-to-leaf chains and must not be required for
-correctness.
+2. Use `invocation` and `tool_invocations` for timing.
+3. Use `ancestry` for step-level lineage context.
 
 ## Validation Invariants
 
@@ -143,12 +143,8 @@ correctness.
 
 - `len(tool_ancestry)` matches `len(tool_calls)` for emitted invocation lineage.
 - Index alignment is stable (`tool_calls[i]` maps to `tool_ancestry[i]`).
-
-### Helper-path invariants (if present)
-
-- `step_ancestry_path` is non-empty and root-to-leaf.
-- `tool_ancestry_paths` length equals `len(tool_calls)`.
-- Every `tool_ancestry_paths[i]` path is non-empty and root-to-leaf.
+- If `tool_invocations` is emitted, `len(tool_invocations)` equals `len(tool_calls)`.
+- If `invocation` or `tool_invocations` is emitted, `start_timestamp <= end_timestamp`.
 
 ## Upstreaming Path to `AtifStep`
 
@@ -167,7 +163,7 @@ Do not make helper path fields part of the canonical upstream contract.
 During transition:
 
 - producers continue writing current `extra` fields
-- consumers prioritize canonical reads and keep helper-path fallback
+- consumers prioritize canonical reads and keep compatibility fallback where needed
 
 This phase avoids breaking existing artifacts and tools.
 
@@ -181,8 +177,8 @@ from current `extra` payload. Keep backward compatibility by accepting legacy
 
 After consumers are canonical-only:
 
-- stop emitting `step_ancestry_path` and `tool_ancestry_paths`
-- keep canonical lineage behavior unchanged
+- remove compatibility-only helper fields
+- keep canonical lineage and invocation behavior unchanged
 
 ## Acceptance Criteria for Upstreaming
 
@@ -191,10 +187,10 @@ Upstreaming is complete when all of the following are true:
 - deterministic lineage tree reconstruction from one ATIF artifact
 - no runtime-specific side-channel dependency
 - stable invocation mapping (`tool_calls[i]` to lineage record `i`)
-- profiler and evaluator scenarios work without helper paths
+- profiler and evaluator scenarios work with canonical invocation metadata only
 
 ## Recommended Implementation Guidance
 
 - New consumers should implement canonical lineage reads immediately.
-- Existing helper-path readers should add canonical fallback now.
-- Producers should avoid introducing new dependencies on helper-path fields.
+- Existing consumers should migrate to canonical invocation metadata reads.
+- Producers should avoid introducing new dependencies on compatibility helper fields.
