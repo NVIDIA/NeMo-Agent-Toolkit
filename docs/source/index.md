@@ -59,7 +59,7 @@ For detailed installation instructions, including optional dependencies, please 
 
 - [**Profiling:**](./improve-workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks.
 
-- [**Observability:**](./run-workflows/observe/observe.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based systems. Track performance, trace execution flows, and gain insights into your agent behaviors.
+- [**Observability:**](./run-workflows/observe/observe.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as LangSmith, Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based systems. Track performance, trace execution flows, and gain insights into your agent behaviors.
 
 - [**Evaluation System:**](./improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
 
