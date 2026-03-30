@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -66,10 +67,14 @@ def _make_llm_response(violation: bool,
                        violation_types: list[str] | None = None,
                        sanitized: str | None = None) -> MagicMock:
     """Build a mock LLM response with the given verification result."""
-    vt = violation_types or (["prompt_injection"] if violation else [])
-    sanitized_str = f'"{sanitized}"' if sanitized is not None else "null"
-    content = (f'{{"violation_detected": {str(violation).lower()}, "confidence": {confidence}, '
-               f'"reason": "{reason}", "violation_types": {vt}, "sanitized_input": {sanitized_str}}}')
+    vt = violation_types if violation_types is not None else (["prompt_injection"] if violation else [])
+    content = json.dumps({
+        "violation_detected": violation,
+        "confidence": confidence,
+        "reason": reason,
+        "violation_types": vt,
+        "sanitized_input": sanitized,
+    })
     mock_response = MagicMock()
     mock_response.content = content
     return mock_response
