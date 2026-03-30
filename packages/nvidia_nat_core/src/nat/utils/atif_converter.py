@@ -218,6 +218,9 @@ class _PendingAgentTurn:
 def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateStep) -> None:
     """Record an observed invocation as a tool_call + observation pair."""
     tool_name = ist.name or "unknown_tool"
+    if tool_name == "<workflow>":
+        # Suppress synthetic workflow wrapper calls from observed tool invocations.
+        return
     tool_input: dict[str, Any] = {}
     tool_output = ""
     if ist.data:

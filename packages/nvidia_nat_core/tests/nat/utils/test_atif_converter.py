@@ -706,6 +706,58 @@ class TestBatchConverter:
         assert agent_step.tool_calls is not None
         assert [tc.function_name for tc in agent_step.tool_calls] == ["branch_a_tool", "branch_b_tool"]
 
+    def test_synthetic_workflow_function_end_is_suppressed(self, batch_converter: IntermediateStepToATIFConverter):
+        """Synthetic `<workflow>` function-end calls are not exported as tool calls."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="What is 2+2?",
+                timestamp_offset=0.0,
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="gpt-4",
+                output_data="Answering",
+                timestamp_offset=1.0,
+                usage=_make_usage(10, 5),
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+            _make_step(
+                IntermediateStepType.FUNCTION_END,
+                name="<workflow>",
+                output_data="4",
+                timestamp_offset=1.1,
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="4",
+                timestamp_offset=2.0,
+                function_name="<workflow>",
+                function_id="wf-1",
+                function_parent_id="root",
+                function_parent_name="root",
+            ),
+        ]
+
+        result = batch_converter.convert(steps)
+        agent_step = result.steps[1]
+        assert agent_step.tool_calls is None
+        assert agent_step.observation is None
+        assert agent_step.extra is not None
+        assert agent_step.extra.get("tool_ancestry") == []
+        assert agent_step.extra.get("tool_invocations") is None
+
     def test_agent_tool_definitions_populated(
         self,
         batch_converter: IntermediateStepToATIFConverter,
