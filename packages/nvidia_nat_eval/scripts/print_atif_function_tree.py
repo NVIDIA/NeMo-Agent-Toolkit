@@ -96,56 +96,9 @@ def _add_ancestry(nodes: dict[str, NodeStats], fn: dict[str, Any], from_tool: bo
         nodes[function_id].seen_in_step_ancestry += 1
 
 
-def _normalize_path_nodes(raw_path: Any) -> list[dict[str, Any]]:
-    """Return validated path nodes from a raw path value."""
-    if not isinstance(raw_path, list):
-        return []
-    return [n for n in raw_path if isinstance(n, dict)]
-
-
-def _iter_step_paths(step: dict[str, Any]) -> tuple[list[dict[str, Any]], list[list[dict[str, Any]]]]:
-    """Extract canonical step/tool ancestry paths from `step.extra`."""
-    extra = step.get("extra") or {}
-    if not isinstance(extra, dict):
-        return [], []
-
-    step_path = _normalize_path_nodes(extra.get("step_ancestry_path"))
-
-    tool_paths: list[list[dict[str, Any]]] = []
-    raw_tool_paths = extra.get("tool_ancestry_paths")
-    if isinstance(raw_tool_paths, list):
-        for raw_path in raw_tool_paths:
-            path_nodes = _normalize_path_nodes(raw_path)
-            if path_nodes:
-                tool_paths.append(path_nodes)
-
-    return step_path, tool_paths
-
-
-def _add_path(nodes: dict[str, NodeStats], path: list[dict[str, Any]], from_tool: bool) -> None:
-    """Add all nodes from one ancestry path to aggregated stats."""
-    for idx, fn in enumerate(path):
-        if idx > 0:
-            # Enforce parent relationship from path adjacency when possible.
-            prev = path[idx - 1]
-            fn = dict(fn)
-            fn.setdefault("parent_id", prev.get("function_id"))
-            fn.setdefault("parent_name", prev.get("function_name"))
-        _add_ancestry(nodes, fn, from_tool=from_tool)
-
-
 def _build_nodes(trajectory: dict[str, Any]) -> dict[str, NodeStats]:
-    """Build node stats from convenience path fields in `step.extra`."""
-    nodes: dict[str, NodeStats] = {}
-    for step in trajectory.get("steps", []):
-        if not isinstance(step, dict):
-            continue
-        step_path, tool_paths = _iter_step_paths(step)
-        if step_path:
-            _add_path(nodes, step_path, from_tool=False)
-        for tool_path in tool_paths:
-            _add_path(nodes, tool_path, from_tool=True)
-    return nodes
+    """Build node stats from required ancestry fields in `step.extra`."""
+    return _build_nodes_from_required_ancestry(trajectory)
 
 
 def _build_nodes_from_required_ancestry(trajectory: dict[str, Any]) -> dict[str, NodeStats]:
@@ -213,10 +166,39 @@ def _extract_tool_call_names(step: dict[str, Any]) -> list[str]:
     return names
 
 
+def _extract_step_function_node(step: dict[str, Any]) -> dict[str, Any] | None:
+    """Extract step-level function ancestry node."""
+    extra = step.get("extra") or {}
+    if not isinstance(extra, dict):
+        return None
+    ancestry = extra.get("ancestry")
+    if not isinstance(ancestry, dict):
+        return None
+    fn = ancestry.get("function_ancestry")
+    return fn if isinstance(fn, dict) else None
+
+
+def _extract_tool_function_nodes(step: dict[str, Any]) -> list[dict[str, Any]]:
+    """Extract tool-level function ancestry nodes aligned with `tool_calls`."""
+    extra = step.get("extra") or {}
+    if not isinstance(extra, dict):
+        return []
+    out: list[dict[str, Any]] = []
+    for item in extra.get("tool_ancestry") or []:
+        if not isinstance(item, dict):
+            continue
+        fn = item.get("function_ancestry")
+        if isinstance(fn, dict):
+            out.append(fn)
+    return out
+
+
 def _build_step_tool_chain(step: dict[str, Any], tool_idx: int, tool_name: str) -> list[str]:
-    """Build one execution chain for a tool call from path metadata + tool call data."""
-    step_path, tool_paths = _iter_step_paths(step)
-    chain = _path_to_labels(step_path)
+    """Build one execution chain for a tool call from required ancestry fields."""
+    chain: list[str] = []
+    step_node = _extract_step_function_node(step)
+    if step_node is not None:
+        chain.extend(_path_to_labels([step_node]))
 
     model_name = step.get("model_name")
     if isinstance(model_name, str) and model_name:
@@ -224,11 +206,10 @@ def _build_step_tool_chain(step: dict[str, Any], tool_idx: int, tool_name: str) 
         if not chain or chain[-1] != llm_label:
             chain.append(llm_label)
 
-    # If tool path has deeper lineage than step path, append only the delta.
-    if tool_idx < len(tool_paths):
-        tool_labels = _path_to_labels(tool_paths[tool_idx])
-        prefix_len = len(_path_to_labels(step_path))
-        for label in tool_labels[prefix_len:]:
+    tool_nodes = _extract_tool_function_nodes(step)
+    if tool_idx < len(tool_nodes):
+        tool_labels = _path_to_labels([tool_nodes[tool_idx]])
+        for label in tool_labels:
             if not chain or chain[-1] != label:
                 chain.append(label)
 
@@ -241,7 +222,7 @@ def _build_step_tool_chain(step: dict[str, Any], tool_idx: int, tool_name: str) 
 
 
 def _build_execution_graph(trajectory: dict[str, Any]) -> tuple[dict[str, set[str]], dict[str, int]]:
-    """Build an aggregated execution graph from canonical path lists."""
+    """Build an aggregated execution graph from required ancestry fields."""
     edges: dict[str, set[str]] = defaultdict(set)
     seen_counts: dict[str, int] = defaultdict(int)
     root_node = "__root__"
@@ -249,9 +230,8 @@ def _build_execution_graph(trajectory: dict[str, Any]) -> tuple[dict[str, set[st
     for step in trajectory.get("steps", []):
         if not isinstance(step, dict):
             continue
-        step_path, _ = _iter_step_paths(step)
-
-        step_labels = _path_to_labels(step_path)
+        step_node = _extract_step_function_node(step)
+        step_labels = _path_to_labels([step_node] if step_node is not None else [])
         model_name = step.get("model_name")
         if isinstance(model_name, str) and model_name:
             llm_label = f"<llm:{model_name}>"
@@ -279,22 +259,21 @@ def _build_execution_graph(trajectory: dict[str, Any]) -> tuple[dict[str, set[st
 
 
 def _build_execution_chains(trajectory: dict[str, Any]) -> list[list[str]]:
-    """Build per-occurrence execution chains from canonical path lists."""
+    """Build per-occurrence execution chains from required ancestry fields."""
     chains: list[list[str]] = []
 
     for step in trajectory.get("steps", []):
         if not isinstance(step, dict):
             continue
-        step_path, tool_paths = _iter_step_paths(step)
-        if step_path:
-            labels = _path_to_labels(step_path)
-            model_name = step.get("model_name")
-            if isinstance(model_name, str) and model_name:
-                llm_label = f"<llm:{model_name}>"
-                if not labels or labels[-1] != llm_label:
-                    labels.append(llm_label)
-            if labels:
-                chains.append(labels)
+        step_node = _extract_step_function_node(step)
+        labels = _path_to_labels([step_node] if step_node is not None else [])
+        model_name = step.get("model_name")
+        if isinstance(model_name, str) and model_name:
+            llm_label = f"<llm:{model_name}>"
+            if not labels or labels[-1] != llm_label:
+                labels.append(llm_label)
+        if labels:
+            chains.append(labels)
 
         tool_names = _extract_tool_call_names(step)
         if tool_names:
@@ -302,18 +281,18 @@ def _build_execution_chains(trajectory: dict[str, Any]) -> list[list[str]]:
                 labels = _build_step_tool_chain(step, idx, tool_name)
                 if labels:
                     chains.append(labels)
-        else:
-            for tool_path in tool_paths:
-                labels = _path_to_labels(tool_path)
-                if labels:
-                    chains.append(labels)
 
     return chains
 
 
 def _print_tree(nodes: dict[str, NodeStats]) -> None:
+    root_stats = nodes.get("root")
     by_parent: dict[str, list[str]] = defaultdict(list)
     for function_id, node in nodes.items():
+        if function_id == "root":
+            # The printer already emits a synthetic root header; avoid treating
+            # the explicit root node as a child, which creates duplicate subtrees.
+            continue
         parent = node.parent_id or "root"
         if parent == function_id:
             # Defensive guard against malformed self-parent links.
@@ -355,14 +334,23 @@ def _print_tree(nodes: dict[str, NodeStats]) -> None:
         for i, child_id in enumerate(children):
             rec(child_id, child_prefix, i == len(children) - 1, visited)
 
-    print("root")
-    if not roots and "root" in nodes:
-        roots = ["root"]
+    if root_stats is not None:
+        counts = []
+        if root_stats.seen_in_step_ancestry:
+            counts.append(f"steps={root_stats.seen_in_step_ancestry}")
+        if root_stats.seen_in_tool_ancestry:
+            counts.append(f"tools={root_stats.seen_in_tool_ancestry}")
+        counts_str = f" ({', '.join(counts)})" if counts else ""
+        print(f"root{counts_str}")
+    else:
+        print("root")
+
     for i, root_id in enumerate(roots):
         rec(root_id, "", i == len(roots) - 1, set())
 
     # Ensure disconnected/cyclic components are still surfaced as top-level entries.
-    remaining_roots = sorted((fid for fid in nodes if fid not in covered), key=lambda fid: nodes[fid].function_name)
+    remaining_roots = sorted((fid for fid in nodes if fid != "root" and fid not in covered),
+                             key=lambda fid: nodes[fid].function_name)
     for i, root_id in enumerate(remaining_roots):
         rec(root_id, "", i == len(remaining_roots) - 1, set())
 
@@ -410,26 +398,75 @@ def _print_execution_sequence_tree(chains: list[list[str]]) -> None:
             prefix += "   " if j == len(chain) - 1 else "│  "
 
 
+def _step_summary(trajectory: dict[str, Any]) -> tuple[int, int, int, int]:
+    """Return total steps, user steps, agent steps, and total tool calls."""
+    steps = trajectory.get("steps", [])
+    if not isinstance(steps, list):
+        return 0, 0, 0, 0
+
+    total_steps = 0
+    user_steps = 0
+    agent_steps = 0
+    total_tool_calls = 0
+
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        total_steps += 1
+        if step.get("source") == "user":
+            user_steps += 1
+        elif step.get("source") == "agent":
+            agent_steps += 1
+        tool_calls = step.get("tool_calls")
+        if isinstance(tool_calls, list):
+            total_tool_calls += len(tool_calls)
+
+    return total_steps, user_steps, agent_steps, total_tool_calls
+
+
+def _print_step_breakdown(trajectory: dict[str, Any]) -> None:
+    """Print a compact per-step breakdown for quick count reconciliation."""
+    steps = trajectory.get("steps", [])
+    if not isinstance(steps, list):
+        print("steps:")
+        print("  (none)")
+        return
+
+    print("steps:")
+    for idx, step in enumerate(steps, start=1):
+        if not isinstance(step, dict):
+            continue
+        source = step.get("source", "?")
+        extra = step.get("extra") or {}
+        ancestry = extra.get("ancestry") if isinstance(extra, dict) else None
+        fn = ancestry.get("function_ancestry") if isinstance(ancestry, dict) else None
+        fn_name = fn.get("function_name") if isinstance(fn, dict) else "?"
+        fn_id = fn.get("function_id") if isinstance(fn, dict) else "?"
+        tool_calls = step.get("tool_calls")
+        tool_count = len(tool_calls) if isinstance(tool_calls, list) else 0
+        print(f"  {idx:>2}. source={source:<5} ancestry={fn_name} [{fn_id}] tool_calls={tool_count}")
+
+
 def main() -> None:
     """Parse the input JSON and print the ATIF function ancestry tree."""
     parser = argparse.ArgumentParser(description="Print ATIF function ancestry tree from workflow_output_atif.json")
     parser.add_argument("input_json", type=Path, help="Path to ATIF workflow output JSON")
     parser.add_argument(
         "--view",
-        choices=[
-            "ancestry", "ancestry_paths", "ancestry_required", "ancestry_compare", "execution", "execution_sequence"
-        ],
+        choices=["ancestry", "execution", "execution_sequence"],
         default="ancestry",
-        help=("Tree view type. 'ancestry'/'ancestry_compare' prints both convenience path-based and required "
-              "ancestry trees for A/B comparison. "
-              "'ancestry_paths' uses convenience path-based ancestry metadata only. "
-              "'ancestry_required' uses required ancestry fields (`ancestry`, `tool_ancestry`) only. "
-              "'execution' shows an aggregated path graph. "
-              "'execution_sequence' lists each path occurrence as its own branch."),
+        help=("Tree view type. 'ancestry' uses required ancestry fields (`ancestry`, `tool_ancestry`). "
+              "'execution' shows an aggregated execution graph. "
+              "'execution_sequence' lists each execution occurrence as its own branch."),
     )
     parser.add_argument(
         "--item-id",
         help="Only print a specific item_id (for example: 3).",
+    )
+    parser.add_argument(
+        "--show-steps",
+        action="store_true",
+        help="Print per-step source/ancestry/tool-call breakdown before the tree.",
     )
     args = parser.parse_args()
 
@@ -446,60 +483,32 @@ def main() -> None:
         if idx > 0:
             print()
         session_id = trajectory.get("session_id", "unknown-session")
+        total_steps, user_steps, agent_steps, total_tool_calls = _step_summary(trajectory)
         print(f"=== {label} | mode=atif | session_id={session_id} ===")
+        print("summary: "
+              f"steps={total_steps} (user={user_steps}, agent={agent_steps}), "
+              f"tool_calls={total_tool_calls}")
+        if args.show_steps:
+            _print_step_breakdown(trajectory)
         if args.view == "execution":
             edges, seen_counts = _build_execution_graph(trajectory)
             if not edges:
-                print("No path metadata found in trajectory steps.")
+                print("No ancestry metadata found in trajectory steps.")
                 continue
             _print_execution_tree(edges, seen_counts)
         elif args.view == "execution_sequence":
             chains = _build_execution_chains(trajectory)
             if not chains:
-                print("No path metadata found in trajectory steps.")
+                print("No ancestry metadata found in trajectory steps.")
                 continue
             _print_execution_sequence_tree(chains)
         else:
-            if args.view in ("ancestry", "ancestry_compare", "ancestry_paths"):
-                path_nodes = _build_nodes(trajectory)
-            else:
-                path_nodes = {}
-            if args.view in ("ancestry", "ancestry_compare", "ancestry_required"):
-                required_nodes = _build_nodes_from_required_ancestry(trajectory)
-            else:
-                required_nodes = {}
-
-            if args.view in ("ancestry_paths", ):
-                if not path_nodes:
-                    print("No convenience path ancestry metadata found in step.extra.")
-                    continue
-                print("--- convenience_paths ---")
-                _print_tree(path_nodes)
-                continue
-
-            if args.view in ("ancestry_required", ):
-                if not required_nodes:
-                    print("No required ancestry metadata (`ancestry`, `tool_ancestry`) found in step.extra.")
-                    continue
-                print("--- required_ancestry ---")
-                _print_tree(required_nodes)
-                continue
-
-            # Compare/default mode: print both trees for easy A/B visual diff.
-            if not path_nodes and not required_nodes:
+            required_nodes = _build_nodes_from_required_ancestry(trajectory)
+            if not required_nodes:
                 print("No ancestry metadata found in step.extra.")
                 continue
-            print("--- convenience_paths ---")
-            if path_nodes:
-                _print_tree(path_nodes)
-            else:
-                print("(missing)")
-            print()
             print("--- required_ancestry ---")
-            if required_nodes:
-                _print_tree(required_nodes)
-            else:
-                print("(missing)")
+            _print_tree(required_nodes)
 
 
 if __name__ == "__main__":

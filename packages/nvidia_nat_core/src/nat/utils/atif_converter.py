@@ -49,7 +49,6 @@ from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TraceMetadata
-from nat.data_models.invocation_node import InvocationNode
 
 logger = logging.getLogger(__name__)
 
@@ -134,9 +133,7 @@ def _extract_user_input(value: Any) -> str:
 
 def _atif_ancestry_from_ist(ist: IntermediateStep) -> AtifAncestry:
     """Build typed ATIF ancestry metadata from an IntermediateStep."""
-    return AtifAncestry(
-        function_ancestry=ist.function_ancestry,
-    )
+    return AtifAncestry(function_ancestry=ist.function_ancestry, )
 
 
 def _atif_invocation_from_ist(ist: IntermediateStep, *, invocation_id: str | None = None) -> AtifInvocationInfo:
@@ -158,43 +155,6 @@ def _atif_step_extra_model_from_ist(ist: IntermediateStep) -> AtifStepExtra:
         ancestry=_atif_ancestry_from_ist(ist),
         invocation=_atif_invocation_from_ist(ist),
     )
-
-
-def _index_invocation_node(index: dict[str, InvocationNode], node: InvocationNode) -> None:
-    """Track the latest seen invocation node by `function_id`."""
-    index[node.function_id] = node
-
-
-def _build_ancestry_path(node: InvocationNode, index: dict[str, InvocationNode]) -> list[InvocationNode]:
-    """Build best-effort root-to-leaf ancestry path for a node.
-
-    The builder follows parent links through previously seen invocation nodes.
-    If a parent node is not available in the index, it inserts a synthetic
-    parent placeholder using `parent_id`/`parent_name` from the child.
-    """
-    path_reverse: list[InvocationNode] = []
-    visited: set[str] = set()
-    current: InvocationNode | None = node
-
-    while current is not None and current.function_id not in visited:
-        path_reverse.append(current)
-        visited.add(current.function_id)
-
-        if current.parent_id is None:
-            break
-
-        parent = index.get(current.parent_id)
-        if parent is None:
-            inferred_parent_name = current.parent_name or ("root" if current.parent_id == "root" else current.parent_id)
-            path_reverse.append(InvocationNode(
-                function_id=current.parent_id,
-                function_name=inferred_parent_name,
-            ))
-            break
-
-        current = parent
-
-    return list(reversed(path_reverse))
 
 
 def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
@@ -239,7 +199,6 @@ class _ObservedInvocation:
     observation: ATIFObservationResult
     ancestry: AtifAncestry
     invocation: AtifInvocationInfo
-    ancestry_path: list[InvocationNode]
 
 
 class _PendingAgentTurn:
@@ -252,14 +211,11 @@ class _PendingAgentTurn:
         self.metrics = metrics
         self.ancestry: AtifAncestry | None = None
         self.invocation: AtifInvocationInfo | None = None
-        self.step_ancestry_path: list[InvocationNode] | None = None
         self.extra: dict[str, Any] = {}
         self.observed_invocations: list[_ObservedInvocation] = []
 
 
-def _record_observed_invocation(pending: _PendingAgentTurn,
-                                ist: IntermediateStep,
-                                invocation_index: dict[str, InvocationNode]) -> None:
+def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateStep) -> None:
     """Record an observed invocation as a tool_call + observation pair."""
     tool_name = ist.name or "unknown_tool"
     tool_input: dict[str, Any] = {}
@@ -275,7 +231,6 @@ def _record_observed_invocation(pending: _PendingAgentTurn,
             observation=ATIFObservationResult(source_call_id=call_id, content=tool_output),
             ancestry=_atif_ancestry_from_ist(ist),
             invocation=_atif_invocation_from_ist(ist, invocation_id=call_id),
-            ancestry_path=_build_ancestry_path(ist.function_ancestry, invocation_index),
         ))
 
 
@@ -311,7 +266,6 @@ class IntermediateStepToATIFConverter:
         total_prompt = 0
         total_completion = 0
         total_cached = 0
-        invocation_index: dict[str, InvocationNode] = {}
 
         def _flush_pending() -> None:
             nonlocal step_id, pending
@@ -323,7 +277,6 @@ class IntermediateStepToATIFConverter:
             observation = ATIFObservation(results=observations) if observations else None
             tool_ancestry = [obs.ancestry for obs in sorted_invocations]
             tool_invocations = [obs.invocation for obs in sorted_invocations] or None
-            tool_ancestry_paths = [obs.ancestry_path for obs in sorted_invocations] or None
             if pending.ancestry is None:
                 raise ValueError("Pending agent turn is missing required ATIF ancestry metadata")
             step_extra = AtifStepExtra(
@@ -331,8 +284,6 @@ class IntermediateStepToATIFConverter:
                 invocation=pending.invocation,
                 tool_ancestry=tool_ancestry,
                 tool_invocations=tool_invocations,
-                step_ancestry_path=pending.step_ancestry_path,
-                tool_ancestry_paths=tool_ancestry_paths,
                 **pending.extra,
             )
             atif_steps.append(
@@ -351,7 +302,6 @@ class IntermediateStepToATIFConverter:
             pending = None
 
         for ist in sorted_steps:
-            _index_invocation_node(invocation_index, ist.function_ancestry)
             event_type = ist.event_type
             category = ist.event_category
             state = ist.event_state
@@ -365,7 +315,6 @@ class IntermediateStepToATIFConverter:
                     if fn_name and fn_name != "root":
                         agent_config.name = fn_name
                 step_extra = _atif_step_extra_model_from_ist(ist)
-                step_extra.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, invocation_index)
                 extra = step_extra.model_dump(exclude_none=True)
                 atif_steps.append(
                     ATIFStep(
@@ -395,7 +344,6 @@ class IntermediateStepToATIFConverter:
                                                                      and ist.event_timestamp > last_agent_ts))
                 if should_emit_terminal_step:
                     step_extra = _atif_step_extra_model_from_ist(ist)
-                    step_extra.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, invocation_index)
                     extra = step_extra.model_dump(exclude_none=True)
                     atif_steps.append(
                         ATIFStep(
@@ -433,25 +381,21 @@ class IntermediateStepToATIFConverter:
                 )
                 pending.ancestry = _atif_ancestry_from_ist(ist)
                 pending.invocation = _atif_invocation_from_ist(ist)
-                pending.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, invocation_index)
                 continue
 
             if event_type == IntermediateStepType.TOOL_END:
                 if pending is not None:
-                    _record_observed_invocation(pending, ist, invocation_index)
+                    _record_observed_invocation(pending, ist)
                 else:
                     orphan_pending = _PendingAgentTurn(message="",
                                                        timestamp=ist.event_timestamp,
                                                        model_name=None,
                                                        metrics=None)
                     orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-                    orphan_pending.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, invocation_index)
-                    _record_observed_invocation(orphan_pending, ist, invocation_index)
+                    _record_observed_invocation(orphan_pending, ist)
                     invocation = orphan_pending.observed_invocations[0]
                     step_extra = _atif_step_extra_model_from_ist(ist)
-                    step_extra.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, invocation_index)
                     step_extra.tool_invocations = [invocation.invocation]
-                    step_extra.tool_ancestry_paths = [invocation.ancestry_path]
                     step_extra.tool_ancestry = [invocation.ancestry]
                     extra = step_extra.model_dump(exclude_none=True)
                     atif_steps.append(
@@ -469,7 +413,7 @@ class IntermediateStepToATIFConverter:
 
             if event_type == IntermediateStepType.FUNCTION_END:
                 if pending is not None:
-                    _record_observed_invocation(pending, ist, invocation_index)
+                    _record_observed_invocation(pending, ist)
                 continue
 
             if state == IntermediateStepState.START:
@@ -523,7 +467,6 @@ class ATIFStreamConverter:
         self._total_prompt = 0
         self._total_completion = 0
         self._total_cached = 0
-        self._invocation_index: dict[str, InvocationNode] = {}
 
     @property
     def agent_config(self) -> ATIFAgentConfig:
@@ -532,7 +475,6 @@ class ATIFStreamConverter:
 
     def push(self, ist: IntermediateStep) -> ATIFStep | None:
         """Process one IntermediateStep and return a flushed ATIF step if available."""
-        _index_invocation_node(self._invocation_index, ist.function_ancestry)
         event_type = ist.event_type
         category = ist.event_category
         state = ist.event_state
@@ -545,7 +487,6 @@ class ATIFStreamConverter:
             if fn_name and fn_name != "root":
                 self._agent_config.name = fn_name
             step_extra = _atif_step_extra_model_from_ist(ist)
-            step_extra.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, self._invocation_index)
             extra = step_extra.model_dump(exclude_none=True)
             step = ATIFStep(
                 step_id=self._step_id,
@@ -578,7 +519,6 @@ class ATIFStreamConverter:
                                                                  and ist.event_timestamp > last_agent_ts))
             if should_emit_terminal_step:
                 step_extra = _atif_step_extra_model_from_ist(ist)
-                step_extra.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, self._invocation_index)
                 extra = step_extra.model_dump(exclude_none=True)
                 final_step = ATIFStep(
                     step_id=self._step_id,
@@ -617,24 +557,20 @@ class ATIFStreamConverter:
             )
             self._pending.ancestry = _atif_ancestry_from_ist(ist)
             self._pending.invocation = _atif_invocation_from_ist(ist)
-            self._pending.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, self._invocation_index)
             return flushed
 
         if event_type == IntermediateStepType.TOOL_END:
             if self._pending is not None:
-                _record_observed_invocation(self._pending, ist, self._invocation_index)
+                _record_observed_invocation(self._pending, ist)
                 return None
 
             orphan_pending = _PendingAgentTurn(message="", timestamp=ist.event_timestamp, model_name=None, metrics=None)
             orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-            orphan_pending.step_ancestry_path = _build_ancestry_path(ist.function_ancestry, self._invocation_index)
-            _record_observed_invocation(orphan_pending, ist, self._invocation_index)
+            _record_observed_invocation(orphan_pending, ist)
             invocation = orphan_pending.observed_invocations[0]
             step_extra = _atif_step_extra_model_from_ist(ist)
-            step_extra.step_ancestry_path = orphan_pending.step_ancestry_path
             step_extra.tool_invocations = [invocation.invocation]
             step_extra.tool_ancestry = [invocation.ancestry]
-            step_extra.tool_ancestry_paths = [invocation.ancestry_path]
             extra = step_extra.model_dump(exclude_none=True)
             orphan_step = ATIFStep(
                 step_id=self._step_id,
@@ -651,7 +587,7 @@ class ATIFStreamConverter:
 
         if event_type == IntermediateStepType.FUNCTION_END:
             if self._pending is not None:
-                _record_observed_invocation(self._pending, ist, self._invocation_index)
+                _record_observed_invocation(self._pending, ist)
             return None
 
         if state == IntermediateStepState.END and category not in (
@@ -699,7 +635,6 @@ class ATIFStreamConverter:
         observation = ATIFObservation(results=observations) if observations else None
         tool_ancestry = [obs.ancestry for obs in sorted_invocations]
         tool_invocations = [obs.invocation for obs in sorted_invocations] or None
-        tool_ancestry_paths = [obs.ancestry_path for obs in sorted_invocations] or None
         if pending.ancestry is None:
             raise ValueError("Pending agent turn is missing required ATIF ancestry metadata")
         step_extra = AtifStepExtra(
@@ -707,8 +642,6 @@ class ATIFStreamConverter:
             invocation=pending.invocation,
             tool_ancestry=tool_ancestry,
             tool_invocations=tool_invocations,
-            step_ancestry_path=pending.step_ancestry_path,
-            tool_ancestry_paths=tool_ancestry_paths,
             **pending.extra,
         )
         step = ATIFStep(

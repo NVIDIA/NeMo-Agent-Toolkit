@@ -63,7 +63,7 @@ class AtifInvocationInfo(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_timing_or_identity(self) -> "AtifInvocationInfo":
+    def validate_timing_or_identity(self) -> AtifInvocationInfo:
         has_start = self.start_timestamp is not None
         has_end = self.end_timestamp is not None
         if has_start != has_end:
@@ -93,17 +93,4 @@ class AtifStepExtra(BaseModel):
         default=None,
         description=("Optional per-tool invocation timing metadata aligned by index with `tool_calls` when "
                      "present."),
-    )
-
-    # Experimental helper fields for migration, will be removed so don't use for any purpose other than troubleshooting
-    step_ancestry_path: list[InvocationNode] | None = Field(
-        default=None,
-        min_length=1,
-        description=("Optional derived root-to-leaf ancestry path for step context. "
-                     "Provided as a convenience helper for consumers."),
-    )
-    tool_ancestry_paths: list[list[InvocationNode]] | None = Field(
-        default=None,
-        description=("Optional derived root-to-leaf ancestry path per tool call, aligned by index with "
-                     "`tool_calls` when present. Provided as a convenience helper for consumers."),
     )

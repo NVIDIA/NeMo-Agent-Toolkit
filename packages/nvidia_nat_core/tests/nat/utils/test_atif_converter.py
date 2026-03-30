@@ -342,7 +342,7 @@ class TestBatchConverter:
         self,
         batch_converter: IntermediateStepToATIFConverter,
     ):
-        """Framework is included in step.extra when present in IntermediateStep."""
+        """Framework is included in invocation metadata when present."""
         steps = [
             _make_step(
                 IntermediateStepType.WORKFLOW_START,
@@ -366,7 +366,7 @@ class TestBatchConverter:
         result = batch_converter.convert(steps)
         agent_step = result.steps[1]
         assert agent_step.extra is not None
-        assert agent_step.extra["ancestry"]["framework"] == "langchain"
+        assert agent_step.extra["invocation"]["framework"] == "langchain"
 
     def test_final_metrics(
         self,
@@ -523,8 +523,8 @@ class TestBatchConverter:
         assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_id"] == "func-id-1"
         assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_name"] == "my_workflow"
 
-    def test_rich_paths_are_populated(self, batch_converter: IntermediateStepToATIFConverter):
-        """Rich lineage paths are populated in step.extra."""
+    def test_nested_tool_ancestry_is_populated(self, batch_converter: IntermediateStepToATIFConverter):
+        """Nested lineage is represented through canonical `tool_ancestry`."""
         steps = [
             _make_step(
                 IntermediateStepType.WORKFLOW_START,
@@ -571,14 +571,14 @@ class TestBatchConverter:
         result = batch_converter.convert(steps)
         agent_step = result.steps[1]
         assert agent_step.extra is not None
-        assert agent_step.extra.get("step_ancestry_path") is not None
-        assert [n["function_id"] for n in agent_step.extra["step_ancestry_path"]] == ["root", "wf-1"]
-        assert agent_step.extra.get("tool_ancestry_paths") is not None
-        assert len(agent_step.extra["tool_ancestry_paths"]) == 1
-        assert [n["function_id"] for n in agent_step.extra["tool_ancestry_paths"][0]] == ["root", "wf-1", "fn-1"]
+        assert agent_step.extra["ancestry"]["function_ancestry"]["function_id"] == "wf-1"
+        assert agent_step.extra.get("tool_ancestry") is not None
+        assert len(agent_step.extra["tool_ancestry"]) == 1
+        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_id"] == "fn-1"
+        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["parent_id"] == "wf-1"
 
-    def test_tool_paths_include_nested_internal_functions(self, batch_converter: IntermediateStepToATIFConverter):
-        """Nested internal function lineage is encoded in `tool_ancestry_paths`."""
+    def test_tool_ancestry_includes_nested_internal_functions(self, batch_converter: IntermediateStepToATIFConverter):
+        """Nested internal function lineage is encoded in canonical `tool_ancestry`."""
         steps = [
             _make_step(
                 IntermediateStepType.WORKFLOW_START,
@@ -637,11 +637,12 @@ class TestBatchConverter:
         assert agent_step.tool_calls is not None
         assert agent_step.tool_calls[0].function_name == "power_of_two"
         assert agent_step.extra is not None
-        assert agent_step.extra.get("tool_ancestry_paths") is not None
-        tool_path_ids = [node["function_id"] for node in agent_step.extra["tool_ancestry_paths"][0]]
-        tool_path_names = [node["function_name"] for node in agent_step.extra["tool_ancestry_paths"][0]]
-        assert tool_path_ids == ["root", "wf-1", "fn-power", "fn-mul"]
-        assert tool_path_names == ["root", "<workflow>", "power_of_two", "calculator__multiply"]
+        assert agent_step.extra.get("tool_ancestry") is not None
+        tool_fn = agent_step.extra["tool_ancestry"][0]["function_ancestry"]
+        assert tool_fn["function_id"] == "fn-mul"
+        assert tool_fn["function_name"] == "calculator__multiply"
+        assert tool_fn["parent_id"] == "fn-power"
+        assert tool_fn["parent_name"] == "power_of_two"
 
     def test_observed_invocations_ordered_by_span_start(self, batch_converter: IntermediateStepToATIFConverter):
         """Observed invocations are ordered by span start, not end arrival."""
