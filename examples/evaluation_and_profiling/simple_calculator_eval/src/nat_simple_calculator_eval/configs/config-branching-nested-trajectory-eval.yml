@@ -17,7 +17,6 @@
 #   react_agent -> power_branch -> {square_via_multiply, cube_via_multiply_chain}
 # and both internal branches call calculator__multiply.
 
-# install arize-phoenix and run `phoenix serve` before launching
 general:
   telemetry:
     tracing:
