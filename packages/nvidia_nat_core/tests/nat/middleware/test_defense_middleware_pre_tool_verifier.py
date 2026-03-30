@@ -30,6 +30,7 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 
 _MAX_CONTENT_LENGTH = 32000
 _STRIDE = _MAX_CONTENT_LENGTH // 2  # 50% overlap — injections ≤ _STRIDE chars are guaranteed full coverage
+_MAX_CHUNKS = 16
 
 
 class _TestInput(BaseModel):
@@ -81,6 +82,10 @@ class TestAnalyzeContentChunking:
       - 64000 chars  → range(0, 64000, 16000) → 4 windows
       - 80000 chars  → range(0, 80000, 16000) → 5 windows
       - 96000 chars  → range(0, 96000, 16000) → 6 windows
+
+    The loop exits early as soon as a window returns should_refuse=True, so call counts
+    may be lower than the total window count when a violation is found mid-scan.
+    Inputs requiring more than _MAX_CHUNKS windows bypass LLM calls entirely.
     """
 
     async def test_short_content_single_llm_call(self, mock_builder, middleware_context):
@@ -116,12 +121,13 @@ class TestAnalyzeContentChunking:
         assert not result.violation_detected
 
     async def test_malicious_payload_in_middle_window_detected(self, mock_builder, middleware_context):
-        """A violation in any window of long content is detected."""
+        """A violation in any window of long content is detected; early exit stops remaining windows."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
-        # 96000 chars → 6 windows; window 2 carries the violation
+        # 96000 chars → 6 windows; window 2 carries the violation.
+        # Early exit fires after window 2 (should_refuse=True), so only 3 calls are made.
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(False, confidence=0.1, reason="clean"),
@@ -135,7 +141,7 @@ class TestAnalyzeContentChunking:
         long_content = "a" * (_MAX_CONTENT_LENGTH * 3)
         result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
 
-        assert mock_llm.ainvoke.call_count == 6
+        assert mock_llm.ainvoke.call_count == 3
         assert result.violation_detected
         assert result.should_refuse
         assert result.confidence == 0.95
@@ -186,7 +192,8 @@ class TestAnalyzeContentChunking:
 
     async def test_windowed_max_confidence_taken(self, mock_builder, middleware_context):
         """Aggregated confidence is the maximum across all windows."""
-        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance", threshold=0.7)
+        # threshold=0.99 prevents early exit so all windows are scanned and max confidence is correct
+        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance", threshold=0.99)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
@@ -206,7 +213,8 @@ class TestAnalyzeContentChunking:
 
     async def test_windowed_violation_types_deduplicated(self, mock_builder, middleware_context):
         """Violation types from all windows are merged without duplicates."""
-        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
+        # threshold=0.99 prevents early exit so all windows are scanned and types from both are merged
+        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance", threshold=0.99)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
@@ -252,7 +260,8 @@ class TestAnalyzeContentChunking:
 
     async def test_windowed_reasons_combined(self, mock_builder, middleware_context):
         """Reasons from all violating windows are combined with semicolons."""
-        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance")
+        # threshold=0.99 prevents early exit so all windows are scanned and both reasons are collected
+        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="partial_compliance", threshold=0.99)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
@@ -279,6 +288,7 @@ class TestAnalyzeContentChunking:
         With stride=_STRIDE, window 1 starts at _STRIDE and ends at _STRIDE+_MAX_CONTENT_LENGTH,
         so it spans the position _MAX_CONTENT_LENGTH that was previously a hard boundary.
         Any injection straddling that boundary is fully visible in window 1.
+        Early exit fires after window 1 (should_refuse=True), so only 2 calls are made.
         """
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
@@ -286,9 +296,9 @@ class TestAnalyzeContentChunking:
         mock_llm = AsyncMock()
         # 64000 chars → 4 windows:
         #   window 0: [0 : 32000]            - clean (only left side of old boundary)
-        #   window 1: [16000 : 48000]         - VIOLATION (spans old boundary at 32000)
-        #   window 2: [32000 : 64000]         - clean (only right side of old boundary)
-        #   window 3: [48000 : 64000] (short) - clean
+        #   window 1: [16000 : 48000]         - VIOLATION (spans old boundary at 32000) → early exit
+        #   window 2: [32000 : 64000]         - never reached
+        #   window 3: [48000 : 64000] (short) - never reached
         mock_llm.ainvoke = AsyncMock(side_effect=[
             _make_llm_response(False, confidence=0.1, reason="clean"),
             _make_llm_response(True, confidence=0.9, reason="injection spanning old boundary"),
@@ -300,7 +310,7 @@ class TestAnalyzeContentChunking:
         long_content = "a" * (_MAX_CONTENT_LENGTH * 2)
         result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
 
-        assert mock_llm.ainvoke.call_count == 4
+        assert mock_llm.ainvoke.call_count == 2
 
         # Verify window 1 was passed content starting at _STRIDE (spans the old boundary)
         window1_messages = mock_llm.ainvoke.call_args_list[1][0][0]
@@ -312,6 +322,46 @@ class TestAnalyzeContentChunking:
         assert result.should_refuse
         assert result.confidence == 0.9
         assert result.sanitized_input is None
+
+    async def test_early_exit_stops_after_first_refusing_window(self, mock_builder, middleware_context):
+        """Scanning stops immediately after the first window that returns should_refuse=True."""
+        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
+        middleware = PreToolVerifierMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        # 64000 chars → 4 windows; window 0 carries the violation → only 1 call should be made
+        mock_llm.ainvoke = AsyncMock(side_effect=[
+            _make_llm_response(True, confidence=0.95, reason="early violation"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+            _make_llm_response(False, confidence=0.1, reason="clean"),
+        ])
+        middleware._llm = mock_llm
+
+        long_content = "a" * (_MAX_CONTENT_LENGTH * 2)
+        result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
+
+        assert mock_llm.ainvoke.call_count == 1
+        assert result.violation_detected
+        assert result.should_refuse
+
+    async def test_over_cap_randomly_samples_max_chunks_windows(self, mock_builder, middleware_context):
+        """Input requiring more than _MAX_CHUNKS windows is analyzed by sampling exactly _MAX_CHUNKS windows."""
+        config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
+        middleware = PreToolVerifierMiddleware(config, mock_builder)
+
+        mock_llm = AsyncMock()
+        mock_llm.ainvoke = AsyncMock(return_value=_make_llm_response(False, confidence=0.1))
+        middleware._llm = mock_llm
+
+        # (_MAX_CHUNKS * _STRIDE) + 1 chars → _MAX_CHUNKS + 1 windows, exceeding the cap
+        over_cap_content = "a" * (_MAX_CHUNKS * _STRIDE + 1)
+        result = await middleware._analyze_content(over_cap_content, function_name=middleware_context.name)
+
+        # All sampled windows are clean → exactly _MAX_CHUNKS calls, no early exit
+        assert mock_llm.ainvoke.call_count == _MAX_CHUNKS
+        assert not result.violation_detected
+        assert not result.should_refuse
 
     async def test_windowed_error_in_one_window_propagates(self, mock_builder, middleware_context):
         """An error in any window sets error=True on the aggregated result."""
