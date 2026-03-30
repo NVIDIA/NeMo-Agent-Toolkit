@@ -46,6 +46,12 @@ This example demonstrates how to evaluate and profile AI agent performance using
 phoenix serve
 ```
 
+If your environment does not include the `phoenix` CLI, install it with:
+
+```bash
+uv pip install arize-phoenix
+```
+
 ## Installation
 
 Install this evaluation example:
