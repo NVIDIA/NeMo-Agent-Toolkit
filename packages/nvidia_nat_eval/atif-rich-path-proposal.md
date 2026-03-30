@@ -56,21 +56,21 @@ metadata.
 
 - `function_ancestry: InvocationNode` (required)
   - Callable ancestry node for this record.
-- `framework: str | None` (optional)
-  - Runtime/framework label (for example, `langchain`).
 
 ### `AtifInvocationInfo`
 
 `AtifInvocationInfo` represents one invocation occurrence with timing metadata.
 
-- `start_timestamp: float` (required)
-  - Invocation start timestamp in epoch seconds.
-- `end_timestamp: float` (required)
-  - Invocation end timestamp in epoch seconds.
+- `start_timestamp: float | None` (optional)
+  - Invocation start timestamp in epoch seconds when timed.
+- `end_timestamp: float | None` (optional)
+  - Invocation end timestamp in epoch seconds when timed.
 - `invocation_id: str | None` (optional)
   - Optional stable invocation identifier for correlation.
 - `status: str | None` (optional)
   - Optional terminal status for the invocation.
+- `framework: str | None` (optional)
+  - Runtime/framework label (for example, `langchain`).
 
 ### `AtifStepExtra`
 
@@ -144,7 +144,7 @@ Consumers should implement lineage reads in this order:
 - `len(tool_ancestry)` matches `len(tool_calls)` for emitted invocation lineage.
 - Index alignment is stable (`tool_calls[i]` maps to `tool_ancestry[i]`).
 - If `tool_invocations` is emitted, `len(tool_invocations)` equals `len(tool_calls)`.
-- If `invocation` or `tool_invocations` is emitted, `start_timestamp <= end_timestamp`.
+- If one of `start_timestamp` / `end_timestamp` is set, the other must also be set.
 
 ## Upstreaming Path to `AtifStep`
 

@@ -19,6 +19,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import model_validator
 
 from nat.data_models.invocation_node import InvocationNode
 
@@ -32,10 +33,6 @@ class AtifAncestry(BaseModel):
         ...,
         description="Function ancestry for the event represented by this metadata entry.",
     )
-    framework: str | None = Field(
-        default=None,
-        description="Optional LLM framework identifier (for example, `langchain`).",
-    )
 
 
 class AtifInvocationInfo(BaseModel):
@@ -43,12 +40,12 @@ class AtifInvocationInfo(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    start_timestamp: float = Field(
-        ...,
+    start_timestamp: float | None = Field(
+        default=None,
         description="Invocation start timestamp in epoch seconds.",
     )
-    end_timestamp: float = Field(
-        ...,
+    end_timestamp: float | None = Field(
+        default=None,
         description="Invocation end timestamp in epoch seconds.",
     )
     invocation_id: str | None = Field(
@@ -60,6 +57,18 @@ class AtifInvocationInfo(BaseModel):
         default=None,
         description="Optional terminal status for the invocation (for example, `completed`, `error`).",
     )
+    framework: str | None = Field(
+        default=None,
+        description="Optional LLM framework identifier (for example, `langchain`).",
+    )
+
+    @model_validator(mode="after")
+    def validate_timing_or_identity(self) -> "AtifInvocationInfo":
+        has_start = self.start_timestamp is not None
+        has_end = self.end_timestamp is not None
+        if has_start != has_end:
+            raise ValueError("start_timestamp and end_timestamp must both be set, or both be null")
+        return self
 
 
 class AtifStepExtra(BaseModel):

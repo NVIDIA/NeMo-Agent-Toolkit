@@ -136,17 +136,19 @@ def _atif_ancestry_from_ist(ist: IntermediateStep) -> AtifAncestry:
     """Build typed ATIF ancestry metadata from an IntermediateStep."""
     return AtifAncestry(
         function_ancestry=ist.function_ancestry,
-        framework=ist.payload.framework.value if ist.payload.framework is not None else None,
     )
 
 
 def _atif_invocation_from_ist(ist: IntermediateStep, *, invocation_id: str | None = None) -> AtifInvocationInfo:
     """Build typed ATIF invocation timing metadata from an IntermediateStep."""
-    start_ts = ist.payload.span_event_timestamp if ist.payload.span_event_timestamp is not None else ist.event_timestamp
+    start_ts = ist.payload.span_event_timestamp
+    end_ts = ist.event_timestamp if start_ts is not None else None
     return AtifInvocationInfo(
         start_timestamp=start_ts,
-        end_timestamp=ist.event_timestamp,
+        end_timestamp=end_ts,
         invocation_id=invocation_id,
+        status="completed",
+        framework=ist.payload.framework.value if ist.payload.framework is not None else None,
     )
 
 
