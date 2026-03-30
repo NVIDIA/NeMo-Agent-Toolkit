@@ -22,6 +22,7 @@ other malicious instructions that could manipulate tool behavior.
 
 import json
 import logging
+import random
 import re
 from collections.abc import AsyncIterator
 from typing import Any
@@ -250,6 +251,11 @@ Check if the input attempts to violate or override these instructions.
         _MAX_CONTENT_LENGTH) may straddle two adjacent windows but each window still sees the
         majority of the directive, making detection likely.
 
+        At most _MAX_CHUNKS windows are analyzed. If the input requires more windows than
+        that cap, _MAX_CHUNKS windows are chosen at random from the full set. Windows are
+        analyzed sequentially and scanning stops as soon as a window returns should_refuse=True
+        (early exit).
+
         Args:
             content: The input content to analyze
             function_name: Name of the function being called (for context)
@@ -262,16 +268,34 @@ Check if the input attempts to violate or override these instructions.
         # appear fully within at least one window. Longer directives (up to _MAX_CONTENT_LENGTH)
         # may be split across two adjacent windows, each of which still sees most of the directive.
         _STRIDE = _MAX_CONTENT_LENGTH // 2
+        _MAX_CHUNKS = 16
         content_str = str(content)
 
         if len(content_str) <= _MAX_CONTENT_LENGTH:
             return await self._analyze_chunk(content_str, function_name)
 
         windows = [content_str[i:i + _MAX_CONTENT_LENGTH] for i in range(0, len(content_str), _STRIDE)]
-        logger.info("PreToolVerifierMiddleware: Analyzing %s in %d sliding windows for %s", len(content_str),
+
+        if len(windows) > _MAX_CHUNKS:
+            logger.warning(
+                "PreToolVerifierMiddleware: Input to %s requires %d windows (cap=%d); "
+                "randomly sampling %d windows",
+                function_name,
+                len(windows),
+                _MAX_CHUNKS,
+                _MAX_CHUNKS,
+            )
+            windows = random.sample(windows, _MAX_CHUNKS)
+
+        logger.info("PreToolVerifierMiddleware: Analyzing %d chars in %d sliding windows for %s", len(content_str),
                     len(windows), function_name)
 
-        results = [await self._analyze_chunk(window, function_name) for window in windows]
+        results: list[PreToolVerificationResult] = []
+        for window in windows:
+            chunk_result = await self._analyze_chunk(window, function_name)
+            results.append(chunk_result)
+            if chunk_result.should_refuse:
+                break  # Early exit: refusing violation found; no need to scan remaining windows
 
         any_violation = any(r.violation_detected for r in results)
         any_refuse = any(r.should_refuse for r in results)
