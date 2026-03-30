@@ -197,25 +197,6 @@ wheels = [
 ]
 
 [[package]]
-name = "arize-phoenix-otel"
-version = "0.15.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-instrumentation" },
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-exporter-otlp" },
-    { name = "opentelemetry-proto" },
-    { name = "opentelemetry-sdk" },
-    { name = "opentelemetry-semantic-conventions" },
-    { name = "typing-extensions" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/f5/f0/b254118db28a2a202573472be67cf61f09cb37912bfde45b27ddc1c5b71f/arize_phoenix_otel-0.15.0.tar.gz", hash = "sha256:56c7dae09aaaa80df9e9595b7384c1bd4054b69b6032ab18e3a110a59b488388", size = 20254, upload-time = "2026-03-02T20:19:04.112Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/4d/70d9c9d7137cc2e2aad819932172ef13ce21b4e60bf258910b9f15e426af/arize_phoenix_otel-0.15.0-py3-none-any.whl", hash = "sha256:5ff4d03b52d2dbd9c2a234417848f6b171cd220dc3c4020cf3568be84b89b88b", size = 17697, upload-time = "2026-03-02T20:19:03.242Z" },
-]
-
-[[package]]
 name = "asgi-lifespan"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1963,13 +1944,13 @@ name = "nat-simple-calculator-eval"
 source = { editable = "." }
 dependencies = [
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "phoenix", "profiler", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-calculator", editable = "../../getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "phoenix", "profiler", "test"], editable = "../../../" },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "test"], editable = "../../../" },
 ]
 
 [[package]]
@@ -2061,9 +2042,6 @@ eval = [
 ]
 langchain = [
     { name = "nvidia-nat-langchain" },
-]
-phoenix = [
-    { name = "nvidia-nat-phoenix" },
 ]
 profiler = [
     { name = "nvidia-nat-profiler" },
@@ -2395,26 +2373,6 @@ requires-dist = [
 provides-extras = ["test"]
 
 [[package]]
-name = "nvidia-nat-phoenix"
-source = { editable = "../../../packages/nvidia_nat_phoenix" }
-dependencies = [
-    { name = "arize-phoenix-otel" },
-    { name = "nvidia-nat-core" },
-    { name = "nvidia-nat-opentelemetry" },
-    { name = "openinference-instrumentation" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "arize-phoenix-otel", specifier = ">=0.13.1,<1.0.0" },
-    { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
-    { name = "nvidia-nat-opentelemetry", editable = "../../../packages/nvidia_nat_opentelemetry" },
-    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
-    { name = "openinference-instrumentation" },
-]
-provides-extras = ["test"]
-
-[[package]]
 name = "nvidia-nat-profiler"
 source = { editable = "../../../packages/nvidia_nat_profiler" }
 dependencies = [
@@ -2494,21 +2452,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d4/37/31e23ef661fa4c3c6a3c979afd884b30205512b4dde680b36d5909550500/openevals-0.1.3.tar.gz", hash = "sha256:9b00df1a7738464676aa887d4d950b77d3ef7024f6e8a54be3a83c82f485ea65", size = 100828, upload-time = "2025-12-18T04:09:03.034Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0d/68/162b0d273ffef5b0ad557ebccb790725bf94d78969702324dd5726828cf0/openevals-0.1.3-py3-none-any.whl", hash = "sha256:aed448df0cfdded732e24cda026eda065435a71ffb8c406a3ce73e590156d9f9", size = 67802, upload-time = "2025-12-18T04:09:01.59Z" },
-]
-
-[[package]]
-name = "openinference-instrumentation"
-version = "0.1.46"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "openinference-semantic-conventions" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-sdk" },
-    { name = "wrapt" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/64/8d/9b76b43e8b2ee2ccf1fe15b21c924095f9c0e4839919bcd4951b1c99c2ab/openinference_instrumentation-0.1.46.tar.gz", hash = "sha256:0b520002a1c682c525dcab49005c209bfd71611e8e4e4933b49779d5e899e6db", size = 23937, upload-time = "2026-03-04T10:13:48.883Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/25/d1/f6668492152a4180492044313e2dc427fbc237904f6bb1629abd030e3469/openinference_instrumentation-0.1.46-py3-none-any.whl", hash = "sha256:f7b63ccd5f93ce82e4e40035c9faa6b021984cbe06ad791f4cf033551533bc48", size = 30124, upload-time = "2026-03-04T10:13:47.613Z" },
 ]
 
 [[package]]
