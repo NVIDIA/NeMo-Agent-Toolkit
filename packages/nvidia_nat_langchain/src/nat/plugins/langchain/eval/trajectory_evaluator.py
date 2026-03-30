@@ -136,8 +136,8 @@ def _dedupe_adjacent_actions(agent_actions: list[tuple[AgentAction, str]]) -> li
     for action, output in agent_actions:
         if deduped:
             prev_action, prev_output = deduped[-1]
-            if (prev_action.tool == action.tool and prev_action.tool_input == action.tool_input and prev_action.log == action.log
-                    and prev_output == output):
+            if (prev_action.tool == action.tool and prev_action.tool_input == action.tool_input
+                    and prev_action.log == action.log and prev_output == output):
                 continue
         deduped.append((action, output))
     return deduped

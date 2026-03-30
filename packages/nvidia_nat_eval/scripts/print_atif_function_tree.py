@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
@@ -447,6 +448,120 @@ def _print_step_breakdown(trajectory: dict[str, Any]) -> None:
         print(f"  {idx:>2}. source={source:<5} ancestry={fn_name} [{fn_id}] tool_calls={tool_count}")
 
 
+def _validate_trajectory_contract(trajectory: dict[str, Any]) -> list[str]:
+    """Validate ATIF lineage/invocation contract invariants for one trajectory."""
+    issues: list[str] = []
+    steps = trajectory.get("steps", [])
+    if not isinstance(steps, list):
+        return ["steps is not a list"]
+
+    known_function_ids: set[str] = {"root"}
+    lineage_nodes: list[tuple[int, str, str | None]] = []
+
+    for step_idx, step in enumerate(steps, start=1):
+        if not isinstance(step, dict):
+            issues.append(f"step {step_idx}: step is not an object")
+            continue
+
+        extra = step.get("extra") or {}
+        if not isinstance(extra, dict):
+            issues.append(f"step {step_idx}: extra is not an object")
+            continue
+
+        # Step-level ancestry node collection for parent-chain validation.
+        ancestry = extra.get("ancestry")
+        if isinstance(ancestry, dict):
+            fn = ancestry.get("function_ancestry")
+            if isinstance(fn, dict):
+                function_id = str(fn.get("function_id") or "")
+                parent_id = str(fn.get("parent_id")) if fn.get("parent_id") is not None else None
+                if function_id:
+                    known_function_ids.add(function_id)
+                    lineage_nodes.append((step_idx, function_id, parent_id))
+
+        tool_calls = step.get("tool_calls") or []
+        if not isinstance(tool_calls, list):
+            issues.append(f"step {step_idx}: tool_calls is not a list")
+            tool_calls = []
+
+        tool_ancestry = extra.get("tool_ancestry") or []
+        if not isinstance(tool_ancestry, list):
+            issues.append(f"step {step_idx}: tool_ancestry is not a list")
+            tool_ancestry = []
+
+        tool_invocations_raw = extra.get("tool_invocations")
+        tool_invocations = tool_invocations_raw if isinstance(tool_invocations_raw, list) else None
+        if tool_invocations_raw is not None and tool_invocations is None:
+            issues.append(f"step {step_idx}: tool_invocations is not a list")
+
+        # Invariant: aligned arrays.
+        if tool_calls and len(tool_ancestry) != len(tool_calls):
+            issues.append(f"step {step_idx}: len(tool_ancestry)={len(tool_ancestry)} != len(tool_calls)={len(tool_calls)}")
+        if tool_invocations is not None and len(tool_invocations) != len(tool_calls):
+            issues.append(
+                f"step {step_idx}: len(tool_invocations)={len(tool_invocations)} != len(tool_calls)={len(tool_calls)}")
+
+        # Invariant: unique call IDs per step and observation linkage.
+        obs_results = (step.get("observation") or {}).get("results") or []
+        obs_ids = {
+            r.get("source_call_id")
+            for r in obs_results
+            if isinstance(r, dict) and r.get("source_call_id")
+        }
+        seen_call_ids: set[str] = set()
+        for i, tool_call in enumerate(tool_calls):
+            if not isinstance(tool_call, dict):
+                issues.append(f"step {step_idx}: tool_calls[{i}] is not an object")
+                continue
+            call_id = str(tool_call.get("tool_call_id") or "")
+            if not call_id:
+                issues.append(f"step {step_idx}: tool_calls[{i}] missing tool_call_id")
+                continue
+            if call_id in seen_call_ids:
+                issues.append(f"step {step_idx}: duplicate tool_call_id {call_id}")
+            seen_call_ids.add(call_id)
+            if call_id not in obs_ids:
+                issues.append(f"step {step_idx}: missing observation source_call_id for {call_id}")
+
+            if i < len(tool_ancestry):
+                ta = tool_ancestry[i]
+                fn = (ta.get("function_ancestry") if isinstance(ta, dict) else None)
+                if not isinstance(fn, dict):
+                    issues.append(f"step {step_idx}: tool_ancestry[{i}] missing function_ancestry")
+                else:
+                    function_id = str(fn.get("function_id") or "")
+                    parent_id = str(fn.get("parent_id")) if fn.get("parent_id") is not None else None
+                    if not function_id:
+                        issues.append(f"step {step_idx}: tool_ancestry[{i}] missing function_id")
+                    else:
+                        known_function_ids.add(function_id)
+                        lineage_nodes.append((step_idx, function_id, parent_id))
+
+            if tool_invocations is not None and i < len(tool_invocations):
+                inv = tool_invocations[i] if isinstance(tool_invocations[i], dict) else {}
+                start_ts = inv.get("start_timestamp")
+                end_ts = inv.get("end_timestamp")
+                if (start_ts is None) ^ (end_ts is None):
+                    issues.append(f"step {step_idx}: tool_invocations[{i}] has partial timestamps")
+
+        # Invariant: step-level invocation timestamp pairing.
+        invocation = extra.get("invocation")
+        if isinstance(invocation, dict):
+            start_ts = invocation.get("start_timestamp")
+            end_ts = invocation.get("end_timestamp")
+            if (start_ts is None) ^ (end_ts is None):
+                issues.append(f"step {step_idx}: invocation has partial timestamps")
+
+    # Invariant: parent chain references resolve to known nodes or root.
+    for step_idx, function_id, parent_id in lineage_nodes:
+        if parent_id in (None, "", "root"):
+            continue
+        if parent_id not in known_function_ids:
+            issues.append(f"step {step_idx}: parent_id {parent_id} for {function_id} not found in trajectory lineage")
+
+    return issues
+
+
 def main() -> None:
     """Parse the input JSON and print the ATIF function ancestry tree."""
     parser = argparse.ArgumentParser(description="Print ATIF function ancestry tree from workflow_output_atif.json")
@@ -468,6 +583,12 @@ def main() -> None:
         action="store_true",
         help="Print per-step source/ancestry/tool-call breakdown before the tree.",
     )
+    parser.add_argument(
+        "--validate",
+        action="store_true",
+        help=("Validate ATIF lineage/invocation contract invariants and return non-zero exit code "
+              "when violations are found."),
+    )
     args = parser.parse_args()
 
     payload = _load_json(args.input_json)
@@ -479,6 +600,7 @@ def main() -> None:
             print(f"No trajectory found for item_id={args.item_id}")
             return
 
+    had_validation_errors = False
     for idx, (label, trajectory) in enumerate(trajectories):
         if idx > 0:
             print()
@@ -509,6 +631,21 @@ def main() -> None:
                 continue
             print("--- required_ancestry ---")
             _print_tree(required_nodes)
+
+        if args.validate:
+            issues = _validate_trajectory_contract(trajectory)
+            if issues:
+                had_validation_errors = True
+                print("--- validation ---")
+                print(f"FAILED ({len(issues)} issues)")
+                for issue in issues:
+                    print(f"- {issue}")
+            else:
+                print("--- validation ---")
+                print("PASSED")
+
+    if args.validate and had_validation_errors:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
