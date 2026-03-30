@@ -5953,13 +5953,13 @@ name = "nat-simple-calculator-eval"
 source = { editable = "examples/evaluation_and_profiling/simple_calculator_eval" }
 dependencies = [
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "phoenix", "profiler", "test"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "phoenix", "profiler", "test"], editable = "." },
 ]
 
 [[package]]
