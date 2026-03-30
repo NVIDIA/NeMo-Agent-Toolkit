@@ -68,6 +68,7 @@ mcp = ["nvidia-nat-mcp == {version}"]
 mem0ai = ["nvidia-nat-mem0ai == {version}"]
 memmachine = ["nvidia-nat-memmachine == {version}"]
 nemo-customizer = ["nvidia-nat-nemo-customizer == {version}"]
+oci = ["nvidia-nat-langchain[oci] == {version}"]
 openpipe-art = ["nvidia-nat-openpipe-art == {version}"]
 opentelemetry = ["nvidia-nat-opentelemetry == {version}"]
 phoenix = ["nvidia-nat-phoenix == {version}"]
@@ -119,6 +120,7 @@ most = [
   "nvidia-nat-s3 == {version}",
   "nvidia-nat-security == {version}",
   "nvidia-nat-semantic-kernel == {version}",
+  "nvidia-nat-strands == {version}",
   "nvidia-nat-test == {version}",
   "nvidia-nat-vanna == {version}",
   "nvidia-nat-weave == {version}",
@@ -216,10 +218,8 @@ conflicts = [
     # (adk|crewai)<>openpipe-art have incompatible litellm versions
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
-    # langchain<>strands have incompatible openai versions (`langchain-oci` requires >=2, `strands-agents[openai]` requires <2)
-    [{ extra = "langchain" }, { extra = "strands" }],
-    [{ extra = "langchain" }, { extra = "most" }],
-    [{ extra = "most" }, { extra = "strands" }],
+    # oci<>strands have incompatible openai versions (`langchain-oci` requires >=2, `strands-agents[openai]` requires <2)
+    [{ extra = "oci" }, { extra = "strands" }],
     [{ extra = "strands" }, { extra = "vanna" }],
     [{ extra = "most" }, { extra = "openpipe-art" }],
     # (strands|adk)<>ragaai have incompatible tenacity versions

@@ -28,7 +28,7 @@ NVIDIA NeMo Agent Toolkit supports the following LLM providers:
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [AWS Bedrock](https://aws.amazon.com/bedrock/) | `aws_bedrock` | AWS Bedrock API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
-| [OCI Generative AI](https://docs.oracle.com/en-us/iaas/Content/generative-ai/home.htm) | `oci` | OCI Generative AI via the OCI SDK-backed `langchain-oci` integration |
+| [OCI Generative AI](https://docs.oracle.com/en-us/iaas/Content/generative-ai/home.htm) | `oci` | OCI Generative AI |
 | [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
 | [Hugging Face](https://huggingface.co) | `huggingface` | Hugging Face API |
 | [Hugging Face Inference](https://huggingface.co/docs/api-inference) | `huggingface_inference` | Hugging Face Inference API, Endpoints, and TGI |
