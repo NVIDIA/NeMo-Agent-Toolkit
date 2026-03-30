@@ -245,6 +245,22 @@ def azure_openai_keys_fixture(fail_missing: bool):
         fail_missing=fail_missing)
 
 
+@pytest.fixture(name="oci_genai", scope='session')
+def oci_genai_fixture(fail_missing: bool) -> Generator[dict[str, str], None, None]:
+    """
+    Use for integration tests that require OCI Generative AI credentials.
+    Required: OCI_COMPARTMENT_ID.
+    Optional: OCI_REGION (default: us-chicago-1), OCI_META_MODEL (default: meta.llama-3.3-70b-instruct),
+              OCI_GOOGLE_MODEL (default: google.gemini-2.5-flash).
+    Auth is read from ~/.oci/config using the DEFAULT profile.
+    """
+    yield require_env_variables(
+        varnames=["OCI_COMPARTMENT_ID"],
+        reason="OCI Generative AI integration tests require the `OCI_COMPARTMENT_ID` environment variable to be defined.",
+        fail_missing=fail_missing,
+    )
+
+
 @pytest.fixture(name="langfuse_keys", scope='session')
 def langfuse_keys_fixture(fail_missing: bool):
     """

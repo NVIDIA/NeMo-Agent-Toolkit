@@ -25,6 +25,7 @@ from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.oci_llm import OCIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 
 
@@ -199,3 +200,59 @@ async def test_huggingface_langchain_agent():
         assert response.content is not None
         assert isinstance(response.content, str)
         assert "3" in response.content.lower()
+
+
+# ---------------------------------------------------------------------------
+# OCI Generative AI → LangChain integration tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("oci_genai")
+@pytest.mark.parametrize(
+    "model_env_var,provider",
+    [
+        ("OCI_META_MODEL", "meta"),
+        ("OCI_GOOGLE_MODEL", "google"),
+    ],
+    ids=["llama", "gemini"],
+)
+async def test_oci_langchain_agent(model_env_var: str, provider: str):
+    """
+    Integration test for OCI Generative AI LLM with LangChain.
+    Requires OCI_COMPARTMENT_ID env var. Uses DEFAULT profile from ~/.oci/config.
+    OCI_REGION defaults to us-chicago-1.
+    OCI_META_MODEL defaults to meta.llama-3.3-70b-instruct.
+    OCI_GOOGLE_MODEL defaults to google.gemini-2.5-flash.
+    """
+    _defaults = {
+        "OCI_META_MODEL": "meta.llama-3.3-70b-instruct",
+        "OCI_GOOGLE_MODEL": "google.gemini-2.5-flash",
+    }
+    model_name = os.environ.get(model_env_var, _defaults[model_env_var])
+
+    prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
+
+    llm_config = OCIModelConfig(
+        model_name=model_name,
+        compartment_id=os.environ["OCI_COMPARTMENT_ID"],
+        region=os.environ.get("OCI_REGION", "us-chicago-1"),
+        auth_type="API_KEY",
+        auth_profile="DEFAULT",
+        provider=provider,
+        temperature=0.0,
+        max_tokens=64,
+    )
+
+    async with WorkflowBuilder() as builder:
+        await builder.add_llm("oci_llm", llm_config)
+        llm = await builder.get_llm("oci_llm", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+
+        agent = prompt | llm
+        response = await agent.ainvoke({"input": "What is 1+2? Reply with only the number."})
+
+        assert isinstance(response, AIMessage)
+        assert response.content is not None
+        assert isinstance(response.content, str)
+        assert len(response.content) > 0
+        assert "3" in response.content
