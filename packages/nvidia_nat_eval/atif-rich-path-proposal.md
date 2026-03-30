@@ -15,40 +15,26 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# ATIF `Step.extra` Lineage Contract
+# ATIF `Step.extra` Contract
 
 ## Purpose
 
-This document explains the lineage fields implemented in
-`packages/nvidia_nat_core/src/nat/data_models/atif/atif_step_extra.py` and
-defines a concrete path to upstreaming this contract into `AtifStep`.
+This document defines the canonical contract for NVIDIA NeMo Agent Toolkit metadata in
+ATIF `Step.extra`.
 
 This is intended to be a shareable reference for:
 
-- runtime and converter maintainers
-- profiler and evaluator maintainers
-- upstream ATIF schema reviewers
-
-## Source of Truth
-
-The data model is defined in:
-
-- `AtifAncestry` in `atif_step_extra.py`
-- `AtifStepExtra` in `atif_step_extra.py`
-
-The converter currently emits this model into ATIF `Step.extra`, and downstream
-tools consume it for tree reconstruction and lineage analysis.
-
-## Sample Trace
-
-For a visual example of nested lineage rendered via the NAT observability module, see:
-`docs/source/_static/nat_nested_trace.png`.
-
-This trace complements the sample artifact below and illustrates how a flat
-`tool_calls` sequence can still represent nested ancestry via aligned lineage
-metadata.
+1. Publishers (for example, runtime trajectory exporters)
+2. Consumers (for example, evaluator and profiler maintainers)
+3. Upstream ATIF schema reviewers
 
 ## Data Model
+
+The data model is defined in
+`packages/nvidia_nat_core/src/nat/data_models/atif/atif_step_extra.py`.
+
+The converter emits this model into ATIF `Step.extra`, and downstream tools
+consume it for lineage reconstruction, invocation identity mapping, and timing.
 
 ### `AtifAncestry`
 
@@ -90,12 +76,26 @@ breaking readers.
 
 ## Canonical Contract
 
-Canonical lineage should be reconstructed from:
+Canonical lineage and invocation context should be reconstructed from:
 
 - `tool_calls` (all observed invocation occurrences)
 - `extra.ancestry`
 - `extra.tool_ancestry`
 - `extra.invocation` and `extra.tool_invocations` for timing metadata
+
+Identity semantics are split:
+
+- call instance identity: `tool_call_id` (invocation occurrence)
+- callable node identity: `function_id` (function/workflow lineage node)
+
+## Core Invariants
+
+- `len(tool_ancestry)` matches `len(tool_calls)` for emitted invocation lineage.
+- Index alignment is stable (`tool_calls[i]` maps to `tool_ancestry[i]`).
+- If `tool_invocations` is emitted, `len(tool_invocations)` equals `len(tool_calls)`.
+- If one of `start_timestamp` / `end_timestamp` is set, the other must also be set.
+- For each call occurrence, observation linkage is stable:
+  `tool_calls[i].tool_call_id` equals the corresponding observation `source_call_id`.
 
 ## Producer Requirements
 
@@ -109,26 +109,6 @@ Producers should satisfy these requirements:
 5. Repeated calls to the same function are emitted as distinct invocation
    entries.
 
-### Call Identity Mapping
-
-For each invocation occurrence at index `i`:
-
-- `tool_calls[i].tool_call_id` is the call instance identifier in `tool_calls`.
-- `observation.results[*].source_call_id` should equal that `tool_call_id` for
-  the corresponding observation payload.
-- `tool_ancestry[i].function_ancestry.function_id` is the callable node identity
-  for lineage (function/workflow node), not the call instance ID.
-
-Practical relationship:
-
-- `tool_call_id` and `source_call_id` identify one execution instance.
-- `function_id` identifies which callable node executed.
-- Multiple tool calls can share the same `function_id` while each keeps a unique
-  `tool_call_id`/`source_call_id` pair.
-
-Reference sample ATIF artifact:
-`examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/workflow_output_atif.json`.
-
 ## Consumer Requirements
 
 Consumers should implement lineage reads in this order:
@@ -137,58 +117,52 @@ Consumers should implement lineage reads in this order:
 2. Use `invocation` and `tool_invocations` for timing.
 3. Use `ancestry` for step-level lineage context.
 
-## Validation Invariants
+### Evaluator guidance for nested trajectories
 
-### Canonical invariants
+Evaluators parsing nested trajectories should:
 
-- `len(tool_ancestry)` matches `len(tool_calls)` for emitted invocation lineage.
-- Index alignment is stable (`tool_calls[i]` maps to `tool_ancestry[i]`).
-- If `tool_invocations` is emitted, `len(tool_invocations)` equals `len(tool_calls)`.
-- If one of `start_timestamp` / `end_timestamp` is set, the other must also be set.
+- Treat each `tool_calls[i]` as one invocation occurrence and resolve lineage from
+  `tool_ancestry[i].function_ancestry`.
+- Preserve separation between invocation identity (`tool_call_id`) and callable
+  identity (`function_id`) during scoring.
+- Use observation linkage (`source_call_id`) to associate tool outputs with the
+  correct invocation instance.
+- Apply only structural normalization in consumer parsing (for example, removing
+  structurally empty rows or adjacent exact duplicates) and avoid semantic
+  rewrites of invocation order or hierarchy.
 
-## Upstreaming Path to `AtifStep`
+### Observability consumer requirements
 
-## Phase 1: Standardize lineage semantics
+Observability consumers should reconstruct execution as per-invocation records with:
 
-Upstream the canonical semantics first:
+- `step_index`
+- `tool_call_id`
+- `function_id` / `function_name`
+- `parent_id` / `parent_name`
+- `source_call_id`
+- `start_timestamp` / `end_timestamp` when timing is available
 
-- step-level lineage record
-- per-invocation lineage aligned with `tool_calls`
-- deterministic ordering expectations
+Identity and lineage interpretation should follow:
 
-Do not add non-canonical convenience fields to the upstream contract.
+- Call instance identity: `tool_calls[i].tool_call_id`
+- Callable node identity: `tool_ancestry[i].function_ancestry.function_id`
+- Parent-child lineage: `function_ancestry.parent_id` / `parent_name`
+- Observation linkage: `observation.results[*].source_call_id` equals `tool_call_id`
 
-## Phase 2: Transition compatibility
+Interpretation notes:
 
-During transition:
+- Untimed invocation occurrences are valid when timestamps are unavailable.
+- Invocation identity and callable identity are separate (`tool_call_id` vs `function_id`).
+  For example, two calls to `calculator__multiply` may have
+  `tool_call_id=call_abc` and `tool_call_id=call_def`, while both map to the
+  same callable node `function_id=fn_multiply`.
+- Consumer output may group by ATIF step for readability, while trace dashboards may center on span timelines.
 
-- producers continue writing current `extra` fields
-- consumers prioritize canonical reads during rollout
+## Reference Artifacts
 
-This phase avoids breaking existing artifacts and tools.
+For a visual example of nested lineage rendered via the NAT observability module, see:
+`docs/source/_static/nat_nested_trace.png`.
 
-## Phase 3: Promote lineage to first-class `AtifStep` fields
+Reference sample ATIF artifact:
+`examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/workflow_output_atif.json`.
 
-Add typed lineage field(s) directly to `AtifStep` with wire-compatible mapping
-from current `extra` payload.
-
-## Phase 4: Stabilize canonical schema
-
-After consumers are canonical:
-
-- keep canonical lineage and invocation behavior unchanged
-
-## Acceptance Criteria for Upstreaming
-
-Upstreaming is complete when all of the following are true:
-
-- deterministic lineage tree reconstruction from one ATIF artifact
-- no runtime-specific side-channel dependency
-- stable invocation mapping (`tool_calls[i]` to lineage record `i`)
-- profiler and evaluator scenarios work with canonical invocation metadata only
-
-## Recommended Implementation Guidance
-
-- New consumers should implement canonical lineage reads immediately.
-- Existing consumers should migrate to canonical invocation metadata reads.
-- Producers should avoid introducing non-canonical fields.

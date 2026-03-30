@@ -47,6 +47,8 @@ llms:
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
     max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
   eval_llm:
     _type: nim
     model_name: mistralai/mixtral-8x22b-instruct-v0.1

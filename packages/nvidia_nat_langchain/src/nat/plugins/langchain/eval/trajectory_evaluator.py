@@ -117,16 +117,51 @@ def _message_to_text(message) -> str:
     return "\n".join(text_parts)
 
 
+def _has_meaningful_value(value) -> bool:
+    """Return whether a value is non-empty for trajectory scoring."""
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Mapping):
+        return bool(value)
+    if isinstance(value, list | tuple | set):
+        return bool(value)
+    return True
+
+
+def _dedupe_adjacent_actions(agent_actions: list[tuple[AgentAction, str]]) -> list[tuple[AgentAction, str]]:
+    """Drop adjacent duplicate trajectory rows to reduce evaluator noise."""
+    deduped: list[tuple[AgentAction, str]] = []
+    for action, output in agent_actions:
+        if deduped:
+            prev_action, prev_output = deduped[-1]
+            if (prev_action.tool == action.tool and prev_action.tool_input == action.tool_input and prev_action.log == action.log
+                    and prev_output == output):
+                continue
+        deduped.append((action, output))
+    return deduped
+
+
 def _atif_to_agent_actions(trajectory) -> list[tuple[AgentAction, str]]:
-    """Convert an ATIF trajectory into LangChain `agent_trajectory` tuples."""
+    """Convert an ATIF trajectory into LangChain `agent_trajectory` tuples.
+
+    Action mapping is intentionally step-centric:
+    - Emit at most one LLM action for each agent step when the step message is meaningful.
+    - Emit one tool action for each structurally valid tool call in that step.
+    - Skip structurally empty artifacts and adjacent duplicate rows to reduce evaluator noise.
+    """
     agent_actions: list[tuple[AgentAction, str]] = []
     for step in trajectory.steps:
         if step.source != "agent":
             continue
 
-        agent_message = _message_to_text(step.message)
-        if step.model_name or agent_message:
-            llm_action = AgentAction(tool=step.model_name or "", tool_input="", log="")
+        agent_message = _message_to_text(step.message).strip()
+        # Keep LLM rows only when they carry meaningful text output.
+        if _has_meaningful_value(agent_message):
+            # Use a stable non-empty fallback so LLM turns are never emitted as empty-tool actions.
+            llm_tool_name = (step.model_name or "").strip() or "llm"
+            llm_action = AgentAction(tool=llm_tool_name, tool_input="", log="")
             agent_actions.append((llm_action, agent_message))
 
         if not step.tool_calls:
@@ -139,17 +174,24 @@ def _atif_to_agent_actions(trajectory) -> list[tuple[AgentAction, str]]:
                     observation_by_call_id[result.source_call_id] = _message_to_text(result.content)
 
         for tool_call in step.tool_calls:
+            tool_name = (tool_call.function_name or "").strip()
+            if not tool_name:
+                # Skip structurally invalid tool rows with missing call name.
+                continue
             if isinstance(tool_call.arguments, dict):
                 tool_input = tool_call.arguments
             elif isinstance(tool_call.arguments, Mapping):
                 tool_input = dict(tool_call.arguments)
             else:
                 tool_input = str(tool_call.arguments)
-            action = AgentAction(tool=tool_call.function_name, tool_input=tool_input, log=agent_message)
             tool_output = observation_by_call_id.get(tool_call.tool_call_id, "")
+            if not _has_meaningful_value(tool_input) and not _has_meaningful_value(tool_output):
+                # Skip rows that carry neither actionable input nor observation output.
+                continue
+            action = AgentAction(tool=tool_name, tool_input=tool_input, log=agent_message)
             agent_actions.append((action, tool_output))
 
-    return agent_actions
+    return _dedupe_adjacent_actions(agent_actions)
 
 
 def _atif_to_user_input(trajectory) -> str:
@@ -191,9 +233,20 @@ class TrajectoryEvaluator(BaseEvaluator):
                 logger.warning("Trajectory judge output parsing failed [lane=%s item_id=%s]: %s", lane, item_id, e)
             else:
                 logger.exception("Error evaluating trajectory [lane=%s item_id=%s]", lane, item_id)
-            return EvalOutputItem(id=item_id, score=0.0, reasoning={}, error=str(e))
+            return EvalOutputItem(
+                id=item_id,
+                score=0.0,
+                reasoning={
+                    "trajectory": [(action.model_dump(), output) for (action, output) in agent_trajectory],
+                    "error_type": type(e).__name__,
+                    "question_text": question_text,
+                    "generated_answer_text": generated_answer_text,
+                },
+                error=str(e),
+            )
 
         reasoning = {
+            "score": eval_result["score"],
             "reasoning": eval_result["reasoning"],
             "trajectory": [(action.model_dump(), output) for (action, output) in agent_trajectory],
         }
