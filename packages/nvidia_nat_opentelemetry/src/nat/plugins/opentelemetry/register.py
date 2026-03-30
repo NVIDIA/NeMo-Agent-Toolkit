@@ -209,6 +209,47 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
     )
 
 
+class WeaveOtelTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="weave_otel"):
+    """A telemetry exporter to transmit traces to Weights & Biases Weave via OpenTelemetry."""
+
+    endpoint: str = Field(
+        description="The W&B Weave OTEL endpoint",
+        default="https://trace.wandb.ai/otel/v1/traces",
+    )
+    api_key: SerializableSecretStr = Field(description="The W&B API key",
+                                           default_factory=lambda: SerializableSecretStr(""))
+    project: str = Field(description="The W&B project name.")
+    entity: str = Field(description="The W&B username or team name.")
+
+
+@register_telemetry_exporter(config_type=WeaveOtelTelemetryExporter)
+async def weave_otel_telemetry_exporter(config: WeaveOtelTelemetryExporter, builder: Builder):
+    """Create a Weave OTel telemetry exporter."""
+
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+
+    api_key = get_secret_value(config.api_key) if config.api_key else os.environ.get("WANDB_API_KEY")
+    if not api_key:
+        raise ValueError("API key is required for Weave (set api_key or WANDB_API_KEY env var)")
+
+    headers = {"wandb-api-key": api_key}
+    resource_attributes = {
+        "wandb.project": config.project,
+        "wandb.entity": config.entity,
+    }
+
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        resource_attributes=resource_attributes,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
+
+
 class DBNLTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="dbnl"):
     """A telemetry exporter to transmit traces to DBNL."""
 
