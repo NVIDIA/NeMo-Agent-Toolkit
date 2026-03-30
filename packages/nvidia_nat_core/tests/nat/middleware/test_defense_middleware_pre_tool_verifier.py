@@ -88,9 +88,10 @@ class TestAnalyzeContentChunking:
       - 80000 chars  → range(0, 80000, 16000) → 5 windows
       - 96000 chars  → range(0, 96000, 16000) → 6 windows
 
-    The loop exits early as soon as a window returns should_refuse=True, so call counts
-    may be lower than the total window count when a violation is found mid-scan.
-    Inputs requiring more than _MAX_CHUNKS windows bypass LLM calls entirely.
+    LLM calls are capped at _MAX_CHUNKS per invocation. Inputs requiring more windows than
+    that cap are analyzed by randomly sampling _MAX_CHUNKS windows (still up to _MAX_CHUNKS
+    LLM calls). The loop also exits early as soon as a window returns should_refuse=True,
+    so the actual call count may be lower than _MAX_CHUNKS when a violation is found mid-scan.
     """
 
     async def test_chunk_xml_tags_are_escaped_in_prompt(self, mock_builder, middleware_context):
