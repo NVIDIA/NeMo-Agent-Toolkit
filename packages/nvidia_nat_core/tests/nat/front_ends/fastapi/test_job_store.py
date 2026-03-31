@@ -121,7 +121,7 @@ async def test_create_job_default_params(db_engine: "AsyncEngine", dask_schedule
 
 @pytest.mark.usefixtures("setup_db")
 @pytest.mark.asyncio
-async def test_job_info_default_params(db_engine: "AsyncEngine", dask_scheduler_address: str):
+async def test_job_info_default_time_fields(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test job creation with default parameters."""
     from nat.front_ends.fastapi.async_jobs import JobInfo
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -139,8 +139,18 @@ async def test_job_info_default_params(db_engine: "AsyncEngine", dask_scheduler_
         session.add(job)
 
     job = await job_store.get_job(job_id)
-    assert job.created_at.replace(tzinfo=UTC) >= test_start_time
-    assert job.updated_at.replace(tzinfo=UTC) >= test_start_time
+    assert job.created_at.replace(tzinfo=UTC) > test_start_time
+    assert job.updated_at.replace(tzinfo=UTC) > test_start_time
+
+    # Verify that updated_at changes on status update
+    initial_updated_at = job.updated_at
+    async with job_store.session() as session:
+        job.status = JobStatus.RUNNING
+        session.add(job)
+    
+    job = await job_store.get_job(job_id)
+    assert job.status == JobStatus.RUNNING
+    assert job.updated_at > initial_updated_at
 
 @pytest.mark.usefixtures("setup_db")
 @pytest.mark.asyncio
