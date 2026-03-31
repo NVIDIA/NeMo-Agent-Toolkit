@@ -14,7 +14,6 @@
 # limitations under the License.
 """OAuth callback route registration."""
 
-import html
 import logging
 from typing import TYPE_CHECKING
 
@@ -24,6 +23,7 @@ from fastapi import FastAPI
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 
+from nat.front_ends.fastapi.html_snippets.auth_code_grant_cancelled import AUTH_REDIRECT_CANCELLED_POPUP_HTML
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_cancelled import build_auth_redirect_cancelled_html
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import AUTH_REDIRECT_SUCCESS_HTML
 from nat.front_ends.fastapi.html_snippets.auth_code_grant_success import build_auth_redirect_success_html
@@ -62,9 +62,11 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
                                     headers={
                                         "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
                                     })
-            return HTMLResponse(html.escape(f"Authorization denied: {error}"),
-                                status_code=400,
-                                headers={"Cache-Control": "no-cache"})
+            return HTMLResponse(content=AUTH_REDIRECT_CANCELLED_POPUP_HTML,
+                                status_code=200,
+                                headers={
+                                    "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                })
 
         config = flow_state.config
         verifier = flow_state.verifier
