@@ -17,9 +17,9 @@ import asyncio
 import json
 import os
 import typing
+from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
-from datetime import UTC
 from pathlib import Path
 
 import pytest
@@ -119,6 +119,7 @@ async def test_create_job_default_params(db_engine: "AsyncEngine", dask_schedule
     assert job.expiry_seconds == JobStore.DEFAULT_EXPIRY
     assert job.is_expired is False
 
+
 @pytest.mark.usefixtures("setup_db")
 @pytest.mark.asyncio
 async def test_job_info_default_time_fields(db_engine: "AsyncEngine", dask_scheduler_address: str):
@@ -131,9 +132,7 @@ async def test_job_info_default_time_fields(db_engine: "AsyncEngine", dask_sched
 
     test_start_time = datetime.now(UTC)
     job_id = job_store.ensure_job_id(None)
-    job = JobInfo(job_id=job_id,
-                  status=JobStatus.SUBMITTED,
-                  expiry_seconds=30)
+    job = JobInfo(job_id=job_id, status=JobStatus.SUBMITTED, expiry_seconds=30)
 
     async with job_store.session() as session:
         session.add(job)
@@ -147,10 +146,11 @@ async def test_job_info_default_time_fields(db_engine: "AsyncEngine", dask_sched
     async with job_store.session() as session:
         job.status = JobStatus.RUNNING
         session.add(job)
-    
+
     job = await job_store.get_job(job_id)
     assert job.status == JobStatus.RUNNING
     assert job.updated_at > initial_updated_at
+
 
 @pytest.mark.usefixtures("setup_db")
 @pytest.mark.asyncio
