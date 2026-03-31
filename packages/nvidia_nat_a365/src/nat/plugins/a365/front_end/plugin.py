@@ -16,18 +16,55 @@
 
 """Microsoft Agent 365 front-end plugin implementation."""
 
+import asyncio
 import importlib
 import logging
 
 from nat.builder.front_end import FrontEndBase
 from nat.builder.workflow_builder import WorkflowBuilder
 from nat.plugins.a365.front_end.front_end_config import A365FrontEndConfig
+from nat.plugins.a365.front_end.worker import A365FrontEndPluginWorker
 from nat.plugins.a365.exceptions import A365SDKError
 from nat.runtime.session import SessionManager
 from nat.utils.log_levels import LOG_LEVELS
 from nat.utils.log_utils import setup_logging
 
 logger = logging.getLogger(__name__)
+
+
+async def _run_until_stopped() -> None:
+    """Block until cancelled or the process exits; used so tests can patch this hook."""
+    await asyncio.Event().wait()
+
+
+def _build_aiohttp_app(agent_app, connection_manager, adapter):
+    """Build aiohttp application with JWT middleware and Bot Framework message route."""
+    from aiohttp import web
+    from microsoft_agents.hosting.aiohttp import jwt_authorization_middleware, start_agent_process
+
+    async def messages(request: web.Request):
+        return await start_agent_process(request, agent_app, adapter)
+
+    application = web.Application(middlewares=[jwt_authorization_middleware])
+    application["agent_configuration"] = connection_manager.get_default_connection_configuration()
+    application["agent_app"] = agent_app
+    application["adapter"] = adapter
+    application.router.add_post("/api/messages", messages)
+    return application
+
+
+async def _start_aiohttp_site(host: str, port: int, app) -> None:
+    """Start aiohttp AppRunner/TCPSite and idle until stopped."""
+    from aiohttp import web
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, host, port)
+    await site.start()
+    try:
+        await _run_until_stopped()
+    finally:
+        await runner.cleanup()
 
 
 class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
@@ -49,25 +86,15 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
         6. Handles cleanup on shutdown
         """
         try:
-            # Try importing start_server from hosting.aiohttp (most common)
-            try:
-                from microsoft_agents.hosting.aiohttp import start_server
-            except ImportError:
-                # Fallback to hosting.core if aiohttp version not available
-                try:
-                    from microsoft_agents.hosting.core.server import start_server
-                except ImportError:
-                    raise A365SDKError(
-                        "Could not import start_server. "
-                        "Install with: uv pip install microsoft-agents-hosting-aiohttp",
-                        sdk_component="start_server"
-                    )
+            import aiohttp  # noqa: F401 — peer dependency of microsoft-agents-hosting-aiohttp
+            import microsoft_agents.hosting.aiohttp  # noqa: F401
         except ImportError as e:
             raise A365SDKError(
                 "Microsoft Agents SDK packages are required. "
-                "Install with: uv pip install microsoft-agents-activity microsoft-agents-hosting-core microsoft-agents-hosting-aiohttp",
+                "Install with: uv pip install microsoft-agents-activity microsoft-agents-hosting-core "
+                "microsoft-agents-hosting-aiohttp microsoft-agents-authentication-msal",
                 sdk_component="core",
-                original_error=e
+                original_error=e,
             ) from e
 
         log_level = LOG_LEVELS.get(self.front_end_config.log_level.upper(), logging.INFO)
@@ -101,7 +128,7 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                 # Get worker instance (allows for custom workers via config)
                 worker = self._get_worker_instance()
 
-                agent_app, connection_manager = await worker.create_agent_application()
+                agent_app, connection_manager, aiohttp_adapter = await worker.create_agent_application()
 
                 if self.front_end_config.enable_notifications:
                     await worker.setup_notification_handlers(
@@ -121,12 +148,12 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                     f"{self.front_end_config.host}:{self.front_end_config.port}"
                 )
 
+                web_app = _build_aiohttp_app(agent_app, connection_manager, aiohttp_adapter)
                 try:
-                    await start_server(
-                        agent_application=agent_app,
-                        auth_configuration=connection_manager.get_default_connection_configuration(),
-                        host=self.front_end_config.host,
-                        port=self.front_end_config.port,
+                    await _start_aiohttp_site(
+                        self.front_end_config.host,
+                        self.front_end_config.port,
+                        web_app,
                     )
                 except Exception as e:
                     error_msg = str(e).lower()
@@ -134,21 +161,21 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                         raise A365SDKError(
                             f"Failed to start server: port {self.front_end_config.port} may already be in use. "
                             f"Try a different port or stop the process using this port.",
-                            sdk_component="start_server",
-                            original_error=e
+                            sdk_component="aiohttp_server",
+                            original_error=e,
                         ) from e
                     elif "permission" in error_msg or "access" in error_msg:
                         raise A365SDKError(
                             f"Failed to start server: insufficient permissions to bind to "
                             f"{self.front_end_config.host}:{self.front_end_config.port}",
-                            sdk_component="start_server",
-                            original_error=e
+                            sdk_component="aiohttp_server",
+                            original_error=e,
                         ) from e
                     else:
                         raise A365SDKError(
                             f"Failed to start server: {str(e)}",
-                            sdk_component="start_server",
-                            original_error=e
+                            sdk_component="aiohttp_server",
+                            original_error=e,
                         ) from e
         finally:
             if session_manager is not None:
@@ -170,20 +197,17 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                 except Exception as e:
                     logger.error(f"Error cleaning up worker: {e}")
 
-    def _get_worker_instance(self):
-        """Get an instance of the worker class.
-        
-        Returns:
-            A365FrontEndPluginWorker instance configured with full config.
-            If runner_class is specified in config, returns a custom worker instance.
-        """
-        from nat.plugins.a365.front_end.worker import A365FrontEndPluginWorker
+    def _get_worker_instance(self) -> A365FrontEndPluginWorker:
+        """Instantiate the worker (default or ``runner_class`` override).
 
+        ``runner_class`` must be a dotted path ``pkg.module.ClassName`` (same pattern as
+        MCP / A2A front-ends): last segment is the class, everything before is the module.
+        """
         if self.front_end_config.runner_class:
             module_name, class_name = self.front_end_config.runner_class.rsplit(".", 1)
             module = importlib.import_module(module_name)
-            worker_class = getattr(module, class_name)
-            return worker_class(self.full_config)
-
-        return A365FrontEndPluginWorker(self.full_config)
+            worker_cls = getattr(module, class_name)
+        else:
+            worker_cls = A365FrontEndPluginWorker
+        return worker_cls(self.full_config)
 

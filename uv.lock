@@ -3006,6 +3006,7 @@ dependencies = [
     { name = "griffecli" },
     { name = "griffelib" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/04/56/28a0accac339c164b52a92c6cfc45a903acc0c174caa5c1713803467b533/griffe-2.0.0.tar.gz", hash = "sha256:c68979cd8395422083a51ea7cf02f9c119d889646d99b7b656ee43725de1b80f", size = 293906, upload-time = "2026-03-23T21:06:53.402Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8b/94/ee21d41e7eb4f823b94603b9d40f86d3c7fde80eacc2c3c71845476dddaa/griffe-2.0.0-py3-none-any.whl", hash = "sha256:5418081135a391c3e6e757a7f3f156f1a1a746cc7b4023868ff7d5e2f9a980aa", size = 5214, upload-time = "2026-02-09T19:09:44.105Z" },
 ]
@@ -3018,6 +3019,7 @@ dependencies = [
     { name = "colorama" },
     { name = "griffelib" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/a4/f8/2e129fd4a86e52e58eefe664de05e7d502decf766e7316cc9e70fdec3e18/griffecli-2.0.0.tar.gz", hash = "sha256:312fa5ebb4ce6afc786356e2d0ce85b06c1c20d45abc42d74f0cda65e159f6ef", size = 56213, upload-time = "2026-03-23T21:06:54.8Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e6/ed/d93f7a447bbf7a935d8868e9617cbe1cadf9ee9ee6bd275d3040fbf93d60/griffecli-2.0.0-py3-none-any.whl", hash = "sha256:9f7cd9ee9b21d55e91689358978d2385ae65c22f307a63fb3269acf3f21e643d", size = 9345, upload-time = "2026-02-09T19:09:42.554Z" },
 ]
@@ -3026,6 +3028,7 @@ wheels = [
 name = "griffelib"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/ad/06/eccbd311c9e2b3ca45dbc063b93134c57a1ccc7607c5e545264ad092c4a9/griffelib-2.0.0.tar.gz", hash = "sha256:e504d637a089f5cab9b5daf18f7645970509bf4f53eda8d79ed71cce8bd97934", size = 166312, upload-time = "2026-03-23T21:06:55.954Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/51/c936033e16d12b627ea334aaaaf42229c37620d0f15593456ab69ab48161/griffelib-2.0.0-py3-none-any.whl", hash = "sha256:01284878c966508b6d6f1dbff9b6fa607bc062d8261c5c7253cb285b06422a7f", size = 142004, upload-time = "2026-02-09T19:09:40.561Z" },
 ]
@@ -5165,32 +5168,47 @@ wheels = [
 
 [[package]]
 name = "microsoft-agents-activity"
-version = "0.7.0"
+version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/e9/7f8086719f28815baca72b2f2600ce1e62b7cd53826bb406c52f28e81998/microsoft_agents_activity-0.7.0.tar.gz", hash = "sha256:77eeb6ffa9ee9e6237e1dbf5e962ea641ff60f20b0966e68e903ffbc10ebd41d", size = 60673, upload-time = "2026-01-21T18:05:24.601Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/8a/3dbdf47f3ddabf646987ddf6f5260e77865c6812177b8759f1c7fc395ac8/microsoft_agents_activity-0.8.0.tar.gz", hash = "sha256:f9e7d92db119cf93dd0642a5e698732c40a450c064306ad076b0d83d95eae114", size = 61226, upload-time = "2026-02-24T18:28:49.283Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e1/f3/64dc3bf13e46c6a09cc1983f66da2e42bf726586fe0f77f915977a6be7d8/microsoft_agents_activity-0.7.0-py3-none-any.whl", hash = "sha256:8d30a25dfd0f491b834be52b4a21ff90ab3b9360ec7e50770c050f1d4a39e5ce", size = 132592, upload-time = "2026-01-21T18:05:33.533Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/10/18b87c552112917496256d4e9e50a49bd712015d285f01a3c6e18cdfdd74/microsoft_agents_activity-0.8.0-py3-none-any.whl", hash = "sha256:16f0e7fd5ba8f64c43ceac514b7b22734e97b4478b7e97963232ca893cfe336d", size = 132917, upload-time = "2026-02-24T18:28:59.002Z" },
+]
+
+[[package]]
+name = "microsoft-agents-authentication-msal"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "microsoft-agents-hosting-core" },
+    { name = "msal" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/a8/8aa658fff2687e5f57e60dc4ea59ca90e803237a0f075f3b98ff7a2740fa/microsoft_agents_authentication_msal-0.8.0.tar.gz", hash = "sha256:4886f1207bddd06e49417922bd09f10fe44b56e3c66610181c9ee6ebce96ef68", size = 13489, upload-time = "2026-02-24T18:28:50.253Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/17/35/cc5644fbc9cdd4ea33f49a7af563865bacb1b1f6b721d51bc095b7bf5018/microsoft_agents_authentication_msal-0.8.0-py3-none-any.whl", hash = "sha256:371db4e3844cd23b61463a96a87b06091a985d2bf7bf1318227e8f38675dcbf8", size = 12453, upload-time = "2026-02-24T18:29:00.133Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-hosting-aiohttp"
-version = "0.7.0"
+version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "microsoft-agents-hosting-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d6/3d/ad0cfc41580d9fe4c364efd604818fc2012aa6eb796b3d8b1d21ef694c68/microsoft_agents_hosting_aiohttp-0.7.0.tar.gz", hash = "sha256:a0d1c6b8d66b77e46927609ddae805d45ff05066653c130f5908b82fa4bc286c", size = 14829, upload-time = "2026-01-21T18:05:28.341Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/6b/231531b5cb83871e992f30c6f452bb5f9f3e871af6795f298274b528e224/microsoft_agents_hosting_aiohttp-0.8.0.tar.gz", hash = "sha256:4fe75de4e85d2ce45a259f6fd352789d5656e85389477a0c6303241d4b27cfa2", size = 14925, upload-time = "2026-02-24T18:28:53.03Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/43/de/06fe3ef62e200394a2af8ce9a57913a0b905bc9df04fbe8d384ef6911faf/microsoft_agents_hosting_aiohttp-0.7.0-py3-none-any.whl", hash = "sha256:1a0abaca331ddbfd26307ca8c56408444b6d3087dccea1924b69d99cf4c759a3", size = 15819, upload-time = "2026-01-21T18:05:36.843Z" },
+    { url = "https://files.pythonhosted.org/packages/99/c1/7d87699351a856ec5bc40006db3850aadfe07800cba991b1d2d205db7e22/microsoft_agents_hosting_aiohttp-0.8.0-py3-none-any.whl", hash = "sha256:5f041423b2a6d6db7e2523982e8066418e17da802353a0424f28819669a3d548", size = 15871, upload-time = "2026-02-24T18:29:02.454Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-hosting-core"
-version = "0.7.0"
+version = "0.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "azure-core" },
@@ -5199,9 +5217,9 @@ dependencies = [
     { name = "pyjwt" },
     { name = "python-dotenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/da/26d461cb222ab41f38a3c72ca43900a65b8e8b6b71d6d1207fad1edc3e7b/microsoft_agents_hosting_core-0.7.0.tar.gz", hash = "sha256:31448279c47e39d63edc347c1d3b4de8043aa1b4c51a1f01d40d7d451221b202", size = 90446, upload-time = "2026-01-21T18:05:29.28Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ad/8a/5ab47498bbc74989c30dbfbcb7862211117bdbeba4e3d844bb281c0e05bf/microsoft_agents_hosting_core-0.8.0.tar.gz", hash = "sha256:d3b34803f73d7f677b797733dfe5c561af876e8721c426d6379a762fe6e86fa4", size = 94079, upload-time = "2026-02-24T18:28:54.156Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ed/e4/8d9e2e3f3a3106d0c80141631385206a6946f0b414cf863db851b98533e7/microsoft_agents_hosting_core-0.7.0-py3-none-any.whl", hash = "sha256:d03549fff01f38c1a96da4f79375c33378205ee9b5c6e01b87ba576f59b7887f", size = 133749, upload-time = "2026-01-21T18:05:38.002Z" },
+    { url = "https://files.pythonhosted.org/packages/d8/ff/a1497b3ea63ab0658518fc18532179e5696c5d8d7b28683ec82c34323e54/microsoft_agents_hosting_core-0.8.0-py3-none-any.whl", hash = "sha256:603f53f14bebc7888b5664718bbd24038dafffdd282c81d0e635fca7acfc6aef", size = 139555, upload-time = "2026-02-24T18:29:03.479Z" },
 ]
 
 [[package]]
@@ -6864,6 +6882,7 @@ dependencies = [
     { name = "microsoft-agents-a365-observability-core" },
     { name = "microsoft-agents-a365-tooling" },
     { name = "microsoft-agents-activity" },
+    { name = "microsoft-agents-authentication-msal" },
     { name = "microsoft-agents-hosting-aiohttp" },
     { name = "microsoft-agents-hosting-core" },
     { name = "nvidia-nat-core" },
@@ -6875,9 +6894,10 @@ requires-dist = [
     { name = "microsoft-agents-a365-notifications", specifier = "~=0.1.0" },
     { name = "microsoft-agents-a365-observability-core", specifier = "~=0.1.0" },
     { name = "microsoft-agents-a365-tooling", specifier = "~=0.1.0" },
-    { name = "microsoft-agents-activity", specifier = "~=0.7.0" },
-    { name = "microsoft-agents-hosting-aiohttp", specifier = "~=0.7.0" },
-    { name = "microsoft-agents-hosting-core", specifier = "~=0.7.0" },
+    { name = "microsoft-agents-activity", specifier = "~=0.8.0" },
+    { name = "microsoft-agents-authentication-msal", specifier = "~=0.8.0" },
+    { name = "microsoft-agents-hosting-aiohttp", specifier = "~=0.8.0" },
+    { name = "microsoft-agents-hosting-core", specifier = "~=0.8.0" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "packages/nvidia_nat_mcp" },
     { name = "nvidia-nat-opentelemetry", editable = "packages/nvidia_nat_opentelemetry" },
