@@ -78,11 +78,12 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
     async def pre_authenticate(self, auth_providers: dict[str, AuthProviderBaseConfig]) -> None:
         """Run auth for every configured OAuth2 provider before the first user message.
 
+        Only providers with pre_authenticate option set in their config are processed.
         Returns immediately if tokens are already cached. Otherwise triggers the OAuth
         redirect so the user authenticates at page load rather than mid-workflow.
         """
         for provider_config in auth_providers.values():
-            if isinstance(provider_config, OAuth2AuthCodeFlowProviderConfig):
+            if isinstance(provider_config, OAuth2AuthCodeFlowProviderConfig) and provider_config.pre_authenticate:
                 await self.authenticate(provider_config, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
 
     def create_oauth_client(self, config: OAuth2AuthCodeFlowProviderConfig) -> AsyncOAuth2Client:

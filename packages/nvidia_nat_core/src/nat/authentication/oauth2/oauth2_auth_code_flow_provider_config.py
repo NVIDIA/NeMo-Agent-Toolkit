@@ -41,6 +41,12 @@ class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth
                      "remains open. When True, the browser navigates to the OAuth login page directly and is "
                      "redirected back after authentication completes."))
 
+    pre_authenticate: bool = Field(
+        default=False,
+        description=("When True, authentication is triggered at WebSocket connection time before the user submits "
+                     "their first prompt. When False (default), authentication is deferred until the workflow first "
+                     "requires credentials. Only applies in nat serve mode."))
+
     authorization_kwargs: dict[str, str] | None = Field(description=("Additional keyword arguments for the "
                                                                      "authorization request."),
                                                         default=None)

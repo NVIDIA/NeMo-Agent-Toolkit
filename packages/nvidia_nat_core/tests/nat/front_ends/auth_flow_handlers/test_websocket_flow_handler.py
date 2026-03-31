@@ -508,6 +508,12 @@ async def test_pre_authenticate_skips_non_oauth2_providers(noop_handler):
     await noop_handler.pre_authenticate({"my_api_key": api_key_config})
 
 
+async def test_pre_authenticate_skips_oauth2_provider_flag_false(noop_handler, minimal_oauth_config):
+    """pre_authenticate does not trigger auth for OAuth2 providers with pre_authenticate=False (the default)."""
+    # minimal_oauth_config has pre_authenticate=False (the default); if the guard were absent this would hang
+    await noop_handler.pre_authenticate({"my_provider": minimal_oauth_config})
+
+
 async def test_pre_authenticate_uses_cached_token(minimal_oauth_config):
     """pre_authenticate returns immediately without calling create_websocket_message on a cache hit."""
 
@@ -526,6 +532,8 @@ async def test_pre_authenticate_uses_cached_token(minimal_oauth_config):
 
     ctx = AuthenticatedContext(headers={"Authorization": "Bearer cached-tok"}, metadata={"expires_at": None})
     store: dict = {}
+    # Enable pre_authenticate so the cache lookup is actually reached
+    active_config = minimal_oauth_config.model_copy(update={"pre_authenticate": True})
     handler = WebSocketAuthenticationFlowHandler(
         add_flow_cb=_noop_add,
         remove_flow_cb=_noop_remove,
@@ -533,8 +541,8 @@ async def test_pre_authenticate_uses_cached_token(minimal_oauth_config):
         token_store=store,
         session_id="sess-1",
     )
-    key = handler._token_cache_key(minimal_oauth_config)
+    key = handler._token_cache_key(active_config)
     store[key] = (ctx, time.time() + 3600)
 
-    await handler.pre_authenticate({"my_provider": minimal_oauth_config})
+    await handler.pre_authenticate({"my_provider": active_config})
     assert message_count[0] == 0, "pre_authenticate must not trigger OAuth when token is cached"
