@@ -5600,14 +5600,14 @@ source = { editable = "examples/agents" }
 dependencies = [
     { name = "nat-multi-frameworks" },
     { name = "nat-simple-calculator" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test", "zep-cloud"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "ragas", "test", "zep-cloud"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "nat-multi-frameworks", editable = "examples/frameworks/multi_frameworks" },
     { name = "nat-simple-calculator", editable = "examples/getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "test", "zep-cloud"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "ragas", "test", "zep-cloud"], editable = "." },
 ]
 
 [[package]]
@@ -5632,7 +5632,7 @@ dependencies = [
     { name = "flask" },
     { name = "langchain-core" },
     { name = "langgraph" },
-    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "ragas", "test"] },
     { name = "pandas" },
 ]
 
@@ -5642,7 +5642,7 @@ requires-dist = [
     { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-core" },
     { name = "langgraph", specifier = ">=0.0.10" },
-    { name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "test"], editable = "." },
+    { name = "nvidia-nat", extras = ["eval", "langchain", "profiler", "ragas", "test"], editable = "." },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
 
@@ -6917,7 +6917,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "google-adk", specifier = "~=1.18" },
-    { name = "litellm", specifier = "~=1.74" },
+    { name = "litellm", specifier = ">=1.74,<1.82.7" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
 ]
@@ -6939,7 +6939,7 @@ dependencies = [
 requires-dist = [
     { name = "agno", specifier = ">=1.2.3,<2.0.0" },
     { name = "google-search-results", specifier = ">=2.4.2,<3.0.0" },
-    { name = "litellm", specifier = "~=1.74" },
+    { name = "litellm", specifier = ">=1.74,<1.82.7" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "openai", specifier = "~=1.106" },
@@ -7118,7 +7118,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "crewai", specifier = ">=0.193.2,<1.0.0" },
-    { name = "litellm", specifier = "~=1.74" },
+    { name = "litellm", specifier = ">=1.74,<1.82.7" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
 ]

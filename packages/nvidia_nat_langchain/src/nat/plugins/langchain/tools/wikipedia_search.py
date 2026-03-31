@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from nat.builder.builder import Builder
+from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
@@ -28,7 +29,7 @@ class WikiSearchToolConfig(FunctionBaseConfig, name="wiki_search"):
 
 
 # Wiki search
-@register_function(config_type=WikiSearchToolConfig)
+@register_function(config_type=WikiSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def wiki_search(tool_config: WikiSearchToolConfig, builder: Builder):
     from langchain_community.document_loaders import WikipediaLoader
 
