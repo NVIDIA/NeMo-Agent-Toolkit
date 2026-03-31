@@ -114,9 +114,11 @@ class TestAnalyzeContentChunking:
         call_messages = mock_llm.ainvoke.call_args[0][0]
         user_message_content = call_messages[1]["content"]
 
-        # The raw closing tag must NOT appear verbatim — it must be escaped
-        assert "</user_input>" not in user_message_content
-        assert "&lt;/user_input&gt;" in user_message_content
+        # Extract only the injected portion between the wrapper tags
+        injected = user_message_content.split("<user_input>\n", 1)[1].rsplit("\n</user_input>", 1)[0]
+        # The raw closing tag must NOT appear inside the injected payload — it must be escaped
+        assert "</user_input>" not in injected
+        assert "&lt;/user_input&gt;" in injected
 
     async def test_short_content_single_llm_call(self, mock_builder, middleware_context):
         """Content within limit is analyzed with a single LLM call (no windowing)."""
@@ -337,16 +339,20 @@ class TestAnalyzeContentChunking:
         ])
         middleware._llm = mock_llm
 
-        long_content = "a" * (_MAX_CONTENT_LENGTH * 2)
+        # Place a unique marker straddling the _MAX_CONTENT_LENGTH boundary so that
+        # window 0 [0:_MAX_CONTENT_LENGTH] only sees a partial prefix of the marker
+        # while window 1 [_STRIDE:_STRIDE+_MAX_CONTENT_LENGTH] sees it in full.
+        _MARKER = "BOUNDARY_MARKER"
+        long_content = "a" * (_MAX_CONTENT_LENGTH - 5) + _MARKER + "a" * (_MAX_CONTENT_LENGTH + 5)
         result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
 
         assert mock_llm.ainvoke.call_count == 2
 
-        # Verify window 1 was passed content starting at _STRIDE (spans the old boundary)
-        window1_messages = mock_llm.ainvoke.call_args_list[1][0][0]
-        window1_user_content = window1_messages[1]["content"]
-        expected_window1 = "a" * _MAX_CONTENT_LENGTH  # content[_STRIDE : _STRIDE + _MAX_CONTENT_LENGTH]
-        assert expected_window1 in window1_user_content
+        # Verify window 1 contains the full marker (spans the old boundary at _MAX_CONTENT_LENGTH)
+        window0_user_content = mock_llm.ainvoke.call_args_list[0][0][0][1]["content"]
+        window1_user_content = mock_llm.ainvoke.call_args_list[1][0][0][1]["content"]
+        assert _MARKER not in window0_user_content
+        assert _MARKER in window1_user_content
 
         assert result.violation_detected
         assert result.should_refuse
