@@ -22,6 +22,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import subprocess
 from collections.abc import Callable
 
@@ -122,7 +123,8 @@ class GitWrapper:
     @staticmethod
     def get_repo_remote_name(repo_owner_and_name: str):
 
-        return _run_cmd(f"git remote -v | grep :{repo_owner_and_name} | grep \"(fetch)\" | head -1 | cut -f1")
+        quoted_repo_owner_and_name = shlex.quote(repo_owner_and_name)
+        return _run_cmd(f"git remote -v | grep :{quoted_repo_owner_and_name} | grep \"(fetch)\" | head -1 | cut -f1")
 
     @functools.lru_cache
     @staticmethod
@@ -195,13 +197,13 @@ class GitWrapper:
     @staticmethod
     def add_files(*files_to_add):
         """Runs git add on file"""
-        return _git("add", *files_to_add)
+        return _git("add", *(shlex.quote(f) for f in files_to_add))
 
     @functools.lru_cache
     @staticmethod
     def get_file_add_date(file_path):
         """Return the date a given file was added to git"""
-        date_str = _run_cmd(f"git log --follow --format=%as -- {file_path} | tail -n 1")
+        date_str = _run_cmd(f"git log --follow --format=%as -- {shlex.quote(file_path)} | tail -n 1")
         return datetime.datetime.strptime(date_str, "%Y-%m-%d")
 
     @staticmethod
