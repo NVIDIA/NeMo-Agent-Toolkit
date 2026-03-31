@@ -106,8 +106,11 @@ Producers should satisfy these requirements:
 2. `tool_ancestry[i]` corresponds to `tool_calls[i]`.
 3. `tool_invocations[i]` corresponds to `tool_calls[i]` when timing metadata is emitted.
 4. Invocation order is deterministic and based on start time.
+   When start timestamps are equal, producers should preserve stable source event order.
 5. Repeated calls to the same function are emitted as distinct invocation
    entries.
+6. `tool_calls` should include only callable execution invocation occurrences.
+   Non-execution lifecycle or wrapper records should not be emitted as `tool_calls`.
 
 ## Consumer Requirements
 

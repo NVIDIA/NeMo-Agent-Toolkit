@@ -496,18 +496,15 @@ def _validate_trajectory_contract(trajectory: dict[str, Any]) -> list[str]:
 
         # Invariant: aligned arrays.
         if tool_calls and len(tool_ancestry) != len(tool_calls):
-            issues.append(f"step {step_idx}: len(tool_ancestry)={len(tool_ancestry)} != len(tool_calls)={len(tool_calls)}")
+            issues.append(
+                f"step {step_idx}: len(tool_ancestry)={len(tool_ancestry)} != len(tool_calls)={len(tool_calls)}")
         if tool_invocations is not None and len(tool_invocations) != len(tool_calls):
             issues.append(
                 f"step {step_idx}: len(tool_invocations)={len(tool_invocations)} != len(tool_calls)={len(tool_calls)}")
 
         # Invariant: unique call IDs per step and observation linkage.
         obs_results = (step.get("observation") or {}).get("results") or []
-        obs_ids = {
-            r.get("source_call_id")
-            for r in obs_results
-            if isinstance(r, dict) and r.get("source_call_id")
-        }
+        obs_ids = {r.get("source_call_id") for r in obs_results if isinstance(r, dict) and r.get("source_call_id")}
         seen_call_ids: set[str] = set()
         for i, tool_call in enumerate(tool_calls):
             if not isinstance(tool_call, dict):
