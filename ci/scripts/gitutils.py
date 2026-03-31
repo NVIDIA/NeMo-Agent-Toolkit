@@ -197,7 +197,7 @@ class GitWrapper:
     @staticmethod
     def add_files(*files_to_add):
         """Runs git add on file"""
-        return _git("add", *(shlex.quote(f) for f in files_to_add))
+        return _git("add", *files_to_add)
 
     @functools.lru_cache
     @staticmethod
