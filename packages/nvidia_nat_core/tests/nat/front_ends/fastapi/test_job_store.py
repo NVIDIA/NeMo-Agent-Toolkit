@@ -728,7 +728,7 @@ async def test_session_context_manager(db_engine: "AsyncEngine", dask_scheduler_
 
 @pytest.mark.usefixtures("setup_db")
 async def test_job_info_default_time_fields(db_engine: "AsyncEngine", dask_scheduler_address: str):
-    """Test job creation with default parameters."""
+    """Test to ensure that datetime fields in JobInfo are set correctly on job creation and update."""
     from nat.front_ends.fastapi.async_jobs import JobInfo
     from nat.front_ends.fastapi.async_jobs import JobStatus
     from nat.front_ends.fastapi.async_jobs import JobStore
