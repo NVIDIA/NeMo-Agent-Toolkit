@@ -48,7 +48,51 @@ def _load_json(path: Path) -> Any:
 
 
 def _iter_trajectories(payload: Any) -> list[tuple[str, dict[str, Any]]]:
-    """Normalize ATIF payload to (label, trajectory_dict)."""
+    """Normalize ATIF payload to (label, trajectory_dict).
+
+    Supported input shapes include:
+    - eval output wrappers: [{"item_id": ..., "trajectory": {...}}, ...]
+    - single eval wrapper: {"item_id": ..., "trajectory": {...}}
+    - raw trajectory object: {"schema_version": "...", "steps": [...]}
+    - list of raw trajectory objects
+    - nested containers that include any of the above
+    """
+
+    def _is_trajectory(obj: Any) -> bool:
+        return isinstance(obj, dict) and isinstance(obj.get("steps"), list)
+
+    def _collect(item: Any, label_prefix: str) -> list[tuple[str, dict[str, Any]]]:
+        out: list[tuple[str, dict[str, Any]]] = []
+
+        if isinstance(item, dict):
+            # Preferred eval wrapper form.
+            if isinstance(item.get("trajectory"), dict) and _is_trajectory(item.get("trajectory")):
+                label = f"item={item.get('item_id', label_prefix)}"
+                out.append((label, item["trajectory"]))
+                return out
+
+            # Raw trajectory object.
+            if _is_trajectory(item):
+                out.append((f"trajectory={label_prefix}", item))
+                return out
+
+            # Recurse through nested mappings.
+            for key, value in item.items():
+                out.extend(_collect(value, f"{label_prefix}.{key}"))
+            return out
+
+        if isinstance(item, list):
+            for i, value in enumerate(item):
+                out.extend(_collect(value, f"{label_prefix}[{i}]"))
+            return out
+
+        return out
+
+    collected = _collect(payload, "root")
+    if collected:
+        return collected
+
+    # Backward-compatible fallback path.
     if isinstance(payload, list):
         out: list[tuple[str, dict[str, Any]]] = []
         for i, item in enumerate(payload):
@@ -67,7 +111,7 @@ def _iter_trajectories(payload: Any) -> list[tuple[str, dict[str, Any]]]:
         if isinstance(payload.get("steps"), list):
             return [("trajectory=0", payload)]
 
-    raise ValueError("Unsupported ATIF JSON shape. Expected trajectory or eval-sample payload.")
+    raise ValueError("Unsupported ATIF JSON shape. No trajectory object with a 'steps' array was found.")
 
 
 def _label_id(label: str) -> str:
@@ -561,7 +605,8 @@ def _validate_trajectory_contract(trajectory: dict[str, Any]) -> list[str]:
 
 def main() -> None:
     """Parse the input JSON and print the ATIF function ancestry tree."""
-    parser = argparse.ArgumentParser(description="Print ATIF function ancestry tree from workflow_output_atif.json")
+    parser = argparse.ArgumentParser(
+        description="Print ATIF function ancestry tree from any JSON payload containing trajectory objects.")
     parser.add_argument("input_json", type=Path, help="Path to ATIF workflow output JSON")
     parser.add_argument(
         "--view",
