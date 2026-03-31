@@ -15,6 +15,27 @@
 
 import json
 
+AUTH_REDIRECT_CANCELLED_POPUP_HTML = """
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authorization Cancelled</title>
+    <script>
+        (function () {
+            window.history.replaceState(null, "", window.location.pathname);
+
+            window.opener?.postMessage({ type: 'AUTH_CANCELLED' }, '*');
+
+            window.close();
+        })();
+    </script>
+</head>
+<body>
+    <p>Authorization cancelled. You may now close this window.</p>
+</body>
+</html>
+"""
+
 _AUTH_REDIRECT_CANCELLED_HTML_TEMPLATE = """\
 <!DOCTYPE html>
 <html>
