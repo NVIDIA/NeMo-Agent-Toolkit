@@ -17,7 +17,9 @@ import asyncio
 import json
 import os
 import typing
+from datetime import datetime
 from datetime import timedelta
+from datetime import UTC
 from pathlib import Path
 
 import pytest
@@ -117,6 +119,28 @@ async def test_create_job_default_params(db_engine: "AsyncEngine", dask_schedule
     assert job.expiry_seconds == JobStore.DEFAULT_EXPIRY
     assert job.is_expired is False
 
+@pytest.mark.usefixtures("setup_db")
+@pytest.mark.asyncio
+async def test_job_info_default_params(db_engine: "AsyncEngine", dask_scheduler_address: str):
+    """Test job creation with default parameters."""
+    from nat.front_ends.fastapi.async_jobs import JobInfo
+    from nat.front_ends.fastapi.async_jobs import JobStatus
+    from nat.front_ends.fastapi.async_jobs import JobStore
+
+    job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
+
+    test_start_time = datetime.now(UTC)
+    job_id = job_store.ensure_job_id(None)
+    job = JobInfo(job_id=job_id,
+                  status=JobStatus.SUBMITTED,
+                  expiry_seconds=30)
+
+    async with job_store.session() as session:
+        session.add(job)
+
+    job = await job_store.get_job(job_id)
+    assert job.created_at.replace(tzinfo=UTC) >= test_start_time
+    assert job.updated_at.replace(tzinfo=UTC) >= test_start_time
 
 @pytest.mark.usefixtures("setup_db")
 @pytest.mark.asyncio
