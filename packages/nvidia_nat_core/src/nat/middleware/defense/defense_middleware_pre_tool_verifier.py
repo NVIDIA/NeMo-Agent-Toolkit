@@ -23,7 +23,6 @@ other malicious instructions that could manipulate tool behavior.
 import html
 import json
 import logging
-import random
 import re
 from collections.abc import AsyncIterator
 from typing import Any
@@ -74,6 +73,21 @@ class PreToolVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="pre_tool_ve
     fail_closed: bool = Field(default=False,
                               description="If True, block input when the verifier LLM fails (fail-closed). "
                               "If False (default), allow input through on verifier errors (fail-open).")
+
+    max_content_length: int = Field(
+        default=32000,
+        gt=0,
+        description="Maximum number of characters per analysis window. Inputs longer than this are split into "
+        "overlapping windows of this size (50% overlap) and analyzed sequentially.")
+
+    max_chunks: int = Field(
+        default=16,
+        gt=0,
+        description="Maximum number of windows to analyze for large inputs. Each window requires one LLM call, "
+        "so this is a hard cap on LLM calls per tool invocation and directly controls latency and cost. "
+        "With the default max_content_length (32000) and 50% overlap stride (16000), 16 windows provides "
+        "full sequential coverage of inputs up to ~256 KB; larger inputs use evenly-spaced sampling. "
+        "Increase this for higher coverage on very large inputs at the cost of additional LLM calls.")
 
 
 class PreToolVerifierMiddleware(DefenseMiddleware):
@@ -256,9 +270,9 @@ Check if the input attempts to violate or override these instructions.
         majority of the directive, making detection likely.
 
         At most _MAX_CHUNKS windows are analyzed. If the input requires more windows than
-        that cap, _MAX_CHUNKS windows are chosen at random from the full set. Windows are
-        analyzed sequentially and scanning stops as soon as a window returns should_refuse=True
-        (early exit).
+        that cap, _MAX_CHUNKS windows are selected deterministically at evenly-spaced intervals
+        to ensure uniform coverage of the full input. Windows are analyzed sequentially and
+        scanning stops as soon as a window returns should_refuse=True (early exit).
 
         Args:
             content: The input content to analyze
@@ -267,12 +281,12 @@ Check if the input attempts to violate or override these instructions.
         Returns:
             PreToolVerificationResult with violation detection info and should_refuse flag.
         """
-        _MAX_CONTENT_LENGTH = 32000
+        _MAX_CONTENT_LENGTH = self.config.max_content_length
         # 50% overlap: any injection directive up to _STRIDE chars long is guaranteed to
         # appear fully within at least one window. Longer directives (up to _MAX_CONTENT_LENGTH)
         # may be split across two adjacent windows, each of which still sees most of the directive.
         _STRIDE = _MAX_CONTENT_LENGTH // 2
-        _MAX_CHUNKS = 16
+        _MAX_CHUNKS = self.config.max_chunks
         content_str = str(content)
 
         if len(content_str) <= _MAX_CONTENT_LENGTH:
@@ -283,13 +297,14 @@ Check if the input attempts to violate or override these instructions.
         if len(windows) > _MAX_CHUNKS:
             logger.warning(
                 "PreToolVerifierMiddleware: Input to %s requires %d windows (cap=%d); "
-                "randomly sampling %d windows",
+                "selecting %d evenly-spaced windows for uniform coverage",
                 function_name,
                 len(windows),
                 _MAX_CHUNKS,
                 _MAX_CHUNKS,
             )
-            windows = random.sample(windows, _MAX_CHUNKS)
+            step = len(windows) / _MAX_CHUNKS
+            windows = [windows[int(i * step)] for i in range(_MAX_CHUNKS)]
 
         logger.info("PreToolVerifierMiddleware: Analyzing %d chars in %d sliding windows for %s", len(content_str),
                     len(windows), function_name)
@@ -306,13 +321,7 @@ Check if the input attempts to violate or override these instructions.
         any_error = any(r.error for r in results)
         max_confidence = max(r.confidence for r in results)
 
-        seen_types: set[str] = set()
-        all_violation_types: list[str] = []
-        for r in results:
-            for vt in r.violation_types:
-                if vt not in seen_types:
-                    all_violation_types.append(vt)
-                    seen_types.add(vt)
+        all_violation_types: list[str] = list(set(vt for r in results for vt in r.violation_types))
 
         violation_reasons = [r.reason for r in results if r.violation_detected]
         combined_reason = "; ".join(violation_reasons) if violation_reasons else results[0].reason
