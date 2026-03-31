@@ -45,7 +45,9 @@ _AUTH_REDIRECT_CANCELLED_HTML_TEMPLATE = """\
         (function () {
             var returnTo = RETURN_URL_PLACEHOLDER;
             if (returnTo) {
-                window.location.replace(returnTo);
+                var url = new URL(returnTo);
+                url.searchParams.set('oauth_auth_error', 'cancelled');
+                window.location.replace(url.toString());
             } else {
                 window.history.back();
             }
@@ -60,14 +62,13 @@ _AUTH_REDIRECT_CANCELLED_HTML_TEMPLATE = """\
 
 
 def build_auth_redirect_cancelled_html(return_url: str | None = None) -> str:
-    """Build the authorization-cancelled HTML page.
-
-    Redirects back to the UI without the ``oauth_auth_completed`` query
-    parameter so the UI's cancellation-message branch handles it.
+    """Build the same-page authorization-cancelled HTML page.
 
     Args:
-        return_url: The UI origin to navigate back to. Falls back to
-            ``window.history.back()`` when not provided.
+        return_url: The URL to redirect to after cancellation. When
+            provided the page navigates there immediately with an ``oauth_auth_error``
+            query parameter so the UI can detect the cancellation and avoid a
+            pre-auth redirect loop; otherwise it falls back to ``window.history.back()``.
 
     Returns:
         An HTML string for the post-cancellation redirect page.

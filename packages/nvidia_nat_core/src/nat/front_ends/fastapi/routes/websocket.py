@@ -104,7 +104,12 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
                                                               token_store=worker._oauth_token_store,
                                                               session_id=nat_session_id)
             handler.set_flow_handler(flow_handler)
-            await flow_handler.pre_authenticate(worker._config.authentication)
+            skip_pre_auth = websocket.query_params.get("skip_pre_auth") == "true"
+            if not skip_pre_auth:
+                try:
+                    await flow_handler.pre_authenticate(worker._config.authentication)
+                except Exception as e:
+                    logger.info("Pre-authentication did not complete: %s", e)
             await handler.run()
 
     return _websocket_endpoint
