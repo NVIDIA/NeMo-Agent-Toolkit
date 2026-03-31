@@ -119,7 +119,7 @@ class JobInfo(Base):
     config_file: Mapped[str] = mapped_column(nullable=True)
     error: Mapped[str] = mapped_column(nullable=True)
     output_path: Mapped[str] = mapped_column(nullable=True)
-    # We shoud be able to use server_default=func.now() and server_onupdate=func.now() for the datetime fields
+    # We should be able to use server_default=func.now() and server_onupdate=func.now() for the datetime fields
     # but in SQLite this results in timestamps with only second level precision
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True),
