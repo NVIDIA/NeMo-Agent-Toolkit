@@ -49,8 +49,7 @@ If you have not already done so, follow the [Install Guide](../../../docs/source
 Install the required packages from the **repository root**:
 
 ```bash
-uv pip install -e ".[langchain]"
-uv pip install -e "packages/nvidia_nat_memmachine"
+uv pip install -e ".[langchain,memmachine]"
 ```
 
 ### Configure MemMachine
