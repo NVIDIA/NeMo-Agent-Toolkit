@@ -258,6 +258,14 @@ class DynamicClientRegistration:
             client_name=self.config.client_name or None,
         )
         payload = metadata.model_dump(by_alias=True, mode="json", exclude_none=True)
+        logger.debug(
+            "MCP DCR request: registration_url=%s server_url=%s redirect_uri=%s scopes=%s auth_method=%s",
+            registration_url,
+            self.config.server_url,
+            self.config.redirect_uri,
+            scopes,
+            getattr(self.config, "token_endpoint_auth_method", None) or "client_secret_post",
+        )
 
         async with httpx.AsyncClient(timeout=30.0) as client:
             resp = await client.post(
@@ -279,6 +287,18 @@ class DynamicClientRegistration:
         if not info.client_id:
             raise RuntimeError("No client_id received from registration")
 
+        returned_redirect_uris = getattr(info, "redirect_uris", None)
+        returned_redirect_uris_str = ([str(uri) for uri in returned_redirect_uris] if returned_redirect_uris else None)
+        logger.debug("MCP DCR response: client_id=%s returned_redirect_uris=%s",
+                     info.client_id,
+                     returned_redirect_uris_str)
+        if returned_redirect_uris_str and str(self.config.redirect_uri) not in returned_redirect_uris_str:
+            logger.warning(
+                "MCP DCR redirect mismatch: requested_redirect_uri=%s returned_redirect_uris=%s client_id=%s",
+                self.config.redirect_uri,
+                returned_redirect_uris_str,
+                info.client_id,
+            )
         logger.info("Successfully registered OAuth2 client: %s", info.client_id)
         return OAuth2Credentials(client_id=info.client_id, client_secret=info.client_secret)
 
@@ -420,6 +440,15 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 scopes=scopes,
                 use_pkce=bool(self.config.use_pkce),
                 authorization_kwargs={"resource": str(self.config.server_url)})
+            logger.debug(
+                "MCP OAuth authorize request inputs: authorization_url=%s client_id=%s redirect_uri=%s "
+                "resource=%s scopes=%s",
+                oauth2_config.authorization_url,
+                oauth2_config.client_id,
+                oauth2_config.redirect_uri,
+                oauth2_config.authorization_kwargs.get("resource") if oauth2_config.authorization_kwargs else None,
+                oauth2_config.scopes,
+            )
             self._auth_code_provider = OAuth2AuthCodeFlowProvider(oauth2_config, token_storage=self._token_storage)
 
             # Use MCP-specific authentication method if available
