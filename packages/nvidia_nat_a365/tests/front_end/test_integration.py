@@ -216,50 +216,31 @@ def patch_sdk_components(mock_agent_app=None, mock_notification=None, mock_sessi
             patches.append(patch("microsoft_agents.hosting.core.AgentApplication", new=MockAgentApplicationClass))
         
         # Patch SDK components - they're imported inside run()
-        # We patch them where they're imported from
         mock_storage = Mock()
         mock_adapter = Mock()
         mock_conn_mgr = Mock()
-        mock_conn_mgr.get_default_connection_configuration = Mock(return_value={})
+        mock_conn_mgr.get_default_connection_configuration = Mock(return_value=Mock())
         mock_auth = Mock()
-        
-        # Patch CloudAdapter and MemoryStorage (from microsoft_agents.hosting.core)
+
         patches.extend([
             patch("microsoft_agents.hosting.core.MemoryStorage", return_value=mock_storage, create=True),
-            patch("microsoft_agents.hosting.core.CloudAdapter", return_value=mock_adapter, create=True),
+            patch("microsoft_agents.hosting.aiohttp.CloudAdapter", return_value=mock_adapter, create=True),
+            patch("microsoft_agents.authentication.msal.MsalConnectionManager", return_value=mock_conn_mgr),
+            patch("microsoft_agents.hosting.core.app.oauth.Authorization", return_value=mock_auth),
         ])
-        
-        # For authentication submodule, create it in sys.modules before import
-        # The authentication submodule might not exist, so we create it as a mock module
-        import sys
-        import types
-        
-        # Create mock authentication module
-        mock_auth_module = types.ModuleType('microsoft_agents.hosting.core.authentication')
-        mock_auth_module.MsalConnectionManager = Mock(return_value=mock_conn_mgr)
-        mock_auth_module.Authorization = Mock(return_value=mock_auth)
-        sys.modules['microsoft_agents.hosting.core.authentication'] = mock_auth_module
-        
-        # Also ensure the parent module has the authentication attribute
-        try:
-            import microsoft_agents.hosting.core as core_module
-            core_module.authentication = mock_auth_module
-        except ImportError:
-            pass  # Parent module might not exist, but sys.modules entry should be enough
-        
+
         if mock_notification:
             patches.append(patch("microsoft_agents_a365.notifications.AgentNotification", return_value=mock_notification))
-        
-        # Patch start_server - it's imported inside run() from either:
-        # microsoft_agents.hosting.aiohttp.start_server (preferred) or
-        # microsoft_agents.hosting.core.server.start_server (fallback)
-        # We patch both locations since we don't know which will be used
-        # Use create=True to handle cases where modules don't exist yet
-        # side_effect should be the exception class, not an instance
-        def raise_keyboard_interrupt(*args, **kwargs):
+
+        async def raise_keyboard_interrupt():
             raise KeyboardInterrupt()
-        patches.append(patch("microsoft_agents.hosting.aiohttp.start_server", side_effect=raise_keyboard_interrupt, create=True))
-        patches.append(patch("microsoft_agents.hosting.core.server.start_server", side_effect=raise_keyboard_interrupt, create=True))
+
+        patches.append(
+            patch(
+                "nat.plugins.a365.front_end.plugin._run_until_stopped",
+                side_effect=raise_keyboard_interrupt,
+            )
+        )
         
         # Start all patches, handling failures gracefully for optional imports
         started_patches = []
@@ -281,19 +262,6 @@ def patch_sdk_components(mock_agent_app=None, mock_notification=None, mock_sessi
         for p in patches:
             p.stop()
         
-        # Clean up mock modules from sys.modules if we created them
-        import sys
-        import types
-        auth_module_key = 'microsoft_agents.hosting.core.authentication'
-        if auth_module_key in sys.modules:
-            # Only remove if it was our mock (check if it has our mock attributes)
-            mod = sys.modules[auth_module_key]
-            if isinstance(mod, types.ModuleType) and hasattr(mod, 'MsalConnectionManager'):
-                # It's likely our mock, but be careful - only remove if it's safe
-                # In practice, leaving it is fine as it won't affect other tests
-                pass
-
-
 class TestNotificationHandlerSetup:
     """Test notification handler setup."""
 
@@ -837,24 +805,28 @@ class TestWorkerPatternMethods:
 
     def test_get_connection_manager_returns_msal_connection_manager(self, full_config):
         """Test that _get_connection_manager() returns MsalConnectionManager with correct config."""
+        from microsoft_agents.hosting.core import AgentAuthConfiguration
+        from microsoft_agents.hosting.core.authorization.auth_types import AuthTypes
+
         worker = A365FrontEndPluginWorker(full_config)
-        
-        agents_sdk_config = {
-            "MicrosoftAppId": "test-app-id",
-            "MicrosoftAppPassword": "test-password",
-            "MicrosoftAppTenantId": "test-tenant-id",
-        }
-        
-        # Patch MsalConnectionManager at its import source
-        with patch("microsoft_agents.hosting.core.authentication.MsalConnectionManager") as mock_msal:
+
+        service_connection = AgentAuthConfiguration(
+            client_id="test-app-id",
+            client_secret="test-password",
+            tenant_id="test-tenant-id",
+            auth_type=AuthTypes.client_secret,
+            connection_name="SERVICE_CONNECTION",
+        )
+
+        with patch("microsoft_agents.authentication.msal.MsalConnectionManager") as mock_msal:
             mock_instance = Mock()
             mock_msal.return_value = mock_instance
-            
-            connection_manager = worker._get_connection_manager(agents_sdk_config)
-            
-            # Verify MsalConnectionManager was instantiated with correct config
-            mock_msal.assert_called_once_with(**agents_sdk_config)
-            # Verify returned instance
+
+            connection_manager = worker._get_connection_manager(service_connection)
+
+            mock_msal.assert_called_once_with(
+                connections_configurations={"SERVICE_CONNECTION": service_connection}
+            )
             assert connection_manager is mock_instance
 
     def test_get_storage_can_be_overridden(self, full_config):
@@ -873,14 +845,14 @@ class TestWorkerPatternMethods:
     def test_get_connection_manager_can_be_overridden(self, full_config):
         """Test that _get_connection_manager() can be overridden in a subclass."""
         custom_connection_manager = Mock()
-        agents_sdk_config = {"MicrosoftAppId": "test-app-id"}
-        
+        service_connection = Mock()
+
         class CustomWorker(A365FrontEndPluginWorker):
-            def _get_connection_manager(self, agents_sdk_config):
+            def _get_connection_manager(self, service_connection):
                 return custom_connection_manager
-        
+
         worker = CustomWorker(full_config)
-        connection_manager = worker._get_connection_manager(agents_sdk_config)
+        connection_manager = worker._get_connection_manager(service_connection)
         
         assert connection_manager is custom_connection_manager
 
@@ -912,7 +884,7 @@ class TestErrorHandlingInCreateAgentApplication:
                 return mock_agent_app_instance
         
         with patch("microsoft_agents.hosting.core.MemoryStorage", return_value=Mock()):
-            with patch("microsoft_agents.hosting.core.CloudAdapter", MockCloudAdapter, create=True):
+            with patch("microsoft_agents.hosting.aiohttp.CloudAdapter", MockCloudAdapter, create=True):
                 with patch("microsoft_agents.hosting.core.AgentApplication", MockAgentApplication, create=True):
                     with patch("microsoft_agents.hosting.core.TurnState", Mock(), create=True):
                         with patch.object(worker, "_get_connection_manager", side_effect=ValueError("Invalid config")):
@@ -943,7 +915,7 @@ class TestErrorHandlingInCreateAgentApplication:
                 return mock_agent_app_instance
         
         with patch("microsoft_agents.hosting.core.MemoryStorage", return_value=Mock()):
-            with patch("microsoft_agents.hosting.core.CloudAdapter", MockCloudAdapter, create=True):
+            with patch("microsoft_agents.hosting.aiohttp.CloudAdapter", MockCloudAdapter, create=True):
                 with patch("microsoft_agents.hosting.core.AgentApplication", MockAgentApplication, create=True):
                     with patch("microsoft_agents.hosting.core.TurnState", Mock(), create=True):
                         with patch.object(worker, "_get_connection_manager", side_effect=TypeError("Wrong type")):
@@ -978,7 +950,7 @@ class TestErrorHandlingInCreateAgentApplication:
                 return mock_agent_app_instance
         
         with patch("microsoft_agents.hosting.core.MemoryStorage", return_value=Mock()):
-            with patch("microsoft_agents.hosting.core.CloudAdapter", MockCloudAdapter, create=True):
+            with patch("microsoft_agents.hosting.aiohttp.CloudAdapter", MockCloudAdapter, create=True):
                 with patch("microsoft_agents.hosting.core.AgentApplication", MockAgentApplication, create=True):
                     with patch("microsoft_agents.hosting.core.TurnState", Mock(), create=True):
                         with patch.object(worker, "_get_connection_manager", side_effect=MockApplicationError("SDK error")):
@@ -999,7 +971,7 @@ class TestErrorHandlingInCreateAgentApplication:
         with patch.object(worker, "_get_storage", return_value=mock_storage):
             with patch.object(worker, "_get_connection_manager", return_value=mock_connection_manager):
                 # Patch CloudAdapter at its import source
-                with patch("microsoft_agents.hosting.core.CloudAdapter", side_effect=Exception("Adapter error"), create=True):
+                with patch("microsoft_agents.hosting.aiohttp.CloudAdapter", side_effect=Exception("Adapter error"), create=True):
                     with pytest.raises(A365SDKError, match="Failed to initialize CloudAdapter"):
                         await worker.create_agent_application()
 
@@ -1015,8 +987,8 @@ class TestErrorHandlingInCreateAgentApplication:
         with patch.object(worker, "_get_storage", return_value=mock_storage):
             with patch.object(worker, "_get_connection_manager", return_value=mock_connection_manager):
                 # Patch SDK components at their import source
-                with patch("microsoft_agents.hosting.core.CloudAdapter", return_value=Mock(), create=True):
-                    with patch("microsoft_agents.hosting.core.authentication.Authorization", side_effect=ValueError("Invalid auth config")):
+                with patch("microsoft_agents.hosting.aiohttp.CloudAdapter", return_value=Mock(), create=True):
+                    with patch("microsoft_agents.hosting.core.app.oauth.Authorization", side_effect=ValueError("Invalid auth config")):
                         with pytest.raises(A365ConfigurationError, match="Invalid configuration for Authorization"):
                             await worker.create_agent_application()
 
@@ -1034,8 +1006,8 @@ class TestErrorHandlingInCreateAgentApplication:
         with patch.object(worker, "_get_storage", return_value=mock_storage):
             with patch.object(worker, "_get_connection_manager", return_value=mock_connection_manager):
                 # Patch SDK components at their import source
-                with patch("microsoft_agents.hosting.core.CloudAdapter", return_value=mock_adapter, create=True):
-                    with patch("microsoft_agents.hosting.core.authentication.Authorization", return_value=mock_authorization):
+                with patch("microsoft_agents.hosting.aiohttp.CloudAdapter", return_value=mock_adapter, create=True):
+                    with patch("microsoft_agents.hosting.core.app.oauth.Authorization", return_value=mock_authorization):
                         # Mock AgentApplication to raise ValueError
                         class MockAgentApplication:
                             def __class_getitem__(cls, item):
@@ -1065,8 +1037,8 @@ class TestErrorHandlingInCreateAgentApplication:
         with patch.object(worker, "_get_storage", return_value=mock_storage):
             with patch.object(worker, "_get_connection_manager", return_value=mock_connection_manager):
                 # Patch SDK components at their import source
-                with patch("microsoft_agents.hosting.core.CloudAdapter", return_value=mock_adapter, create=True):
-                    with patch("microsoft_agents.hosting.core.authentication.Authorization", return_value=mock_authorization):
+                with patch("microsoft_agents.hosting.aiohttp.CloudAdapter", return_value=mock_adapter, create=True):
+                    with patch("microsoft_agents.hosting.core.app.oauth.Authorization", return_value=mock_authorization):
                         # Mock AgentApplication to raise ApplicationError
                         class MockAgentApplication:
                             def __class_getitem__(cls, item):

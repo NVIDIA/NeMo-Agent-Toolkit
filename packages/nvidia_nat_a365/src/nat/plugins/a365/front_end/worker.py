@@ -37,8 +37,9 @@ from nat.plugins.a365.front_end.front_end_config import A365FrontEndConfig
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
-    from microsoft_agents.hosting.core import AgentApplication, TurnState
-    from microsoft_agents.hosting.core.authentication import MsalConnectionManager
+    from microsoft_agents.authentication.msal import MsalConnectionManager
+    from microsoft_agents.hosting.aiohttp import CloudAdapter
+    from microsoft_agents.hosting.core import AgentApplication, AgentAuthConfiguration, TurnState
     from microsoft_agents.hosting.core.authorization import Connections
     from microsoft_agents.hosting.core.storage import Storage
 
@@ -74,48 +75,51 @@ class A365FrontEndPluginWorker:
         from microsoft_agents.hosting.core import MemoryStorage
         return MemoryStorage()
 
-    def _get_connection_manager(self, agents_sdk_config: dict[str, str]) -> Connections:
+    def _get_connection_manager(self, service_connection: "AgentAuthConfiguration") -> Connections:
         """Get the connection manager instance for the AgentApplication.
-        
-        Uses dependency injection pattern - returns Connections Protocol implementation.
-        Defaults to MsalConnectionManager, but can be overridden for custom connection managers.
-        
+
+        Defaults to MsalConnectionManager with a single ``SERVICE_CONNECTION`` entry
+        (required by the Microsoft Agents SDK 0.8+ MSAL integration).
+
         Args:
-            agents_sdk_config: Configuration dictionary with MicrosoftAppId, MicrosoftAppPassword, etc.
-        
+            service_connection: Auth configuration for the bot's service connection.
+
         Returns:
-            Connections: A Connections Protocol implementation (default: MsalConnectionManager)
+            Connections: A Connections implementation (default: MsalConnectionManager)
         """
-        from microsoft_agents.hosting.core.authentication import MsalConnectionManager
-        return MsalConnectionManager(**agents_sdk_config)
+        from microsoft_agents.authentication.msal import MsalConnectionManager
+
+        return MsalConnectionManager(
+            connections_configurations={"SERVICE_CONNECTION": service_connection}
+        )
 
     async def create_agent_application(
-        self
-    ) -> tuple[AgentApplication[TurnState], Connections]:
+        self,
+    ) -> tuple[AgentApplication[TurnState], Connections, "CloudAdapter"]:
         """Create and initialize Microsoft Agents SDK application.
-        
+
         Returns:
-            tuple[AgentApplication[TurnState], Connections]: Initialized application
-                and connection manager (needed for server startup)
-            
+            Initialized ``AgentApplication``, ``Connections`` (MSAL manager), and aiohttp
+            ``CloudAdapter`` (used by the HTTP server and ``AgentApplication`` options).
+
         Raises:
             A365ConfigurationError: If configuration is invalid (missing fields, wrong types)
             A365SDKError: If SDK component initialization fails
         """
-        from microsoft_agents.hosting.core import (
-            AgentApplication,
-            CloudAdapter,
-            TurnState,
-        )
+        from microsoft_agents.hosting.aiohttp import CloudAdapter
+        from microsoft_agents.hosting.core import AgentApplication, AgentAuthConfiguration, TurnState
         from microsoft_agents.hosting.core.app.app_error import ApplicationError
-        from microsoft_agents.hosting.core.authentication import Authorization
+        from microsoft_agents.hosting.core.app.app_options import ApplicationOptions
+        from microsoft_agents.hosting.core.app.oauth import Authorization
+        from microsoft_agents.hosting.core.authorization.auth_types import AuthTypes
 
-        agents_sdk_config = {
-            "MicrosoftAppId": self.front_end_config.app_id,
-            "MicrosoftAppPassword": get_secret_value(self.front_end_config.app_password),
-        }
-        if self.front_end_config.tenant_id:
-            agents_sdk_config["MicrosoftAppTenantId"] = self.front_end_config.tenant_id
+        service_connection = AgentAuthConfiguration(
+            client_id=self.front_end_config.app_id,
+            client_secret=get_secret_value(self.front_end_config.app_password),
+            auth_type=AuthTypes.client_secret,
+            connection_name="SERVICE_CONNECTION",
+            tenant_id=self.front_end_config.tenant_id,
+        )
 
         # Initialize components sequentially, catching errors with context
         # This pattern matches A2A and MCP plugins: sequential initialization with
@@ -128,7 +132,7 @@ class A365FrontEndPluginWorker:
         # Get connection manager instance (uses dependency injection pattern - defaults to MsalConnectionManager)
         # Users can override _get_connection_manager() in a subclass to use custom connection managers
         try:
-            connection_manager = self._get_connection_manager(agents_sdk_config)
+            connection_manager = self._get_connection_manager(service_connection)
         except (ValueError, TypeError) as e:
             # ValueError/TypeError from connection manager initialization indicate configuration issues
             # (missing required fields, wrong parameter types, invalid values)
@@ -164,7 +168,6 @@ class A365FrontEndPluginWorker:
             authorization = Authorization(
                 storage=storage,
                 connection_manager=connection_manager,
-                **agents_sdk_config
             )
         except (ValueError, TypeError) as e:
             # ValueError/TypeError from Authorization initialization indicate configuration issues
@@ -189,11 +192,15 @@ class A365FrontEndPluginWorker:
             ) from e
 
         try:
-            agent_app = AgentApplication[TurnState](
+            options = ApplicationOptions(
                 storage=storage,
                 adapter=adapter,
+                bot_app_id=self.front_end_config.app_id,
+            )
+            agent_app = AgentApplication[TurnState](
+                options=options,
+                connection_manager=connection_manager,
                 authorization=authorization,
-                **agents_sdk_config
             )
         except ApplicationError as e:
             # ApplicationError from SDK indicates missing required components (storage, adapter, auth)
@@ -222,7 +229,7 @@ class A365FrontEndPluginWorker:
                 original_error=e
             ) from e
 
-        return agent_app, connection_manager
+        return agent_app, connection_manager, adapter
 
     async def setup_notification_handlers(
         self,

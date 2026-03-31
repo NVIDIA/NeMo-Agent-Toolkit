@@ -57,9 +57,10 @@ dependencies = [
   "microsoft-agents-a365-notifications~=0.1.0",
   "microsoft-agents-a365-observability-core~=0.1.0",
   "microsoft-agents-a365-tooling~=0.1.0",
-  "microsoft-agents-activity~=0.7.0",
-  "microsoft-agents-hosting-aiohttp~=0.7.0",
-  "microsoft-agents-hosting-core~=0.7.0",
+  "microsoft-agents-activity~=0.8.0",
+  "microsoft-agents-authentication-msal~=0.8.0",
+  "microsoft-agents-hosting-aiohttp~=0.8.0",
+  "microsoft-agents-hosting-core~=0.8.0",
   "nvidia-nat-core == {version}",
   "nvidia-nat-opentelemetry == {version}",
 ]
