@@ -45,7 +45,6 @@ async def failing_job_function() -> None:
     raise ValueError("This job is designed to fail")
 
 
-
 async def test_job_store_init_with_engine(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test JobStore initialization with provided database engine."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -54,7 +53,6 @@ async def test_job_store_init_with_engine(db_engine: "AsyncEngine", dask_schedul
 
     assert job_store._scheduler_address == dask_scheduler_address
     assert job_store._session is not None
-
 
 
 async def test_job_store_init_with_db_url(db_url: str, dask_scheduler_address: str):
