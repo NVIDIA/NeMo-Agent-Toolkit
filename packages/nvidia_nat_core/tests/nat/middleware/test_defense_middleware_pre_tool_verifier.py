@@ -89,9 +89,10 @@ class TestAnalyzeContentChunking:
       - 96000 chars  → range(0, 96000, 16000) → 6 windows
 
     LLM calls are capped at _MAX_CHUNKS per invocation. Inputs requiring more windows than
-    that cap are analyzed by randomly sampling _MAX_CHUNKS windows (still up to _MAX_CHUNKS
-    LLM calls). The loop also exits early as soon as a window returns should_refuse=True,
-    so the actual call count may be lower than _MAX_CHUNKS when a violation is found mid-scan.
+    that cap are analyzed using _MAX_CHUNKS evenly-spaced windows selected deterministically
+    for uniform coverage (still up to _MAX_CHUNKS LLM calls). The loop also exits early as
+    soon as a window returns should_refuse=True, so the actual call count may be lower than
+    _MAX_CHUNKS when a violation is found mid-scan.
     """
 
     async def test_chunk_xml_tags_are_escaped_in_prompt(self, mock_builder, middleware_context):
@@ -374,8 +375,8 @@ class TestAnalyzeContentChunking:
         assert result.violation_detected
         assert result.should_refuse
 
-    async def test_over_cap_randomly_samples_max_chunks_windows(self, mock_builder, middleware_context):
-        """Input requiring more than _MAX_CHUNKS windows is analyzed by sampling exactly _MAX_CHUNKS windows."""
+    async def test_over_cap_selects_evenly_spaced_windows(self, mock_builder, middleware_context):
+        """Input requiring more than _MAX_CHUNKS windows is analyzed using exactly _MAX_CHUNKS evenly-spaced windows."""
         config = PreToolVerifierMiddlewareConfig(llm_name="test_llm", action="refusal", threshold=0.7)
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
@@ -387,7 +388,7 @@ class TestAnalyzeContentChunking:
         over_cap_content = "a" * (_MAX_CHUNKS * _STRIDE + 1)
         result = await middleware._analyze_content(over_cap_content, function_name=middleware_context.name)
 
-        # All sampled windows are clean → exactly _MAX_CHUNKS calls, no early exit
+        # All selected windows are clean → exactly _MAX_CHUNKS calls, no early exit
         assert mock_llm.ainvoke.call_count == _MAX_CHUNKS
         assert not result.violation_detected
         assert not result.should_refuse
