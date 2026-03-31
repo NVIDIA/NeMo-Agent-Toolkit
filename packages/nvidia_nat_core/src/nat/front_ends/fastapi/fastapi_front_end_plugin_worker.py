@@ -202,6 +202,10 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Conversation handlers for WebSocket reconnection support
         self._conversation_handlers: dict[str, WebSocketMessageHandler] = {}
 
+        # OAuth token cache: maps "{session_id}:{client_id}:{token_url}" to
+        # (AuthenticatedContext, expires_at_unix_or_None)
+        self._oauth_token_store: dict[str, tuple] = {}
+
         # Track session managers for each route
         self._session_managers: list[SessionManager] = []
 

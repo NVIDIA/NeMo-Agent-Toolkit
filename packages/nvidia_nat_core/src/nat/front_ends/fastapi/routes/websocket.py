@@ -25,6 +25,7 @@ from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import Web
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 from nat.runtime.session import SESSION_COOKIE_NAME
 from nat.runtime.session import SessionManager
+from nat.runtime.user_manager import UserManager
 
 logger = logging.getLogger(__name__)
 
@@ -95,11 +96,15 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
             allowed_origins = worker.front_end_config.cors.allow_origins or []
             allow_origin_regex = worker.front_end_config.cors.allow_origin_regex
             return_url = origin if _is_origin_allowed(origin, allowed_origins, allow_origin_regex) else None
+            nat_session_id = UserManager._get_session_cookie(websocket)
             flow_handler = WebSocketAuthenticationFlowHandler(worker._add_flow,
                                                               worker._remove_flow,
                                                               handler,
-                                                              return_url=return_url)
+                                                              return_url=return_url,
+                                                              token_store=worker._oauth_token_store,
+                                                              session_id=nat_session_id)
             handler.set_flow_handler(flow_handler)
+            await flow_handler.pre_authenticate(worker._config.authentication)
             await handler.run()
 
     return _websocket_endpoint

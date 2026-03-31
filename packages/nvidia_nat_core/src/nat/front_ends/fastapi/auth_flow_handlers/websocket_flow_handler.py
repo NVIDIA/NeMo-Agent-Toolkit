@@ -16,6 +16,7 @@
 import asyncio
 import logging
 import secrets
+import time
 from collections.abc import Awaitable
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ from nat.authentication.interfaces import FlowHandlerBase
 from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAuth2AuthCodeFlowProviderConfig
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
+from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.interactive import _HumanPromptOAuthConsent
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 
@@ -52,13 +54,17 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                  remove_flow_cb: Callable[[str], Awaitable[None]],
                  web_socket_message_handler: WebSocketMessageHandler,
                  auth_timeout_seconds: float = 300.0,
-                 return_url: str | None = None):
+                 return_url: str | None = None,
+                 token_store: dict | None = None,
+                 session_id: str | None = None):
 
         self._add_flow_cb: Callable[[str, FlowState], Awaitable[None]] = add_flow_cb
         self._remove_flow_cb: Callable[[str], Awaitable[None]] = remove_flow_cb
         self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
         self._auth_timeout_seconds: float = auth_timeout_seconds
-        self._return_url: str | None = return_url
+        self.return_url: str | None = return_url
+        self._token_store: dict | None = token_store
+        self._session_id: str | None = session_id
 
     async def authenticate(
             self,
@@ -68,6 +74,16 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             return await self._handle_oauth2_auth_code_flow(config)
 
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the websocket frontend.")
+
+    async def pre_authenticate(self, auth_providers: dict[str, AuthProviderBaseConfig]) -> None:
+        """Run auth for every configured OAuth2 provider before the first user message.
+
+        Returns immediately if tokens are already cached. Otherwise triggers the OAuth
+        redirect so the user authenticates at page load rather than mid-workflow.
+        """
+        for provider_config in auth_providers.values():
+            if isinstance(provider_config, OAuth2AuthCodeFlowProviderConfig):
+                await self.authenticate(provider_config, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
 
     def create_oauth_client(self, config: OAuth2AuthCodeFlowProviderConfig) -> AsyncOAuth2Client:
         try:
@@ -120,6 +136,11 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             raise ValueError("Redirect-based authentication (use_redirect_auth=True) requires a return URL, "
                              "but none was configured. Pass return_url when constructing the flow handler.")
 
+        cached = self._get_cached_token(config)
+        if cached is not None:
+            logger.debug("OAuth token cache hit for client_id=%s", config.client_id)
+            return cached
+
         state = secrets.token_urlsafe(16)
         return_url = self._return_url if config.use_redirect_auth else None
         flow_state = FlowState(config=config, return_url=return_url)
@@ -148,7 +169,37 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
             await self._remove_flow_cb(state)
 
-        return AuthenticatedContext(headers={"Authorization": f"Bearer {token['access_token']}"},
-                                    metadata={
-                                        "expires_at": token.get("expires_at"), "raw_token": token
-                                    })
+        ctx = AuthenticatedContext(headers={"Authorization": f"Bearer {token['access_token']}"},
+                                   metadata={
+                                       "expires_at": token.get("expires_at"), "raw_token": token
+                                   })
+        self._store_token(config, ctx)
+        return ctx
+
+    def _token_cache_key(self, config: OAuth2AuthCodeFlowProviderConfig) -> str | None:
+        """Return a cache key for this (session, provider) pair, or None if caching is unavailable."""
+        if not self._session_id or self._token_store is None:
+            return None
+        return f"{self._session_id}:{config.client_id}:{config.token_url}"
+
+    def _get_cached_token(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext | None:
+        """Return a cached, non-expired token for *config*, or None."""
+        key = self._token_cache_key(config)
+        if key is None or self._token_store is None:
+            return None
+        entry = self._token_store.get(key)
+        if entry is None:
+            return None
+        ctx, expires_at = entry
+        if expires_at is not None and time.time() >= expires_at - 60:
+            del self._token_store[key]
+            return None
+        return ctx
+
+    def _store_token(self, config: OAuth2AuthCodeFlowProviderConfig, ctx: AuthenticatedContext) -> None:
+        """Cache *ctx* for *config* if caching is available."""
+        key = self._token_cache_key(config)
+        if key is None or self._token_store is None:
+            return
+        expires_at = ctx.metadata.get("expires_at") if ctx.metadata else None
+        self._token_store[key] = (ctx, expires_at)
