@@ -36,9 +36,9 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
-from nat.plugins.langchain.eval.trajectory_evaluator import _atif_to_agent_actions
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluator
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluatorConfig
+from nat.plugins.langchain.eval.trajectory_evaluator import _atif_to_agent_actions
 from nat.plugins.langchain.eval.trajectory_evaluator import register_trajectory_evaluator
 
 
@@ -136,12 +136,11 @@ async def test_trajectory_evaluate_failure(trajectory_evaluator, rag_eval_input)
 
 
 async def test_trajectory_evaluate_recovers_score_from_output_parser_error(trajectory_evaluator, rag_eval_input):
-    parser_error = (
-        "Could not find score in model eval output: "
-        "Overall, I would give the AI language model a score of 5."
-    )
+    parser_error = ("Could not find score in model eval output: "
+                    "Overall, I would give the AI language model a score of 5.")
     with patch.object(trajectory_evaluator, "traj_eval_chain") as mock_traj_eval_chain:
-        mock_traj_eval_chain.aevaluate_agent_trajectory = AsyncMock(side_effect=[Exception(parser_error), Exception(parser_error)])
+        mock_traj_eval_chain.aevaluate_agent_trajectory = AsyncMock(
+            side_effect=[Exception(parser_error), Exception(parser_error)])
 
         eval_output = await trajectory_evaluator.evaluate(rag_eval_input)
 

@@ -27,6 +27,7 @@ from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.token_usage import TokenUsageBaseModel
+from nat.utils import atif_converter as atif_converter_module
 from nat.utils.atif_converter import ATIFStreamConverter
 from nat.utils.atif_converter import IntermediateStepToATIFConverter
 
@@ -100,6 +101,58 @@ def _make_usage(
         ),
         num_llm_calls=1,
     )
+
+
+@pytest.mark.parametrize(
+    ("raw_input", "expected"),
+    [
+        ({
+            "input_message": "hello from input_message"
+        }, "hello from input_message"),
+        ({
+            "messages": [
+                {
+                    "role": "system", "content": "system"
+                },
+                {
+                    "role": "user", "content": "first user"
+                },
+                {
+                    "role": "assistant", "content": "assistant reply"
+                },
+                {
+                    "role": "user", "content": "last user"
+                },
+            ]
+        },
+         "last user"),
+    ],
+)
+def test_extract_user_input_chat_variants(raw_input: str | dict, expected: str):
+    """User input extraction handles both `input_message` and chat `messages` payloads."""
+    assert atif_converter_module._extract_user_input(raw_input) == expected
+
+
+@pytest.mark.parametrize(
+    ("raw_input", "expected"),
+    [
+        ('{"expression": "2+2"}', {
+            "expression": "2+2"
+        }),
+        ("{'expression': '2+2'}", {
+            "expression": "2+2"
+        }),
+        ("2+2", {
+            "input": "2+2"
+        }),
+        (42, {
+            "input": "42"
+        }),
+    ],
+)
+def test_parse_tool_arguments_variants(raw_input: str | int, expected: dict[str, str]):
+    """Tool argument parsing supports JSON/literal/plain/scalar payload variants."""
+    assert atif_converter_module._parse_tool_arguments(raw_input) == expected
 
 
 # ---------------------------------------------------------------------------
@@ -802,6 +855,94 @@ class TestBatchConverter:
         assert len(result.agent.tool_definitions) == 1
         assert result.agent.tool_definitions[0]["function"]["name"] == "weather"
 
+    @pytest.mark.parametrize("event_type", [IntermediateStepType.TOOL_END, IntermediateStepType.FUNCTION_END])
+    def test_batch_converter_emits_orphan_invocation_step(
+        self,
+        batch_converter: IntermediateStepToATIFConverter,
+        event_type: IntermediateStepType,
+    ):
+        """Orphan tool/function end events are emitted as standalone agent tool steps."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="Run one orphan call",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                event_type,
+                name="calculator",
+                input_data={"expression": "2+2"},
+                output_data="4",
+                timestamp_offset=1.0,
+                step_uuid="orphan-tool-1",
+                function_name="calculator",
+                function_id="fn-calc",
+                function_parent_id="wf-1",
+                function_parent_name="workflow",
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="done",
+                timestamp_offset=2.0,
+            ),
+        ]
+        result = batch_converter.convert(steps)
+
+        orphan_step = result.steps[1]
+        assert orphan_step.source == "agent"
+        assert orphan_step.message == ""
+        assert orphan_step.tool_calls is not None
+        assert len(orphan_step.tool_calls) == 1
+        assert orphan_step.observation is not None
+        assert len(orphan_step.observation.results) == 1
+        assert orphan_step.observation.results[0].source_call_id == orphan_step.tool_calls[0].tool_call_id
+        assert orphan_step.extra is not None
+        assert len(orphan_step.extra["tool_ancestry"]) == 1
+        assert len(orphan_step.extra["tool_invocations"]) == 1
+        assert orphan_step.extra["tool_invocations"][0]["invocation_id"] == orphan_step.tool_calls[0].tool_call_id
+
+    def test_converter_ignores_non_exported_events(self, batch_converter: IntermediateStepToATIFConverter):
+        """Non-exported start/chunk/unsupported-end events do not produce ATIF steps."""
+        steps = [
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="hello",
+                timestamp_offset=0.0,
+            ),
+            _make_step(
+                IntermediateStepType.TOOL_START,
+                name="calculator",
+                timestamp_offset=0.5,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_NEW_TOKEN,
+                output_data="tok",
+                timestamp_offset=0.6,
+            ),
+            _make_step(
+                IntermediateStepType.SPAN_CHUNK,
+                output_data="chunk",
+                timestamp_offset=0.7,
+            ),
+            _make_step(
+                IntermediateStepType.TASK_END,
+                output_data="ignored",
+                timestamp_offset=0.8,
+            ),
+            _make_step(
+                IntermediateStepType.WORKFLOW_END,
+                output_data="final",
+                timestamp_offset=1.0,
+            ),
+        ]
+        result = batch_converter.convert(steps)
+        assert len(result.steps) == 2
+        assert result.steps[0].source == "user"
+        assert result.steps[0].message == "hello"
+        assert result.steps[1].source == "agent"
+        assert result.steps[1].message == "final"
+        assert result.steps[1].tool_calls is None
+
 
 # ---------------------------------------------------------------------------
 # Stream converter tests
@@ -887,6 +1028,68 @@ class TestStreamConverter:
         assert len(flushed.tool_calls) == 1
         assert flushed.tool_calls[0].function_name == "search"
         assert flushed.observation.results[0].content == "found it"
+
+    def test_stream_converter_emits_orphan_tool_end(self):
+        """Orphan `TOOL_END` emits an immediate standalone agent step."""
+        converter = ATIFStreamConverter()
+        converter.push(_make_step(
+            IntermediateStepType.WORKFLOW_START,
+            input_data="q",
+            timestamp_offset=0.0,
+        ))
+        orphan = converter.push(
+            _make_step(
+                IntermediateStepType.TOOL_END,
+                name="search",
+                input_data='{"query": "orphan"}',
+                output_data="found orphan",
+                timestamp_offset=1.0,
+                step_uuid="stream-orphan-tool-1",
+            ))
+        assert orphan is not None
+        assert orphan.source == "agent"
+        assert orphan.message == ""
+        assert orphan.tool_calls is not None
+        assert len(orphan.tool_calls) == 1
+        assert orphan.observation is not None
+        assert len(orphan.observation.results) == 1
+        assert orphan.observation.results[0].source_call_id == orphan.tool_calls[0].tool_call_id
+
+    def test_stream_converter_populates_tool_definitions_from_llm_metadata(self):
+        """`LLM_END` metadata tool schemas populate stream converter agent config."""
+        from nat.data_models.intermediate_step import ToolDetails
+        from nat.data_models.intermediate_step import ToolParameters
+        from nat.data_models.intermediate_step import ToolSchema
+        from nat.data_models.intermediate_step import TraceMetadata
+
+        converter = ATIFStreamConverter()
+        converter.push(_make_step(
+            IntermediateStepType.WORKFLOW_START,
+            input_data="q",
+            timestamp_offset=0.0,
+        ))
+        llm_end = _make_step(
+            IntermediateStepType.LLM_END,
+            name="gpt-4",
+            output_data="using tools",
+            timestamp_offset=1.0,
+        )
+        llm_end.payload.metadata = TraceMetadata(tools_schema=[
+            ToolSchema(
+                type="function",
+                function=ToolDetails(
+                    name="weather",
+                    description="Get weather",
+                    parameters=ToolParameters(properties={}),
+                ),
+            )
+        ])
+
+        pushed = converter.push(llm_end)
+        assert pushed is None
+        assert converter.agent_config.tool_definitions is not None
+        assert len(converter.agent_config.tool_definitions) == 1
+        assert converter.agent_config.tool_definitions[0]["function"]["name"] == "weather"
 
     def test_finalize_flushes_pending(self):
         """finalize() returns any remaining pending turn."""
