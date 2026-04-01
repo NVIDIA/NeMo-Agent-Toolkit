@@ -13,11 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Nested trajectory evaluation example:
-#   react_agent -> power_of_two -> calculator__multiply
+# Trajectory evaluation example:
+#   react_agent -> {calculator, current_datetime}
 #
-# This configuration writes ATIF workflow output so you can inspect how nested
-# tool calls are represented in trajectory steps.
+# This configuration writes ATIF workflow output so you can inspect
+# trajectory structure with standard calculator and datetime tool calls.
 
 general:
   telemetry:
@@ -60,12 +60,16 @@ eval:
   general:
     max_concurrency: 1
     output:
-      dir: .tmp/nat/examples/simple_calculator/nested-eval
+      dir: .tmp/nat/examples/simple_calculator/trajectory-eval
       write_atif_workflow_output: true
       cleanup: true
     dataset:
       _type: json
       file_path: examples/getting_started/simple_calculator/data/simple_calculator.json
+      filter:
+        allowlist:
+          field:
+            id: [1]
 
   evaluators:
     trajectory_eval:

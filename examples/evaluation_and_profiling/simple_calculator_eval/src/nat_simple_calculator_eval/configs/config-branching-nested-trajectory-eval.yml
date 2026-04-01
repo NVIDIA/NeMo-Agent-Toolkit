@@ -72,6 +72,10 @@ eval:
     dataset:
       _type: json
       file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_branch.json
+      filter:
+        allowlist:
+          field:
+            id: [1]
 
   evaluators:
     trajectory_eval:
