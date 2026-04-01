@@ -282,3 +282,78 @@ async def test_runner_state_management():
         async with runner:
             result = await runner.result()
             assert result == "test!"
+
+
+async def test_runner_aexit_raises_on_incomplete_clean_exit():
+    """Test that Runner raises ValueError when exited cleanly without completing the workflow."""
+
+    async with WorkflowBuilder() as builder:
+        entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())
+
+        context_state = ContextState()
+        exporter_manager = ExporterManager()
+
+        with pytest.raises(ValueError, match="Cannot exit the context without completing the workflow"):
+            async with Runner(input_message="test",
+                              entry_fn=entry_fn,
+                              context_state=context_state,
+                              exporter_manager=exporter_manager):
+                pass  # exit without calling result()
+
+
+async def test_runner_aexit_allows_cancelled_error_to_propagate():
+    """Test that Runner does not mask CancelledError with a ValueError on exit."""
+    import asyncio
+
+    async with WorkflowBuilder() as builder:
+        entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())
+
+        context_state = ContextState()
+        exporter_manager = ExporterManager()
+
+        with pytest.raises(asyncio.CancelledError):
+            async with Runner(input_message="test",
+                              entry_fn=entry_fn,
+                              context_state=context_state,
+                              exporter_manager=exporter_manager):
+                raise asyncio.CancelledError()
+
+
+async def test_runner_workflow_replacement_handoff():
+    """Test the workflow-replacement handoff path tied to the message_handler regression.
+
+    Cancelling the first in-flight Runner via task.cancel() must not mask CancelledError
+    with a ValueError (runner.py fix), and the immediately-following second Runner must
+    run to completion on the same context_state/exporter_manager.
+    """
+    import asyncio
+
+    async with WorkflowBuilder() as builder:
+        entry_fn = await builder.add_function(name="test_function", config=SingleOutputConfig())
+
+        context_state = ContextState()
+        exporter_manager = ExporterManager()
+
+        # Simulate message_handler cancelling an in-flight task when a new message arrives.
+        async def _first_workflow():
+            async with Runner(input_message="first",
+                              entry_fn=entry_fn,
+                              context_state=context_state,
+                              exporter_manager=exporter_manager):
+                await asyncio.sleep(0)  # yield so external cancel can be delivered
+
+        first_task = asyncio.create_task(_first_workflow())
+        await asyncio.sleep(0)  # let the task enter the Runner context
+        first_task.cancel()
+
+        # CancelledError must propagate cleanly — not be masked by ValueError.
+        with pytest.raises(asyncio.CancelledError):
+            await first_task
+
+        # Handoff: second Runner starts immediately on the same context and runs to completion.
+        async with Runner(input_message="second",
+                          entry_fn=entry_fn,
+                          context_state=context_state,
+                          exporter_manager=exporter_manager) as runner2:
+            result = await runner2.result()
+            assert result == "second!"

@@ -150,7 +150,7 @@ class Runner:
 
         self._context_state.runtime_type.reset(self._runtime_type_token)
 
-        if (self._state not in (RunnerState.COMPLETED, RunnerState.FAILED)):
+        if (self._state not in (RunnerState.COMPLETED, RunnerState.FAILED)) and exc_type is None:
             raise ValueError("Cannot exit the context without completing the workflow")
 
     @typing.overload
