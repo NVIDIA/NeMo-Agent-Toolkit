@@ -13,16 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import StrEnum
+"""Entry point — imports modules to trigger registration."""
 
-
-class LLMFrameworkEnum(StrEnum):
-    LANGCHAIN = "langchain"
-    LLAMA_INDEX = "llama_index"
-    CREWAI = "crewai"
-    SEMANTIC_KERNEL = "semantic_kernel"
-    AGNO = "agno"
-    ADK = "adk"
-    STRANDS = "strands"
-    AUTOGEN = "autogen"
-    AG2 = "ag2"  # AG2 (formerly AutoGen) — separate from Microsoft AutoGen
+from . import llm  # noqa: F401
+from . import tool_wrapper  # noqa: F401
+from . import callback_handler  # noqa: F401

@@ -181,6 +181,7 @@ We would like to thank the following groups for their contribution to the toolki
 
 In addition, we would like to thank the following open source projects that made NeMo Agent Toolkit possible:
 
+- [AG2](https://github.com/ag2ai/ag2)
 - [Agent2Agent (A2A) Protocol](https://github.com/a2aproject/A2A)
 - [CrewAI](https://github.com/crewAIInc/crewAI)
 - [Dynamo](https://github.com/ai-dynamo/dynamo)

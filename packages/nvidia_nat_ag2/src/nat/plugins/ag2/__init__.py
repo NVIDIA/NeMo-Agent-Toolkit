@@ -13,16 +13,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import StrEnum
-
-
-class LLMFrameworkEnum(StrEnum):
-    LANGCHAIN = "langchain"
-    LLAMA_INDEX = "llama_index"
-    CREWAI = "crewai"
-    SEMANTIC_KERNEL = "semantic_kernel"
-    AGNO = "agno"
-    ADK = "adk"
-    STRANDS = "strands"
-    AUTOGEN = "autogen"
-    AG2 = "ag2"  # AG2 (formerly AutoGen) — separate from Microsoft AutoGen
+"""AG2 (formerly AutoGen) plugin for NeMo-Agent-Toolkit."""

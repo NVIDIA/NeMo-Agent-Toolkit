@@ -1,5 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
-# All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,24 +23,23 @@ root = "../../.."
 
 [tool.setuptools.packages.find]
 where = ["src"]
+include = ["nat_ag2_demo.*"]
 
 [project]
-name = "nat_autogen_demo"
+name = "nat-ag2-demo"
 dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
-description = "AutoGen Workflow Example"
-keywords = ["ai", "rag", "agents", "autogen", "multi-agent"]
+description = "AG2 (formerly AutoGen) Workflow Example"
+keywords = ["ai", "agents", "ag2", "autogen", "multi-agent"]
 classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[autogen,eval,mcp,test] == {version}",
+    "nvidia-nat[ag2,eval,mcp,test] == {version}",
 ]
 
 [tool.uv.sources]
-nvidia-nat-core = { path = "../../../packages/nvidia_nat_core", editable = true }
-nvidia-nat-ag2  = { path = "../../../packages/nvidia_nat_ag2",  editable = true }
-nvidia-nat      = { path = "../../..", editable = true }
+nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
-nat_autogen_demo = "nat_autogen_demo.register"
+nat_ag2_demo = "nat_ag2_demo.register"

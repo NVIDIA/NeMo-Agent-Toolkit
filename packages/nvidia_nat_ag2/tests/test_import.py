@@ -13,16 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import StrEnum
+"""Basic tests for the AG2 plugin package."""
 
 
-class LLMFrameworkEnum(StrEnum):
-    LANGCHAIN = "langchain"
-    LLAMA_INDEX = "llama_index"
-    CREWAI = "crewai"
-    SEMANTIC_KERNEL = "semantic_kernel"
-    AGNO = "agno"
-    ADK = "adk"
-    STRANDS = "strands"
-    AUTOGEN = "autogen"
-    AG2 = "ag2"  # AG2 (formerly AutoGen) — separate from Microsoft AutoGen
+def test_register_module_imports():
+    """Verify the entry point module loads without error."""
+    from nat.plugins.ag2 import register  # noqa: F401
+
+
+def test_framework_enum_has_ag2():
+    """Verify AG2 is registered in the framework enum."""
+    from nat.builder.framework_enum import LLMFrameworkEnum
+    assert hasattr(LLMFrameworkEnum, "AG2")
+    assert LLMFrameworkEnum.AG2 == "ag2"

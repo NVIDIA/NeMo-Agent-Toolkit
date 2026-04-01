@@ -13,16 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import StrEnum
-
-
-class LLMFrameworkEnum(StrEnum):
-    LANGCHAIN = "langchain"
-    LLAMA_INDEX = "llama_index"
-    CREWAI = "crewai"
-    SEMANTIC_KERNEL = "semantic_kernel"
-    AGNO = "agno"
-    ADK = "adk"
-    STRANDS = "strands"
-    AUTOGEN = "autogen"
-    AG2 = "ag2"  # AG2 (formerly AutoGen) — separate from Microsoft AutoGen
+from . import ag2_async_team  # noqa: F401 # pylint: disable=W0611     #imported for side effects (registration)
+from . import ag2_research_team  # noqa: F401 # pylint: disable=W0611     #imported for side effects (registration)
+from . import ag2_team  # noqa: F401 # pylint: disable=W0611     #imported for side effects (registration)
+from . import traffic_status_tool  # noqa: F401 # pylint: disable=W0611     #imported for side effects (registration)
