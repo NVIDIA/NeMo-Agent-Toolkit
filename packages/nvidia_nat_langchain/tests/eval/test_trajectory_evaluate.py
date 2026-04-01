@@ -36,6 +36,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+from nat.plugins.langchain.eval.trajectory_evaluator import _atif_to_agent_actions
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluator
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluatorConfig
 from nat.plugins.langchain.eval.trajectory_evaluator import register_trajectory_evaluator
@@ -132,6 +133,24 @@ async def test_trajectory_evaluate_failure(trajectory_evaluator, rag_eval_input)
         assert error_message in failed_item.error
         assert successful_item.score == pytest.approx(0.8)
         assert successful_item.reasoning["reasoning"] == "LGTM"
+
+
+async def test_trajectory_evaluate_recovers_score_from_output_parser_error(trajectory_evaluator, rag_eval_input):
+    parser_error = (
+        "Could not find score in model eval output: "
+        "Overall, I would give the AI language model a score of 5."
+    )
+    with patch.object(trajectory_evaluator, "traj_eval_chain") as mock_traj_eval_chain:
+        mock_traj_eval_chain.aevaluate_agent_trajectory = AsyncMock(side_effect=[Exception(parser_error), Exception(parser_error)])
+
+        eval_output = await trajectory_evaluator.evaluate(rag_eval_input)
+
+        assert isinstance(eval_output, EvalOutput)
+        assert len(eval_output.eval_output_items) == 2
+        assert eval_output.average_score == pytest.approx(5.0)
+        for item in eval_output.eval_output_items:
+            assert item.score == pytest.approx(5.0)
+            assert item.reasoning["recovered_from_output_parser_error"] is True
 
 
 @pytest.fixture(name="atif_samples")
@@ -296,3 +315,47 @@ async def test_register_trajectory_evaluator_exposes_atif_lane_when_enabled(mock
     async with register_trajectory_evaluator(config, builder) as info:
         assert callable(info.evaluate_fn)
         assert callable(getattr(info, "evaluate_atif_fn", None))
+
+
+def test_atif_to_agent_actions_does_not_dedupe_tool_invocations():
+    trajectory = ATIFTrajectory(
+        session_id="atif-dedupe-tools",
+        agent=ATIFAgentConfig(name="test-agent", version="0.0.0"),
+        steps=[
+            ATIFStep(step_id=1, source="user", message="search twice"),
+            ATIFStep(
+                step_id=2,
+                source="agent",
+                model_name="mock-llm",
+                message="",
+                tool_calls=[
+                    ATIFToolCall(tool_call_id="call-1", function_name="web_search", arguments={"query": "nemo"}),
+                    ATIFToolCall(tool_call_id="call-2", function_name="web_search", arguments={"query": "nemo"}),
+                ],
+                observation=ATIFObservation(results=[
+                    ATIFObservationResult(source_call_id="call-1", content="result"),
+                    ATIFObservationResult(source_call_id="call-2", content="result"),
+                ]),
+            ),
+        ],
+    )
+
+    actions = _atif_to_agent_actions(trajectory)
+    tool_rows = [(action, output) for action, output in actions if action.tool == "web_search"]
+    assert len(tool_rows) == 2
+
+
+def test_atif_to_agent_actions_dedupes_adjacent_llm_rows():
+    trajectory = ATIFTrajectory(
+        session_id="atif-dedupe-llm",
+        agent=ATIFAgentConfig(name="test-agent", version="0.0.0"),
+        steps=[
+            ATIFStep(step_id=1, source="user", message="hello"),
+            ATIFStep(step_id=2, source="agent", model_name="mock-llm", message="same response"),
+            ATIFStep(step_id=3, source="agent", model_name="mock-llm", message="same response"),
+        ],
+    )
+
+    actions = _atif_to_agent_actions(trajectory)
+    llm_rows = [(action, output) for action, output in actions if action.tool == "mock-llm"]
+    assert len(llm_rows) == 1

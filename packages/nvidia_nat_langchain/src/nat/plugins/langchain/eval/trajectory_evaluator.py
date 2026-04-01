@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import re
 from collections.abc import Mapping
 
 from langchain_classic.evaluation import TrajectoryEvalChain
@@ -47,6 +48,21 @@ def _coerce_text(value) -> str:
     if value is None:
         return ""
     return value if isinstance(value, str) else str(value)
+
+
+def _extract_score_from_parser_error(error_text: str) -> float | None:
+    """Best-effort extraction of numeric judge score from parser failures."""
+    if not error_text:
+        return None
+    matches = re.findall(r"score\s*(?:of|:)?\s*([0-9]+(?:\.[0-9]+)?)", error_text, flags=re.IGNORECASE)
+    if not matches:
+        return None
+    try:
+        # Prefer the last score mention; judge narratives often conclude with final score.
+        score = float(matches[-1])
+    except ValueError:
+        return None
+    return score
 
 
 class TrajectoryEvaluatorConfig(EvaluatorLLMConfig, name="trajectory"):
@@ -132,12 +148,20 @@ def _has_meaningful_value(value) -> bool:
 
 def _dedupe_adjacent_actions(agent_actions: list[tuple[AgentAction, str]]) -> list[tuple[AgentAction, str]]:
     """Drop adjacent duplicate trajectory rows to reduce evaluator noise."""
+
+    def _is_llm_row(action: AgentAction) -> bool:
+        # Only compact synthetic LLM rows emitted by `_atif_to_agent_actions`.
+        # Tool invocation rows must retain per-call identity even when projected
+        # fields happen to match.
+        return isinstance(action.tool_input, str) and action.tool_input == "" and action.log == ""
+
     deduped: list[tuple[AgentAction, str]] = []
     for action, output in agent_actions:
         if deduped:
             prev_action, prev_output = deduped[-1]
-            if (prev_action.tool == action.tool and prev_action.tool_input == action.tool_input
-                    and prev_action.log == action.log and prev_output == output):
+            if (_is_llm_row(prev_action) and _is_llm_row(action) and prev_action.tool == action.tool
+                    and prev_action.tool_input == action.tool_input and prev_action.log == action.log
+                    and prev_output == output):
                 continue
         deduped.append((action, output))
     return deduped
@@ -233,6 +257,24 @@ class TrajectoryEvaluator(BaseEvaluator):
                 logger.warning("Trajectory judge output parsing failed [lane=%s item_id=%s]: %s", lane, item_id, e)
             else:
                 logger.exception("Error evaluating trajectory [lane=%s item_id=%s]", lane, item_id)
+            recovered_score = _extract_score_from_parser_error(str(e))
+            if recovered_score is not None:
+                logger.warning("Recovered trajectory score from parser error [lane=%s item_id=%s]: %s",
+                               lane,
+                               item_id,
+                               recovered_score)
+                return EvalOutputItem(
+                    id=item_id,
+                    score=recovered_score,
+                    reasoning={
+                        "score": recovered_score,
+                        "recovered_from_output_parser_error": True,
+                        "trajectory": [(action.model_dump(), output) for (action, output) in agent_trajectory],
+                        "error_type": type(e).__name__,
+                        "question_text": question_text,
+                        "generated_answer_text": generated_answer_text,
+                    },
+                )
             return EvalOutputItem(
                 id=item_id,
                 score=0.0,
