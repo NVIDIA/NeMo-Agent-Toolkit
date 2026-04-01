@@ -62,7 +62,7 @@ consume it for lineage reconstruction, invocation identity mapping, and timing.
 - `status: str | None` (optional)
   - Optional terminal status for the invocation.
 - `framework: str | None` (optional)
-  - Runtime/framework label (for example, `langchain`).
+  - Runtime or framework label (for example, `langchain`).
 
 ### `AtifStepExtra`
 
@@ -112,7 +112,7 @@ Identity semantics are split:
 
 Producers should satisfy these requirements:
 
-1. `tool_calls` is a flat list that includes all observed tool/function
+1. `tool_calls` is a flat list that includes all observed tool and function
    invocations, not only top-level model-selected calls.
 2. `tool_ancestry[i]` corresponds to `tool_calls[i]`.
 3. `tool_invocations[i]` corresponds to `tool_calls[i]` when timing metadata is emitted.
@@ -166,7 +166,7 @@ Identity and lineage interpretation should follow:
 
 Interpretation notes:
 
-- Untimed invocation occurrences are valid when timestamps are unavailable.
+- Invocation occurrences without timestamps are valid when timestamps are unavailable.
 - Invocation identity and callable identity are separate (`tool_call_id` vs `function_id`).
   For example, two calls to `calculator__multiply` may have
   `tool_call_id=call_abc` and `tool_call_id=call_def`, while both map to the
@@ -175,12 +175,12 @@ Interpretation notes:
 
 ## Reference Artifacts
 
-Use the following config-specific artifact pairs as reference visual/output
+Use the following config-specific artifact pairs as reference visual output
 (Phoenix dashboard screenshot + generated `workflow_output_atif.json`):
 The sequence is intentionally ordered from simpler to progressively richer nested trajectories.
 
 1. One-level tool calls
-   - Config:
+   - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-trajectory-eval.yml`
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_trajectory_phoenix_trace.png`
@@ -188,7 +188,7 @@ The sequence is intentionally ordered from simpler to progressively richer neste
      `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/trajectory_eval/workflow_output_atif.json`
 
 2. Nested tool call chain
-   - Config:
+   - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml`
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_nested_phoenix_trace.png`
@@ -196,7 +196,7 @@ The sequence is intentionally ordered from simpler to progressively richer neste
      `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/nested_trajectory_eval/workflow_output_atif.json`
 
 3. Branching nested tool calls
-   - Config:
+   - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-branching-nested-trajectory-eval.yml`
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_branching_phoenix_trace.png`
