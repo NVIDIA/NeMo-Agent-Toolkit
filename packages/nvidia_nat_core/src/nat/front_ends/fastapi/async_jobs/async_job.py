@@ -21,9 +21,6 @@ import logging
 import os
 import typing
 
-if typing.TYPE_CHECKING:
-    from fastapi import Request
-
 
 def _configure_logging(configure_logging: bool, log_level: int) -> logging.Logger:
     from nat.utils.log_utils import setup_logging
@@ -61,6 +58,8 @@ async def run_generation(configure_logging: bool,
     payload : typing.Any
         The input payload for the workflow.
     """
+    from fastapi import Request
+
     from nat.front_ends.fastapi.async_jobs.job_store import JobStatus
     from nat.front_ends.fastapi.async_jobs.job_store import JobStore
     from nat.front_ends.fastapi.response_helpers import generate_single_response
@@ -72,9 +71,8 @@ async def run_generation(configure_logging: bool,
     try:
         job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
         await job_store.update_status(job_id, JobStatus.RUNNING)
-        http_connection: "Request | None" = None
+        http_connection: Request | None = None
         if serialized_request is not None:
-            from fastapi import Request
             http_connection = Request(scope=serialized_request)
 
         async with load_workflow(config_file_path) as local_session_manager:
