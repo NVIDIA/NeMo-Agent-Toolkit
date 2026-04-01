@@ -257,15 +257,49 @@ az webapp config appsettings list \
   --name <webapp-name> -o table
 ```
 
-## Step 5: Deploy
+## Step 5: Register a Bot in Teams Developer Portal
+
+The `a365 setup blueprint` creates the agent identity (Entra app registration) but does **not** register a Bot Framework bot. You must create one separately for Teams messaging to work.
+
+1. Go to [Teams Developer Portal](https://dev.teams.microsoft.com) > **Tools** > **Bot management**
+2. Click **New Bot**
+3. Set **Endpoint address** to: `https://<webapp-name>.azurewebsites.net/api/messages`
+4. Create a **client secret** for the bot — save the bot ID and secret
+5. Note the bot's App ID (this is different from the blueprint ID)
+
+## Step 6: Configure Blueprint in Developer Portal
+
+Connect your blueprint to the A365 messaging infrastructure:
+
+1. Navigate to: `https://dev.teams.microsoft.com/tools/agent-blueprint/<blueprint-id>/configuration`
+2. Set **Agent Type** to **API Based**
+3. Set **Notification URL** to `https://<webapp-name>.azurewebsites.net/api/messages`
+4. Click **Save**
+
+## Step 7: Update .env with Bot Credentials
+
+Update your `.env` with the **bot's** credentials (not the blueprint's):
+
+```bash
+# Bot credentials (from Step 5)
+CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTID=<bot-app-id>
+CONNECTIONS__SERVICE_CONNECTION__SETTINGS__CLIENTSECRET=<bot-client-secret>
+CLIENT_ID=<bot-app-id>
+CLIENT_SECRET=<bot-client-secret>
+
+# Blueprint ID (from a365 setup blueprint)
+AGENT_ID=<blueprint-id>
+```
+
+## Step 8: Deploy
 
 ```bash
 a365 deploy
 ```
 
 This will:
-1. Detect the Python project (via `pyproject.toml`)
-2. Build and package the application
+1. Detect the Python project (via `requirements.txt`)
+2. Package the application
 3. Set the startup command to `python start_with_generic_host.py`
 4. Convert `.env` variables to Azure App Settings
 5. Deploy to Azure App Service via zip deploy
@@ -277,16 +311,84 @@ curl https://<webapp-name>.azurewebsites.net/api/health
 # {"status": "ok", "agent_type": "WebQueryAgent", "agent_initialized": true, ...}
 ```
 
-## Step 6: Register as a Teams App (Optional)
+Note: `a365 deploy` may report a startup timeout — this is a false positive. The site starts successfully after ~80 seconds. Verify with the health endpoint.
 
-To use the agent in Microsoft Teams:
+## Step 9: Publish and Upload Manifest
 
-1. Open the [Teams Developer Portal](https://dev.teams.microsoft.com)
-2. Create a new app with a **Bot** feature
-3. Set the bot's messaging endpoint to: `https://<webapp-name>.azurewebsites.net/api/messages`
-4. Configure the manifest with your blueprint ID as the `botId`
-5. Set `isNotificationOnly: false` and scope to `personal`
-6. Publish to your org
+```bash
+a365 publish
+```
+
+Edit the generated manifest at `manifest/manifest.json`. The manifest requires these sections:
+
+### Required manifest IDs
+
+```json
+{
+  "id": "<blueprint-id>",
+  "bots": [{ "botId": "<blueprint-id>", ... }],
+  "webApplicationInfo": { "id": "<blueprint-id>", "resource": "api://<blueprint-id>" }
+}
+```
+
+### Required: Copilot Agent declaration
+
+Without this, the agent is treated as a regular Teams app with no Entra identity:
+
+```json
+"copilotAgents": {
+  "customEngineAgents": [{
+    "type": "bot",
+    "id": "<blueprint-id>",
+    "functionsAs": "agenticUserOnly",
+    "agenticUserTemplateId": "<template-id>"
+  }]
+}
+```
+
+### Required: Agentic User Template
+
+This enables the "allowing instances" security template during upload:
+
+```json
+"agenticUserTemplates": [{
+  "id": "<template-id>",
+  "file": "agenticUserTemplateManifest.json"
+}]
+```
+
+### Required: agenticUserTemplateManifest.json
+
+Create this file in the `manifest/` directory:
+
+```json
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/vDevPreview/MicrosoftTeams.AgenticUser.schema.json",
+  "id": "<template-id>",
+  "schemaVersion": "0.1.0-preview",
+  "agentIdentityBlueprintId": "<blueprint-id>",
+  "communicationProtocol": "activityProtocol"
+}
+```
+
+### Zip and upload
+
+The zip must include the template file:
+
+```bash
+cd manifest
+zip manifest.zip manifest.json agenticUserTemplateManifest.json color.png outline.png
+```
+
+Upload `manifest.zip` to **M365 Admin Center** > **Agents** > **Upload custom agent**.
+
+During upload, select the **"Default template for allowing instances"** security template. This enables agent instance creation with Entra identities and automatic Frontier license assignment.
+
+## Step 10: Create Agent Instance in Teams
+
+1. Go to Teams > **Apps** > **Built for your org** (or **Agents for your team**)
+2. Find your agent and click **Add** (or **Request Instance**)
+3. Send a test message: "What is LangSmith?"
 
 ## Troubleshooting
 

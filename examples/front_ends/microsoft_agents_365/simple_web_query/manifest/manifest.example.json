@@ -1,0 +1,91 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.25/MicrosoftTeams.schema.json",
+  "version": "1.0.0",
+  "manifestVersion": "1.25",
+  "id": "<blueprint-id>",
+  "name": {
+    "short": "My Agent Blueprint",
+    "full": "My Agent Blueprint"
+  },
+  "developer": {
+    "name": "Your Organization",
+    "websiteUrl": "https://<webapp-name>.azurewebsites.net",
+    "privacyUrl": "https://<webapp-name>.azurewebsites.net/privacy",
+    "termsOfUseUrl": "https://<webapp-name>.azurewebsites.net/terms"
+  },
+  "description": {
+    "short": "Short description of your agent",
+    "full": "Full description of your agent and its capabilities."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#ffffff",
+  "bots": [
+    {
+      "botId": "<blueprint-id>",
+      "scopes": [
+        "personal"
+      ],
+      "commandLists": [
+        {
+          "scopes": [
+            "personal"
+          ],
+          "commands": [
+            {
+              "title": "Command 1",
+              "description": "Description of what command 1 does"
+            },
+            {
+              "title": "Command 2",
+              "description": "Description of what command 2 does"
+            },
+            {
+              "title": "Get help",
+              "description": "Learn what this agent can do"
+            }
+          ]
+        }
+      ],
+      "isNotificationOnly": false,
+      "supportsCalling": false,
+      "supportsVideo": false,
+      "supportsFiles": false
+    }
+  ],
+  "agenticUserTemplates": [
+    {
+      "id": "my-agent-template",
+      "file": "agenticUserTemplateManifest.json"
+    }
+  ],
+  "copilotAgents": {
+    "customEngineAgents": [
+      {
+        "type": "bot",
+        "id": "<blueprint-id>",
+        "functionsAs": "agenticUserOnly",
+        "agenticUserTemplateId": "my-agent-template"
+      }
+    ]
+  },
+  "validDomains": [
+    "<webapp-name>.azurewebsites.net"
+  ],
+  "webApplicationInfo": {
+    "id": "<blueprint-id>",
+    "resource": "api://<blueprint-id>"
+  },
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        {
+          "name": "ChatMessage.Send.Chat",
+          "type": "Application"
+        }
+      ]
+    }
+  }
+}
