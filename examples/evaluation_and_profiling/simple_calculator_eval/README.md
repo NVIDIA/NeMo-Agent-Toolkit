@@ -52,6 +52,11 @@ If your environment does not include the `phoenix` CLI, install it with:
 uv pip install arize-phoenix
 ```
 
+You can run Phoenix from a separate virtual environment than the one used for
+NVIDIA NeMo Agent Toolkit evaluation runs. This is often preferable to avoid
+dependency/version conflicts between Phoenix packages and toolkit/evaluator
+dependencies.
+
 ## Installation
 
 Install this evaluation example:
@@ -101,7 +106,6 @@ This command:
 - Uses `examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_of_two.json`
 - Runs the built-in `trajectory` evaluator
 - Writes workflow trajectories to `.tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json`
-- Writes raw intermediate steps to `.tmp/nat/examples/simple_calculator/nested-eval/raw_intermediate_steps.jsonl`
 
 To inspect the call hierarchy from the generated ATIF file:
 
