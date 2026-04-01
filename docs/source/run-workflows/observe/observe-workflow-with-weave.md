@@ -194,8 +194,66 @@ def my_auth_callback(request):
     context.metadata.trace_user_email = user_info.get("email")
 ```
 
+## OTel-Based Exporter
+
+Weave also supports an [OTel-based integration](https://weave-docs.wandb.ai/guides/tracking/otel) that sends traces via OpenTelemetry. This uses the `opentelemetry` plugin instead of the `weave` plugin, which means it does not require installing `weave` as a dependency — only the `opentelemetry` extra is needed.
+
+### Install the OTel plugin
+
+::::{tab-set}
+:sync-group: install-tool
+
+:::{tab-item} source
+:selected:
+:sync: source
+
+```bash
+uv pip install -e ".[opentelemetry]"
+```
+
+:::
+
+:::{tab-item} package
+:sync: package
+
+```bash
+uv pip install "nvidia-nat[opentelemetry]"
+```
+
+:::
+
+::::
+
+### Configuration
+
+Update your workflow configuration to use the `weave_otel` exporter type:
+
+```yaml
+general:
+  telemetry:
+    tracing:
+      weave_otel:
+        _type: weave_otel
+        project: "nat-demo"
+        entity: "your-team-name"
+```
+
+| Parameter | Description | Example |
+|-----------|-------------|---------|
+| `project` | The name of your W&B Weave project | `"nat-demo"` |
+| `entity` | Your W&B username or team name | `"your-team-name"` |
+| `endpoint` | The W&B Weave OTel endpoint (optional) | `"https://trace.wandb.ai/otel/v1/traces"` |
+| `api_key` | The W&B API key (optional, falls back to `WANDB_API_KEY` env var) | — |
+
+### Run the Workflow
+
+```bash
+nat run --config_file examples/observability/simple_calculator_observability/configs/config-weave-otel.yml --input "What's the sum of 7 and 8?"
+```
+
 ## Resources
 
 - Learn more about tracing [here](https://weave-docs.wandb.ai/guides/tracking/tracing).
 - Learn more about how to navigate the logged traces [here](https://weave-docs.wandb.ai/guides/tracking/trace-tree).
 - Learn more about PII redaction [here](https://weave-docs.wandb.ai/guides/tracking/redact-pii).
+- Learn more about the OTel-based integration [here](https://weave-docs.wandb.ai/guides/tracking/otel).

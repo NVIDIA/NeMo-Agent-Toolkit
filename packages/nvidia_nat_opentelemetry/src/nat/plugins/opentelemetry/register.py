@@ -15,6 +15,7 @@
 
 import logging
 import os
+from collections.abc import AsyncGenerator
 
 from pydantic import Field
 
@@ -210,10 +211,10 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
 
 
 class WeaveOtelTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="weave_otel"):
-    """A telemetry exporter to transmit traces to Weights & Biases Weave via OpenTelemetry."""
+    """A telemetry exporter to transmit traces to Weights & Biases Weave via OTel."""
 
     endpoint: str = Field(
-        description="The W&B Weave OTEL endpoint",
+        description="The W&B Weave OTel endpoint",
         default="https://trace.wandb.ai/otel/v1/traces",
     )
     api_key: SerializableSecretStr = Field(description="The W&B API key",
@@ -223,7 +224,9 @@ class WeaveOtelTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, 
 
 
 @register_telemetry_exporter(config_type=WeaveOtelTelemetryExporter)
-async def weave_otel_telemetry_exporter(config: WeaveOtelTelemetryExporter, builder: Builder):
+async def weave_otel_telemetry_exporter(
+    config: WeaveOtelTelemetryExporter, builder: Builder,
+) -> AsyncGenerator["OTLPSpanAdapterExporter", None]:
     """Create a Weave OTel telemetry exporter."""
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
