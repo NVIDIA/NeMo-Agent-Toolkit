@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Integration test for nested trajectory integrity in simple calculator eval."""
+"""Integration tests for trajectory lineage integrity in simple calculator eval."""
 
 import json
 from pathlib import Path
@@ -66,7 +66,8 @@ async def test_nested_trajectory_eval_emits_power_of_two_and_multiply(tmp_path: 
     assert trajectory_eval_output and trajectory_eval_output.exists(), "The trajectory evaluator output was not created"
 
     payload = json.loads(atif_workflow_output.read_text(encoding="utf-8"))
-    assert isinstance(payload, list) and payload, "ATIF workflow output is empty"
+    assert isinstance(payload, list), "ATIF workflow output should be a list"
+    assert len(payload) == 1, "Expected exactly one ATIF item (id filter should reduce dataset to one row)"
 
     saw_power_of_two_tool_call = False
     saw_power_of_two_in_tool_ancestry = False
@@ -99,3 +100,146 @@ async def test_nested_trajectory_eval_emits_power_of_two_and_multiply(tmp_path: 
     assert saw_power_of_two_tool_call, "Expected at least one tool call to power_of_two"
     assert saw_power_of_two_in_tool_ancestry, "Expected power_of_two in tool_ancestry lineage"
     assert saw_calculator_multiply_in_tool_ancestry, "Expected calculator__multiply in tool_ancestry lineage"
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_trajectory_eval_emits_single_item_with_expected_tools(tmp_path: Path):
+    """Ensure one-level trajectory config emits one ATIF sample with expected tool lineage."""
+    import nat_simple_calculator_eval
+
+    config_file: Path = locate_example_config(nat_simple_calculator_eval, "config-trajectory-eval.yml")
+    output_dir = tmp_path / "trajectory-eval"
+
+    config = EvaluationRunConfig(
+        config_file=config_file,
+        dataset=None,
+        result_json_path="$",
+        skip_workflow=False,
+        skip_completed_entries=False,
+        endpoint=None,
+        endpoint_timeout=30,
+        reps=1,
+        override=(
+            ("eval.general.max_concurrency", "1"),
+            ("eval.general.output.dir", str(output_dir)),
+        ),
+    )
+
+    eval_runner = EvaluationRun(config=config)
+    output = await eval_runner.run_and_evaluate()
+
+    assert not output.workflow_interrupted, "The workflow was interrupted"
+    assert output.workflow_output_file and output.workflow_output_file.exists()
+
+    atif_workflow_output = output.workflow_output_file.parent / "workflow_output_atif.json"
+    assert atif_workflow_output.exists(), "The workflow_output_atif.json file was not created"
+
+    payload = json.loads(atif_workflow_output.read_text(encoding="utf-8"))
+    assert isinstance(payload, list), "ATIF workflow output should be a list"
+    assert len(payload) == 1, "Expected exactly one ATIF item (id filter should reduce dataset to one row)"
+
+    trajectory = payload[0].get("trajectory")
+    assert isinstance(trajectory, dict), "ATIF item should contain trajectory object"
+
+    saw_multiply_tool_call = False
+    saw_current_datetime_tool_call = False
+    saw_multiply_in_tool_ancestry = False
+    saw_current_datetime_in_tool_ancestry = False
+
+    for step in trajectory.get("steps", []):
+        if not isinstance(step, dict):
+            continue
+        for tool_call in step.get("tool_calls") or []:
+            if not isinstance(tool_call, dict):
+                continue
+            fn = tool_call.get("function_name")
+            if fn == "calculator__multiply":
+                saw_multiply_tool_call = True
+            if fn == "current_datetime":
+                saw_current_datetime_tool_call = True
+
+        extra = step.get("extra") or {}
+        for tool_ancestry in extra.get("tool_ancestry") or []:
+            if not isinstance(tool_ancestry, dict):
+                continue
+            name = tool_ancestry.get("function_name")
+            if name == "calculator__multiply":
+                saw_multiply_in_tool_ancestry = True
+            if name == "current_datetime":
+                saw_current_datetime_in_tool_ancestry = True
+
+    assert saw_multiply_tool_call, "Expected at least one tool call to calculator__multiply"
+    assert saw_current_datetime_tool_call, "Expected at least one tool call to current_datetime"
+    assert saw_multiply_in_tool_ancestry, "Expected calculator__multiply in tool_ancestry lineage"
+    assert saw_current_datetime_in_tool_ancestry, "Expected current_datetime in tool_ancestry lineage"
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_branching_nested_trajectory_eval_emits_branching_lineage(tmp_path: Path):
+    """Ensure branching nested config emits one ATIF sample with expected branch lineage."""
+    import nat_simple_calculator_eval
+
+    config_file: Path = locate_example_config(nat_simple_calculator_eval, "config-branching-nested-trajectory-eval.yml")
+    output_dir = tmp_path / "branching-nested-trajectory-eval"
+
+    config = EvaluationRunConfig(
+        config_file=config_file,
+        dataset=None,
+        result_json_path="$",
+        skip_workflow=False,
+        skip_completed_entries=False,
+        endpoint=None,
+        endpoint_timeout=30,
+        reps=1,
+        override=(
+            ("eval.general.max_concurrency", "1"),
+            ("eval.general.output.dir", str(output_dir)),
+        ),
+    )
+
+    eval_runner = EvaluationRun(config=config)
+    output = await eval_runner.run_and_evaluate()
+
+    assert not output.workflow_interrupted, "The workflow was interrupted"
+    assert output.workflow_output_file and output.workflow_output_file.exists()
+
+    atif_workflow_output = output.workflow_output_file.parent / "workflow_output_atif.json"
+    assert atif_workflow_output.exists(), "The workflow_output_atif.json file was not created"
+
+    payload = json.loads(atif_workflow_output.read_text(encoding="utf-8"))
+    assert isinstance(payload, list), "ATIF workflow output should be a list"
+    assert len(payload) == 1, "Expected exactly one ATIF item (id filter should reduce dataset to one row)"
+
+    trajectory = payload[0].get("trajectory")
+    assert isinstance(trajectory, dict), "ATIF item should contain trajectory object"
+
+    saw_power_branch_tool_call = False
+    saw_square_lineage = False
+    saw_cube_lineage = False
+    saw_multiply_lineage = False
+
+    for step in trajectory.get("steps", []):
+        if not isinstance(step, dict):
+            continue
+        for tool_call in step.get("tool_calls") or []:
+            if isinstance(tool_call, dict) and tool_call.get("function_name") == "power_branch":
+                saw_power_branch_tool_call = True
+
+        extra = step.get("extra") or {}
+        for tool_ancestry in extra.get("tool_ancestry") or []:
+            if not isinstance(tool_ancestry, dict):
+                continue
+            name = tool_ancestry.get("function_name")
+            if name == "square_via_multiply":
+                saw_square_lineage = True
+            if name == "cube_via_multiply_chain":
+                saw_cube_lineage = True
+            if name == "calculator__multiply":
+                saw_multiply_lineage = True
+
+    assert saw_power_branch_tool_call, "Expected at least one tool call to power_branch"
+    assert saw_square_lineage, "Expected square_via_multiply in tool_ancestry lineage"
+    assert saw_cube_lineage, "Expected cube_via_multiply_chain in tool_ancestry lineage"
+    assert saw_multiply_lineage, "Expected calculator__multiply in tool_ancestry lineage"

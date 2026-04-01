@@ -31,12 +31,10 @@ from nat.plugins.profiler.intermediate_property_adapter import IntermediatePrope
 def _extra() -> dict:
     return {
         "ancestry": {
-            "function_ancestry": {
-                "function_id": "root",
-                "function_name": "root",
-                "parent_id": "",
-                "parent_name": "",
-            }
+            "function_id": "root",
+            "function_name": "root",
+            "parent_id": "",
+            "parent_name": "",
         }
     }
 
