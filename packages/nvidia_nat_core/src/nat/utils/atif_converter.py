@@ -401,6 +401,8 @@ class IntermediateStepToATIFConverter:
                                                        metrics=None)
                     orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
                     _record_observed_invocation(orphan_pending, ist)
+                    if not orphan_pending.observed_invocations:
+                        continue
                     invocation = orphan_pending.observed_invocations[0]
                     step_extra = _atif_step_extra_model_from_ist(ist)
                     step_extra.tool_invocations = [invocation.invocation]
@@ -422,6 +424,31 @@ class IntermediateStepToATIFConverter:
             if event_type == IntermediateStepType.FUNCTION_END:
                 if pending is not None:
                     _record_observed_invocation(pending, ist)
+                else:
+                    orphan_pending = _PendingAgentTurn(message="",
+                                                       timestamp=ist.event_timestamp,
+                                                       model_name=None,
+                                                       metrics=None)
+                    orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
+                    _record_observed_invocation(orphan_pending, ist)
+                    if not orphan_pending.observed_invocations:
+                        continue
+                    invocation = orphan_pending.observed_invocations[0]
+                    step_extra = _atif_step_extra_model_from_ist(ist)
+                    step_extra.tool_invocations = [invocation.invocation]
+                    step_extra.tool_ancestry = [invocation.ancestry]
+                    extra = step_extra.model_dump(exclude_none=True)
+                    atif_steps.append(
+                        ATIFStep(
+                            step_id=step_id,
+                            source="agent",
+                            message="",
+                            timestamp=_epoch_to_iso(ist.event_timestamp),
+                            tool_calls=[invocation.tool_call],
+                            observation=ATIFObservation(results=[invocation.observation]),
+                            extra=extra or None,
+                        ))
+                    step_id += 1
                 continue
 
             if state == IntermediateStepState.START:
@@ -575,6 +602,8 @@ class ATIFStreamConverter:
             orphan_pending = _PendingAgentTurn(message="", timestamp=ist.event_timestamp, model_name=None, metrics=None)
             orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
             _record_observed_invocation(orphan_pending, ist)
+            if not orphan_pending.observed_invocations:
+                return None
             invocation = orphan_pending.observed_invocations[0]
             step_extra = _atif_step_extra_model_from_ist(ist)
             step_extra.tool_invocations = [invocation.invocation]
@@ -596,7 +625,30 @@ class ATIFStreamConverter:
         if event_type == IntermediateStepType.FUNCTION_END:
             if self._pending is not None:
                 _record_observed_invocation(self._pending, ist)
-            return None
+                return None
+
+            orphan_pending = _PendingAgentTurn(message="", timestamp=ist.event_timestamp, model_name=None, metrics=None)
+            orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
+            _record_observed_invocation(orphan_pending, ist)
+            if not orphan_pending.observed_invocations:
+                return None
+            invocation = orphan_pending.observed_invocations[0]
+            step_extra = _atif_step_extra_model_from_ist(ist)
+            step_extra.tool_invocations = [invocation.invocation]
+            step_extra.tool_ancestry = [invocation.ancestry]
+            extra = step_extra.model_dump(exclude_none=True)
+            orphan_step = ATIFStep(
+                step_id=self._step_id,
+                source="agent",
+                message="",
+                timestamp=_epoch_to_iso(ist.event_timestamp),
+                tool_calls=[invocation.tool_call],
+                observation=ATIFObservation(results=[invocation.observation]),
+                extra=extra or None,
+            )
+            self._step_id += 1
+            self._emitted_steps.append(orphan_step)
+            return orphan_step
 
         if state == IntermediateStepState.END and category not in (
                 IntermediateStepCategory.LLM,
