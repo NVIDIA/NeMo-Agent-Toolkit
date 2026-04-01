@@ -76,7 +76,7 @@ class PreToolVerifierMiddlewareConfig(DefenseMiddlewareConfig, name="pre_tool_ve
 
     max_content_length: int = Field(
         default=32000,
-        gt=0,
+        gt=500,
         description="Maximum number of characters per analysis window. Inputs longer than this are split into "
         "overlapping windows of this size (50% overlap) and analyzed sequentially.")
 
