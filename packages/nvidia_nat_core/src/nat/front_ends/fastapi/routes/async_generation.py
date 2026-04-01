@@ -29,6 +29,7 @@ from pydantic import Field
 from nat.front_ends.fastapi.async_jobs.async_job import run_generation
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
+from nat.front_ends.fastapi.routes.common_utils import _serialize_request
 from nat.front_ends.fastapi.routes.common_utils import _with_annotation
 from nat.runtime.session import SessionManager
 
@@ -78,6 +79,7 @@ def post_async_generation(*, worker: Any, session_manager: SessionManager, reque
                     worker._config_file_path,
                     job_id,
                     request.model_dump(mode="json", exclude=["job_id", "sync_timeout", "expiry_seconds"]),
+                    _serialize_request(http_request),
                 ],
             )
 

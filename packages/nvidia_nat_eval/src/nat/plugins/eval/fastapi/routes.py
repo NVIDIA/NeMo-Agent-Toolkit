@@ -31,6 +31,7 @@ from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
 from nat.front_ends.fastapi.routes.common_utils import RESPONSE_500
+from nat.front_ends.fastapi.routes.common_utils import _serialize_request
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.plugins.eval.runtime.evaluate import EvaluationRunConfig
 from nat.plugins.eval.runtime.evaluate import EvaluationRunOutput
@@ -38,22 +39,6 @@ from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
 
 logger = logging.getLogger(__name__)
-
-
-def _serialize_request(request: Request) -> dict:
-    """Serialize a FastAPI Request into a plain dict that can be passed through Dask and reconstructed."""
-    return {
-        "type": "http",
-        "method": request.method,
-        "path": request.url.path,
-        "query_string": request.url.query.encode("latin-1") if request.url.query else b"",
-        "root_path": request.scope.get("root_path", ""),
-        "scheme": request.url.scheme,
-        "server": (request.url.hostname, request.url.port or 80),
-        "client": (request.client.host, request.client.port) if request.client else ("", 0),
-        "headers": list(request.headers.raw),
-        "path_params": dict(request.path_params),
-    }
 
 
 async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: SessionManager):
