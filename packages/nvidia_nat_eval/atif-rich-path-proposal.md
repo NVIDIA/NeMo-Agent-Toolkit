@@ -38,10 +38,16 @@ consume it for lineage reconstruction, invocation identity mapping, and timing.
 
 ### `AtifAncestry`
 
-`AtifAncestry` represents one lineage record.
+`AtifAncestry` represents one callable lineage node.
 
-- `function_ancestry: InvocationNode` (required)
-  - Callable ancestry node for this record.
+- `function_id: str` (required)
+  - Unique identifier for the callable node.
+- `function_name: str` (required)
+  - Callable name.
+- `parent_id: str | None` (optional)
+  - Optional parent callable identifier.
+- `parent_name: str | None` (optional)
+  - Optional parent callable name.
 
 ### `AtifInvocationInfo`
 
@@ -74,6 +80,11 @@ consume it for lineage reconstruction, invocation identity mapping, and timing.
 `AtifStepExtra` uses `extra="allow"` so new metadata can coexist without
 breaking readers.
 
+Extension fields should be additive and optional.
+Publishers should avoid redefining canonical keys
+(`ancestry`, `invocation`, `tool_ancestry`, `tool_invocations`).
+Consumer implementations should ignore unknown extension keys by default.
+
 ## Canonical Contract
 
 Canonical lineage and invocation context should be reconstructed from:
@@ -94,8 +105,8 @@ Identity semantics are split:
 - Index alignment is stable (`tool_calls[i]` maps to `tool_ancestry[i]`).
 - If `tool_invocations` is emitted, `len(tool_invocations)` equals `len(tool_calls)`.
 - If one of `start_timestamp` / `end_timestamp` is set, the other must also be set.
-- For each call occurrence, observation linkage is stable:
-  `tool_calls[i].tool_call_id` equals the corresponding observation `source_call_id`.
+- When observation results are present for a call occurrence, linkage is stable:
+  the matching observation `source_call_id` equals `tool_calls[i].tool_call_id`.
 
 ## Producer Requirements
 
@@ -119,13 +130,14 @@ Consumers should implement lineage reads in this order:
 1. Use `tool_calls` + `tool_ancestry` as the primary source.
 2. Use `invocation` and `tool_invocations` for timing.
 3. Use `ancestry` for step-level lineage context.
+4. Tolerate missing observation rows and treat absent observation output as unavailable, not linkage failure.
 
 ### Evaluator guidance for nested trajectories
 
 Evaluators parsing nested trajectories should:
 
 - Treat each `tool_calls[i]` as one invocation occurrence and resolve lineage from
-  `tool_ancestry[i].function_ancestry`.
+  `tool_ancestry[i]`.
 - Preserve separation between invocation identity (`tool_call_id`) and callable
   identity (`function_id`) during scoring.
 - Use observation linkage (`source_call_id`) to associate tool outputs with the
@@ -148,8 +160,8 @@ Observability consumers should reconstruct execution as per-invocation records w
 Identity and lineage interpretation should follow:
 
 - Call instance identity: `tool_calls[i].tool_call_id`
-- Callable node identity: `tool_ancestry[i].function_ancestry.function_id`
-- Parent-child lineage: `function_ancestry.parent_id` / `parent_name`
+- Callable node identity: `tool_ancestry[i].function_id`
+- Parent-child lineage: `parent_id` / `parent_name`
 - Observation linkage: `observation.results[*].source_call_id` equals `tool_call_id`
 
 Interpretation notes:
@@ -163,9 +175,30 @@ Interpretation notes:
 
 ## Reference Artifacts
 
-For a visual example of nested lineage rendered via the NAT observability module, see:
-`docs/source/_static/nat_nested_trace.png`.
+Use the following config-specific artifact pairs for manual parity checks
+(Phoenix dashboard screenshot + generated `workflow_output_atif.json`):
 
-Reference sample ATIF artifact:
-`examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/workflow_output_atif.json`.
+1. `config-trajectory-eval.yml`
+   - Config:
+     `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-trajectory-eval.yml`
+   - Phoenix PNG:
+     `docs/source/_static/simple_calculator_trajectory_phoenix_trace.png`
+   - ATIF output:
+     `.tmp/nat/examples/getting_started/simple_calculator/atif/workflow_output_atif.json`
+
+2. `config-nested-trajectory-eval.yml`
+   - Config:
+     `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml`
+   - Phoenix PNG:
+     `docs/source/_static/simple_calculator_nested_phoenix_trace.png`
+   - ATIF output:
+     `.tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json`
+
+3. `config-branching-nested-trajectory-eval.yml`
+   - Config:
+     `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-branching-nested-trajectory-eval.yml`
+   - Phoenix PNG:
+     `docs/source/_static/simple_calculator_branching_phoenix_trace.png`
+   - ATIF output:
+     `.tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json`
 

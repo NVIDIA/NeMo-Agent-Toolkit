@@ -62,10 +62,10 @@ def _ancestry_from_extra(step: Any, tool_index: int | None = None) -> dict[str, 
 
     def to_flat(ancestry: AtifAncestry, span_event_timestamp: float | None, framework: str | None) -> dict[str, Any]:
         return {
-            "function_id": ancestry.function_ancestry.function_id,
-            "function_name": ancestry.function_ancestry.function_name,
-            "parent_function_id": ancestry.function_ancestry.parent_id or "",
-            "parent_function_name": ancestry.function_ancestry.parent_name or "",
+            "function_id": ancestry.function_id,
+            "function_name": ancestry.function_name,
+            "parent_function_id": ancestry.parent_id or "",
+            "parent_function_name": ancestry.parent_name or "",
             "span_event_timestamp": span_event_timestamp,
             "framework": framework,
         }

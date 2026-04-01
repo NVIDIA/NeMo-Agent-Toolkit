@@ -21,17 +21,27 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
 
-from nat.data_models.invocation_node import InvocationNode
-
 
 class AtifAncestry(BaseModel):
     """Validated ancestry metadata embedded in ATIF ``Step.extra``."""
 
     model_config = ConfigDict(extra="forbid")
 
-    function_ancestry: InvocationNode = Field(
+    function_id: str = Field(
         ...,
-        description="Function ancestry for the event represented by this metadata entry.",
+        description="Unique identifier for the callable node.",
+    )
+    function_name: str = Field(
+        ...,
+        description="Name of the callable node.",
+    )
+    parent_id: str | None = Field(
+        default=None,
+        description="Optional parent callable identifier.",
+    )
+    parent_name: str | None = Field(
+        default=None,
+        description="Optional parent callable name.",
     )
 
 
@@ -63,7 +73,7 @@ class AtifInvocationInfo(BaseModel):
     )
 
     @model_validator(mode="after")
-    def validate_timing_or_identity(self) -> AtifInvocationInfo:
+    def validate_timestamp_pairing(self) -> AtifInvocationInfo:
         has_start = self.start_timestamp is not None
         has_end = self.end_timestamp is not None
         if has_start != has_end:

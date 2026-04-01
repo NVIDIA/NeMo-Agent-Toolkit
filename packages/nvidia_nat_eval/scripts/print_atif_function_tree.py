@@ -150,8 +150,8 @@ def _build_nodes_from_required_ancestry(trajectory: dict[str, Any]) -> dict[str,
     """Build node stats from required ancestry fields in `step.extra`.
 
     This uses:
-    - `extra.ancestry.function_ancestry`
-    - `extra.tool_ancestry[].function_ancestry`
+    - `extra.ancestry`
+    - `extra.tool_ancestry[]`
     """
     nodes: dict[str, NodeStats] = {}
     for step in trajectory.get("steps", []):
@@ -163,16 +163,12 @@ def _build_nodes_from_required_ancestry(trajectory: dict[str, Any]) -> dict[str,
 
         ancestry = extra.get("ancestry")
         if isinstance(ancestry, dict):
-            fn = ancestry.get("function_ancestry")
-            if isinstance(fn, dict):
-                _add_ancestry(nodes, fn, from_tool=False)
+            _add_ancestry(nodes, ancestry, from_tool=False)
 
         for tool_ancestry in extra.get("tool_ancestry") or []:
             if not isinstance(tool_ancestry, dict):
                 continue
-            fn = tool_ancestry.get("function_ancestry")
-            if isinstance(fn, dict):
-                _add_ancestry(nodes, fn, from_tool=True)
+            _add_ancestry(nodes, tool_ancestry, from_tool=True)
 
     return nodes
 
@@ -219,8 +215,7 @@ def _extract_step_function_node(step: dict[str, Any]) -> dict[str, Any] | None:
     ancestry = extra.get("ancestry")
     if not isinstance(ancestry, dict):
         return None
-    fn = ancestry.get("function_ancestry")
-    return fn if isinstance(fn, dict) else None
+    return ancestry
 
 
 def _extract_tool_function_nodes(step: dict[str, Any]) -> list[dict[str, Any]]:
@@ -232,9 +227,7 @@ def _extract_tool_function_nodes(step: dict[str, Any]) -> list[dict[str, Any]]:
     for item in extra.get("tool_ancestry") or []:
         if not isinstance(item, dict):
             continue
-        fn = item.get("function_ancestry")
-        if isinstance(fn, dict):
-            out.append(fn)
+        out.append(item)
     return out
 
 
@@ -484,9 +477,8 @@ def _print_step_breakdown(trajectory: dict[str, Any]) -> None:
         source = step.get("source", "?")
         extra = step.get("extra") or {}
         ancestry = extra.get("ancestry") if isinstance(extra, dict) else None
-        fn = ancestry.get("function_ancestry") if isinstance(ancestry, dict) else None
-        fn_name = fn.get("function_name") if isinstance(fn, dict) else "?"
-        fn_id = fn.get("function_id") if isinstance(fn, dict) else "?"
+        fn_name = ancestry.get("function_name") if isinstance(ancestry, dict) else "?"
+        fn_id = ancestry.get("function_id") if isinstance(ancestry, dict) else "?"
         tool_calls = step.get("tool_calls")
         tool_count = len(tool_calls) if isinstance(tool_calls, list) else 0
         print(f"  {idx:>2}. source={source:<5} ancestry={fn_name} [{fn_id}] tool_calls={tool_count}")
@@ -515,13 +507,11 @@ def _validate_trajectory_contract(trajectory: dict[str, Any]) -> list[str]:
         # Step-level ancestry node collection for parent-chain validation.
         ancestry = extra.get("ancestry")
         if isinstance(ancestry, dict):
-            fn = ancestry.get("function_ancestry")
-            if isinstance(fn, dict):
-                function_id = str(fn.get("function_id") or "")
-                parent_id = str(fn.get("parent_id")) if fn.get("parent_id") is not None else None
-                if function_id:
-                    known_function_ids.add(function_id)
-                    lineage_nodes.append((step_idx, function_id, parent_id))
+            function_id = str(ancestry.get("function_id") or "")
+            parent_id = str(ancestry.get("parent_id")) if ancestry.get("parent_id") is not None else None
+            if function_id:
+                known_function_ids.add(function_id)
+                lineage_nodes.append((step_idx, function_id, parent_id))
 
         tool_calls = step.get("tool_calls") or []
         if not isinstance(tool_calls, list):
@@ -566,12 +556,11 @@ def _validate_trajectory_contract(trajectory: dict[str, Any]) -> list[str]:
 
             if i < len(tool_ancestry):
                 ta = tool_ancestry[i]
-                fn = (ta.get("function_ancestry") if isinstance(ta, dict) else None)
-                if not isinstance(fn, dict):
-                    issues.append(f"step {step_idx}: tool_ancestry[{i}] missing function_ancestry")
+                if not isinstance(ta, dict):
+                    issues.append(f"step {step_idx}: tool_ancestry[{i}] missing ancestry node")
                 else:
-                    function_id = str(fn.get("function_id") or "")
-                    parent_id = str(fn.get("parent_id")) if fn.get("parent_id") is not None else None
+                    function_id = str(ta.get("function_id") or "")
+                    parent_id = str(ta.get("parent_id")) if ta.get("parent_id") is not None else None
                     if not function_id:
                         issues.append(f"step {step_idx}: tool_ancestry[{i}] missing function_id")
                     else:

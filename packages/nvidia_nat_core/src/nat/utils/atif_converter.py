@@ -133,7 +133,12 @@ def _extract_user_input(value: Any) -> str:
 
 def _atif_ancestry_from_ist(ist: IntermediateStep) -> AtifAncestry:
     """Build typed ATIF ancestry metadata from an IntermediateStep."""
-    return AtifAncestry(function_ancestry=ist.function_ancestry, )
+    return AtifAncestry(
+        function_id=ist.function_ancestry.function_id,
+        function_name=ist.function_ancestry.function_name,
+        parent_id=ist.function_ancestry.parent_id,
+        parent_name=ist.function_ancestry.parent_name,
+    )
 
 
 def _atif_invocation_from_ist(ist: IntermediateStep, *, invocation_id: str | None = None) -> AtifInvocationInfo:

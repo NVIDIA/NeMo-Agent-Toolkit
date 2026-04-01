@@ -89,11 +89,8 @@ async def test_nested_trajectory_eval_emits_power_of_two_and_multiply(tmp_path: 
             for tool_ancestry in extra.get("tool_ancestry") or []:
                 if not isinstance(tool_ancestry, dict):
                     continue
-                fn = tool_ancestry.get("function_ancestry")
-                if not isinstance(fn, dict):
-                    continue
-                name = fn.get("function_name")
-                parent_name = fn.get("parent_name")
+                name = tool_ancestry.get("function_name")
+                parent_name = tool_ancestry.get("parent_name")
                 if name == "power_of_two" or parent_name == "power_of_two":
                     saw_power_of_two_in_tool_ancestry = True
                 if name == "calculator__multiply":

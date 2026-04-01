@@ -505,23 +505,23 @@ class TestBatchConverter:
         batch_converter: IntermediateStepToATIFConverter,
         simple_trajectory: list[IntermediateStep],
     ):
-        """step.extra contains function_ancestry for profiling."""
+        """step.extra contains flat ancestry metadata for profiling."""
         result = batch_converter.convert(simple_trajectory)
 
         # User step has profiling extra
         user_step = result.steps[0]
         assert user_step.extra is not None
-        assert user_step.extra["ancestry"]["function_ancestry"]["function_id"] == "func-id-1"
-        assert user_step.extra["ancestry"]["function_ancestry"]["function_name"] == "my_workflow"
+        assert user_step.extra["ancestry"]["function_id"] == "func-id-1"
+        assert user_step.extra["ancestry"]["function_name"] == "my_workflow"
 
         # Agent step with tool call has tool_ancestry (from TOOL_END)
         agent_step = result.steps[1]
         assert agent_step.extra is not None
-        assert agent_step.extra["ancestry"]["function_ancestry"]["function_id"] == "func-id-1"
+        assert agent_step.extra["ancestry"]["function_id"] == "func-id-1"
         assert agent_step.extra.get("tool_ancestry") is not None
         assert len(agent_step.extra["tool_ancestry"]) == 1
-        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_id"] == "func-id-1"
-        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_name"] == "my_workflow"
+        assert agent_step.extra["tool_ancestry"][0]["function_id"] == "func-id-1"
+        assert agent_step.extra["tool_ancestry"][0]["function_name"] == "my_workflow"
 
     def test_nested_tool_ancestry_is_populated(self, batch_converter: IntermediateStepToATIFConverter):
         """Nested lineage is represented through canonical `tool_ancestry`."""
@@ -571,11 +571,11 @@ class TestBatchConverter:
         result = batch_converter.convert(steps)
         agent_step = result.steps[1]
         assert agent_step.extra is not None
-        assert agent_step.extra["ancestry"]["function_ancestry"]["function_id"] == "wf-1"
+        assert agent_step.extra["ancestry"]["function_id"] == "wf-1"
         assert agent_step.extra.get("tool_ancestry") is not None
         assert len(agent_step.extra["tool_ancestry"]) == 1
-        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["function_id"] == "fn-1"
-        assert agent_step.extra["tool_ancestry"][0]["function_ancestry"]["parent_id"] == "wf-1"
+        assert agent_step.extra["tool_ancestry"][0]["function_id"] == "fn-1"
+        assert agent_step.extra["tool_ancestry"][0]["parent_id"] == "wf-1"
 
     def test_tool_ancestry_includes_nested_internal_functions(self, batch_converter: IntermediateStepToATIFConverter):
         """Nested internal function lineage is encoded in canonical `tool_ancestry`."""
@@ -638,7 +638,8 @@ class TestBatchConverter:
         assert agent_step.tool_calls[0].function_name == "power_of_two"
         assert agent_step.extra is not None
         assert agent_step.extra.get("tool_ancestry") is not None
-        tool_fn = agent_step.extra["tool_ancestry"][0]["function_ancestry"]
+        tool_fn = next(entry for entry in agent_step.extra["tool_ancestry"]
+                       if entry["function_name"] == "calculator__multiply")
         assert tool_fn["function_id"] == "fn-mul"
         assert tool_fn["function_name"] == "calculator__multiply"
         assert tool_fn["parent_id"] == "fn-power"
