@@ -62,7 +62,7 @@ Phoenix provides local tracing capabilities perfect for development and testing.
 1. Start the Phoenix server in a separate terminal, for this example we will use the `arizephoenix/phoenix` Docker image:
 
     ```bash
-    docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:latest
+    docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
     ```
 
 2. Run the workflow with tracing enabled:
