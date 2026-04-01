@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# Trajectory evaluation example:
+#   react_agent -> {calculator, current_datetime}
+#
+# This configuration writes ATIF workflow output so you can inspect
+# trajectory structure with standard calculator and datetime tool calls.
 
 general:
   telemetry:
@@ -19,7 +25,7 @@ general:
       phoenix:
         _type: phoenix
         endpoint: http://localhost:6006/v1/traces
-        project: simple_calculator_tunable_rag_eval_atif
+        project: simple_calculator_eval
 
 function_groups:
   calculator:
@@ -42,10 +48,6 @@ llms:
     model_name: mistralai/mixtral-8x22b-instruct-v0.1
     temperature: 0.0
     max_tokens: 1024
-  openai_llm:
-    _type: openai
-    model_name: gpt-3.5-turbo
-    max_tokens: 2000
 
 workflow:
   _type: react_agent
@@ -54,32 +56,23 @@ workflow:
   verbose: true
   parse_agent_response_max_retries: 3
 
-
 eval:
   general:
     max_concurrency: 1
     output:
-      dir: .tmp/nat/examples/getting_started/simple_calculator/atif
+      dir: .tmp/nat/examples/simple_calculator/trajectory-eval
       write_atif_workflow_output: true
+      cleanup: true
     dataset:
       _type: json
       file_path: examples/getting_started/simple_calculator/data/simple_calculator.json
+      filter:
+        allowlist:
+          field:
+            id: [1]
+
   evaluators:
-    tuneable_eval:
-      _type: tunable_rag_evaluator
+    trajectory_eval:
+      _type: trajectory
       enable_atif_evaluator: true
       llm_name: eval_llm
-      default_scoring: true
-      default_score_weights:
-        coverage: 0.5
-        correctness: 0.3
-        relevance: 0.2
-      judge_llm_prompt: >
-        You are an intelligent evaluator that scores the generated answer based on the description of the expected answer.
-        The score is a measure of how well the generated answer matches the description of the expected answer based on the question.
-        Take into account the question, the relevance of the answer to the question and the quality compared to the description of the expected answer.
-
-        Rules:
-        - The score must be a float of any value between 0.0 and 1.0 on a sliding scale.
-        - The reasoning string must be concise and to the point. It should be 1 sentence and 2 only if extra description is needed. It must explain why the score was given and what is different between the generated answer and the expected answer.
-        - The tags <image> and <chart> are real images and charts.

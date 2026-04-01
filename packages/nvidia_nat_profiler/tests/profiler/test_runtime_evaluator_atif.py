@@ -45,14 +45,16 @@ def _make_sample(
 def _extra_with_span(span: object) -> dict:
     return {
         "ancestry": {
-            "function_ancestry": {
-                "function_id": "root",
-                "function_name": "root",
-                "parent_id": "",
-                "parent_name": "",
-            },
-            "span_event_timestamp": span,
-        }
+            "function_id": "root",
+            "function_name": "root",
+            "parent_id": "",
+            "parent_name": "",
+        },
+        "invocation": {
+            "start_timestamp": span,
+            "end_timestamp": span,
+            "status": "completed",
+        },
     }
 
 
