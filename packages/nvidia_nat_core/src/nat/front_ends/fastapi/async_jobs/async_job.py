@@ -21,6 +21,9 @@ import logging
 import os
 import typing
 
+if typing.TYPE_CHECKING:
+    from fastapi import Request
+
 
 def _configure_logging(configure_logging: bool, log_level: int) -> logging.Logger:
     from nat.utils.log_utils import setup_logging
