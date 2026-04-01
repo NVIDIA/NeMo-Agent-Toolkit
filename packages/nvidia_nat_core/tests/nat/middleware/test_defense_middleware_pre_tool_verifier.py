@@ -29,9 +29,10 @@ from nat.middleware.defense.defense_middleware_pre_tool_verifier import PreToolV
 from nat.middleware.defense.defense_middleware_pre_tool_verifier import PreToolVerifierMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
 
-_MAX_CONTENT_LENGTH = 32000
+# Derive test constants from the config defaults so tests stay in sync with production values.
+_MAX_CONTENT_LENGTH = PreToolVerifierMiddlewareConfig.model_fields["max_content_length"].default
 _STRIDE = _MAX_CONTENT_LENGTH // 2  # 50% overlap — injections ≤ _STRIDE chars are guaranteed full coverage
-_MAX_CHUNKS = 16
+_MAX_CHUNKS = PreToolVerifierMiddlewareConfig.model_fields["max_chunks"].default
 
 
 class _TestInput(BaseModel):
