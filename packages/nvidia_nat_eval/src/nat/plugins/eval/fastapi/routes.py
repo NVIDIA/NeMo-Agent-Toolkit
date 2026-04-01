@@ -40,6 +40,22 @@ from nat.runtime.session import SessionManager
 logger = logging.getLogger(__name__)
 
 
+def _serialize_request(request: Request) -> dict:
+    """Serialize a FastAPI Request into a plain dict that can be passed through Dask and reconstructed."""
+    return {
+        "type": "http",
+        "method": request.method,
+        "path": request.url.path,
+        "query_string": request.url.query.encode("latin-1") if request.url.query else b"",
+        "root_path": request.scope.get("root_path", ""),
+        "scheme": request.url.scheme,
+        "server": (request.url.hostname, request.url.port or 80),
+        "client": (request.client.host, request.client.port) if request.client else ("", 0),
+        "headers": list(request.headers.raw),
+        "path_params": dict(request.path_params),
+    }
+
+
 async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: SessionManager):
     """Add the evaluate endpoint to the FastAPI app."""
 
@@ -63,6 +79,7 @@ async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: Sessio
         job_id: str,
         eval_config_file: str,
         reps: int,
+        serialized_request: dict | None = None,
     ):
         """Background task to run the evaluation."""
 
@@ -72,9 +89,14 @@ async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: Sessio
             await job_store.update_status(job_id, JobStatus.RUNNING)
             eval_runner = EvaluationRun(eval_config)
 
+            http_connection: Request | None = None
+            if serialized_request is not None:
+                http_connection = Request(scope=serialized_request)
+
             async with load_workflow(workflow_config_file_path) as local_session_manager:
                 output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=local_session_manager,
-                                                                                 job_id=job_id)
+                                                                                 job_id=job_id,
+                                                                                 http_connection=http_connection)
 
             if output.workflow_interrupted:
                 await job_store.update_status(job_id, JobStatus.INTERRUPTED)
@@ -105,6 +127,7 @@ async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: Sessio
                                                    job_id,
                                                    request.config_file,
                                                    request.reps,
+                                                   _serialize_request(http_request),
                                                ])
 
             logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)
