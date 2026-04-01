@@ -555,7 +555,7 @@ nat serve --config_file=path/to/config --host 0.0.0.0 --port 8000
 The Swagger API docs will be available at: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ## Evaluation
-The `nat eval` and `nat red-team` commands are provided by the `nvidia-nat-eval` package. Install evaluation support with `pip install "nvidia-nat[eval]"` or `pip install nvidia-nat-eval`.
+The `nat eval` command is provided by the `nvidia-nat-eval` package. Install evaluation support with `pip install "nvidia-nat[eval]"` or `pip install nvidia-nat-eval`.
 
 The `nat eval` command provides access a set of evaluators designed to assessing the accuracy of NeMo Agent Toolkit workflows as
 well as instrumenting their performance characteristics. Please reference
@@ -756,7 +756,7 @@ nat optimize --config_file configs/my_workflow_optimizer.yml
 <!-- path-check-skip-end -->
 
 ## GPU Cluster Sizing
-The `nat sizing` command group is provided by the `nvidia-nat-eval` package. Install evaluation support with `pip install "nvidia-nat[eval]"` or `pip install nvidia-nat-eval`.
+The `nat sizing` command group is provided by the `nvidia-nat-profiler` package. Install support with `pip install "nvidia-nat[profiler]"` or `pip install nvidia-nat-profiler`.
 
 The `nat sizing calc` command estimates GPU requirements and produces performance plots for a workflow. You can run it online (collect metrics by executing the workflow) or offline (estimate from previously collected metrics). For a full guide, see [GPU Cluster Sizing](../improve-workflows/sizing-calc.md).
 

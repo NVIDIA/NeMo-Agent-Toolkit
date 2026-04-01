@@ -118,9 +118,6 @@ user_message = {
     "user": {
         "name": "string", "email": "string"
     },
-    "security": {
-        "api_key": "string", "token": "string"
-    },
     "error": {
         "code": "unknown_error", "message": "string", "details": "object"
     },
@@ -166,9 +163,6 @@ user_interaction_response_message = {
     "timestamp": "string",
     "user": {
         "name": "string", "email": "string"
-    },
-    "security": {
-        "api_key": "string", "token": "string"
     },
     "error": {
         "code": "unknown_error", "message": "string", "details": "object"

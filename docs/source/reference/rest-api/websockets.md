@@ -32,6 +32,8 @@ to the client.
 ## Explanation of Fields
 - `type`: Defines the category of the message.
     - Possible values:
+      - `auth_message`
+      - `auth_response_message`
       - `user_message`
       - `system_intermediate_message`
       - `system_response_message`
@@ -58,11 +60,79 @@ to the client.
     -   name: User name
     -   email: User email
     -   other info: Any other information
-- `security`: Stores security information such as `api_key`, auth token etc. - OPTIONAL
-    -   `api_key`: API key
-    - token: auth or access token
 - `error`: Error information object with `code` (string, see Error types), `message` (string), and `details` (string)
 - `schema_version`: schema version - `OPTIONAL`
+
+## Auth Message
+This message allows clients to authenticate over a WebSocket connection when header-based or
+cookie-based authentication is not feasible (e.g., browser WebSocket APIs that do not support custom headers).
+The server validates the credentials, resolves a user identity, and associates it with the current session.
+The server responds with an `auth_response_message` in both cases — with `status: "success"` and the resolved
+`user_id` on success, or `status: "error"` with structured error details on failure.
+
+### JWT Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "jwt",
+    "token": "<jwt-token>"
+  }
+}
+```
+
+### API Key Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "api_key",
+    "token": "<api-key>"
+  }
+}
+```
+
+### Basic Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "basic",
+    "username": "<username>",
+    "password": "<password>"
+  }
+}
+```
+
+## Auth Response Message
+The server responds to an `auth_message` with an `auth_response_message` indicating success (with the resolved
+`user_id`) or failure (with structured error details).
+
+### Auth Success Response Example:
+```json
+{
+  "type": "auth_response_message",
+  "status": "success",
+  "user_id": "5a3f8e2b-1c4d-5e6f-7a8b-9c0d1e2f3a4b",
+  "payload": null,
+  "timestamp": "2025-01-13T10:00:00Z"
+}
+```
+
+### Auth Failure Response Example:
+```json
+{
+  "type": "auth_response_message",
+  "status": "error",
+  "user_id": null,
+  "payload": {
+    "code": "user_auth_error",
+    "message": "Authentication failed",
+    "details": "Could not resolve user identity from auth payload (method=jwt)"
+  },
+  "timestamp": "2025-01-13T10:00:00Z"
+}
+```
 
 ## User Message Examples
 ### User Message - (OpenAI compatible)
@@ -113,10 +183,6 @@ running workflow.
     "name": "string",
     "email": "string"
   },
-  "security": {
-    "api_key": "string",
-    "token": "string"
-  },
   "error": {
     "code": "string",
     "message": "string",
@@ -154,10 +220,6 @@ Definition: This message contains the response content from the human in the loo
   "user": {
     "name": "string",
     "email": "string"
-  },
-  "security": {
-    "api_key": "string",
-    "token": "string"
   },
   "schema_version": "string"
 }
@@ -204,7 +266,7 @@ Definition: This message contains the final response content from a running work
 ```
 
 ### System Response Token Message, Type: `error_message`
-Definition: This message sends various types of error content to the client. The `content` object matches the Error model: `code` is one of `unknown_error`, `workflow_error`, `invalid_message`, `invalid_message_type`, `invalid_user_message_content`, `invalid_data_content`; `message` and `details` are strings.
+Definition: This message sends various types of error content to the client. The `content` object matches the Error model: `code` is one of `unknown_error`, `workflow_error`, `invalid_message`, `invalid_message_type`, `invalid_user_message_content`, `invalid_data_content`, `user_auth_error`; `message` and `details` are strings.
 #### System Response Token Message Error Type Example:
 ```json
 {

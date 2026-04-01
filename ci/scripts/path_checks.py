@@ -61,10 +61,6 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_calculator_eval/data/",
     ),
     (
-        r"^examples/evaluation_and_profiling/swe_bench/.*configs/",
-        r"^examples/evaluation_and_profiling/swe_bench/data/",
-    ),
-    (
         r"^examples/evaluation_and_profiling/simple_calculator_eval/.*configs/",
         r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
     ),
@@ -128,6 +124,11 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config_with_eval.yml",
         r"^examples/frameworks/auto_wrapper/langchain_deep_research/data/DeepConsult_top10.csv",
     ),
+    # Allow deploy README to reference memmachine configuration
+    (
+        r"^examples/deploy/README\.md",
+        r"^examples/memory/memmachine/",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
@@ -166,8 +167,10 @@ ALLOWLISTED_WORDS: set[str] = {
     "read/write",
     "run/host",
     "run/serve",
+    "start/stop",
     "search/edit/score/select",
     "size/time",
+    "SSL/TLS",
     "string/array",
     "string/object",
     "success/failure",

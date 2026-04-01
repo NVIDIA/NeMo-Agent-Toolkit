@@ -372,6 +372,38 @@ async def call_external_api(config: APICallerConfig, builder: Builder):
 - **Streaming**: Always bypasses cache to avoid buffering
 - **Serialization**: Falls back to function call if input can't be serialized
 
+### Timeout Middleware
+
+The timeout middleware enforces configurable time limits on intercepted calls, raising `TimeoutError` when execution exceeds the configured duration.
+
+#### Configuration
+
+```yaml
+middleware:
+  llm_timeout:
+    _type: timeout
+    timeout: 30.0
+    register_llms: true
+
+  tool_timeout:
+    _type: timeout
+    timeout: 10.0
+    timeout_message: "Tool call timed out, try a simpler input."
+```
+
+#### Parameters
+
+- **`timeout`**: Time limit in seconds (must be greater than zero)
+- **`timeout_message`**: Optional additional message appended to the `TimeoutError` raised on expiry
+
+Timeout middleware extends `DynamicFunctionMiddleware`, enabling interception of component methods such as LLMs.
+
+#### Behavior
+
+- **Single invocations**: Enforces the time limit on the intercepted function call
+- **Streaming**: Enforces the time limit across the entire stream duration, not per-chunk
+- **Error handling**: Raises `TimeoutError` with the configured `timeout_message`
+
 ## Advanced Patterns
 
 ### Accessing the Builder
@@ -684,6 +716,7 @@ When chaining multiple middleware:
 3. **Validation**: Validate before expensive operations
 4. **Rate Limiting**: Prevent excessive calls
 5. **Caching**: Final middleware to skip execution
+6. **Timeout**: Timing starts from where it is positioned and runs until the remaining chain completes
 
 ```yaml
 middleware:

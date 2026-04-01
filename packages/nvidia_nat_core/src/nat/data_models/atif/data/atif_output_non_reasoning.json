@@ -1,0 +1,128 @@
+{
+  "schema_version": "ATIF-v1.6",
+  "session_id": "010f16e8-032b-453b-85bf-2d7b72c397f1",
+  "agent": {
+    "name": "nat-agent",
+    "version": "0.0.0",
+    "model_name": "nvidia/nemotron-3-nano-30b-a3b"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-03-03T00:11:30.819759+00:00",
+      "source": "user",
+      "message": "What is 12 * 15 + 8?"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-03-03T00:11:33.460266+00:00",
+      "source": "agent",
+      "model_name": "nvidia/nemotron-3-nano-30b-a3b",
+      "message": "n.\n</think>\nQuestion: What is 12 * 15 + 8?\nThought: I need to first multiply 12 by 15, then add 8 to the product.\nAction: calculator__multiply\nAction Input: {\"numbers\": [12, 15]}",
+      "tool_calls": [
+        {
+          "tool_call_id": "call_019cb109-28d7-7e43-8d3f-bac5be6d7537",
+          "function_name": "calculator__multiply",
+          "arguments": {
+            "numbers": [
+              12,
+              15
+            ]
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "call_019cb109-28d7-7e43-8d3f-bac5be6d7537",
+            "content": "180.0"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 519,
+        "completion_tokens": 473
+      },
+      "extra": {
+        "nat_events": [
+          {
+            "type": "FUNCTION_END",
+            "name": "calculator__multiply",
+            "timestamp": "2026-03-03T00:11:33.464094+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2026-03-03T00:11:34.267582+00:00",
+      "source": "agent",
+      "model_name": "nvidia/nemotron-3-nano-30b-a3b",
+      "message": "].\n</think>\nQuestion: What is 12 * 15 + 8?\nThought: I have the product 12 * 15 = 180.0. Now I need to add 8 to it.\nAction: calculator__add\nAction Input: {\"numbers\": [180.0, 8]}",
+      "tool_calls": [
+        {
+          "tool_call_id": "call_019cb109-2bfe-72e0-8496-76e1c35c5bd4",
+          "function_name": "calculator__add",
+          "arguments": {
+            "numbers": [
+              180.0,
+              8
+            ]
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "call_019cb109-2bfe-72e0-8496-76e1c35c5bd4",
+            "content": "188.0"
+          }
+        ]
+      },
+      "metrics": {
+        "prompt_tokens": 599,
+        "completion_tokens": 106
+      },
+      "extra": {
+        "nat_events": [
+          {
+            "type": "FUNCTION_END",
+            "name": "calculator__add",
+            "timestamp": "2026-03-03T00:11:34.272482+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "step_id": 4,
+      "timestamp": "2026-03-03T00:11:34.851834+00:00",
+      "source": "agent",
+      "model_name": "nvidia/nemotron-3-nano-30b-a3b",
+      "message": "0.\n</think>\nThought: I now know the final answer\nFinal Answer: 188.0",
+      "metrics": {
+        "prompt_tokens": 687,
+        "completion_tokens": 51
+      },
+      "extra": {
+        "nat_events": [
+          {
+            "type": "FUNCTION_END",
+            "name": "<workflow>",
+            "timestamp": "2026-03-03T00:11:34.854381+00:00"
+          }
+        ]
+      }
+    },
+    {
+      "step_id": 5,
+      "timestamp": "2026-03-03T00:11:34.854470+00:00",
+      "source": "agent",
+      "message": "188.0"
+    }
+  ],
+  "final_metrics": {
+    "total_prompt_tokens": 1805,
+    "total_completion_tokens": 630,
+    "total_steps": 4
+  }
+}

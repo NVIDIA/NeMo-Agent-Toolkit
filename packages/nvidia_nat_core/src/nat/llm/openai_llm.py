@@ -26,10 +26,12 @@ from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.ssl_verification_mixin import SSLVerificationMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 
 
-class OpenAIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, name="openai"):
+class OpenAIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, SSLVerificationMixin,
+                        name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")

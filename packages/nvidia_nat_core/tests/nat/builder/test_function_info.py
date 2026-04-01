@@ -726,56 +726,56 @@ def test_create_and_from_fn(function: Callable,
                                       "data": "test", "data2": 10.0, "data3": 7
                                   }
                               },
-                              "10{'data': 'test', 'data2': 10.0, 'data3': 7}"),
+                              "10" + str(MultipleInputModel(data="test", data2=10.0, data3=7))),
                              (fn_multiple_args_annotated_to_str,
                               False, {
                                   "param1": 10, "param2": {
                                       "data": "test", "data2": 10.0, "data3": 7
                                   }
                               },
-                              "10{'data': 'test', 'data2': 10.0, 'data3': 7}"),
+                              "10" + str(MultipleInputModel(data="test", data2=10.0, data3=7))),
                              (fn_multiple_args_to_str_annotated,
                               False, {
                                   "param1": 10, "param2": {
                                       "data": "test", "data2": 10.0, "data3": 7
                                   }
                               },
-                              "10{'data': 'test', 'data2': 10.0, 'data3': 7}"),
+                              "10" + str(MultipleInputModel(data="test", data2=10.0, data3=7))),
                              (fn_multiple_args_annotated_to_str_annotated,
                               False, {
                                   "param1": 10, "param2": {
                                       "data": "test", "data2": 10.0, "data3": 7
                                   }
                               },
-                              "10{'data': 'test', 'data2': 10.0, 'data3': 7}"),
+                              "10" + str(MultipleInputModel(data="test", data2=10.0, data3=7))),
                              (fn_multiple_args_to_str_stream,
                               True, {
                                   "param1": 10, "param2": {
                                       "data": "test", "data2": 10.0, "data3": 7
                                   }
                               },
-                              "10{'data': 'test', 'data2': 10.0, 'data3': 7}"),
+                              "10" + str(MultipleInputModel(data="test", data2=10.0, data3=7))),
                              (fn_multiple_args_annotated_to_str_stream,
                               True, {
                                   "param1": 10, "param2": {
                                       "data": "test", "data2": 10.0, "data3": 7
                                   }
                               },
-                              "10{'data': 'test', 'data2': 10.0, 'data3': 7}"),
+                              "10" + str(MultipleInputModel(data="test", data2=10.0, data3=7))),
                              (fn_multiple_args_to_str_annotated_stream,
                               True, {
                                   "param1": 10, "param2": {
                                       "data": "test", "data2": 10.0, "data3": 7
                                   }
                               },
-                              "10{'data': 'test', 'data2': 10.0, 'data3': 7}"),
+                              "10" + str(MultipleInputModel(data="test", data2=10.0, data3=7))),
                              (fn_multiple_args_annotated_to_str_annotated_stream,
                               True, {
                                   "param1": 10, "param2": {
                                       "data": "test", "data2": 10.0, "data3": 7
                                   }
                               },
-                              "10{'data': 'test', 'data2': 10.0, 'data3': 7}"),
+                              "10" + str(MultipleInputModel(data="test", data2=10.0, data3=7))),
                              (fn_union_to_str, False, 10, "10"),
                              (fn_int_to_union, False, 10, "10"),
                              (fn_int_to_union, False, 2, 2),

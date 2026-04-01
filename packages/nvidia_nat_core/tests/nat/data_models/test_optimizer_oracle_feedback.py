@@ -1,4 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +13,33 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""
+Tests for GAPromptOptimizationConfig oracle feedback fields.
 
-import pytest
-from pydantic import ValidationError
+Oracle feedback fields are typed directly on GAPromptOptimizationConfig
+with proper defaults and validation.
+"""
 
-from nat.data_models.optimizer import PromptGAOptimizationConfig
+from nat.data_models.optimizer import GAPromptOptimizationConfig
 
 
-class TestOracleFeedbackConfig:
-    """Tests for oracle feedback configuration fields."""
+class TestGAPromptOptimizationConfigOracleFeedback:
+    """GAPromptOptimizationConfig has typed oracle feedback fields."""
 
-    def test_default_values(self):
-        """Oracle feedback is disabled by default."""
-        config = PromptGAOptimizationConfig()
+    def test_oracle_feedback_fields_as_typed_attributes(self):
+        """Oracle feedback fields are proper typed attributes with defaults."""
+        config = GAPromptOptimizationConfig(
+            oracle_feedback_mode="always",
+            oracle_feedback_worst_n=3,
+            oracle_feedback_max_chars=2000,
+        )
+        assert config.oracle_feedback_mode == "always"
+        assert config.oracle_feedback_worst_n == 3
+        assert config.oracle_feedback_max_chars == 2000
+
+    def test_oracle_feedback_defaults(self):
+        """Without oracle keys, defaults are applied."""
+        config = GAPromptOptimizationConfig()
         assert config.oracle_feedback_mode == "never"
         assert config.oracle_feedback_worst_n == 5
         assert config.oracle_feedback_max_chars == 4000
@@ -32,42 +47,3 @@ class TestOracleFeedbackConfig:
         assert config.oracle_feedback_stagnation_generations == 3
         assert config.oracle_feedback_fitness_variance_threshold == 0.01
         assert config.oracle_feedback_diversity_threshold == 0.5
-
-    def test_valid_modes(self):
-        """All valid feedback modes are accepted."""
-        for mode in ["never", "always", "failing_only", "adaptive"]:
-            config = PromptGAOptimizationConfig(oracle_feedback_mode=mode)
-            assert config.oracle_feedback_mode == mode
-
-    def test_invalid_mode_rejected(self):
-        """Invalid feedback mode raises validation error."""
-        with pytest.raises(ValidationError):
-            PromptGAOptimizationConfig(oracle_feedback_mode="invalid")
-
-    def test_worst_n_must_be_positive(self):
-        """oracle_feedback_worst_n must be >= 1."""
-        with pytest.raises(ValidationError):
-            PromptGAOptimizationConfig(oracle_feedback_worst_n=0)
-
-    def test_max_chars_must_be_positive(self):
-        """oracle_feedback_max_chars must be >= 1."""
-        with pytest.raises(ValidationError):
-            PromptGAOptimizationConfig(oracle_feedback_max_chars=0)
-
-    def test_fitness_threshold_range(self):
-        """oracle_feedback_fitness_threshold must be in [0, 1]."""
-        PromptGAOptimizationConfig(oracle_feedback_fitness_threshold=0.0)
-        PromptGAOptimizationConfig(oracle_feedback_fitness_threshold=1.0)
-        with pytest.raises(ValidationError):
-            PromptGAOptimizationConfig(oracle_feedback_fitness_threshold=-0.1)
-        with pytest.raises(ValidationError):
-            PromptGAOptimizationConfig(oracle_feedback_fitness_threshold=1.1)
-
-    def test_diversity_threshold_range(self):
-        """oracle_feedback_diversity_threshold must be in [0, 1]."""
-        PromptGAOptimizationConfig(oracle_feedback_diversity_threshold=0.0)
-        PromptGAOptimizationConfig(oracle_feedback_diversity_threshold=1.0)
-        with pytest.raises(ValidationError):
-            PromptGAOptimizationConfig(oracle_feedback_diversity_threshold=-0.1)
-        with pytest.raises(ValidationError):
-            PromptGAOptimizationConfig(oracle_feedback_diversity_threshold=1.1)

@@ -58,15 +58,9 @@ dependencies = [
   "datasets~=4.4",
   "nvidia-nat-core == {version}",
   "openpyxl~=3.1",
-  "ragas~=0.2.14",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
-profiling = [
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
-]
 test = [
   "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",
@@ -87,5 +81,3 @@ nat_evaluators = "nat.plugins.eval.register"
 
 [project.entry-points.'nat.cli']
 eval = "nat.plugins.eval.cli.commands:eval_command"
-red-team = "nat.plugins.eval.cli.commands:red_team_command"
-sizing = "nat.plugins.eval.cli.commands:sizing_command"

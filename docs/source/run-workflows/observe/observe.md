@@ -21,7 +21,7 @@ The NeMo Agent Toolkit uses a flexible, plugin-based observability system that p
 
 - Uses an event-driven architecture with `IntermediateStepManager` publishing workflow events to a reactive stream
 - Supports multiple concurrent telemetry exporters processing events asynchronously
-- Provides built-in exporters for popular observability platforms (Phoenix, Langfuse, Weave, etc.)
+- Provides built-in exporters for popular observability platforms (LangSmith, Phoenix, Langfuse, Weave, etc.)
 - Enables custom telemetry exporter development for any observability service
 
 These features enable developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
@@ -185,8 +185,8 @@ Each exporter can optionally include a processing pipeline that transforms, filt
 
 #### Integration Components
 
-- **{py:class}`nat.plugins.eval.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
-- **{py:class}`~nat.plugins.eval.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
+- **{py:class}`nat.plugins.profiler.decorators`**: Decorators that wrap workflow and LLM framework context managers to inject usage-collection callbacks.
+- **{py:class}`~nat.plugins.profiler.callbacks`**: Callback handlers that track usage statistics (tokens, time, inputs/outputs) and push them to the event stream. Supports LangChain/LangGraph, LLama Index, CrewAI, Semantic Kernel, and Google ADK frameworks.
 
 ### Registering a New Telemetry Provider as a Plugin
 

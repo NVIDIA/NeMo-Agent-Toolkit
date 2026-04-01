@@ -364,6 +364,50 @@ class TestLLMClientFunctions:
         client = await gen.__anext__()
         assert client is not None
 
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    async def test_openai_autogen_verify_ssl_passed_to_client(self, mock_httpx_async_client, verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        from nat.plugins.autogen.llm import openai_autogen
+
+        config = OpenAIModelConfig(api_key="test-key", model_name="gpt-4")
+        config.verify_ssl = verify_ssl
+        builder = Mock(spec=Builder)
+
+        with patch('autogen_ext.models.openai.OpenAIChatCompletionClient') as mock_client_class:
+            with patch('autogen_core.models.ModelInfo') as mock_model_info_class:
+                mock_client = Mock()
+                mock_client_class.return_value = mock_client
+                mock_model_info_class.return_value = Mock()
+
+                with patch('nat.plugins.autogen.llm._patch_autogen_client_based_on_config', return_value=mock_client):
+                    async with openai_autogen(config, builder):
+                        mock_httpx_async_client.assert_called_once()
+                        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    async def test_nim_autogen_verify_ssl_passed_to_client(self, mock_httpx_async_client, verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        from nat.plugins.autogen.llm import nim_autogen
+
+        config = NIMModelConfig(
+            base_url="https://nim.api.nvidia.com/v1",
+            api_key="test-key",
+            model_name="test-model",
+        )
+        config.verify_ssl = verify_ssl
+        builder = Mock(spec=Builder)
+
+        with patch('autogen_ext.models.openai.OpenAIChatCompletionClient') as mock_client_class:
+            with patch('autogen_core.models.ModelInfo') as mock_model_info_class:
+                mock_client = Mock()
+                mock_client_class.return_value = mock_client
+                mock_model_info_class.return_value = Mock()
+
+                with patch('nat.plugins.autogen.llm._patch_autogen_client_based_on_config', return_value=mock_client):
+                    async with nim_autogen(config, builder):
+                        mock_httpx_async_client.assert_called_once()
+                        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
     @patch('builtins.__import__')
     async def test_litellm_autogen_generator(self, mock_import):
         """Test LiteLLM client async generator."""

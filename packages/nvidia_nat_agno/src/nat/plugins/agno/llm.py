@@ -27,6 +27,7 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import async_http_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -86,18 +87,29 @@ async def nim_agno(llm_config: NIMModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.AGNO)
 
-    config_obj = {
-        **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_type"},
-            by_alias=True,
-            exclude_none=True,
-            exclude_unset=True,
-        ),
-    }
+    async with async_http_client(llm_config) as http_client:
+        config_obj = {
+            **llm_config.model_dump(
+                exclude={
+                    "api_type",
+                    "model_name",
+                    "thinking",
+                    "type",
+                    "verify_ssl",
+                },
+                by_alias=True,
+                exclude_none=True,
+                exclude_unset=True,
+            ),
+            "http_client":
+                http_client,
+            "id":
+                llm_config.model_name
+        }
 
-    client = Nvidia(**config_obj, id=llm_config.model_name)
+        client = Nvidia(**config_obj)
 
-    yield _patch_llm_based_on_config(client, llm_config)
+        yield _patch_llm_based_on_config(client, llm_config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
@@ -106,28 +118,40 @@ async def openai_agno(llm_config: OpenAIModelConfig, _builder: Builder):
     from agno.models.openai import OpenAIChat
     from agno.models.openai import OpenAIResponses
 
-    config_obj = {
-        **llm_config.model_dump(
-            exclude={"type", "model_name", "thinking", "api_type", "api_key", "base_url", "request_timeout"},
-            by_alias=True,
-            exclude_none=True,
-            exclude_unset=True,
-        ),
-    }
+    async with async_http_client(llm_config) as http_client:
+        config_obj = {
+            **llm_config.model_dump(
+                exclude={
+                    "api_key",
+                    "api_type",
+                    "base_url",
+                    "model_name",
+                    "request_timeout",
+                    "thinking",
+                    "type",
+                    "verify_ssl",
+                },
+                by_alias=True,
+                exclude_none=True,
+                exclude_unset=True,
+            ),
+            "http_client":
+                http_client,
+        }
 
-    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
-        config_obj["api_key"] = api_key
-    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
-        config_obj["base_url"] = base_url
-    if llm_config.request_timeout is not None:
-        config_obj["timeout"] = llm_config.request_timeout
+        if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+            config_obj["api_key"] = api_key
+        if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+            config_obj["base_url"] = base_url
+        if llm_config.request_timeout is not None:
+            config_obj["timeout"] = llm_config.request_timeout
 
-    if llm_config.api_type == APITypeEnum.RESPONSES:
-        client = OpenAIResponses(**config_obj, id=llm_config.model_name)
-    else:
-        client = OpenAIChat(**config_obj, id=llm_config.model_name)
+        if llm_config.api_type == APITypeEnum.RESPONSES:
+            client = OpenAIResponses(**config_obj, id=llm_config.model_name)
+        else:
+            client = OpenAIChat(**config_obj, id=llm_config.model_name)
 
-    yield _patch_llm_based_on_config(client, llm_config)
+        yield _patch_llm_based_on_config(client, llm_config)
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.AGNO)
@@ -137,14 +161,22 @@ async def litellm_agno(llm_config: LiteLlmModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.AGNO)
 
-    client = LiteLLM(
-        **llm_config.model_dump(
-            exclude={"type", "thinking", "model_name", "api_type"},
-            by_alias=True,
-            exclude_none=True,
-            exclude_unset=True,
-        ),
-        id=llm_config.model_name,
-    )
+    async with async_http_client(llm_config) as http_client:
+        client = LiteLLM(
+            **llm_config.model_dump(
+                exclude={
+                    "api_type",
+                    "model_name",
+                    "thinking",
+                    "type",
+                    "verify_ssl",
+                },
+                by_alias=True,
+                exclude_none=True,
+                exclude_unset=True,
+            ),
+            http_client=http_client,
+            id=llm_config.model_name,
+        )
 
-    yield _patch_llm_based_on_config(client, llm_config)
+        yield _patch_llm_based_on_config(client, llm_config)
