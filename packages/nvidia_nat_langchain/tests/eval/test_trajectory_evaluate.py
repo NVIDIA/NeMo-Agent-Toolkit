@@ -424,8 +424,7 @@ def test_atif_to_agent_actions_emits_filtered_rows_and_dedupes_adjacent_llm():
                     },
                     {
                         "type": "image", "source": {
-                            "media_type": "image/png",
-                            "path": "/tmp/ref.png"
+                            "media_type": "image/png", "path": "/tmp/ref.png"
                         }
                     },
                 ],
