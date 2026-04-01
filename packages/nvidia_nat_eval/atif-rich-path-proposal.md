@@ -175,30 +175,31 @@ Interpretation notes:
 
 ## Reference Artifacts
 
-Use the following config-specific artifact pairs for manual parity checks
+Use the following config-specific artifact pairs as reference visual/output
 (Phoenix dashboard screenshot + generated `workflow_output_atif.json`):
+The sequence is intentionally ordered from simpler to progressively richer nested trajectories.
 
-1. `config-trajectory-eval.yml`
+1. One-level tool calls
    - Config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-trajectory-eval.yml`
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_trajectory_phoenix_trace.png`
    - ATIF output:
-     `.tmp/nat/examples/getting_started/simple_calculator/atif/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/trajectory_eval/workflow_output_atif.json`
 
-2. `config-nested-trajectory-eval.yml`
+2. Nested tool call chain
    - Config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml`
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_nested_phoenix_trace.png`
    - ATIF output:
-     `.tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/nested_trajectory_eval/workflow_output_atif.json`
 
-3. `config-branching-nested-trajectory-eval.yml`
+3. Branching nested tool calls
    - Config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-branching-nested-trajectory-eval.yml`
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_branching_phoenix_trace.png`
    - ATIF output:
-     `.tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/branching_nested_trajectory_eval/workflow_output_atif.json`
 
