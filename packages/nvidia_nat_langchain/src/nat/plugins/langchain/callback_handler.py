@@ -36,6 +36,7 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import ServerToolUseSchema
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import ToolDetails
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.data_models.intermediate_step import ToolParameters
 from nat.data_models.intermediate_step import ToolSchema
 from nat.data_models.intermediate_step import TraceMetadata
@@ -71,7 +72,7 @@ def _extract_tools_schema(invocation_params: dict) -> list:
                             ),
                         ))
                 except (KeyError, TypeError, AttributeError):
-                    logger.exception(
+                    logger.debug(
                         "Failed to parse tool schema from invocation params: %s. \n This "
                         "can occur when the LLM server has native tools and can be ignored if "
                         "using the responses API.",
@@ -101,6 +102,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
         self._run_id_to_model_name = {}
         self._run_id_to_llm_input = {}
         self._run_id_to_tool_input = {}
+        self._run_id_to_tool_name = {}
         self._run_id_to_start_time = {}
 
     def __repr__(self) -> str:
@@ -346,6 +348,7 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
 
         self.step_manager.push_intermediate_step(stats)
         self._run_id_to_tool_input[str(run_id)] = input_str
+        self._run_id_to_tool_name[str(run_id)] = serialized.get("name", "")
         self._run_id_to_start_time[str(run_id)] = time.time()
 
     async def on_tool_end(
@@ -367,5 +370,39 @@ class LangchainProfilerHandler(AsyncCallbackHandler, BaseProfilerCallback):
                                         data=StreamEventData(input=self._run_id_to_tool_input.get(str(run_id), ""),
                                                              output=output,
                                                              payload=output))
+
+        self.step_manager.push_intermediate_step(stats)
+
+    async def on_tool_error(
+        self,
+        error: BaseException,
+        *,
+        run_id: UUID,
+        parent_run_id: UUID | None = None,
+        tags: list[str] | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """Handle tool errors and create an intermediate step for the failure."""
+        run_id_str: str = str(run_id)
+        tool_name: str = self._run_id_to_tool_name.get(run_id_str, "") or kwargs.get("name") or ""
+
+        output: ToolErrorData = ToolErrorData(
+            content=f"{type(error).__name__}: {error!s}",
+            error_type=type(error).__name__,
+            error_message=str(error),
+        )
+
+        stats: IntermediateStepPayload = IntermediateStepPayload(
+            event_type=IntermediateStepType.TOOL_END,
+            span_event_timestamp=self._run_id_to_start_time.get(run_id_str, time.time()),
+            framework=LLMFrameworkEnum.LANGCHAIN,
+            name=tool_name,
+            UUID=run_id_str,
+            usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
+            data=StreamEventData(
+                input=self._run_id_to_tool_input.get(run_id_str, ""),
+                output=output,
+            ),
+        )
 
         self.step_manager.push_intermediate_step(stats)

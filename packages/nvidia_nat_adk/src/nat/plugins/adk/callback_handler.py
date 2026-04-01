@@ -25,6 +25,7 @@ from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.profiler_callback import BaseProfilerCallback
@@ -200,8 +201,29 @@ class ADKProfilerHandler(BaseProfilerCallback):
 
                 return result
 
-            except Exception as _e:
-                logger.exception("BaseTool error occured")
+            except Exception as e:
+                logger.error("BaseTool error: %s", e)
+                kwargs_args = (kwargs.get("args", {}) if isinstance(kwargs.get("args"), dict) else {})
+                tool_error: ToolErrorData = ToolErrorData(
+                    content=f"{type(e).__name__}: {e!s}",
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                )
+                self.step_manager.push_intermediate_step(
+                    IntermediateStepPayload(
+                        event_type=IntermediateStepType.TOOL_END,
+                        span_event_timestamp=time.time(),
+                        framework=LLMFrameworkEnum.ADK,
+                        name=tool_name,
+                        data=StreamEventData(
+                            input={
+                                "args": args, "kwargs": dict(kwargs_args)
+                            },
+                            output=tool_error,
+                        ),
+                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel()),
+                        UUID=step_uuid,
+                    ))
                 raise
 
         return wrapped_tool_use

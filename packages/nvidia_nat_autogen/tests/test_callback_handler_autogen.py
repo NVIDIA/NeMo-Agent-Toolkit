@@ -22,6 +22,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.plugins.autogen.callback_handler import AutoGenProfilerHandler
 from nat.plugins.autogen.callback_handler import ClientPatchInfo
 from nat.plugins.autogen.callback_handler import PatchedClients
@@ -561,7 +562,7 @@ class TestToolWrapper:
 
     @patch('nat.plugins.autogen.callback_handler.Context.get')
     async def test_tool_wrapper_handles_exception(self, mock_get):
-        """Test tool wrapper handles tool execution errors."""
+        """When a tool raises an exception, TOOL_END event contains ToolErrorData with parsed error details."""
         mock_context = Mock()
         mock_step_manager = Mock()
         mock_context.intermediate_step_manager = mock_step_manager
@@ -569,21 +570,48 @@ class TestToolWrapper:
 
         handler = AutoGenProfilerHandler()
 
-        original_func = AsyncMock(side_effect=ValueError("Tool failed"))
+        original_func = AsyncMock(side_effect=ValueError("Column 'revenue' not found"))
         wrapped = handler._create_tool_wrapper(original_func)
 
         tool = Mock()
-        tool.name = "failing_tool"
+        tool.name = "lookup_tool"
         call_data = Mock()
         call_data.kwargs = {}
 
-        with pytest.raises(ValueError, match="Tool failed"):
+        with pytest.raises(ValueError, match="Column 'revenue' not found"):
             await wrapped(tool, call_data)
 
-        # Should have START and error END
         assert mock_step_manager.push_intermediate_step.call_count == 2
         error_call = mock_step_manager.push_intermediate_step.call_args_list[1][0][0]
-        assert "Tool failed" in error_call.data.output
+        assert error_call.name == "lookup_tool"
+        assert isinstance(error_call.data.output, ToolErrorData)
+
+        error_data: ToolErrorData = error_call.data.output
+        assert error_data.content == "ValueError: Column 'revenue' not found"
+        assert error_data.error_type == "ValueError"
+        assert error_data.error_message == "Column 'revenue' not found"
+
+    @patch('nat.plugins.autogen.callback_handler.Context.get')
+    async def test_tool_wrapper_extracts_input_from_run_json_args(self, mock_get):
+        """Test tool wrapper extracts input from run_json signature: (self, args: Mapping, ...)."""
+        mock_context = Mock()
+        mock_step_manager = Mock()
+        mock_context.intermediate_step_manager = mock_step_manager
+        mock_get.return_value = mock_context
+
+        handler = AutoGenProfilerHandler()
+
+        original_func = AsyncMock(return_value="result")
+        wrapped = handler._create_tool_wrapper(original_func)
+
+        tool = Mock()
+        tool.name = "failing_lookup"
+        tool_args = {"query": "revenue"}
+
+        await wrapped(tool, tool_args, Mock())
+
+        start_event = mock_step_manager.push_intermediate_step.call_args_list[0][0][0]
+        assert start_event.data.input == {"query": "revenue"}
 
 
 class TestIntegration:

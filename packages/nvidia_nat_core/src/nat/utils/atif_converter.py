@@ -46,6 +46,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.data_models.intermediate_step import TraceMetadata
 
 logger = logging.getLogger(__name__)
@@ -334,18 +335,35 @@ class IntermediateStepToATIFConverter:
                 tool_name = ist.name or "unknown_tool"
                 tool_input: dict[str, Any] = {}
                 tool_output = ""
+                raw_output: Any = None
+
                 if ist.data:
                     tool_input = _parse_tool_arguments(ist.data.input)
-                    tool_output = _safe_str(ist.data.output)
+                    raw_output = ist.data.output
+                    tool_output = _safe_str(raw_output)
                 call_id = f"call_{ist.UUID}"
                 tc = ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input)
                 obs = ATIFObservationResult(source_call_id=call_id, content=tool_output)
+
+                tool_error: dict[str, str] | None = None
+                if isinstance(raw_output, ToolErrorData):
+                    tool_error = {
+                        "tool": tool_name,
+                        "error": raw_output.content,
+                        "error_type": raw_output.error_type,
+                        "error_message": raw_output.error_message,
+                    }
+
                 if pending is not None:
                     pending.tool_calls.append(tc)
                     pending.observations.append(obs)
+                    if tool_error:
+                        pending.extra.setdefault("tool_errors", []).append(tool_error)
                     pending.tool_ancestry.append(_atif_ancestry_from_ist(ist))
                 else:
-                    extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
+                    extra: dict[str, Any] = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
+                    if tool_error:
+                        extra.setdefault("tool_errors", []).append(tool_error)
                     atif_steps.append(
                         ATIFStep(
                             step_id=step_id,
@@ -508,19 +526,35 @@ class ATIFStreamConverter:
             tool_name = ist.name or "unknown_tool"
             tool_input: dict[str, Any] = {}
             tool_output = ""
+            raw_output: Any = None
             if ist.data:
                 tool_input = _parse_tool_arguments(ist.data.input)
-                tool_output = _safe_str(ist.data.output)
+                raw_output = ist.data.output
+                tool_output = _safe_str(raw_output)
             call_id = f"call_{ist.UUID}"
             tc = ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input)
             obs = ATIFObservationResult(source_call_id=call_id, content=tool_output)
+
+            tool_error: dict[str, str] | None = None
+            if isinstance(raw_output, ToolErrorData):
+                tool_error = {
+                    "tool": tool_name,
+                    "error": raw_output.content,
+                    "error_type": raw_output.error_type,
+                    "error_message": raw_output.error_message,
+                }
+
             if self._pending is not None:
                 self._pending.tool_calls.append(tc)
                 self._pending.observations.append(obs)
+                if tool_error:
+                    self._pending.extra.setdefault("tool_errors", []).append(tool_error)
                 self._pending.tool_ancestry.append(_atif_ancestry_from_ist(ist))
                 return None
 
-            extra = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
+            extra: dict[str, Any] = _atif_step_extra_model_from_ist(ist).model_dump(exclude_none=True)
+            if tool_error:
+                extra.setdefault("tool_errors", []).append(tool_error)
             orphan_step = ATIFStep(
                 step_id=self._step_id,
                 source="agent",

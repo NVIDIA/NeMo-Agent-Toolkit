@@ -17,7 +17,11 @@ import asyncio
 import logging
 from uuid import uuid4
 
+import pytest
+
+from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import ToolErrorData
 from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 from nat.plugins.langchain.callback_handler import _extract_tools_schema
 from nat.utils.reactive.subject import Subject
@@ -278,3 +282,71 @@ def test_extract_tools_schema_empty_and_none():
     assert _extract_tools_schema({}) == []
     assert _extract_tools_schema({"tools": []}) == []
     assert _extract_tools_schema(None) == []
+
+
+@pytest.fixture(name="handler_and_stats")
+def fixture_handler_and_stats(
+    reactive_stream: Subject, ) -> tuple[LangchainProfilerHandler, list[IntermediateStepPayload]]:
+    """Create a handler wired to a reactive stream, returning (handler, collected_stats)."""
+    all_stats: list[IntermediateStepPayload] = []
+    handler: LangchainProfilerHandler = LangchainProfilerHandler()
+    reactive_stream.subscribe(all_stats.append)
+    return handler, all_stats
+
+
+async def _simulate_tool_start(
+    handler: LangchainProfilerHandler,
+    run_id: str,
+    tool_name: str,
+    input_str: str = "",
+) -> None:
+    """Push a TOOL_START event so the handler has run_id context."""
+    await handler.on_tool_start(
+        serialized={"name": tool_name},
+        input_str=input_str,
+        run_id=run_id,
+    )
+
+
+def _get_tool_end(stats: list[IntermediateStepPayload]) -> IntermediateStepPayload:
+    """Return the first TOOL_END payload from collected stats."""
+    return [s for s in stats if s.event_type == IntermediateStepType.TOOL_END][0]
+
+
+class TestOnToolError:
+    """Verify on_tool_error produces correct ToolErrorData and IntermediateStepPayload."""
+
+    async def test_produces_tool_error_data(self, handler_and_stats):
+        """Constructs a ToolErrorData with parsed exception content."""
+        handler, stats = handler_and_stats
+        run_id: str = str(uuid4())
+        await _simulate_tool_start(handler, run_id, "lookup", "some query")
+        await handler.on_tool_error(ValueError("Column 'revenue' not found"), run_id=run_id)
+
+        payload: IntermediateStepPayload = _get_tool_end(stats)
+        output: ToolErrorData = payload.data.output
+        assert isinstance(output, ToolErrorData)
+        assert output.content == "ValueError: Column 'revenue' not found"
+        assert output.error_type == "ValueError"
+        assert output.error_message == "Column 'revenue' not found"
+
+    async def test_populates_intermediate_step_from_tool_start(self, handler_and_stats):
+        """Emitted TOOL_END payload inherits the tool name and input from the preceding ``on_tool_start`` call."""
+        handler, stats = handler_and_stats
+        run_id: str = str(uuid4())
+        await _simulate_tool_start(handler, run_id, "search", "query text")
+        await handler.on_tool_error(RuntimeError("timeout"), run_id=run_id)
+
+        payload: IntermediateStepPayload = _get_tool_end(stats)
+        assert payload.event_type == IntermediateStepType.TOOL_END
+        assert payload.name == "search"
+        assert payload.data.input == "query text"
+
+    async def test_tool_name_falls_back_to_kwargs(self, handler_and_stats):
+        """When the tool name from on_tool_start is empty, on_tool_error falls back to the name provided in kwargs."""
+        handler, stats = handler_and_stats
+        run_id: str = str(uuid4())
+        await _simulate_tool_start(handler, run_id, tool_name="", input_str="x")
+        await handler.on_tool_error(ValueError("err"), run_id=run_id, name="fallback_tool")
+
+        assert _get_tool_end(stats).name == "fallback_tool"
