@@ -39,6 +39,7 @@ from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluator
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluatorConfig
 from nat.plugins.langchain.eval.trajectory_evaluator import _atif_to_agent_actions
+from nat.plugins.langchain.eval.trajectory_evaluator import _message_to_text
 from nat.plugins.langchain.eval.trajectory_evaluator import register_trajectory_evaluator
 
 
@@ -225,6 +226,34 @@ async def test_trajectory_evaluate_atif_success(trajectory_evaluator, atif_sampl
     assert mock_traj_eval_chain.aevaluate_agent_trajectory.call_count == 2
 
 
+async def test_trajectory_evaluate_atif_failure(trajectory_evaluator, atif_samples):
+    error_message = "Mocked ATIF trajectory evaluation failure"
+
+    with patch.object(trajectory_evaluator, "traj_eval_chain") as mock_traj_eval_chain:
+        mock_traj_eval_chain.aevaluate_agent_trajectory = AsyncMock(side_effect=[
+            Exception(error_message),
+            {
+                "score": 0.8, "reasoning": "LGTM-ATIF"
+            },
+        ])
+
+        eval_output = await trajectory_evaluator.evaluate_atif_fn(atif_samples)
+
+        assert isinstance(eval_output, EvalOutput)
+        assert len(eval_output.eval_output_items) == 2
+        assert eval_output.average_score == pytest.approx(0.4)
+
+        failed_item = next(item for item in eval_output.eval_output_items if item.error is not None)
+        successful_item = next(item for item in eval_output.eval_output_items if item.error is None)
+
+        assert failed_item.score == pytest.approx(0.0)
+        assert error_message in failed_item.error
+        assert "trajectory" in failed_item.reasoning
+        assert failed_item.reasoning["error_type"] == "Exception"
+        assert successful_item.score == pytest.approx(0.8)
+        assert successful_item.reasoning["reasoning"] == "LGTM-ATIF"
+
+
 async def test_trajectory_legacy_and_atif_lane_parity_with_tolerance(trajectory_evaluator):
     llm_end_step = IntermediateStep(parent_id="root",
                                     function_ancestry=InvocationNode(function_name="llm_test",
@@ -358,3 +387,91 @@ def test_atif_to_agent_actions_dedupes_adjacent_llm_rows():
     actions = _atif_to_agent_actions(trajectory)
     llm_rows = [(action, output) for action, output in actions if action.tool == "mock-llm"]
     assert len(llm_rows) == 1
+
+
+def test_message_to_text_flattens_multimodal_structured_payload():
+    message = {
+        "parts": [
+            {
+                "type": "text", "text": "First line"
+            },
+            {
+                "type": "image", "source": {
+                    "path": "/tmp/input.png"
+                }
+            },
+            {
+                "type": "text", "text": "Second line"
+            },
+        ]
+    }
+    assert _message_to_text(message) == "First line\n/tmp/input.png\nSecond line"
+
+
+def test_atif_to_agent_actions_emits_filtered_rows_and_dedupes_adjacent_llm():
+    trajectory = ATIFTrajectory(
+        session_id="atif-filter-and-dedupe",
+        agent=ATIFAgentConfig(name="test-agent", version="0.0.0"),
+        steps=[
+            ATIFStep(step_id=1, source="user", message="question"),
+            ATIFStep(
+                step_id=2,
+                source="agent",
+                model_name="mock-llm",
+                message=[
+                    {
+                        "type": "text", "text": "plan"
+                    },
+                    {
+                        "type": "image", "source": {
+                            "media_type": "image/png",
+                            "path": "/tmp/ref.png"
+                        }
+                    },
+                ],
+                tool_calls=[
+                    ATIFToolCall(
+                        tool_call_id="call-1",
+                        function_name="web_search",
+                        arguments={"query": "nemo"},
+                    ),
+                    ATIFToolCall(
+                        tool_call_id="call-2",
+                        function_name="",
+                        arguments={"query": "skip-empty-tool-name"},
+                    ),
+                    ATIFToolCall(
+                        tool_call_id="call-3",
+                        function_name="empty_payload_tool",
+                        arguments={},
+                    ),
+                ],
+                observation=ATIFObservation(results=[
+                    ATIFObservationResult(source_call_id="call-1", content="search result"),
+                    ATIFObservationResult(source_call_id="call-3", content=""),
+                ]),
+            ),
+            ATIFStep(
+                step_id=3,
+                source="agent",
+                model_name="mock-llm",
+                message="plan\n/tmp/ref.png",
+            ),
+        ],
+    )
+
+    actions = _atif_to_agent_actions(trajectory)
+
+    llm_rows = [(action, output) for action, output in actions if action.tool == "mock-llm"]
+    # LLM rows are separated by a tool invocation row, so adjacent-dedupe does not apply.
+    assert len(llm_rows) == 2
+    assert llm_rows[0][1] == "plan\n/tmp/ref.png"
+
+    tool_rows = [(action, output) for action, output in actions if action.tool == "web_search"]
+    assert len(tool_rows) == 1
+    assert tool_rows[0][0].tool_input == {"query": "nemo"}
+    assert tool_rows[0][0].log == "plan\n/tmp/ref.png"
+    assert tool_rows[0][1] == "search result"
+
+    skipped_tool_rows = [(action, output) for action, output in actions if action.tool in {"", "empty_payload_tool"}]
+    assert skipped_tool_rows == []
