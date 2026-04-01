@@ -289,9 +289,9 @@ class DynamicClientRegistration:
 
         returned_redirect_uris = getattr(info, "redirect_uris", None)
         returned_redirect_uris_str = ([str(uri) for uri in returned_redirect_uris] if returned_redirect_uris else None)
-        logger.debug("MCP DCR response: client_id=%s returned_redirect_uris=%s",
-                     info.client_id,
-                     returned_redirect_uris_str)
+        logger.info("MCP DCR response: client_id=%s returned_redirect_uris=%s",
+                    info.client_id,
+                    returned_redirect_uris_str)
         if returned_redirect_uris_str and str(self.config.redirect_uri) not in returned_redirect_uris_str:
             logger.warning(
                 "MCP DCR redirect mismatch: requested_redirect_uri=%s returned_redirect_uris=%s client_id=%s",
@@ -440,7 +440,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 scopes=scopes,
                 use_pkce=bool(self.config.use_pkce),
                 authorization_kwargs={"resource": str(self.config.server_url)})
-            logger.debug(
+            logger.info(
                 "MCP OAuth authorize request inputs: authorization_url=%s client_id=%s redirect_uri=%s "
                 "resource=%s scopes=%s",
                 oauth2_config.authorization_url,
