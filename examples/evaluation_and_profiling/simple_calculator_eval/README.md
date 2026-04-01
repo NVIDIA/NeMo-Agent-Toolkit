@@ -54,8 +54,8 @@ uv pip install arize-phoenix
 
 You can run Phoenix from a separate virtual environment than the one used for
 NVIDIA NeMo Agent Toolkit evaluation runs. This is often preferable to avoid
-dependency/version conflicts between Phoenix packages and toolkit/evaluator
-dependencies.
+dependency and version conflicts between Phoenix packages and toolkit plus
+evaluator dependencies.
 
 ## Installation
 
