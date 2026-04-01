@@ -25,20 +25,14 @@ llms:
     temperature: 0.0
     max_tokens: 2048
 
-functions:
-  ag2_research:
-    _type: nat_ag2_demo/ag2_research_team
-    llm_name: nim_llm
-    max_rounds: 6
-    researcher_instructions: |
-      You are a research specialist. Investigate the topic thoroughly.
-      Present key facts, data, and sources in a structured format.
-    writer_instructions: |
-      You are a technical writer. Synthesize the researcher's findings into a
-      clear, structured summary with: Key Findings, Analysis, and
-      Recommendations. Keep it under 500 words.
-
 workflow:
-  _type: react_agent
+  _type: nat_ag2_demo/ag2_research_team
   llm_name: nim_llm
-  tool_names: [ag2_research]
+  max_rounds: 6
+  researcher_instructions: |
+    You are a research specialist. Investigate the topic thoroughly.
+    Present key facts, data, and sources in a structured format.
+  writer_instructions: |
+    You are a technical writer. Synthesize the researcher's findings into a
+    clear, structured summary with: Key Findings, Analysis, and
+    Recommendations. Keep it under 500 words.

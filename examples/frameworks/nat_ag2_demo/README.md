@@ -151,7 +151,7 @@ nat run --config_file examples/frameworks/nat_ag2_demo/configs/config-research.y
   --input "What are the latest advances in quantum computing?"
 ```
 
-This config uses the `ag2_research_team` workflow type which wraps the AG2 research agents as a NAT tool, invoked by a `react_agent` orchestrator.
+This config uses the `ag2_research_team` workflow type directly as the workflow, with prompts configured inline.
 
 ## Observability with Phoenix
 
