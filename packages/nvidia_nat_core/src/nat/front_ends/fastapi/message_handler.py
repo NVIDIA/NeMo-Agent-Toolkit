@@ -272,22 +272,33 @@ class WebSocketMessageHandler:
             self._initialize_workflow_request(user_message_as_validated_type)
             message_content: typing.Any = await self._process_websocket_user_message(user_message_as_validated_type)
 
-            if (self._running_workflow_task is None):
+            if self._workflow_schema_type is None:
+                raise RuntimeError("Workflow schema type is not initialized")
 
-                def _done_callback(_task: asyncio.Task):
+            if self._running_workflow_task is not None:
+                self._running_workflow_task.cancel()
+                try:
+                    await self._running_workflow_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                self._running_workflow_task = None
+
+            _conversation_id = self._conversation_id
+
+            def _done_callback(_task: asyncio.Task):
+                if self._running_workflow_task is _task:
                     self._running_workflow_task = None
-                    if self._conversation_id:
-                        self._worker.remove_conversation_handler(self._conversation_id)
+                if self._running_workflow_task is None and _conversation_id and \
+                   self._worker.get_conversation_handler(_conversation_id) is self:
+                    self._worker.remove_conversation_handler(_conversation_id)
 
-                if self._workflow_schema_type is None:
-                    raise RuntimeError("Workflow schema type is not initialized")
-                self._running_workflow_task = asyncio.create_task(
-                    self._run_workflow(payload=message_content,
-                                       user_message_id=self._message_parent_id,
-                                       conversation_id=self._conversation_id,
-                                       result_type=self._schema_output_mapping[self._workflow_schema_type],
-                                       output_type=self._schema_output_mapping[self._workflow_schema_type]))
-                self._running_workflow_task.add_done_callback(_done_callback)
+            self._running_workflow_task = asyncio.create_task(
+                self._run_workflow(payload=message_content,
+                                   user_message_id=self._message_parent_id,
+                                   conversation_id=self._conversation_id,
+                                   result_type=self._schema_output_mapping[self._workflow_schema_type],
+                                   output_type=self._schema_output_mapping[self._workflow_schema_type]))
+            self._running_workflow_task.add_done_callback(_done_callback)
 
         except ValueError as e:
             logger.exception("User message content not found: %s", str(e))
@@ -439,6 +450,7 @@ class WebSocketMessageHandler:
                             result_type: type | None = None,
                             output_type: type | None = None) -> None:
 
+        _cancelled = False
         try:
             auth_callback = self._flow_handler.authenticate if self._flow_handler else None
             async with self._session_manager.session(user_id=self._user_id,
@@ -466,6 +478,10 @@ class WebSocketMessageHandler:
 
                     await self.create_websocket_message(data_model=value, status=WebSocketMessageStatus.IN_PROGRESS)
 
+        except asyncio.CancelledError:
+            _cancelled = True
+            raise
+
         except Exception as e:
             logger.exception("Unhandled workflow error")
             await self.create_websocket_message(data_model=Error(code=ErrorTypes.WORKFLOW_ERROR,
@@ -475,12 +491,16 @@ class WebSocketMessageHandler:
                                                 status=WebSocketMessageStatus.IN_PROGRESS)
 
         finally:
-            await self.create_websocket_message(data_model=SystemResponseContent(),
-                                                message_type=WebSocketMessageType.RESPONSE_MESSAGE,
-                                                status=WebSocketMessageStatus.COMPLETE)
+            try:
+                if not _cancelled:
+                    await self.create_websocket_message(data_model=SystemResponseContent(),
+                                                        message_type=WebSocketMessageType.RESPONSE_MESSAGE,
+                                                        status=WebSocketMessageStatus.COMPLETE)
 
-            # Send observability trace after completion message
-            if self._pending_observability_trace is not None:
-                await self.create_websocket_message(data_model=self._pending_observability_trace,
-                                                    message_type=WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE)
+                    # Send observability trace after completion message
+                    if self._pending_observability_trace is not None:
+                        await self.create_websocket_message(
+                            data_model=self._pending_observability_trace,
+                            message_type=WebSocketMessageType.OBSERVABILITY_TRACE_MESSAGE)
+            finally:
                 self._pending_observability_trace = None
