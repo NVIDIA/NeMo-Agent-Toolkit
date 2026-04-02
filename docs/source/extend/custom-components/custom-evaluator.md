@@ -154,7 +154,8 @@ You can also author a custom evaluator that only implements ATIF-native scoring 
 When using `AtifBaseEvaluator`, implement `evaluate_atif_item` and reuse the built-in concurrent `evaluate_atif_fn`.
 This is useful when your scoring logic consumes canonical ATIF trajectories directly.
 
-For this ATIF-only path, base `nvidia-nat-eval` is sufficient. Install `nvidia-nat-eval[full]` only when you also need the full `nat eval` runtime.
+This example uses evaluator registration (`@register_evaluator`) and therefore requires full runtime dependencies (`nvidia-nat-eval[full]`).
+Base `nvidia-nat-eval` is sufficient for standalone ATIF harness usage without workflow/plugin registration.
 
 The following example registers a minimal ATIF-only cosine-similarity evaluator:
 `examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/atif_only_evaluator_register.py`:

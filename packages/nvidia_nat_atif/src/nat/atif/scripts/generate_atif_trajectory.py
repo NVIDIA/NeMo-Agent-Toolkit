@@ -24,7 +24,7 @@ Prerequisites:
     - An appropriate API key must be set (for example, ``NVIDIA_API_KEY``).
 
 Usage (from repo root):
-    python -m nat.data_models.atif.scripts.generate_atif_trajectory \\
+    python -m nat.atif.scripts.generate_atif_trajectory \\
         --config examples/getting_started/simple_calculator/src/nat_simple_calculator/configs/config.yml \\
         --input "What is 7 * 8?" \\
         -o atif_output.json

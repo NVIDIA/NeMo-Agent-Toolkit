@@ -40,8 +40,6 @@ from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import ProfilerResults
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -50,6 +48,8 @@ from nat.data_models.invocation_node import InvocationNode
 from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.runtime.session import SessionManager
+from nat.shared_contracts.evaluator_io import EvalOutput
+from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 # pylint: disable=unused-argument # arguments are passed to setup the fixtures
 

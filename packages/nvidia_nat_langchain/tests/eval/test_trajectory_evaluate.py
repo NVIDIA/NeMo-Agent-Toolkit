@@ -21,12 +21,12 @@ import pytest
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
 
-from nat.data_models.atif import ATIFAgentConfig
-from nat.data_models.atif import ATIFObservation
-from nat.data_models.atif import ATIFObservationResult
-from nat.data_models.atif import ATIFStep
-from nat.data_models.atif import ATIFToolCall
-from nat.data_models.atif import ATIFTrajectory
+from nat.atif import ATIFAgentConfig
+from nat.atif import ATIFObservation
+from nat.atif import ATIFObservationResult
+from nat.atif import ATIFStep
+from nat.atif import ATIFToolCall
+from nat.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.intermediate_step import IntermediateStep

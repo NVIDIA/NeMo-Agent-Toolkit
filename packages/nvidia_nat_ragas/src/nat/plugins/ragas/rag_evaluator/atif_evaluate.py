@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nat.data_models.atif import ATIFObservationResult
-from nat.data_models.atif import ATIFTrajectory
+from nat.atif import ATIFObservationResult
+from nat.atif import ATIFTrajectory
 from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.shared_contracts.evaluator_io import EvalOutputItem

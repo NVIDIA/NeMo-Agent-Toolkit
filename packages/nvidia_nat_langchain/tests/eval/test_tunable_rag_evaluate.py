@@ -19,9 +19,9 @@ from unittest.mock import MagicMock
 import pytest
 from langchain_core.language_models import BaseChatModel
 
-from nat.data_models.atif import ATIFAgentConfig
-from nat.data_models.atif import ATIFStep
-from nat.data_models.atif import ATIFTrajectory
+from nat.atif import ATIFAgentConfig
+from nat.atif import ATIFStep
+from nat.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample

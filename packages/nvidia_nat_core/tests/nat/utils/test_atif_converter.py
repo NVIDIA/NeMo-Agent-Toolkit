@@ -18,8 +18,8 @@ import datetime
 
 import pytest
 
+from nat.atif import ATIFTrajectory
 from nat.builder.framework_enum import LLMFrameworkEnum
-from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
