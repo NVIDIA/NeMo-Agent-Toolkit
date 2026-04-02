@@ -58,15 +58,7 @@ dependencies = [
   "pydantic~=2.11",
 ]
 
-[tool.setuptools_dynamic_dependencies.optional-dependencies]
-test = [
-  "nvidia-nat-test == {version}",
-]
-
 [tool.uv]
 build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
-
-[tool.uv.sources]
-nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
