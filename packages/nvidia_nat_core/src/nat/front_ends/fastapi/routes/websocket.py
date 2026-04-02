@@ -101,7 +101,7 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
                                                               worker._remove_flow,
                                                               handler,
                                                               return_url=return_url,
-                                                              token_store=worker._oauth_token_store,
+                                                              token_cache=worker._oauth_token_cache,
                                                               session_id=nat_session_id)
             handler.set_flow_handler(flow_handler)
             skip_eager_auth = websocket.query_params.get("skip_eager_auth") == "true"

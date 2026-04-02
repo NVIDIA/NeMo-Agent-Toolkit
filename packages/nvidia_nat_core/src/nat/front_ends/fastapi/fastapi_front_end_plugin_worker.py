@@ -36,6 +36,9 @@ from nat.runtime.session import SessionManager
 from nat.utils.log_utils import setup_logging
 
 from .auth_flow_handlers.http_flow_handler import HTTPAuthenticationFlowHandler
+from .auth_flow_handlers.oauth_token_cache import InMemoryOAuthTokenCache
+from .auth_flow_handlers.oauth_token_cache import OAuthTokenCacheBase
+from .auth_flow_handlers.oauth_token_cache import ObjectStoreOAuthTokenCache
 from .auth_flow_handlers.websocket_flow_handler import FlowState
 from .execution_store import ExecutionStore
 from .fastapi_front_end_config import FastApiFrontEndConfig
@@ -202,9 +205,9 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Conversation handlers for WebSocket reconnection support
         self._conversation_handlers: dict[str, WebSocketMessageHandler] = {}
 
-        # OAuth token cache: maps "{session_id}:{client_id}:{token_url}" to
-        # (AuthenticatedContext, expires_at_unix_or_None)
-        self._oauth_token_store: dict[str, tuple] = {}
+        # OAuth token cache — replaced with an ObjectStoreOAuthTokenCache in configure()
+        # when front_end.oauth_token_store is set, enabling cross-replica token sharing.
+        self._oauth_token_cache: OAuthTokenCacheBase = InMemoryOAuthTokenCache()
 
         # Track session managers for each route
         self._session_managers: list[SessionManager] = []
@@ -316,6 +319,11 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
 
         # Do things like setting the base URL and global configuration options
         app.root_path = self.front_end_config.root_path
+
+        if self.front_end_config.oauth_token_store is not None:
+            object_store = await builder.get_object_store_client(self.front_end_config.oauth_token_store)
+            self._oauth_token_cache = ObjectStoreOAuthTokenCache(object_store)
+            logger.debug("OAuth token cache backed by object store '%s'", self.front_end_config.oauth_token_store)
 
         # Initialize evaluators for single-item evaluation
         # TODO: we need config control over this as it's not always needed

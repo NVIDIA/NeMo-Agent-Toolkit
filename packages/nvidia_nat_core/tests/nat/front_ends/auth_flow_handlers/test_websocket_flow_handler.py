@@ -28,6 +28,7 @@ from nat.authentication.oauth2.oauth2_auth_code_flow_provider_config import OAut
 from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.config import Config
+from nat.front_ends.fastapi.auth_flow_handlers.oauth_token_cache import InMemoryOAuthTokenCache
 from nat.front_ends.fastapi.auth_flow_handlers.websocket_flow_handler import WebSocketAuthenticationFlowHandler
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.test.functions import EchoFunctionConfig
@@ -378,29 +379,29 @@ def minimal_oauth_config_fixture():
 
 
 def test_token_cache_key_returns_none_without_required_attrs(noop_handler, minimal_oauth_config):
-    """_token_cache_key returns None when session_id or token_store is absent."""
-    noop_handler._token_store = {}
+    """_token_cache_key returns None when session_id or token_cache is absent."""
+    noop_handler._token_cache = InMemoryOAuthTokenCache()
     noop_handler._session_id = None
     assert noop_handler._token_cache_key(minimal_oauth_config) is None
 
-    noop_handler._token_store = None
+    noop_handler._token_cache = None
     noop_handler._session_id = "sess-1"
     assert noop_handler._token_cache_key(minimal_oauth_config) is None
 
 
 def test_token_cache_key_format(noop_handler, minimal_oauth_config):
     """_token_cache_key returns '{session_id}:{client_id}:{token_url}' when both are present."""
-    noop_handler._token_store = {}
+    noop_handler._token_cache = InMemoryOAuthTokenCache()
     noop_handler._session_id = "sess-1"
     key = noop_handler._token_cache_key(minimal_oauth_config)
     assert key == f"sess-1:{minimal_oauth_config.client_id}:{minimal_oauth_config.token_url}"
 
 
-def test_get_cached_token_miss(noop_handler, minimal_oauth_config):
+async def test_get_cached_token_miss(noop_handler, minimal_oauth_config):
     """_get_cached_token returns None when the cache has no entry for the config."""
-    noop_handler._token_store = {}
+    noop_handler._token_cache = InMemoryOAuthTokenCache()
     noop_handler._session_id = "sess-1"
-    assert noop_handler._get_cached_token(minimal_oauth_config) is None
+    assert await noop_handler._get_cached_token(minimal_oauth_config) is None
 
 
 @pytest.mark.parametrize("expires_at,expect_hit",
@@ -410,33 +411,33 @@ def test_get_cached_token_miss(noop_handler, minimal_oauth_config):
                              pytest.param(time.time() - 1, False, id="past"),
                              pytest.param(time.time() + 30, False, id="within_buffer"),
                          ])
-def test_get_cached_token_expiry(noop_handler, minimal_oauth_config, expires_at, expect_hit):
+async def test_get_cached_token_expiry(noop_handler, minimal_oauth_config, expires_at, expect_hit):
     """_get_cached_token returns the context when valid and evicts it when expired or within the 60s buffer."""
     ctx = AuthenticatedContext(headers={"Authorization": "Bearer tok"}, metadata={})
-    store: dict = {}
-    noop_handler._token_store = store
+    cache = InMemoryOAuthTokenCache()
+    noop_handler._token_cache = cache
     noop_handler._session_id = "sess-1"
     key = noop_handler._token_cache_key(minimal_oauth_config)
-    store[key] = (ctx, expires_at)
-    result = noop_handler._get_cached_token(minimal_oauth_config)
+    cache._store[key] = (ctx, expires_at)
+    result = await noop_handler._get_cached_token(minimal_oauth_config)
     if expect_hit:
         assert result is ctx
     else:
         assert result is None
-        assert key not in store
+        assert key not in cache._store
 
 
-def test_store_token_writes_correctly(noop_handler, minimal_oauth_config):
-    """_store_token writes (ctx, expires_at) to the store under the expected key."""
-    store: dict = {}
-    noop_handler._token_store = store
+async def test_store_token_writes_correctly(noop_handler, minimal_oauth_config):
+    """_store_token writes the context to the cache under the expected key."""
+    cache = InMemoryOAuthTokenCache()
+    noop_handler._token_cache = cache
     noop_handler._session_id = "sess-1"
     expires = 9999999999.0
     ctx = AuthenticatedContext(headers={"Authorization": "Bearer tok"}, metadata={"expires_at": expires})
-    noop_handler._store_token(minimal_oauth_config, ctx)
+    await noop_handler._store_token(minimal_oauth_config, ctx)
     key = noop_handler._token_cache_key(minimal_oauth_config)
-    assert key in store
-    stored_ctx, stored_expires = store[key]
+    assert key in cache._store
+    stored_ctx, stored_expires = cache._store[key]
     assert stored_ctx is ctx
     assert stored_expires == expires
 
@@ -468,13 +469,13 @@ async def test_authenticate_second_call_uses_cache(monkeypatch, mock_server, tmp
             message_count[0] += 1
             await _complete_oauth_redirect(msg.text, mock_server, worker._outstanding_flows)
 
-    token_store: dict = {}
+    token_cache = InMemoryOAuthTokenCache()
     ws_handler = _AuthHandler(
         oauth_server=mock_server,
         add_flow_cb=worker._add_flow,
         remove_flow_cb=worker._remove_flow,
         web_socket_message_handler=_DummyWSHandler(),
-        token_store=token_store,
+        token_cache=token_cache,
         session_id="test-session",
     )
 
@@ -492,7 +493,7 @@ async def test_authenticate_second_call_uses_cache(monkeypatch, mock_server, tmp
 
     ctx1 = await ws_handler.authenticate(cfg_flow, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
     assert message_count[0] == 1, "OAuth flow should have run exactly once"
-    assert token_store, "Token must be stored after first auth"
+    assert token_cache._store, "Token must be stored after first auth"
 
     ctx2 = await ws_handler.authenticate(cfg_flow, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
     assert message_count[0] == 1, "Second authenticate() must return from cache without triggering OAuth"
@@ -531,18 +532,18 @@ async def test_run_eager_auth_uses_cached_token(minimal_oauth_config):
             message_count[0] += 1
 
     ctx = AuthenticatedContext(headers={"Authorization": "Bearer cached-tok"}, metadata={"expires_at": None})
-    store: dict = {}
+    cache = InMemoryOAuthTokenCache()
     # Enable use_eager_auth so the cache lookup is actually reached
     active_config = minimal_oauth_config.model_copy(update={"use_eager_auth": True})
     handler = WebSocketAuthenticationFlowHandler(
         add_flow_cb=_noop_add,
         remove_flow_cb=_noop_remove,
         web_socket_message_handler=_CountingWSHandler(),
-        token_store=store,
+        token_cache=cache,
         session_id="sess-1",
     )
     key = handler._token_cache_key(active_config)
-    store[key] = (ctx, time.time() + 3600)
+    cache._store[key] = (ctx, time.time() + 3600)
 
     await handler.run_eager_auth({"my_provider": active_config})
     assert message_count[0] == 0, "run_eager_auth must not trigger OAuth when token is cached"

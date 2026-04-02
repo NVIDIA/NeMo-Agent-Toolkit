@@ -16,7 +16,6 @@
 import asyncio
 import logging
 import secrets
-import time
 from collections.abc import Awaitable
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -32,6 +31,7 @@ from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.interactive import _HumanPromptOAuthConsent
+from nat.front_ends.fastapi.auth_flow_handlers.oauth_token_cache import OAuthTokenCacheBase
 from nat.front_ends.fastapi.message_handler import WebSocketMessageHandler
 
 logger = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                  web_socket_message_handler: WebSocketMessageHandler,
                  auth_timeout_seconds: float = 300.0,
                  return_url: str | None = None,
-                 token_store: dict | None = None,
+                 token_cache: OAuthTokenCacheBase | None = None,
                  session_id: str | None = None):
 
         self._add_flow_cb: Callable[[str, FlowState], Awaitable[None]] = add_flow_cb
@@ -63,7 +63,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
         self._auth_timeout_seconds: float = auth_timeout_seconds
         self._return_url: str | None = return_url
-        self._token_store: dict | None = token_store
+        self._token_cache: OAuthTokenCacheBase | None = token_cache
         self._session_id: str | None = session_id
 
     async def authenticate(
@@ -137,7 +137,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
             raise ValueError("Redirect-based authentication (use_redirect_auth=True) requires a return URL, "
                              "but none was configured. Pass return_url when constructing the flow handler.")
 
-        cached = self._get_cached_token(config)
+        cached = await self._get_cached_token(config)
         if cached is not None:
             logger.debug("OAuth token cache hit for client_id=%s", config.client_id)
             return cached
@@ -174,33 +174,26 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
                                    metadata={
                                        "expires_at": token.get("expires_at"), "raw_token": token
                                    })
-        self._store_token(config, ctx)
+        await self._store_token(config, ctx)
         return ctx
 
     def _token_cache_key(self, config: OAuth2AuthCodeFlowProviderConfig) -> str | None:
         """Return a cache key for this (session, provider) pair, or None if caching is unavailable."""
-        if not self._session_id or self._token_store is None:
+        if not self._session_id or self._token_cache is None:
             return None
         return f"{self._session_id}:{config.client_id}:{config.token_url}"
 
-    def _get_cached_token(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext | None:
+    async def _get_cached_token(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext | None:
         """Return a cached, non-expired token for *config*, or None."""
         key = self._token_cache_key(config)
-        if key is None or self._token_store is None:
+        if key is None or self._token_cache is None:
             return None
-        entry = self._token_store.get(key)
-        if entry is None:
-            return None
-        ctx, expires_at = entry
-        if expires_at is not None and time.time() >= expires_at - 60:
-            del self._token_store[key]
-            return None
-        return ctx
+        return await self._token_cache.get(key)
 
-    def _store_token(self, config: OAuth2AuthCodeFlowProviderConfig, ctx: AuthenticatedContext) -> None:
+    async def _store_token(self, config: OAuth2AuthCodeFlowProviderConfig, ctx: AuthenticatedContext) -> None:
         """Cache *ctx* for *config* if caching is available."""
         key = self._token_cache_key(config)
-        if key is None or self._token_store is None:
+        if key is None or self._token_cache is None:
             return
         expires_at = ctx.metadata.get("expires_at") if ctx.metadata else None
-        self._token_store[key] = (ctx, expires_at)
+        await self._token_cache.set(key, ctx, expires_at)
