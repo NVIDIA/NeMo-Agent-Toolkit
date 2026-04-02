@@ -6515,7 +6515,7 @@ most = [
     { name = "nvidia-nat-core", extra = ["async-endpoints", "gunicorn", "pii-defense"], marker = "extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "nvidia-nat-crewai" },
     { name = "nvidia-nat-data-flywheel" },
-    { name = "nvidia-nat-eval" },
+    { name = "nvidia-nat-eval", extra = ["full"], marker = "extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-rag' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai')" },
     { name = "nvidia-nat-fastmcp" },
     { name = "nvidia-nat-langchain" },
     { name = "nvidia-nat-llama-index" },
@@ -6703,7 +6703,7 @@ requires-dist = [
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'most'", editable = "packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-eval", marker = "extra == 'eval'", editable = "packages/nvidia_nat_eval" },
-    { name = "nvidia-nat-eval", marker = "extra == 'most'", editable = "packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-eval", extras = ["full"], marker = "extra == 'most'", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'fastmcp'", editable = "packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'most'", editable = "packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "packages/nvidia_nat_langchain" },
@@ -6856,11 +6856,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
-    { name = "pydantic", specifier = "~=2.11" },
-]
-provides-extras = ["test"]
+requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 
 [[package]]
 name = "nvidia-nat-autogen"
@@ -7059,6 +7055,13 @@ dependencies = [
     { name = "nvidia-nat-atif" },
     { name = "nvidia-nat-shared-contracts" },
     { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+full = [
+    { name = "datasets" },
+    { name = "nvidia-nat-core" },
+    { name = "openpyxl" },
 ]
 
 [package.metadata]
@@ -7491,11 +7494,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
-    { name = "pydantic", specifier = "~=2.11" },
-]
-provides-extras = ["test"]
+requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 
 [[package]]
 name = "nvidia-nat-strands"

@@ -1809,7 +1809,7 @@ requires-dist = [
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'data-flywheel'", editable = "../../packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-data-flywheel", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_data_flywheel" },
     { name = "nvidia-nat-eval", marker = "extra == 'eval'", editable = "../../packages/nvidia_nat_eval" },
-    { name = "nvidia-nat-eval", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_eval" },
+    { name = "nvidia-nat-eval", extras = ["full"], marker = "extra == 'most'", editable = "../../packages/nvidia_nat_eval" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'fastmcp'", editable = "../../packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-fastmcp", marker = "extra == 'most'", editable = "../../packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "../../packages/nvidia_nat_langchain" },
@@ -1897,11 +1897,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../packages/nvidia_nat_test" },
-    { name = "pydantic", specifier = "~=2.11" },
-]
-provides-extras = ["test"]
+requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 
 [[package]]
 name = "nvidia-nat-core"
@@ -2096,11 +2092,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../packages/nvidia_nat_test" },
-    { name = "pydantic", specifier = "~=2.11" },
-]
-provides-extras = ["test"]
+requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 
 [[package]]
 name = "nvidia-nat-test"

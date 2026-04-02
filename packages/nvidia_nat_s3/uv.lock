@@ -1349,11 +1349,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
-    { name = "pydantic", specifier = "~=2.11" },
-]
-provides-extras = ["test"]
+requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 
 [[package]]
 name = "nvidia-nat-core"
@@ -1478,11 +1474,7 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
-    { name = "pydantic", specifier = "~=2.11" },
-]
-provides-extras = ["test"]
+requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 
 [[package]]
 name = "nvidia-nat-test"

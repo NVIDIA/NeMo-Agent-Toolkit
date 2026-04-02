@@ -103,7 +103,7 @@ most = [
   "nvidia-nat-core[async_endpoints,gunicorn,pii-defense] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
-  "nvidia-nat-eval == {version}",
+  "nvidia-nat-eval[full] == {version}",
   "nvidia-nat-fastmcp == {version}",
   "nvidia-nat-langchain == {version}",
   "nvidia-nat-llama-index == {version}",
