@@ -55,13 +55,11 @@ uv pip install "nvidia-nat-eval"
 ::::
 
 
-For package installs, add full runtime dependencies when you need full `nat eval` functionality:
+For package installs, use the NeMo Agent Toolkit metapackage to run `nat eval`:
 
 ```bash
-uv pip install "nvidia-nat-eval[full]"
+uv pip install "nvidia-nat[eval]"
 ```
-
-If you invoke a full runtime path without the `full` extra, NeMo Agent Toolkit raises an actionable error with the required install command.
 
 If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install the profiler package as well:
 
