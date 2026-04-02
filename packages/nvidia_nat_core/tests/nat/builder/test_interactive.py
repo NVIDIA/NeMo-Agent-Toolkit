@@ -167,7 +167,7 @@ def test_human_prompt_oauth_consent_defaults():
 
 
 def test_human_prompt_oauth_consent_use_popup_false():
-    """_HumanPromptOAuthConsent accepts use_popup=False for same-tab auth flow."""
+    """_HumanPromptOAuthConsent accepts use_popup=False for redirect-based auth flow."""
     prompt = _HumanPromptOAuthConsent(text="https://auth.example.com/authorize", use_popup=False)
     assert prompt.use_popup is False
     assert prompt.input_type == HumanPromptModelType.OAUTH_CONSENT
