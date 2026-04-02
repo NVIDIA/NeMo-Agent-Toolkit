@@ -12,7 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Evaluation input/output data models shared across core and eval."""
+"""Evaluation input/output data models shared across core and eval.
+
+Note:
+    ``EvalOutput`` and ``EvalOutputItem`` are intentionally duplicated in
+    ``nvidia-nat-eval`` during the ongoing dependency split. Keep the core
+    definitions until the migration is complete.
+"""
 
 import typing
 

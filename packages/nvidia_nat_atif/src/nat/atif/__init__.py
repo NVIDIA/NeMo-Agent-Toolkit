@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Pydantic models for Agent Trajectory Interchange Format (ATIF).
 
 Models are derived from the Harbor reference implementation
