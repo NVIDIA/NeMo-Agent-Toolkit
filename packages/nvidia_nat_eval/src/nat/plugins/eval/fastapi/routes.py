@@ -31,6 +31,7 @@ from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusResponse
 from nat.front_ends.fastapi.routes.common_utils import RESPONSE_500
+from nat.front_ends.fastapi.routes.common_utils import _serialize_request
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.plugins.eval.runtime.evaluate import EvaluationRunConfig
 from nat.plugins.eval.runtime.evaluate import EvaluationRunOutput
@@ -63,6 +64,7 @@ async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: Sessio
         job_id: str,
         eval_config_file: str,
         reps: int,
+        serialized_request: dict | None = None,
     ):
         """Background task to run the evaluation."""
 
@@ -72,9 +74,14 @@ async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: Sessio
             await job_store.update_status(job_id, JobStatus.RUNNING)
             eval_runner = EvaluationRun(eval_config)
 
+            http_connection: Request | None = None
+            if serialized_request is not None:
+                http_connection = Request(scope=serialized_request)
+
             async with load_workflow(workflow_config_file_path) as local_session_manager:
                 output: EvaluationRunOutput = await eval_runner.run_and_evaluate(session_manager=local_session_manager,
-                                                                                 job_id=job_id)
+                                                                                 job_id=job_id,
+                                                                                 http_connection=http_connection)
 
             if output.workflow_interrupted:
                 await job_store.update_status(job_id, JobStatus.INTERRUPTED)
@@ -105,6 +112,7 @@ async def _add_evaluate_route(worker: Any, app: FastAPI, session_manager: Sessio
                                                    job_id,
                                                    request.config_file,
                                                    request.reps,
+                                                   _serialize_request(http_request),
                                                ])
 
             logger.info("Submitted evaluation job %s with config %s", job_id, request.config_file)

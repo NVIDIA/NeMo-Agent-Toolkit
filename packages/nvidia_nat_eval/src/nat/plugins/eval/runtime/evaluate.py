@@ -58,6 +58,8 @@ from nat.plugins.eval.utils.output_uploader import OutputUploader
 from nat.runtime.session import SessionManager
 
 if TYPE_CHECKING:
+    from starlette.requests import HTTPConnection
+
     from nat.plugins.eval.eval_callbacks import EvalCallbackManager
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
     from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
@@ -176,7 +178,9 @@ class EvaluationRun:
                                                                      llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
-    async def run_workflow_local(self, session_manager: SessionManager):
+    async def run_workflow_local(self,
+                                 session_manager: SessionManager,
+                                 http_connection: "HTTPConnection | None" = None):
         '''
         Launch the workflow with the specified questions and extract the output using the jsonpath
         '''
@@ -214,7 +218,7 @@ class EvaluationRun:
             ctx_state = ContextState.get()
             root_span_token = ctx_state._root_span_id.set(pre_span_id) if pre_span_id is not None else None
             try:
-                async with session_manager.session(user_id=eval_user_id) as session:
+                async with session_manager.session(user_id=eval_user_id, http_connection=http_connection) as session:
                     async with session.run(item.input_obj) as runner:
                         if not session.workflow.has_single_output:
                             # raise an error if the workflow has multiple outputs
@@ -689,7 +693,8 @@ class EvaluationRun:
 
     async def run_and_evaluate(self,
                                session_manager: SessionManager | None = None,
-                               job_id: str | None = None) -> EvaluationRunOutput:
+                               job_id: str | None = None,
+                               http_connection: "HTTPConnection | None" = None) -> EvaluationRunOutput:
         """
         Run the workflow with the specified config file and evaluate the dataset
         """
@@ -818,7 +823,7 @@ class EvaluationRun:
                                 shared_builder=eval_workflow,
                                 max_concurrency=self.eval_config.general.max_concurrency)
                             local_session_manager = session_manager
-                        await self.run_workflow_local(session_manager)
+                        await self.run_workflow_local(session_manager, http_connection=http_connection)
 
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
