@@ -32,6 +32,25 @@ logger = logging.getLogger(__name__)
 _SAFE_SESSION_ID_RE = re.compile(r'^[A-Za-z0-9\-_.~]+$')
 
 
+def _is_origin_allowed(origin: str | None, allowed_origins: list[str], allow_origin_regex: str | None) -> bool:
+    """Return True if *origin* should be treated as an allowed CORS origin.
+
+    Mirrors the three-tier check used by Starlette's CORSMiddleware:
+    1. Wildcard ``"*"`` in *allowed_origins* accepts any non-empty origin.
+    2. Exact membership in *allowed_origins*.
+    3. Full-string match against *allow_origin_regex* (when set).
+    """
+    if not origin:
+        return False
+    if "*" in allowed_origins:
+        return True
+    if origin in allowed_origins:
+        return True
+    if allow_origin_regex and re.fullmatch(allow_origin_regex, origin):
+        return True
+    return False
+
+
 def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
     """Build websocket endpoint handler with auth-flow integration."""
 
@@ -74,7 +93,8 @@ def websocket_endpoint(*, worker: Any, session_manager: SessionManager):
         async with WebSocketMessageHandler(websocket, session_manager, worker.get_step_adaptor(), worker) as handler:
             origin = websocket.headers.get("origin")
             allowed_origins = worker.front_end_config.cors.allow_origins or []
-            return_url = origin if origin and origin in allowed_origins else None
+            allow_origin_regex = worker.front_end_config.cors.allow_origin_regex
+            return_url = origin if _is_origin_allowed(origin, allowed_origins, allow_origin_regex) else None
             flow_handler = WebSocketAuthenticationFlowHandler(worker._add_flow,
                                                               worker._remove_flow,
                                                               handler,

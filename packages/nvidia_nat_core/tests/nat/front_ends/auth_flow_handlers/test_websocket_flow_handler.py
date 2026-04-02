@@ -266,6 +266,47 @@ async def test_websocket_oauth2_flow_no_popup(monkeypatch, mock_server, tmp_path
 
 
 # --------------------------------------------------------------------------- #
+# use_redirect_auth=True without return_url guard                             #
+# --------------------------------------------------------------------------- #
+@pytest.mark.usefixtures("set_nat_config_file_env_var")
+async def test_websocket_oauth2_flow_redirect_without_return_url(monkeypatch):
+    """Verify that use_redirect_auth=True with no return_url raises ValueError immediately."""
+
+    cfg_nat = Config(workflow=EchoFunctionConfig())
+    worker = FastApiFrontEndPluginWorker(cfg_nat)
+
+    class _DummyWSHandler:
+
+        def set_flow_handler(self, _):
+            return
+
+        async def create_websocket_message(self, msg):
+            pass
+
+    ws_handler = WebSocketAuthenticationFlowHandler(
+        add_flow_cb=worker._add_flow,
+        remove_flow_cb=worker._remove_flow,
+        web_socket_message_handler=_DummyWSHandler(),
+        return_url=None,
+    )
+
+    cfg_flow = OAuth2AuthCodeFlowProviderConfig(
+        client_id="cid",
+        client_secret="secret",
+        authorization_url="http://testserver/oauth/authorize",
+        token_url="http://testserver/oauth/token",
+        scopes=["read"],
+        redirect_uri="http://localhost:8000/auth/redirect",
+        use_redirect_auth=True,
+    )
+
+    monkeypatch.setattr("click.echo", lambda *_: None, raising=True)
+
+    with pytest.raises(ValueError, match="return URL"):
+        await ws_handler.authenticate(cfg_flow, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
+
+
+# --------------------------------------------------------------------------- #
 # Error Recovery Tests                                                        #
 # --------------------------------------------------------------------------- #
 @pytest.mark.slow
