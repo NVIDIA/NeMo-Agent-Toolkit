@@ -19,8 +19,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
-
-from nat.data_models.invocation_node import InvocationNode
+from pydantic import model_validator
 
 
 class AtifAncestry(BaseModel):
@@ -28,19 +27,58 @@ class AtifAncestry(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    function_ancestry: InvocationNode = Field(
+    function_id: str = Field(
         ...,
-        description="Function ancestry for the event represented by this metadata entry.",
+        description="Unique identifier for the callable node.",
     )
-    span_event_timestamp: float | None = Field(
+    function_name: str = Field(
+        ...,
+        description="Name of the callable node.",
+    )
+    parent_id: str | None = Field(
         default=None,
-        description=("Start timestamp of the span for an END event. For step-level ancestry this is the step span "
-                     "start; for tool ancestry entries this is the tool span start."),
+        description="Optional parent callable identifier.",
+    )
+    parent_name: str | None = Field(
+        default=None,
+        description="Optional parent callable name.",
+    )
+
+
+class AtifInvocationInfo(BaseModel):
+    """Invocation timing metadata embedded in ATIF ``Step.extra``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start_timestamp: float | None = Field(
+        default=None,
+        description="Invocation start timestamp in epoch seconds.",
+    )
+    end_timestamp: float | None = Field(
+        default=None,
+        description="Invocation end timestamp in epoch seconds.",
+    )
+    invocation_id: str | None = Field(
+        default=None,
+        description=("Optional stable invocation identifier for correlation (for example, "
+                     "`tool_call_id` for tool invocations)."),
+    )
+    status: str | None = Field(
+        default=None,
+        description="Optional terminal status for the invocation (for example, `completed`, `error`).",
     )
     framework: str | None = Field(
         default=None,
         description="Optional LLM framework identifier (for example, `langchain`).",
     )
+
+    @model_validator(mode="after")
+    def validate_timestamp_pairing(self) -> AtifInvocationInfo:
+        has_start = self.start_timestamp is not None
+        has_end = self.end_timestamp is not None
+        if has_start != has_end:
+            raise ValueError("start_timestamp and end_timestamp must both be set, or both be null")
+        return self
 
 
 class AtifStepExtra(BaseModel):
@@ -50,10 +88,19 @@ class AtifStepExtra(BaseModel):
 
     ancestry: AtifAncestry = Field(
         ...,
-        description="Required step-level ancestry metadata for ATIF processing.",
+        description="Step-level ancestry metadata for ATIF step context.",
+    )
+    invocation: AtifInvocationInfo | None = Field(
+        default=None,
+        description="Optional step-level invocation timing metadata.",
     )
     tool_ancestry: list[AtifAncestry] = Field(
         default_factory=list,
-        description=("Optional per-tool ancestry metadata aligned by index with `tool_calls` when a single agent "
-                     "step contains multiple tool calls."),
+        description=("Per-tool ancestry metadata aligned by index with `tool_calls` for observed invocation "
+                     "lineage reconstruction."),
+    )
+    tool_invocations: list[AtifInvocationInfo] | None = Field(
+        default=None,
+        description=("Optional per-tool invocation timing metadata aligned by index with `tool_calls` when "
+                     "present."),
     )

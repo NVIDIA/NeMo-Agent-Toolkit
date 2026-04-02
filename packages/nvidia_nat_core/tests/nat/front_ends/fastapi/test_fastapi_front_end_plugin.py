@@ -14,8 +14,10 @@
 # limitations under the License.
 
 import io
+import os
 import time
 import typing
+from pathlib import Path
 
 import pytest
 from fastapi import FastAPI
@@ -33,8 +35,10 @@ from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfi
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
 from nat.test.functions import EchoFunctionConfig
+from nat.test.functions import HeaderCaptureFunctionConfig
 from nat.test.functions import StreamingEchoFunctionConfig
 from nat.test.utils import build_nat_client
+from nat.utils.io.yaml_tools import yaml_dump
 from nat.utils.type_utils import override
 
 if typing.TYPE_CHECKING:
@@ -240,6 +244,59 @@ async def test_generate_async(dask_client: "DaskClient", fn_use_openai_api: bool
             if status != "success":
                 assert time.time() < deadline, "Job did not complete in time"
                 wait_job(dask_client, job_id, timeout=timeout)
+
+
+@pytest.mark.usefixtures("restore_environ")
+async def test_generate_async_propagates_headers(dask_client: "DaskClient", tmp_path: Path):
+    custom_header_name = "x-custom-test-header"
+    custom_header_value = "test-header-value"
+    job_id = "test_headers"
+
+    front_end_config = FastApiFrontEndConfig()
+    config = Config(
+        general=GeneralConfig(front_end=front_end_config),
+        workflow=HeaderCaptureFunctionConfig(header_name=custom_header_name),
+    )
+
+    # In the fastapi front end the config file path is passed to the workers by setting the
+    # NAT_CONFIG_FILE environment variable
+    config_file = tmp_path / "config.yaml"
+    config_dict = config.model_dump(mode="json", by_alias=True, round_trip=True)
+    with open(config_file, "w") as fh:
+        yaml_dump(config_dict, fh)
+
+    os.environ["NAT_CONFIG_FILE"] = str(config_file)
+
+    workflow_path = f"{front_end_config.workflow.path}/async"
+
+    async with build_nat_client(config) as client:
+        response = await client.post(
+            workflow_path,
+            json={
+                "message": "ignored", "job_id": job_id
+            },
+            headers={custom_header_name: custom_header_value},
+        )
+
+        assert response.status_code == 202
+        assert response.json() == {"job_id": job_id, "status": "submitted"}
+
+        status_path = f"{workflow_path}/job/{job_id}"
+        status = None
+        data = {}
+        timeout = 10
+        deadline = time.time() + timeout
+        while status != "success":
+            response = await client.get(status_path)
+            assert response.status_code == 200
+            data = response.json()
+            status = data["status"]
+            assert status in ("running", "success", "submitted")
+            if status != "success":
+                assert time.time() < deadline, "Job did not complete in time"
+                wait_job(dask_client, job_id, timeout=timeout)
+
+        assert data["output"]["value"] == custom_header_value
 
 
 async def test_async_job_status_not_found():
