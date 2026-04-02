@@ -26,6 +26,7 @@ provided so that existing NAT code continues to work without import changes.
 
 from nat.data_models.atif.agent import Agent
 from nat.data_models.atif.atif_step_extra import AtifAncestry
+from nat.data_models.atif.atif_step_extra import AtifInvocationInfo
 from nat.data_models.atif.atif_step_extra import AtifStepExtra
 from nat.data_models.atif.content import ContentPart
 from nat.data_models.atif.content import ImageSource
@@ -76,6 +77,7 @@ __all__ = [
     "Observation",
     "ObservationResult",
     "AtifAncestry",
+    "AtifInvocationInfo",
     "AtifStepExtra",
     "Step",
     "SubagentTrajectoryRef",

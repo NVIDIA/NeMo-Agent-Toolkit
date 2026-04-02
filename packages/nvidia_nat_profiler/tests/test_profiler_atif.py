@@ -17,6 +17,7 @@
 import math
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -48,19 +49,31 @@ def _extra(
     parent_function_id: str = "",
     parent_function_name: str = "",
     framework: str | None = None,
+    start_timestamp: float | None = None,
+    end_timestamp: float | None = None,
+    tool_ancestry: list[dict[str, Any]] | None = None,
+    tool_invocations: list[dict[str, Any]] | None = None,
 ) -> dict:
     """Build profiling extra metadata for ATIF steps."""
     ancestry = {
-        "function_ancestry": {
-            "function_id": function_id,
-            "function_name": function_name,
-            "parent_id": parent_function_id,
-            "parent_name": parent_function_name,
-        },
+        "function_id": function_id,
+        "function_name": function_name,
+        "parent_id": parent_function_id,
+        "parent_name": parent_function_name,
     }
-    if framework is not None:
-        ancestry["framework"] = framework
-    return {"ancestry": ancestry}
+    extra: dict[str, Any] = {"ancestry": ancestry}
+    if start_timestamp is not None or end_timestamp is not None or framework is not None:
+        extra["invocation"] = {
+            "start_timestamp": start_timestamp,
+            "end_timestamp": end_timestamp,
+            "framework": framework,
+            "status": "completed",
+        }
+    if tool_ancestry is not None:
+        extra["tool_ancestry"] = tool_ancestry
+    if tool_invocations is not None:
+        extra["tool_invocations"] = tool_invocations
+    return extra
 
 
 def _make_intermediate_step(
@@ -227,6 +240,8 @@ def test_profiler_preserves_function_ancestry_from_atif():
                     parent_function_id="",
                     parent_function_name="",
                     framework="langchain",
+                    start_timestamp=1704110400.5,
+                    end_timestamp=1704110401.0,
                 ),
             ),
         ],
@@ -256,7 +271,36 @@ def test_create_dataframe_from_atif_emits_tool_end_rows():
                 source="agent",
                 message="",
                 timestamp="2024-01-01T12:00:01+00:00",
-                extra=_extra(),
+                extra=_extra(
+                    tool_ancestry=[
+                        {
+                            "function_id": "tool-fn-1",
+                            "function_name": "calculator",
+                            "parent_id": "root",
+                            "parent_name": "root",
+                        },
+                        {
+                            "function_id": "tool-fn-2",
+                            "function_name": "validator",
+                            "parent_id": "root",
+                            "parent_name": "root",
+                        },
+                    ],
+                    tool_invocations=[
+                        {
+                            "invocation_id": "tc-1",
+                            "start_timestamp": 1704110401.1,
+                            "end_timestamp": 1704110401.2,
+                            "status": "completed",
+                        },
+                        {
+                            "invocation_id": "tc-2",
+                            "start_timestamp": 1704110401.2,
+                            "end_timestamp": 1704110401.3,
+                            "status": "completed",
+                        },
+                    ],
+                ),
                 tool_calls=[
                     ToolCall(tool_call_id="tc-1", function_name="calculator", arguments={"expr": "2+2"}),
                     ToolCall(tool_call_id="tc-2", function_name="validator", arguments={}),
@@ -356,7 +400,7 @@ def test_create_dataframe_from_atif_zero_token_metrics_still_emit_llm_rows():
                 timestamp="2024-01-01T12:00:01+00:00",
                 model_name="gpt-4",
                 metrics=Metrics(prompt_tokens=0, completion_tokens=0, cached_tokens=0),
-                extra=_extra(),
+                extra=_extra(start_timestamp=1704110400.5, end_timestamp=1704110401.0),
             ),
         ],
     )

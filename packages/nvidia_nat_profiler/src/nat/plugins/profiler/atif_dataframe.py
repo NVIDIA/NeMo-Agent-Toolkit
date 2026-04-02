@@ -60,21 +60,26 @@ def _ancestry_from_extra(step: Any, tool_index: int | None = None) -> dict[str, 
     """Extract profiling ancestry from step.extra. Returns defaults for missing fields."""
     step_extra = AtifStepExtra.model_validate(step.extra)
 
-    def to_flat(ancestry: AtifAncestry) -> dict[str, Any]:
+    def to_flat(ancestry: AtifAncestry, span_event_timestamp: float | None, framework: str | None) -> dict[str, Any]:
         return {
-            "function_id": ancestry.function_ancestry.function_id,
-            "function_name": ancestry.function_ancestry.function_name,
-            "parent_function_id": ancestry.function_ancestry.parent_id or "",
-            "parent_function_name": ancestry.function_ancestry.parent_name or "",
-            "span_event_timestamp": ancestry.span_event_timestamp,
-            "framework": ancestry.framework,
+            "function_id": ancestry.function_id,
+            "function_name": ancestry.function_name,
+            "parent_function_id": ancestry.parent_id or "",
+            "parent_function_name": ancestry.parent_name or "",
+            "span_event_timestamp": span_event_timestamp,
+            "framework": framework,
         }
 
     if tool_index is not None:
         tool_ancestry = step_extra.tool_ancestry
         if tool_index < len(tool_ancestry):
-            return to_flat(tool_ancestry[tool_index])
-    return to_flat(step_extra.ancestry)
+            tool_invocations = step_extra.tool_invocations or []
+            tool_start_ts = tool_invocations[tool_index].start_timestamp if tool_index < len(tool_invocations) else None
+            tool_framework = tool_invocations[tool_index].framework if tool_index < len(tool_invocations) else None
+            return to_flat(tool_ancestry[tool_index], tool_start_ts, tool_framework)
+    step_start_ts = step_extra.invocation.start_timestamp if step_extra.invocation is not None else None
+    step_framework = step_extra.invocation.framework if step_extra.invocation is not None else None
+    return to_flat(step_extra.ancestry, step_start_ts, step_framework)
 
 
 def _observation_content_to_str(content: Any) -> str:
@@ -182,6 +187,9 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                         obs = obs_by_id.get(tc.tool_call_id)
                         content = _observation_content_to_str(obs.content) if obs else ""
                         tool_anc = _ancestry_from_extra(step, tool_index=i)
+                        if tool_anc.get("span_event_timestamp") is None:
+                            # Keep untimed tool invocations in trajectory lineage, but skip profiler timing rows.
+                            continue
                         all_rows.append(
                             _row(
                                 event_timestamp=ts,
@@ -207,21 +215,22 @@ def create_dataframe_from_atif(trajectories: list[Trajectory]) -> pd.DataFrame:
                     total = prompt + completion + cached
                     llm_start_ts = (step_anc["span_event_timestamp"]
                                     if step_anc.get("span_event_timestamp") is not None else ts)
-                    all_rows.append(
-                        _row(
-                            event_timestamp=llm_start_ts,
-                            example_number=example_number,
-                            event_type=IntermediateStepType.LLM_START,
-                            llm_text_input=last_user_message,
-                            llm_name=step.model_name or "",
-                            row_uuid=step_uuid,
-                            function_id=step_anc["function_id"],
-                            function_name=step_anc["function_name"],
-                            parent_function_id=step_anc["parent_function_id"],
-                            parent_function_name=step_anc["parent_function_name"],
-                            span_event_timestamp=step_anc.get("span_event_timestamp"),
-                            framework=step_anc.get("framework"),
-                        ))
+                    if step_anc.get("span_event_timestamp") is not None:
+                        all_rows.append(
+                            _row(
+                                event_timestamp=llm_start_ts,
+                                example_number=example_number,
+                                event_type=IntermediateStepType.LLM_START,
+                                llm_text_input=last_user_message,
+                                llm_name=step.model_name or "",
+                                row_uuid=step_uuid,
+                                function_id=step_anc["function_id"],
+                                function_name=step_anc["function_name"],
+                                parent_function_id=step_anc["parent_function_id"],
+                                parent_function_name=step_anc["parent_function_name"],
+                                span_event_timestamp=step_anc.get("span_event_timestamp"),
+                                framework=step_anc.get("framework"),
+                            ))
                     all_rows.append(
                         _row(
                             event_timestamp=ts,
