@@ -52,6 +52,8 @@ docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
 Alternately, you can run Phoenix from a separate virtual environment than the one used for NeMo Agent Toolkit evaluation runs. In either case using a Docker container or a separate virtual environment is needed to avoid dependency and version conflicts between Phoenix packages and toolkit plus evaluator dependencies.
 
 ```bash
+# Create a new virtual environment for Phoenix, must be performed in a different directory
+uv venv -p 3.13 --seed .venv
 uv pip install arize-phoenix
 phoenix serve
 ```
