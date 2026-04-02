@@ -104,7 +104,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
         finally:
             await worker._remove_flow(state)
 
-        if flow_state.config and not flow_state.config.use_popup_auth:
+        if flow_state.config and flow_state.config.use_redirect_auth:
             success_html = build_auth_redirect_success_html(flow_state.return_url)
         else:
             success_html = AUTH_REDIRECT_SUCCESS_HTML

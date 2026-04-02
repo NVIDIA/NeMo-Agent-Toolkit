@@ -117,7 +117,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
     async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
 
         state = secrets.token_urlsafe(16)
-        return_url = None if config.use_popup_auth else self._return_url
+        return_url = self._return_url if config.use_redirect_auth else None
         flow_state = FlowState(config=config, return_url=return_url)
 
         flow_state.client = self.create_oauth_client(config)
@@ -135,7 +135,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
         await self._add_flow_cb(state, flow_state)
         await self._web_socket_message_handler.create_websocket_message(
-            _HumanPromptOAuthConsent(text=authorization_url, use_popup=config.use_popup_auth))
+            _HumanPromptOAuthConsent(text=authorization_url, use_redirect=config.use_redirect_auth))
         try:
             token = await asyncio.wait_for(flow_state.future, timeout=self._auth_timeout_seconds)
         except TimeoutError as exc:
