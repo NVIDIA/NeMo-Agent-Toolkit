@@ -42,20 +42,19 @@ This example demonstrates how to evaluate and profile AI agent performance using
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 3. **Phoenix tracing backend**: Start Phoenix before running trajectory-based configurations in this example.
 
+#### Using Docker Container for Phoenix
+Start Phoenix using a Docker container with the following command:
 ```bash
-phoenix serve
+docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
 ```
 
-If your environment does not include the `phoenix` CLI, install it with:
+### Using a Separate Virtual Environment for Phoenix
+Alternately, you can run Phoenix from a separate virtual environment than the one used for NeMo Agent Toolkit evaluation runs. In either case using a Docker container or a separate virtual environment is needed to avoid dependency and version conflicts between Phoenix packages and toolkit plus evaluator dependencies.
 
 ```bash
 uv pip install arize-phoenix
+phoenix serve
 ```
-
-You can run Phoenix from a separate virtual environment than the one used for
-NVIDIA NeMo Agent Toolkit evaluation runs. This is often preferable to avoid
-dependency and version conflicts between Phoenix packages and toolkit plus
-evaluator dependencies.
 
 ## Installation
 
