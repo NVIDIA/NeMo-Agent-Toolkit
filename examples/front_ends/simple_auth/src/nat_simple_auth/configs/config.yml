@@ -57,7 +57,7 @@ authentication:
     client_id: ${NAT_OAUTH_CLIENT_ID}
     client_secret: ${NAT_OAUTH_CLIENT_SECRET}
     use_pkce: false
-    use_redirect_auth: true
+    use_redirect_auth: false
 
 workflow:
   _type: react_agent

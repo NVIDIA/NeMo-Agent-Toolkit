@@ -50,21 +50,38 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
 
             flow_state = worker._outstanding_flows[state]
 
-        # The OAuth provider returned an error (e.g. user denied consent).
-        # Signal the waiting workflow and redirect the browser back to the UI.
+        # The OAuth provider returned an error in the redirect. Two distinct cases:
+        # - "access_denied": user explicitly declined consent → cancellation UX.
+        # - anything else: provider/server error → error UX.
         if error:
             error_description = request.query_params.get("error_description", "")
-            logger.info("OAuth authorisation denied for state %s: %s (%s)", state, error, error_description)
-            if not flow_state.future.done():
-                flow_state.future.set_exception(RuntimeError(f"Authorisation denied: {error} ({error_description})"))
             await worker._remove_flow(state)
-            if flow_state.return_url:
-                return HTMLResponse(content=build_auth_redirect_cancelled_html(flow_state.return_url),
+
+            if error == "access_denied":
+                logger.info("OAuth authorisation denied for state %s: %s (%s)", state, error, error_description)
+                if not flow_state.future.done():
+                    flow_state.future.set_exception(
+                        RuntimeError(f"Authorisation denied: {error} ({error_description})"))
+                if flow_state.return_url:
+                    return HTMLResponse(content=build_auth_redirect_cancelled_html(flow_state.return_url),
+                                        status_code=200,
+                                        headers={
+                                            "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
+                                        })
+                return HTMLResponse(content=AUTH_REDIRECT_CANCELLED_POPUP_HTML,
                                     status_code=200,
                                     headers={
                                         "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
                                     })
-            return HTMLResponse(content=AUTH_REDIRECT_CANCELLED_POPUP_HTML,
+
+            logger.error("OAuth error for state %s: %s (%s)", state, error, error_description)
+            if not flow_state.future.done():
+                flow_state.future.set_exception(RuntimeError(f"OAuth error: {error} ({error_description})"))
+            if flow_state.config and flow_state.config.use_redirect_auth:
+                error_html = build_auth_redirect_error_html(flow_state.return_url)
+            else:
+                error_html = AUTH_REDIRECT_ERROR_HTML
+            return HTMLResponse(content=error_html,
                                 status_code=200,
                                 headers={
                                     "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-cache"
