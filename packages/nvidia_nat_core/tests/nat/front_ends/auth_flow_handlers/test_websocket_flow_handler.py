@@ -170,7 +170,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 
     # ----------------- assertions -------------------------------------- #
     assert opened, "The authorization URL was never emitted."
-    assert received_messages[0].use_popup is True, "Default use_popup_auth should emit use_popup=True"
+    assert received_messages[0].use_redirect is False, "Default use_redirect_auth should emit use_redirect=False"
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
 
@@ -179,11 +179,11 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
 
 
 # --------------------------------------------------------------------------- #
-# use_popup_auth=False test                                                   #
+# use_redirect_auth=True test                                                 #
 # --------------------------------------------------------------------------- #
 @pytest.mark.usefixtures("set_nat_config_file_env_var")
 async def test_websocket_oauth2_flow_no_popup(monkeypatch, mock_server, tmp_path):
-    """Verify that use_popup_auth=False sends use_popup=False in the consent prompt and
+    """Verify that use_redirect_auth=True sends use_redirect=True in the consent prompt and
     propagates return_url into FlowState."""
 
     redirect_port = _free_port()
@@ -250,7 +250,7 @@ async def test_websocket_oauth2_flow_no_popup(monkeypatch, mock_server, tmp_path
         scopes=["read"],
         use_pkce=True,
         redirect_uri=f"http://localhost:{redirect_port}/auth/redirect",
-        use_popup_auth=False,
+        use_redirect_auth=True,
     )
 
     monkeypatch.setattr("click.echo", lambda *_: None, raising=True)
@@ -258,7 +258,7 @@ async def test_websocket_oauth2_flow_no_popup(monkeypatch, mock_server, tmp_path
     ctx = await ws_handler.authenticate(cfg_flow, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
 
     assert received_messages, "The authorization URL was never emitted."
-    assert received_messages[0].use_popup is False, "use_popup_auth=False should emit use_popup=False"
+    assert received_messages[0].use_redirect is True, "use_redirect_auth=True should emit use_redirect=True"
     assert captured_flow_states[0].return_url == "http://localhost:3000"
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
