@@ -36,7 +36,7 @@ AUTH_REDIRECT_SUCCESS_HTML = """
 </html>
 """
 
-_AUTH_REDIRECT_SUCCESS_HTML_SAME_PAGE_TEMPLATE = """\
+_AUTH_REDIRECT_SUCCESS_HTML_REDIRECT_TEMPLATE = """\
 <!DOCTYPE html>
 <html>
 <head>
@@ -62,7 +62,7 @@ _AUTH_REDIRECT_SUCCESS_HTML_SAME_PAGE_TEMPLATE = """\
 
 
 def build_auth_redirect_success_html(return_url: str | None = None) -> str:
-    """Build the same-page authentication success HTML page.
+    """Build the redirect-based authentication success HTML page.
 
     Args:
         return_url: The URL to redirect to after successful authentication. When
@@ -74,4 +74,4 @@ def build_auth_redirect_success_html(return_url: str | None = None) -> str:
         An HTML string for the post-authentication redirect page.
     """
     safe_json = json.dumps(return_url).replace('<', '\\u003c').replace('>', '\\u003e').replace('/', '\\u002f')
-    return _AUTH_REDIRECT_SUCCESS_HTML_SAME_PAGE_TEMPLATE.replace("RETURN_URL_PLACEHOLDER", safe_json)
+    return _AUTH_REDIRECT_SUCCESS_HTML_REDIRECT_TEMPLATE.replace("RETURN_URL_PLACEHOLDER", safe_json)
