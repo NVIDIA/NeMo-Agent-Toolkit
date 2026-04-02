@@ -59,25 +59,19 @@ uv pip install -e examples/observability/simple_calculator_observability
 
 Phoenix provides local tracing capabilities perfect for development and testing.
 
-1. Install Phoenix:
+1. Start the Phoenix server in a separate terminal, for this example we will use the `arizephoenix/phoenix` Docker image:
 
     ```bash
-    uv pip install arize-phoenix
+    docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
     ```
 
-2. Start Phoenix in a separate terminal:
-
-    ```bash
-    phoenix serve
-    ```
-
-3. Run the workflow with tracing enabled:
+2. Run the workflow with tracing enabled:
 
     ```bash
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 2 * 4?"
     ```
 
-4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
+3. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
 
 ### Phoenix Tracing with Nested Tool Calls
 

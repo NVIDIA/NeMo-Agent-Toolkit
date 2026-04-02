@@ -321,4 +321,5 @@ async def add_generate_routes(
                                       endpoint=endpoint,
                                       session_manager=session_manager,
                                       generate_body_type=request_type,
-                                      response_500=RESPONSE_500)
+                                      response_500=RESPONSE_500,
+                                      disable_legacy_routes=disable_legacy_routes)
