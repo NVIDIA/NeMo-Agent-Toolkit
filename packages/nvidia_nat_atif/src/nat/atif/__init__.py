@@ -1,5 +1,5 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, Harbor Framework Contributors (https://github.com/harbor-framework/harbor)
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,15 +13,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 """Pydantic models for Agent Trajectory Interchange Format (ATIF).
 
 Models are derived from the Harbor reference implementation
 (https://github.com/harbor-framework/harbor) and follow the ATIF RFC
-(0001-trajectory-format).  NAT-specific relaxations are documented inline
+(0001-trajectory-format). NAT-specific relaxations are documented inline
 in the individual model files.
 
-Backward-compatible aliases (``ATIFStep``, ``ATIFTrajectory``, etc.) are
-provided so that existing NAT code continues to work without import changes.
+Backward-compatible aliases (``ATIFStep``, ``ATIFTrajectory``, and so on)
+are provided so existing code can continue to work without import changes.
 """
 
 from nat.atif.agent import Agent
@@ -41,7 +42,7 @@ from nat.atif.trajectory import ATIF_VERSION
 from nat.atif.trajectory import Trajectory
 
 # ---------------------------------------------------------------------------
-# Backward-compatible aliases used by the converter, API server, and tests.
+# Backward-compatible aliases used by converter, API server, and tests.
 # Prefer the Harbor-aligned names for new code.
 # ---------------------------------------------------------------------------
 ATIFAgentConfig = Agent

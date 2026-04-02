@@ -51,6 +51,7 @@ dependencies = [
   "jsonpath-ng~=1.7",
   "nest-asyncio2~=1.7",
   "networkx~=3.4",
+  "nvidia-nat-atif == {version}",
   "numpy~=2.3",
   "openinference-semantic-conventions>=0.1.14,<1.0.0",
   "optuna~=4.4",
@@ -115,6 +116,7 @@ test = [
 ]
 
 [tool.uv.sources]
+nvidia-nat-atif = { path = "../nvidia_nat_atif", editable = true }
 nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
