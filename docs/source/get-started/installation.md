@@ -38,7 +38,8 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
-- `nvidia-nat[eval]` or `nvidia-nat-eval` - Evaluation orchestration package
+- `nvidia-nat[eval]` or `nvidia-nat-eval` - Evaluation package for ATIF-native and standalone custom evaluator workflows
+- `nvidia-nat[eval-full]` - Full evaluation runtime dependencies for config-driven `nat eval` workflows
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/), [LangGraph](https://www.langchain.com/langgraph)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mcp]` or `nvidia-nat-mcp` - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)

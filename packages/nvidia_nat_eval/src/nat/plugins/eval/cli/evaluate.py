@@ -21,7 +21,8 @@ import click
 from tabulate import tabulate
 
 FULL_EVAL_INSTALL_HINT = ("Full workflow evaluation requires optional dependencies that are not installed. "
-                          "Install with: pip install \"nvidia-nat-eval[full]\"")
+                          "Install with: pip install \"nvidia-nat[eval-full]\" "
+                          "(or pip install \"nvidia-nat-eval[full]\")")
 
 
 def _raise_full_eval_dependency_error(error: Exception):

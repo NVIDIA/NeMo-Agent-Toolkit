@@ -1447,7 +1447,6 @@ name = "nvidia-nat-eval"
 source = { editable = "../nvidia_nat_eval" }
 dependencies = [
     { name = "nvidia-nat-atif" },
-    { name = "pydantic" },
 ]
 
 [package.metadata]
@@ -1460,7 +1459,6 @@ requires-dist = [
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openpyxl", marker = "extra == 'full'", specifier = "~=3.1" },
     { name = "openpyxl", marker = "extra == 'test'", specifier = "~=3.1" },
-    { name = "pydantic", specifier = "~=2.11" },
 ]
 provides-extras = ["full", "test"]
 
