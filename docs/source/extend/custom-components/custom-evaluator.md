@@ -155,7 +155,7 @@ When using `AtifBaseEvaluator`, implement `evaluate_atif_item` and reuse the bui
 This is useful when your scoring logic consumes canonical ATIF trajectories directly.
 
 This example uses evaluator registration (`@register_evaluator`) and therefore requires full runtime dependencies (`nvidia-nat-eval[full]`).
-Base `nvidia-nat-eval` is sufficient for standalone ATIF harness usage without workflow/plugin registration.
+Base `nvidia-nat-eval` is sufficient for standalone ATIF harness usage without workflow or plugin registration.
 
 The following example registers a minimal ATIF-only cosine-similarity evaluator:
 `examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/atif_only_evaluator_register.py`:
