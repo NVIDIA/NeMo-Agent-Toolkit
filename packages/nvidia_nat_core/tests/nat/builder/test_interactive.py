@@ -160,16 +160,16 @@ def test_human_prompt_base_timeout_validation_gt_zero():
 
 
 def test_human_prompt_oauth_consent_defaults():
-    """_HumanPromptOAuthConsent defaults: input_type is OAUTH_CONSENT and use_popup is True."""
+    """_HumanPromptOAuthConsent defaults: input_type is OAUTH_CONSENT and use_redirect is False."""
     prompt = _HumanPromptOAuthConsent(text="https://auth.example.com/authorize")
     assert prompt.input_type == HumanPromptModelType.OAUTH_CONSENT
-    assert prompt.use_popup is True
+    assert prompt.use_redirect is False
 
 
-def test_human_prompt_oauth_consent_use_popup_false():
-    """_HumanPromptOAuthConsent accepts use_popup=False for redirect-based auth flow."""
-    prompt = _HumanPromptOAuthConsent(text="https://auth.example.com/authorize", use_popup=False)
-    assert prompt.use_popup is False
+def test_human_prompt_oauth_consent_use_redirect_true():
+    """_HumanPromptOAuthConsent accepts use_redirect=True for redirect-based auth flow."""
+    prompt = _HumanPromptOAuthConsent(text="https://auth.example.com/authorize", use_redirect=True)
+    assert prompt.use_redirect is True
     assert prompt.input_type == HumanPromptModelType.OAUTH_CONSENT
 
 
