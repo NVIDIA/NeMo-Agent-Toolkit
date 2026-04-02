@@ -62,7 +62,7 @@ async def add_authorization_route(worker: "FastApiFrontEndPluginWorker", app: Fa
                 if not flow_state.future.done():
                     flow_state.future.set_exception(
                         RuntimeError(f"Authorisation denied: {error} ({error_description})"))
-                if flow_state.return_url:
+                if flow_state.config and flow_state.config.use_redirect_auth:
                     return HTMLResponse(content=build_auth_redirect_cancelled_html(flow_state.return_url),
                                         status_code=200,
                                         headers={

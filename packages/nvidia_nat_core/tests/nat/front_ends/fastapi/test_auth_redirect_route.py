@@ -84,6 +84,18 @@ async def test_access_denied_popup_returns_cancelled_html():
     assert "AUTH_ERROR" not in response.text
 
 
+async def test_access_denied_popup_with_return_url_still_returns_cancelled_html():
+    """error=access_denied in popup mode uses popup HTML even when return_url is set."""
+    flow_state = FlowState(config=_POPUP_CONFIG, return_url=_RETURN_URL)
+    worker = _make_worker(flow_state)
+    response = await _get(worker, {"state": "teststate", "error": "access_denied"})
+    assert response.status_code == 200
+    assert "AUTH_CANCELLED" in response.text
+    assert "AUTH_ERROR" not in response.text
+    assert _RETURN_URL.replace("/", "\\u002f") not in response.text
+    assert "oauth_auth_completed" not in response.text
+
+
 async def test_access_denied_redirect_returns_cancelled_html():
     """error=access_denied in redirect mode returns the redirect-back cancelled page."""
     flow_state = FlowState(config=_REDIRECT_CONFIG, return_url=_RETURN_URL)
