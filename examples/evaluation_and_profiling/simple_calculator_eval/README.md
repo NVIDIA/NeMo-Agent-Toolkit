@@ -42,7 +42,7 @@ This example demonstrates how to evaluate and profile AI agent performance using
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
 3. **Phoenix tracing backend**: Start Phoenix before running trajectory-based configurations in this example.
 
-#### Using Docker Container for Phoenix
+### Using Docker Container for Phoenix
 Start Phoenix using a Docker container with the following command:
 ```bash
 docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
