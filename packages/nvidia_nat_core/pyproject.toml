@@ -51,7 +51,8 @@ dependencies = [
   "jsonpath-ng~=1.7",
   "nest-asyncio2~=1.7",
   "networkx~=3.4",
-  "nvidia-nat-atif == {version}",
+  # Keep static for now: core uses [project].dependencies (non-dynamic), so do not use `{version}` templating here.
+  "nvidia-nat-atif",
   "numpy~=2.3",
   "openinference-semantic-conventions>=0.1.14,<1.0.0",
   "optuna~=4.4",
