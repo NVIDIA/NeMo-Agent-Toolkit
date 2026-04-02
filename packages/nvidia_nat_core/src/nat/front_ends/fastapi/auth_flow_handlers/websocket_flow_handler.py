@@ -116,6 +116,10 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
     async def _handle_oauth2_auth_code_flow(self, config: OAuth2AuthCodeFlowProviderConfig) -> AuthenticatedContext:
 
+        if config.use_redirect_auth and self._return_url is None:
+            raise ValueError("Redirect-based authentication (use_redirect_auth=True) requires a return URL, "
+                             "but none was configured. Pass return_url when constructing the flow handler.")
+
         state = secrets.token_urlsafe(16)
         return_url = self._return_url if config.use_redirect_auth else None
         flow_state = FlowState(config=config, return_url=return_url)
