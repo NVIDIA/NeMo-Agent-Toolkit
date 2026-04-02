@@ -26,7 +26,7 @@ NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. I
 Choose the installation mode that matches your evaluation workflow:
 
 - Standalone ATIF evaluation (`EvaluationHarness` plus ATIF-native custom evaluators): install base `nvidia-nat-eval`.
-- Full `nat eval` runtime (workflow execution, dataset readers such as `csv`/`parquet`/`xls`, and config-driven evaluators): install `nvidia-nat-eval[full]`.
+- Full `nat eval` runtime (workflow execution, dataset readers such as `csv`/`parquet`/`xls`, and config-driven evaluators): install `nvidia-nat[eval]`.
 
 For source installs:
 
