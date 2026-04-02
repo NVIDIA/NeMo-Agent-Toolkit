@@ -178,7 +178,7 @@ async def test_websocket_oauth2_flow(monkeypatch, mock_server, tmp_path):
     token_val = ctx.headers["Authorization"].split()[1]
     assert token_val in mock_server.tokens, "token not issued by mock server"
 
-    # all flow‑state cleaned up
+    # all flow-state cleaned up
     assert worker._outstanding_flows == {}
 
 
