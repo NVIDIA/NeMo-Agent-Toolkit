@@ -62,7 +62,7 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
         self._remove_flow_cb: Callable[[str], Awaitable[None]] = remove_flow_cb
         self._web_socket_message_handler: WebSocketMessageHandler = web_socket_message_handler
         self._auth_timeout_seconds: float = auth_timeout_seconds
-        self.return_url: str | None = return_url
+        self._return_url: str | None = return_url
         self._token_store: dict | None = token_store
         self._session_id: str | None = session_id
 
@@ -75,15 +75,15 @@ class WebSocketAuthenticationFlowHandler(FlowHandlerBase):
 
         raise NotImplementedError(f"Authentication method '{method}' is not supported by the websocket frontend.")
 
-    async def pre_authenticate(self, auth_providers: dict[str, AuthProviderBaseConfig]) -> None:
+    async def run_eager_auth(self, auth_providers: dict[str, AuthProviderBaseConfig]) -> None:
         """Run auth for every configured OAuth2 provider before the first user message.
 
-        Only providers with pre_authenticate option set in their config are processed.
+        Only providers with use_eager_auth option set in their config are processed.
         Returns immediately if tokens are already cached. Otherwise triggers the OAuth
         redirect so the user authenticates at page load rather than mid-workflow.
         """
         for provider_config in auth_providers.values():
-            if isinstance(provider_config, OAuth2AuthCodeFlowProviderConfig) and provider_config.pre_authenticate:
+            if isinstance(provider_config, OAuth2AuthCodeFlowProviderConfig) and provider_config.use_eager_auth:
                 await self.authenticate(provider_config, AuthFlowType.OAUTH2_AUTHORIZATION_CODE)
 
     def create_oauth_client(self, config: OAuth2AuthCodeFlowProviderConfig) -> AsyncOAuth2Client:

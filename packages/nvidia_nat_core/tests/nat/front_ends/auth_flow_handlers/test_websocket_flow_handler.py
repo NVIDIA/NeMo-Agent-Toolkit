@@ -500,22 +500,22 @@ async def test_authenticate_second_call_uses_cache(monkeypatch, mock_server, tmp
 
 
 # --------------------------------------------------------------------------- #
-# pre_authenticate tests                                                      #
+# run_eager_auth tests                                                        #
 # --------------------------------------------------------------------------- #
-async def test_pre_authenticate_skips_non_oauth2_providers(noop_handler):
-    """pre_authenticate is a no-op for non-OAuth2 providers such as APIKeyAuthProviderConfig."""
+async def test_run_eager_auth_skips_non_oauth2_providers(noop_handler):
+    """run_eager_auth is a no-op for non-OAuth2 providers such as APIKeyAuthProviderConfig."""
     api_key_config = APIKeyAuthProviderConfig(raw_key="my-api-key-value")
-    await noop_handler.pre_authenticate({"my_api_key": api_key_config})
+    await noop_handler.run_eager_auth({"my_api_key": api_key_config})
 
 
-async def test_pre_authenticate_skips_oauth2_provider_flag_false(noop_handler, minimal_oauth_config):
-    """pre_authenticate does not trigger auth for OAuth2 providers with pre_authenticate=False (the default)."""
-    # minimal_oauth_config has pre_authenticate=False (the default); if the guard were absent this would hang
-    await noop_handler.pre_authenticate({"my_provider": minimal_oauth_config})
+async def test_run_eager_auth_skips_oauth2_provider_flag_false(noop_handler, minimal_oauth_config):
+    """run_eager_auth does not trigger auth for OAuth2 providers with use_eager_auth=False (the default)."""
+    # minimal_oauth_config has use_eager_auth=False (the default); if the guard were absent this would hang
+    await noop_handler.run_eager_auth({"my_provider": minimal_oauth_config})
 
 
-async def test_pre_authenticate_uses_cached_token(minimal_oauth_config):
-    """pre_authenticate returns immediately without calling create_websocket_message on a cache hit."""
+async def test_run_eager_auth_uses_cached_token(minimal_oauth_config):
+    """run_eager_auth returns immediately without calling create_websocket_message on a cache hit."""
 
     async def _noop_add(state, flow_state):
         pass
@@ -532,8 +532,8 @@ async def test_pre_authenticate_uses_cached_token(minimal_oauth_config):
 
     ctx = AuthenticatedContext(headers={"Authorization": "Bearer cached-tok"}, metadata={"expires_at": None})
     store: dict = {}
-    # Enable pre_authenticate so the cache lookup is actually reached
-    active_config = minimal_oauth_config.model_copy(update={"pre_authenticate": True})
+    # Enable use_eager_auth so the cache lookup is actually reached
+    active_config = minimal_oauth_config.model_copy(update={"use_eager_auth": True})
     handler = WebSocketAuthenticationFlowHandler(
         add_flow_cb=_noop_add,
         remove_flow_cb=_noop_remove,
@@ -544,5 +544,5 @@ async def test_pre_authenticate_uses_cached_token(minimal_oauth_config):
     key = handler._token_cache_key(active_config)
     store[key] = (ctx, time.time() + 3600)
 
-    await handler.pre_authenticate({"my_provider": active_config})
-    assert message_count[0] == 0, "pre_authenticate must not trigger OAuth when token is cached"
+    await handler.run_eager_auth({"my_provider": active_config})
+    assert message_count[0] == 0, "run_eager_auth must not trigger OAuth when token is cached"
