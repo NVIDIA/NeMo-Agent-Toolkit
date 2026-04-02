@@ -262,8 +262,8 @@ async def test_optimize_prompts_with_oracle_feedback(tmp_path: Path):
             self.config = config
 
         async def run_and_evaluate(self):
-            from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
-            from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+            from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+            from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
             items = [
                 EvalOutputItem(id=1, score=0.2, reasoning="Failed to greet properly"),

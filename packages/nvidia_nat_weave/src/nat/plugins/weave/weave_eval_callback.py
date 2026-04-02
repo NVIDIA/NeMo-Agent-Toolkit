@@ -23,7 +23,7 @@ from nat.data_models.evaluate_runtime import UsageStats
 from nat.data_models.evaluate_runtime import UsageStatsItem
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 
 logger = logging.getLogger(__name__)
 

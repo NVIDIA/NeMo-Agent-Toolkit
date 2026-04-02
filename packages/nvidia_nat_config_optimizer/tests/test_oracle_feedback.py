@@ -28,8 +28,8 @@ from nat.plugins.config_optimizer.prompts.oracle_feedback import build_oracle_fe
 from nat.plugins.config_optimizer.prompts.oracle_feedback import check_adaptive_triggers
 from nat.plugins.config_optimizer.prompts.oracle_feedback import extract_worst_reasoning
 from nat.plugins.config_optimizer.prompts.oracle_feedback import should_inject_feedback
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutput
-from nat.plugins.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
 
 class TestBuildOracleFeedback:
