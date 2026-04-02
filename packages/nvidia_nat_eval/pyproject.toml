@@ -56,6 +56,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat-atif == {version}",
+  "nvidia-nat-shared-contracts == {version}",
   "pydantic~=2.11",
 ]
 
@@ -80,6 +81,7 @@ config-settings = { editable_mode = "compat" }
 [tool.uv.sources]
 nvidia-nat-atif = { path = "../nvidia_nat_atif", editable = true }
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
+nvidia-nat-shared-contracts = { path = "../nvidia_nat_shared_contracts", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']

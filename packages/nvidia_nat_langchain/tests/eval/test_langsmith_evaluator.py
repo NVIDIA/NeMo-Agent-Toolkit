@@ -22,10 +22,10 @@ from pydantic import ValidationError
 
 from nat.builder.evaluator import EvaluatorInfo
 from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalOutputItem
 from nat.plugins.langchain.eval.langsmith_evaluator import LangSmithEvaluatorConfig
 from nat.plugins.langchain.eval.langsmith_evaluator import register_langsmith_evaluator
 from nat.plugins.langchain.eval.langsmith_evaluator_adapter import LangSmithEvaluatorAdapter
+from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 from .conftest import make_mock_builder
 from .conftest import register_evaluator_ctx

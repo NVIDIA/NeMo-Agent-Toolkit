@@ -28,14 +28,14 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.evaluator import EvaluatorLLMConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.shared_contracts.evaluator_io import EvalOutput
+from nat.shared_contracts.evaluator_io import EvalOutputItem
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
 logger = logging.getLogger(__name__)

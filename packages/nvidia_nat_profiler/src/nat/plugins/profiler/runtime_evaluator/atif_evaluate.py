@@ -18,9 +18,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from nat.data_models.evaluator import EvalOutputItem
 from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 
 def _iso_to_epoch(ts: str | None) -> float | None:

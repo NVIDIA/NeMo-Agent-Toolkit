@@ -12,20 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Evaluation input/output data models shared across core and eval.
-
-Note:
-    ``EvalOutput`` and ``EvalOutputItem`` are intentionally duplicated in
-    ``nvidia-nat-eval`` during the ongoing dependency split. Keep the core
-    definitions until the migration is complete.
-"""
+"""Evaluation input data models and evaluator configs."""
 
 import typing
 
 from pydantic import BaseModel
-from pydantic import ConfigDict
 from pydantic import Field
-from pydantic import SerializeAsAny
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
@@ -74,21 +66,3 @@ class EvalInput(BaseModel):
     """Container for evaluation input items."""
 
     eval_input_items: list[EvalInputItem] = Field(description="List of items to evaluate.")
-
-
-class EvalOutputItem(BaseModel):
-    """A single output item from evaluation."""
-
-    model_config = ConfigDict(exclude_none=True)  # pyright: ignore[reportCallIssue]
-
-    id: typing.Any = Field(description="Identifier matching the corresponding EvalInputItem.")
-    score: typing.Any = Field(description="Evaluation score (typically float, may be NaN on failure).")
-    reasoning: typing.Any = Field(description="Evaluation context and LLM judge explanation.")
-    error: str | None = Field(default=None, description="Evaluation error message if this item failed.")
-
-
-class EvalOutput(BaseModel):
-    """Container for evaluation output items."""
-
-    average_score: typing.Any = Field(description="Average score across all evaluated items.")
-    eval_output_items: list[SerializeAsAny[EvalOutputItem]] = Field(description="List of evaluation results.")

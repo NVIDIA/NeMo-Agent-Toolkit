@@ -58,6 +58,7 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",
   "nvidia-nat-opentelemetry == {version}",
+  "nvidia-nat-shared-contracts == {version}",
   "langchain>=1.2.3,<2.0.0",
   "langchain-aws>=1.1.0,<2.0.0",
   "langchain-classic>=1.0.1,<2.0.0",
@@ -88,6 +89,7 @@ config-settings = { editable_mode = "compat" }
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
 nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-opentelemetry = { path = "../nvidia_nat_opentelemetry", editable = true }
+nvidia-nat-shared-contracts = { path = "../nvidia_nat_shared_contracts", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']

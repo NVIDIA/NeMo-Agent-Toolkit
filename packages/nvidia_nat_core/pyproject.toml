@@ -53,6 +53,8 @@ dependencies = [
   "networkx~=3.4",
   # Keep static for now: core uses [project].dependencies (non-dynamic), so do not use `{version}` templating here.
   "nvidia-nat-atif",
+  # Keep static for now: core uses [project].dependencies (non-dynamic), so do not use `{version}` templating here.
+  "nvidia-nat-shared-contracts",
   "numpy~=2.3",
   "openinference-semantic-conventions>=0.1.14,<1.0.0",
   "optuna~=4.4",
@@ -119,6 +121,7 @@ test = [
 [tool.uv.sources]
 nvidia-nat-atif = { path = "../nvidia_nat_atif", editable = true }
 nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
+nvidia-nat-shared-contracts = { path = "../nvidia_nat_shared_contracts", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']

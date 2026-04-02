@@ -17,8 +17,8 @@ import pytest
 
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutputItem
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 
 class MockSimilarityEvaluator(BaseEvaluator):

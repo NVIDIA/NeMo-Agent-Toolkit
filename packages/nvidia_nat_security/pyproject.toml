@@ -57,6 +57,7 @@ dependencies = [
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",
+  "nvidia-nat-shared-contracts == {version}",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
@@ -72,6 +73,7 @@ config-settings = { editable_mode = "compat" }
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
 nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
+nvidia-nat-shared-contracts = { path = "../nvidia_nat_shared_contracts", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']

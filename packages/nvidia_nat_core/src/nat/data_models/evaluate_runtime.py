@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalOutput
+from nat.shared_contracts.evaluator_io import EvalOutput
 
 
 class EndpointRetryConfig(BaseModel):
