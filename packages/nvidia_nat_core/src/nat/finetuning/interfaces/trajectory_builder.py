@@ -18,10 +18,10 @@ from abc import abstractmethod
 from typing import Any
 
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
+from nat.data_models.evaluator import EvalOutputItemLike
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
-from nat.shared_contracts.evaluator_io import EvalOutputItem
 from nat.utils.io.supress_logs import suppress_logs
 
 
@@ -89,12 +89,12 @@ class TrajectoryBuilder(ABC):
         """
         raise NotImplementedError
 
-    async def compute_reward(self, output_item: EvalOutputItem, meta: dict | None = None):
+    async def compute_reward(self, output_item: EvalOutputItemLike, meta: dict | None = None):
         """
         Compute reward for a given EvalOutputItem.
 
         Args:
-            output_item (EvalOutputItem): The evaluation output item.
+            output_item (EvalOutputItemLike): The evaluation output item.
             meta (dict): Metadata associated with the training run.
 
         Returns:

@@ -24,11 +24,11 @@ from nat.atif import ATIFStep
 from nat.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluator
 from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluatorConfig
 from nat.plugins.langchain.eval.tunable_rag_evaluator import register_tunable_rag_evaluator
-from nat.shared_contracts.evaluator_io import EvalOutput
 
 
 @pytest.fixture

@@ -32,6 +32,7 @@ from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
 from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
 from nat.plugins.security.eval.red_teaming_evaluator.data_models import RedTeamingEvalOutputItem
@@ -39,7 +40,6 @@ from nat.plugins.security.eval.red_teaming_evaluator.register import RedTeamingE
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingScenario
 from nat.plugins.security.eval.runners.red_teaming_runner.report_utils import generate_and_save_report
-from nat.shared_contracts.evaluator_io import EvalOutput
 from nat.utils.data_models.schema_validator import validate_schema
 
 logger = logging.getLogger(__name__)

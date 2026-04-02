@@ -21,9 +21,9 @@ from tqdm import tqdm
 
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.utils.tqdm_position_registry import TqdmPositionRegistry
-from nat.shared_contracts.evaluator_io import EvalOutput
-from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 
 class BaseEvaluator(ABC):

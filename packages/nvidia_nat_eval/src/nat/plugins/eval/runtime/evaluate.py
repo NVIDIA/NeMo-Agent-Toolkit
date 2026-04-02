@@ -64,8 +64,8 @@ try:
     from nat.data_models.intermediate_step import IntermediateStepType
     from nat.data_models.user_info import BasicUserInfo
     from nat.data_models.user_info import UserInfo
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
     from nat.runtime.session import SessionManager
-    from nat.shared_contracts.evaluator_io import EvalOutput
 except ImportError as import_error:  # pragma: no cover - guarded runtime path
     _raise_full_eval_dependency_error(import_error)
 

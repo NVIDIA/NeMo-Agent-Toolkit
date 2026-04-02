@@ -24,10 +24,10 @@ from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import ProfilerResults
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.runners.config import MultiEvaluationRunConfig
 from nat.plugins.eval.runners.multi_eval_runner import MultiEvaluationRunner
-from nat.shared_contracts.evaluator_io import EvalOutput
-from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 
 @pytest.fixture

@@ -152,7 +152,7 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input):
     Validate evaluate processing when metric scoring raises an exception.
     """
 
-    from nat.shared_contracts.evaluator_io import EvalOutput
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 
     error_message = "Mocked exception in metric.ascore"
 

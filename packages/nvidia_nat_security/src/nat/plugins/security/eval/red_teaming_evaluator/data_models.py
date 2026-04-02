@@ -19,7 +19,7 @@ from __future__ import annotations
 from pydantic import Field
 
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.shared_contracts.evaluator_io import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
 
 class ConditionEvalOutputItem(EvalOutputItem):

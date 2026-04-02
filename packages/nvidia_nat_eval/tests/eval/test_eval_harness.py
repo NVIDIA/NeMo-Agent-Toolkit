@@ -16,9 +16,9 @@
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
-from nat.shared_contracts.evaluator_io import EvalOutput
-from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 
 async def test_evaluate_returns_per_evaluator_outputs():

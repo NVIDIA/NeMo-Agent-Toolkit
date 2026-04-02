@@ -20,7 +20,6 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from nat.data_models.evaluator import EvalInput
-from nat.shared_contracts.evaluator_io import EvalOutput
 
 
 class EndpointRetryConfig(BaseModel):
@@ -187,7 +186,7 @@ class EvaluationRunOutput(BaseModel):
         ...,
         description="Evaluation input containing all dataset items and their outputs.",
     )
-    evaluation_results: list[tuple[str, EvalOutput]] = Field(
+    evaluation_results: list[tuple[str, BaseModel]] = Field(
         ...,
         description="List of evaluator results as (evaluator_name, output) tuples.",
     )

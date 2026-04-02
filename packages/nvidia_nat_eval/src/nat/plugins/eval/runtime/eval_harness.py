@@ -34,9 +34,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
-from nat.shared_contracts.evaluator_io import EvalOutput
 
 logger = logging.getLogger(__name__)
 

@@ -293,8 +293,8 @@ async def evaluate_item_client_fixture(restore_environ) -> TestClient:
 
     from nat.builder.evaluator import EvaluatorInfo
     from nat.data_models.evaluator import EvalInput
-    from nat.shared_contracts.evaluator_io import EvalOutput
-    from nat.shared_contracts.evaluator_io import EvalOutputItem
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
     config = Config()
     config.general.front_end = FastApiFrontEndConfig(evaluate_item=FastApiFrontEndConfig.EndpointBase(

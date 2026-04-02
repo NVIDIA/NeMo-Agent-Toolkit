@@ -25,7 +25,7 @@ from pydantic import BaseModel
 from pydantic import Field
 
 from nat.atif import ATIFTrajectory
-from nat.shared_contracts.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 
 
 class AtifEvalSample(BaseModel):

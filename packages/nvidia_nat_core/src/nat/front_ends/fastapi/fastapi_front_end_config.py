@@ -28,7 +28,6 @@ from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.step_adaptor import StepAdaptorConfig
-from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +143,7 @@ class EvaluateItemRequest(BaseModel):
 class EvaluateItemResponse(BaseModel):
     """Response model for single-item evaluation endpoint."""
     success: bool = Field(description="Whether the evaluation completed successfully")
-    result: EvalOutputItem | None = Field(default=None, description="Evaluation result if successful")
+    result: BaseModel | None = Field(default=None, description="Evaluation result if successful")
     error: str | None = Field(default=None, description="Error message if evaluation failed")
 
 

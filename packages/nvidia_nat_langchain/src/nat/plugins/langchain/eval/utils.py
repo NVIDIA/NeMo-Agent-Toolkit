@@ -22,7 +22,7 @@ from typing import Any
 from langsmith.evaluation.evaluator import EvaluationResult
 
 from nat.data_models.evaluator import EvalInputItem
-from nat.shared_contracts.evaluator_io import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
 _MISSING = object()
 

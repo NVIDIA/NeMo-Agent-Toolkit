@@ -18,12 +18,12 @@ import warnings
 
 from nat.data_models.evaluator import EvalInput  # noqa: F401
 from nat.data_models.evaluator import EvalInputItem  # noqa: F401
-from nat.shared_contracts.evaluator_io import EvalOutput  # noqa: F401
-from nat.shared_contracts.evaluator_io import EvalOutputItem  # noqa: F401
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput  # noqa: F401
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem  # noqa: F401
 
 warnings.warn(
     "Importing evaluator models from 'nat.plugins.eval.evaluator.evaluator_model' is deprecated and this "
-    "compatibility layer will be removed in a future release. Use 'nat.shared_contracts.evaluator_io' and "
+    "compatibility layer will be removed in a future release. Use 'nat.plugins.eval.data_models.evaluator_io' and "
     "'nat.data_models.evaluator' instead.",
     UserWarning,
     stacklevel=2,

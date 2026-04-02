@@ -31,7 +31,7 @@ from nat.data_models.finetuning import Trajectory
 from nat.data_models.finetuning import TrajectoryBuilderConfig
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
-from nat.shared_contracts.evaluator_io import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
 
 class ConcreteTrajectoryBuilder(TrajectoryBuilder):

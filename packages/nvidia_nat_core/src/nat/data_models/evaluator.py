@@ -15,6 +15,9 @@
 """Evaluation input data models and evaluator configs."""
 
 import typing
+from collections.abc import Sequence
+from typing import Protocol
+from typing import runtime_checkable
 
 from pydantic import BaseModel
 from pydantic import Field
@@ -66,3 +69,21 @@ class EvalInput(BaseModel):
     """Container for evaluation input items."""
 
     eval_input_items: list[EvalInputItem] = Field(description="List of items to evaluate.")
+
+
+@runtime_checkable
+class EvalOutputItemLike(Protocol):
+    """Structural contract for a single evaluation output item."""
+
+    id: typing.Any
+    score: typing.Any
+    reasoning: typing.Any
+    error: str | None
+
+
+@runtime_checkable
+class EvalOutputLike(Protocol):
+    """Structural contract for a collection of evaluation output items."""
+
+    average_score: typing.Any
+    eval_output_items: Sequence[EvalOutputItemLike]

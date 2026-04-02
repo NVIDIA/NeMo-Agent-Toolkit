@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Shared evaluation I/O contracts."""
+"""Evaluation output models owned by the eval plugin."""
 
 from __future__ import annotations
 

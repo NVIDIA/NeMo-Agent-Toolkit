@@ -34,13 +34,13 @@ from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluator
 from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluatorConfig
 from nat.plugins.langchain.eval.trajectory_evaluator import _atif_to_agent_actions
 from nat.plugins.langchain.eval.trajectory_evaluator import _message_to_text
 from nat.plugins.langchain.eval.trajectory_evaluator import register_trajectory_evaluator
-from nat.shared_contracts.evaluator_io import EvalOutput
 
 
 @pytest.fixture(name="mock_llm")

@@ -17,9 +17,9 @@ import asyncio
 
 from nat.atif import ATIFAgentConfig
 from nat.atif import ATIFTrajectory
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
-from nat.shared_contracts.evaluator_io import EvalOutputItem
 
 
 def _sample(item_id: str, expected: str, generated: str) -> AtifEvalSample:
