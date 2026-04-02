@@ -18,7 +18,8 @@ from .atif_base_evaluator import AtifBaseEvaluator
 __all__ = ["AtifBaseEvaluator"]
 
 try:  # Base evaluator requires core runtime models.
-    from .base_evaluator import BaseEvaluator
+    from .base_evaluator import BaseEvaluator as _BaseEvaluator
+    BaseEvaluator = _BaseEvaluator
     __all__.append("BaseEvaluator")
 except ModuleNotFoundError:
     # In base `nvidia-nat-eval` installs, `nat.data_models` is intentionally absent.
