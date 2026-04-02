@@ -2054,7 +2054,6 @@ dependencies = [
     { name = "networkx" },
     { name = "numpy" },
     { name = "nvidia-nat-atif" },
-    { name = "nvidia-nat-shared-contracts" },
     { name = "openinference-semantic-conventions" },
     { name = "optuna" },
     { name = "pandas" },
@@ -2100,7 +2099,6 @@ requires-dist = [
     { name = "numpy", specifier = "~=2.3" },
     { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
     { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
-    { name = "nvidia-nat-shared-contracts", editable = "../nvidia_nat_shared_contracts" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openinference-semantic-conventions", specifier = ">=0.1.14,<1.0.0" },
     { name = "optuna", specifier = "~=4.4" },
@@ -2134,7 +2132,6 @@ name = "nvidia-nat-eval"
 source = { editable = "../nvidia_nat_eval" }
 dependencies = [
     { name = "nvidia-nat-atif" },
-    { name = "nvidia-nat-shared-contracts" },
     { name = "pydantic" },
 ]
 
@@ -2145,7 +2142,6 @@ requires-dist = [
     { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
     { name = "nvidia-nat-core", marker = "extra == 'full'", editable = "../nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "../nvidia_nat_core" },
-    { name = "nvidia-nat-shared-contracts", editable = "../nvidia_nat_shared_contracts" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openpyxl", marker = "extra == 'full'", specifier = "~=3.1" },
     { name = "openpyxl", marker = "extra == 'test'", specifier = "~=3.1" },
@@ -2172,7 +2168,6 @@ dependencies = [
     { name = "nvidia-nat-core" },
     { name = "nvidia-nat-eval" },
     { name = "nvidia-nat-opentelemetry" },
-    { name = "nvidia-nat-shared-contracts" },
     { name = "openevals" },
 ]
 
@@ -2194,7 +2189,6 @@ requires-dist = [
     { name = "nvidia-nat-eval", editable = "../nvidia_nat_eval" },
     { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
     { name = "nvidia-nat-opentelemetry", editable = "../nvidia_nat_opentelemetry" },
-    { name = "nvidia-nat-shared-contracts", editable = "../nvidia_nat_shared_contracts" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openevals", specifier = ">=0.1.3,<1.0.0" },
 ]
@@ -2219,16 +2213,6 @@ requires-dist = [
     { name = "opentelemetry-sdk", specifier = "~=1.3" },
 ]
 provides-extras = ["test"]
-
-[[package]]
-name = "nvidia-nat-shared-contracts"
-source = { editable = "../nvidia_nat_shared_contracts" }
-dependencies = [
-    { name = "pydantic" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 
 [[package]]
 name = "nvidia-nat-test"
