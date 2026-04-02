@@ -97,13 +97,13 @@ The `--override` flag accepts a dot-notation path into the YAML config hierarchy
 The `nat eval` command is provided by the evaluation package. For full config-driven eval paths, install the full eval extra:
 
 ```bash
-uv pip install -e '.[eval-full]'
+uv pip install -e '.[eval]'
 ```
 
 Or, for a package install:
 
 ```bash
-uv pip install "nvidia-nat[eval-full]"
+uv pip install "nvidia-nat[eval]"
 ```
 
 For more details, see [Agent Evaluation Prerequisites](../../improve-workflows/evaluate.md#prerequisites).

@@ -58,7 +58,7 @@ This is a breaking change:
 
 To migrate:
 - Install both packages when using these evaluators:
-  - `pip install "nvidia-nat[eval-full]" nvidia-nat-langchain`
+  - `pip install "nvidia-nat[eval]" nvidia-nat-langchain`
   - `pip install "nvidia-nat-eval[full]" nvidia-nat-langchain`
 - Install the RAGAS evaluator package when using `_type: ragas`:
   - `pip install nvidia-nat-ragas`
@@ -67,7 +67,7 @@ To migrate:
   - Note: the previous dependency group name `nvidia-nat-profiling` is now `nvidia-nat-profiler`.
 - Keep evaluator config names unchanged (`trajectory`, `tunable_rag_evaluator`, `avg_llm_latency`, `avg_workflow_runtime`, `avg_num_llm_calls`, `avg_tokens_per_llm_end`).
 - Remove any `_type: swe_bench` evaluator entries from evaluation configurations.
-- If you only need custom evaluators, keep `nvidia-nat-eval` installed for evaluator contracts and do not rely on moved built-ins.
+- If you only need custom evaluators, use `nvidia-nat-eval` for the lightweight path and do not rely on moved built-ins.
 
 #### Eval Exporter Callback Split
 
@@ -91,7 +91,7 @@ CLI command ownership is now aligned to package domains:
 
 To migrate:
 - Install command-specific packages as needed:
-  - `pip install "nvidia-nat[eval-full]"`
+  - `pip install "nvidia-nat[eval]"`
   - `pip install "nvidia-nat-eval[full]"`
   - `pip install nvidia-nat-profiler`
   - `pip install nvidia-nat-security`
