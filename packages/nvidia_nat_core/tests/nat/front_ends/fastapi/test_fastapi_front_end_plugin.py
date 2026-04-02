@@ -34,7 +34,6 @@ from nat.data_models.config import GeneralConfig
 from nat.front_ends.fastapi.fastapi_front_end_config import FastApiFrontEndConfig
 from nat.front_ends.fastapi.fastapi_front_end_plugin_worker import FastApiFrontEndPluginWorker
 from nat.object_store.in_memory_object_store import InMemoryObjectStoreConfig
-from nat.runtime.loader import load_config
 from nat.test.functions import EchoFunctionConfig
 from nat.test.functions import HeaderCaptureFunctionConfig
 from nat.test.functions import StreamingEchoFunctionConfig
@@ -246,6 +245,7 @@ async def test_generate_async(dask_client: "DaskClient", fn_use_openai_api: bool
                 assert time.time() < deadline, "Job did not complete in time"
                 wait_job(dask_client, job_id, timeout=timeout)
 
+
 @pytest.mark.usefixtures("restore_environ")
 async def test_generate_async_propagates_headers(dask_client: "DaskClient", tmp_path: Path):
     custom_header_name = "x-custom-test-header"
@@ -258,7 +258,7 @@ async def test_generate_async_propagates_headers(dask_client: "DaskClient", tmp_
         workflow=HeaderCaptureFunctionConfig(header_name=custom_header_name),
     )
 
-    # In the fastapi front end the config file path is passed to the workers by setting the 
+    # In the fastapi front end the config file path is passed to the workers by setting the
     # NAT_CONFIG_FILE environment variable
     config_file = tmp_path / "config.yaml"
     config_dict = config.model_dump(mode="json", by_alias=True, round_trip=True)
@@ -272,7 +272,9 @@ async def test_generate_async_propagates_headers(dask_client: "DaskClient", tmp_
     async with build_nat_client(config) as client:
         response = await client.post(
             workflow_path,
-            json={"message": "ignored", "job_id": job_id},
+            json={
+                "message": "ignored", "job_id": job_id
+            },
             headers={custom_header_name: custom_header_value},
         )
 

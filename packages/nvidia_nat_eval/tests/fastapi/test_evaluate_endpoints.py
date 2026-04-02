@@ -163,7 +163,9 @@ def test_evaluate_propagates_headers(dask_client: "DaskClient",
     with patch("nat.plugins.eval.fastapi.routes.EvaluationRun", CapturingEvaluationRun):
         response = test_client.post(
             "/evaluate",
-            json={"config_file": eval_config_file, "job_id": job_id},
+            json={
+                "config_file": eval_config_file, "job_id": job_id
+            },
             headers={custom_header_name: custom_header_value},
         )
         assert response.status_code == 200
