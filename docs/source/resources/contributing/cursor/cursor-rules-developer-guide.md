@@ -21,7 +21,7 @@ This guide explains how to organize, create, and maintain Cursor rules within th
 
 ## Overview
 
-Cursor Rules allow you to provide system-level guidance to AI assistants, functioning as persistent context that helps them understand your project and preferences. Cursor rules solve the problem that "Large language models do not retain memory between completions" by providing persistent, reusable context at the prompt level.
+Cursor Rules allow you to provide system-level guidance to AI assistants, functioning as persistent context that helps them understand your project and preferences. According to the [official Cursor documentation](https://docs.cursor.com/context/rules), rules solve the problem that "Large language models do not retain memory between completions" by providing persistent, reusable context at the prompt level.
 
 In the NeMo Agent Toolkit project, Cursor rules serve as specialized documentation files that extract information from project documentation and convert it into system prompts for AI agents. They help AI assistants understand:
 
@@ -134,7 +134,7 @@ Each subdirectory focuses on a specific area of the toolkit:
 
 3. **Select Proper Rule Type and Add Description**
 
-   There are four types of Cursor rules, which are defined in the `.mdc` metadata header:
+   According to the [official Cursor documentation](https://docs.cursor.com/context/rules), there are four types of Cursor rules, which are defined in the `.mdc` metadata header:
 
    | Rule Type | Description | When to Use |
    |-----------|-------------|-------------|
