@@ -32,6 +32,11 @@ class PhoenixTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
     endpoint: str = Field(
         description="Phoenix server endpoint for trace export (e.g., 'http://localhost:6006/v1/traces'")
     timeout: float = Field(default=30.0, description="Timeout in seconds for HTTP requests to Phoenix server")
+    use_atif: bool = Field(
+        default=False,
+        description="Use ATIF trajectory conversion path instead of direct IntermediateStep spans. "
+        "When enabled, IntermediateStep events are first converted to an ATIFTrajectory, "
+        "then span tree is reconstructed from ATIF ancestry/invocation metadata.")
 
 
 @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)
@@ -39,17 +44,28 @@ async def phoenix_telemetry_exporter(config: PhoenixTelemetryExporter, builder: 
     """Create a Phoenix telemetry exporter."""
 
     try:
-        from nat.plugins.phoenix.phoenix_exporter import PhoenixOtelExporter
+        if config.use_atif:
+            from nat.plugins.phoenix.phoenix_atif_trajectory_exporter import PhoenixATIFTrajectoryExporter
 
-        # Create the exporter
-        yield PhoenixOtelExporter(endpoint=config.endpoint,
-                                  project=config.project,
-                                  timeout=config.timeout,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+            yield PhoenixATIFTrajectoryExporter(endpoint=config.endpoint,
+                                                project=config.project,
+                                                timeout=config.timeout,
+                                                batch_size=config.batch_size,
+                                                flush_interval=config.flush_interval,
+                                                max_queue_size=config.max_queue_size,
+                                                drop_on_overflow=config.drop_on_overflow,
+                                                shutdown_timeout=config.shutdown_timeout)
+        else:
+            from nat.plugins.phoenix.phoenix_exporter import PhoenixOtelExporter
+
+            yield PhoenixOtelExporter(endpoint=config.endpoint,
+                                      project=config.project,
+                                      timeout=config.timeout,
+                                      batch_size=config.batch_size,
+                                      flush_interval=config.flush_interval,
+                                      max_queue_size=config.max_queue_size,
+                                      drop_on_overflow=config.drop_on_overflow,
+                                      shutdown_timeout=config.shutdown_timeout)
 
     except ConnectionError as ex:
         logger.warning("Unable to connect to Phoenix at port 6006. Are you sure Phoenix is running?\n %s",

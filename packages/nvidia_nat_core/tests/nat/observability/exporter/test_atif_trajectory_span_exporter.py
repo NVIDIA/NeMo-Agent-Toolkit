@@ -1,0 +1,540 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Tests for ATIFTrajectorySpanExporter."""
+
+import pytest
+
+from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.atif import ATIFObservation
+from nat.data_models.atif import ATIFObservationResult
+from nat.data_models.atif import ATIFStep
+from nat.data_models.atif import ATIFStepMetrics
+from nat.data_models.atif import ATIFToolCall
+from nat.data_models.atif import ATIFTrajectory
+from nat.data_models.atif import ATIFAgentConfig
+from nat.data_models.intermediate_step import IntermediateStep
+from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import IntermediateStepType
+from nat.data_models.intermediate_step import StreamEventData
+from nat.data_models.intermediate_step import UsageInfo
+from nat.data_models.invocation_node import InvocationNode
+from nat.data_models.span import Span
+from nat.data_models.span import SpanAttributes
+from nat.data_models.token_usage import TokenUsageBaseModel
+from nat.observability.exporter.atif_trajectory_span_exporter import ATIFTrajectorySpanExporter
+from nat.observability.utils.time_utils import ns_timestamp
+
+_BASE_TIME = 1700000000.0
+
+
+class ConcreteATIFSpanExporter(ATIFTrajectorySpanExporter[Span]):
+    """Concrete implementation for testing."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exported_spans: list[Span] = []
+
+    async def export_processed(self, item: Span) -> None:
+        self.exported_spans.append(item)
+
+
+def _make_step(
+    event_type: IntermediateStepType,
+    *,
+    name: str = "test",
+    input_data: str | dict | None = None,
+    output_data: str | dict | None = None,
+    timestamp_offset: float = 0.0,
+    parent_id: str = "root",
+    function_name: str = "my_workflow",
+    function_id: str = "func-id-1",
+    function_parent_id: str | None = None,
+    function_parent_name: str | None = None,
+    usage: UsageInfo | None = None,
+    step_uuid: str | None = None,
+    framework: LLMFrameworkEnum | None = None,
+) -> IntermediateStep:
+    """Create a minimal IntermediateStep for testing."""
+    payload_kwargs: dict = {
+        "event_type": event_type,
+        "event_timestamp": _BASE_TIME + timestamp_offset,
+        "name": name,
+        "data": StreamEventData(input=input_data, output=output_data),
+    }
+    if usage is not None:
+        payload_kwargs["usage_info"] = usage
+    if step_uuid is not None:
+        payload_kwargs["UUID"] = step_uuid
+    if framework is not None:
+        payload_kwargs["framework"] = framework
+    if event_type.endswith("_END") and event_type != "LLM_NEW_TOKEN":
+        payload_kwargs["span_event_timestamp"] = _BASE_TIME + timestamp_offset - 0.5
+    return IntermediateStep(
+        parent_id=parent_id,
+        function_ancestry=InvocationNode(
+            function_name=function_name,
+            function_id=function_id,
+            parent_id=function_parent_id,
+            parent_name=function_parent_name,
+        ),
+        payload=IntermediateStepPayload(**payload_kwargs),
+    )
+
+
+def _make_usage(prompt: int = 100, completion: int = 50) -> UsageInfo:
+    return UsageInfo(
+        token_usage=TokenUsageBaseModel(
+            prompt_tokens=prompt,
+            completion_tokens=completion,
+            total_tokens=prompt + completion,
+        ),
+    )
+
+
+def _build_simple_trajectory() -> ATIFTrajectory:
+    """Build a simple trajectory: user → agent (LLM + 1 tool) → agent (final)."""
+    return ATIFTrajectory(
+        session_id="test-session",
+        agent=ATIFAgentConfig(name="test_agent", version="0.0.0"),
+        steps=[
+            ATIFStep(
+                step_id=1,
+                source="user",
+                message="What is 2 * 3?",
+                timestamp="2023-11-14T22:13:20+00:00",
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_react_agent",
+                        "function_name": "react_agent",
+                        "parent_id": None,
+                        "parent_name": None,
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME,
+                        "end_timestamp": _BASE_TIME + 5.0,
+                    },
+                },
+            ),
+            ATIFStep(
+                step_id=2,
+                source="agent",
+                message="I'll use the multiply tool.",
+                timestamp="2023-11-14T22:13:21+00:00",
+                model_name="llama-3.1-70b",
+                metrics=ATIFStepMetrics(prompt_tokens=100, completion_tokens=50),
+                tool_calls=[
+                    ATIFToolCall(
+                        tool_call_id="call_abc",
+                        function_name="calculator__multiply",
+                        arguments={"a": 2, "b": 3},
+                    ),
+                ],
+                observation=ATIFObservation(
+                    results=[
+                        ATIFObservationResult(source_call_id="call_abc", content="6"),
+                    ],
+                ),
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_llm",
+                        "function_name": "llama-3.1-70b",
+                        "parent_id": "fn_react_agent",
+                        "parent_name": "react_agent",
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME + 0.5,
+                        "end_timestamp": _BASE_TIME + 1.5,
+                    },
+                    "tool_ancestry": [
+                        {
+                            "function_id": "fn_multiply",
+                            "function_name": "calculator__multiply",
+                            "parent_id": "fn_react_agent",
+                            "parent_name": "react_agent",
+                        },
+                    ],
+                    "tool_invocations": [
+                        {
+                            "start_timestamp": _BASE_TIME + 1.5,
+                            "end_timestamp": _BASE_TIME + 2.0,
+                            "invocation_id": "call_abc",
+                            "status": "completed",
+                        },
+                    ],
+                },
+            ),
+            ATIFStep(
+                step_id=3,
+                source="agent",
+                message="The result is 6.",
+                timestamp="2023-11-14T22:13:25+00:00",
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_react_agent",
+                        "function_name": "react_agent",
+                        "parent_id": None,
+                        "parent_name": None,
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME + 4.0,
+                        "end_timestamp": _BASE_TIME + 5.0,
+                    },
+                },
+            ),
+        ],
+    )
+
+
+def _build_nested_trajectory() -> ATIFTrajectory:
+    """Build a nested trajectory: react_agent → LLM → power_of_two → calculator__multiply."""
+    return ATIFTrajectory(
+        session_id="test-nested-session",
+        agent=ATIFAgentConfig(name="power_of_two_agent", version="0.0.0"),
+        steps=[
+            ATIFStep(
+                step_id=1,
+                source="user",
+                message="What is the power of two of 5?",
+                timestamp="2023-11-14T22:13:20+00:00",
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_react_agent",
+                        "function_name": "react_agent",
+                        "parent_id": None,
+                        "parent_name": None,
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME,
+                        "end_timestamp": _BASE_TIME + 10.0,
+                    },
+                },
+            ),
+            ATIFStep(
+                step_id=2,
+                source="agent",
+                message="I'll compute 5^2 using power_of_two.",
+                timestamp="2023-11-14T22:13:21+00:00",
+                model_name="llama-3.1-70b",
+                metrics=ATIFStepMetrics(prompt_tokens=200, completion_tokens=80),
+                tool_calls=[
+                    ATIFToolCall(
+                        tool_call_id="call_pow2",
+                        function_name="power_of_two",
+                        arguments={"x": 5},
+                    ),
+                    ATIFToolCall(
+                        tool_call_id="call_mul",
+                        function_name="calculator__multiply",
+                        arguments={"a": 5, "b": 5},
+                    ),
+                ],
+                observation=ATIFObservation(
+                    results=[
+                        ATIFObservationResult(source_call_id="call_pow2", content="25"),
+                        ATIFObservationResult(source_call_id="call_mul", content="25"),
+                    ],
+                ),
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_llm",
+                        "function_name": "llama-3.1-70b",
+                        "parent_id": "fn_react_agent",
+                        "parent_name": "react_agent",
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME + 1.0,
+                        "end_timestamp": _BASE_TIME + 2.0,
+                    },
+                    "tool_ancestry": [
+                        {
+                            "function_id": "fn_power_of_two",
+                            "function_name": "power_of_two",
+                            "parent_id": "fn_react_agent",
+                            "parent_name": "react_agent",
+                        },
+                        {
+                            "function_id": "fn_multiply",
+                            "function_name": "calculator__multiply",
+                            "parent_id": "fn_power_of_two",
+                            "parent_name": "power_of_two",
+                        },
+                    ],
+                    "tool_invocations": [
+                        {
+                            "start_timestamp": _BASE_TIME + 2.0,
+                            "end_timestamp": _BASE_TIME + 4.0,
+                            "invocation_id": "call_pow2",
+                            "status": "completed",
+                        },
+                        {
+                            "start_timestamp": _BASE_TIME + 2.5,
+                            "end_timestamp": _BASE_TIME + 3.5,
+                            "invocation_id": "call_mul",
+                            "status": "completed",
+                        },
+                    ],
+                },
+            ),
+            ATIFStep(
+                step_id=3,
+                source="agent",
+                message="The power of two of 5 is 25.",
+                timestamp="2023-11-14T22:13:30+00:00",
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_react_agent",
+                        "function_name": "react_agent",
+                        "parent_id": None,
+                        "parent_name": None,
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME + 8.0,
+                        "end_timestamp": _BASE_TIME + 10.0,
+                    },
+                },
+            ),
+        ],
+    )
+
+
+class TestTrajectoryToSpans:
+    """Test _trajectory_to_spans conversion."""
+
+    @pytest.fixture
+    def exporter(self):
+        return ConcreteATIFSpanExporter()
+
+    def test_simple_trajectory_span_count(self, exporter):
+        """Simple trajectory produces expected number of spans."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        # 1 workflow + 1 LLM + 1 tool + 1 final agent = 4 spans
+        assert len(spans) == 4
+
+    def test_simple_trajectory_workflow_span(self, exporter):
+        """Workflow span has correct name and no parent."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        workflow_span = spans[0]
+        assert workflow_span.name == "react_agent"
+        assert workflow_span.parent is None
+        assert workflow_span.attributes["nat.event_type"] == "WORKFLOW_START"
+        assert workflow_span.attributes["nat.function.id"] == "fn_react_agent"
+
+    def test_simple_trajectory_llm_span_parent(self, exporter):
+        """LLM span is a child of the workflow span."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        workflow_span = spans[0]
+        llm_span = spans[1]
+        assert llm_span.name == "llama-3.1-70b"
+        assert llm_span.parent is not None
+        assert llm_span.parent.context.span_id == workflow_span.context.span_id
+        assert llm_span.attributes["nat.event_type"] == "LLM_START"
+
+    def test_simple_trajectory_tool_span_parent(self, exporter):
+        """Tool span parent is determined by tool_ancestry.parent_id."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        workflow_span = spans[0]
+        tool_span = spans[2]
+        # tool_ancestry.parent_id = "fn_react_agent" → parent is workflow span
+        assert tool_span.name == "calculator__multiply"
+        assert tool_span.parent is not None
+        assert tool_span.parent.context.span_id == workflow_span.context.span_id
+
+    def test_simple_trajectory_shared_trace_id(self, exporter):
+        """All spans share the same trace_id."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        trace_ids = {s.context.trace_id for s in spans}
+        assert len(trace_ids) == 1
+
+    def test_timing_from_invocation(self, exporter):
+        """Span timing comes from invocation.start/end_timestamp."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        llm_span = spans[1]
+        assert llm_span.start_time == ns_timestamp(_BASE_TIME + 0.5)
+        assert llm_span.end_time == ns_timestamp(_BASE_TIME + 1.5)
+
+    def test_tool_timing(self, exporter):
+        """Tool span timing comes from tool_invocations."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        tool_span = spans[2]
+        assert tool_span.start_time == ns_timestamp(_BASE_TIME + 1.5)
+        assert tool_span.end_time == ns_timestamp(_BASE_TIME + 2.0)
+
+    def test_token_metrics(self, exporter):
+        """LLM span includes token count attributes from step.metrics."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        llm_span = spans[1]
+        assert llm_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value] == 100
+        assert llm_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value] == 50
+        assert llm_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value] == 150
+
+    def test_tool_input_output(self, exporter):
+        """Tool span has input/output from tool_call.arguments and observation."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        tool_span = spans[2]
+        assert SpanAttributes.INPUT_VALUE.value in tool_span.attributes
+        assert SpanAttributes.OUTPUT_VALUE.value in tool_span.attributes
+
+    def test_user_input_on_workflow_span(self, exporter):
+        """Workflow span has user message as input.value."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        workflow_span = spans[0]
+        assert workflow_span.attributes[SpanAttributes.INPUT_VALUE.value] == "What is 2 * 3?"
+
+    def test_agent_output_on_llm_span(self, exporter):
+        """Agent step message appears as output.value on LLM span."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        llm_span = spans[1]
+        assert SpanAttributes.OUTPUT_VALUE.value in llm_span.attributes
+
+    def test_missing_timing_fallback(self, exporter):
+        """When invocation timing is missing, falls back to step timestamp."""
+        trajectory = ATIFTrajectory(
+            session_id="test",
+            agent=ATIFAgentConfig(name="agent", version="0.0.0"),
+            steps=[
+                ATIFStep(
+                    step_id=1,
+                    source="user",
+                    message="hi",
+                    timestamp="2023-11-14T22:13:20+00:00",
+                    extra={
+                        "ancestry": {
+                            "function_id": "fn_wf",
+                            "function_name": "workflow",
+                            "parent_id": None,
+                            "parent_name": None,
+                        },
+                    },
+                ),
+            ],
+        )
+        spans = exporter._trajectory_to_spans(trajectory)
+        assert len(spans) == 1
+        # start_time == end_time (zero duration fallback)
+        assert spans[0].start_time == spans[0].end_time
+
+    def test_span_kind_attributes(self, exporter):
+        """Spans have correct nat.span.kind values."""
+        trajectory = _build_simple_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        assert spans[0].attributes["nat.span.kind"] == "WORKFLOW"
+        assert spans[1].attributes["nat.span.kind"] == "LLM"
+        assert spans[2].attributes["nat.span.kind"] == "TOOL"
+
+
+class TestNestedTrajectory:
+    """Test nested tool call hierarchy: react_agent → LLM → power_of_two → calculator__multiply."""
+
+    @pytest.fixture
+    def exporter(self):
+        return ConcreteATIFSpanExporter()
+
+    def test_nested_span_count(self, exporter):
+        """Nested trajectory produces expected number of spans."""
+        trajectory = _build_nested_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        # 1 workflow + 1 LLM + 2 tools + 1 final agent = 5
+        assert len(spans) == 5
+
+    def test_nested_power_of_two_parent(self, exporter):
+        """power_of_two span parent is the workflow span (parent_id=fn_react_agent)."""
+        trajectory = _build_nested_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        workflow_span = spans[0]
+        pow2_span = spans[2]  # first tool
+        assert pow2_span.name == "power_of_two"
+        assert pow2_span.parent is not None
+        assert pow2_span.parent.context.span_id == workflow_span.context.span_id
+
+    def test_nested_multiply_parent(self, exporter):
+        """calculator__multiply span parent is power_of_two (parent_id=fn_power_of_two)."""
+        trajectory = _build_nested_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        pow2_span = spans[2]
+        mul_span = spans[3]  # second tool
+        assert mul_span.name == "calculator__multiply"
+        assert mul_span.parent is not None
+        assert mul_span.parent.context.span_id == pow2_span.context.span_id
+
+    def test_nested_timing(self, exporter):
+        """Nested tool spans have correct timing from tool_invocations."""
+        trajectory = _build_nested_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        pow2_span = spans[2]
+        mul_span = spans[3]
+        assert pow2_span.start_time == ns_timestamp(_BASE_TIME + 2.0)
+        assert pow2_span.end_time == ns_timestamp(_BASE_TIME + 4.0)
+        assert mul_span.start_time == ns_timestamp(_BASE_TIME + 2.5)
+        assert mul_span.end_time == ns_timestamp(_BASE_TIME + 3.5)
+
+    def test_nested_token_metrics(self, exporter):
+        """LLM span in nested trajectory has correct token counts."""
+        trajectory = _build_nested_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory)
+        llm_span = spans[1]
+        assert llm_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value] == 200
+        assert llm_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value] == 80
+        assert llm_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value] == 280
+
+
+class TestEventCollection:
+    """Test that export() collects steps and triggers on WORKFLOW_END."""
+
+    @pytest.fixture
+    def exporter(self):
+        return ConcreteATIFSpanExporter()
+
+    def test_events_collected(self, exporter):
+        """Events are collected in _collected_steps."""
+        step = _make_step(IntermediateStepType.LLM_START, timestamp_offset=0.0)
+        exporter.export(step)
+        assert len(exporter._collected_steps) == 1
+
+    def test_non_intermediate_step_ignored(self, exporter):
+        """Non-IntermediateStep objects are ignored."""
+        exporter.export("not an event")  # type: ignore
+        assert len(exporter._collected_steps) == 0
+
+    def test_workflow_end_clears_collected(self, exporter):
+        """WORKFLOW_END triggers processing and clears collected steps."""
+        wf_start = _make_step(
+            IntermediateStepType.WORKFLOW_START,
+            function_name="agent",
+            function_id="fn_agent",
+            input_data="hello",
+            timestamp_offset=0.0,
+        )
+        wf_end = _make_step(
+            IntermediateStepType.WORKFLOW_END,
+            function_name="agent",
+            function_id="fn_agent",
+            output_data="goodbye",
+            timestamp_offset=5.0,
+        )
+        exporter.export(wf_start)
+        exporter.export(wf_end)
+        # After WORKFLOW_END, collected_steps should be cleared
+        assert len(exporter._collected_steps) == 0
