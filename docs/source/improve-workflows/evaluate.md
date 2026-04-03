@@ -55,7 +55,7 @@ uv pip install "nvidia-nat-eval"
 ::::
 
 
-For package installs, use the NeMo Agent Toolkit metapackage to run `nat eval`:
+For package installs, use the NeMo Agent Toolkit `metapackage` to run `nat eval`:
 
 ```bash
 uv pip install "nvidia-nat[eval]"
