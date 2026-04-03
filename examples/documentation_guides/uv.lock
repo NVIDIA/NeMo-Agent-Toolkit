@@ -3094,6 +3094,7 @@ requires-dist = [
     { name = "fickling", specifier = ">=0.1.7,<1.0.0" },
     { name = "nvidia-nat-core", editable = "../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "../../packages/nvidia_nat_core" },
+    { name = "nvidia-nat-eval", marker = "extra == 'test'", editable = "../../packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../packages/nvidia_nat_test" },
     { name = "presidio-analyzer", specifier = "~=2.2" },
     { name = "presidio-anonymizer", specifier = "~=2.2" },

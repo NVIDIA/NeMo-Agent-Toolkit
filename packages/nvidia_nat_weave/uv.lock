@@ -1890,6 +1890,26 @@ requires-dist = [
 provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
 
 [[package]]
+name = "nvidia-nat-eval"
+source = { editable = "../nvidia_nat_eval" }
+dependencies = [
+    { name = "nvidia-nat-atif" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "datasets", marker = "extra == 'full'", specifier = "~=4.4" },
+    { name = "datasets", marker = "extra == 'test'", specifier = "~=4.4" },
+    { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
+    { name = "nvidia-nat-core", marker = "extra == 'full'", editable = "../nvidia_nat_core" },
+    { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "../nvidia_nat_core" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
+    { name = "openpyxl", marker = "extra == 'full'", specifier = "~=3.1" },
+    { name = "openpyxl", marker = "extra == 'test'", specifier = "~=3.1" },
+]
+provides-extras = ["full", "test"]
+
+[[package]]
 name = "nvidia-nat-test"
 source = { editable = "../nvidia_nat_test" }
 dependencies = [
@@ -1930,6 +1950,7 @@ dependencies = [
 [package.optional-dependencies]
 test = [
     { name = "nvidia-nat-core", extra = ["async-endpoints"] },
+    { name = "nvidia-nat-eval" },
     { name = "nvidia-nat-test" },
 ]
 
@@ -1939,6 +1960,7 @@ requires-dist = [
     { name = "fickling", specifier = ">=0.1.7,<1.0.0" },
     { name = "nvidia-nat-core", editable = "../nvidia_nat_core" },
     { name = "nvidia-nat-core", extras = ["async-endpoints"], marker = "extra == 'test'", editable = "../nvidia_nat_core" },
+    { name = "nvidia-nat-eval", marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "presidio-analyzer", specifier = "~=2.2" },
     { name = "presidio-anonymizer", specifier = "~=2.2" },
