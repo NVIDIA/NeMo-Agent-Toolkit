@@ -542,7 +542,7 @@ def phoenix_url_fixture(fail_missing: bool) -> str:
     """
     To run these tests, a phoenix server must be running.
     The phoenix server can be started by running the following command:
-    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
+    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:13.22
     """
     import requests
 

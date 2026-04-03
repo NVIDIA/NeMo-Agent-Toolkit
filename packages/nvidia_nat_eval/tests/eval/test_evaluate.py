@@ -226,7 +226,7 @@ def session_manager(generated_answer, mock_pull_intermediate):
 
     # Define an async context manager for session
     @asynccontextmanager
-    async def mock_session_cm(user_id=None):
+    async def mock_session_cm(http_connection=None, user_id=None):
         """Mock async context manager for session."""
         yield mock_session
 
@@ -323,7 +323,7 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
 
     # Get the mock session from session_manager.session and update its run method
     @asynccontextmanager
-    async def mock_error_session(user_id=None):
+    async def mock_error_session(http_connection=None, user_id=None):
         mock_session = MagicMock()
         mock_session.run = mock_error_run
         mock_session.workflow = session_manager.workflow
@@ -376,7 +376,7 @@ async def test_workflow_continues_after_one_item_fails(evaluation_run, session_m
         yield mock_runner
 
     @asynccontextmanager
-    async def mock_session_cm(user_id=None):
+    async def mock_session_cm(http_connection=None, user_id=None):
         mock_session = MagicMock()
         mock_session.run = mock_run
         mock_session.workflow = session_manager.workflow
@@ -413,7 +413,7 @@ async def test_run_workflow_local_reuse_coroutine_on_error(evaluation_run, eval_
         yield mock_error_runner
 
     @asynccontextmanager
-    async def mock_error_session(user_id=None):
+    async def mock_error_session(http_connection=None, user_id=None):
         mock_session = MagicMock()
         mock_session.run = mock_error_run
         mock_session.workflow = session_manager.workflow
@@ -449,7 +449,7 @@ async def test_run_workflow_local_cancels_pending_intermediate(evaluation_run, e
         yield mock_error_runner
 
     @asynccontextmanager
-    async def mock_error_session(user_id=None):
+    async def mock_error_session(http_connection=None, user_id=None):
         mock_session = MagicMock()
         mock_session.run = mock_error_run
         mock_session.workflow = session_manager.workflow

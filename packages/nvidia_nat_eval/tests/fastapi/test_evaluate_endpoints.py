@@ -123,6 +123,60 @@ def create_job(test_client: TestClient, config_file: str, job_id: str | None = N
     return test_client.post("/evaluate", json=payload)
 
 
+def test_evaluate_propagates_headers(dask_client: "DaskClient",
+                                     test_client: TestClient,
+                                     eval_config_file: str,
+                                     tmp_path: Path):
+    """Test that custom HTTP headers sent to /evaluate are propagated into the run_and_evaluate call."""
+    custom_header_name = "x-custom-test-header"
+    custom_header_value = "test-header-value"
+    job_id = "test_evaluate_propagates_headers"
+
+    # Communicate the captured value through a file: Path is pickle-serializable so the
+    # value written by the Dask worker thread (after cloudpickle round-trip) is visible here.
+    capture_file = tmp_path / "captured_header.txt"
+
+    class CapturingEvaluationRun:
+        """Replaces EvaluationRun to capture the http_connection passed by the Dask worker."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        async def run_and_evaluate(self, *args, http_connection=None, **kwargs):
+            from nat.data_models.evaluate_runtime import EvaluationRunOutput
+            from nat.data_models.evaluate_runtime import ProfilerResults
+            from nat.data_models.evaluator import EvalInput
+
+            if http_connection is not None:
+                capture_file.write_text(http_connection.headers.get(custom_header_name, ""))
+
+            return EvaluationRunOutput(
+                workflow_output_file="/fake/output/path.json",
+                evaluator_output_files=[],
+                workflow_interrupted=False,
+                eval_input=EvalInput(eval_input_items=[]),
+                evaluation_results=[],
+                usage_stats=None,
+                profiler_results=ProfilerResults(),
+            )
+
+    with patch("nat.plugins.eval.fastapi.routes.EvaluationRun", CapturingEvaluationRun):
+        response = test_client.post(
+            "/evaluate",
+            json={
+                "config_file": eval_config_file, "job_id": job_id
+            },
+            headers={custom_header_name: custom_header_value},
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "submitted"
+
+        wait_job(dask_client, job_id)
+
+    assert capture_file.exists(), "http_connection was None; header was not propagated to run_and_evaluate"
+    assert capture_file.read_text() == custom_header_value
+
+
 def test_create_job(dask_client: "DaskClient", test_client: TestClient, eval_config_file: str):
     """Test creating a new evaluation job."""
     response = create_job(test_client, eval_config_file)

@@ -78,7 +78,6 @@ uv pip install -e examples/getting_started/simple_calculator
 
 # Optional: Install Phoenix for observability and tracing
 uv pip install -e '.[phoenix]'
-uv pip install arize-phoenix
 
 uv pip install matplotlib
 ```
@@ -155,13 +154,13 @@ This section demonstrates how to enable distributed tracing using Phoenix to mon
 Phoenix provides local tracing capabilities for development and testing. In a separate terminal, start Phoenix:
 
 ```bash
-phoenix serve
+docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
 ```
 
 Phoenix runs on `http://localhost:6006` with the tracing endpoint at `http://localhost:6006/v1/traces`.
 
 > [!NOTE]
-> If Phoenix is not started as a background task (using the `&` operator), you will need to open a new terminal session, activate the uv environment, and export NVIDIA_API_KEY again.
+> If Phoenix is not started as a background task (using the `-d` or `--detach` flag), you will need to open a new terminal session, activate the uv environment, and export NVIDIA_API_KEY again.
 
 ### Run with Tracing Enabled
 
@@ -212,7 +211,7 @@ Ensure both the MCP server and Phoenix are running, then execute the evaluation:
 # nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
 
 # Terminal 2: Start Phoenix server (if not already running)
-# phoenix serve
+# docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
 
 # Terminal 3: Run evaluation
 nat eval --config_file examples/frameworks/nat_autogen_demo/configs/config-eval.yml
