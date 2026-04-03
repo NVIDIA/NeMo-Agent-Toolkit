@@ -755,6 +755,262 @@ class TestOrphanFunctionSteps:
         assert SpanAttributes.OUTPUT_VALUE.value in workflow_span.attributes
 
 
+def _build_full_parity_trajectory() -> ATIFTrajectory:
+    """Build a trajectory matching the full Path A structure.
+
+    Path A produces: workflow → workflow → LLM → tool → LLM
+    This requires:
+    - Two source="user" steps (outer + inner WORKFLOW_START)
+    - One agent step with model_name + tools (first LLM call)
+    - One agent step with model_name but no tools (final LLM answer)
+    - One terminal step (no model_name, no tools)
+    """
+    return ATIFTrajectory(
+        session_id="test-parity-session",
+        agent=ATIFAgentConfig(name="power_of_two_agent", version="0.0.0"),
+        steps=[
+            # Outer WORKFLOW_START
+            ATIFStep(
+                step_id=1,
+                source="user",
+                message="What is 2 to the power of 5?",
+                timestamp="2023-11-14T22:13:20+00:00",
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_outer_workflow",
+                        "function_name": "power_of_two_agent",
+                        "parent_id": None,
+                        "parent_name": None,
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME,
+                        "end_timestamp": _BASE_TIME + 10.0,
+                    },
+                },
+            ),
+            # Inner WORKFLOW_START (react_agent loop)
+            ATIFStep(
+                step_id=2,
+                source="user",
+                message="What is 2 to the power of 5?",
+                timestamp="2023-11-14T22:13:20.100+00:00",
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_react_agent",
+                        "function_name": "react_agent",
+                        "parent_id": "fn_outer_workflow",
+                        "parent_name": "power_of_two_agent",
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME + 0.1,
+                        "end_timestamp": _BASE_TIME + 9.0,
+                    },
+                },
+            ),
+            # First LLM call with tool calls
+            ATIFStep(
+                step_id=3,
+                source="agent",
+                message="I'll compute power of two using the tool.",
+                timestamp="2023-11-14T22:13:21+00:00",
+                model_name="nvidia/nemotron-3-nano-30b-a3b",
+                metrics=ATIFStepMetrics(prompt_tokens=200, completion_tokens=80),
+                tool_calls=[
+                    ATIFToolCall(
+                        tool_call_id="call_pow2",
+                        function_name="power_of_two",
+                        arguments={"x": 5},
+                    ),
+                ],
+                observation=ATIFObservation(
+                    results=[
+                        ATIFObservationResult(source_call_id="call_pow2", content="32"),
+                    ],
+                ),
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_llm_1",
+                        "function_name": "nvidia/nemotron-3-nano-30b-a3b",
+                        "parent_id": "fn_react_agent",
+                        "parent_name": "react_agent",
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME + 1.0,
+                        "end_timestamp": _BASE_TIME + 3.0,
+                    },
+                    "tool_ancestry": [
+                        {
+                            "function_id": "fn_power_of_two",
+                            "function_name": "power_of_two",
+                            "parent_id": "fn_llm_1",
+                            "parent_name": "nvidia/nemotron-3-nano-30b-a3b",
+                        },
+                    ],
+                    "tool_invocations": [
+                        {
+                            "start_timestamp": _BASE_TIME + 3.0,
+                            "end_timestamp": _BASE_TIME + 5.0,
+                            "invocation_id": "call_pow2",
+                            "status": "completed",
+                        },
+                    ],
+                },
+            ),
+            # Final LLM response (model_name set, no tools) — Case 3a
+            ATIFStep(
+                step_id=4,
+                source="agent",
+                message="2 to the power of 5 is 32.",
+                timestamp="2023-11-14T22:13:26+00:00",
+                model_name="nvidia/nemotron-3-nano-30b-a3b",
+                metrics=ATIFStepMetrics(prompt_tokens=150, completion_tokens=30),
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_llm_2",
+                        "function_name": "nvidia/nemotron-3-nano-30b-a3b",
+                        "parent_id": "fn_react_agent",
+                        "parent_name": "react_agent",
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME + 6.0,
+                        "end_timestamp": _BASE_TIME + 8.0,
+                    },
+                },
+            ),
+            # Terminal step (no model_name, no tools) — Case 3b
+            ATIFStep(
+                step_id=5,
+                source="agent",
+                message="2 to the power of 5 is 32.",
+                timestamp="2023-11-14T22:13:29+00:00",
+                extra={
+                    "ancestry": {
+                        "function_id": "fn_react_agent",
+                        "function_name": "react_agent",
+                        "parent_id": "fn_outer_workflow",
+                        "parent_name": "power_of_two_agent",
+                    },
+                    "invocation": {
+                        "start_timestamp": _BASE_TIME + 8.5,
+                        "end_timestamp": _BASE_TIME + 9.0,
+                    },
+                },
+            ),
+        ],
+    )
+
+
+class TestFullParityTrajectory:
+    """Test the full Path A parity structure: workflow → workflow → LLM → tool → LLM."""
+
+    @pytest.fixture
+    def exporter(self):
+        return ConcreteATIFSpanExporter()
+
+    def test_parity_span_count(self, exporter):
+        """Full parity trajectory produces 5 spans: 2 workflow + 2 LLM + 1 tool."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        assert len(spans) == 5
+
+    def test_parity_span_names(self, exporter):
+        """Span names match expected Path A structure."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        names = [s.name for s in spans]
+        assert names == [
+            "power_of_two_agent",            # outer workflow
+            "react_agent",                   # inner workflow
+            "nvidia/nemotron-3-nano-30b-a3b",  # first LLM
+            "power_of_two",                  # tool
+            "nvidia/nemotron-3-nano-30b-a3b",  # final LLM
+        ]
+
+    def test_parity_span_kinds(self, exporter):
+        """Span kinds match expected types."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        kinds = [s.attributes["nat.span.kind"] for s in spans]
+        assert kinds == ["WORKFLOW", "WORKFLOW", "LLM", "TOOL", "LLM"]
+
+    def test_inner_workflow_parent(self, exporter):
+        """Inner workflow span is a child of the outer workflow span."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        outer_wf = spans[0]
+        inner_wf = spans[1]
+        assert outer_wf.parent is None
+        assert inner_wf.parent is not None
+        assert inner_wf.parent.context.span_id == outer_wf.context.span_id
+
+    def test_first_llm_parent(self, exporter):
+        """First LLM span is a child of the inner workflow."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        inner_wf = spans[1]
+        first_llm = spans[2]
+        assert first_llm.parent is not None
+        assert first_llm.parent.context.span_id == inner_wf.context.span_id
+
+    def test_tool_parent(self, exporter):
+        """Tool span is a child of the first LLM span."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        first_llm = spans[2]
+        tool_span = spans[3]
+        assert tool_span.parent is not None
+        assert tool_span.parent.context.span_id == first_llm.context.span_id
+
+    def test_final_llm_parent(self, exporter):
+        """Final LLM span is a child of the inner workflow."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        inner_wf = spans[1]
+        final_llm = spans[4]
+        assert final_llm.parent is not None
+        assert final_llm.parent.context.span_id == inner_wf.context.span_id
+
+    def test_final_llm_has_output(self, exporter):
+        """Final LLM span has the agent's final answer as output."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        final_llm = spans[4]
+        assert SpanAttributes.OUTPUT_VALUE.value in final_llm.attributes
+
+    def test_final_llm_has_token_metrics(self, exporter):
+        """Final LLM span has token count attributes."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        final_llm = spans[4]
+        assert final_llm.attributes[SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value] == 150
+        assert final_llm.attributes[SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value] == 30
+        assert final_llm.attributes[SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value] == 180
+
+    def test_workflow_output_set_from_final_llm(self, exporter):
+        """Workflow span output is also set from the final LLM answer."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        # The inner workflow is the active workflow_span when Case 3a fires,
+        # but the terminal step (Case 3b) also sets output on the workflow.
+        inner_wf = spans[1]
+        assert SpanAttributes.OUTPUT_VALUE.value in inner_wf.attributes
+
+    def test_shared_trace_id(self, exporter):
+        """All 5 spans share the same trace_id."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        trace_ids = {s.context.trace_id for s in spans}
+        assert len(trace_ids) == 1
+
+    def test_inner_workflow_end_time_covers_all(self, exporter):
+        """Inner workflow end_time is updated to cover the full trajectory."""
+        trajectory = _build_full_parity_trajectory()
+        spans = exporter._trajectory_to_spans(trajectory, timing_map={})
+        inner_wf = spans[1]
+        # The latest span end is from the terminal step: _BASE_TIME + 9.0
+        assert inner_wf.end_time >= ns_timestamp(_BASE_TIME + 8.0)
+
+
 class TestEventCollection:
     """Test that export() collects steps and triggers on WORKFLOW_END."""
 

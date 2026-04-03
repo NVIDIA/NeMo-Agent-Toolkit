@@ -23,8 +23,10 @@ validation before ATIF-native cutover.
 """
 
 import datetime
+import json
 import logging
 import os
+import time
 import typing
 from abc import abstractmethod
 from typing import Any
@@ -33,7 +35,6 @@ from typing import TypeVar
 from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.atif.atif_step_extra import AtifAncestry
 from nat.data_models.atif.atif_step_extra import AtifInvocationInfo
-from nat.data_models.atif.atif_step_extra import AtifStepExtra
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -42,7 +43,6 @@ from nat.data_models.span import Span
 from nat.data_models.span import SpanAttributes
 from nat.data_models.span import SpanContext
 from nat.data_models.span import SpanKind
-from nat.data_models.span import event_type_to_span_kind
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.processing_exporter import ProcessingExporter
 from nat.observability.mixin.serialize_mixin import SerializeMixin
@@ -139,42 +139,49 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                 end_ts = ist.event_timestamp
                 timing_map[uid] = (start_ts, end_ts)
 
+        # Debug: Dump raw IST event summary
+        logger.warning("=== RAW IST EVENTS (%d total) ===", len(steps))
+        for ist in steps:
+            fa = ist.function_ancestry
+            logger.warning(
+                "IST: type=%s state=%s UUID=%s name=%s fn=%s(%s) parent=%s(%s)",
+                ist.event_type, ist.event_state, ist.UUID[:8],
+                ist.payload.name,
+                fa.function_name, fa.function_id[:8] if fa.function_id else "?",
+                fa.parent_name, fa.parent_id[:8] if fa.parent_id else "?",
+            )
+        logger.warning("=== END RAW IST ===")
+
+        # Scan IST events for inner <workflow> FUNCTION pairs that the ATIF
+        # converter suppresses.  These become synthetic workflow spans to match
+        # Path A's span tree (which creates a span for every START/END pair).
+        inner_workflow_events: dict[str, dict[str, Any]] = {}
+        for ist in steps:
+            if ist.event_type == IntermediateStepType.FUNCTION_START and ist.payload.name == "<workflow>":
+                fa = ist.function_ancestry
+                inner_workflow_events[fa.function_id] = {
+                    "function_id": fa.function_id,
+                    "function_name": fa.function_name,
+                    "parent_id": fa.parent_id,
+                    "parent_name": fa.parent_name,
+                }
+
         converter = IntermediateStepToATIFConverter()
         trajectory = converter.convert(steps)
 
-        # DEBUG: Dump trajectory
-        import json
-        logger.warning("=== ATIF TRAJECTORY DEBUG (%d steps) ===", len(trajectory.steps))
-        for i, step in enumerate(trajectory.steps):
-            extra = step.extra or {}
-            tool_ancestries = extra.get("tool_ancestry", [])
-            step_info = {
-                "step_id": step.step_id,
-                "source": step.source,
-                "model_name": step.model_name,
-                "tool_calls": [tc.function_name for tc in (step.tool_calls or [])],
-                "ancestry": extra.get("ancestry"),
-                "tool_ancestry": [
-                    {"fn": ta.get("function_name"), "parent": ta.get("parent_name")}
-                    for ta in tool_ancestries
-                ],
-            }
-            logger.warning("ATIF[%d]: %s", i, json.dumps(step_info, default=str))
-        logger.warning("=== END ATIF DEBUG ===")
+        spans = self._trajectory_to_spans(trajectory, timing_map, inner_workflow_events)
 
-        spans = self._trajectory_to_spans(trajectory, timing_map)
-
-        # DEBUG: Log final span tree
-        logger.warning("=== SPAN TREE DEBUG ===")
+        # Debug: Log final span tree
+        logger.warning("=== SPAN TREE DEBUG (%d spans) ===", len(spans))
         for i, span in enumerate(spans):
-            parent_info = f"parent_span_id={span.parent.context.span_id}" if span.parent else "parent=None (ROOT)"
+            parent_info = f"parent={span.parent.name}" if span.parent else "parent=None (ROOT)"
             duration_ms = (span.end_time - span.start_time) / 1e6 if span.end_time else 0
             logger.warning(
-                "Span %d: name=%s, span_id=%s, %s, kind=%s, duration=%.2fms",
-                i, span.name, span.context.span_id, parent_info,
+                "Span %d: name=%s, %s, kind=%s, duration=%.2fms",
+                i, span.name, parent_info,
                 span.attributes.get("nat.span.kind", "?"), duration_ms,
             )
-        logger.warning("=== END SPAN TREE DEBUG ===")
+        logger.warning("=== END SPAN TREE ===")
 
         for span in spans:
             self._create_export_task(self._export_with_processing(span))
@@ -187,6 +194,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         self,
         trajectory: ATIFTrajectory,
         timing_map: dict[str, tuple[float, float]],
+        inner_workflow_events: dict[str, dict[str, Any]] | None = None,
     ) -> list[Span]:
         """Convert an ATIFTrajectory into a list of Span objects.
 
@@ -199,8 +207,12 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             The converted trajectory.
         timing_map : dict
             UUID → (start_epoch, end_epoch) from raw IST event pairs.
+        inner_workflow_events : dict, optional
+            function_id → ancestry info for inner ``<workflow>`` FUNCTION
+            pairs that the ATIF converter suppresses.
         """
         spans: list[Span] = []
+        inner_workflow_events = inner_workflow_events or {}
 
         # Shared trace_id for all spans in this trajectory
         trace_id = self._context_state.workflow_trace_id.get()
@@ -217,12 +229,60 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             extra = step.extra or {}
 
             if step.source == "user":
-                span = self._create_workflow_span(step, shared_trace_id, extra, timing_map)
+                span = self._create_workflow_span(
+                    step, shared_trace_id, extra, timing_map,
+                    parent_workflow=workflow_span,
+                )
                 ancestry = extra.get("ancestry")
                 if ancestry:
                     fn_span_map[ancestry["function_id"]] = span
                 spans.append(span)
                 workflow_span = span
+
+                # Create inner <workflow> spans from suppressed FUNCTION events.
+                # These are wrapper functions that Path A renders as workflow spans.
+                for wf_fid, wf_info in inner_workflow_events.items():
+                    if wf_fid in fn_span_map:
+                        continue  # already created
+                    inner_ancestry = self._parse_ancestry(wf_info)
+                    inner_timing = timing_map.get(wf_fid)
+                    if inner_timing:
+                        inner_start = ns_timestamp(inner_timing[0])
+                        inner_end = ns_timestamp(inner_timing[1])
+                    else:
+                        inner_start, inner_end = span.start_time, span.end_time
+
+                    inner_parent = workflow_span
+                    if inner_ancestry and inner_ancestry.parent_id:
+                        found = fn_span_map.get(inner_ancestry.parent_id)
+                        if found is not None:
+                            inner_parent = found
+
+                    inner_ctx = SpanContext(trace_id=shared_trace_id)
+                    inner_name = wf_info.get("function_name", "<workflow>")
+                    inner_span = Span(
+                        name=inner_name,
+                        context=inner_ctx,
+                        parent=inner_parent.model_copy() if inner_parent else None,
+                        start_time=inner_start,
+                        attributes=self._build_base_attributes(
+                            event_type="FUNCTION_START",
+                            ancestry=inner_ancestry,
+                            trace_id=shared_trace_id,
+                            step_timestamp=step.timestamp,
+                            subspan_name=inner_name,
+                        ),
+                    )
+                    inner_span.set_attribute(
+                        f"{self._span_prefix}.span.kind", SpanKind.WORKFLOW.value,
+                    )
+                    self._set_session_attribute(inner_span)
+                    inner_span.end(end_time=inner_end)
+
+                    fn_span_map[wf_fid] = inner_span
+                    spans.append(inner_span)
+                    # Agent steps reference this as their parent; promote it
+                    workflow_span = inner_span
 
             elif step.source == "agent":
                 new_spans = self._create_agent_step_spans(
@@ -252,8 +312,14 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         trace_id: int,
         extra: dict[str, Any],
         timing_map: dict[str, tuple[float, float]],
+        parent_workflow: Span | None = None,
     ) -> Span:
-        """Create a workflow root span from a source='user' ATIF step."""
+        """Create a workflow span from a source='user' ATIF step.
+
+        For the first source='user' step this is the root span. For subsequent
+        source='user' steps (inner WORKFLOW_START events in nested workflows)
+        this creates a child workflow span parented to *parent_workflow*.
+        """
         ancestry = self._parse_ancestry(extra.get("ancestry"))
         invocation = self._parse_invocation(extra.get("invocation"))
 
@@ -266,12 +332,15 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         span = Span(
             name=span_name,
             context=span_ctx,
-            parent=None,
+            parent=parent_workflow.model_copy() if parent_workflow else None,
             start_time=start_ns,
             attributes=self._build_base_attributes(
                 event_type="WORKFLOW_START",
                 ancestry=ancestry,
                 trace_id=trace_id,
+                invocation=invocation,
+                step_timestamp=step.timestamp,
+                subspan_name=span_name,
             ),
         )
 
@@ -279,6 +348,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         if step.message:
             msg = step.message if isinstance(step.message, str) else str(step.message)
             span.set_attribute(SpanAttributes.INPUT_VALUE.value, msg)
+            span.set_attribute("input.value_obj", self._to_json_string(msg))
 
         span.set_attribute(f"{self._span_prefix}.span.kind", SpanKind.WORKFLOW.value)
         self._set_session_attribute(span)
@@ -314,11 +384,29 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         tool_calls = step.tool_calls or []
         has_tools = len(tool_calls) > 0
 
-        # Case 3: Terminal/final step — merge output into workflow span, don't create a span.
-        # Covers two cases:
-        #   a) No model_name, no tools (terminal step from WORKFLOW_END)
-        #   b) Has model_name, no tools (final LLM response before terminal step)
+        # Case 3: No tool calls.
         if not has_tools:
+            # Case 3a: Has model_name — standalone LLM span (final answer).
+            # Path A creates a separate LLM span for the final LLM response.
+            if step.model_name:
+                llm_span = self._create_final_llm_span(
+                    step, trace_id, extra, fn_span_map, workflow_span, timing_map,
+                )
+                spans.append(llm_span)
+                # Also set the workflow span output from the final answer
+                if workflow_span and step.message:
+                    msg = step.message if isinstance(step.message, str) else str(step.message)
+                    serialized, is_json = self._serialize_payload(msg)
+                    workflow_span.set_attribute(SpanAttributes.OUTPUT_VALUE.value, serialized)
+                    workflow_span.set_attribute(
+                        SpanAttributes.OUTPUT_MIME_TYPE.value,
+                        MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
+                    )
+                    workflow_span.set_attribute("output.value_obj", self._to_json_string(msg))
+                return spans
+
+            # Case 3b: No model_name — terminal step from WORKFLOW_END.
+            # Merge output into the workflow span.
             if workflow_span and step.message:
                 msg = step.message if isinstance(step.message, str) else str(step.message)
                 serialized, is_json = self._serialize_payload(msg)
@@ -327,18 +415,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                     SpanAttributes.OUTPUT_MIME_TYPE.value,
                     MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
                 )
-                # Preserve token metrics from final LLM response on workflow span
-                if step.metrics:
-                    workflow_span.set_attribute(
-                        SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value,
-                        step.metrics.prompt_tokens or 0,
-                    )
-                    workflow_span.set_attribute(
-                        SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value,
-                        step.metrics.completion_tokens or 0,
-                    )
-                    total = (step.metrics.prompt_tokens or 0) + (step.metrics.completion_tokens or 0)
-                    workflow_span.set_attribute(SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value, total)
+                workflow_span.set_attribute("output.value_obj", self._to_json_string(msg))
             return spans
 
         # Case 2: Orphan function step (no model_name, has tool_calls)
@@ -397,6 +474,9 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                 event_type=event_type,
                 ancestry=ancestry,
                 trace_id=trace_id,
+                invocation=invocation,
+                step_timestamp=step.timestamp,
+                subspan_name=span_name,
             ),
         )
 
@@ -413,6 +493,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                 SpanAttributes.OUTPUT_MIME_TYPE.value,
                 MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
             )
+            llm_span.set_attribute("output.value_obj", self._to_json_string(msg))
 
         # Set token metrics from step.metrics
         if step.metrics:
@@ -514,6 +595,9 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                 event_type=event_type,
                 ancestry=tool_ancestry,
                 trace_id=trace_id,
+                invocation=tool_invocation,
+                step_timestamp=step.timestamp,
+                subspan_name=span_name,
             ),
         )
 
@@ -529,6 +613,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                 SpanAttributes.INPUT_MIME_TYPE.value,
                 MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
             )
+            fn_span.set_attribute("input.value_obj", self._to_json_string(tool_call.arguments))
 
         # Set output from observation
         if step.observation and step.observation.results and index < len(step.observation.results):
@@ -541,6 +626,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                     SpanAttributes.OUTPUT_MIME_TYPE.value,
                     MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
                 )
+                fn_span.set_attribute("output.value_obj", self._to_json_string(content))
 
         fn_span.end(end_time=end_ns)
         return fn_span
@@ -584,6 +670,9 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                 event_type=event_type,
                 ancestry=tool_ancestry,
                 trace_id=trace_id,
+                invocation=tool_invocation,
+                step_timestamp=step.timestamp,
+                subspan_name=span_name,
             ),
         )
 
@@ -599,6 +688,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                 SpanAttributes.INPUT_MIME_TYPE.value,
                 MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
             )
+            tool_span.set_attribute("input.value_obj", self._to_json_string(tool_call.arguments))
 
         # Set output from observation
         if step.observation and step.observation.results and index < len(step.observation.results):
@@ -611,9 +701,72 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                     SpanAttributes.OUTPUT_MIME_TYPE.value,
                     MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
                 )
+                tool_span.set_attribute("output.value_obj", self._to_json_string(content))
 
         tool_span.end(end_time=end_ns)
         return tool_span
+
+    def _create_final_llm_span(
+        self,
+        step: "ATIFStep",
+        trace_id: int,
+        extra: dict[str, Any],
+        fn_span_map: dict[str, Span],
+        workflow_span: Span | None,
+        timing_map: dict[str, tuple[float, float]],
+    ) -> Span:
+        """Create a standalone LLM span for the final answer (no tool calls)."""
+        ancestry = self._parse_ancestry(extra.get("ancestry"))
+        invocation = self._parse_invocation(extra.get("invocation"))
+
+        start_ns, end_ns = self._resolve_timing(invocation, step.timestamp, ancestry, timing_map)
+        parent_span = self._resolve_parent(ancestry, fn_span_map, workflow_span)
+
+        span_ctx = SpanContext(trace_id=trace_id)
+        span_name = step.model_name or (ancestry.function_name if ancestry else None) or "agent"
+
+        llm_span = Span(
+            name=span_name,
+            context=span_ctx,
+            parent=parent_span.model_copy() if parent_span else None,
+            start_time=start_ns,
+            attributes=self._build_base_attributes(
+                event_type="LLM_START",
+                ancestry=ancestry,
+                trace_id=trace_id,
+                invocation=invocation,
+                step_timestamp=step.timestamp,
+                subspan_name=span_name,
+            ),
+        )
+
+        llm_span.set_attribute(f"{self._span_prefix}.span.kind", SpanKind.LLM.value)
+        self._set_session_attribute(llm_span)
+
+        if step.message:
+            msg = step.message if isinstance(step.message, str) else str(step.message)
+            serialized, is_json = self._serialize_payload(msg)
+            llm_span.set_attribute(SpanAttributes.OUTPUT_VALUE.value, serialized)
+            llm_span.set_attribute(
+                SpanAttributes.OUTPUT_MIME_TYPE.value,
+                MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
+            )
+            llm_span.set_attribute("output.value_obj", self._to_json_string(msg))
+
+        if step.metrics:
+            llm_span.set_attribute(
+                SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value,
+                step.metrics.prompt_tokens or 0,
+            )
+            llm_span.set_attribute(
+                SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value,
+                step.metrics.completion_tokens or 0,
+            )
+            total = (step.metrics.prompt_tokens or 0) + (step.metrics.completion_tokens or 0)
+            llm_span.set_attribute(SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value, total)
+
+        llm_span.end(end_time=end_ns)
+        return llm_span
 
     # ------------------------------------------------------------------
     # Helpers
@@ -690,7 +843,6 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             return ts_ns, ts_ns
 
         # Last resort: current time
-        import time
         now_ns = int(time.time() * 1e9)
         return now_ns, now_ns
 
@@ -699,6 +851,9 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         event_type: str,
         ancestry: AtifAncestry | None,
         trace_id: int,
+        invocation: AtifInvocationInfo | None = None,
+        step_timestamp: str | None = None,
+        subspan_name: str | None = None,
     ) -> dict[str, Any]:
         """Build the common set of span attributes matching Path A parity."""
         attrs: dict[str, Any] = {
@@ -711,11 +866,41 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             f"{self._span_prefix}.function.parent_name": (
                 ancestry.parent_name if ancestry and ancestry.parent_name else "unknown"
             ),
+            f"{self._span_prefix}.subspan.name": subspan_name or (
+                ancestry.function_name if ancestry else ""
+            ),
+            f"{self._span_prefix}.event_timestamp": step_timestamp or "",
+            f"{self._span_prefix}.framework": (
+                invocation.framework if invocation and invocation.framework else "unknown"
+            ),
             f"{self._span_prefix}.workflow.trace_id": f"{trace_id:032x}" if trace_id else "unknown",
             f"{self._span_prefix}.conversation.id": self._context_state.conversation_id.get() or "unknown",
             f"{self._span_prefix}.workflow.run_id": self._context_state.workflow_run_id.get() or "unknown",
         }
         return attrs
+
+    def _to_json_string(self, data: Any) -> str:
+        """Transform payload into a JSON string for span attributes.
+
+        Mirrors Path A's ``SpanExporter._to_json_string`` for parity.
+        """
+        def _normalize(obj: Any) -> Any:
+            if hasattr(obj, 'model_dump'):
+                return _normalize(obj.model_dump(mode='json', exclude_none=True))
+            if isinstance(obj, dict):
+                normalized = {k: _normalize(v) for k, v in obj.items() if v is not None}
+                if 'value' in normalized and normalized['value'] is not None:
+                    return _normalize(normalized['value'])
+                return normalized
+            if isinstance(obj, (list, tuple)):
+                return [_normalize(item) for item in obj]
+            return obj
+
+        try:
+            return json.dumps(_normalize(data), default=str)
+        except Exception as e:
+            logger.debug("Span attribute serialization failed, using str fallback: %s", e)
+            return json.dumps(str(data))
 
     def _set_session_attribute(self, span: Span) -> None:
         """Set session.id from conversation_id for Phoenix session grouping."""
