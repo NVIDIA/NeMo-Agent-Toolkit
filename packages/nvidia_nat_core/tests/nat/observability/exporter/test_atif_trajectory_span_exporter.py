@@ -722,19 +722,15 @@ class TestOrphanFunctionSteps:
         assert pow2_span.parent.context.span_id == workflow_span.context.span_id
 
     def test_orphan_nested_parent(self, exporter):
-        """calculator__multiply finds power_of_two as its parent."""
+        """calculator__multiply finds power_of_two as its parent via deferred resolution."""
         trajectory = _build_orphan_function_trajectory()
         spans = exporter._trajectory_to_spans(trajectory, timing_map={})
         pow2_span = next(s for s in spans if s.name == "power_of_two")
         mul_span = next(s for s in spans if s.name == "calculator__multiply")
-        # calculator__multiply.parent_id = "uuid-pow2" → should find power_of_two
-        # BUT: calculator__multiply is processed BEFORE power_of_two (appears first in steps)
-        # So it can't find uuid-pow2 yet → falls back to workflow span
-        # This is a known ordering issue when orphan steps arrive inner-first
-        # (the converter sorts by event_timestamp, and inner functions END before outer ones)
-        workflow_span = spans[0]
+        # calculator__multiply is processed BEFORE power_of_two (inner END first),
+        # but the deferred parent resolution pass fixes this after all spans are registered.
         assert mul_span.parent is not None
-        assert mul_span.parent.context.span_id == workflow_span.context.span_id
+        assert mul_span.parent.context.span_id == pow2_span.context.span_id
 
     def test_orphan_timing_from_timing_map(self, exporter):
         """Orphan function spans get timing from timing_map."""

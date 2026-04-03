@@ -178,6 +178,8 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         # function_id → most-recently-created Span for parent lookup
         fn_span_map: dict[str, Span] = {}
         workflow_span: Span | None = None
+        # Deferred parent resolution for spans whose parent_id wasn't in fn_span_map yet
+        pending_parents: list[tuple[Span, AtifAncestry]] = []
 
         for step in trajectory.steps:
             extra = step.extra or {}
@@ -193,8 +195,16 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             elif step.source == "agent":
                 new_spans = self._create_agent_step_spans(
                     step, shared_trace_id, extra, fn_span_map, workflow_span, timing_map,
+                    pending_parents,
                 )
                 spans.extend(new_spans)
+
+        # Second pass: resolve deferred parents now that all spans are registered
+        for span, ancestry in pending_parents:
+            if ancestry.parent_id:
+                found = fn_span_map.get(ancestry.parent_id)
+                if found is not None:
+                    span.parent = found.model_copy()
 
         # Update workflow span end_time to cover the full trajectory
         if workflow_span and spans:
@@ -254,6 +264,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         fn_span_map: dict[str, Span],
         workflow_span: Span | None,
         timing_map: dict[str, tuple[float, float]],
+        pending_parents: list[tuple[Span, AtifAncestry]] | None = None,
     ) -> list[Span]:
         """Create spans for a source='agent' ATIF step.
 
@@ -311,6 +322,11 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
 
                 if t_ancestry:
                     fn_span_map[t_ancestry.function_id] = fn_span
+                    # If parent_id wasn't resolved, defer for second pass
+                    if (pending_parents is not None
+                            and t_ancestry.parent_id
+                            and t_ancestry.parent_id not in fn_span_map):
+                        pending_parents.append((fn_span, t_ancestry))
 
             return spans
 
