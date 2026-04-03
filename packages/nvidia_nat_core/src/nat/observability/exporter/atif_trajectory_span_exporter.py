@@ -142,7 +142,39 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         converter = IntermediateStepToATIFConverter()
         trajectory = converter.convert(steps)
 
+        # DEBUG: Dump trajectory
+        import json
+        logger.warning("=== ATIF TRAJECTORY DEBUG (%d steps) ===", len(trajectory.steps))
+        for i, step in enumerate(trajectory.steps):
+            extra = step.extra or {}
+            tool_ancestries = extra.get("tool_ancestry", [])
+            step_info = {
+                "step_id": step.step_id,
+                "source": step.source,
+                "model_name": step.model_name,
+                "tool_calls": [tc.function_name for tc in (step.tool_calls or [])],
+                "ancestry": extra.get("ancestry"),
+                "tool_ancestry": [
+                    {"fn": ta.get("function_name"), "parent": ta.get("parent_name")}
+                    for ta in tool_ancestries
+                ],
+            }
+            logger.warning("ATIF[%d]: %s", i, json.dumps(step_info, default=str))
+        logger.warning("=== END ATIF DEBUG ===")
+
         spans = self._trajectory_to_spans(trajectory, timing_map)
+
+        # DEBUG: Log final span tree
+        logger.warning("=== SPAN TREE DEBUG ===")
+        for i, span in enumerate(spans):
+            parent_info = f"parent_span_id={span.parent.context.span_id}" if span.parent else "parent=None (ROOT)"
+            duration_ms = (span.end_time - span.start_time) / 1e6 if span.end_time else 0
+            logger.warning(
+                "Span %d: name=%s, span_id=%s, %s, kind=%s, duration=%.2fms",
+                i, span.name, span.context.span_id, parent_info,
+                span.attributes.get("nat.span.kind", "?"), duration_ms,
+            )
+        logger.warning("=== END SPAN TREE DEBUG ===")
 
         for span in spans:
             self._create_export_task(self._export_with_processing(span))
@@ -282,8 +314,11 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         tool_calls = step.tool_calls or []
         has_tools = len(tool_calls) > 0
 
-        # Case 3: Terminal step — merge output into workflow span, don't create a span
-        if not has_tools and not step.model_name:
+        # Case 3: Terminal/final step — merge output into workflow span, don't create a span.
+        # Covers two cases:
+        #   a) No model_name, no tools (terminal step from WORKFLOW_END)
+        #   b) Has model_name, no tools (final LLM response before terminal step)
+        if not has_tools:
             if workflow_span and step.message:
                 msg = step.message if isinstance(step.message, str) else str(step.message)
                 serialized, is_json = self._serialize_payload(msg)
@@ -292,6 +327,18 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                     SpanAttributes.OUTPUT_MIME_TYPE.value,
                     MimeTypes.JSON.value if is_json else MimeTypes.TEXT.value,
                 )
+                # Preserve token metrics from final LLM response on workflow span
+                if step.metrics:
+                    workflow_span.set_attribute(
+                        SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value,
+                        step.metrics.prompt_tokens or 0,
+                    )
+                    workflow_span.set_attribute(
+                        SpanAttributes.LLM_TOKEN_COUNT_COMPLETION.value,
+                        step.metrics.completion_tokens or 0,
+                    )
+                    total = (step.metrics.prompt_tokens or 0) + (step.metrics.completion_tokens or 0)
+                    workflow_span.set_attribute(SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value, total)
             return spans
 
         # Case 2: Orphan function step (no model_name, has tool_calls)
@@ -339,7 +386,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         parent_span = self._resolve_parent(ancestry, fn_span_map, workflow_span)
 
         span_ctx = SpanContext(trace_id=trace_id)
-        span_name = (ancestry.function_name if ancestry else None) or step.model_name or "agent"
+        span_name = step.model_name or (ancestry.function_name if ancestry else None) or "agent"
 
         llm_span = Span(
             name=span_name,
@@ -387,14 +434,29 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         if ancestry:
             fn_span_map[ancestry.function_id] = llm_span
 
-        # Create tool/function child spans
+        # Create tool/function child spans.
+        # The converter may produce duplicate/misaligned entries when both TOOL_END
+        # and FUNCTION_END fire for the same function. The TOOL_END entry uses the
+        # caller's ancestry (misaligned), while FUNCTION_END uses the function's own
+        # ancestry. Skip misaligned entries to avoid duplicate spans.
+        seen_tool_names: set[str] = set()
         for i, tc in enumerate(tool_calls):
+            tc_name = tc.function_name if hasattr(tc, "function_name") else str(tc)
             t_ancestry = self._parse_ancestry(
                 tool_ancestries_raw[i] if i < len(tool_ancestries_raw) else None
             )
             t_invocation = self._parse_invocation(
                 tool_invocations_raw[i] if i < len(tool_invocations_raw) else None
             )
+
+            # Skip misaligned entries: tool_ancestry.function_name doesn't match tool_call name
+            if t_ancestry and t_ancestry.function_name != tc_name:
+                continue
+
+            # Skip duplicates (same function_name already processed)
+            if tc_name in seen_tool_names:
+                continue
+            seen_tool_names.add(tc_name)
 
             tool_span = self._create_tool_span(
                 tool_call=tc,
@@ -412,6 +474,11 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             # Register for nested lookups
             if t_ancestry:
                 fn_span_map[t_ancestry.function_id] = tool_span
+                # If parent_id wasn't resolved (tool defaults to llm_span), defer
+                if (pending_parents is not None
+                        and t_ancestry.parent_id
+                        and t_ancestry.parent_id not in fn_span_map):
+                    pending_parents.append((tool_span, t_ancestry))
 
         return spans
 
