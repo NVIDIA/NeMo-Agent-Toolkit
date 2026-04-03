@@ -17,11 +17,15 @@
 Drives a tool-calling loop using tool stubs from the dataset.
 Each scenario's available_tools are converted to OpenAI tool schemas,
 bound to the LLM, and tool call intents are captured for TSQ scoring.
+
+If the model returns ``<tool_call>`` XML (e.g. Qwen 3.5 thinking mode) instead of
+structured tool_calls, the XML is parsed into tool calls automatically.
 """
 
 import hashlib
 import json
 import logging
+import re
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -34,6 +38,40 @@ from ..common.tool_intent_stubs import set_current_scenario_id
 from .config import AgentLeaderboardWorkflowConfig
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_xml_tool_calls(content: str) -> list[dict] | None:
+    """Parse ``<tool_call>`` XML blocks from model output (e.g. Qwen 3.5 thinking mode).
+
+    Returns a list of {"name": ..., "args": {...}} dicts, or None if no tool calls found.
+    """
+    content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+
+    tool_call_blocks = re.findall(r'<tool_call>(.*?)</tool_call>', content, re.DOTALL)
+    if not tool_call_blocks:
+        return None
+
+    calls = []
+    for block in tool_call_blocks:
+        func_match = re.search(r'<function=([^>]+)>', block)
+        if not func_match:
+            continue
+        func_name = func_match.group(1).strip()
+
+        params = {}
+        for param_match in re.finditer(
+            r'<parameter=([^>]+)>(.*?)</parameter>', block, re.DOTALL
+        ):
+            param_name = param_match.group(1).strip()
+            param_value = param_match.group(2).strip()
+            try:
+                params[param_name] = json.loads(param_value)
+            except (json.JSONDecodeError, ValueError):
+                params[param_name] = param_value
+
+        calls.append({"name": func_name, "args": params})
+
+    return calls if calls else None
 
 
 def _tool_schema_to_openai(tool: dict) -> dict:
@@ -100,12 +138,26 @@ async def agent_leaderboard_workflow(config: AgentLeaderboardWorkflowConfig, bui
             for step in range(config.max_steps):
                 response = await bound_llm.ainvoke(messages)
 
-                if not response.tool_calls:
+                tool_calls = response.tool_calls or []
+
+                # # XML fallback (disabled — switchyard-v2 fixes native tool call parsing)
+                # if not tool_calls:
+                #     content = str(response.content) if response.content else ""
+                #     xml_calls = _parse_xml_tool_calls(content)
+                #     if xml_calls:
+                #         logger.debug("Parsed %d tool call(s) from XML in response content", len(xml_calls))
+                #         tool_calls = [
+                #             {"name": c["name"], "args": c["args"], "id": f"xml_{step}_{i}"}
+                #             for i, c in enumerate(xml_calls)
+                #         ]
+
+                if not tool_calls:
                     break
 
-                for tc in response.tool_calls:
+                for tc in tool_calls:
                     name = tc["name"]
                     args = dict(tc["args"]) if tc["args"] else {}
+                    call_id = tc.get("id", f"call_{step}_{name}")
 
                     intent_buffer.record(name, args)
 
@@ -117,12 +169,12 @@ async def agent_leaderboard_workflow(config: AgentLeaderboardWorkflowConfig, bui
                             tool_calls=[{
                                 "name": name,
                                 "args": args,
-                                "id": tc.get("id", f"call_{step}_{name}"),
+                                "id": call_id,
                             }],
                         ))
                     messages.append(ToolMessage(
                         content=canned,
-                        tool_call_id=tc.get("id", f"call_{step}_{name}"),
+                        tool_call_id=call_id,
                     ))
 
             # Return captured intents as JSON

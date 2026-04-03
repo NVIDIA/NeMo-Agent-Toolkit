@@ -20,6 +20,7 @@ Tool calls are executed against ToolTalk's simulated database backends via ToolE
 
 import json
 import logging
+import re
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -30,6 +31,32 @@ from .config import ToolTalkApiMode
 from .config import ToolTalkWorkflowConfig
 
 logger = logging.getLogger(__name__)
+
+# Regex patterns for Qwen-style XML tool calls:
+#   <tool_call><function=name><parameter=key>value</parameter>...</function></tool_call>
+_TOOL_CALL_RE = re.compile(r"<tool_call>\s*<function=(\w+)>(.*?)</function>\s*</tool_call>", re.DOTALL)
+_PARAM_RE = re.compile(r"<parameter=(\w+)>\s*(.*?)\s*</parameter>", re.DOTALL)
+
+
+def _parse_xml_tool_calls(content: str) -> list[dict]:
+    """Parse Qwen-style XML tool calls from raw response content.
+
+    Returns list of dicts with 'name' and 'args' keys, matching LangChain tool_calls format.
+    """
+    results = []
+    for match in _TOOL_CALL_RE.finditer(content):
+        fn_name = match.group(1)
+        params_block = match.group(2)
+        args = {}
+        for pm in _PARAM_RE.finditer(params_block):
+            key = pm.group(1)
+            value = pm.group(2)
+            try:
+                args[key] = json.loads(value)
+            except (json.JSONDecodeError, ValueError):
+                args[key] = value
+        results.append({"name": fn_name, "args": args})
+    return results
 
 
 def _build_tool_schemas(apis_used, disable_docs: bool = False) -> list[dict]:
@@ -103,6 +130,18 @@ async def tooltalk_workflow(config: ToolTalkWorkflowConfig, builder: Builder):
     from langchain_core.messages import HumanMessage
     from langchain_core.messages import SystemMessage
     from langchain_core.messages import ToolMessage
+
+    # Guard against tooltalk's transitive torch/transformers import chain
+    # (tooltalk.apis.utils imports torch+transformers at top level for HFVectorizer,
+    # which isn't needed for benchmark evaluation)
+    import sys
+    _need_mock = "torch" not in sys.modules
+    if _need_mock:
+        import types
+        for mod_name in ("torch", "transformers"):
+            if mod_name not in sys.modules:
+                sys.modules[mod_name] = types.ModuleType(mod_name)
+
     from tooltalk.apis import ALL_APIS
     from tooltalk.apis import APIS_BY_NAME
     from tooltalk.apis import SUITES_BY_NAME
@@ -184,9 +223,18 @@ async def tooltalk_workflow(config: ToolTalkWorkflowConfig, builder: Builder):
                 # Call LLM
                 response = await bound_llm.ainvoke(lc_messages)
 
-                if response.tool_calls:
+                # Fallback: parse Qwen XML tool calls from content if server
+                # didn't return structured tool_calls
+                tool_calls = response.tool_calls
+                if not tool_calls and isinstance(response.content, str):
+                    parsed = _parse_xml_tool_calls(response.content)
+                    if parsed:
+                        tool_calls = parsed
+                        logger.debug("Parsed %d XML tool call(s) from content", len(parsed))
+
+                if tool_calls:
                     # LLM made a tool call — execute it via ToolExecutor
-                    tc = response.tool_calls[0]
+                    tc = tool_calls[0]
                     api_name = tc["name"]
                     parameters = tc["args"]
 

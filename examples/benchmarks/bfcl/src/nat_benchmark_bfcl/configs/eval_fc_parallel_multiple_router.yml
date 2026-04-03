@@ -1,0 +1,84 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# BFCL v3 — Native FC on parallel_multiple split — Switchyard Router
+#
+# 199 items requiring both parallel and sequential function calls.
+#
+# Usage: nat eval --config_file examples/benchmarks/bfcl/configs/eval_fc_parallel_multiple_router.yml
+
+llms:
+  dynamo_llm:
+    _type: dynamo
+    model_name: Qwen/Qwen3.5
+    base_url: ${DYNAMO_BASE_URL:-http://localhost:8000/v1}
+    api_key: ${DYNAMO_API_KEY:-dummy}
+    max_tokens: 512
+    temperature: 0.0
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "bfcl-pm-router-{uuid}"
+    nvext_prefix_total_requests: 10
+    nvext_prefix_osl: MEDIUM
+    nvext_prefix_iat: MEDIUM
+
+workflow:
+  _type: bfcl_fc_workflow
+  llm_name: dynamo_llm
+
+eval:
+  general:
+    output_dir: .tmp/nat/benchmarks/bfcl/parallel_multiple_router/
+    workflow_alias: bfcl_pm_router
+    per_input_user_id: false
+    max_concurrency: 5
+    dataset:
+      _type: bfcl
+      file_path: ${BFCL_PARALLEL_MULTIPLE_FILE}
+      test_category: parallel_multiple
+      structure:
+        question_key: question
+        answer_key: answer
+
+    profiler:
+      compute_llm_metrics: true
+      token_uniqueness_forecast: true
+      workflow_runtime_forecast: true
+      csv_exclude_io_text: true
+      prompt_caching_prefixes:
+        enable: true
+        min_frequency: 0.1
+      bottleneck_analysis:
+        enable_nested_stack: true
+      concurrency_spike_analysis:
+        enable: true
+        spike_threshold: 10
+      prediction_trie:
+        enable: true
+      dynamo_metrics:
+        enable: true
+        prometheus_url: ${PROMETHEUS_URL:-http://localhost:9090}
+        query_range: 30s
+        collect_kv_cache: true
+        collect_ttft: true
+        collect_itl: true
+        collect_inflight_requests: true
+        collect_throughput: true
+        collect_token_throughput: true
+
+  evaluators:
+    bfcl:
+      _type: bfcl_evaluator
+      test_category: parallel_multiple
+      language: Python
