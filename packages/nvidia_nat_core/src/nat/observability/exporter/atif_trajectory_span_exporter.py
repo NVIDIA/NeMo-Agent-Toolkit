@@ -794,7 +794,8 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         """Resolve the parent span for a given ancestry.
 
         Lookup order:
-        1. ancestry.function_id in fn_span_map (enclosing scope — e.g. inner
+
+        1. ancestry.function_id in fn_span_map (enclosing scope, e.g. inner
            ``<workflow>`` wrapper that the event runs within)
         2. ancestry.parent_id in fn_span_map (direct parent callable)
         3. workflow_span (fall back to root)
