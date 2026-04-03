@@ -145,10 +145,14 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             fa = ist.function_ancestry
             logger.warning(
                 "IST: type=%s state=%s UUID=%s name=%s fn=%s(%s) parent=%s(%s)",
-                ist.event_type, ist.event_state, ist.UUID[:8],
+                ist.event_type,
+                ist.event_state,
+                ist.UUID[:8],
                 ist.payload.name,
-                fa.function_name, fa.function_id[:8] if fa.function_id else "?",
-                fa.parent_name, fa.parent_id[:8] if fa.parent_id else "?",
+                fa.function_name,
+                fa.function_id[:8] if fa.function_id else "?",
+                fa.parent_name,
+                fa.parent_id[:8] if fa.parent_id else "?",
             )
         logger.warning("=== END RAW IST ===")
 
@@ -178,8 +182,11 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             duration_ms = (span.end_time - span.start_time) / 1e6 if span.end_time else 0
             logger.warning(
                 "Span %d: name=%s, %s, kind=%s, duration=%.2fms",
-                i, span.name, parent_info,
-                span.attributes.get("nat.span.kind", "?"), duration_ms,
+                i,
+                span.name,
+                parent_info,
+                span.attributes.get("nat.span.kind", "?"),
+                duration_ms,
             )
         logger.warning("=== END SPAN TREE ===")
 
@@ -230,7 +237,10 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
 
             if step.source == "user":
                 span = self._create_workflow_span(
-                    step, shared_trace_id, extra, timing_map,
+                    step,
+                    shared_trace_id,
+                    extra,
+                    timing_map,
                     parent_workflow=workflow_span,
                 )
                 ancestry = extra.get("ancestry")
@@ -274,7 +284,8 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                         ),
                     )
                     inner_span.set_attribute(
-                        f"{self._span_prefix}.span.kind", SpanKind.WORKFLOW.value,
+                        f"{self._span_prefix}.span.kind",
+                        SpanKind.WORKFLOW.value,
                     )
                     self._set_session_attribute(inner_span)
                     inner_span.end(end_time=inner_end)
@@ -286,7 +297,12 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
 
             elif step.source == "agent":
                 new_spans = self._create_agent_step_spans(
-                    step, shared_trace_id, extra, fn_span_map, workflow_span, timing_map,
+                    step,
+                    shared_trace_id,
+                    extra,
+                    fn_span_map,
+                    workflow_span,
+                    timing_map,
                     pending_parents,
                 )
                 spans.extend(new_spans)
@@ -390,7 +406,12 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             # Path A creates a separate LLM span for the final LLM response.
             if step.model_name:
                 llm_span = self._create_final_llm_span(
-                    step, trace_id, extra, fn_span_map, workflow_span, timing_map,
+                    step,
+                    trace_id,
+                    extra,
+                    fn_span_map,
+                    workflow_span,
+                    timing_map,
                 )
                 spans.append(llm_span)
                 # Also set the workflow span output from the final answer
@@ -424,12 +445,9 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         # Create a single function span instead of LLM + tool.
         if has_tools and not step.model_name:
             for i, tc in enumerate(tool_calls):
-                t_ancestry = self._parse_ancestry(
-                    tool_ancestries_raw[i] if i < len(tool_ancestries_raw) else None
-                )
-                t_invocation = self._parse_invocation(
-                    tool_invocations_raw[i] if i < len(tool_invocations_raw) else None
-                )
+                t_ancestry = self._parse_ancestry(tool_ancestries_raw[i] if i < len(tool_ancestries_raw) else None)
+                t_invocation = self._parse_invocation(tool_invocations_raw[i] if i <
+                                                      len(tool_invocations_raw) else None)
 
                 fn_span = self._create_function_span(
                     tool_call=tc,
@@ -447,8 +465,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
                 if t_ancestry:
                     fn_span_map[t_ancestry.function_id] = fn_span
                     # If parent_id wasn't resolved, defer for second pass
-                    if (pending_parents is not None
-                            and t_ancestry.parent_id
+                    if (pending_parents is not None and t_ancestry.parent_id
                             and t_ancestry.parent_id not in fn_span_map):
                         pending_parents.append((fn_span, t_ancestry))
 
@@ -525,12 +542,8 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         seen_tool_names: set[str] = set()
         for i, tc in enumerate(tool_calls):
             tc_name = tc.function_name if hasattr(tc, "function_name") else str(tc)
-            t_ancestry = self._parse_ancestry(
-                tool_ancestries_raw[i] if i < len(tool_ancestries_raw) else None
-            )
-            t_invocation = self._parse_invocation(
-                tool_invocations_raw[i] if i < len(tool_invocations_raw) else None
-            )
+            t_ancestry = self._parse_ancestry(tool_ancestries_raw[i] if i < len(tool_ancestries_raw) else None)
+            t_invocation = self._parse_invocation(tool_invocations_raw[i] if i < len(tool_invocations_raw) else None)
 
             # Skip misaligned entries: tool_ancestry.function_name doesn't match tool_call name
             if t_ancestry and t_ancestry.function_name != tc_name:
@@ -558,9 +571,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             if t_ancestry:
                 fn_span_map[t_ancestry.function_id] = tool_span
                 # If parent_id wasn't resolved (tool defaults to llm_span), defer
-                if (pending_parents is not None
-                        and t_ancestry.parent_id
-                        and t_ancestry.parent_id not in fn_span_map):
+                if (pending_parents is not None and t_ancestry.parent_id and t_ancestry.parent_id not in fn_span_map):
                     pending_parents.append((tool_span, t_ancestry))
 
         return spans
@@ -864,19 +875,14 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
             f"{self._span_prefix}.event_type": event_type,
             f"{self._span_prefix}.function.id": ancestry.function_id if ancestry else "unknown",
             f"{self._span_prefix}.function.name": ancestry.function_name if ancestry else "unknown",
-            f"{self._span_prefix}.function.parent_id": (
-                ancestry.parent_id if ancestry and ancestry.parent_id else "unknown"
-            ),
-            f"{self._span_prefix}.function.parent_name": (
-                ancestry.parent_name if ancestry and ancestry.parent_name else "unknown"
-            ),
-            f"{self._span_prefix}.subspan.name": subspan_name or (
-                ancestry.function_name if ancestry else ""
-            ),
+            f"{self._span_prefix}.function.parent_id":
+                (ancestry.parent_id if ancestry and ancestry.parent_id else "unknown"),
+            f"{self._span_prefix}.function.parent_name":
+                (ancestry.parent_name if ancestry and ancestry.parent_name else "unknown"),
+            f"{self._span_prefix}.subspan.name": subspan_name or (ancestry.function_name if ancestry else ""),
             f"{self._span_prefix}.event_timestamp": step_timestamp or "",
-            f"{self._span_prefix}.framework": (
-                invocation.framework if invocation and invocation.framework else "unknown"
-            ),
+            f"{self._span_prefix}.framework":
+                (invocation.framework if invocation and invocation.framework else "unknown"),
             f"{self._span_prefix}.workflow.trace_id": f"{trace_id:032x}" if trace_id else "unknown",
             f"{self._span_prefix}.conversation.id": self._context_state.conversation_id.get() or "unknown",
             f"{self._span_prefix}.workflow.run_id": self._context_state.workflow_run_id.get() or "unknown",
@@ -888,6 +894,7 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
 
         Mirrors Path A's ``SpanExporter._to_json_string`` for parity.
         """
+
         def _normalize(obj: Any) -> Any:
             if hasattr(obj, 'model_dump'):
                 return _normalize(obj.model_dump(mode='json', exclude_none=True))

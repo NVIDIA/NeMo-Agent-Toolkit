@@ -22,7 +22,6 @@ import logging
 from abc import abstractmethod
 
 from nat.builder.context import ContextState
-from nat.data_models.span import Span
 from nat.observability.exporter.atif_trajectory_span_exporter import ATIFTrajectorySpanExporter
 from nat.plugins.opentelemetry.otel_span import OtelSpan
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanBatchProcessor
@@ -66,8 +65,7 @@ class ATIFOtelSpanExporter(ATIFTrajectorySpanExporter[OtelSpan]):
                 max_queue_size=max_queue_size,
                 drop_on_overflow=drop_on_overflow,
                 shutdown_timeout=shutdown_timeout,
-            )
-        )
+            ))
 
     async def export_processed(self, item: OtelSpan | list[OtelSpan]) -> None:
         """Export the processed span(s) with resource attributes."""

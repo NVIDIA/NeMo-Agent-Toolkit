@@ -32,11 +32,10 @@ class PhoenixTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
     endpoint: str = Field(
         description="Phoenix server endpoint for trace export (e.g., 'http://localhost:6006/v1/traces'")
     timeout: float = Field(default=30.0, description="Timeout in seconds for HTTP requests to Phoenix server")
-    use_atif: bool = Field(
-        default=False,
-        description="Use ATIF trajectory conversion path instead of direct IntermediateStep spans. "
-        "When enabled, IntermediateStep events are first converted to an ATIFTrajectory, "
-        "then span tree is reconstructed from ATIF ancestry/invocation metadata.")
+    use_atif: bool = Field(default=False,
+                           description="Use ATIF trajectory conversion path instead of direct IntermediateStep spans. "
+                           "When enabled, IntermediateStep events are first converted to an ATIFTrajectory, "
+                           "then span tree is reconstructed from ATIF ancestry/invocation metadata.")
 
 
 @register_telemetry_exporter(config_type=PhoenixTelemetryExporter)

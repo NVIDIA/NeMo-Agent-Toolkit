@@ -17,13 +17,13 @@
 import pytest
 
 from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.data_models.atif import ATIFAgentConfig
 from nat.data_models.atif import ATIFObservation
 from nat.data_models.atif import ATIFObservationResult
 from nat.data_models.atif import ATIFStep
 from nat.data_models.atif import ATIFStepMetrics
 from nat.data_models.atif import ATIFToolCall
 from nat.data_models.atif import ATIFTrajectory
-from nat.data_models.atif import ATIFAgentConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
@@ -94,13 +94,11 @@ def _make_step(
 
 
 def _make_usage(prompt: int = 100, completion: int = 50) -> UsageInfo:
-    return UsageInfo(
-        token_usage=TokenUsageBaseModel(
-            prompt_tokens=prompt,
-            completion_tokens=completion,
-            total_tokens=prompt + completion,
-        ),
-    )
+    return UsageInfo(token_usage=TokenUsageBaseModel(
+        prompt_tokens=prompt,
+        completion_tokens=completion,
+        total_tokens=prompt + completion,
+    ), )
 
 
 def _build_simple_trajectory() -> ATIFTrajectory:
@@ -138,14 +136,14 @@ def _build_simple_trajectory() -> ATIFTrajectory:
                     ATIFToolCall(
                         tool_call_id="call_abc",
                         function_name="calculator__multiply",
-                        arguments={"a": 2, "b": 3},
+                        arguments={
+                            "a": 2, "b": 3
+                        },
                     ),
                 ],
-                observation=ATIFObservation(
-                    results=[
-                        ATIFObservationResult(source_call_id="call_abc", content="6"),
-                    ],
-                ),
+                observation=ATIFObservation(results=[
+                    ATIFObservationResult(source_call_id="call_abc", content="6"),
+                ], ),
                 extra={
                     "ancestry": {
                         "function_id": "fn_llm",
@@ -157,22 +155,18 @@ def _build_simple_trajectory() -> ATIFTrajectory:
                         "start_timestamp": _BASE_TIME + 0.5,
                         "end_timestamp": _BASE_TIME + 1.5,
                     },
-                    "tool_ancestry": [
-                        {
-                            "function_id": "fn_multiply",
-                            "function_name": "calculator__multiply",
-                            "parent_id": "fn_react_agent",
-                            "parent_name": "react_agent",
-                        },
-                    ],
-                    "tool_invocations": [
-                        {
-                            "start_timestamp": _BASE_TIME + 1.5,
-                            "end_timestamp": _BASE_TIME + 2.0,
-                            "invocation_id": "call_abc",
-                            "status": "completed",
-                        },
-                    ],
+                    "tool_ancestry": [{
+                        "function_id": "fn_multiply",
+                        "function_name": "calculator__multiply",
+                        "parent_id": "fn_react_agent",
+                        "parent_name": "react_agent",
+                    }, ],
+                    "tool_invocations": [{
+                        "start_timestamp": _BASE_TIME + 1.5,
+                        "end_timestamp": _BASE_TIME + 2.0,
+                        "invocation_id": "call_abc",
+                        "status": "completed",
+                    }, ],
                 },
             ),
             # Terminal step: no model_name, no tool_calls → merged into workflow span
@@ -238,15 +232,15 @@ def _build_nested_trajectory() -> ATIFTrajectory:
                     ATIFToolCall(
                         tool_call_id="call_mul",
                         function_name="calculator__multiply",
-                        arguments={"a": 5, "b": 5},
+                        arguments={
+                            "a": 5, "b": 5
+                        },
                     ),
                 ],
-                observation=ATIFObservation(
-                    results=[
-                        ATIFObservationResult(source_call_id="call_pow2", content="25"),
-                        ATIFObservationResult(source_call_id="call_mul", content="25"),
-                    ],
-                ),
+                observation=ATIFObservation(results=[
+                    ATIFObservationResult(source_call_id="call_pow2", content="25"),
+                    ATIFObservationResult(source_call_id="call_mul", content="25"),
+                ], ),
                 extra={
                     "ancestry": {
                         "function_id": "fn_llm",
@@ -346,14 +340,14 @@ def _build_orphan_function_trajectory() -> ATIFTrajectory:
                     ATIFToolCall(
                         tool_call_id="call_mul",
                         function_name="calculator__multiply",
-                        arguments={"a": 5, "b": 5},
+                        arguments={
+                            "a": 5, "b": 5
+                        },
                     ),
                 ],
-                observation=ATIFObservation(
-                    results=[
-                        ATIFObservationResult(source_call_id="call_mul", content="25"),
-                    ],
-                ),
+                observation=ATIFObservation(results=[
+                    ATIFObservationResult(source_call_id="call_mul", content="25"),
+                ], ),
                 extra={
                     "ancestry": {
                         "function_id": "uuid-multiply",
@@ -361,21 +355,19 @@ def _build_orphan_function_trajectory() -> ATIFTrajectory:
                         "parent_id": "uuid-pow2",
                         "parent_name": "power_of_two",
                     },
-                    "invocation": {"status": "completed"},
-                    "tool_ancestry": [
-                        {
-                            "function_id": "uuid-multiply",
-                            "function_name": "calculator__multiply",
-                            "parent_id": "uuid-pow2",
-                            "parent_name": "power_of_two",
-                        },
-                    ],
-                    "tool_invocations": [
-                        {
-                            "invocation_id": "call_uuid-multiply",
-                            "status": "completed",
-                        },
-                    ],
+                    "invocation": {
+                        "status": "completed"
+                    },
+                    "tool_ancestry": [{
+                        "function_id": "uuid-multiply",
+                        "function_name": "calculator__multiply",
+                        "parent_id": "uuid-pow2",
+                        "parent_name": "power_of_two",
+                    }, ],
+                    "tool_invocations": [{
+                        "invocation_id": "call_uuid-multiply",
+                        "status": "completed",
+                    }, ],
                 },
             ),
             # Orphan function step: power_of_two (child of <workflow>, which is suppressed)
@@ -391,11 +383,9 @@ def _build_orphan_function_trajectory() -> ATIFTrajectory:
                         arguments={"x": 5},
                     ),
                 ],
-                observation=ATIFObservation(
-                    results=[
-                        ATIFObservationResult(source_call_id="call_pow2", content="25"),
-                    ],
-                ),
+                observation=ATIFObservation(results=[
+                    ATIFObservationResult(source_call_id="call_pow2", content="25"),
+                ], ),
                 extra={
                     "ancestry": {
                         "function_id": "uuid-pow2",
@@ -403,21 +393,19 @@ def _build_orphan_function_trajectory() -> ATIFTrajectory:
                         "parent_id": "uuid-workflow-wrapper",
                         "parent_name": "<workflow>",
                     },
-                    "invocation": {"status": "completed"},
-                    "tool_ancestry": [
-                        {
-                            "function_id": "uuid-pow2",
-                            "function_name": "power_of_two",
-                            "parent_id": "uuid-workflow-wrapper",
-                            "parent_name": "<workflow>",
-                        },
-                    ],
-                    "tool_invocations": [
-                        {
-                            "invocation_id": "call_uuid-pow2",
-                            "status": "completed",
-                        },
-                    ],
+                    "invocation": {
+                        "status": "completed"
+                    },
+                    "tool_ancestry": [{
+                        "function_id": "uuid-pow2",
+                        "function_name": "power_of_two",
+                        "parent_id": "uuid-workflow-wrapper",
+                        "parent_name": "<workflow>",
+                    }, ],
+                    "tool_invocations": [{
+                        "invocation_id": "call_uuid-pow2",
+                        "status": "completed",
+                    }, ],
                 },
             ),
             # Terminal step
@@ -431,7 +419,9 @@ def _build_orphan_function_trajectory() -> ATIFTrajectory:
                         "function_id": "root",
                         "function_name": "root",
                     },
-                    "invocation": {"status": "completed"},
+                    "invocation": {
+                        "status": "completed"
+                    },
                 },
             ),
         ],
@@ -596,7 +586,9 @@ class TestTrajectoryToSpans:
                             "parent_id": None,
                             "parent_name": None,
                         },
-                        "invocation": {"status": "completed"},
+                        "invocation": {
+                            "status": "completed"
+                        },
                     },
                 ),
             ],
@@ -822,11 +814,9 @@ def _build_full_parity_trajectory() -> ATIFTrajectory:
                         arguments={"x": 5},
                     ),
                 ],
-                observation=ATIFObservation(
-                    results=[
-                        ATIFObservationResult(source_call_id="call_pow2", content="32"),
-                    ],
-                ),
+                observation=ATIFObservation(results=[
+                    ATIFObservationResult(source_call_id="call_pow2", content="32"),
+                ], ),
                 extra={
                     "ancestry": {
                         "function_id": "fn_llm_1",
@@ -838,22 +828,18 @@ def _build_full_parity_trajectory() -> ATIFTrajectory:
                         "start_timestamp": _BASE_TIME + 1.0,
                         "end_timestamp": _BASE_TIME + 3.0,
                     },
-                    "tool_ancestry": [
-                        {
-                            "function_id": "fn_power_of_two",
-                            "function_name": "power_of_two",
-                            "parent_id": "fn_llm_1",
-                            "parent_name": "nvidia/nemotron-3-nano-30b-a3b",
-                        },
-                    ],
-                    "tool_invocations": [
-                        {
-                            "start_timestamp": _BASE_TIME + 3.0,
-                            "end_timestamp": _BASE_TIME + 5.0,
-                            "invocation_id": "call_pow2",
-                            "status": "completed",
-                        },
-                    ],
+                    "tool_ancestry": [{
+                        "function_id": "fn_power_of_two",
+                        "function_name": "power_of_two",
+                        "parent_id": "fn_llm_1",
+                        "parent_name": "nvidia/nemotron-3-nano-30b-a3b",
+                    }, ],
+                    "tool_invocations": [{
+                        "start_timestamp": _BASE_TIME + 3.0,
+                        "end_timestamp": _BASE_TIME + 5.0,
+                        "invocation_id": "call_pow2",
+                        "status": "completed",
+                    }, ],
                 },
             ),
             # Final LLM response (model_name set, no tools) — Case 3a
@@ -919,10 +905,10 @@ class TestFullParityTrajectory:
         spans = exporter._trajectory_to_spans(trajectory, timing_map={})
         names = [s.name for s in spans]
         assert names == [
-            "power_of_two_agent",            # outer workflow
-            "react_agent",                   # inner workflow
+            "power_of_two_agent",  # outer workflow
+            "react_agent",  # inner workflow
             "nvidia/nemotron-3-nano-30b-a3b",  # first LLM
-            "power_of_two",                  # tool
+            "power_of_two",  # tool
             "nvidia/nemotron-3-nano-30b-a3b",  # final LLM
         ]
 
