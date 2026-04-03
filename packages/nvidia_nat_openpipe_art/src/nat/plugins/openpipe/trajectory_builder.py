@@ -31,6 +31,7 @@ from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.finetuning.interfaces.trajectory_builder import TrajectoryBuilder
 from nat.finetuning.utils.parsers.base_parser import parse_to_openai_messages
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
 from .config import ARTTrajectoryBuilderConfig
 
@@ -107,8 +108,6 @@ class ARTTrajectoryBuilder(TrajectoryBuilder):
         Returns:
             TrajectoryCollection: The collection of built trajectories grouped by example.
         """
-        from nat.data_models.evaluator import EvalOutputItem
-
         if run_id not in self.evaluation_runs:
             raise ValueError(f"No evaluation runs found for run_id: {run_id}")
 

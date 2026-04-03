@@ -24,7 +24,7 @@ from typing import Any
 import pandas as pd
 from pydantic import BaseModel
 
-from nat.data_models.atif import Trajectory
+from nat.atif import Trajectory
 from nat.data_models.evaluate_runtime import InferenceMetricsModel
 from nat.data_models.evaluate_runtime import ProfilerResults
 from nat.data_models.profiler import ProfilerConfig

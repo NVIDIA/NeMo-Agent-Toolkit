@@ -20,9 +20,21 @@ from pathlib import Path
 import click
 from tabulate import tabulate
 
-from nat.data_models.evaluate_runtime import EvaluationRunConfig
-from nat.data_models.evaluate_runtime import EvaluationRunOutput
-from nat.plugins.eval.runtime.evaluate import EvaluationRun
+FULL_EVAL_INSTALL_HINT = ("Full workflow evaluation requires optional dependencies that are not installed. "
+                          "Install with: pip install \"nvidia-nat[eval]\" "
+                          "(or pip install \"nvidia-nat-eval[full]\")")
+
+
+def _raise_full_eval_dependency_error(error: Exception):
+    raise ModuleNotFoundError(FULL_EVAL_INSTALL_HINT) from error
+
+
+try:
+    from nat.data_models.evaluate_runtime import EvaluationRunConfig
+    from nat.data_models.evaluate_runtime import EvaluationRunOutput
+    from nat.plugins.eval.runtime.evaluate import EvaluationRun
+except ImportError as import_error:  # pragma: no cover - guarded runtime path
+    _raise_full_eval_dependency_error(import_error)
 
 logger = logging.getLogger(__name__)
 

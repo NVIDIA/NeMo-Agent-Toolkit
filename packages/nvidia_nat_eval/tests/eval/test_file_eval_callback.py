@@ -23,10 +23,10 @@ import pytest
 from nat.data_models.config import Config
 from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
 from nat.eval.eval_callbacks import EvalResult
 from nat.eval.eval_callbacks import EvalResultItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 
 

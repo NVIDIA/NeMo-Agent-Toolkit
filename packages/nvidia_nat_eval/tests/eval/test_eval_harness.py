@@ -16,8 +16,8 @@
 from unittest.mock import AsyncMock
 from unittest.mock import patch
 
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 
 

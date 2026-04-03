@@ -23,7 +23,12 @@ NeMo Agent Toolkit provides a set of evaluators to run and evaluate workflows. I
 
 ## Prerequisites
 
-In addition to the base `nvidia-nat` package, you need to install the evaluation package to use `nat eval`. Install the evaluation extra package with one of the following commands, depending on whether you installed the NeMo Agent Toolkit from source or from a package.
+Choose the installation mode that matches your evaluation workflow:
+
+- Standalone ATIF evaluation (`EvaluationHarness` plus ATIF-native custom evaluators): install base `nvidia-nat-eval`.
+- Full `nat eval` runtime (workflow execution, dataset readers such as `csv`/`parquet`/`xls`, and config-driven evaluators): install `nvidia-nat[eval]`.
+
+For source installs:
 
 ::::{tab-set}
 :sync-group: install-tool
@@ -49,6 +54,12 @@ uv pip install "nvidia-nat-eval"
 
 ::::
 
+
+For package installs, use the NeMo Agent Toolkit `metapackage` to run `nat eval`:
+
+```bash
+uv pip install "nvidia-nat[eval]"
+```
 
 If you plan to run profiling via `nat eval` (for example, when `eval.general.profiler` is enabled), install the profiler package as well:
 

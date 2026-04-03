@@ -24,6 +24,8 @@ from fastapi import FastAPI
 from fastapi import HTTPException
 from fastapi import Request
 
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluator import EvalInput
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemRequest
 from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateItemResponse
@@ -33,8 +35,6 @@ from nat.front_ends.fastapi.fastapi_front_end_config import EvaluateStatusRespon
 from nat.front_ends.fastapi.routes.common_utils import RESPONSE_500
 from nat.front_ends.fastapi.routes.common_utils import _serialize_request
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
-from nat.plugins.eval.runtime.evaluate import EvaluationRunConfig
-from nat.plugins.eval.runtime.evaluate import EvaluationRunOutput
 from nat.runtime.loader import load_workflow
 from nat.runtime.session import SessionManager
 

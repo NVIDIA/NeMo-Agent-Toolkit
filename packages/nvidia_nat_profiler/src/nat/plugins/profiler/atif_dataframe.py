@@ -22,9 +22,9 @@ from typing import Any
 
 import pandas as pd
 
-from nat.data_models.atif import AtifAncestry
-from nat.data_models.atif import AtifStepExtra
-from nat.data_models.atif import Trajectory
+from nat.atif import AtifAncestry
+from nat.atif import AtifStepExtra
+from nat.atif import Trajectory
 from nat.data_models.intermediate_step import IntermediateStepType
 
 

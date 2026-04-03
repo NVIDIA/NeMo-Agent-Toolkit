@@ -27,10 +27,10 @@ from pydantic import Field
 from pydantic import field_validator
 from pydantic import model_validator
 
-from nat.data_models.atif.content import ContentPart
-from nat.data_models.atif.metrics import Metrics
-from nat.data_models.atif.observation import Observation
-from nat.data_models.atif.tool_call import ToolCall
+from nat.atif.content import ContentPart
+from nat.atif.metrics import Metrics
+from nat.atif.observation import Observation
+from nat.atif.tool_call import ToolCall
 
 
 class Step(BaseModel):
@@ -59,7 +59,7 @@ class Step(BaseModel):
         description="Qualitative or quantitative measure of effort",
     )
     # NAT deviation: defaults to "" so the converter can create steps without
-    # explicitly passing a message.  Harbor upstream requires this field.
+    # explicitly passing a message. Harbor upstream requires this field.
     message: str | list[ContentPart] = Field(
         default="",
         description=("The dialogue message. String for text-only content, or array of "

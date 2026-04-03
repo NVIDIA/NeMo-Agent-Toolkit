@@ -26,9 +26,9 @@ from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import model_validator
 
-from nat.data_models.atif.agent import Agent
-from nat.data_models.atif.final_metrics import FinalMetrics
-from nat.data_models.atif.step import Step
+from nat.atif.agent import Agent
+from nat.atif.final_metrics import FinalMetrics
+from nat.atif.step import Step
 
 ATIF_VERSION = "ATIF-v1.6"
 
@@ -49,7 +49,7 @@ class Trajectory(BaseModel):
         description="String defining ATIF compatibility",
     )
     # NAT deviation: defaults to a generated UUID so the converter can create
-    # trajectories without an explicit session_id.  Harbor upstream requires it.
+    # trajectories without an explicit session_id. Harbor upstream requires it.
     session_id: str = Field(
         default_factory=lambda: str(uuid.uuid4()),
         description="Unique identifier for the entire agent run",
@@ -59,7 +59,7 @@ class Trajectory(BaseModel):
         description="Object specifying the agent configuration",
     )
     # NAT deviation: allows an empty steps list (the batch converter returns an
-    # empty trajectory for empty input).  Harbor upstream requires min_length=1.
+    # empty trajectory for empty input). Harbor upstream requires min_length=1.
     steps: list[Step] = Field(
         default_factory=list,
         description="Array of step objects representing the complete interaction history",

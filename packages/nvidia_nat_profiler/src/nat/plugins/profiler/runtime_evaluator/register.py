@@ -19,8 +19,8 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalOutput
 from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 
 
