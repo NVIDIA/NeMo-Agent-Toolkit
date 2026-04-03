@@ -18,8 +18,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from nat.data_models.atif import ATIFContentPart
-from nat.data_models.atif import ATIFTrajectory
+from nat.atif import ATIFContentPart
+from nat.atif import ATIFTrajectory
 
 
 def content_part_to_text(part: ATIFContentPart) -> str:

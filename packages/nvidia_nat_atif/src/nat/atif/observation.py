@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from nat.data_models.atif.observation_result import ObservationResult
+from nat.atif.observation_result import ObservationResult
 
 
 class Observation(BaseModel):

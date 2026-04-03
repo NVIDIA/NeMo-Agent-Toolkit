@@ -32,22 +32,6 @@ from pydantic import BaseModel
 from pydantic import SecretStr
 from tqdm import tqdm
 
-from nat.builder.context import ContextState
-from nat.data_models.config import Config
-from nat.data_models.evaluate_config import EvalConfig
-from nat.data_models.evaluate_config import JobEvictionPolicy
-from nat.data_models.evaluate_runtime import EvaluationRunConfig
-from nat.data_models.evaluate_runtime import EvaluationRunOutput
-from nat.data_models.evaluate_runtime import ProfilerResults
-from nat.data_models.evaluate_runtime import UsageStats
-from nat.data_models.evaluate_runtime import UsageStatsItem
-from nat.data_models.evaluate_runtime import UsageStatsLLM
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.intermediate_step import IntermediateStepType
-from nat.data_models.user_info import BasicUserInfo
-from nat.data_models.user_info import UserInfo
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
@@ -55,7 +39,36 @@ from nat.plugins.eval.evaluator.atif_evaluator import LegacyEvaluator
 from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
-from nat.runtime.session import SessionManager
+
+FULL_EVAL_INSTALL_HINT = ("Full workflow evaluation requires optional dependencies that are not installed. "
+                          "Install with: pip install \"nvidia-nat[eval]\" "
+                          "(or pip install \"nvidia-nat-eval[full]\")")
+
+
+def _raise_full_eval_dependency_error(error: Exception):
+    raise ModuleNotFoundError(FULL_EVAL_INSTALL_HINT) from error
+
+
+try:
+    from nat.builder.context import ContextState
+    from nat.data_models.config import Config
+    from nat.data_models.evaluate_config import EvalConfig
+    from nat.data_models.evaluate_config import JobEvictionPolicy
+    from nat.data_models.evaluate_runtime import EvaluationRunConfig
+    from nat.data_models.evaluate_runtime import EvaluationRunOutput
+    from nat.data_models.evaluate_runtime import ProfilerResults
+    from nat.data_models.evaluate_runtime import UsageStats
+    from nat.data_models.evaluate_runtime import UsageStatsItem
+    from nat.data_models.evaluate_runtime import UsageStatsLLM
+    from nat.data_models.evaluator import EvalInput
+    from nat.data_models.evaluator import EvalInputItem
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.data_models.user_info import BasicUserInfo
+    from nat.data_models.user_info import UserInfo
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+    from nat.runtime.session import SessionManager
+except ImportError as import_error:  # pragma: no cover - guarded runtime path
+    _raise_full_eval_dependency_error(import_error)
 
 if TYPE_CHECKING:
     from starlette.requests import HTTPConnection

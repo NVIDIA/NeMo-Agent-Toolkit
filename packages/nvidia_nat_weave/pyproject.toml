@@ -71,6 +71,7 @@ dependencies = [
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 test = [
   "nvidia-nat-core[async_endpoints] == {version}",
+  "nvidia-nat-eval == {version}",
   "nvidia-nat-test == {version}",
 ]
 
@@ -81,6 +82,7 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
+nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']

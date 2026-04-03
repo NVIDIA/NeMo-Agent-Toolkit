@@ -18,8 +18,8 @@ from __future__ import annotations
 
 from pydantic import Field
 
-from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStep
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
 
 class ConditionEvalOutputItem(EvalOutputItem):

@@ -19,12 +19,12 @@ from unittest.mock import MagicMock
 import pytest
 from langchain_core.language_models import BaseChatModel
 
-from nat.data_models.atif import ATIFAgentConfig
-from nat.data_models.atif import ATIFStep
-from nat.data_models.atif import ATIFTrajectory
+from nat.atif import ATIFAgentConfig
+from nat.atif import ATIFStep
+from nat.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluator
 from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluatorConfig

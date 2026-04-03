@@ -94,7 +94,7 @@ The `--override` flag accepts a dot-notation path into the YAML config hierarchy
 ## Structured Evaluation Experiments
 
 :::{note}
-The `nat eval` command is provided by the evaluation package. If the command is not available, install the eval extra first:
+The `nat eval` command is provided by the evaluation package. For full config-driven eval paths, install the full eval extra:
 
 ```bash
 uv pip install -e '.[eval]'
