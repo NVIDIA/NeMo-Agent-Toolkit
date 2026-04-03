@@ -511,8 +511,10 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         llm_span.end(end_time=end_ns)
         spans.append(llm_span)
 
-        # Register in fn_span_map for child lookups
-        if ancestry:
+        # Register in fn_span_map for child lookups.
+        # Don't overwrite an existing entry — it may be an inner <workflow>
+        # span that agent steps should remain children of.
+        if ancestry and ancestry.function_id not in fn_span_map:
             fn_span_map[ancestry.function_id] = llm_span
 
         # Create tool/function child spans.
@@ -781,19 +783,21 @@ class ATIFTrajectorySpanExporter(ProcessingExporter[Span, OutputSpanT], Serializ
         """Resolve the parent span for a given ancestry.
 
         Lookup order:
-        1. ancestry.parent_id in fn_span_map (direct parent callable)
-        2. ancestry.function_id in fn_span_map (same callable, e.g. workflow → LLM)
+        1. ancestry.function_id in fn_span_map (enclosing scope — e.g. inner
+           ``<workflow>`` wrapper that the event runs within)
+        2. ancestry.parent_id in fn_span_map (direct parent callable)
         3. workflow_span (fall back to root)
         """
         if ancestry:
+            # Enclosing scope: the span runs *inside* this function
+            found = fn_span_map.get(ancestry.function_id)
+            if found is not None:
+                return found
+            # Direct parent callable
             if ancestry.parent_id:
                 found = fn_span_map.get(ancestry.parent_id)
                 if found is not None:
                     return found
-            # Same callable: e.g., an LLM span inside a workflow that shares function_id
-            found = fn_span_map.get(ancestry.function_id)
-            if found is not None:
-                return found
         return workflow_span
 
     def _parse_ancestry(self, raw: dict[str, Any] | AtifAncestry | None) -> AtifAncestry | None:
