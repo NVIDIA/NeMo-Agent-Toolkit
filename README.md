@@ -158,7 +158,7 @@ Before getting started, it's possible to run this simple workflow and many other
 - [x] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
 - [x] Integration with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo) to reduce LLM latency at scale.
 - [x] Improve agent throughput with KV-Cache optimization.
-- [ ] Improved, standalone evaluation harness and migration to [ATIF](https://github.com/laude-institute/harbor/blob/main/docs/rfcs/0001-trajectory-format.md) for trajectory format.
+- [ ] Improved, standalone evaluation harness and migration to [ATIF](https://github.com/harbor-framework/harbor/blob/main/rfcs/0001-trajectory-format.md) for trajectory format.
 - [ ] Support for additional programming languages (TypeScript, Rust, Go, WASM) with compiled libraries.
 - [ ] Phasing out wrapping architecture to ease onboarding for more agents.
 - [ ] Support for adding skills and sandboxes to existing agents.
