@@ -59,6 +59,21 @@ general:
 
 This setup enables tracing through LangSmith, with traces grouped into the `default` project.
 
+:::{note}
+If you are using a custom deployment of LangSmith, you can specify the `endpoint` field under `langsmith`. Since under the hood NeMo Agent Toolkit uses an OpenTelemetry exporter to communicate with LangSmith the endpoint will be: `https://<your-langsmith-endpoint>/api/v1/otel/v1/traces`. Resulting in a configuration like:
+
+```yaml
+general:
+  telemetry:
+    tracing:
+      langsmith:
+        _type: langsmith
+        project: default
+        endpoint: https://<your-langsmith-endpoint>/api/v1/otel/v1/traces
+```
+:::
+
+
 ## Step 3: Run Your Workflow
 
 From the root directory of the NeMo Agent Toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
