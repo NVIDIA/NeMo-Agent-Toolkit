@@ -15,12 +15,20 @@
 """Runtime-only evaluation models used by `nat eval` programmatic execution."""
 
 from pathlib import Path
+from typing import TYPE_CHECKING
+from typing import TypeAlias
 
 from pydantic import BaseModel
 from pydantic import Field
 
 from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalOutput
+
+if TYPE_CHECKING:
+    from nat.data_models.evaluator import EvalOutputLike
+    EvaluationResultOutput: TypeAlias = EvalOutputLike
+else:
+    # Keep runtime type pydantic-compatible while exposing EvalOutputLike to static analysis.
+    EvaluationResultOutput: TypeAlias = BaseModel
 
 
 class EndpointRetryConfig(BaseModel):
@@ -187,7 +195,7 @@ class EvaluationRunOutput(BaseModel):
         ...,
         description="Evaluation input containing all dataset items and their outputs.",
     )
-    evaluation_results: list[tuple[str, EvalOutput]] = Field(
+    evaluation_results: list[tuple[str, EvaluationResultOutput]] = Field(
         ...,
         description="List of evaluator results as (evaluator_name, output) tuples.",
     )

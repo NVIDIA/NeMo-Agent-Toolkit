@@ -47,6 +47,27 @@ RESPONSE_500 = {
 }
 
 
+def _serialize_request(request: Request) -> dict:
+    """Serialize a FastAPI Request into a plain dict that can be passed through Dask and reconstructed.
+
+    The resulting dict can be passed to ``Request(scope=serialized_dict)`` in a Dask worker to
+    reconstruct a Request with the original headers and metadata available via
+    ``session_manager.session(http_connection=...)``.
+    """
+    return {
+        "type": "http",
+        "method": request.method,
+        "path": request.url.path,
+        "query_string": request.url.query.encode("latin-1") if request.url.query else b"",
+        "root_path": request.scope.get("root_path", ""),
+        "scheme": request.url.scheme,
+        "server": (request.url.hostname, request.url.port or 80),
+        "client": (request.client.host, request.client.port) if request.client else ("", 0),
+        "headers": list(request.headers.raw),
+        "path_params": dict(request.path_params),
+    }
+
+
 def add_context_headers_to_response(response: Response) -> None:
     """Add context-based headers to response if available."""
     observability_trace_id = Context.get().observability_trace_id

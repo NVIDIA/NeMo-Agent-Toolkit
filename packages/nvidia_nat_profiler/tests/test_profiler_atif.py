@@ -22,13 +22,13 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from nat.data_models.atif import Agent
-from nat.data_models.atif import Metrics
-from nat.data_models.atif import Observation
-from nat.data_models.atif import ObservationResult
-from nat.data_models.atif import Step
-from nat.data_models.atif import ToolCall
-from nat.data_models.atif import Trajectory
+from nat.atif import Agent
+from nat.atif import Metrics
+from nat.atif import Observation
+from nat.atif import ObservationResult
+from nat.atif import Step
+from nat.atif import ToolCall
+from nat.atif import Trajectory
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType

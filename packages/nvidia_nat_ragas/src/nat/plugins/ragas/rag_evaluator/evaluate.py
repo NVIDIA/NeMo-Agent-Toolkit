@@ -18,8 +18,8 @@ import logging
 from pydantic import BaseModel
 
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStepType
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 from ragas import SingleTurnSample
 from ragas.metrics.base import SimpleBaseMetric

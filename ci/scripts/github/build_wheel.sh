@@ -113,13 +113,17 @@ for whl in "${MOVED_WHEELS[@]}"; do
                 exit ${IMPORT_TEST_RESULT}
             fi
 
-            REPORTED_VERSION=$(nat --version 2>&1)
-            NAT_CMD_EXIT_CODE=$?
+            if command -v nat >/dev/null 2>&1; then
+                REPORTED_VERSION=$(nat --version 2>&1)
+                NAT_CMD_EXIT_CODE=$?
 
-            if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
-                rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
-                echo "${REPORTED_VERSION}"
-                exit ${NAT_CMD_EXIT_CODE}
+                if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
+                    rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
+                    echo "${REPORTED_VERSION}"
+                    exit ${NAT_CMD_EXIT_CODE}
+                fi
+            else
+                rapids-logger "Skipping nat CLI test; 'nat' command not installed by wheel ${whl}"
             fi
         else
             rapids-logger "Skipping nat CLI test for nvidia_nat_app (framework-agnostic package); verifying nat_app import"

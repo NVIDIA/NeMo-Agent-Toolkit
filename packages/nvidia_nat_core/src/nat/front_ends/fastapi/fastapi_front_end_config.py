@@ -22,11 +22,11 @@ from pathlib import Path
 
 from pydantic import BaseModel
 from pydantic import Field
+from pydantic import SerializeAsAny
 from pydantic import field_validator
 
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.step_adaptor import StepAdaptorConfig
 
@@ -144,7 +144,7 @@ class EvaluateItemRequest(BaseModel):
 class EvaluateItemResponse(BaseModel):
     """Response model for single-item evaluation endpoint."""
     success: bool = Field(description="Whether the evaluation completed successfully")
-    result: EvalOutputItem | None = Field(default=None, description="Evaluation result if successful")
+    result: SerializeAsAny[BaseModel] | None = Field(default=None, description="Evaluation result if successful")
     error: str | None = Field(default=None, description="Error message if evaluation failed")
 
 

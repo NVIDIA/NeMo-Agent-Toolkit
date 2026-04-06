@@ -31,7 +31,7 @@ This is intended to be a shareable reference for:
 ## Data Model
 
 The data model is defined in
-`packages/nvidia_nat_core/src/nat/data_models/atif/atif_step_extra.py`.
+`packages/nvidia_nat_atif/src/nat/atif/atif_step_extra.py`.
 
 The converter emits this model into ATIF `Step.extra`, and downstream tools
 consume it for lineage reconstruction, invocation identity mapping, and timing.
