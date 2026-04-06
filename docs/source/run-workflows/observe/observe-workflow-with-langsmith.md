@@ -62,7 +62,7 @@ This setup enables tracing through LangSmith, with traces grouped into the `defa
 The following optional fields can also be set under `langsmith`:
 
 - `endpoint`: The OTLP endpoint URL (see note below for custom deployments).
-- `workspace_id`: Your LangSmith workspace ID. Falls back to the `LANGSMITH_WORKSPACE_ID` environment variable if not set.
+- `workspace_id`: Your LangSmith workspace ID. Falls back to the `LANGSMITH_WORKSPACE_ID` environment variable if not set, and undefined if neither is provided. This is needed if your LangSmith API key has access to multiple workspaces.
 - `resource_attributes`: A dictionary of key-value pairs to attach as resource attributes on exported spans.
 
 :::{note}
