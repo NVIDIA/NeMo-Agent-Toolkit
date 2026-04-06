@@ -183,7 +183,7 @@ The sequence is intentionally ordered from simpler to progressively richer neste
    - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-trajectory-eval.yml`
    - Phoenix PNG:
-     `docs/source/_static/simple_calculator_trajectory_phoenix_trace.png`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/trajectory_eval/simple_calculator_trajectory_phoenix_trace.png`
    - ATIF output:
      `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/trajectory_eval/workflow_output_atif.json`
 
@@ -191,7 +191,7 @@ The sequence is intentionally ordered from simpler to progressively richer neste
    - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml`
    - Phoenix PNG:
-     `docs/source/_static/simple_calculator_nested_phoenix_trace.png`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/nested_trajectory_eval/simple_calculator_nested_phoenix_trace.png`
    - ATIF output:
      `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/nested_trajectory_eval/workflow_output_atif.json`
 
@@ -199,7 +199,7 @@ The sequence is intentionally ordered from simpler to progressively richer neste
    - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-branching-nested-trajectory-eval.yml`
    - Phoenix PNG:
-     `docs/source/_static/simple_calculator_branching_phoenix_trace.png`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/branching_nested_trajectory_eval/simple_calculator_branching_phoenix_trace.png`
    - ATIF output:
      `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/branching_nested_trajectory_eval/workflow_output_atif.json`
 
