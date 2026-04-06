@@ -185,7 +185,7 @@ The sequence is intentionally ordered from simpler to progressively richer neste
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_trajectory_phoenix_trace.png`
    - ATIF output:
-     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/trajectory_eval/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/trajectory_eval/workflow_output_atif.json`
 
 2. Nested tool call chain
    - config:
@@ -193,7 +193,7 @@ The sequence is intentionally ordered from simpler to progressively richer neste
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_nested_phoenix_trace.png`
    - ATIF output:
-     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/nested_trajectory_eval/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/nested_trajectory_eval/workflow_output_atif.json`
 
 3. Branching nested tool calls
    - config:
@@ -201,5 +201,5 @@ The sequence is intentionally ordered from simpler to progressively richer neste
    - Phoenix PNG:
      `docs/source/_static/simple_calculator_branching_phoenix_trace.png`
    - ATIF output:
-     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/branching_nested_trajectory_eval/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/branching_nested_trajectory_eval/workflow_output_atif.json`
 
