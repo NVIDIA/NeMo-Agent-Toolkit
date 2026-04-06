@@ -66,7 +66,7 @@ The following optional fields can also be set under `langsmith`:
 - `resource_attributes`: A dictionary of key-value pairs to attach as resource attributes on exported spans.
 
 :::{note}
-If you are using a custom deployment of LangSmith, you can specify the `endpoint` field under `langsmith`. Since under the hood NeMo Agent Toolkit uses an OpenTelemetry exporter to communicate with LangSmith the endpoint will be: `https://<your-langsmith-endpoint>/api/v1/otel/v1/traces`. Resulting in a configuration like:
+If you are using a custom deployment of LangSmith, you will need to set the `endpoint` field under `langsmith`. The official LangSmith service at `api.smith.langchain.com` has routing that maps `/otel/v1/traces` to its OTLP ingestion API directly. Custom deployments typically don't have this routing, so you need to specify the full path: `https://<your-langsmith-endpoint>/api/v1/otel/v1/traces`. For example:
 
 ```yaml
 general:
