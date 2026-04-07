@@ -2256,7 +2256,6 @@ dependencies = [
     { name = "markdown-it-py" },
     { name = "nvidia-haystack" },
     { name = "nvidia-nat", extra = ["langchain", "llama-index", "test"] },
-    { name = "openai" },
 ]
 
 [package.metadata]
@@ -2266,7 +2265,6 @@ requires-dist = [
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "~=0.3.0" },
     { name = "nvidia-nat", extras = ["langchain", "llama-index", "test"], editable = "../../../" },
-    { name = "openai", specifier = "~=2.0" },
 ]
 
 [[package]]

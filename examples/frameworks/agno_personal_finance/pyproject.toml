@@ -34,7 +34,6 @@ classifiers = ["Programming Language :: Python"]
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
   "nvidia-nat[agno,test] == {version}",
-  "openai~=2.0",
 ]
 
 [tool.uv.sources]

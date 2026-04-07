@@ -38,7 +38,6 @@ dependencies = [
   "beautifulsoup4~=4.13",
   "markdown-it-py~=3.0",
   "nvidia-haystack~=0.3.0",
-  "openai~=2.0",
 ]
 
 [tool.uv.sources]

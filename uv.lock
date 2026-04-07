@@ -107,6 +107,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e1/24/49f7ddba0b0bad299fd632b8d6d67894ed522cf732c902b7c64c1352d2f9/agno-1.8.4-py3-none-any.whl", hash = "sha256:fbdf1c8b760f566def51e5f2bbac7bf2a7ad12b8758cbf7d5f3ee6ee23079575", size = 995048, upload-time = "2025-09-25T18:39:50.417Z" },
 ]
 
+[package.optional-dependencies]
+openai = [
+    { name = "openai" },
+]
+
 [[package]]
 name = "aioboto3"
 version = "15.5.0"
@@ -5458,14 +5463,10 @@ name = "nat-agno-personal-finance"
 source = { editable = "examples/frameworks/agno_personal_finance" }
 dependencies = [
     { name = "nvidia-nat", extra = ["agno", "test"] },
-    { name = "openai" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "nvidia-nat", extras = ["agno", "test"], editable = "." },
-    { name = "openai", specifier = "~=2.0" },
-]
+requires-dist = [{ name = "nvidia-nat", extras = ["agno", "test"], editable = "." }]
 
 [[package]]
 name = "nat-alert-triage-agent"
@@ -5677,7 +5678,6 @@ dependencies = [
     { name = "markdown-it-py" },
     { name = "nvidia-haystack" },
     { name = "nvidia-nat", extra = ["langchain", "llama-index", "test"] },
-    { name = "openai" },
 ]
 
 [package.metadata]
@@ -5687,7 +5687,6 @@ requires-dist = [
     { name = "markdown-it-py", specifier = "~=3.0" },
     { name = "nvidia-haystack", specifier = "~=0.3.0" },
     { name = "nvidia-nat", extras = ["langchain", "llama-index", "test"], editable = "." },
-    { name = "openai", specifier = "~=2.0" },
 ]
 
 [[package]]
@@ -6745,21 +6744,19 @@ provides-extras = ["test"]
 name = "nvidia-nat-agno"
 source = { editable = "packages/nvidia_nat_agno" }
 dependencies = [
-    { name = "agno" },
+    { name = "agno", extra = ["openai"] },
     { name = "google-search-results" },
     { name = "litellm" },
     { name = "nvidia-nat-core" },
-    { name = "openai" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "agno", specifier = ">=1.2.3,<2.0.0" },
+    { name = "agno", extras = ["openai"], specifier = ">=1.2.3,<2.0.0" },
     { name = "google-search-results", specifier = ">=2.4.2,<3.0.0" },
     { name = "litellm", specifier = ">=1.74,<1.82.7" },
     { name = "nvidia-nat-core", editable = "packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
-    { name = "openai", specifier = "~=2.0" },
 ]
 provides-extras = ["test"]
 
