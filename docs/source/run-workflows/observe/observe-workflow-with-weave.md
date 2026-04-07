@@ -243,7 +243,7 @@ general:
 | `project` | The name of your W&B Weave project | `"nat-demo"` |
 | `entity` | Your W&B username or team name | `"your-team-name"` |
 | `endpoint` | The W&B Weave OTel endpoint (optional) | `"https://trace.wandb.ai/otel/v1/traces"` |
-| `api_key` | The W&B API key (optional, falls back to `WANDB_API_KEY` env var) | — |
+| `api_key` | The W&B API key (optional, falls back to `WANDB_API_KEY` environment variable) | — |
 
 ### Run the Workflow
 
