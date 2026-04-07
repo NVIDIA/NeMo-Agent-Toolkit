@@ -1647,6 +1647,7 @@ dependencies = [
     { name = "networkx" },
     { name = "numpy" },
     { name = "nvidia-nat-atif" },
+    { name = "nvidia-nat-prompt-optimization" },
     { name = "openinference-semantic-conventions" },
     { name = "optuna" },
     { name = "pandas" },
@@ -1711,6 +1712,7 @@ requires-dist = [
     { name = "numpy", specifier = "~=2.3" },
     { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
     { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
+    { name = "nvidia-nat-prompt-optimization", editable = "../nvidia_nat_prompt_optimization" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openinference-semantic-conventions", specifier = ">=0.1.14,<1.0.0" },
     { name = "optuna", specifier = "~=4.4" },
@@ -1758,6 +1760,20 @@ requires-dist = [
     { name = "openpyxl", marker = "extra == 'test'", specifier = "~=3.1" },
 ]
 provides-extras = ["full", "test"]
+
+[[package]]
+name = "nvidia-nat-prompt-optimization"
+source = { editable = "../nvidia_nat_prompt_optimization" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
+    { name = "pydantic", specifier = "~=2.11" },
+]
+provides-extras = ["test"]
 
 [[package]]
 name = "nvidia-nat-test"

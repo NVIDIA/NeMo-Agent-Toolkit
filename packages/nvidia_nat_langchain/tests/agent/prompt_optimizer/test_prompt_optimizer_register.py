@@ -13,12 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nvidia_prompt_optimization import PromptMutationInput
+
 from nat.plugins.langchain.agent.prompt_optimizer.prompt import oracle_feedback_template
 from nat.plugins.langchain.agent.prompt_optimizer.register import PromptOptimizerInputSchema
 
 
 class TestPromptOptimizerInputSchema:
     """Tests for PromptOptimizerInputSchema."""
+
+    def test_schema_is_standalone_contract(self):
+        assert PromptOptimizerInputSchema is PromptMutationInput
 
     def test_oracle_feedback_is_optional(self):
         """Oracle feedback defaults to None."""

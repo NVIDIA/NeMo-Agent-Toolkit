@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from nvidia_prompt_optimization import PromptMutationInput
+from nvidia_prompt_optimization import PromptRecombinationInput
 from pydantic import Field
 
 from nat.builder.builder import Builder
@@ -21,7 +23,8 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
-from nat.data_models.optimizer import PromptOptimizerInputSchema
+
+PromptOptimizerInputSchema = PromptMutationInput
 
 
 class PromptOptimizerConfig(FunctionBaseConfig, name="prompt_init"):
@@ -66,7 +69,7 @@ async def prompt_optimizer_function(config: PromptOptimizerConfig, builder: Buil
         input_variables=["original_prompt", "objective", "oracle_feedback_section"],
         validate_template=True)
 
-    async def _inner(input_message: PromptOptimizerInputSchema) -> str:
+    async def _inner(input_message: PromptMutationInput) -> str:
         """
         Optimize the prompt using the provided LLM.
         """
@@ -130,8 +133,8 @@ async def prompt_recombiner_function(config: PromptRecombinerConfig, builder: Bu
 
     base_prompt: str = (await template.ainvoke(input={"system_objective": config.system_objective})).to_string()
 
-    class RecombineSchema(PromptOptimizerInputSchema):
-        parent_b: str | None = None
+    class RecombineSchema(PromptRecombinationInput):
+        pass
 
     async def _inner(input_message: RecombineSchema) -> str:
         parent_a = input_message.original_prompt
