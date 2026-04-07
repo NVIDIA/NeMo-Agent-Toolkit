@@ -59,6 +59,27 @@ general:
 
 This setup enables tracing through LangSmith, with traces grouped into the `default` project.
 
+The following optional fields can also be set under `langsmith`:
+
+- `endpoint`: The OTLP endpoint URL (see note below for custom deployments).
+- `workspace_id`: Your LangSmith workspace ID. Falls back to the `LANGSMITH_WORKSPACE_ID` environment variable if not set, and undefined if neither is provided. This is needed if your LangSmith API key has access to multiple workspaces.
+- `resource_attributes`: A dictionary of key-value pairs to attach as resource attributes on exported spans.
+
+:::{note}
+If you are using a custom deployment of LangSmith, you will need to set the `endpoint` field under `langsmith`. The official LangSmith service at `api.smith.langchain.com` has routing that maps `/otel/v1/traces` to its OTLP ingestion API directly. Custom deployments typically don't have this routing, so you need to specify the full path: `https://<your-langsmith-endpoint>/api/v1/otel/v1/traces`. For example:
+
+```yaml
+general:
+  telemetry:
+    tracing:
+      langsmith:
+        _type: langsmith
+        project: default
+        endpoint: https://<your-langsmith-endpoint>/api/v1/otel/v1/traces
+```
+:::
+
+
 ## Step 3: Run Your Workflow
 
 From the root directory of the NeMo Agent Toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
