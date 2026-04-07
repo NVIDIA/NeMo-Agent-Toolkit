@@ -95,5 +95,5 @@ llms:
 ## Troubleshooting
 * `401 Unauthorized`: verify the OCI profile, signer, and IAM permissions for Generative AI.
 * `404 Not Found`: confirm the regional endpoint or custom endpoint URL is correct.
-* `Connection errors`: verify OCI networking and regional endpoint reachability.
+* `Connection errors`: verify OCI networking and that the regional endpoint is reachable.
 * `Tool calling issues`: verify the served model supports tool calling and that the serving stack is configured for it.
