@@ -38,8 +38,12 @@ logger = logging.getLogger(__name__)
 class EvalAtifAdapter:
     """Build and cache ATIF trajectories for eval items."""
 
-    def __init__(self, converter: IntermediateStepToATIFConverter | None = None) -> None:
-        self._converter = converter or IntermediateStepToATIFConverter()
+    def __init__(self,
+                 converter: IntermediateStepToATIFConverter | None = None,
+                 *,
+                 allow_implicit_subagent_delegation: bool = False) -> None:
+        self._converter = converter or IntermediateStepToATIFConverter(
+            allow_implicit_subagent_delegation=allow_implicit_subagent_delegation)
         self._cache: dict[str, ATIFTrajectory] = {}
 
     @staticmethod

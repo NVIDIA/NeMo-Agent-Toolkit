@@ -943,6 +943,74 @@ class TestBatchConverter:
         assert result.steps[1].message == "final"
         assert result.steps[1].tool_calls is None
 
+    def test_implicit_subagent_delegation_is_disabled_by_default(self):
+        """Implicit delegation inference is opt-in and disabled by default."""
+        converter = IntermediateStepToATIFConverter()
+        steps = [
+            _make_step(IntermediateStepType.WORKFLOW_START, input_data="q", timestamp_offset=0.0),
+            _make_step(IntermediateStepType.LLM_END, output_data="thinking", timestamp_offset=1.0),
+            _make_step(
+                IntermediateStepType.FUNCTION_END,
+                name="child_agent",
+                timestamp_offset=2.0,
+                function_name="parent_agent",
+                function_id="wrapper-fn",
+                function_parent_id="root",
+                step_uuid="wrapper-step",
+            ),
+            _make_step(
+                IntermediateStepType.FUNCTION_END,
+                name="inner_tool",
+                timestamp_offset=3.0,
+                function_name="child_agent",
+                function_id="child-fn",
+                function_parent_id="wrapper-fn",
+                step_uuid="child-step",
+            ),
+            _make_step(IntermediateStepType.LLM_END, output_data="done", timestamp_offset=4.0),
+            _make_step(IntermediateStepType.WORKFLOW_END, output_data="done", timestamp_offset=5.0),
+        ]
+
+        result = converter.convert(steps)
+        first_agent_turn = result.steps[1]
+        assert first_agent_turn.observation is not None
+        assert first_agent_turn.observation.results[0].subagent_trajectory_ref is None
+
+    def test_implicit_subagent_delegation_can_be_enabled(self):
+        """Implicit delegation inference can be enabled explicitly."""
+        converter = IntermediateStepToATIFConverter(allow_implicit_subagent_delegation=True)
+        steps = [
+            _make_step(IntermediateStepType.WORKFLOW_START, input_data="q", timestamp_offset=0.0),
+            _make_step(IntermediateStepType.LLM_END, output_data="thinking", timestamp_offset=1.0),
+            _make_step(
+                IntermediateStepType.FUNCTION_END,
+                name="child_agent",
+                timestamp_offset=2.0,
+                function_name="parent_agent",
+                function_id="wrapper-fn",
+                function_parent_id="root",
+                step_uuid="wrapper-step",
+            ),
+            _make_step(
+                IntermediateStepType.FUNCTION_END,
+                name="inner_tool",
+                timestamp_offset=3.0,
+                function_name="child_agent",
+                function_id="child-fn",
+                function_parent_id="wrapper-fn",
+                step_uuid="child-step",
+            ),
+            _make_step(IntermediateStepType.LLM_END, output_data="done", timestamp_offset=4.0),
+            _make_step(IntermediateStepType.WORKFLOW_END, output_data="done", timestamp_offset=5.0),
+        ]
+
+        result = converter.convert(steps)
+        first_agent_turn = result.steps[1]
+        assert first_agent_turn.observation is not None
+        refs = first_agent_turn.observation.results[0].subagent_trajectory_ref
+        assert refs is not None
+        assert len(refs) == 1
+
 
 # ---------------------------------------------------------------------------
 # Stream converter tests
