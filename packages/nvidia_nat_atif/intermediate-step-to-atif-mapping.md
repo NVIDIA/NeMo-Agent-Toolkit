@@ -32,13 +32,13 @@ It is intentionally generic and applies to the current conversion path used by t
 | `function_ancestry.function_id` | `extra.tool_ancestry[*].function_id` | Direct match | Callable lineage node identity |
 | `function_ancestry.parent_id` | `extra.tool_ancestry[*].parent_id` | Direct match | Parent callable lineage node identity |
 | `function_ancestry.function_id` (step context) | `extra.ancestry.function_id` | Direct match | Step-level callable context |
-| N/A | `step_id` | Generated ATIF sequence counter | Not derived from IntermediateStep UUID |
+| Not applicable | `step_id` | Generated ATIF sequence counter | Not derived from IntermediateStep UUID |
 
 ## Name Mappings
 
 | IntermediateStep | ATIF | Mapping Rule | Notes |
 |---|---|---|---|
-| `payload.name` (tool/function/LLM by event type) | `tool_calls[*].function_name` / `model_name` | Context dependent | IntermediateStep name is polymorphic by event type |
+| `payload.name` (tool, function, or LLM by event type) | `tool_calls[*].function_name` or `model_name` | Context dependent | IntermediateStep name is polymorphic by event type |
 | `function_ancestry.function_name` | `extra.tool_ancestry[*].function_name` | Direct match | Callable lineage node name |
 | `function_ancestry.parent_name` | `extra.tool_ancestry[*].parent_name` | Direct match | Parent callable lineage node name |
 | `function_ancestry.function_name` (step context) | `extra.ancestry.function_name` | Direct match | Step-level lineage name |
@@ -72,7 +72,7 @@ It is intentionally generic and applies to the current conversion path used by t
 ## Practical Validation Checklist
 
 - Verify `tool_call_id == source_call_id == invocation_id` for each ATIF invocation row.
-- Verify `tool_call_id == "call_" + payload.UUID` for mapped tool/function end events.
+- Verify `tool_call_id == "call_" + payload.UUID` for mapped tool or function end events.
 - Verify callable lineage consistency:
   - `function_ancestry.function_id <-> extra.tool_ancestry[*].function_id`
   - `function_ancestry.parent_id <-> extra.tool_ancestry[*].parent_id`
@@ -86,4 +86,4 @@ It is intentionally generic and applies to the current conversion path used by t
 - Event semantics: `payload.event_type`
 - Time surfaces: `event_timestamp`, `span_event_timestamp`, ATIF `timestamp`
 - Session scope: ATIF `session_id`
-- Framework/provider run IDs when present in metadata (for example, model framework trace IDs)
+- Framework or provider run IDs when present in metadata (for example, model framework trace IDs)
