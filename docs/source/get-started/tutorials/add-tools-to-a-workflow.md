@@ -185,3 +185,10 @@ functions:
     search_type: neural  # 'auto', 'neural', or 'keyword'
     livecrawl: fallback  # 'always', 'fallback', or 'never'
 ```
+
+Then ensure the tool is included in the workflow tool list:
+```yaml
+workflow:
+  _type: react_agent
+  tool_names: [internet_search, current_datetime]
+```

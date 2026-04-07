@@ -32,7 +32,7 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
     Tool that retrieves relevant contexts from web search (using Exa) for the given question.
     Requires an EXA_API_KEY.
     """
-    max_results: int = 3
+    max_results: int = Field(default=3, ge=1, description="Maximum number of search results to return.")
     api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
                                            description="The API key for the Exa service.")
     max_retries: int = Field(default=3, ge=1, description="Maximum number of retries for the search request")
@@ -63,6 +63,9 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
         Returns:
             str: The web search results.
         """
+        if not resolved_api_key:
+            return "Web search is unavailable: `EXA_API_KEY` is not configured."
+
         # Exa API supports longer queries than Tavily but truncate at a reasonable limit
         if len(question) > 2000:
             question = question[:1997] + "..."
