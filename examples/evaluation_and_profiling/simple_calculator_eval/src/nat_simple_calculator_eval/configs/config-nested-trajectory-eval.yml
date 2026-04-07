@@ -61,9 +61,11 @@ eval:
   general:
     max_concurrency: 1
     output:
+      workflow_output_step_filter: []
       dir: .tmp/nat/examples/simple_calculator/nested-eval
       write_atif_workflow_output: true
       cleanup: true
+
     dataset:
       _type: json
       file_path: examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_of_two.json

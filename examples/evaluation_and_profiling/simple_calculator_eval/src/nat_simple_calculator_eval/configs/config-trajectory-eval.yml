@@ -60,6 +60,7 @@ eval:
   general:
     max_concurrency: 1
     output:
+      workflow_output_step_filter: []
       dir: .tmp/nat/examples/simple_calculator/trajectory-eval
       write_atif_workflow_output: true
       cleanup: true

@@ -123,6 +123,52 @@ Producers should satisfy these requirements:
 6. `tool_calls` should include only callable execution invocation occurrences.
    Non-execution lifecycle or wrapper records should not be emitted as `tool_calls`.
 
+### Publisher ID Guidance
+
+Publishers should maintain two complementary identity layers:
+
+- Callable lineage identity (`function_id`, `parent_id`)
+- Invocation instance identity (`tool_call_id`, `source_call_id`, `invocation_id`)
+
+Callable lineage identity guidance:
+
+1. `function_id` should identify one callable occurrence in the lineage tree.
+2. `function_id` should remain stable across events emitted for that same callable occurrence.
+3. Repeated calls to the same callable should use distinct `function_id` values.
+4. `parent_id` should reference the parent callable occurrence's `function_id`.
+
+Invocation instance identity guidance:
+
+1. `tool_call_id` should be unique per emitted invocation row.
+2. For each aligned invocation row, `source_call_id` should equal `tool_call_id`.
+3. For each aligned invocation row, `invocation_id` should equal `tool_call_id` when present.
+
+Alignment guidance:
+
+1. `len(tool_calls)` should equal `len(tool_ancestry)`.
+2. If `tool_invocations` is present, `len(tool_invocations)` should equal `len(tool_calls)`.
+3. Row alignment should be index-stable:
+   `tool_calls[i]` <-> `tool_ancestry[i]` <-> `tool_invocations[i]` <-> `observation.results[i]`.
+
+Deep and parallel chain example:
+
+- Branch A: `agent1 -> fn-a -> fn-b -> fn-c`
+- Branch B: `agent1 -> fn-d -> fn-a -> fn-b`
+
+One valid lineage assignment:
+
+- Branch A:
+  - `fn-a`: `function_id=A1`, `parent_id=ROOT`
+  - `fn-b`: `function_id=B1`, `parent_id=A1`
+  - `fn-c`: `function_id=C1`, `parent_id=B1`
+- Branch B:
+  - `fn-d`: `function_id=D1`, `parent_id=ROOT`
+  - `fn-a`: `function_id=A2`, `parent_id=D1`
+  - `fn-b`: `function_id=B2`, `parent_id=A2`
+
+In this example, callable names repeat across branches, but callable occurrence IDs
+remain distinct and lineage stays unambiguous.
+
 ## Consumer Requirements
 
 Consumers should implement lineage reads in this order:
@@ -183,23 +229,23 @@ The sequence is intentionally ordered from simpler to progressively richer neste
    - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-trajectory-eval.yml`
    - Phoenix PNG:
-     `docs/source/_static/simple_calculator_trajectory_phoenix_trace.png`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/trajectory_eval/simple_calculator_trajectory_phoenix_trace.png`
    - ATIF output:
-     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/trajectory_eval/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/trajectory_eval/workflow_output_atif.json`
 
 2. Nested tool call chain
    - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml`
    - Phoenix PNG:
-     `docs/source/_static/simple_calculator_nested_phoenix_trace.png`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/nested_trajectory_eval/simple_calculator_nested_phoenix_trace.png`
    - ATIF output:
-     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/nested_trajectory_eval/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/nested_trajectory_eval/workflow_output_atif.json`
 
 3. Branching nested tool calls
    - config:
      `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-branching-nested-trajectory-eval.yml`
    - Phoenix PNG:
-     `docs/source/_static/simple_calculator_branching_phoenix_trace.png`
+     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/branching_nested_trajectory_eval/simple_calculator_branching_phoenix_trace.png`
    - ATIF output:
-     `examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/data/output_samples/branching_nested_trajectory_eval/workflow_output_atif.json`
+     `examples/evaluation_and_profiling/simple_calculator_eval/data/output_samples/branching_nested_trajectory_eval/workflow_output_atif.json`
 
