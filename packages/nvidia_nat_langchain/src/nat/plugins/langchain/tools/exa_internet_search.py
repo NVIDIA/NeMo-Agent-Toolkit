@@ -47,7 +47,7 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
 async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder: Builder):
     import os
 
-    from langchain_exa import ExaSearchResults
+    from exa_py import Exa
 
     api_key = get_secret_value(tool_config.api_key) if tool_config.api_key else ""
     if not os.environ.get("EXA_API_KEY"):
@@ -55,7 +55,7 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
             os.environ["EXA_API_KEY"] = api_key
     # This Exa tool requires an API Key and it must be set as an environment variable (EXA_API_KEY)
 
-    exa_search = ExaSearchResults(exa_api_key=api_key or os.environ.get("EXA_API_KEY", ""))
+    exa_client = Exa(api_key=api_key or os.environ.get("EXA_API_KEY", ""))
 
     async def _exa_internet_search(question: str) -> str:
         """This tool retrieves relevant contexts from web search (using Exa) for the given question.
@@ -72,24 +72,21 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
 
         for attempt in range(tool_config.max_retries):
             try:
-                # ExaSearchResults._run returns list[dict] | str
-                search_docs = exa_search.run(
+                search_response = exa_client.search_and_contents(
                     question,
                     num_results=tool_config.max_results,
                     type=tool_config.search_type,
                     livecrawl=tool_config.livecrawl,
-                    text_contents_options={"max_characters": 3000},
+                    text={"max_characters": 3000},
                 )
-                # On error, ExaSearchResults returns a string error message
-                if isinstance(search_docs, str):
+                if not search_response.results:
                     return f"No web search results found for: {question}"
-                if not search_docs:
-                    return f"No web search results found for: {question}"
-                # Format
+                # Format - SearchResponse.results contains Result objects with .url and .text attrs
                 web_search_results = "\n\n---\n\n".join([
-                    f'<Document href="{doc["url"]}"/>\n{doc["text"]}\n</Document>' for doc in search_docs
+                    f'<Document href="{doc.url}"/>\n{doc.text}\n</Document>'
+                    for doc in search_response.results if doc.text
                 ])
-                return web_search_results
+                return web_search_results or f"No web search results found for: {question}"
             except Exception:
                 # Return a graceful message instead of raising, so the agent can
                 # continue reasoning without web search rather than failing entirely.
