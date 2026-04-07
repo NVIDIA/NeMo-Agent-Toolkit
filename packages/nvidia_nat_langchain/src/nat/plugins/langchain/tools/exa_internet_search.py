@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
+from typing import Literal
 
 from pydantic import Field
 
@@ -34,11 +35,11 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
     max_results: int = 3
     api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
                                            description="The API key for the Exa service.")
-    max_retries: int = Field(default=3, description="Maximum number of retries for the search request")
-    search_type: str = Field(
+    max_retries: int = Field(default=3, ge=1, description="Maximum number of retries for the search request")
+    search_type: Literal["auto", "neural", "keyword"] = Field(
         default="auto",
         description="Type of search to perform - 'neural', 'keyword', or 'auto'")
-    livecrawl: str = Field(
+    livecrawl: Literal["always", "fallback", "never"] = Field(
         default="fallback",
         description="Livecrawl behavior - 'always', 'fallback', or 'never'")
 
@@ -47,15 +48,11 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
 async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder: Builder):
     import os
 
-    from exa_py import Exa
+    from exa_py import AsyncExa
 
     api_key = get_secret_value(tool_config.api_key) if tool_config.api_key else ""
-    if not os.environ.get("EXA_API_KEY"):
-        if api_key:
-            os.environ["EXA_API_KEY"] = api_key
-    # This Exa tool requires an API Key and it must be set as an environment variable (EXA_API_KEY)
-
-    exa_client = Exa(api_key=api_key or os.environ.get("EXA_API_KEY", ""))
+    resolved_api_key = api_key or os.environ.get("EXA_API_KEY", "")
+    exa_client = AsyncExa(api_key=resolved_api_key)
 
     async def _exa_internet_search(question: str) -> str:
         """This tool retrieves relevant contexts from web search (using Exa) for the given question.
@@ -72,7 +69,7 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
 
         for attempt in range(tool_config.max_retries):
             try:
-                search_response = exa_client.search_and_contents(
+                search_response = await exa_client.search_and_contents(
                     question,
                     num_results=tool_config.max_results,
                     type=tool_config.search_type,
@@ -93,6 +90,7 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
                 if attempt == tool_config.max_retries - 1:
                     return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
                 await asyncio.sleep(2**attempt)
+        return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
 
     # Create a Generic NAT tool that can be used with any supported LLM framework
     yield FunctionInfo.from_fn(
