@@ -73,3 +73,59 @@ def test_build_samples_uses_prebuilt_trajectory_without_conversion():
     assert len(samples) == 1
     assert samples[0].trajectory.agent.name == "prebuilt-agent"
     assert samples[0].item_id == "sample-a"
+
+
+def test_build_samples_populates_in_memory_subagent_map():
+    converter = _CountingConverter()
+    adapter = EvalAtifAdapter(converter=converter)
+    item = _make_eval_input_item("sample-b")
+    eval_input = EvalInput(eval_input_items=[item])
+    prebuilt = ATIFTrajectory.model_validate({
+        "session_id": "sample-b",
+        "agent": {
+            "name": "prebuilt-agent",
+            "version": "0.0.0",
+        },
+        "steps": [
+            {
+                "step_id": 1,
+                "source": "agent",
+                "message": "",
+                "tool_calls": [{
+                    "tool_call_id": "call_parent",
+                    "function_name": "delegator",
+                    "arguments": {},
+                }],
+                "observation": {
+                    "results": [{
+                        "source_call_id": "call_parent",
+                        "content": "delegated",
+                        "subagent_trajectory_ref": [{
+                            "session_id": "sample-b:call_child",
+                            "trajectory_path": None,
+                            "extra": {
+                                "child_function_id": "child-fn",
+                            },
+                        }],
+                    }],
+                },
+                "extra": {
+                    "ancestry": {
+                        "function_id": "child-fn",
+                        "parent_id": "parent-fn",
+                        "function_name": "delegator",
+                    },
+                },
+            }
+        ],
+    })
+
+    samples = adapter.build_samples(eval_input, prebuilt_trajectories={"sample-b": prebuilt})
+
+    assert len(samples) == 1
+    sub_map = samples[0].subagent_trajectories
+    assert isinstance(sub_map, dict)
+    assert "sample-b:call_child" in sub_map
+    child = sub_map["sample-b:call_child"]
+    assert child.session_id == "sample-b:call_child"
+    assert child.steps[0].step_id == 1

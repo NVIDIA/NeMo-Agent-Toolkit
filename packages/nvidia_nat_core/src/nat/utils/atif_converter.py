@@ -44,6 +44,7 @@ from nat.atif import AtifStepExtra
 from nat.atif import ATIFStepMetrics
 from nat.atif import ATIFToolCall
 from nat.atif import ATIFTrajectory
+from nat.atif import SubagentTrajectoryRef
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepState
@@ -190,6 +191,18 @@ def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
     return {}
 
 
+def _extract_subagent_delegation_flag(metadata: Any) -> bool:
+    """Extract optional subagent delegation flag from metadata payload."""
+    if isinstance(metadata, TraceMetadata):
+        provided = metadata.provided_metadata
+        if isinstance(provided, dict):
+            return bool(provided.get("is_subagent_delegation", provided.get("subagent_delegation", False)))
+        return False
+    if isinstance(metadata, dict):
+        return bool(metadata.get("is_subagent_delegation", metadata.get("subagent_delegation", False)))
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Internal accumulator
 # ---------------------------------------------------------------------------
@@ -201,9 +214,10 @@ class _ObservedInvocation:
 
     order_key: float
     tool_call: ATIFToolCall
-    observation: ATIFObservationResult
+    tool_output: str
     ancestry: AtifAncestry
     invocation: AtifInvocationInfo
+    is_subagent_delegation: bool
 
 
 class _PendingAgentTurn:
@@ -220,7 +234,10 @@ class _PendingAgentTurn:
         self.observed_invocations: list[_ObservedInvocation] = []
 
 
-def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateStep) -> None:
+def _record_observed_invocation(pending: _PendingAgentTurn,
+                                ist: IntermediateStep,
+                                *,
+                                start_flag: bool = False) -> None:
     """Record an observed invocation as a tool_call + observation pair."""
     tool_name = ist.name or "unknown_tool"
     if tool_name == "<workflow>":
@@ -232,14 +249,69 @@ def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateSte
         tool_input = _parse_tool_arguments(ist.data.input)
         tool_output = _safe_str(ist.data.output)
     call_id = f"call_{ist.UUID}"
+    is_subagent_delegation = _extract_subagent_delegation_flag(ist.metadata) or start_flag
     pending.observed_invocations.append(
         _ObservedInvocation(
             order_key=ist.payload.span_event_timestamp or ist.event_timestamp,
             tool_call=ATIFToolCall(tool_call_id=call_id, function_name=tool_name, arguments=tool_input),
-            observation=ATIFObservationResult(source_call_id=call_id, content=tool_output),
+            tool_output=tool_output,
             ancestry=_atif_ancestry_from_ist(ist),
             invocation=_atif_invocation_from_ist(ist, invocation_id=call_id),
+            is_subagent_delegation=is_subagent_delegation,
         ))
+
+
+def _build_observation_results(observed: list[_ObservedInvocation], trajectory_session_id: str) -> list[ATIFObservationResult]:
+    """Build observation rows and attach in-memory subagent refs when detected.
+
+    A wrapper/delegation pattern is inferred when:
+    - either the wrapper invocation is explicitly flagged as subagent delegation, or
+    - the wrapper row appears to represent delegation based on existing lineage
+      (tool call name differs from ancestry function name), and
+    - another invocation in the same ATIF step has:
+      - ancestry.function_name equal to the wrapper tool call name, and
+      - ancestry.parent_id equal to the wrapper ancestry.function_id.
+    """
+    results = [
+        ATIFObservationResult(source_call_id=obs.tool_call.tool_call_id, content=obs.tool_output)
+        for obs in observed
+    ]
+
+    for i, wrapper in enumerate(observed):
+        wrapper_call_name = wrapper.tool_call.function_name
+        wrapper_ancestry = wrapper.ancestry
+        inferred_delegation = wrapper_ancestry.function_name != wrapper_call_name
+        if not (wrapper.is_subagent_delegation or inferred_delegation):
+            continue
+
+        refs: list[SubagentTrajectoryRef] = []
+        seen_ref_session_ids: set[str] = set()
+        for child in observed:
+            child_ancestry = child.ancestry
+            if child_ancestry.function_name != wrapper_call_name:
+                continue
+            if child_ancestry.parent_id != wrapper_ancestry.function_id:
+                continue
+
+            ref_session_id = f"{trajectory_session_id}:{child.tool_call.tool_call_id}"
+            if ref_session_id in seen_ref_session_ids:
+                continue
+            seen_ref_session_ids.add(ref_session_id)
+            refs.append(
+                SubagentTrajectoryRef(
+                    session_id=ref_session_id,
+                    extra={
+                        "parent_tool_call_id": wrapper.tool_call.tool_call_id,
+                        "child_tool_call_id": child.tool_call.tool_call_id,
+                        "child_function_id": child_ancestry.function_id,
+                        "child_function_name": child_ancestry.function_name,
+                    },
+                ))
+
+        if refs:
+            results[i].subagent_trajectory_ref = refs
+
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -258,9 +330,10 @@ class IntermediateStepToATIFConverter:
         agent_name: str | None = None,
     ) -> ATIFTrajectory:
         """Convert a list of IntermediateSteps to an ATIF trajectory."""
+        trajectory_session_id = session_id or str(uuid.uuid4())
         if not steps:
             return ATIFTrajectory(
-                session_id=session_id or str(uuid.uuid4()),
+                session_id=trajectory_session_id,
                 agent=ATIFAgentConfig(name=agent_name or "nat-agent", version="0.0.0"),
             )
 
@@ -274,6 +347,7 @@ class IntermediateStepToATIFConverter:
         total_prompt = 0
         total_completion = 0
         total_cached = 0
+        delegation_flags_by_uuid: dict[str, bool] = {}
 
         def _flush_pending() -> None:
             nonlocal step_id, pending
@@ -281,7 +355,7 @@ class IntermediateStepToATIFConverter:
                 return
             sorted_invocations = sorted(pending.observed_invocations, key=lambda i: i.order_key)
             tool_calls = [obs.tool_call for obs in sorted_invocations] or None
-            observations = [obs.observation for obs in sorted_invocations]
+            observations = _build_observation_results(sorted_invocations, trajectory_session_id)
             observation = ATIFObservation(results=observations) if observations else None
             tool_ancestry = [obs.ancestry for obs in sorted_invocations]
             tool_invocations = [obs.invocation for obs in sorted_invocations] or None
@@ -313,6 +387,9 @@ class IntermediateStepToATIFConverter:
             event_type = ist.event_type
             category = ist.event_category
             state = ist.event_state
+
+            if state == IntermediateStepState.START and _extract_subagent_delegation_flag(ist.metadata):
+                delegation_flags_by_uuid[ist.UUID] = True
 
             if event_type == IntermediateStepType.WORKFLOW_START:
                 user_input = ""
@@ -392,21 +469,23 @@ class IntermediateStepToATIFConverter:
                 continue
 
             if event_type == IntermediateStepType.TOOL_END:
+                start_flag = delegation_flags_by_uuid.pop(ist.UUID, False)
                 if pending is not None:
-                    _record_observed_invocation(pending, ist)
+                    _record_observed_invocation(pending, ist, start_flag=start_flag)
                 else:
                     orphan_pending = _PendingAgentTurn(message="",
                                                        timestamp=ist.event_timestamp,
                                                        model_name=None,
                                                        metrics=None)
                     orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-                    _record_observed_invocation(orphan_pending, ist)
+                    _record_observed_invocation(orphan_pending, ist, start_flag=start_flag)
                     if not orphan_pending.observed_invocations:
                         continue
                     invocation = orphan_pending.observed_invocations[0]
                     step_extra = _atif_step_extra_model_from_ist(ist)
                     step_extra.tool_invocations = [invocation.invocation]
                     step_extra.tool_ancestry = [invocation.ancestry]
+                    observation_results = _build_observation_results([invocation], trajectory_session_id)
                     extra = step_extra.model_dump(exclude_none=True)
                     atif_steps.append(
                         ATIFStep(
@@ -415,28 +494,30 @@ class IntermediateStepToATIFConverter:
                             message="",
                             timestamp=_epoch_to_iso(ist.event_timestamp),
                             tool_calls=[invocation.tool_call],
-                            observation=ATIFObservation(results=[invocation.observation]),
+                            observation=ATIFObservation(results=observation_results),
                             extra=extra or None,
                         ))
                     step_id += 1
                 continue
 
             if event_type == IntermediateStepType.FUNCTION_END:
+                start_flag = delegation_flags_by_uuid.pop(ist.UUID, False)
                 if pending is not None:
-                    _record_observed_invocation(pending, ist)
+                    _record_observed_invocation(pending, ist, start_flag=start_flag)
                 else:
                     orphan_pending = _PendingAgentTurn(message="",
                                                        timestamp=ist.event_timestamp,
                                                        model_name=None,
                                                        metrics=None)
                     orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-                    _record_observed_invocation(orphan_pending, ist)
+                    _record_observed_invocation(orphan_pending, ist, start_flag=start_flag)
                     if not orphan_pending.observed_invocations:
                         continue
                     invocation = orphan_pending.observed_invocations[0]
                     step_extra = _atif_step_extra_model_from_ist(ist)
                     step_extra.tool_invocations = [invocation.invocation]
                     step_extra.tool_ancestry = [invocation.ancestry]
+                    observation_results = _build_observation_results([invocation], trajectory_session_id)
                     extra = step_extra.model_dump(exclude_none=True)
                     atif_steps.append(
                         ATIFStep(
@@ -445,7 +526,7 @@ class IntermediateStepToATIFConverter:
                             message="",
                             timestamp=_epoch_to_iso(ist.event_timestamp),
                             tool_calls=[invocation.tool_call],
-                            observation=ATIFObservation(results=[invocation.observation]),
+                            observation=ATIFObservation(results=observation_results),
                             extra=extra or None,
                         ))
                     step_id += 1
@@ -478,7 +559,7 @@ class IntermediateStepToATIFConverter:
             )
 
         return ATIFTrajectory(
-            session_id=session_id or str(uuid.uuid4()),
+            session_id=trajectory_session_id,
             agent=agent_config,
             steps=atif_steps,
             final_metrics=final_metrics,
@@ -495,6 +576,7 @@ class ATIFStreamConverter:
 
     def __init__(self, agent_name: str = "nat-agent"):
         self._step_id: int = 1
+        self._session_id: str = str(uuid.uuid4())
         self._agent_config = ATIFAgentConfig(name=agent_name, version="0.0.0")
         self._tool_defs_captured = False
         self._pending: _PendingAgentTurn | None = None
@@ -502,6 +584,7 @@ class ATIFStreamConverter:
         self._total_prompt = 0
         self._total_completion = 0
         self._total_cached = 0
+        self._delegation_flags_by_uuid: dict[str, bool] = {}
 
     @property
     def agent_config(self) -> ATIFAgentConfig:
@@ -513,6 +596,9 @@ class ATIFStreamConverter:
         event_type = ist.event_type
         category = ist.event_category
         state = ist.event_state
+
+        if state == IntermediateStepState.START and _extract_subagent_delegation_flag(ist.metadata):
+            self._delegation_flags_by_uuid[ist.UUID] = True
 
         if event_type == IntermediateStepType.WORKFLOW_START:
             user_input = ""
@@ -595,19 +681,21 @@ class ATIFStreamConverter:
             return flushed
 
         if event_type == IntermediateStepType.TOOL_END:
+            start_flag = self._delegation_flags_by_uuid.pop(ist.UUID, False)
             if self._pending is not None:
-                _record_observed_invocation(self._pending, ist)
+                _record_observed_invocation(self._pending, ist, start_flag=start_flag)
                 return None
 
             orphan_pending = _PendingAgentTurn(message="", timestamp=ist.event_timestamp, model_name=None, metrics=None)
             orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-            _record_observed_invocation(orphan_pending, ist)
+            _record_observed_invocation(orphan_pending, ist, start_flag=start_flag)
             if not orphan_pending.observed_invocations:
                 return None
             invocation = orphan_pending.observed_invocations[0]
             step_extra = _atif_step_extra_model_from_ist(ist)
             step_extra.tool_invocations = [invocation.invocation]
             step_extra.tool_ancestry = [invocation.ancestry]
+            observation_results = _build_observation_results([invocation], self._session_id)
             extra = step_extra.model_dump(exclude_none=True)
             orphan_step = ATIFStep(
                 step_id=self._step_id,
@@ -615,7 +703,7 @@ class ATIFStreamConverter:
                 message="",
                 timestamp=_epoch_to_iso(ist.event_timestamp),
                 tool_calls=[invocation.tool_call],
-                observation=ATIFObservation(results=[invocation.observation]),
+                observation=ATIFObservation(results=observation_results),
                 extra=extra or None,
             )
             self._step_id += 1
@@ -623,19 +711,21 @@ class ATIFStreamConverter:
             return orphan_step
 
         if event_type == IntermediateStepType.FUNCTION_END:
+            start_flag = self._delegation_flags_by_uuid.pop(ist.UUID, False)
             if self._pending is not None:
-                _record_observed_invocation(self._pending, ist)
+                _record_observed_invocation(self._pending, ist, start_flag=start_flag)
                 return None
 
             orphan_pending = _PendingAgentTurn(message="", timestamp=ist.event_timestamp, model_name=None, metrics=None)
             orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-            _record_observed_invocation(orphan_pending, ist)
+            _record_observed_invocation(orphan_pending, ist, start_flag=start_flag)
             if not orphan_pending.observed_invocations:
                 return None
             invocation = orphan_pending.observed_invocations[0]
             step_extra = _atif_step_extra_model_from_ist(ist)
             step_extra.tool_invocations = [invocation.invocation]
             step_extra.tool_ancestry = [invocation.ancestry]
+            observation_results = _build_observation_results([invocation], self._session_id)
             extra = step_extra.model_dump(exclude_none=True)
             orphan_step = ATIFStep(
                 step_id=self._step_id,
@@ -643,7 +733,7 @@ class ATIFStreamConverter:
                 message="",
                 timestamp=_epoch_to_iso(ist.event_timestamp),
                 tool_calls=[invocation.tool_call],
-                observation=ATIFObservation(results=[invocation.observation]),
+                observation=ATIFObservation(results=observation_results),
                 extra=extra or None,
             )
             self._step_id += 1
@@ -679,6 +769,7 @@ class ATIFStreamConverter:
                 total_steps=agent_step_count,
             )
         return ATIFTrajectory(
+            session_id=self._session_id,
             agent=self._agent_config,
             steps=list(self._emitted_steps),
             final_metrics=final_metrics,
@@ -691,7 +782,7 @@ class ATIFStreamConverter:
         pending = self._pending
         sorted_invocations = sorted(pending.observed_invocations, key=lambda i: i.order_key)
         tool_calls = [obs.tool_call for obs in sorted_invocations] or None
-        observations = [obs.observation for obs in sorted_invocations]
+        observations = _build_observation_results(sorted_invocations, self._session_id)
         observation = ATIFObservation(results=observations) if observations else None
         tool_ancestry = [obs.ancestry for obs in sorted_invocations]
         tool_invocations = [obs.invocation for obs in sorted_invocations] or None
