@@ -15,7 +15,6 @@
 
 import logging
 import os
-from collections.abc import AsyncGenerator
 
 from pydantic import Field
 
@@ -35,12 +34,15 @@ class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, n
     """A telemetry exporter to transmit traces to externally hosted langfuse service."""
 
     endpoint: str = Field(description="The langfuse OTEL endpoint (/api/public/otel/v1/traces)")
-    public_key: SerializableSecretStr = Field(description="The Langfuse public key",
-                                              default_factory=lambda: SerializableSecretStr(""))
-    secret_key: SerializableSecretStr = Field(description="The Langfuse secret key",
-                                              default_factory=lambda: SerializableSecretStr(""))
-    resource_attributes: dict[str, str] = Field(default_factory=dict,
-                                                description="The resource attributes to add to the span")
+    public_key: SerializableSecretStr = Field(
+        description="The Langfuse public key", default_factory=lambda: SerializableSecretStr("")
+    )
+    secret_key: SerializableSecretStr = Field(
+        description="The Langfuse secret key", default_factory=lambda: SerializableSecretStr("")
+    )
+    resource_attributes: dict[str, str] = Field(
+        default_factory=dict, description="The resource attributes to add to the span"
+    )
 
 
 @register_telemetry_exporter(config_type=LangfuseTelemetryExporter)
@@ -59,13 +61,15 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
     auth_header = base64.b64encode(credentials).decode("utf-8")
     headers = {"Authorization": f"Basic {auth_header}"}
 
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
-                                  headers=headers,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
 
 
 class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="langsmith"):
@@ -75,13 +79,15 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
         description="The langsmith OTEL endpoint",
         default="https://api.smith.langchain.com/otel/v1/traces",
     )
-    api_key: SerializableSecretStr = Field(description="The Langsmith API key",
-                                           default_factory=lambda: SerializableSecretStr(""))
-    workspace_id: str = Field(default="",
-                              description="The Langsmith workspace ID. "
-                              "Falls back to LANGSMITH_WORKSPACE_ID env var if not set.")
-    resource_attributes: dict[str, str] = Field(default_factory=dict,
-                                                description="The resource attributes to add to the span")
+    api_key: SerializableSecretStr = Field(
+        description="The Langsmith API key", default_factory=lambda: SerializableSecretStr("")
+    )
+    workspace_id: str = Field(
+        default="", description="The Langsmith workspace ID. Falls back to LANGSMITH_WORKSPACE_ID env var if not set."
+    )
+    resource_attributes: dict[str, str] = Field(
+        default_factory=dict, description="The resource attributes to add to the span"
+    )
 
 
 @register_telemetry_exporter(config_type=LangsmithTelemetryExporter)
@@ -95,27 +101,30 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
         raise ValueError("API key is required for langsmith")
 
     headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
-    workspace_id = config.workspace_id or os.environ.get("LANGSMITH_WORKSPACE_ID") or os.environ.get(
-        "LANGCHAIN_WORKSPACE_ID")
+    workspace_id = (
+        config.workspace_id or os.environ.get("LANGSMITH_WORKSPACE_ID") or os.environ.get("LANGCHAIN_WORKSPACE_ID")
+    )
     if workspace_id:
         headers["X-Tenant-Id"] = workspace_id
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
-                                  headers=headers,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
 
 
-class OtelCollectorTelemetryExporter(BatchConfigMixin,
-                                     CollectorConfigMixin,
-                                     TelemetryExporterBaseConfig,
-                                     name="otelcollector"):
+class OtelCollectorTelemetryExporter(
+    BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="otelcollector"
+):
     """A telemetry exporter to transmit traces to externally hosted otel collector service."""
 
-    resource_attributes: dict[str, str] = Field(default_factory=dict,
-                                                description="The resource attributes to add to the span")
+    resource_attributes: dict[str, str] = Field(
+        default_factory=dict, description="The resource attributes to add to the span"
+    )
 
 
 @register_telemetry_exporter(config_type=OtelCollectorTelemetryExporter)
@@ -136,22 +145,26 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
     # Merge defaults with config, giving precedence to config
     merged_resource_attributes = {**default_resource_attributes, **config.resource_attributes}
 
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
-                                  resource_attributes=merged_resource_attributes,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        resource_attributes=merged_resource_attributes,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
 
 
 class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
     """A telemetry exporter to transmit traces to Patronus service."""
 
-    api_key: SerializableSecretStr = Field(description="The Patronus API key",
-                                           default_factory=lambda: SerializableSecretStr(""))
-    resource_attributes: dict[str, str] = Field(default_factory=dict,
-                                                description="The resource attributes to add to the span")
+    api_key: SerializableSecretStr = Field(
+        description="The Patronus API key", default_factory=lambda: SerializableSecretStr("")
+    )
+    resource_attributes: dict[str, str] = Field(
+        default_factory=dict, description="The resource attributes to add to the span"
+    )
 
 
 @register_telemetry_exporter(config_type=PatronusTelemetryExporter)
@@ -168,21 +181,25 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
         "x-api-key": api_key,
         "pat-project-name": config.project,
     }
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
-                                  headers=headers,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout,
-                                  protocol="grpc")
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+        protocol="grpc",
+    )
 
 
 class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
-    endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
-                          default="https://app.galileo.ai/api/galileo/otel/traces")
+    endpoint: str = Field(
+        description="The galileo endpoint to export telemetry traces.",
+        default="https://app.galileo.ai/api/galileo/otel/traces",
+    )
     logstream: str = Field(description="The logstream name to group the telemetry traces.")
     api_key: SerializableSecretStr = Field(description="The api key to authenticate with the galileo service.")
 
@@ -217,16 +234,15 @@ class WeaveOtelTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, 
         description="The W&B Weave OTel endpoint",
         default="https://trace.wandb.ai/otel/v1/traces",
     )
-    api_key: SerializableSecretStr = Field(description="The W&B API key",
-                                           default_factory=lambda: SerializableSecretStr(""))
+    api_key: SerializableSecretStr = Field(
+        description="The W&B API key", default_factory=lambda: SerializableSecretStr("")
+    )
     project: str = Field(description="The W&B project name.")
     entity: str = Field(description="The W&B username or team name.")
 
 
 @register_telemetry_exporter(config_type=WeaveOtelTelemetryExporter)
-async def weave_otel_telemetry_exporter(
-    config: WeaveOtelTelemetryExporter, builder: Builder,
-) -> AsyncGenerator["OTLPSpanAdapterExporter", None]:
+async def weave_otel_telemetry_exporter(config: WeaveOtelTelemetryExporter, builder: Builder):
     """Create a Weave OTel telemetry exporter."""
 
     from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
