@@ -109,7 +109,9 @@ Workflow Result:
 ```
 
 ## Alternate Method Using a Web Search Tool
-Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. One of the tools available in NeMo Agent Toolkit is the `tavily_internet_search` tool, which utilizes the [Tavily Search API](https://tavily.com/).
+Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. NeMo Agent Toolkit provides two web search tools: `tavily_internet_search` which utilizes the [Tavily Search API](https://tavily.com/), and `exa_internet_search` which utilizes the [Exa Search API](https://exa.ai/).
+
+### Using Tavily Search
 
 The `tavily_internet_search` tool is part of the `nvidia-nat[langchain]` package, to install the package run:
 ```bash
@@ -150,4 +152,36 @@ Which will then yield a slightly different result to the same question:
 ```
 Workflow Result:
 ['To trace only specific parts of a LangChain application, users can use the `@traceable` decorator to mark specific functions or methods as traceable. Additionally, users can configure the tracing functionality to log traces to a specific project, add metadata and tags to traces, and customize the run name and ID. Users can also use the `LangChainTracer` class to trace specific invocations or parts of their application. Furthermore, users can use the `tracing_v2_enabled` context manager to trace a specific block of code.']
+```
+
+### Using Exa Search
+
+The `exa_internet_search` tool is also part of the `nvidia-nat[langchain]` package. If you haven't already installed it:
+```bash
+# local package install from source
+uv pip install -e ".[langchain]"
+```
+
+Prior to using the `exa_internet_search` tool, create an account at [`exa.ai`](https://exa.ai/) and obtain an API key. Once obtained, set the `EXA_API_KEY` environment variable to the API key:
+```bash
+export EXA_API_KEY=<YOUR_EXA_API_KEY>
+```
+
+You can use the `exa_internet_search` tool in the same way as `tavily_internet_search` by updating the `functions` section of the configuration file:
+```yaml
+functions:
+  internet_search:
+    _type: exa_internet_search
+  current_datetime:
+    _type: current_datetime
+```
+
+The `exa_internet_search` tool supports additional configuration options:
+```yaml
+functions:
+  internet_search:
+    _type: exa_internet_search
+    max_results: 5
+    search_type: neural  # 'auto', 'neural', or 'keyword'
+    livecrawl: fallback  # 'always', 'fallback', or 'never'
 ```
