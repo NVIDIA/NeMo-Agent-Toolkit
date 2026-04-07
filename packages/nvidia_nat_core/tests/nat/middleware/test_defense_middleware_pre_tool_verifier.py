@@ -55,11 +55,11 @@ def fixture_mock_builder():
 def fixture_middleware_context():
     """Create a test FunctionMiddlewareContext."""
     return FunctionMiddlewareContext(name=f"my_tool{FunctionGroup.SEPARATOR}search",
-                                    config=MagicMock(),
-                                    description="Search function",
-                                    input_schema=_TestInput,
-                                    single_output_schema=_TestOutput,
-                                    stream_output_schema=type(None))
+                                     config=MagicMock(),
+                                     description="Search function",
+                                     input_schema=_TestInput,
+                                     single_output_schema=_TestOutput,
+                                     stream_output_schema=type(None))
 
 
 def _make_llm_response(violation: bool,
@@ -471,8 +471,7 @@ class TestPreToolVerifierInvoke:
         middleware = PreToolVerifierMiddleware(config, mock_builder)
 
         mock_llm = AsyncMock()
-        mock_llm.ainvoke = AsyncMock(
-            return_value=_make_llm_response(True, confidence=0.9, sanitized="sanitized query"))
+        mock_llm.ainvoke = AsyncMock(return_value=_make_llm_response(True, confidence=0.9, sanitized="sanitized query"))
         middleware._llm = mock_llm
 
         call_next_input = None
@@ -567,8 +566,8 @@ class TestPreToolVerifierStreaming:
 
         chunks = []
         async for chunk in middleware.function_middleware_stream("safe input",
-                                                                  call_next=mock_stream,
-                                                                  context=middleware_context):
+                                                                 call_next=mock_stream,
+                                                                 context=middleware_context):
             chunks.append(chunk)
 
         assert chunks == ["chunk1", "chunk2"]
@@ -587,8 +586,8 @@ class TestPreToolVerifierStreaming:
 
         with pytest.raises(ValueError, match="Input blocked by security policy"):
             async for _ in middleware.function_middleware_stream("injected input",
-                                                                  call_next=mock_stream,
-                                                                  context=middleware_context):
+                                                                 call_next=mock_stream,
+                                                                 context=middleware_context):
                 pass
 
     async def test_streaming_skips_non_targeted_function(self, mock_builder, middleware_context):
@@ -604,8 +603,8 @@ class TestPreToolVerifierStreaming:
 
         chunks = []
         async for chunk in middleware.function_middleware_stream("input",
-                                                                  call_next=mock_stream,
-                                                                  context=middleware_context):
+                                                                 call_next=mock_stream,
+                                                                 context=middleware_context):
             chunks.append(chunk)
 
         assert chunks == ["chunk1", "chunk2"]
