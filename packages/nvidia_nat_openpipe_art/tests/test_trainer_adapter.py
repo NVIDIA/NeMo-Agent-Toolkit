@@ -51,7 +51,6 @@ class TestARTTrainerAdapter:
                                 delete_old_checkpoints=False,
                                 init_args=None,
                                 engine_args=None,
-                                torchtune_args=None,
                                 server_config=None)
 
     @pytest.fixture

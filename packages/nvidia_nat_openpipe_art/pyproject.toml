@@ -58,7 +58,7 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",
   "matplotlib~=3.9",
-  "openpipe-art==0.5.4"
+  "openpipe-art~=0.5.17"
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
