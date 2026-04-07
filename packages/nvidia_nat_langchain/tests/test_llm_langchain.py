@@ -189,10 +189,6 @@ class TestOCILangChain:
     """Tests for the oci_langchain wrapper."""
 
     @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def oci_cfg(self):
         return OCIModelConfig(
             model_name="nvidia/Llama-3.1-Nemotron-Nano-8B-v1",

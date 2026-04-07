@@ -218,7 +218,9 @@ conflicts = [
     # (adk|crewai)<>openpipe-art have incompatible litellm versions
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
-    # oci<>strands/examples have incompatible openai versions (`langchain-oci` requires >=2, `strands-agents[openai]` requires <2)
+    # oci<>agno/most/strands/examples have incompatible openai versions (`langchain-oci` requires >=2, others require <2)
+    [{ extra = "oci" }, { extra = "agno" }],
+    [{ extra = "oci" }, { extra = "most" }],
     [{ extra = "oci" }, { extra = "strands" }],
     [{ extra = "oci" }, { extra = "examples" }],
     [{ extra = "strands" }, { extra = "vanna" }],
