@@ -169,19 +169,30 @@ async def azure_openai_langchain(llm_config: AzureOpenAIModelConfig, _builder: B
 async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
 
     from langchain_nvidia_ai_endpoints import ChatNVIDIA
-    from langchain_nvidia_ai_endpoints._statics import MODEL_TABLE, Model
+    from langchain_nvidia_ai_endpoints import Model
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
 
+    # TODO: Remove after upgrading to a langchain-nvidia-ai-endpoints release
+    # that includes https://github.com/langchain-ai/langchain-nvidia/pull/282.
+    #
     # Pre-register unknown models so ChatNVIDIA skips the /v1/models API
     # call. This guards against upstream issues such as duplicate entries
     # in the API response that cause ChatNVIDIA to crash with AssertionError.
-    if llm_config.model_name not in MODEL_TABLE:
-        MODEL_TABLE[llm_config.model_name] = Model(
-            id=llm_config.model_name,
-            model_type="chat",
-            client="ChatNVIDIA",
-        )
+    # Uses internal MODEL_TABLE with fallback — if the private module
+    # changes between langchain-nvidia-ai-endpoints versions, we skip
+    # pre-registration and let ChatNVIDIA discover the model via /v1/models.
+    try:
+        from langchain_nvidia_ai_endpoints._statics import MODEL_TABLE
+
+        if llm_config.model_name not in MODEL_TABLE:
+            MODEL_TABLE[llm_config.model_name] = Model(
+                id=llm_config.model_name,
+                model_type="chat",
+                client="ChatNVIDIA",
+            )
+    except (ImportError, AttributeError):
+        pass
 
     # prefer max_completion_tokens over max_tokens
     # verify_ssl is a supported keyword parameter for the ChatNVIDIA client
