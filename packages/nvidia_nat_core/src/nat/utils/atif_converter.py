@@ -198,8 +198,19 @@ def _extract_subagent_delegation_flag(metadata: Any) -> bool:
             return bool(provided.get("is_subagent_delegation", provided.get("subagent_delegation", False)))
         return False
     if isinstance(metadata, dict):
+        provided = metadata.get("provided_metadata")
+        if isinstance(provided, dict):
+            return bool(provided.get("is_subagent_delegation", provided.get("subagent_delegation", False)))
         return bool(metadata.get("is_subagent_delegation", metadata.get("subagent_delegation", False)))
     return False
+
+
+def _event_metadata(ist: IntermediateStep) -> Any:
+    """Return metadata payload from the most reliable event surface."""
+    payload_metadata = getattr(ist.payload, "metadata", None)
+    if payload_metadata is not None:
+        return payload_metadata
+    return getattr(ist, "metadata", None)
 
 
 def _event_uuid(ist: IntermediateStep) -> str:
@@ -269,7 +280,7 @@ def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateSte
         logger.warning("Skipping invocation without UUID for tool=%s", tool_name)
         return
     call_id = f"call_{event_uuid}"
-    is_subagent_delegation = _extract_subagent_delegation_flag(ist.metadata) or start_flag
+    is_subagent_delegation = _extract_subagent_delegation_flag(_event_metadata(ist)) or start_flag
     pending.observed_invocations.append(
         _ObservedInvocation(
             order_key=ist.payload.span_event_timestamp or ist.event_timestamp,
@@ -452,7 +463,7 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
     delegation_flags_by_uuid: dict[str, bool] = {}
     delegated_callable_ids: set[str] = set()
     for ist in sorted_steps:
-        if ist.event_state == IntermediateStepState.START and _extract_subagent_delegation_flag(ist.metadata):
+        if ist.event_state == IntermediateStepState.START and _extract_subagent_delegation_flag(_event_metadata(ist)):
             event_uuid = _event_uuid(ist)
             if event_uuid:
                 delegation_flags_by_uuid[event_uuid] = True
@@ -469,10 +480,13 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
 
     wrapper_events: list[IntermediateStep] = []
     for e in end_events:
-        if e.event_type not in (IntermediateStepType.TOOL_END, IntermediateStepType.FUNCTION_END):
+        # Delegation boundaries are represented by callable-level completion.
+        # Do not use TOOL_END here: nested tool rows inherit parent ancestry and can
+        # otherwise be misclassified as delegation wrappers.
+        if e.event_type != IntermediateStepType.FUNCTION_END:
             continue
         event_uuid = _event_uuid(e)
-        if (_extract_subagent_delegation_flag(e.metadata)
+        if (_extract_subagent_delegation_flag(_event_metadata(e))
                 or (event_uuid and delegation_flags_by_uuid.get(event_uuid, False))
                 or e.function_ancestry.function_id in delegated_callable_ids):
             wrapper_events.append(e)
