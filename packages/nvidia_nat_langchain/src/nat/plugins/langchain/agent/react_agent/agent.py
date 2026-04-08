@@ -32,6 +32,7 @@ from langchain_core.messages.tool import ToolMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.prompts import MessagesPlaceholder
 from langchain_core.runnables import Runnable
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
 from pydantic import Field
@@ -195,7 +196,7 @@ class ReActAgentGraph(DualNodeAgent):
 
         return tool_input_str, False
 
-    async def agent_node(self, state: ReActGraphState):
+    async def agent_node(self, state: ReActGraphState, config: RunnableConfig | None = None):
         try:
             logger.debug("%s Starting the ReAct Agent Node", AGENT_LOG_PREFIX)
             # keeping a working state allows us to resolve parsing errors without polluting the agent scratchpad
@@ -217,9 +218,8 @@ class ReActAgentGraph(DualNodeAgent):
                     question = content
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
                     chat_history = self._get_chat_history(state.messages)
-                    output_message = await self._stream_llm(self.agent, {
-                        "question": question, "chat_history": chat_history
-                    })  # type: ignore
+                    inputs = {"question": question, "chat_history": chat_history}
+                    output_message = await self._stream_llm(self.agent, inputs, config=config)  # type: ignore
                     if isinstance(output_message.content, str):
                         raw_content = output_message.content
                         output_message.content = remove_r1_think_tags(raw_content)
@@ -250,10 +250,8 @@ class ReActAgentGraph(DualNodeAgent):
                     question = str(state.messages[-1].content)
                     logger.debug("%s Querying agent, attempt: %s", AGENT_LOG_PREFIX, attempt)
 
-                    output_message = await self._stream_llm(
-                        self.agent, {
-                            "question": question, "agent_scratchpad": agent_scratchpad, "chat_history": chat_history
-                        })  # type: ignore
+                    inputs = {"question": question, "agent_scratchpad": agent_scratchpad, "chat_history": chat_history}
+                    output_message = await self._stream_llm(self.agent, inputs, config=config)  # type: ignore
                     if isinstance(output_message.content, str):
                         raw_content = output_message.content
                         output_message.content = remove_r1_think_tags(raw_content)
