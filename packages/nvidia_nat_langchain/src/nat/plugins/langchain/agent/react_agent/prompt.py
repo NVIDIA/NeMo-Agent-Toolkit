@@ -31,7 +31,7 @@ Action Input: the input to the action (if there is no required input, include "A
 Observation: wait for the human to respond with the result from the tool, do not assume the response
 
 ... (this Thought/Action/Action Input/Observation can repeat N times. If you do not need to use a tool, or after asking the human to use any tools and waiting for the human to respond, you might know the final answer.)
-Use the following format once you have the final answer:
+Use the following format once you have the final answer. Important: write "Final Answer:" exactly as shown, with no surrounding asterisks or markdown formatting:
 
 Thought: I now know the final answer
 Final Answer: the final answer to the original input question
