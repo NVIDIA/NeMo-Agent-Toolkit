@@ -105,6 +105,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from nat.plugins.langchain.agent.react_agent.agent import ReActAgentGraph
     from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
     from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
+    from nat.plugins.langchain.agent.react_agent.output_parser import FINAL_ANSWER_PATTERN
 
     prompt = create_react_agent_prompt(config)
 
@@ -205,16 +206,34 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
                                                         include_system=True)
             state = ReActGraphState(messages=messages)
 
+            # buffer tokens until "Final Answer:" is found, then yield only the answer content
+            buffer = ""
+            found_final_answer = False
+
             async for msg, metadata in graph.astream(
                     state,
                     config={'recursion_limit': (config.max_tool_calls + 1) * 2},
                     stream_mode="messages"):
                 if not isinstance(msg, AIMessageChunk):
                     continue
-                if metadata.get("langgraph_node") != "agent":
+                if not isinstance(metadata, dict) or metadata.get("langgraph_node") != "agent":
                     continue
                 if isinstance(msg.content, str) and msg.content and not msg.tool_call_chunks:
-                    yield ChatResponseChunk.create_streaming_chunk(msg.content, id_=chunk_id)
+                    if found_final_answer:
+                        yield ChatResponseChunk.create_streaming_chunk(msg.content, id_=chunk_id)
+                    else:
+                        buffer += msg.content
+                        match = FINAL_ANSWER_PATTERN.search(buffer)
+                        if match:
+                            found_final_answer = True
+                            after_marker = buffer[match.end():]
+                            if after_marker:
+                                yield ChatResponseChunk.create_streaming_chunk(after_marker, id_=chunk_id)
+                            buffer = ""
+
+            # fallback: if the LLM answered directly without ReAct format, yield the buffer as-is
+            if not found_final_answer and buffer:
+                yield ChatResponseChunk.create_streaming_chunk(buffer, id_=chunk_id)
 
         except GraphRecursionError:
             logger.warning(
