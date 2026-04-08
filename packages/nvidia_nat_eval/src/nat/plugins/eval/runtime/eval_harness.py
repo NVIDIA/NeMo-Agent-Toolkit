@@ -34,7 +34,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from nat.data_models.evaluator import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
 

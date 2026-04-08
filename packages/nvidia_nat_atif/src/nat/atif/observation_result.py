@@ -21,8 +21,8 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from nat.data_models.atif.content import ContentPart
-from nat.data_models.atif.subagent_trajectory_ref import SubagentTrajectoryRef
+from nat.atif.content import ContentPart
+from nat.atif.subagent_trajectory_ref import SubagentTrajectoryRef
 
 
 class ObservationResult(BaseModel):

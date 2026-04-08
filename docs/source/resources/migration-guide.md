@@ -58,7 +58,7 @@ This is a breaking change:
 
 To migrate:
 - Install both packages when using these evaluators:
-  - `pip install nvidia-nat-eval nvidia-nat-langchain`
+  - `pip install "nvidia-nat-eval" nvidia-nat-langchain`
 - Install the RAGAS evaluator package when using `_type: ragas`:
   - `pip install nvidia-nat-ragas`
 - Install the profiler package when using performance evaluators or profiling workflows:
@@ -90,7 +90,8 @@ CLI command ownership is now aligned to package domains:
 
 To migrate:
 - Install command-specific packages as needed:
-  - `pip install nvidia-nat-eval`
+  - `pip install "nvidia-nat[eval]"`
+  - `pip install "nvidia-nat-eval[full]"`
   - `pip install nvidia-nat-profiler`
   - `pip install nvidia-nat-security`
 

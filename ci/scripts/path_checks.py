@@ -135,6 +135,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "A/B",
     "and/or",
     "application/json",
+    "arizephoenix/phoenix",
     "CI/CD",
     "commit/push",
     "Continue/Cancel",

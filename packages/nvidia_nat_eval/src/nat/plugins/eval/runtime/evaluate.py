@@ -32,22 +32,6 @@ from pydantic import BaseModel
 from pydantic import SecretStr
 from tqdm import tqdm
 
-from nat.builder.context import ContextState
-from nat.data_models.config import Config
-from nat.data_models.evaluate_config import EvalConfig
-from nat.data_models.evaluate_config import JobEvictionPolicy
-from nat.data_models.evaluate_runtime import EvaluationRunConfig
-from nat.data_models.evaluate_runtime import EvaluationRunOutput
-from nat.data_models.evaluate_runtime import ProfilerResults
-from nat.data_models.evaluate_runtime import UsageStats
-from nat.data_models.evaluate_runtime import UsageStatsItem
-from nat.data_models.evaluate_runtime import UsageStatsLLM
-from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.intermediate_step import IntermediateStepType
-from nat.data_models.user_info import BasicUserInfo
-from nat.data_models.user_info import UserInfo
 from nat.plugins.eval.dataset_handler.dataset_handler import DatasetHandler
 from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
@@ -55,9 +39,40 @@ from nat.plugins.eval.evaluator.atif_evaluator import LegacyEvaluator
 from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
 from nat.plugins.eval.utils.output_uploader import OutputUploader
-from nat.runtime.session import SessionManager
+
+FULL_EVAL_INSTALL_HINT = ("Full workflow evaluation requires optional dependencies that are not installed. "
+                          "Install with: pip install \"nvidia-nat[eval]\" "
+                          "(or pip install \"nvidia-nat-eval[full]\")")
+
+
+def _raise_full_eval_dependency_error(error: Exception):
+    raise ModuleNotFoundError(FULL_EVAL_INSTALL_HINT) from error
+
+
+try:
+    from nat.builder.context import ContextState
+    from nat.data_models.config import Config
+    from nat.data_models.evaluate_config import EvalConfig
+    from nat.data_models.evaluate_config import JobEvictionPolicy
+    from nat.data_models.evaluate_runtime import EvaluationRunConfig
+    from nat.data_models.evaluate_runtime import EvaluationRunOutput
+    from nat.data_models.evaluate_runtime import ProfilerResults
+    from nat.data_models.evaluate_runtime import UsageStats
+    from nat.data_models.evaluate_runtime import UsageStatsItem
+    from nat.data_models.evaluate_runtime import UsageStatsLLM
+    from nat.data_models.evaluator import EvalInput
+    from nat.data_models.evaluator import EvalInputItem
+    from nat.data_models.intermediate_step import IntermediateStepType
+    from nat.data_models.user_info import BasicUserInfo
+    from nat.data_models.user_info import UserInfo
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+    from nat.runtime.session import SessionManager
+except ImportError as import_error:  # pragma: no cover - guarded runtime path
+    _raise_full_eval_dependency_error(import_error)
 
 if TYPE_CHECKING:
+    from starlette.requests import HTTPConnection
+
     from nat.plugins.eval.eval_callbacks import EvalCallbackManager
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
     from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
@@ -176,7 +191,9 @@ class EvaluationRun:
                                                                      llm_latency=llm_latency)
         return self.usage_stats.usage_stats_items[item.id]
 
-    async def run_workflow_local(self, session_manager: SessionManager):
+    async def run_workflow_local(self,
+                                 session_manager: SessionManager,
+                                 http_connection: "HTTPConnection | None" = None):
         '''
         Launch the workflow with the specified questions and extract the output using the jsonpath
         '''
@@ -214,7 +231,7 @@ class EvaluationRun:
             ctx_state = ContextState.get()
             root_span_token = ctx_state._root_span_id.set(pre_span_id) if pre_span_id is not None else None
             try:
-                async with session_manager.session(user_id=eval_user_id) as session:
+                async with session_manager.session(user_id=eval_user_id, http_connection=http_connection) as session:
                     async with session.run(item.input_obj) as runner:
                         if not session.workflow.has_single_output:
                             # raise an error if the workflow has multiple outputs
@@ -689,7 +706,8 @@ class EvaluationRun:
 
     async def run_and_evaluate(self,
                                session_manager: SessionManager | None = None,
-                               job_id: str | None = None) -> EvaluationRunOutput:
+                               job_id: str | None = None,
+                               http_connection: "HTTPConnection | None" = None) -> EvaluationRunOutput:
         """
         Run the workflow with the specified config file and evaluate the dataset
         """
@@ -818,7 +836,7 @@ class EvaluationRun:
                                 shared_builder=eval_workflow,
                                 max_concurrency=self.eval_config.general.max_concurrency)
                             local_session_manager = session_manager
-                        await self.run_workflow_local(session_manager)
+                        await self.run_workflow_local(session_manager, http_connection=http_connection)
 
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)

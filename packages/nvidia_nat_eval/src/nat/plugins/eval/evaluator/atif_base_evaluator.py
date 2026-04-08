@@ -20,8 +20,8 @@ import asyncio
 from abc import ABC
 from abc import abstractmethod
 
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 

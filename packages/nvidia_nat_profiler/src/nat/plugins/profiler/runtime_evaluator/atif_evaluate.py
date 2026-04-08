@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 
@@ -37,8 +37,8 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
     """
     ATIF-native mean latency between LLM start and end for agent steps with metrics.
 
-    Uses step.timestamp as end time and step.extra["ancestry"]["span_event_timestamp"] as start time.
-    Steps without span_event_timestamp are skipped (see NEP-008 for ATIF profiling metadata).
+    Uses step.timestamp as end time and step.extra["invocation"]["start_timestamp"] as start time.
+    Steps without invocation start timing are skipped (see NEP-008 for ATIF profiling metadata).
     """
 
     def __init__(self, max_concurrency: int = 8):
@@ -50,8 +50,8 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
             if step.source != "agent" or not step.metrics:
                 continue
             end_ts = _iso_to_epoch(step.timestamp)
-            ancestry = (step.extra or {}).get("ancestry")
-            start_ts_raw = ancestry.get("span_event_timestamp") if isinstance(ancestry, dict) else None
+            invocation = (step.extra or {}).get("invocation")
+            start_ts_raw = invocation.get("start_timestamp") if isinstance(invocation, dict) else None
             if isinstance(start_ts_raw, (int, float)):
                 start_ts = float(start_ts_raw)
             elif isinstance(start_ts_raw, str):

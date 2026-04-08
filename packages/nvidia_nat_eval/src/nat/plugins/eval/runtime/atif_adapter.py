@@ -24,7 +24,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from nat.data_models.atif import ATIFTrajectory
+from nat.atif import ATIFTrajectory
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample

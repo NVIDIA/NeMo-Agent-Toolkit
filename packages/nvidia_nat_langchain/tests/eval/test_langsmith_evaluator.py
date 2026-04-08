@@ -22,7 +22,7 @@ from pydantic import ValidationError
 
 from nat.builder.evaluator import EvaluatorInfo
 from nat.data_models.evaluator import EvalInput
-from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.langchain.eval.langsmith_evaluator import LangSmithEvaluatorConfig
 from nat.plugins.langchain.eval.langsmith_evaluator import register_langsmith_evaluator
 from nat.plugins.langchain.eval.langsmith_evaluator_adapter import LangSmithEvaluatorAdapter

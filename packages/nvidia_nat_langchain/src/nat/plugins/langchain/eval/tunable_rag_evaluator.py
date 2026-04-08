@@ -25,17 +25,17 @@ from langchain_core.messages import SystemMessage
 from langchain_core.runnables import RunnableLambda
 from pydantic import Field
 
+from nat.atif import ATIFContentPart
+from nat.atif import ATIFTrajectory
 from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_evaluator
-from nat.data_models.atif import ATIFContentPart
-from nat.data_models.atif import ATIFTrajectory
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSampleList
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator

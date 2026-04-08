@@ -15,10 +15,10 @@
 
 import pytest
 
-from nat.data_models.atif import Agent
-from nat.data_models.atif import Metrics
-from nat.data_models.atif import Step
-from nat.data_models.atif import Trajectory
+from nat.atif import Agent
+from nat.atif import Metrics
+from nat.atif import Step
+from nat.atif import Trajectory
 from nat.plugins.profiler.atif_dataframe import create_dataframe_from_atif
 from nat.plugins.profiler.forecasting.model_trainer import ModelTrainer
 from nat.plugins.profiler.forecasting.model_trainer import create_model
@@ -31,12 +31,10 @@ from nat.plugins.profiler.intermediate_property_adapter import IntermediatePrope
 def _extra() -> dict:
     return {
         "ancestry": {
-            "function_ancestry": {
-                "function_id": "root",
-                "function_name": "root",
-                "parent_id": "",
-                "parent_name": "",
-            }
+            "function_id": "root",
+            "function_name": "root",
+            "parent_id": "",
+            "parent_name": "",
         }
     }
 
