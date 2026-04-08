@@ -1422,3 +1422,52 @@ async def test_agent_node_native_tool_calling_with_dict_args(mock_config_react_a
         assert parsed["query"] == "search term"
         assert parsed["limit"] == 10
         assert parsed["nested"]["key"] == "value"
+
+
+async def test_agent_node_passes_config_to_stream_llm(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that agent_node forwards the RunnableConfig argument to _stream_llm."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    from langchain_core.agents import AgentFinish
+    from langchain_core.runnables import RunnableConfig
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False)
+
+    state = ReActGraphState(messages=[HumanMessage(content="What is 1+1?")])
+    external_config = RunnableConfig(tags=["streaming-test"])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = AIMessage(content="Final Answer: 2")
+
+        with patch('nat.plugins.langchain.agent.react_agent.agent.ReActOutputParser.aparse',
+                   new_callable=AsyncMock) as mock_parse:
+            mock_parse.return_value = AgentFinish(return_values={'output': '2'}, log='')
+
+            await agent.agent_node(state, config=external_config)
+
+        assert mock_stream_llm.call_count >= 1
+        assert mock_stream_llm.call_args.kwargs.get('config') is external_config
+
+
+async def test_graph_astream_yields_message_chunks(mock_react_graph):
+    """Test that graph.astream with stream_mode='messages' yields message chunks from the agent node.
+
+    This validates the streaming path used by _stream_fn in register.py. With a real LLM the chunks
+    will be AIMessageChunk; the mock LLM produces AIMessage which LangGraph may wrap differently,
+    so we accept any BaseMessage subclass from the agent node.
+    """
+    from langchain_core.messages import BaseMessage
+
+    mock_state = ReActGraphState(messages=[HumanMessage(content='Final Answer: hello, world!')])
+    agent_messages = []
+    async for msg, metadata in mock_react_graph.astream(
+            mock_state, config={'recursion_limit': 5}, stream_mode="messages"):
+        if isinstance(msg, BaseMessage) and isinstance(metadata, dict) and metadata.get("langgraph_node") == "agent":
+            agent_messages.append(msg)
+
+    assert len(agent_messages) > 0, "Expected at least one message from the agent node via stream_mode='messages'"
+    combined_content = "".join(m.content for m in agent_messages if isinstance(m.content, str))
+    assert len(combined_content) > 0, "Expected non-empty content from streamed agent messages"
