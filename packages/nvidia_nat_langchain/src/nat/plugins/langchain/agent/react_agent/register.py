@@ -14,6 +14,8 @@
 # limitations under the License.
 
 import logging
+import uuid
+from collections.abc import AsyncGenerator
 
 from pydantic import AliasChoices
 from pydantic import Field
@@ -26,6 +28,7 @@ from nat.data_models.agent import AgentBaseConfig
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import ChatRequestOrMessage
 from nat.data_models.api_server import ChatResponse
+from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import FunctionGroupRef
 from nat.data_models.component_ref import FunctionRef
@@ -92,8 +95,10 @@ class ReActAgentWorkflowConfig(AgentBaseConfig, OptimizableMixin, name="react_ag
 
 @register_function(config_type=ReActAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builder):
+    from langchain_core.messages import AIMessageChunk
     from langchain_core.messages import BaseMessage
     from langchain_core.messages import trim_messages
+    from langgraph.errors import GraphRecursionError
     from langgraph.graph.state import CompiledStateGraph
 
     from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
@@ -176,4 +181,54 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
             logger.error("%s ReAct Agent failed with exception: %s", AGENT_LOG_PREFIX, str(ex))
             raise
 
-    yield FunctionInfo.from_fn(_response_fn, description=config.description)
+    async def _stream_fn(chat_request_or_message: ChatRequestOrMessage) -> AsyncGenerator[ChatResponseChunk]:
+        """
+        Streaming workflow entry function for the ReAct Agent.
+
+        Uses graph.astream with stream_mode="messages" to yield token-level content chunks from the LLM,
+        enabling real-time SSE streaming over the OpenAI-compatible /v1/chat/completions endpoint.
+
+        Args:
+            chat_request_or_message (ChatRequestOrMessage): The input message to process
+
+        Yields:
+            ChatResponseChunk: Streaming chunks containing content deltas
+        """
+        chunk_id = str(uuid.uuid4())
+        try:
+            message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
+            messages: list[BaseMessage] = trim_messages(messages=[m.model_dump() for m in message.messages],
+                                                        max_tokens=config.max_history,
+                                                        strategy="last",
+                                                        token_counter=len,
+                                                        start_on="human",
+                                                        include_system=True)
+            state = ReActGraphState(messages=messages)
+
+            async for msg, metadata in graph.astream(
+                    state,
+                    config={'recursion_limit': (config.max_tool_calls + 1) * 2},
+                    stream_mode="messages"):
+                if not isinstance(msg, AIMessageChunk):
+                    continue
+                if metadata.get("langgraph_node") != "agent":
+                    continue
+                if isinstance(msg.content, str) and msg.content and not msg.tool_call_chunks:
+                    yield ChatResponseChunk.create_streaming_chunk(msg.content, id_=chunk_id)
+
+        except GraphRecursionError:
+            logger.warning(
+                "%s ReAct Agent reached its maximum iteration limit (%d) without producing a final answer. "
+                "This typically means the LLM kept calling tools instead of returning a response.",
+                AGENT_LOG_PREFIX,
+                config.max_tool_calls)
+            yield ChatResponseChunk.create_streaming_chunk(
+                f"The react agent could not produce a final answer within {config.max_tool_calls} "
+                "iterations. The agent repeatedly called tools without converging on a response.",
+                id_=chunk_id,
+            )
+        except Exception as ex:
+            logger.error("%s ReAct Agent streaming failed with exception: %s", AGENT_LOG_PREFIX, ex)
+            raise
+
+    yield FunctionInfo.create(single_fn=_response_fn, stream_fn=_stream_fn, description=config.description)
