@@ -12,9 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Entry point — imports modules to trigger registration."""
 
+from . import callback_handler  # noqa: F401
 from . import llm  # noqa: F401
 from . import tool_wrapper  # noqa: F401
-from . import callback_handler  # noqa: F401

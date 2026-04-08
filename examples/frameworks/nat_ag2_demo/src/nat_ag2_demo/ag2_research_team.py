@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """AG2 (formerly AutoGen) research team demo for NAT.
 
 Two agents (researcher + writer) collaborate via AutoPattern GroupChat
@@ -36,12 +35,8 @@ class AG2ResearchConfig(FunctionBaseConfig, name="ag2_research_team"):
 
     llm_name: LLMRef = Field(description="NAT LLM config name.")
     max_rounds: int = Field(default=10, description="Max GroupChat rounds.")
-    researcher_instructions: str = Field(
-        description="System message for the researcher agent.",
-    )
-    writer_instructions: str = Field(
-        description="System message for the writer agent.",
-    )
+    researcher_instructions: str = Field(description="System message for the researcher agent.", )
+    writer_instructions: str = Field(description="System message for the writer agent.", )
 
 
 @register_function(

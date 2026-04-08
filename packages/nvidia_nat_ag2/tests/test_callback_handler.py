@@ -81,8 +81,7 @@ class TestInstrument:
             with patch.dict('sys.modules', {'autogen': None, 'autogen.oai': None, 'autogen.oai.client': None}):
                 with patch('builtins.__import__', side_effect=ImportError("No module")):
                     handler.instrument()
-                    mock_logger.debug.assert_any_call(
-                        "autogen.oai.client not available; skipping AG2 instrumentation")
+                    mock_logger.debug.assert_any_call("autogen.oai.client not available; skipping AG2 instrumentation")
 
         assert handler._instrumented is False
 
@@ -96,7 +95,7 @@ class TestInstrument:
 
         with patch('nat.plugins.ag2.callback_handler.logger'):
             with patch.dict(
-                'sys.modules',
+                    'sys.modules',
                 {
                     'autogen': Mock(),
                     'autogen.oai': Mock(),
@@ -145,7 +144,7 @@ class TestUninstrument:
 
         with patch('nat.plugins.ag2.callback_handler.logger'):
             with patch.dict(
-                'sys.modules',
+                    'sys.modules',
                 {
                     'autogen': Mock(),
                     'autogen.oai': Mock(),
@@ -200,7 +199,9 @@ class TestHelperMethods:
         handler = AG2ProfilerHandler()
         result = handler._extract_input_text({
             "model": "gpt-4",
-            "messages": [{"role": "user", "content": "hello"}],
+            "messages": [{
+                "role": "user", "content": "hello"
+            }],
         })
         assert "gpt-4" in result
         assert "1" in result  # message_count

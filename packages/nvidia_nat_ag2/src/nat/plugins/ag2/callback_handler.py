@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Profiler callback handler for AG2.
 
 Patches AG2's OpenAIWrapper to capture LLM call timings and
@@ -185,12 +184,9 @@ class AG2ProfilerHandler(BaseProfilerCallback):
                             input=model_input,
                             output=f"error: {type(e).__name__}",
                         ),
-                        usage_info=UsageInfo(
-                            token_usage=TokenUsageBaseModel(),
-                        ),
+                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel(), ),
                         UUID=start_uuid,
-                    )
-                )
+                    ))
                 with handler._lock:
                     handler.last_call_ts = err_time
                 raise
@@ -212,8 +208,7 @@ class AG2ProfilerHandler(BaseProfilerCallback):
                         num_llm_calls=1,
                     ),
                     UUID=start_uuid,
-                )
-            )
+                ))
             with handler._lock:
                 handler.last_call_ts = end_time
 

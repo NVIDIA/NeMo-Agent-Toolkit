@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """LLM client wrappers for AG2.
 
 AG2 uses LLMConfig (a configuration object) rather than a separate
@@ -69,10 +68,7 @@ async def nim_ag2(
         "api_type": "openai",
         "model": llm_config.model_name,
         "api_key": get_secret_value(llm_config.api_key),
-        "base_url": (
-            llm_config.base_url
-            or "https://integrate.api.nvidia.com/v1"
-        ),
+        "base_url": (llm_config.base_url or "https://integrate.api.nvidia.com/v1"),
     }
 
     yield LLMConfig(
@@ -91,9 +87,7 @@ async def azure_ag2(
 ) -> AsyncGenerator[LLMConfig, None]:
     """Yield an AG2 LLMConfig for Azure OpenAI."""
     if not llm_config.azure_endpoint:
-        raise ValueError(
-            "azure_endpoint is required for Azure OpenAI configs"
-        )
+        raise ValueError("azure_endpoint is required for Azure OpenAI configs")
     config_dict = {
         "api_type": "azure",
         "model": llm_config.azure_deployment,

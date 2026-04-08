@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Converts NAT Function objects to AG2 Tool objects."""
 
 import logging
@@ -82,9 +81,5 @@ def ag2_tool_wrapper(
         name=name,
         description=fn.description or name,
         func_or_tool=call_function,
-        parameters_json_schema=(
-            fn.input_schema.model_json_schema()
-            if fn.input_schema
-            else None
-        ),
+        parameters_json_schema=(fn.input_schema.model_json_schema() if fn.input_schema else None),
     )

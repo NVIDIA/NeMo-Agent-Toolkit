@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """AG2 (formerly AutoGen) multi-agent team workflow for NAT.
 
 Two agents (TrafficAgent + FinalResponseAgent) collaborate via AutoPattern

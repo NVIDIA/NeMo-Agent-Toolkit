@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """AG2 async multi-agent team workflow for NAT.
 
 Demonstrates AG2's native async execution path using ``a_initiate_group_chat``.
