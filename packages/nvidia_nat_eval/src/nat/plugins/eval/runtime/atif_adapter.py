@@ -96,7 +96,8 @@ class EvalAtifAdapter:
         return subtree_ids
 
     @staticmethod
-    def _build_subtrajectory(trajectory: ATIFTrajectory, *, session_id: str, root_function_id: str) -> ATIFTrajectory | None:
+    def _build_subtrajectory(trajectory: ATIFTrajectory, *, session_id: str,
+                             root_function_id: str) -> ATIFTrajectory | None:
         """Build a child trajectory view for a delegated function subtree."""
         subtree_ids = EvalAtifAdapter._collect_subtree_function_ids(trajectory, root_function_id)
         if not subtree_ids:
@@ -125,6 +126,18 @@ class EvalAtifAdapter:
 
     def _build_subagent_trajectory_map(self, trajectory: ATIFTrajectory, *, item_id: Any) -> dict[str, ATIFTrajectory]:
         """Build in-memory session_id -> trajectory map for subagent references."""
+        extra = trajectory.extra if isinstance(trajectory.extra, dict) else None
+        embedded = extra.get("subagent_trajectories") if extra else None
+        if isinstance(embedded, Mapping):
+            parsed: dict[str, ATIFTrajectory] = {}
+            for sid, value in embedded.items():
+                try:
+                    parsed[str(sid)] = value if isinstance(value, ATIFTrajectory) else ATIFTrajectory.model_validate(value)
+                except Exception:
+                    logger.warning("Invalid embedded subagent trajectory for item_id=%s session_id=%s", item_id, sid)
+            if parsed:
+                return parsed
+
         by_session_id: dict[str, ATIFTrajectory] = {}
         unresolved: list[str] = []
 

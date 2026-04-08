@@ -46,7 +46,6 @@ from nat.atif import ATIFToolCall
 from nat.atif import ATIFTrajectory
 from nat.atif import SubagentTrajectoryRef
 from nat.data_models.intermediate_step import IntermediateStep
-from nat.data_models.intermediate_step import IntermediateStepCategory
 from nat.data_models.intermediate_step import IntermediateStepState
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import TraceMetadata
@@ -220,6 +219,15 @@ class _ObservedInvocation:
     is_subagent_delegation: bool
 
 
+@dataclass
+class _ExecutionStructure:
+    """Pass-1 execution structure extracted from IST."""
+
+    root_events: list[IntermediateStep]
+    child_events_by_session: dict[str, list[IntermediateStep]]
+    subagent_ref_by_call_id: dict[str, SubagentTrajectoryRef]
+
+
 class _PendingAgentTurn:
     """Accumulator for an in-progress ATIF agent turn."""
 
@@ -234,10 +242,7 @@ class _PendingAgentTurn:
         self.observed_invocations: list[_ObservedInvocation] = []
 
 
-def _record_observed_invocation(pending: _PendingAgentTurn,
-                                ist: IntermediateStep,
-                                *,
-                                start_flag: bool = False) -> None:
+def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateStep, *, start_flag: bool = False) -> None:
     """Record an observed invocation as a tool_call + observation pair."""
     tool_name = ist.name or "unknown_tool"
     if tool_name == "<workflow>":
@@ -261,61 +266,241 @@ def _record_observed_invocation(pending: _PendingAgentTurn,
         ))
 
 
-def _build_observation_results(observed: list[_ObservedInvocation],
-                               trajectory_session_id: str,
-                               *,
-                               allow_implicit_delegation: bool) -> list[ATIFObservationResult]:
-    """Build observation rows and attach in-memory subagent refs when detected.
-
-    A wrapper/delegation pattern is inferred when:
-    - the wrapper invocation is explicitly flagged as subagent delegation, or
-    - implicit delegation inference is enabled and the wrapper row appears to
-      represent delegation based on existing lineage
-      (tool call name differs from ancestry function name), and
-    - another invocation in the same ATIF step has:
-      - ancestry.function_name equal to the wrapper tool call name, and
-      - ancestry.parent_id equal to the wrapper ancestry.function_id.
-    """
+def _build_flat_observation_rows(observed: list[_ObservedInvocation],
+                                 *,
+                                 subagent_ref_by_call_id: dict[str, SubagentTrajectoryRef] | None = None
+                                 ) -> list[ATIFObservationResult]:
+    """Build observation rows and attach explicit subagent refs when available."""
     results = [
-        ATIFObservationResult(source_call_id=obs.tool_call.tool_call_id, content=obs.tool_output)
-        for obs in observed
+        ATIFObservationResult(source_call_id=obs.tool_call.tool_call_id, content=obs.tool_output) for obs in observed
     ]
 
-    for i, wrapper in enumerate(observed):
-        wrapper_call_name = wrapper.tool_call.function_name
-        wrapper_ancestry = wrapper.ancestry
-        inferred_delegation = allow_implicit_delegation and wrapper_ancestry.function_name != wrapper_call_name
-        if not (wrapper.is_subagent_delegation or inferred_delegation):
-            continue
+    if not subagent_ref_by_call_id:
+        return results
 
-        refs: list[SubagentTrajectoryRef] = []
-        seen_ref_session_ids: set[str] = set()
-        for child in observed:
-            child_ancestry = child.ancestry
-            if child_ancestry.function_name != wrapper_call_name:
-                continue
-            if child_ancestry.parent_id != wrapper_ancestry.function_id:
-                continue
-
-            ref_session_id = f"{trajectory_session_id}:{child.tool_call.tool_call_id}"
-            if ref_session_id in seen_ref_session_ids:
-                continue
-            seen_ref_session_ids.add(ref_session_id)
-            refs.append(
-                SubagentTrajectoryRef(
-                    session_id=ref_session_id,
-                    extra={
-                        "parent_tool_call_id": wrapper.tool_call.tool_call_id,
-                        "child_tool_call_id": child.tool_call.tool_call_id,
-                        "child_function_id": child_ancestry.function_id,
-                        "child_function_name": child_ancestry.function_name,
-                    },
-                ))
-
-        if refs:
-            results[i].subagent_trajectory_ref = refs
+    for i, obs in enumerate(observed):
+        ref = subagent_ref_by_call_id.get(obs.tool_call.tool_call_id)
+        if ref is not None:
+            results[i].subagent_trajectory_ref = [ref]
 
     return results
+
+
+def _pass2_project_context_to_steps(
+    events: list[IntermediateStep],
+    *,
+    step_id_start: int,
+    include_workflow_start_user_step: bool,
+    subagent_ref_by_call_id: dict[str, SubagentTrajectoryRef] | None = None,
+) -> tuple[list[ATIFStep], int, int, int, int]:
+    """Pass-2 projection for one context from IST events to ATIF steps."""
+    atif_steps: list[ATIFStep] = []
+    step_id = step_id_start
+    pending: _PendingAgentTurn | None = None
+    total_prompt = 0
+    total_completion = 0
+    total_cached = 0
+
+    def _flush_pending() -> None:
+        nonlocal step_id, pending
+        if pending is None:
+            return
+        sorted_invocations = sorted(pending.observed_invocations, key=lambda i: i.order_key)
+        tool_calls = [obs.tool_call for obs in sorted_invocations] or None
+        observations = _build_flat_observation_rows(
+            sorted_invocations,
+            subagent_ref_by_call_id=subagent_ref_by_call_id,
+        )
+        observation = ATIFObservation(results=observations) if observations else None
+        tool_ancestry = [obs.ancestry for obs in sorted_invocations]
+        tool_invocations = [obs.invocation for obs in sorted_invocations] or None
+        if pending.ancestry is None:
+            raise ValueError("Pending ATIF step is missing required ancestry metadata")
+        step_extra = AtifStepExtra(
+            ancestry=pending.ancestry,
+            invocation=pending.invocation,
+            tool_ancestry=tool_ancestry,
+            tool_invocations=tool_invocations,
+            **pending.extra,
+        )
+        atif_steps.append(
+            ATIFStep(
+                step_id=step_id,
+                source="agent",
+                message=pending.message,
+                timestamp=_epoch_to_iso(pending.timestamp),
+                model_name=pending.model_name,
+                tool_calls=tool_calls,
+                observation=observation,
+                metrics=pending.metrics,
+                extra=step_extra.model_dump(exclude_none=True),
+            ))
+        step_id += 1
+        pending = None
+
+    for ist in events:
+        event_type = ist.event_type
+        state = ist.event_state
+
+        if include_workflow_start_user_step and event_type == IntermediateStepType.WORKFLOW_START:
+            user_input = ""
+            if ist.data and ist.data.input is not None:
+                user_input = _extract_user_input(ist.data.input)
+            step_extra = _atif_step_extra_model_from_ist(ist)
+            extra = step_extra.model_dump(exclude_none=True)
+            atif_steps.append(
+                ATIFStep(
+                    step_id=step_id,
+                    source="user",
+                    message=user_input,
+                    timestamp=_epoch_to_iso(ist.event_timestamp),
+                    extra=extra or None,
+                ))
+            step_id += 1
+            continue
+
+        if event_type == IntermediateStepType.LLM_END:
+            _flush_pending()
+            llm_output = ""
+            if ist.data and ist.data.output is not None:
+                llm_output = _safe_str(ist.data.output)
+            metrics = _extract_metrics(ist)
+            if metrics:
+                total_prompt += metrics.prompt_tokens or 0
+                total_completion += metrics.completion_tokens or 0
+                total_cached += metrics.cached_tokens or 0
+            pending = _PendingAgentTurn(
+                message=llm_output,
+                timestamp=ist.event_timestamp,
+                model_name=ist.name,
+                metrics=metrics,
+            )
+            pending.ancestry = _atif_ancestry_from_ist(ist)
+            pending.invocation = _atif_invocation_from_ist(ist)
+            continue
+
+        if event_type in (IntermediateStepType.TOOL_END, IntermediateStepType.FUNCTION_END):
+            if pending is None:
+                pending = _PendingAgentTurn(
+                    message="",
+                    timestamp=ist.event_timestamp,
+                    model_name=None,
+                    metrics=None,
+                )
+                pending.ancestry = _atif_ancestry_from_ist(ist)
+                pending.invocation = _atif_invocation_from_ist(ist)
+            _record_observed_invocation(pending, ist)
+            continue
+
+        if event_type == IntermediateStepType.WORKFLOW_END:
+            _flush_pending()
+            final_output = ""
+            if ist.data and ist.data.output is not None:
+                final_output = _safe_str(ist.data.output)
+            last_agent_msg = ""
+            last_agent_ts: float | None = None
+            for s in reversed(atif_steps):
+                if s.source == "agent":
+                    last_agent_msg = str(s.message)
+                    last_agent_ts = _iso_to_epoch(s.timestamp) if s.timestamp else None
+                    break
+            should_emit_terminal_step = bool(final_output) and (final_output != last_agent_msg or
+                                                                (last_agent_ts is not None
+                                                                 and ist.event_timestamp > last_agent_ts))
+            if should_emit_terminal_step:
+                step_extra = _atif_step_extra_model_from_ist(ist)
+                extra = step_extra.model_dump(exclude_none=True)
+                atif_steps.append(
+                    ATIFStep(
+                        step_id=step_id,
+                        source="agent",
+                        message=final_output,
+                        timestamp=_epoch_to_iso(ist.event_timestamp),
+                        extra=extra or None,
+                    ))
+                step_id += 1
+            continue
+
+        if state == IntermediateStepState.START:
+            continue
+        if event_type in (IntermediateStepType.LLM_NEW_TOKEN, IntermediateStepType.SPAN_CHUNK):
+            continue
+        if state == IntermediateStepState.END:
+            continue
+
+    _flush_pending()
+    return atif_steps, step_id, total_prompt, total_completion, total_cached
+
+
+def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *,
+                                     session_id: str) -> _ExecutionStructure:
+    """Build root and child context ownership from IST events."""
+    delegation_flags_by_uuid: dict[str, bool] = {}
+    for ist in sorted_steps:
+        if ist.event_state == IntermediateStepState.START and _extract_subagent_delegation_flag(ist.metadata):
+            delegation_flags_by_uuid[ist.UUID] = True
+
+    end_events = [s for s in sorted_steps if s.event_state == IntermediateStepState.END]
+    children_by_parent: dict[str, list[IntermediateStep]] = {}
+    for e in end_events:
+        pid = e.function_ancestry.parent_id
+        if pid:
+            children_by_parent.setdefault(pid, []).append(e)
+
+    wrapper_events: list[IntermediateStep] = []
+    for e in end_events:
+        if e.event_type not in (IntermediateStepType.TOOL_END, IntermediateStepType.FUNCTION_END):
+            continue
+        if _extract_subagent_delegation_flag(e.metadata) or delegation_flags_by_uuid.get(e.UUID, False):
+            wrapper_events.append(e)
+
+    child_session_by_wrapper_call_id: dict[str, str] = {}
+    child_events_by_session: dict[str, list[IntermediateStep]] = {}
+    delegated_function_ids: set[str] = set()
+
+    for wrapper in wrapper_events:
+        wrapper_call_id = f"call_{wrapper.UUID}"
+        wrapper_fn_id = wrapper.function_ancestry.function_id
+        direct_children = children_by_parent.get(wrapper_fn_id, [])
+        preferred_roots = [c for c in direct_children if c.function_ancestry.function_name == (wrapper.name or "")
+                          ] or direct_children
+        if not preferred_roots:
+            continue
+        child_root = sorted(preferred_roots, key=lambda s: s.event_timestamp)[0]
+        child_root_fn_id = child_root.function_ancestry.function_id
+
+        subtree_ids: set[str] = set()
+        frontier = [child_root_fn_id]
+        while frontier:
+            node = frontier.pop()
+            if node in subtree_ids:
+                continue
+            subtree_ids.add(node)
+            for child in children_by_parent.get(node, []):
+                frontier.append(child.function_ancestry.function_id)
+
+        child_events = [e for e in end_events if e.function_ancestry.function_id in subtree_ids and e.UUID != wrapper.UUID]
+        if not child_events:
+            continue
+        child_session_id = f"{session_id}:{wrapper_call_id}"
+        child_session_by_wrapper_call_id[wrapper_call_id] = child_session_id
+        child_events_by_session[child_session_id] = sorted(child_events, key=lambda s: s.event_timestamp)
+        delegated_function_ids.update(subtree_ids)
+
+    root_events = [
+        e for e in sorted_steps
+        if (e.event_type == IntermediateStepType.WORKFLOW_START or e.event_type == IntermediateStepType.WORKFLOW_END
+            or e.function_ancestry.function_id not in delegated_function_ids)
+    ]
+    subagent_ref_by_call_id = {
+        call_id: SubagentTrajectoryRef(session_id=child_sid)
+        for call_id, child_sid in child_session_by_wrapper_call_id.items()
+    }
+    return _ExecutionStructure(
+        root_events=root_events,
+        child_events_by_session=child_events_by_session,
+        subagent_ref_by_call_id=subagent_ref_by_call_id,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -327,6 +512,7 @@ class IntermediateStepToATIFConverter:
     """Convert a complete list of NAT IntermediateSteps to an ATIF trajectory."""
 
     def __init__(self, *, allow_implicit_subagent_delegation: bool = False) -> None:
+        # Legacy option retained for API compatibility; clean converter ignores implicit delegation.
         self._allow_implicit_subagent_delegation = allow_implicit_subagent_delegation
 
     def convert(
@@ -345,227 +531,46 @@ class IntermediateStepToATIFConverter:
             )
 
         sorted_steps = sorted(steps, key=lambda s: s.event_timestamp)
-        atif_steps: list[ATIFStep] = []
-        step_id = 1
-
         agent_config = ATIFAgentConfig(name=agent_name or "nat-agent", version="0.0.0")
-        tool_defs_captured = False
-        pending: _PendingAgentTurn | None = None
-        total_prompt = 0
-        total_completion = 0
-        total_cached = 0
-        delegation_flags_by_uuid: dict[str, bool] = {}
 
-        def _flush_pending() -> None:
-            nonlocal step_id, pending
-            if pending is None:
-                return
-            sorted_invocations = sorted(pending.observed_invocations, key=lambda i: i.order_key)
-            tool_calls = [obs.tool_call for obs in sorted_invocations] or None
-            observations = _build_observation_results(
-                sorted_invocations,
-                trajectory_session_id,
-                allow_implicit_delegation=self._allow_implicit_subagent_delegation,
-            )
-            observation = ATIFObservation(results=observations) if observations else None
-            tool_ancestry = [obs.ancestry for obs in sorted_invocations]
-            tool_invocations = [obs.invocation for obs in sorted_invocations] or None
-            if pending.ancestry is None:
-                raise ValueError("Pending agent turn is missing required ATIF ancestry metadata")
-            step_extra = AtifStepExtra(
-                ancestry=pending.ancestry,
-                invocation=pending.invocation,
-                tool_ancestry=tool_ancestry,
-                tool_invocations=tool_invocations,
-                **pending.extra,
-            )
-            atif_steps.append(
-                ATIFStep(
-                    step_id=step_id,
-                    source="agent",
-                    message=pending.message,
-                    timestamp=_epoch_to_iso(pending.timestamp),
-                    model_name=pending.model_name,
-                    tool_calls=tool_calls,
-                    observation=observation,
-                    metrics=pending.metrics,
-                    extra=step_extra.model_dump(exclude_none=True),
-                ))
-            step_id += 1
-            pending = None
-
-        for ist in sorted_steps:
-            event_type = ist.event_type
-            category = ist.event_category
-            state = ist.event_state
-
-            if state == IntermediateStepState.START and _extract_subagent_delegation_flag(ist.metadata):
-                delegation_flags_by_uuid[ist.UUID] = True
-
-            if event_type == IntermediateStepType.WORKFLOW_START:
-                user_input = ""
-                if ist.data and ist.data.input is not None:
-                    user_input = _extract_user_input(ist.data.input)
-                if agent_name is None:
+        if agent_name is None:
+            for ist in sorted_steps:
+                if ist.event_type == IntermediateStepType.WORKFLOW_START:
                     fn_name = ist.function_ancestry.function_name
                     if fn_name and fn_name != "root":
                         agent_config.name = fn_name
-                step_extra = _atif_step_extra_model_from_ist(ist)
-                extra = step_extra.model_dump(exclude_none=True)
-                atif_steps.append(
-                    ATIFStep(
-                        step_id=step_id,
-                        source="user",
-                        message=user_input,
-                        timestamp=_epoch_to_iso(ist.event_timestamp),
-                        extra=extra or None,
-                    ))
-                step_id += 1
-                continue
-
-            if event_type == IntermediateStepType.WORKFLOW_END:
-                _flush_pending()
-                final_output = ""
-                if ist.data and ist.data.output is not None:
-                    final_output = _safe_str(ist.data.output)
-                last_agent_msg = ""
-                last_agent_ts: float | None = None
-                for s in reversed(atif_steps):
-                    if s.source == "agent":
-                        last_agent_msg = str(s.message)
-                        last_agent_ts = _iso_to_epoch(s.timestamp) if s.timestamp else None
                         break
-                should_emit_terminal_step = bool(final_output) and (final_output != last_agent_msg or
-                                                                    (last_agent_ts is not None
-                                                                     and ist.event_timestamp > last_agent_ts))
-                if should_emit_terminal_step:
-                    step_extra = _atif_step_extra_model_from_ist(ist)
-                    extra = step_extra.model_dump(exclude_none=True)
-                    atif_steps.append(
-                        ATIFStep(
-                            step_id=step_id,
-                            source="agent",
-                            message=final_output,
-                            timestamp=_epoch_to_iso(ist.event_timestamp),
-                            extra=extra or None,
-                        ))
-                    step_id += 1
-                continue
 
-            if event_type == IntermediateStepType.LLM_END:
-                _flush_pending()
-                llm_output = ""
-                if ist.data and ist.data.output is not None:
-                    llm_output = _safe_str(ist.data.output)
-                metrics = _extract_metrics(ist)
-                if metrics:
-                    total_prompt += metrics.prompt_tokens or 0
-                    total_completion += metrics.completion_tokens or 0
-                    total_cached += metrics.cached_tokens or 0
-                if not tool_defs_captured:
-                    defs = _extract_tool_definitions(ist)
-                    if defs:
-                        agent_config.tool_definitions = defs
-                        tool_defs_captured = True
+        for ist in sorted_steps:
+            if ist.event_type == IntermediateStepType.LLM_END:
                 if ist.name and not agent_config.model_name:
                     agent_config.model_name = ist.name
-                pending = _PendingAgentTurn(
-                    message=llm_output,
-                    timestamp=ist.event_timestamp,
-                    model_name=ist.name,
-                    metrics=metrics,
-                )
-                pending.ancestry = _atif_ancestry_from_ist(ist)
-                pending.invocation = _atif_invocation_from_ist(ist)
-                continue
+                defs = _extract_tool_definitions(ist)
+                if defs and not agent_config.tool_definitions:
+                    agent_config.tool_definitions = defs
 
-            if event_type == IntermediateStepType.TOOL_END:
-                start_flag = delegation_flags_by_uuid.pop(ist.UUID, False)
-                if pending is not None:
-                    _record_observed_invocation(pending, ist, start_flag=start_flag)
-                else:
-                    orphan_pending = _PendingAgentTurn(message="",
-                                                       timestamp=ist.event_timestamp,
-                                                       model_name=None,
-                                                       metrics=None)
-                    orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-                    _record_observed_invocation(orphan_pending, ist, start_flag=start_flag)
-                    if not orphan_pending.observed_invocations:
-                        continue
-                    invocation = orphan_pending.observed_invocations[0]
-                    step_extra = _atif_step_extra_model_from_ist(ist)
-                    step_extra.tool_invocations = [invocation.invocation]
-                    step_extra.tool_ancestry = [invocation.ancestry]
-                    observation_results = _build_observation_results(
-                        [invocation],
-                        trajectory_session_id,
-                        allow_implicit_delegation=self._allow_implicit_subagent_delegation,
-                    )
-                    extra = step_extra.model_dump(exclude_none=True)
-                    atif_steps.append(
-                        ATIFStep(
-                            step_id=step_id,
-                            source="agent",
-                            message="",
-                            timestamp=_epoch_to_iso(ist.event_timestamp),
-                            tool_calls=[invocation.tool_call],
-                            observation=ATIFObservation(results=observation_results),
-                            extra=extra or None,
-                        ))
-                    step_id += 1
-                continue
+        execution_structure = _pass1_build_execution_structure(sorted_steps, session_id=trajectory_session_id)
+        atif_steps, _, total_prompt, total_completion, total_cached = _pass2_project_context_to_steps(
+            execution_structure.root_events,
+            step_id_start=1,
+            include_workflow_start_user_step=True,
+            subagent_ref_by_call_id=execution_structure.subagent_ref_by_call_id,
+        )
 
-            if event_type == IntermediateStepType.FUNCTION_END:
-                start_flag = delegation_flags_by_uuid.pop(ist.UUID, False)
-                if pending is not None:
-                    _record_observed_invocation(pending, ist, start_flag=start_flag)
-                else:
-                    orphan_pending = _PendingAgentTurn(message="",
-                                                       timestamp=ist.event_timestamp,
-                                                       model_name=None,
-                                                       metrics=None)
-                    orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-                    _record_observed_invocation(orphan_pending, ist, start_flag=start_flag)
-                    if not orphan_pending.observed_invocations:
-                        continue
-                    invocation = orphan_pending.observed_invocations[0]
-                    step_extra = _atif_step_extra_model_from_ist(ist)
-                    step_extra.tool_invocations = [invocation.invocation]
-                    step_extra.tool_ancestry = [invocation.ancestry]
-                    observation_results = _build_observation_results(
-                        [invocation],
-                        trajectory_session_id,
-                        allow_implicit_delegation=self._allow_implicit_subagent_delegation,
-                    )
-                    extra = step_extra.model_dump(exclude_none=True)
-                    atif_steps.append(
-                        ATIFStep(
-                            step_id=step_id,
-                            source="agent",
-                            message="",
-                            timestamp=_epoch_to_iso(ist.event_timestamp),
-                            tool_calls=[invocation.tool_call],
-                            observation=ATIFObservation(results=observation_results),
-                            extra=extra or None,
-                        ))
-                    step_id += 1
-                continue
-
-            if state == IntermediateStepState.START:
-                continue
-            if event_type == IntermediateStepType.LLM_NEW_TOKEN:
-                continue
-            if event_type == IntermediateStepType.SPAN_CHUNK:
-                continue
-
-            if state == IntermediateStepState.END and category not in (
-                    IntermediateStepCategory.LLM,
-                    IntermediateStepCategory.TOOL,
-                    IntermediateStepCategory.WORKFLOW,
-            ):
-                continue
-
-        _flush_pending()
+        child_trajectories: dict[str, dict[str, Any]] = {}
+        for child_session_id, child_events in execution_structure.child_events_by_session.items():
+            child_steps, _, _, _, _ = _pass2_project_context_to_steps(
+                child_events,
+                step_id_start=1,
+                include_workflow_start_user_step=False,
+                subagent_ref_by_call_id=None,
+            )
+            child_trajectory = ATIFTrajectory(
+                session_id=child_session_id,
+                agent=agent_config.model_copy(deep=True),
+                steps=child_steps,
+            )
+            child_trajectories[child_session_id] = child_trajectory.model_dump(exclude_none=True, mode="json")
 
         final_metrics = None
         agent_step_count = sum(1 for s in atif_steps if s.source == "agent")
@@ -577,11 +582,13 @@ class IntermediateStepToATIFConverter:
                 total_steps=agent_step_count,
             )
 
+        trajectory_extra = {"subagent_trajectories": child_trajectories} if child_trajectories else None
         return ATIFTrajectory(
             session_id=trajectory_session_id,
             agent=agent_config,
             steps=atif_steps,
             final_metrics=final_metrics,
+            extra=trajectory_extra,
         )
 
 
@@ -591,254 +598,53 @@ class IntermediateStepToATIFConverter:
 
 
 class ATIFStreamConverter:
-    """Stateful converter that emits ATIF steps incrementally."""
+    """Stateful converter that reuses the same two-pass conversion model.
+
+    This stream adapter accumulates IST events and re-projects ATIF using the
+    same batch converter logic on each push. It keeps behavior consistent
+    between batch and stream conversion paths.
+    """
 
     def __init__(self, agent_name: str = "nat-agent", *, allow_implicit_subagent_delegation: bool = False):
-        self._step_id: int = 1
         self._session_id: str = str(uuid.uuid4())
-        self._agent_config = ATIFAgentConfig(name=agent_name, version="0.0.0")
-        self._allow_implicit_subagent_delegation = allow_implicit_subagent_delegation
-        self._tool_defs_captured = False
-        self._pending: _PendingAgentTurn | None = None
-        self._emitted_steps: list[ATIFStep] = []
-        self._total_prompt = 0
-        self._total_completion = 0
-        self._total_cached = 0
-        self._delegation_flags_by_uuid: dict[str, bool] = {}
+        self._agent_name = agent_name
+        self._buffered_events: list[IntermediateStep] = []
+        self._last_projected_steps: list[ATIFStep] = []
+        self._returned_step_count = 0
+        self._latest_trajectory = ATIFTrajectory(
+            session_id=self._session_id,
+            agent=ATIFAgentConfig(name=agent_name, version="0.0.0"),
+            steps=[],
+        )
+        self._batch_converter = IntermediateStepToATIFConverter(
+            allow_implicit_subagent_delegation=allow_implicit_subagent_delegation)
 
     @property
     def agent_config(self) -> ATIFAgentConfig:
-        """Current agent configuration (populated as steps arrive)."""
-        return self._agent_config
+        """Current agent configuration based on latest projection."""
+        return self._latest_trajectory.agent
 
     def push(self, ist: IntermediateStep) -> ATIFStep | None:
-        """Process one IntermediateStep and return a flushed ATIF step if available."""
-        event_type = ist.event_type
-        category = ist.event_category
-        state = ist.event_state
-
-        if state == IntermediateStepState.START and _extract_subagent_delegation_flag(ist.metadata):
-            self._delegation_flags_by_uuid[ist.UUID] = True
-
-        if event_type == IntermediateStepType.WORKFLOW_START:
-            user_input = ""
-            if ist.data and ist.data.input is not None:
-                user_input = _extract_user_input(ist.data.input)
-            fn_name = ist.function_ancestry.function_name
-            if fn_name and fn_name != "root":
-                self._agent_config.name = fn_name
-            step_extra = _atif_step_extra_model_from_ist(ist)
-            extra = step_extra.model_dump(exclude_none=True)
-            step = ATIFStep(
-                step_id=self._step_id,
-                source="user",
-                message=user_input,
-                timestamp=_epoch_to_iso(ist.event_timestamp),
-                extra=extra or None,
-            )
-            self._step_id += 1
-            self._emitted_steps.append(step)
+        """Add one IST event and return next newly visible ATIF step."""
+        self._buffered_events.append(ist)
+        self._latest_trajectory = self._batch_converter.convert(
+            steps=self._buffered_events,
+            session_id=self._session_id,
+            agent_name=self._agent_name,
+        )
+        self._last_projected_steps = list(self._latest_trajectory.steps)
+        if self._returned_step_count < len(self._last_projected_steps):
+            step = self._last_projected_steps[self._returned_step_count]
+            self._returned_step_count += 1
             return step
-
-        if event_type == IntermediateStepType.WORKFLOW_END:
-            results: list[ATIFStep] = []
-            flushed = self._flush_pending()
-            if flushed:
-                results.append(flushed)
-            final_output = ""
-            if ist.data and ist.data.output is not None:
-                final_output = _safe_str(ist.data.output)
-            last_agent_msg = ""
-            last_agent_ts: float | None = None
-            for s in reversed(self._emitted_steps):
-                if s.source == "agent":
-                    last_agent_msg = str(s.message)
-                    last_agent_ts = _iso_to_epoch(s.timestamp) if s.timestamp else None
-                    break
-            should_emit_terminal_step = bool(final_output) and (final_output != last_agent_msg or
-                                                                (last_agent_ts is not None
-                                                                 and ist.event_timestamp > last_agent_ts))
-            if should_emit_terminal_step:
-                step_extra = _atif_step_extra_model_from_ist(ist)
-                extra = step_extra.model_dump(exclude_none=True)
-                final_step = ATIFStep(
-                    step_id=self._step_id,
-                    source="agent",
-                    message=final_output,
-                    timestamp=_epoch_to_iso(ist.event_timestamp),
-                    extra=extra or None,
-                )
-                self._step_id += 1
-                self._emitted_steps.append(final_step)
-                results.append(final_step)
-            return results[0] if results else None
-
-        if event_type == IntermediateStepType.LLM_END:
-            flushed = self._flush_pending()
-            llm_output = ""
-            if ist.data and ist.data.output is not None:
-                llm_output = _safe_str(ist.data.output)
-            metrics = _extract_metrics(ist)
-            if metrics:
-                self._total_prompt += metrics.prompt_tokens or 0
-                self._total_completion += metrics.completion_tokens or 0
-                self._total_cached += metrics.cached_tokens or 0
-            if not self._tool_defs_captured:
-                defs = _extract_tool_definitions(ist)
-                if defs:
-                    self._agent_config.tool_definitions = defs
-                    self._tool_defs_captured = True
-            if ist.name and not self._agent_config.model_name:
-                self._agent_config.model_name = ist.name
-            self._pending = _PendingAgentTurn(
-                message=llm_output,
-                timestamp=ist.event_timestamp,
-                model_name=ist.name,
-                metrics=metrics,
-            )
-            self._pending.ancestry = _atif_ancestry_from_ist(ist)
-            self._pending.invocation = _atif_invocation_from_ist(ist)
-            return flushed
-
-        if event_type == IntermediateStepType.TOOL_END:
-            start_flag = self._delegation_flags_by_uuid.pop(ist.UUID, False)
-            if self._pending is not None:
-                _record_observed_invocation(self._pending, ist, start_flag=start_flag)
-                return None
-
-            orphan_pending = _PendingAgentTurn(message="", timestamp=ist.event_timestamp, model_name=None, metrics=None)
-            orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-            _record_observed_invocation(orphan_pending, ist, start_flag=start_flag)
-            if not orphan_pending.observed_invocations:
-                return None
-            invocation = orphan_pending.observed_invocations[0]
-            step_extra = _atif_step_extra_model_from_ist(ist)
-            step_extra.tool_invocations = [invocation.invocation]
-            step_extra.tool_ancestry = [invocation.ancestry]
-            observation_results = _build_observation_results(
-                [invocation],
-                self._session_id,
-                allow_implicit_delegation=self._allow_implicit_subagent_delegation,
-            )
-            extra = step_extra.model_dump(exclude_none=True)
-            orphan_step = ATIFStep(
-                step_id=self._step_id,
-                source="agent",
-                message="",
-                timestamp=_epoch_to_iso(ist.event_timestamp),
-                tool_calls=[invocation.tool_call],
-                observation=ATIFObservation(results=observation_results),
-                extra=extra or None,
-            )
-            self._step_id += 1
-            self._emitted_steps.append(orphan_step)
-            return orphan_step
-
-        if event_type == IntermediateStepType.FUNCTION_END:
-            start_flag = self._delegation_flags_by_uuid.pop(ist.UUID, False)
-            if self._pending is not None:
-                _record_observed_invocation(self._pending, ist, start_flag=start_flag)
-                return None
-
-            orphan_pending = _PendingAgentTurn(message="", timestamp=ist.event_timestamp, model_name=None, metrics=None)
-            orphan_pending.ancestry = _atif_ancestry_from_ist(ist)
-            _record_observed_invocation(orphan_pending, ist, start_flag=start_flag)
-            if not orphan_pending.observed_invocations:
-                return None
-            invocation = orphan_pending.observed_invocations[0]
-            step_extra = _atif_step_extra_model_from_ist(ist)
-            step_extra.tool_invocations = [invocation.invocation]
-            step_extra.tool_ancestry = [invocation.ancestry]
-            observation_results = _build_observation_results(
-                [invocation],
-                self._session_id,
-                allow_implicit_delegation=self._allow_implicit_subagent_delegation,
-            )
-            extra = step_extra.model_dump(exclude_none=True)
-            orphan_step = ATIFStep(
-                step_id=self._step_id,
-                source="agent",
-                message="",
-                timestamp=_epoch_to_iso(ist.event_timestamp),
-                tool_calls=[invocation.tool_call],
-                observation=ATIFObservation(results=observation_results),
-                extra=extra or None,
-            )
-            self._step_id += 1
-            self._emitted_steps.append(orphan_step)
-            return orphan_step
-
-        if state == IntermediateStepState.END and category not in (
-                IntermediateStepCategory.LLM,
-                IntermediateStepCategory.TOOL,
-                IntermediateStepCategory.WORKFLOW,
-        ):
-            return None
-
         return None
 
     def finalize(self) -> list[ATIFStep]:
-        """Flush any pending agent turn and return remaining steps."""
-        result: list[ATIFStep] = []
-        flushed = self._flush_pending()
-        if flushed:
-            result.append(flushed)
-        return result
+        """Return all projected ATIF steps not yet returned by `push`."""
+        remaining = self._last_projected_steps[self._returned_step_count:]
+        self._returned_step_count = len(self._last_projected_steps)
+        return remaining
 
     def get_trajectory(self) -> ATIFTrajectory:
-        """Build the complete ATIF trajectory from all emitted steps."""
-        agent_step_count = sum(1 for s in self._emitted_steps if s.source == "agent")
-        final_metrics = None
-        if self._total_prompt or self._total_completion or self._total_cached or agent_step_count:
-            final_metrics = ATIFFinalMetrics(
-                total_prompt_tokens=self._total_prompt or None,
-                total_completion_tokens=self._total_completion or None,
-                total_cached_tokens=self._total_cached or None,
-                total_steps=agent_step_count,
-            )
-        return ATIFTrajectory(
-            session_id=self._session_id,
-            agent=self._agent_config,
-            steps=list(self._emitted_steps),
-            final_metrics=final_metrics,
-        )
-
-    def _flush_pending(self) -> ATIFStep | None:
-        """Convert the pending turn into an ATIFStep and clear it."""
-        if self._pending is None:
-            return None
-        pending = self._pending
-        sorted_invocations = sorted(pending.observed_invocations, key=lambda i: i.order_key)
-        tool_calls = [obs.tool_call for obs in sorted_invocations] or None
-        observations = _build_observation_results(
-            sorted_invocations,
-            self._session_id,
-            allow_implicit_delegation=self._allow_implicit_subagent_delegation,
-        )
-        observation = ATIFObservation(results=observations) if observations else None
-        tool_ancestry = [obs.ancestry for obs in sorted_invocations]
-        tool_invocations = [obs.invocation for obs in sorted_invocations] or None
-        if pending.ancestry is None:
-            raise ValueError("Pending agent turn is missing required ATIF ancestry metadata")
-        step_extra = AtifStepExtra(
-            ancestry=pending.ancestry,
-            invocation=pending.invocation,
-            tool_ancestry=tool_ancestry,
-            tool_invocations=tool_invocations,
-            **pending.extra,
-        )
-        step = ATIFStep(
-            step_id=self._step_id,
-            source="agent",
-            message=pending.message,
-            timestamp=_epoch_to_iso(pending.timestamp),
-            model_name=pending.model_name,
-            tool_calls=tool_calls,
-            observation=observation,
-            metrics=pending.metrics,
-            extra=step_extra.model_dump(exclude_none=True),
-        )
-        self._step_id += 1
-        self._emitted_steps.append(step)
-        self._pending = None
-        return step
+        """Return trajectory projected from all buffered IST events."""
+        return self._latest_trajectory

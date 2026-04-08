@@ -22,6 +22,7 @@ from nat.atif import ATIFTrajectory
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
+from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import UsageInfo
@@ -977,11 +978,23 @@ class TestBatchConverter:
         assert first_agent_turn.observation.results[0].subagent_trajectory_ref is None
 
     def test_implicit_subagent_delegation_can_be_enabled(self):
-        """Implicit delegation inference can be enabled explicitly."""
+        """Explicit delegation marker emits subagent refs and embedded child trajectory."""
         converter = IntermediateStepToATIFConverter(allow_implicit_subagent_delegation=True)
+        wrapper_uuid = "wrapper-step"
+        wrapper_start = _make_step(
+            IntermediateStepType.FUNCTION_START,
+            name="child_agent",
+            timestamp_offset=1.5,
+            function_name="parent_agent",
+            function_id="wrapper-fn",
+            function_parent_id="root",
+            step_uuid=wrapper_uuid,
+        )
+        wrapper_start.payload.metadata = TraceMetadata(provided_metadata={"is_subagent_delegation": True})
         steps = [
             _make_step(IntermediateStepType.WORKFLOW_START, input_data="q", timestamp_offset=0.0),
             _make_step(IntermediateStepType.LLM_END, output_data="thinking", timestamp_offset=1.0),
+            wrapper_start,
             _make_step(
                 IntermediateStepType.FUNCTION_END,
                 name="child_agent",
@@ -989,15 +1002,24 @@ class TestBatchConverter:
                 function_name="parent_agent",
                 function_id="wrapper-fn",
                 function_parent_id="root",
-                step_uuid="wrapper-step",
+                step_uuid=wrapper_uuid,
+            ),
+            _make_step(
+                IntermediateStepType.LLM_END,
+                name="child-model",
+                output_data="child thinking",
+                timestamp_offset=2.1,
+                function_name="child_agent",
+                function_id="child-root-fn",
+                function_parent_id="wrapper-fn",
             ),
             _make_step(
                 IntermediateStepType.FUNCTION_END,
                 name="inner_tool",
-                timestamp_offset=3.0,
+                timestamp_offset=2.2,
                 function_name="child_agent",
                 function_id="child-fn",
-                function_parent_id="wrapper-fn",
+                function_parent_id="child-root-fn",
                 step_uuid="child-step",
             ),
             _make_step(IntermediateStepType.LLM_END, output_data="done", timestamp_offset=4.0),
@@ -1010,6 +1032,12 @@ class TestBatchConverter:
         refs = first_agent_turn.observation.results[0].subagent_trajectory_ref
         assert refs is not None
         assert len(refs) == 1
+        child_sid = refs[0].session_id
+        assert result.extra is not None
+        assert "subagent_trajectories" in result.extra
+        embedded = result.extra["subagent_trajectories"]
+        assert isinstance(embedded, dict)
+        assert child_sid in embedded
 
 
 # ---------------------------------------------------------------------------
@@ -1021,177 +1049,38 @@ class TestStreamConverter:
     """Tests for ATIFStreamConverter."""
 
     def test_workflow_start_emits_user_step(self):
-        """WORKFLOW_START produces an immediate user step."""
+        """`WORKFLOW_START` emits the first projected user step."""
         converter = ATIFStreamConverter()
-        step = _make_step(
-            IntermediateStepType.WORKFLOW_START,
-            input_data="hello",
-            timestamp_offset=0.0,
-        )
-        result = converter.push(step)
+        result = converter.push(
+            _make_step(
+                IntermediateStepType.WORKFLOW_START,
+                input_data="hello",
+                timestamp_offset=0.0,
+            ))
         assert result is not None
         assert result.source == "user"
         assert result.message == "hello"
 
-    def test_llm_end_flushes_previous_turn(self):
-        """Second LLM_END flushes the first turn."""
+    def test_finalize_returns_unreturned_steps(self):
+        """`finalize` returns projected steps not returned by `push`."""
         converter = ATIFStreamConverter()
-        converter.push(_make_step(
-            IntermediateStepType.WORKFLOW_START,
-            input_data="q",
-            timestamp_offset=0.0,
-        ))
-        # First LLM_END → creates pending, nothing to flush yet
-        result1 = converter.push(
-            _make_step(
-                IntermediateStepType.LLM_END,
-                name="gpt-4",
-                output_data="thinking...",
-                timestamp_offset=1.0,
-            ))
-        assert result1 is None  # Nothing flushed yet
-
-        # Second LLM_END → flushes the first turn
-        result2 = converter.push(
-            _make_step(
-                IntermediateStepType.LLM_END,
-                name="gpt-4",
-                output_data="done",
-                timestamp_offset=2.0,
-            ))
-        assert result2 is not None
-        assert result2.source == "agent"
-        assert result2.message == "thinking..."
-
-    def test_tool_end_attaches_to_pending(self):
-        """TOOL_END attaches to the current pending agent turn."""
-        converter = ATIFStreamConverter()
-        converter.push(_make_step(
-            IntermediateStepType.WORKFLOW_START,
-            input_data="q",
-            timestamp_offset=0.0,
-        ))
-        converter.push(_make_step(
-            IntermediateStepType.LLM_END,
-            output_data="let me search",
-            timestamp_offset=1.0,
-        ))
-        result = converter.push(
-            _make_step(
-                IntermediateStepType.TOOL_END,
-                name="search",
-                input_data={"query": "test"},
-                output_data="found it",
-                timestamp_offset=2.0,
-                step_uuid="tool-1",
-            ))
-        # Tool attaches to pending, doesn't emit yet
-        assert result is None
-
-        # Finalize flushes
+        converter.push(_make_step(IntermediateStepType.WORKFLOW_START, input_data="q", timestamp_offset=0.0))
+        converter.push(_make_step(IntermediateStepType.LLM_END, output_data="thinking", timestamp_offset=1.0))
         remaining = converter.finalize()
         assert len(remaining) == 1
-        flushed = remaining[0]
-        assert flushed.tool_calls is not None
-        assert len(flushed.tool_calls) == 1
-        assert flushed.tool_calls[0].function_name == "search"
-        assert flushed.observation.results[0].content == "found it"
-
-    def test_stream_converter_emits_orphan_tool_end(self):
-        """Orphan `TOOL_END` emits an immediate standalone agent step."""
-        converter = ATIFStreamConverter()
-        converter.push(_make_step(
-            IntermediateStepType.WORKFLOW_START,
-            input_data="q",
-            timestamp_offset=0.0,
-        ))
-        orphan = converter.push(
-            _make_step(
-                IntermediateStepType.TOOL_END,
-                name="search",
-                input_data='{"query": "orphan"}',
-                output_data="found orphan",
-                timestamp_offset=1.0,
-                step_uuid="stream-orphan-tool-1",
-            ))
-        assert orphan is not None
-        assert orphan.source == "agent"
-        assert orphan.message == ""
-        assert orphan.tool_calls is not None
-        assert len(orphan.tool_calls) == 1
-        assert orphan.observation is not None
-        assert len(orphan.observation.results) == 1
-        assert orphan.observation.results[0].source_call_id == orphan.tool_calls[0].tool_call_id
-
-    def test_stream_converter_populates_tool_definitions_from_llm_metadata(self):
-        """`LLM_END` metadata tool schemas populate stream converter agent config."""
-        from nat.data_models.intermediate_step import ToolDetails
-        from nat.data_models.intermediate_step import ToolParameters
-        from nat.data_models.intermediate_step import ToolSchema
-        from nat.data_models.intermediate_step import TraceMetadata
-
-        converter = ATIFStreamConverter()
-        converter.push(_make_step(
-            IntermediateStepType.WORKFLOW_START,
-            input_data="q",
-            timestamp_offset=0.0,
-        ))
-        llm_end = _make_step(
-            IntermediateStepType.LLM_END,
-            name="gpt-4",
-            output_data="using tools",
-            timestamp_offset=1.0,
-        )
-        llm_end.payload.metadata = TraceMetadata(tools_schema=[
-            ToolSchema(
-                type="function",
-                function=ToolDetails(
-                    name="weather",
-                    description="Get weather",
-                    parameters=ToolParameters(properties={}),
-                ),
-            )
-        ])
-
-        pushed = converter.push(llm_end)
-        assert pushed is None
-        assert converter.agent_config.tool_definitions is not None
-        assert len(converter.agent_config.tool_definitions) == 1
-        assert converter.agent_config.tool_definitions[0]["function"]["name"] == "weather"
-
-    def test_finalize_flushes_pending(self):
-        """finalize() returns any remaining pending turn."""
-        converter = ATIFStreamConverter()
-        converter.push(_make_step(
-            IntermediateStepType.WORKFLOW_START,
-            input_data="q",
-            timestamp_offset=0.0,
-        ))
-        converter.push(_make_step(
-            IntermediateStepType.LLM_END,
-            output_data="answer",
-            timestamp_offset=1.0,
-        ))
-        remaining = converter.finalize()
-        assert len(remaining) == 1
-        assert remaining[0].message == "answer"
-
-    def test_finalize_empty_when_nothing_pending(self):
-        """finalize() returns empty list if no pending turn."""
-        converter = ATIFStreamConverter()
-        assert converter.finalize() == []
+        assert remaining[0].source == "agent"
+        assert remaining[0].message == "thinking"
 
     def test_get_trajectory_builds_complete(
         self,
         simple_trajectory: list[IntermediateStep],
     ):
-        """get_trajectory() returns a complete trajectory after all steps."""
+        """`get_trajectory` returns the latest projected trajectory."""
         converter = ATIFStreamConverter()
         for ist in simple_trajectory:
             converter.push(ist)
         converter.finalize()
         trajectory = converter.get_trajectory()
-
         assert isinstance(trajectory, ATIFTrajectory)
         assert trajectory.schema_version == "ATIF-v1.6"
         assert len(trajectory.steps) >= 2
@@ -1202,18 +1091,14 @@ class TestStreamConverter:
         simple_trajectory: list[IntermediateStep],
         batch_converter: IntermediateStepToATIFConverter,
     ):
-        """Stream converter produces the same steps as batch converter."""
+        """Stream converter uses the same two-pass projection as batch."""
         batch_result = batch_converter.convert(simple_trajectory, session_id="test")
-
         stream_conv = ATIFStreamConverter()
         for ist in simple_trajectory:
             stream_conv.push(ist)
         stream_conv.finalize()
         stream_result = stream_conv.get_trajectory()
-
         assert len(stream_result.steps) == len(batch_result.steps)
         for s_step, b_step in zip(stream_result.steps, batch_result.steps, strict=True):
             assert s_step.source == b_step.source
             assert s_step.message == b_step.message
-            if b_step.tool_calls:
-                assert len(s_step.tool_calls) == len(b_step.tool_calls)

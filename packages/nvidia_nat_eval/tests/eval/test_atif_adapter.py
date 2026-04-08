@@ -81,43 +81,44 @@ def test_build_samples_populates_in_memory_subagent_map():
     item = _make_eval_input_item("sample-b")
     eval_input = EvalInput(eval_input_items=[item])
     prebuilt = ATIFTrajectory.model_validate({
-        "session_id": "sample-b",
+        "session_id":
+            "sample-b",
         "agent": {
             "name": "prebuilt-agent",
             "version": "0.0.0",
         },
-        "steps": [
-            {
-                "step_id": 1,
-                "source": "agent",
-                "message": "",
-                "tool_calls": [{
-                    "tool_call_id": "call_parent",
-                    "function_name": "delegator",
-                    "arguments": {},
-                }],
-                "observation": {
-                    "results": [{
-                        "source_call_id": "call_parent",
-                        "content": "delegated",
-                        "subagent_trajectory_ref": [{
-                            "session_id": "sample-b:call_child",
-                            "trajectory_path": None,
-                            "extra": {
-                                "child_function_id": "child-fn",
-                            },
-                        }],
+        "steps": [{
+            "step_id": 1,
+            "source": "agent",
+            "message": "",
+            "tool_calls": [{
+                "tool_call_id": "call_parent",
+                "function_name": "delegator",
+                "arguments": {},
+            }],
+            "observation": {
+                "results": [{
+                    "source_call_id":
+                        "call_parent",
+                    "content":
+                        "delegated",
+                    "subagent_trajectory_ref": [{
+                        "session_id": "sample-b:call_child",
+                        "trajectory_path": None,
+                        "extra": {
+                            "child_function_id": "child-fn",
+                        },
                     }],
+                }],
+            },
+            "extra": {
+                "ancestry": {
+                    "function_id": "child-fn",
+                    "parent_id": "parent-fn",
+                    "function_name": "delegator",
                 },
-                "extra": {
-                    "ancestry": {
-                        "function_id": "child-fn",
-                        "parent_id": "parent-fn",
-                        "function_name": "delegator",
-                    },
-                },
-            }
-        ],
+            },
+        }],
     })
 
     samples = adapter.build_samples(eval_input, prebuilt_trajectories={"sample-b": prebuilt})
