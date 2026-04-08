@@ -106,7 +106,8 @@ def main() -> None:
     items = _iter_items(payload)
     converter = IntermediateStepToATIFConverter()
     converted = [
-        _convert_item(item, converter=converter, item_index=i, agent_name=args.agent_name) for i, item in enumerate(items)
+        _convert_item(item, converter=converter, item_index=i, agent_name=args.agent_name)
+        for i, item in enumerate(items)
     ]
 
     output_path = _resolve_output_path(args.input, args.output, args.output_dir)
@@ -118,4 +119,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
