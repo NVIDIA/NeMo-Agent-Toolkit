@@ -36,10 +36,6 @@ A quick example using the AG2 framework (formerly AutoGen), showcasing a multi-a
     - [Expected Output](#expected-output)
   - [Async Workflow](#async-workflow)
   - [Research Team Example](#research-team-example)
-  - [Observability with Phoenix](#observability-with-phoenix)
-    - [Start Phoenix Server](#start-phoenix-server)
-    - [Run with Tracing Enabled](#run-with-tracing-enabled)
-    - [View Traces in Phoenix](#view-traces-in-phoenix)
   - [Evaluate the Workflow](#evaluate-the-workflow)
     - [Evaluation Dataset](#evaluation-dataset)
     - [Run the Evaluation](#run-the-evaluation)
@@ -47,7 +43,7 @@ A quick example using the AG2 framework (formerly AutoGen), showcasing a multi-a
   - [Architecture](#architecture)
     - [Async Execution](#async-execution)
     - [Tool Integration](#tool-integration)
-  - [Available Configs](#available-configs)
+  - [Available Configurations](#available-configurations)
 
 ## Key Features
 
@@ -80,10 +76,6 @@ uv pip install -e examples/frameworks/nat_ag2_demo
 
 # Required to run the current_datetime MCP tool used in the example workflow
 uv pip install -e examples/getting_started/simple_calculator
-
-# Optional: Install Phoenix for observability and tracing
-uv pip install -e '.[phoenix]'
-uv pip install arize-phoenix
 
 uv pip install matplotlib
 ```
@@ -153,38 +145,6 @@ nat run --config_file examples/frameworks/nat_ag2_demo/configs/config-research.y
 
 This config uses the `ag2_research_team` workflow type directly as the workflow, with prompts configured inline.
 
-## Observability with Phoenix
-
-This section demonstrates how to enable distributed tracing using Phoenix to monitor and analyze the AG2 workflow execution.
-
-### Start Phoenix Server
-
-In a separate terminal, start Phoenix:
-
-```bash
-phoenix serve
-```
-
-Phoenix runs on `http://localhost:6006` with the tracing endpoint at `http://localhost:6006/v1/traces`.
-
-### Run with Tracing Enabled
-
-With Phoenix running, execute the workflow using the evaluation config which has tracing enabled:
-
-```bash
-nat run --config_file examples/frameworks/nat_ag2_demo/configs/config-eval.yml \
-  --input "What is the current traffic on the 10 West?"
-```
-
-### View Traces in Phoenix
-
-Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI. You can see:
-
-- **Agent execution flow**: Track the conversation between TrafficAgent and FinalResponseAgent
-- **Tool invocations**: Monitor calls to `traffic_status_tool` and `current_datetime`
-- **LLM interactions**: View prompts, completions, and token usage
-- **Timing metrics**: Analyze latency across different workflow components
-
 ## Evaluate the Workflow
 
 NeMo Agent Toolkit provides a comprehensive evaluation framework to assess your workflow's performance against a test dataset.
@@ -209,16 +169,13 @@ Traffic status varies by time period:
 
 ### Run the Evaluation
 
-Ensure both the MCP server and Phoenix are running, then execute the evaluation:
+Ensure the MCP server is running, then execute the evaluation:
 
 ```bash
 # Terminal 1: Start MCP server (if not already running)
 # nat mcp serve --config_file examples/getting_started/simple_calculator/configs/config.yml --tool_names current_datetime
 
-# Terminal 2: Start Phoenix server (if not already running)
-# phoenix serve
-
-# Terminal 3: Run evaluation
+# Terminal 2: Run evaluation
 nat eval --config_file examples/frameworks/nat_ag2_demo/configs/config-eval.yml
 ```
 
@@ -265,17 +222,17 @@ This replaces the previous approach of running async tool calls through a `Threa
 
 This example demonstrates the unified approach to tool integration provided by NeMo Agent Toolkit:
 
-- **Local tools** (like `traffic_status_tool`) are defined as NAT functions and provide time-aware traffic data for Los Angeles highways
+- **Local tools** (like `traffic_status_tool`) are defined as NeMo Agent Toolkit functions and provide time-aware traffic data for Los Angeles highways
 - **MCP tools** (like `current_datetime`) are configured in YAML using the `mcp_client` function group provided by the toolkit
 
 Both types of tools are passed to AG2 agents through the `builder.get_tools()` method, which automatically wraps them for the AG2 framework. This eliminates the need for framework-specific MCP integration code and provides a consistent interface across all supported frameworks (AG2, AutoGen, LangChain, Semantic Kernel, and others).
 
-## Available Configs
+## Available Configurations
 
-| Config | Workflow Type | Description |
+| config | Workflow Type | Description |
 |--------|--------------|-------------|
 | `config.yml` | `ag2_team` | Default traffic workflow with async group chat |
 | `config-async.yml` | `ag2_async_team` | Explicit async variant of the traffic workflow |
 | `config-research.yml` | `ag2_research_team` | Research team with researcher + writer agents |
-| `config-eval.yml` | `ag2_team` | Traffic workflow with Phoenix tracing and evaluation |
+| `config-eval.yml` | `ag2_team` | Traffic workflow with evaluation |
 
