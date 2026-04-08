@@ -132,7 +132,8 @@ class EvalAtifAdapter:
             parsed: dict[str, ATIFTrajectory] = {}
             for sid, value in embedded.items():
                 try:
-                    parsed[str(sid)] = value if isinstance(value, ATIFTrajectory) else ATIFTrajectory.model_validate(value)
+                    parsed[str(sid)] = value if isinstance(value,
+                                                           ATIFTrajectory) else ATIFTrajectory.model_validate(value)
                 except Exception:
                     logger.warning("Invalid embedded subagent trajectory for item_id=%s session_id=%s", item_id, sid)
             if parsed:

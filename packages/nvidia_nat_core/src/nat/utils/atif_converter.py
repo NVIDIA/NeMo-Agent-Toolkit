@@ -266,10 +266,10 @@ def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateSte
         ))
 
 
-def _build_flat_observation_rows(observed: list[_ObservedInvocation],
-                                 *,
-                                 subagent_ref_by_call_id: dict[str, SubagentTrajectoryRef] | None = None
-                                 ) -> list[ATIFObservationResult]:
+def _build_flat_observation_rows(
+        observed: list[_ObservedInvocation],
+        *,
+        subagent_ref_by_call_id: dict[str, SubagentTrajectoryRef] | None = None) -> list[ATIFObservationResult]:
     """Build observation rows and attach explicit subagent refs when available."""
     results = [
         ATIFObservationResult(source_call_id=obs.tool_call.tool_call_id, content=obs.tool_output) for obs in observed
@@ -432,8 +432,7 @@ def _pass2_project_context_to_steps(
     return atif_steps, step_id, total_prompt, total_completion, total_cached
 
 
-def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *,
-                                     session_id: str) -> _ExecutionStructure:
+def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, session_id: str) -> _ExecutionStructure:
     """Build root and child context ownership from IST events."""
     delegation_flags_by_uuid: dict[str, bool] = {}
     for ist in sorted_steps:
@@ -463,7 +462,7 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *,
         wrapper_fn_id = wrapper.function_ancestry.function_id
         direct_children = children_by_parent.get(wrapper_fn_id, [])
         preferred_roots = [c for c in direct_children if c.function_ancestry.function_name == (wrapper.name or "")
-                          ] or direct_children
+                           ] or direct_children
         if not preferred_roots:
             continue
         child_root = sorted(preferred_roots, key=lambda s: s.event_timestamp)[0]
@@ -479,7 +478,9 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *,
             for child in children_by_parent.get(node, []):
                 frontier.append(child.function_ancestry.function_id)
 
-        child_events = [e for e in end_events if e.function_ancestry.function_id in subtree_ids and e.UUID != wrapper.UUID]
+        child_events = [
+            e for e in end_events if e.function_ancestry.function_id in subtree_ids and e.UUID != wrapper.UUID
+        ]
         if not child_events:
             continue
         child_session_id = f"{session_id}:{wrapper_call_id}"
@@ -489,7 +490,7 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *,
 
     root_events = [
         e for e in sorted_steps
-        if (e.event_type == IntermediateStepType.WORKFLOW_START or e.event_type == IntermediateStepType.WORKFLOW_END
+        if (e.event_type in {IntermediateStepType.WORKFLOW_START, IntermediateStepType.WORKFLOW_END}
             or e.function_ancestry.function_id not in delegated_function_ids)
     ]
     subagent_ref_by_call_id = {
