@@ -51,6 +51,11 @@ class EvalAtifAdapter:
         item_type = type(item_id)
         return f"{item_type.__module__}.{item_type.__qualname__}:{item_id!r}"
 
+    @staticmethod
+    def _trajectory_session_id(item_id: Any) -> str:
+        """Return the canonical ATIF trajectory session identifier."""
+        return str(item_id)
+
     def _coerce_trajectory(self, value: Any) -> ATIFTrajectory:
         if isinstance(value, ATIFTrajectory):
             return value
@@ -193,7 +198,10 @@ class EvalAtifAdapter:
         if prebuilt is not None:
             trajectory = self._coerce_trajectory(prebuilt)
         else:
-            trajectory = self._converter.convert(steps=item.trajectory, session_id=key)
+            trajectory = self._converter.convert(
+                steps=item.trajectory,
+                session_id=self._trajectory_session_id(item.id),
+            )
         self._cache[key] = trajectory
         return trajectory
 

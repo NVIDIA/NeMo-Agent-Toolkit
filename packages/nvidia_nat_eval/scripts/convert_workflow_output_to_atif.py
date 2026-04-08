@@ -46,8 +46,7 @@ def _iter_items(payload: Any) -> list[dict[str, Any]]:
 
 
 def _session_id_for_item(item_id: Any) -> str:
-    item_type = type(item_id)
-    return f"{item_type.__module__}.{item_type.__qualname__}:{item_id!r}"
+    return str(item_id)
 
 
 def _convert_item(item: dict[str, Any],
