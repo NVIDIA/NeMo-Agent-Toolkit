@@ -202,6 +202,17 @@ def _extract_subagent_delegation_flag(metadata: Any) -> bool:
     return False
 
 
+def _event_uuid(ist: IntermediateStep) -> str:
+    """Return stable event UUID from top-level or payload fields."""
+    top_level = getattr(ist, "UUID", None)
+    if top_level:
+        return str(top_level)
+    payload_level = getattr(ist.payload, "UUID", None)
+    if payload_level:
+        return str(payload_level)
+    return ""
+
+
 # ---------------------------------------------------------------------------
 # Internal accumulator
 # ---------------------------------------------------------------------------
@@ -253,7 +264,11 @@ def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateSte
     if ist.data:
         tool_input = _parse_tool_arguments(ist.data.input)
         tool_output = _safe_str(ist.data.output)
-    call_id = f"call_{ist.UUID}"
+    event_uuid = _event_uuid(ist)
+    if not event_uuid:
+        logger.warning("Skipping invocation without UUID for tool=%s", tool_name)
+        return
+    call_id = f"call_{event_uuid}"
     is_subagent_delegation = _extract_subagent_delegation_flag(ist.metadata) or start_flag
     pending.observed_invocations.append(
         _ObservedInvocation(
@@ -435,9 +450,15 @@ def _pass2_project_context_to_steps(
 def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, session_id: str) -> _ExecutionStructure:
     """Build root and child context ownership from IST events."""
     delegation_flags_by_uuid: dict[str, bool] = {}
+    delegated_callable_ids: set[str] = set()
     for ist in sorted_steps:
         if ist.event_state == IntermediateStepState.START and _extract_subagent_delegation_flag(ist.metadata):
-            delegation_flags_by_uuid[ist.UUID] = True
+            event_uuid = _event_uuid(ist)
+            if event_uuid:
+                delegation_flags_by_uuid[event_uuid] = True
+            function_id = ist.function_ancestry.function_id
+            if function_id:
+                delegated_callable_ids.add(function_id)
 
     end_events = [s for s in sorted_steps if s.event_state == IntermediateStepState.END]
     children_by_parent: dict[str, list[IntermediateStep]] = {}
@@ -450,7 +471,10 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
     for e in end_events:
         if e.event_type not in (IntermediateStepType.TOOL_END, IntermediateStepType.FUNCTION_END):
             continue
-        if _extract_subagent_delegation_flag(e.metadata) or delegation_flags_by_uuid.get(e.UUID, False):
+        event_uuid = _event_uuid(e)
+        if (_extract_subagent_delegation_flag(e.metadata)
+                or (event_uuid and delegation_flags_by_uuid.get(event_uuid, False))
+                or e.function_ancestry.function_id in delegated_callable_ids):
             wrapper_events.append(e)
 
     child_session_by_wrapper_call_id: dict[str, str] = {}
@@ -458,7 +482,10 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
     delegated_function_ids: set[str] = set()
 
     for wrapper in wrapper_events:
-        wrapper_call_id = f"call_{wrapper.UUID}"
+        wrapper_uuid = _event_uuid(wrapper)
+        if not wrapper_uuid:
+            continue
+        wrapper_call_id = f"call_{wrapper_uuid}"
         wrapper_fn_id = wrapper.function_ancestry.function_id
         direct_children = children_by_parent.get(wrapper_fn_id, [])
         preferred_roots = [c for c in direct_children if c.function_ancestry.function_name == (wrapper.name or "")
@@ -479,7 +506,7 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
                 frontier.append(child.function_ancestry.function_id)
 
         child_events = [
-            e for e in end_events if e.function_ancestry.function_id in subtree_ids and e.UUID != wrapper.UUID
+            e for e in end_events if e.function_ancestry.function_id in subtree_ids and _event_uuid(e) != wrapper_uuid
         ]
         if not child_events:
             continue
