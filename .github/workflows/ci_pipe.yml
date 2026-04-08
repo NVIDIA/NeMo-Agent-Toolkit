@@ -209,6 +209,15 @@ jobs:
         shell: bash
         run: ./nat/ci/scripts/github/build_wheel.sh
 
+      - name: Upload Package Reports
+        uses: actions/upload-artifact@v6
+        if: ${{ always() }}
+        with:
+          name: "package_listings"
+          path: "${{ github.workspace }}/tmp/package_listings.tar.bz2"
+          if-no-files-found: error
+          compression-level: 0
+
       - name: Upload Wheels
         uses: actions/upload-artifact@v6
         with:

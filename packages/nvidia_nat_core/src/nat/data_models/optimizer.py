@@ -13,12 +13,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel
 from pydantic import Field
+
+from .common import BaseModelRegistryTag
+from .common import TypedBaseModel
+
+
+class OptimizerStrategyBaseConfig(TypedBaseModel, BaseModelRegistryTag):
+    """Base for optimizer strategy configs (numeric, prompt) registered in the optimizer registry."""
+
+    enabled: bool = Field(default=False, description="Enable this optimizer strategy.")
 
 
 class OptimizerMetric(BaseModel):
@@ -30,15 +40,24 @@ class OptimizerMetric(BaseModel):
     weight: float = Field(description="Weight of the metric in the optimization process.", default=1.0)
 
 
+class PromptOptimizerInputSchema(BaseModel):
+    """Input schema for prompt optimizer mutator/recombiner helper functions."""
+
+    original_prompt: str
+    objective: str
+    oracle_feedback: str | None = None
+
+
 class SamplerType(StrEnum):
     BAYESIAN = "bayesian"
     GRID = "grid"
 
 
-class NumericOptimizationConfig(BaseModel):
+class OptunaParameterOptimizationConfig(OptimizerStrategyBaseConfig, name="numeric"):
     """
-    Configuration for numeric/enum optimization (Optuna).
+    Configuration for Optuna-based numeric/enum parameter optimization.
     """
+
     enabled: bool = Field(default=True, description="Enable numeric optimization")
     n_trials: int = Field(description="Number of trials for numeric optimization.", default=20)
     sampler: SamplerType | None = Field(
@@ -49,13 +68,11 @@ class NumericOptimizationConfig(BaseModel):
     )
 
 
-class PromptGAOptimizationConfig(BaseModel):
-    """
-    Configuration for prompt optimization using a Genetic Algorithm.
-    """
-    enabled: bool = Field(default=False, description="Enable GA-based prompt optimization")
+class PromptOptimizationConfig(OptimizerStrategyBaseConfig):
+    """Base for all prompt optimization strategy configs."""
 
-    # Prompt optimization function hooks
+    enabled: bool = Field(default=False, description="Enable prompt optimization")
+
     prompt_population_init_function: str | None = Field(
         default=None,
         description="Optional function name to initialize/mutate candidate prompts.",
@@ -65,6 +82,10 @@ class PromptGAOptimizationConfig(BaseModel):
         description="Optional function name to recombine two parent prompts into a child.",
     )
 
+
+class GAPromptOptimizationConfig(PromptOptimizationConfig, name="ga"):
+    """GA-specific prompt optimization config with typed oracle feedback fields."""
+
     # Genetic algorithm configuration
     ga_population_size: int = Field(
         description="Population size for genetic algorithm prompt optimization.",
@@ -73,10 +94,6 @@ class PromptGAOptimizationConfig(BaseModel):
     ga_generations: int = Field(
         description="Number of generations to evolve in GA prompt optimization.",
         default=15,
-    )
-    ga_offspring_size: int | None = Field(
-        description="Number of offspring to produce per generation. Defaults to population_size - elitism.",
-        default=None,
     )
     ga_crossover_rate: float = Field(
         description="Probability of applying crossover during reproduction.",
@@ -94,7 +111,7 @@ class PromptGAOptimizationConfig(BaseModel):
         description="Number of top individuals carried over unchanged each generation.",
         default=2,
     )
-    ga_selection_method: str = Field(
+    ga_selection_method: Literal["tournament", "roulette"] = Field(
         description="Parent selection strategy: 'tournament' or 'roulette'.",
         default="tournament",
     )
@@ -114,8 +131,7 @@ class PromptGAOptimizationConfig(BaseModel):
 
     # Oracle feedback configuration
     oracle_feedback_mode: Literal["never", "always", "failing_only", "adaptive"] = Field(
-        description="When to inject failure reasoning into mutations: "
-        "'never' (default), 'always', 'failing_only' (below threshold), 'adaptive' (on plateau).",
+        description="When to inject failure reasoning into mutations.",
         default="never",
     )
     oracle_feedback_worst_n: int = Field(
@@ -152,9 +168,10 @@ class PromptGAOptimizationConfig(BaseModel):
     )
 
 
-class OptimizerConfig(BaseModel):
+class BaseOptimizerConfig(BaseModel):
     """
-    Parameters used by the workflow optimizer.
+    Shared optimizer parameters that any optimizer strategy could reuse.
+    Strategy-specific config lives on subtypes via the registry.
     """
     output_path: Path | None = Field(
         default=None,
@@ -182,9 +199,18 @@ class OptimizerConfig(BaseModel):
         default="harmonic",
     )
 
-    # Nested configs
-    numeric: NumericOptimizationConfig = NumericOptimizationConfig()
-    prompt: PromptGAOptimizationConfig = PromptGAOptimizationConfig()
+
+class OptimizerConfig(BaseOptimizerConfig):
+    """
+    Full optimizer config used in the app Config and for parsing YAML.
+    Extends the shared base with strategy-specific nests: .numeric for
+    parameter/Optuna optimization, .prompt for prompt optimization.
+    """
+    numeric: OptunaParameterOptimizationConfig = OptunaParameterOptimizationConfig()
+    prompt: GAPromptOptimizationConfig = GAPromptOptimizationConfig()
+
+
+OptimizerStrategyBaseConfigT = typing.TypeVar("OptimizerStrategyBaseConfigT", bound=OptimizerStrategyBaseConfig)
 
 
 class OptimizerRunConfig(BaseModel):

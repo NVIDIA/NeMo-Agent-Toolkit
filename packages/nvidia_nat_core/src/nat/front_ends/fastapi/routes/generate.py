@@ -24,6 +24,7 @@ from fastapi import Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from nat.front_ends.fastapi.response_helpers import generate_streaming_response_atif_as_str
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from nat.runtime.session import SessionManager
 
@@ -96,10 +97,33 @@ def post_streaming_raw_endpoint(*,
     return _with_annotation(post_stream_interactive if enable_interactive else post_stream, "payload", request_type)
 
 
+def post_streaming_atif_endpoint(*,
+                                 worker: Any,
+                                 session_manager: SessionManager,
+                                 request_type: Any,
+                                 enable_interactive: bool,
+                                 streaming: bool,
+                                 result_type: type | None,
+                                 output_type: type | None):
+    """Build an experimental POST handler that streams ATIF-formatted steps."""
+
+    async def post_stream(request: Request, payload: Any = Body()):
+        async with session_manager.session(http_connection=request) as session:
+            return StreamingResponse(headers={"Content-Type": "text/event-stream; charset=utf-8"},
+                                     content=generate_streaming_response_atif_as_str(payload,
+                                                                                     session=session,
+                                                                                     streaming=streaming,
+                                                                                     result_type=result_type,
+                                                                                     output_type=output_type))
+
+    return _with_annotation(post_stream, "payload", request_type)
+
+
 class _GenerateEndpointType(StrEnum):
     SINGLE = "single"
     STREAMING = "streaming"
     FULL = "full"
+    ATIF = "atif"
 
 
 class _GenerateEndpointMethod(StrEnum):
@@ -113,6 +137,8 @@ def _response_for_endpoint_type(session_manager: SessionManager, endpoint_type: 
     elif endpoint_type == _GenerateEndpointType.STREAMING:
         return session_manager.get_workflow_streaming_output_schema()
     elif endpoint_type == _GenerateEndpointType.FULL:
+        return session_manager.get_workflow_streaming_output_schema()
+    elif endpoint_type == _GenerateEndpointType.ATIF:
         return session_manager.get_workflow_streaming_output_schema()
     else:
         return None
@@ -202,6 +228,25 @@ async def add_generate_route(
                 "Use filter_steps query parameter to filter steps by type (comma-separated list) or"
                 " set to 'none' to suppress all intermediate steps.",
             )
+        case _GenerateEndpointType.ATIF:
+            route_handler = post_streaming_atif_endpoint(session_manager=session_manager,
+                                                         worker=worker,
+                                                         request_type=request_type,
+                                                         enable_interactive=False,
+                                                         streaming=True,
+                                                         result_type=response_type,
+                                                         output_type=response_type)
+            app.add_api_route(
+                path=endpoint_path,
+                endpoint=route_handler,
+                methods=[endpoint_method],
+                response_model=response_type,
+                responses={500: RESPONSE_500},
+                description="Stream workflow execution as ATIF "
+                "(Agent Trajectory Interchange Format) steps.\n"
+                "Each SSE event is either an ATIF step object or a final trajectory summary.\n"
+                "This endpoint is currently experimental and may change in future releases.",
+            )
         case _:
             raise ValueError(f"Unsupported endpoint type: {endpoint_type}")
 
@@ -240,6 +285,13 @@ async def add_generate_routes(
                                  endpoint_path=f"{endpoint.path}/full",
                                  endpoint_type=_GenerateEndpointType.FULL,
                                  endpoint_method=endpoint_method)
+        await add_generate_route(worker=worker,
+                                 app=app,
+                                 session_manager=session_manager,
+                                 enable_interactive=False,
+                                 endpoint_path=f"{endpoint.path}/atif",
+                                 endpoint_type=_GenerateEndpointType.ATIF,
+                                 endpoint_method=endpoint_method)
 
     if not disable_legacy_routes and endpoint.legacy_path:
         await add_generate_route(worker=worker,
@@ -269,4 +321,5 @@ async def add_generate_routes(
                                       endpoint=endpoint,
                                       session_manager=session_manager,
                                       generate_body_type=request_type,
-                                      response_500=RESPONSE_500)
+                                      response_500=RESPONSE_500,
+                                      disable_legacy_routes=disable_legacy_routes)

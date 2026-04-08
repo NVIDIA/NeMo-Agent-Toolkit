@@ -21,6 +21,8 @@ GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 source ${GITHUB_SCRIPT_DIR}/common.sh
 WHEELS_BASE_DIR="${WORKSPACE_TMP}/wheels"
 WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
+PIP_REPORTS_DIR="${WORKSPACE_TMP}/pip_reports"
+mkdir -p "${PIP_REPORTS_DIR}"
 
 GIT_TAG=$(get_git_tag)
 rapids-logger "Git Version: ${GIT_TAG}"
@@ -57,6 +59,18 @@ deactivate
 TEMP_INSTALL_LOCATION="${WORKSPACE_TMP}/wheel_test_env"
 install_python_versions
 
+function create_package_report_tarball() {
+    local tarball_path="${WORKSPACE_TMP}/package_listings.tar.bz2"
+    tar -cjf "${tarball_path}" -C "${PIP_REPORTS_DIR}" .
+
+    # Clean out the reports directory, in CI this doesn't have an impact, but if running locally it prevents old
+    # reports from being included in future tarballs
+    rm -rf "${PIP_REPORTS_DIR}"
+    echo "${tarball_path}"
+}
+
+trap create_package_report_tarball EXIT
+
 for whl in "${MOVED_WHEELS[@]}"; do
 
     for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
@@ -75,6 +89,10 @@ for whl in "${MOVED_WHEELS[@]}"; do
         set +e
         UV_PIP_OUT=$(uv pip install -q --prerelease=allow --find-links "${WHEELS_BASE_DIR}" "${whl}" 2>&1)
         INSTALL_RESULT=$?
+
+        # Report the packages in the environment regardless of install success
+        rapids-logger "Installed wheel ${whl} with Python ${pyver}, pip install exit code ${INSTALL_RESULT}"
+        uv pip list --format json > "${PIP_REPORTS_DIR}/$(basename "${whl}" .whl)_py${pyver}_packages.json"
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
             rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver}"
@@ -95,13 +113,17 @@ for whl in "${MOVED_WHEELS[@]}"; do
                 exit ${IMPORT_TEST_RESULT}
             fi
 
-            REPORTED_VERSION=$(nat --version 2>&1)
-            NAT_CMD_EXIT_CODE=$?
+            if command -v nat >/dev/null 2>&1; then
+                REPORTED_VERSION=$(nat --version 2>&1)
+                NAT_CMD_EXIT_CODE=$?
 
-            if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
-                rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
-                echo "${REPORTED_VERSION}"
-                exit ${NAT_CMD_EXIT_CODE}
+                if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
+                    rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
+                    echo "${REPORTED_VERSION}"
+                    exit ${NAT_CMD_EXIT_CODE}
+                fi
+            else
+                rapids-logger "Skipping nat CLI test; 'nat' command not installed by wheel ${whl}"
             fi
         else
             rapids-logger "Skipping nat CLI test for nvidia_nat_app (framework-agnostic package); verifying nat_app import"
@@ -119,3 +141,5 @@ for whl in "${MOVED_WHEELS[@]}"; do
         rm -rf "${TEMP_INSTALL_LOCATION}"
     done
 done
+
+exit 0

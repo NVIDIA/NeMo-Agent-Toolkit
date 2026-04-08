@@ -23,9 +23,10 @@ from nat.cli.register_workflow import register_embedder_provider
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.ssl_verification_mixin import SSLVerificationMixin
 
 
-class OpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, name="openai"):
+class OpenAIEmbedderModelConfig(EmbedderBaseConfig, RetryMixin, SSLVerificationMixin, name="openai"):
     """An OpenAI LLM provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")

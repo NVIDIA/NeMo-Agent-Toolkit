@@ -29,8 +29,9 @@ class TestEvaluationRunCallbacks:
         runner = EvaluationRun(config=config, callback_manager=mgr)
         assert runner.callback_manager is mgr
 
-    def test_callback_manager_defaults_to_none(self):
-        """EvaluationRun defaults callback_manager to None."""
-        config = EvaluationRunConfig(config_file=Path("dummy.yml"))
+    def test_callback_manager_defaults_to_empty(self):
+        """EvaluationRun defaults callback_manager to an empty EvalCallbackManager."""
+        config = EvaluationRunConfig(config_file=Path("dummy.yml"), write_output=False)
         runner = EvaluationRun(config=config)
-        assert runner.callback_manager is None
+        assert isinstance(runner.callback_manager, EvalCallbackManager)
+        assert not runner.callback_manager.has_callbacks

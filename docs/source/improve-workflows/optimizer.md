@@ -18,6 +18,10 @@ limitations under the License.
 
 This document provides a comprehensive overview of how to use the NeMo Agent Toolkit Optimizer to tune your NeMo Agent Toolkit [workflows](../build-workflows/about-building-workflows.md).
 
+## Prerequisites
+
+The optimizer is optional. Install it to use `nat optimize`: run `pip install nvidia-nat[config-optimizer]` or `pip install nvidia-nat-config-optimizer`. See the [Install Guide](../get-started/installation.md) for details.
+
 ## Introduction
 
 ### What is Parameter Optimization?
@@ -333,7 +337,6 @@ optimizer:
     prompt_recombination_function: "prompt_recombiner"  # optional
     ga_population_size: 16
     ga_generations: 8
-    ga_offspring_size: 12        # optional; defaults to pop_size - elitism
     ga_crossover_rate: 0.7
     ga_mutation_rate: 0.2
     ga_elitism: 2
@@ -367,7 +370,6 @@ This is the main configuration object for the optimizer.
 -   `prompt.enabled: bool`: Enable GA-based prompt optimization. Defaults to `false`.
 -   `prompt.ga_population_size: int`: Population size for GA prompt optimization. Larger populations increase diversity but cost more per generation. Defaults to `10`.
 -   `prompt.ga_generations: int`: Number of generations for GA prompt optimization. Replaces `n_trials_prompt`. Defaults to `5`.
--   `prompt.ga_offspring_size: int | null`: Number of offspring produced per generation. If `null`, defaults to `ga_population_size - ga_elitism`.
 -   `prompt.ga_crossover_rate: float`: Probability of recombination between two parents for each prompt parameter. Defaults to `0.7`.
 -   `prompt.ga_mutation_rate: float`: Probability of mutating a child's prompt parameter using the LLM optimizer. Defaults to `0.1`.
 -   `prompt.ga_elitism: int`: Number of elite individuals copied unchanged to the next generation. Defaults to `1`.
@@ -444,7 +446,7 @@ This section explains how the GA evolves prompt parameters when `do_prompt_optim
    - Selection: choose parents using `ga_selection_method` (`tournament` with `ga_tournament_size`, or `roulette`).
    - Crossover: with probability `ga_crossover_rate`, recombine two parent prompts for a parameter using `prompt_recombination_function` (if provided), otherwise pick from a parent.
    - Mutation: with probability `ga_mutation_rate`, apply `prompt_population_init_function` to mutate the child's parameter.
-   - Repeat until the new population reaches `ga_population_size` (or `ga_offspring_size` offspring plus elites).
+   - Repeat until the new population reaches `ga_population_size`.
 6. Repeat steps 2–5 for `ga_generations` generations.
 
 All LLM calls and evaluations are executed asynchronously with a concurrency limit of `ga_parallel_evaluations`.
@@ -709,7 +711,7 @@ When the user configures the corresponding telemetry exporter in their workflow 
 
 ### Built-in Implementation
 
-LangSmith implements this callback pattern with per-trial experiment projects, feedback scores, parameter metadata, and prompt repo version tracking. See the [LangSmith integration guide](../run-workflows/observe/observe.md?provider=LangSmith#provider-integration-guides){.external} for details on what LangSmith tracks during optimization.
+LangSmith implements this callback pattern with per-trial experiment projects, feedback scores, parameter metadata, and prompt repo version tracking. See the [LangSmith integration guide](../run-workflows/observe/observe-workflow-with-langsmith.md){.external} for details on what LangSmith tracks during optimization.
 
 Other observability providers can implement the same `OptimizerCallback` protocol to add their own trial tracking during optimization.
 

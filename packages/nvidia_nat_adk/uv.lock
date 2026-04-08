@@ -2235,11 +2235,21 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "google-adk", specifier = "~=1.18" },
-    { name = "litellm", specifier = "~=1.74" },
+    { name = "litellm", specifier = ">=1.74,<1.82.7" },
     { name = "nvidia-nat-core", editable = "../nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
 ]
 provides-extras = ["test"]
+
+[[package]]
+name = "nvidia-nat-atif"
+source = { editable = "../nvidia_nat_atif" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 
 [[package]]
 name = "nvidia-nat-core"
@@ -2259,6 +2269,7 @@ dependencies = [
     { name = "nest-asyncio2" },
     { name = "networkx" },
     { name = "numpy" },
+    { name = "nvidia-nat-atif" },
     { name = "openinference-semantic-conventions" },
     { name = "optuna" },
     { name = "pandas" },
@@ -2276,6 +2287,7 @@ dependencies = [
     { name = "rich" },
     { name = "starlette" },
     { name = "tabulate" },
+    { name = "tzlocal" },
     { name = "urllib3" },
     { name = "uvicorn", extra = ["standard"] },
     { name = "wikipedia" },
@@ -2301,6 +2313,7 @@ requires-dist = [
     { name = "nest-asyncio2", specifier = "~=1.7" },
     { name = "networkx", specifier = "~=3.4" },
     { name = "numpy", specifier = "~=2.3" },
+    { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
     { name = "nvidia-nat-eval", extras = ["profiling"], marker = "extra == 'test'", editable = "../nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openinference-semantic-conventions", specifier = ">=0.1.14,<1.0.0" },
@@ -2323,6 +2336,7 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async-endpoints'", specifier = "~=2.0" },
     { name = "starlette", specifier = "~=0.51" },
     { name = "tabulate", specifier = "~=0.9" },
+    { name = "tzlocal", specifier = "~=5.3" },
     { name = "urllib3", specifier = ">=2.6.3,<3.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
     { name = "wikipedia", specifier = "~=1.4" },

@@ -18,6 +18,7 @@ import datetime
 import json
 import os
 import re
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -43,6 +44,7 @@ from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
 from nat.data_models.api_server import ObservabilityTraceContent
 from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponseObservabilityTrace
 from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.api_server import SystemIntermediateStepContent
 from nat.data_models.api_server import SystemResponseContent
@@ -118,9 +120,6 @@ user_message = {
     "user": {
         "name": "string", "email": "string"
     },
-    "security": {
-        "api_key": "string", "token": "string"
-    },
     "error": {
         "code": "unknown_error", "message": "string", "details": "object"
     },
@@ -166,9 +165,6 @@ user_interaction_response_message = {
     "timestamp": "string",
     "user": {
         "name": "string", "email": "string"
-    },
-    "security": {
-        "api_key": "string", "token": "string"
     },
     "error": {
         "code": "unknown_error", "message": "string", "details": "object"
@@ -1059,3 +1055,130 @@ async def test_restore_execution_state_sends_prompt_with_remaining_timeout():
     call_kwargs = handler.create_websocket_message.call_args[1]
     sent_content = call_kwargs["data_model"]
     assert sent_content.timeout == 7
+
+
+async def test_process_workflow_request_cancels_in_flight_task():
+    """A new workflow request cancels any in-flight task before creating a replacement."""
+    mock_socket = AsyncMock()
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    mock_worker.get_conversation_handler.return_value = None
+
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+
+    existing_task = asyncio.create_task(asyncio.sleep(100))
+    handler._running_workflow_task = existing_task
+
+    msg = WebSocketUserMessage.model_validate({**user_message, "type": "user_message"})
+
+    async def _noop_workflow(*args, **kwargs):
+        await asyncio.sleep(0)
+
+    with patch.object(handler, "_run_workflow", _noop_workflow):
+        await handler.process_workflow_request(msg)
+
+    assert existing_task.cancelled()
+    assert handler._running_workflow_task is not None
+    assert handler._running_workflow_task is not existing_task
+
+    new_task = handler._running_workflow_task
+    new_task.cancel()
+    try:
+        await new_task
+    except (asyncio.CancelledError, Exception):
+        pass
+
+
+async def test_done_callback_guards_against_stale_task():
+    """_done_callback does not clear _running_workflow_task when the task has been replaced."""
+    mock_socket = AsyncMock()
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+    mock_worker.get_conversation_handler.return_value = None
+
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+
+    msg = WebSocketUserMessage.model_validate({**user_message, "type": "user_message"})
+    completed = asyncio.Event()
+
+    async def _quick_workflow(*args, **kwargs):
+        await asyncio.sleep(0)
+        completed.set()
+
+    with patch.object(handler, "_run_workflow", _quick_workflow):
+        await handler.process_workflow_request(msg)
+
+    # Simulate a second request replacing the first task reference
+    second_task = asyncio.create_task(asyncio.sleep(100))
+    handler._running_workflow_task = second_task
+
+    # Let the first task complete and fire its done callback
+    await completed.wait()
+    await asyncio.sleep(0)
+
+    # second_task must remain untouched by the first task's callback
+    assert handler._running_workflow_task is second_task
+    mock_worker.remove_conversation_handler.assert_not_called()
+
+    second_task.cancel()
+    try:
+        await second_task
+    except asyncio.CancelledError:
+        pass
+
+
+async def test_run_workflow_skips_response_on_cancellation():
+    """When _run_workflow is cancelled, RESPONSE_MESSAGE is not sent and pending trace is cleared."""
+    mock_socket = AsyncMock()
+    mock_session_manager = MagicMock()
+    mock_step_adaptor = MagicMock()
+    mock_worker = MagicMock()
+
+    handler = WebSocketMessageHandler(
+        socket=mock_socket,
+        session_manager=mock_session_manager,
+        step_adaptor=mock_step_adaptor,
+        worker=mock_worker,
+    )
+    handler.create_websocket_message = AsyncMock()
+    handler._user_message_payload = {}
+
+    handler._pending_observability_trace = ResponseObservabilityTrace(observability_trace_id="trace-to-clear")
+
+    blocking_event = asyncio.Event()
+
+    @asynccontextmanager
+    async def _mock_session(*args, **kwargs):
+        yield MagicMock()
+
+    mock_session_manager.session = _mock_session
+
+    async def _blocking_generator(*args, **kwargs):
+        blocking_event.set()
+        await asyncio.sleep(100)
+        yield  # pragma: no cover
+
+    with patch("nat.front_ends.fastapi.message_handler.generate_streaming_response", _blocking_generator):
+        task = asyncio.create_task(handler._run_workflow(payload="test"))
+        await blocking_event.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+
+    for call in handler.create_websocket_message.call_args_list:
+        msg_type = call.kwargs.get("message_type") or (call.args[1] if len(call.args) > 1 else None)
+        assert msg_type != WebSocketMessageType.RESPONSE_MESSAGE
+
+    assert handler._pending_observability_trace is None

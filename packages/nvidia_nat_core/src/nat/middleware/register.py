@@ -20,3 +20,4 @@ from nat.middleware.defense import register as register_defense
 from nat.middleware.dynamic import register as register_dynamic
 from nat.middleware.logging import register as register_logging
 from nat.middleware.red_teaming import register as register_red_teaming
+from nat.middleware.timeout import register as register_timeout

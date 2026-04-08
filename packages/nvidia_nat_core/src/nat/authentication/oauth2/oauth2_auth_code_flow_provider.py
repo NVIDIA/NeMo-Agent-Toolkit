@@ -31,6 +31,7 @@ from nat.data_models.authentication import AuthenticatedContext
 from nat.data_models.authentication import AuthFlowType
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
+from nat.runtime.session import SESSION_COOKIE_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +93,7 @@ class OAuth2AuthCodeFlowProvider(AuthProviderBase[OAuth2AuthCodeFlowProviderConf
         context = Context.get()
         if user_id is None and hasattr(context, "metadata") and hasattr(
                 context.metadata, "cookies") and context.metadata.cookies is not None:
-            session_id = context.metadata.cookies.get("nat-session", None)
+            session_id = context.metadata.cookies.get(SESSION_COOKIE_NAME, None)
             if not session_id:
                 raise RuntimeError("Authentication failed. No session ID found. Cannot identify user.")
 

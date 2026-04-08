@@ -27,10 +27,11 @@ from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.ssl_verification_mixin import SSLVerificationMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 
 
-class NIMModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, name="nim"):
+class NIMModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, SSLVerificationMixin, name="nim"):
     """An NVIDIA Inference Microservice (NIM) llm provider to be used with an LLM client."""
 
     model_config = ConfigDict(protected_namespaces=(), extra="allow")
