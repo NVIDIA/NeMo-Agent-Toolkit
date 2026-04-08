@@ -184,7 +184,6 @@ class TestAzureOpenAILangChain:
         assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
 
 
-
 class TestOCILangChain:
     """Tests for the oci_langchain wrapper."""
 
@@ -213,11 +212,18 @@ class TestOCILangChain:
     @patch("oci.generative_ai_inference.GenerativeAiInferenceClient")
     @patch("langchain_oci.common.auth.create_oci_client_kwargs")
     @patch("nat.plugins.langchain.llm._get_langchain_oci_chat_model")
-    async def test_basic_creation(self, mock_get_chat, mock_create_client_kwargs, mock_oci_client, oci_cfg, mock_builder):
+    async def test_basic_creation(self,
+                                  mock_get_chat,
+                                  mock_create_client_kwargs,
+                                  mock_oci_client,
+                                  oci_cfg,
+                                  mock_builder):
         mock_chat_class = MagicMock()
         mock_get_chat.return_value = mock_chat_class
         mock_create_client_kwargs.return_value = {
-            "config": {"region": "us-chicago-1"},
+            "config": {
+                "region": "us-chicago-1"
+            },
             "service_endpoint": oci_cfg.endpoint,
             "retry_strategy": object(),
             "timeout": (10, 240),
@@ -252,9 +258,11 @@ class TestOCILangChain:
     @patch("oci.generative_ai_inference.GenerativeAiInferenceClient")
     @patch("langchain_oci.common.auth.create_oci_client_kwargs")
     @patch("nat.plugins.langchain.llm._get_langchain_oci_chat_model")
-    async def test_openai_provider_uses_max_completion_tokens(
-        self, mock_get_chat, mock_create_client_kwargs, mock_oci_client, mock_builder
-    ):
+    async def test_openai_provider_uses_max_completion_tokens(self,
+                                                              mock_get_chat,
+                                                              mock_create_client_kwargs,
+                                                              mock_oci_client,
+                                                              mock_builder):
         mock_chat_class = MagicMock()
         mock_get_chat.return_value = mock_chat_class
         mock_create_client_kwargs.return_value = {"config": {}}
@@ -267,7 +275,7 @@ class TestOCILangChain:
             max_tokens=128,
         )
 
-        async with oci_langchain(cfg, mock_builder) as client:
+        async with oci_langchain(cfg, mock_builder) as _:
             kwargs = mock_chat_class.call_args.kwargs
             assert "max_completion_tokens" in kwargs["model_kwargs"]
             assert "max_tokens" not in kwargs["model_kwargs"]

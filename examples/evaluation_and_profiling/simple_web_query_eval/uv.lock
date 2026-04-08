@@ -3107,6 +3107,7 @@ requires-dist = [
     { name = "nvidia-nat-fastmcp", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_fastmcp" },
     { name = "nvidia-nat-langchain", marker = "extra == 'langchain'", editable = "../../../packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-langchain", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_langchain" },
+    { name = "nvidia-nat-langchain", extras = ["oci"], marker = "extra == 'oci'", editable = "../../../packages/nvidia_nat_langchain" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'llama-index'", editable = "../../../packages/nvidia_nat_llama_index" },
     { name = "nvidia-nat-llama-index", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_llama_index" },
     { name = "nvidia-nat-mcp", marker = "extra == 'mcp'", editable = "../../../packages/nvidia_nat_mcp" },
@@ -3150,7 +3151,7 @@ requires-dist = [
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "../../../packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "../../documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "adk", "agno", "app", "autogen", "atif", "config-optimizer", "core", "crewai", "data-flywheel", "eval", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "memmachine", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragas", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "most", "examples"]
+provides-extras = ["a2a", "adk", "agno", "app", "autogen", "atif", "config-optimizer", "core", "crewai", "data-flywheel", "eval", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "memmachine", "nemo-customizer", "oci", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragas", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -3342,6 +3343,7 @@ requires-dist = [
     { name = "langchain-litellm", specifier = ">=0.3.5,<1.0.0" },
     { name = "langchain-milvus", specifier = ">=0.3.3,<1.0.0" },
     { name = "langchain-nvidia-ai-endpoints", specifier = ">=1.0.2,<2.0.0" },
+    { name = "langchain-oci", marker = "extra == 'oci'", specifier = ">=0.2.4,<1.0.0" },
     { name = "langchain-openai", specifier = ">=1.1.6,<2.0.0" },
     { name = "langchain-tavily", specifier = ">=0.2.16,<1.0.0" },
     { name = "langgraph", specifier = ">=1.0.5,<2.0.0" },
@@ -3352,7 +3354,7 @@ requires-dist = [
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
     { name = "openevals", specifier = ">=0.1.3,<1.0.0" },
 ]
-provides-extras = ["test"]
+provides-extras = ["oci", "test"]
 
 [[package]]
 name = "nvidia-nat-opentelemetry"

@@ -256,7 +256,8 @@ def oci_genai_fixture(fail_missing: bool) -> Generator[dict[str, str], None, Non
     """
     yield require_env_variables(
         varnames=["OCI_COMPARTMENT_ID"],
-        reason="OCI Generative AI integration tests require the `OCI_COMPARTMENT_ID` environment variable to be defined.",
+        reason=
+        "OCI Generative AI integration tests require the `OCI_COMPARTMENT_ID` environment variable to be defined.",
         fail_missing=fail_missing,
     )
 

@@ -30,6 +30,7 @@ from nat.data_models.optimizable import SearchSpace
 from nat.data_models.retry_mixin import RetryMixin
 from nat.data_models.thinking_mixin import ThinkingMixin
 
+
 class OCIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin, name="oci"):
     """OCI Generative AI LLM provider."""
 
@@ -51,6 +52,7 @@ class OCIModelConfig(LLMBaseConfig, RetryMixin, OptimizableMixin, ThinkingMixin,
         if self.endpoint is None:
             self.endpoint = f"https://inference.generativeai.{self.region}.oci.oraclecloud.com"
         return self
+
     auth_type: str = Field(default="API_KEY",
                            description="OCI SDK authentication type: API_KEY, SECURITY_TOKEN, INSTANCE_PRINCIPAL, "
                            "or RESOURCE_PRINCIPAL.")
