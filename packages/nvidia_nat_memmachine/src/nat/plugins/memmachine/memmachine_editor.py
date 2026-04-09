@@ -111,11 +111,13 @@ class MemMachineEditor(MemoryEditor):
         Each MemoryItem is translated and uploaded through the MemMachine API.
 
         All memories are added to both episodic and semantic memory types.
-        """
-        # Run synchronous operations in thread pool to make them async
-        tasks = []
 
-        for memory_item in items:
+        Conversation messages within a single MemoryItem are added sequentially to
+        preserve chronological order. Separate MemoryItems (and non-conversation
+        memories) are still dispatched concurrently via asyncio.gather.
+        """
+
+        async def add_item(memory_item: MemoryItem) -> None:
             # Make a copy of metadata to avoid modifying the original
             item_meta = memory_item.metadata.copy() if memory_item.metadata else {}
             conversation = memory_item.conversation
@@ -139,7 +141,9 @@ class MemMachineEditor(MemoryEditor):
             # If we have a conversation, add each message separately
             # Otherwise, use memory_text or skip if no content
             if conversation:
-                # Add each message in the conversation with its role
+                # Add each message sequentially to preserve conversation order.
+                # asyncio.to_thread tasks dispatched via gather() complete in
+                # nondeterministic order, so we await each one before the next.
                 for msg in conversation:
                     msg_role = msg.get('role', 'user')
                     msg_content = msg.get('content', '')
@@ -154,7 +158,6 @@ class MemMachineEditor(MemoryEditor):
                         # Convert list to comma-separated string
                         metadata["tags"] = ", ".join(tags) if isinstance(tags, list) else str(tags)
 
-                    # Capture variables in closure to avoid late binding issues
                     def add_memory(
                         content=msg_content,
                         role=msg_role,
@@ -173,8 +176,7 @@ class MemMachineEditor(MemoryEditor):
                             episode_type=None  # Use default (MESSAGE)
                         )
 
-                    task = asyncio.to_thread(add_memory)
-                    tasks.append(task)
+                    await asyncio.to_thread(add_memory)
             elif memory_text:
                 # Add as a single memory item (direct memory without conversation)
                 # Add tags to metadata if present
@@ -195,11 +197,10 @@ class MemMachineEditor(MemoryEditor):
                         episode_type=None  # Use default (MESSAGE)
                     )
 
-                task = asyncio.to_thread(add_memory)
-                tasks.append(task)
+                await asyncio.to_thread(add_memory)
 
-        if tasks:
-            await asyncio.gather(*tasks)
+        if items:
+            await asyncio.gather(*(add_item(item) for item in items))
 
     async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
         """
