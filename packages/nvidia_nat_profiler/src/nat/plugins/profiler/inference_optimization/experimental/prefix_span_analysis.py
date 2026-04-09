@@ -147,7 +147,7 @@ def build_sequences(df: pd.DataFrame) -> dict[int, list[PrefixCallNode]]:
 # --------------------------------------------------------------------------------
 
 
-def build_token(call: PrefixCallNode, max_text_len: int = 20, prefix_list: list[str] | None = None) -> str:
+def build_token(call: PrefixCallNode, max_text_len: int = 20, prefix_list: list[str] = None) -> str:
     """
     Construct a token for prefixspan from a PrefixCallNode.
     - We do "LLM:{operation_name}|{text}" if it's an LLM call and text is available
@@ -179,7 +179,7 @@ def build_token(call: PrefixCallNode, max_text_len: int = 20, prefix_list: list[
 
 def convert_sequences_for_prefixspan(sequences_map: dict[int, list[PrefixCallNode]],
                                      max_text_len: int = 20,
-                                     prefix_list: list[str] | None = None) -> list[list[str]]:
+                                     prefix_list: list[str] = None) -> list[list[str]]:
     """
     Convert each example's list of PrefixCallNode into a list of tokens. Return a list-of-lists
     suitable for prefixspan. E.g.::
@@ -201,7 +201,7 @@ def convert_sequences_for_prefixspan(sequences_map: dict[int, list[PrefixCallNod
 def run_prefixspan(sequences_map: dict[int, list[PrefixCallNode]],
                    min_support: int | float,
                    max_text_len: int = 20,
-                   prefix_list: list[str] | None = None) -> list[tuple[list[str], int]]:
+                   prefix_list: list[str] = None) -> list[tuple[list[str], int]]:
     """
     1) Convert all example sequences => tokens
     2) Run prefixspan with min_support
@@ -261,8 +261,7 @@ def compute_coverage_and_duration(sequences_map: dict[int, list[PrefixCallNode]]
                                   prefixspan_patterns: list[tuple[list[str], int]],
                                   top_k: int,
                                   min_coverage: float = 0.0,
-                                  max_text_len: int = 20,
-                                  prefix_list: list[str] | None = None) -> list[FrequentPattern]:
+                                  max_text_len: int = 20) -> list[FrequentPattern]:
     """
     For each pattern from prefixspan, compute:
 
@@ -275,7 +274,7 @@ def compute_coverage_and_duration(sequences_map: dict[int, list[PrefixCallNode]]
     token_sequences = {}
     call_sequences = {}
     for ex_num, call_list in sequences_map.items():
-        token_seq = [build_token(c, max_text_len, prefix_list) for c in call_list]
+        token_seq = [build_token(c, max_text_len) for c in call_list]
         token_sequences[ex_num] = token_seq
         call_sequences[ex_num] = call_list
 
@@ -322,12 +321,12 @@ def compute_coverage_and_duration(sequences_map: dict[int, list[PrefixCallNode]]
 # --------------------------------------------------------------------------------
 
 
-def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]] | pd.DataFrame,
+def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]],
                                      min_support: int | float = 2,
                                      top_k: int = 10,
                                      min_coverage: float = 0.0,
                                      max_text_len: int = 700,
-                                     prefix_list: list[str] | None = None) -> PrefixSpanSubworkflowResult:
+                                     prefix_list: list[str] = None) -> PrefixSpanSubworkflowResult:
     """
     1) Build sequences of calls for each example (with llm_text_input).
     2) Convert to token lists, run PrefixSpan with min_support.
@@ -341,10 +340,7 @@ def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]] | p
     :param max_text_len: how many chars of llm_text_input to incorporate in the token
     :param prefix_list: list of prefixes to filter on and exclude from pattern matching
     """
-    if isinstance(all_steps, pd.DataFrame):
-        df = all_steps
-    else:
-        df = create_standardized_dataframe(all_steps)
+    df = create_standardized_dataframe(all_steps)
     # Validate columns
     required_cols = {
         "framework",
@@ -382,8 +378,7 @@ def prefixspan_subworkflow_with_text(all_steps: list[list[IntermediateStep]] | p
                                                    prefixspan_patterns,
                                                    top_k=top_k,
                                                    min_coverage=min_coverage,
-                                                   max_text_len=max_text_len,
-                                                   prefix_list=prefix_list)
+                                                   max_text_len=max_text_len)
     if not final_patterns:
         return PrefixSpanSubworkflowResult(patterns=[],
                                            textual_report="No patterns passed coverage/duration thresholds.")
