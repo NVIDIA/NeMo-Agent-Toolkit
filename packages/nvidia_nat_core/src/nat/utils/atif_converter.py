@@ -496,23 +496,22 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
     child_events_by_session: dict[str, list[IntermediateStep]] = {}
     child_agent_name_by_session: dict[str, str] = {}
     delegated_function_ids: set[str] = set()
+    wrapper_event_ids: set[str] = set()
 
     for wrapper in wrapper_events:
         wrapper_uuid = _event_uuid(wrapper)
         if not wrapper_uuid:
             continue
+        wrapper_event_ids.add(wrapper_uuid)
         wrapper_call_id = f"call_{wrapper_uuid}"
         wrapper_fn_id = wrapper.function_ancestry.function_id
-        direct_children = children_by_parent.get(wrapper_fn_id, [])
-        preferred_roots = [c for c in direct_children if c.function_ancestry.function_name == (wrapper.name or "")
-                           ] or direct_children
-        if not preferred_roots:
+        if not wrapper_fn_id:
             continue
-        child_root = sorted(preferred_roots, key=lambda s: s.event_timestamp)[0]
-        child_root_fn_id = child_root.function_ancestry.function_id
 
         subtree_ids: set[str] = set()
-        frontier = [child_root_fn_id]
+        # Delegated callable scope is anchored by wrapper function_id itself.
+        # Include that function_id and recursively include end-event children.
+        frontier = [wrapper_fn_id]
         while frontier:
             node = frontier.pop()
             if node in subtree_ids:
@@ -529,12 +528,13 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
         child_session_id = f"{session_id}:{wrapper_call_id}"
         child_session_by_wrapper_call_id[wrapper_call_id] = child_session_id
         child_events_by_session[child_session_id] = sorted(child_events, key=lambda s: s.event_timestamp)
-        child_agent_name_by_session[child_session_id] = wrapper.name or child_root.function_ancestry.function_name or "nat-agent"
+        child_agent_name_by_session[child_session_id] = wrapper.name or wrapper.function_ancestry.function_name or "nat-agent"
         delegated_function_ids.update(subtree_ids)
 
     root_events = [
         e for e in sorted_steps
         if (e.event_type in {IntermediateStepType.WORKFLOW_START, IntermediateStepType.WORKFLOW_END}
+            or _event_uuid(e) in wrapper_event_ids
             or e.function_ancestry.function_id not in delegated_function_ids)
     ]
     subagent_ref_by_call_id = {
