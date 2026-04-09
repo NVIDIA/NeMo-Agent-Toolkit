@@ -18,6 +18,7 @@ from abc import abstractmethod
 
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -44,7 +45,7 @@ class DualNodeAgent(BaseAgent):
                          log_response_max_chars=log_response_max_chars)
 
     @abstractmethod
-    async def agent_node(self, state: BaseModel) -> BaseModel:
+    async def agent_node(self, state: BaseModel, config: RunnableConfig | None = None) -> BaseModel:
         pass
 
     @abstractmethod
