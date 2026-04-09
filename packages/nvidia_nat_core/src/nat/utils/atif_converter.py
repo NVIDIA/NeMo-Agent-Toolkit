@@ -247,6 +247,7 @@ class _ExecutionStructure:
 
     root_events: list[IntermediateStep]
     child_events_by_session: dict[str, list[IntermediateStep]]
+    child_agent_name_by_session: dict[str, str]
     subagent_ref_by_call_id: dict[str, SubagentTrajectoryRef]
 
 
@@ -493,6 +494,7 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
 
     child_session_by_wrapper_call_id: dict[str, str] = {}
     child_events_by_session: dict[str, list[IntermediateStep]] = {}
+    child_agent_name_by_session: dict[str, str] = {}
     delegated_function_ids: set[str] = set()
 
     for wrapper in wrapper_events:
@@ -527,6 +529,7 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
         child_session_id = f"{session_id}:{wrapper_call_id}"
         child_session_by_wrapper_call_id[wrapper_call_id] = child_session_id
         child_events_by_session[child_session_id] = sorted(child_events, key=lambda s: s.event_timestamp)
+        child_agent_name_by_session[child_session_id] = wrapper.name or child_root.function_ancestry.function_name or "nat-agent"
         delegated_function_ids.update(subtree_ids)
 
     root_events = [
@@ -541,6 +544,7 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
     return _ExecutionStructure(
         root_events=root_events,
         child_events_by_session=child_events_by_session,
+        child_agent_name_by_session=child_agent_name_by_session,
         subagent_ref_by_call_id=subagent_ref_by_call_id,
     )
 
@@ -607,9 +611,11 @@ class IntermediateStepToATIFConverter:
                 include_workflow_start_user_step=False,
                 subagent_ref_by_call_id=None,
             )
+            child_agent = agent_config.model_copy(deep=True)
+            child_agent.name = execution_structure.child_agent_name_by_session.get(child_session_id, child_agent.name)
             child_trajectory = ATIFTrajectory(
                 session_id=child_session_id,
-                agent=agent_config.model_copy(deep=True),
+                agent=child_agent,
                 steps=child_steps,
             )
             child_trajectories[child_session_id] = child_trajectory.model_dump(exclude_none=True, mode="json")
