@@ -20,7 +20,7 @@ limitations under the License.
 This package provides integration with MemMachine for memory management in NeMo Agent toolkit.
 
 > [!WARNING]
-> **Experimental**: The `nvidia-nat-memmachine` plugin is Experimental and is not recommended for production use. APIs, behavior, and dependencies may change without notice.
+> **Experimental**: The `nvidia-nat-memmachine` plugin is Experimental and is not recommended for production use. Behavior may change without notice.
 
 ## Overview
 
