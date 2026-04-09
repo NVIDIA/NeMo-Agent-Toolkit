@@ -37,8 +37,8 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
     """
     ATIF-native mean latency between LLM start and end for agent steps with metrics.
 
-    Uses step.timestamp as end time and step.extra["invocation"]["start_timestamp"] as start time.
-    Steps without invocation start timing are skipped (see NEP-008 for ATIF profiling metadata).
+    Uses step.timestamp as end time and step.extra.get("span_event_timestamp") as start time.
+    Steps without span_event_timestamp are skipped (see NEP-008 for ATIF profiling metadata).
     """
 
     def __init__(self, max_concurrency: int = 8):
@@ -50,14 +50,8 @@ class AverageLLMLatencyAtifEvaluator(AtifBaseEvaluator):
             if step.source != "agent" or not step.metrics:
                 continue
             end_ts = _iso_to_epoch(step.timestamp)
-            invocation = (step.extra or {}).get("invocation")
-            start_ts_raw = invocation.get("start_timestamp") if isinstance(invocation, dict) else None
-            if isinstance(start_ts_raw, (int, float)):
-                start_ts = float(start_ts_raw)
-            elif isinstance(start_ts_raw, str):
-                start_ts = _iso_to_epoch(start_ts_raw)
-            else:
-                start_ts = None
+            start_ts_raw = (step.extra or {}).get("span_event_timestamp")
+            start_ts = _iso_to_epoch(start_ts_raw) if isinstance(start_ts_raw, str) else None
             if end_ts is not None and start_ts is not None:
                 latencies.append(max(0.0, end_ts - start_ts))
 
