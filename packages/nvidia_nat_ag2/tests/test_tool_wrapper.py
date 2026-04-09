@@ -169,6 +169,16 @@ class TestAG2ToolWrapperStreaming:
         result = await tool.func(query="test")
         assert result == [{"a": 1}, {"b": 2}]
 
+    async def test_stream_collected_returns_list_for_mixed_types(self, mock_builder):
+        """Test that mixed string and non-string chunks are returned as a list (no joining)."""
+        chunks = ["Hello", {"a": 1}, " ", 42, "World"]
+        mock_fn = self._make_streaming_fn(chunks)
+        tool = ag2_tool_wrapper("stream_tool", mock_fn, mock_builder)
+
+        result = await tool.func(query="test")
+        # Any non-string chunk disables joining — full list is returned, order preserved
+        assert result == ["Hello", {"a": 1}, " ", 42, "World"]
+
     async def test_stream_collected_empty_returns_empty_string(self, mock_builder):
         """Test that empty stream returns empty string."""
         mock_fn = self._make_streaming_fn([])
