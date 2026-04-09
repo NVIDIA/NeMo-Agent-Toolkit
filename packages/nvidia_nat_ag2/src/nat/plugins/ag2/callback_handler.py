@@ -127,9 +127,14 @@ class AG2ProfilerHandler(BaseProfilerCallback):
         Returns:
             str: String representation of sanitized input
         """
+        messages = kwargs.get("messages")
+        try:
+            message_count = len(messages)
+        except TypeError:
+            message_count = 0
         return str({
             "model": kwargs.get("model", ""),
-            "message_count": len(kwargs.get("messages", [])),
+            "message_count": message_count,
         })
 
     def _create_llm_wrapper(self, original_func: Callable[..., Any]) -> Callable[..., Any]:

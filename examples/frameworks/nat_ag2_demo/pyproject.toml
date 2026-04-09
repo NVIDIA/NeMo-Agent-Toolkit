@@ -23,7 +23,6 @@ root = "../../.."
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["nat_ag2_demo.*"]
 
 [project]
 name = "nat-ag2-demo"

@@ -107,7 +107,6 @@ class TestAG2ToolWrapperAsync:
     def fixture_mock_builder(self):
         return Mock(spec=Builder)
 
-    @pytest.mark.asyncio
     async def test_callable_ainvoke_returns_result(self, mock_function, mock_builder):
         """Test that the async invoke callable returns the correct result."""
         tool = ag2_tool_wrapper("my_tool", mock_function, mock_builder)
@@ -117,13 +116,11 @@ class TestAG2ToolWrapperAsync:
         assert result == "async_result"
         mock_function.acall_invoke.assert_called_once_with(query="hello", limit=5)
 
-    @pytest.mark.asyncio
     async def test_callable_ainvoke_is_coroutine(self, mock_function, mock_builder):
         """Test that the tool function is a proper coroutine function."""
         tool = ag2_tool_wrapper("my_tool", mock_function, mock_builder)
         assert asyncio.iscoroutinefunction(tool.func)
 
-    @pytest.mark.asyncio
     async def test_callable_ainvoke_propagates_exceptions(self, mock_function, mock_builder):
         """Test that async invoke propagates exceptions."""
         mock_function.acall_invoke = AsyncMock(side_effect=ValueError("invoke failed"))
@@ -156,7 +153,6 @@ class TestAG2ToolWrapperStreaming:
         mock_fn.acall_invoke = AsyncMock()
         return mock_fn
 
-    @pytest.mark.asyncio
     async def test_stream_collected_joins_strings(self, mock_builder):
         """Test that string stream chunks are joined."""
         mock_fn = self._make_streaming_fn(["Hello", " ", "World"])
@@ -165,7 +161,6 @@ class TestAG2ToolWrapperStreaming:
         result = await tool.func(query="test")
         assert result == "Hello World"
 
-    @pytest.mark.asyncio
     async def test_stream_collected_returns_list_for_non_strings(self, mock_builder):
         """Test that non-string stream chunks are returned as list."""
         mock_fn = self._make_streaming_fn([{"a": 1}, {"b": 2}])
@@ -174,7 +169,6 @@ class TestAG2ToolWrapperStreaming:
         result = await tool.func(query="test")
         assert result == [{"a": 1}, {"b": 2}]
 
-    @pytest.mark.asyncio
     async def test_stream_collected_empty_returns_empty_string(self, mock_builder):
         """Test that empty stream returns empty string."""
         mock_fn = self._make_streaming_fn([])
@@ -183,7 +177,6 @@ class TestAG2ToolWrapperStreaming:
         result = await tool.func(query="test")
         assert result == ""
 
-    @pytest.mark.asyncio
     async def test_stream_collected_is_coroutine(self, mock_builder):
         """Test that stream-collected function is a proper coroutine (not async generator)."""
         mock_fn = self._make_streaming_fn(["a"])
@@ -221,7 +214,6 @@ class TestAG2ToolWrapperAG2Integration:
     def fixture_mock_builder(self):
         return Mock(spec=Builder)
 
-    @pytest.mark.asyncio
     async def test_ag2_a_execute_function_compatibility(self, mock_builder):
         """Test that tools work with AG2's a_execute_function pattern.
 

@@ -100,7 +100,7 @@ For more information, visit the [AG2 documentation](https://docs.ag2.ai).
 | **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI                                                    |
 | **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
 | **Retriever Providers** | None (use AG2 native tools)                                                         |
-| **Tool Calling**        | Fully supported through AG2's `Tool` interface                                      |
+| **Tool Calling**        | Fully supported through the `Tool` interface of AG2                                 |
 | **Profiling**           | Comprehensive profiling support with instrumentation                                |
 
 **Installation:**
