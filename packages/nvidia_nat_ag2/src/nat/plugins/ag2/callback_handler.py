@@ -172,48 +172,57 @@ class AG2ProfilerHandler(BaseProfilerCallback):
                 ),
             )
             start_uuid = start_payload.UUID
-            handler.step_manager.push_intermediate_step(start_payload)
+            try:
+                handler.step_manager.push_intermediate_step(start_payload)
+            except Exception:
+                logger.exception("Profiler failed to push LLM_START step; continuing")
 
             try:
                 result = original_func(wrapper_self, *args, **kwargs)
             except Exception as e:
                 logger.error("Error during LLM call: %s", e)
                 err_time = time.time()
-                handler.step_manager.push_intermediate_step(
-                    IntermediateStepPayload(
-                        event_type=IntermediateStepType.LLM_END,
-                        span_event_timestamp=err_time,
-                        framework=LLMFrameworkEnum.AG2,
-                        name=model_name,
-                        data=StreamEventData(
-                            input=model_input,
-                            output=f"error: {type(e).__name__}",
-                        ),
-                        usage_info=UsageInfo(token_usage=TokenUsageBaseModel(), ),
-                        UUID=start_uuid,
-                    ))
+                try:
+                    handler.step_manager.push_intermediate_step(
+                        IntermediateStepPayload(
+                            event_type=IntermediateStepType.LLM_END,
+                            span_event_timestamp=err_time,
+                            framework=LLMFrameworkEnum.AG2,
+                            name=model_name,
+                            data=StreamEventData(
+                                input=model_input,
+                                output=f"error: {type(e).__name__}",
+                            ),
+                            usage_info=UsageInfo(token_usage=TokenUsageBaseModel(), ),
+                            UUID=start_uuid,
+                        ))
+                except Exception:
+                    logger.exception("Profiler failed to push LLM_END (error) step; continuing")
                 with handler._lock:
                     handler.last_call_ts = err_time
                 raise
 
             # Push LLM_END event
             end_time = time.time()
-            handler.step_manager.push_intermediate_step(
-                IntermediateStepPayload(
-                    event_type=IntermediateStepType.LLM_END,
-                    span_event_timestamp=end_time,
-                    framework=LLMFrameworkEnum.AG2,
-                    name=model_name,
-                    data=StreamEventData(
-                        input=model_input,
-                        output="completed",
-                    ),
-                    usage_info=UsageInfo(
-                        token_usage=TokenUsageBaseModel(),
-                        num_llm_calls=1,
-                    ),
-                    UUID=start_uuid,
-                ))
+            try:
+                handler.step_manager.push_intermediate_step(
+                    IntermediateStepPayload(
+                        event_type=IntermediateStepType.LLM_END,
+                        span_event_timestamp=end_time,
+                        framework=LLMFrameworkEnum.AG2,
+                        name=model_name,
+                        data=StreamEventData(
+                            input=model_input,
+                            output="completed",
+                        ),
+                        usage_info=UsageInfo(
+                            token_usage=TokenUsageBaseModel(),
+                            num_llm_calls=1,
+                        ),
+                        UUID=start_uuid,
+                    ))
+            except Exception:
+                logger.exception("Profiler failed to push LLM_END step; continuing")
             with handler._lock:
                 handler.last_call_ts = end_time
 

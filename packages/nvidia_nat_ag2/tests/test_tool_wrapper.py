@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Test AG2 tool_wrapper.py — async tool wrapping for AG2."""
+"""Test AG2 `tool_wrapper.py` — async tool wrapping for AG2."""
 
 import asyncio
 from unittest.mock import AsyncMock
@@ -38,7 +38,7 @@ class TestAG2ToolWrapperBasic:
 
     @pytest.fixture(name="mock_function")
     def fixture_mock_function(self):
-        """Create a mock NAT function for non-streaming."""
+        """Create a mock NeMo Agent Toolkit function for non-streaming."""
         mock_fn = Mock(spec=Function)
         mock_fn.description = "Test function description"
         mock_fn.input_schema = MockInputSchema
@@ -93,7 +93,7 @@ class TestAG2ToolWrapperAsync:
 
     @pytest.fixture(name="mock_function")
     def fixture_mock_function(self):
-        """Create a mock NAT function."""
+        """Create a mock NeMo Agent Toolkit function."""
         mock_fn = Mock(spec=Function)
         mock_fn.description = "Async test function"
         mock_fn.input_schema = MockInputSchema
