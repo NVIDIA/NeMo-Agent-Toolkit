@@ -118,6 +118,7 @@ class MemMachineEditor(MemoryEditor):
         """
 
         async def add_item(memory_item: MemoryItem) -> None:
+            """Upload a single MemoryItem, adding conversation messages sequentially."""
             # Make a copy of metadata to avoid modifying the original
             item_meta = memory_item.metadata.copy() if memory_item.metadata else {}
             conversation = memory_item.conversation
