@@ -20,6 +20,7 @@ from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_memory
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
+from nat.experimental.decorators.experimental_warning_decorator import experimental
 from nat.memory.interfaces import MemoryEditor
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
@@ -45,6 +46,7 @@ class MemMachineMemoryClientConfig(MemoryBaseConfig, RetryMixin, name="memmachin
 
 
 @register_memory(config_type=MemMachineMemoryClientConfig)
+@experimental(feature_name="MemMachine")
 async def memmachine_memory_client(
         config: MemMachineMemoryClientConfig,
         _builder: Builder,  # Required by @register_memory contract
