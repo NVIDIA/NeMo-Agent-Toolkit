@@ -16,11 +16,13 @@
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.builder.context import Context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
+from nat.data_models.intermediate_step import TraceMetadata
 
 from . import utils
 from .prompts import TelemetryMetricsAnalysisAgentPrompts
@@ -88,7 +90,14 @@ async def telemetry_metrics_analysis_agent_tool(config: TelemetryMetricsAnalysis
 
         # Execute analysis and get response
         input_message = f"Host to investigate: {host_id}. Alert type: {alert_type}"
-        response = await agent_executor.ainvoke({"messages": [HumanMessage(content=input_message)]})
+        delegation_metadata = TraceMetadata(provided_metadata={"is_subagent_delegation": True})
+        with Context.get().push_active_function("telemetry_metrics_analysis_subagent_call",
+                                                input_data={
+                                                    "host_id": host_id,
+                                                    "alert_type": alert_type,
+                                                },
+                                                metadata=delegation_metadata):
+            response = await agent_executor.ainvoke({"messages": [HumanMessage(content=input_message)]})
 
         conclusion = response["messages"][-1].content
 

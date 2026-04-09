@@ -33,6 +33,11 @@ class AtifEvalSample(BaseModel):
 
     item_id: Any = Field(description="Identifier matching the source EvalInputItem.")
     trajectory: ATIFTrajectory = Field(description="Canonical ATIF trajectory.")
+    subagent_trajectories: dict[str, ATIFTrajectory] = Field(
+        default_factory=dict,
+        description=("In-memory child trajectories keyed by "
+                     "`subagent_trajectory_ref.session_id`."),
+    )
     expected_output_obj: Any = Field(default=None, description="Optional expected output reference.")
     output_obj: Any = Field(default=None, description="Optional workflow output reference.")
     metadata: dict[str, Any] = Field(default_factory=dict, description="Optional evaluator metadata.")
