@@ -196,25 +196,62 @@ class TestAG2ToolWrapperStreaming:
         # AG2's is_coroutine_callable checks for this
         assert asyncio.iscoroutinefunction(tool.func)
 
-    def test_streaming_fn_selects_stream_path(self, mock_builder):
-        """Test that streaming-only functions use the stream-collected path."""
-        mock_fn = self._make_streaming_fn(["x"])
-        tool = ag2_tool_wrapper("stream_tool", mock_fn, mock_builder)
-        # The function should be named after the tool
-        assert tool.func.__name__ == "stream_tool"
+    async def test_streaming_fn_selects_stream_path(self, mock_builder):
+        """Test that streaming-only functions actually go through the stream-collected path.
 
-    def test_non_streaming_fn_selects_invoke_path(self, mock_builder):
-        """Test that non-streaming functions use the invoke path."""
+        Both branches of the wrapper rename the callable to ``name``, so
+        ``__name__`` alone doesn't prove which path was taken. Instead, invoke
+        the wrapped tool and assert that ``acall_stream`` was used to produce
+        the result and ``acall_invoke`` was never called.
+        """
+        stream_called = []
+
+        async def spy_stream(**kwargs):
+            stream_called.append(kwargs)
+            yield "STREAM_MARKER"
+
+        mock_fn = Mock(spec=Function)
+        mock_fn.description = "Streaming"
+        mock_fn.input_schema = MockInputSchema
+        mock_fn.has_streaming_output = True
+        mock_fn.has_single_output = False
+        mock_fn.acall_stream = spy_stream
+        mock_fn.acall_invoke = AsyncMock(return_value="INVOKE_MARKER")
+
+        tool = ag2_tool_wrapper("stream_tool", mock_fn, mock_builder)
+        result = await tool.func(query="hello")
+
+        # Stream-collected path joins string chunks → returns the marker.
+        assert result == "STREAM_MARKER"
+        assert stream_called == [{"query": "hello"}]
+        mock_fn.acall_invoke.assert_not_called()
+
+    async def test_non_streaming_fn_selects_invoke_path(self, mock_builder):
+        """Test that non-streaming functions actually go through the invoke path.
+
+        Asserts ``acall_invoke`` produced the result and ``acall_stream`` was
+        never touched — proving branch selection at runtime, not just by name.
+        """
+        stream_called = []
+
+        async def spy_stream(**kwargs):
+            stream_called.append(kwargs)
+            yield "STREAM_MARKER"
+
         mock_fn = Mock(spec=Function)
         mock_fn.description = "Non-streaming"
         mock_fn.input_schema = None
         mock_fn.has_streaming_output = False
         mock_fn.has_single_output = True
-        mock_fn.acall_invoke = AsyncMock()
-        mock_fn.acall_stream = AsyncMock()
+        mock_fn.acall_invoke = AsyncMock(return_value="INVOKE_MARKER")
+        mock_fn.acall_stream = spy_stream
 
         tool = ag2_tool_wrapper("invoke_tool", mock_fn, mock_builder)
-        assert tool.func.__name__ == "invoke_tool"
+        result = await tool.func(query="hello")
+
+        assert result == "INVOKE_MARKER"
+        mock_fn.acall_invoke.assert_called_once_with(query="hello")
+        assert stream_called == []
 
 
 class TestAG2ToolWrapperAG2Integration:
