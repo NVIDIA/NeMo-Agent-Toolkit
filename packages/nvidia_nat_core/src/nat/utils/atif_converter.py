@@ -190,6 +190,24 @@ def _parse_tool_arguments(raw_input: Any) -> dict[str, Any]:
     return {}
 
 
+def _extract_tool_arguments_from_ist(ist: IntermediateStep) -> dict[str, Any]:
+    """Extract tool arguments from preferred IST sources with fallback."""
+    if ist.data and ist.data.input is not None:
+        return _parse_tool_arguments(ist.data.input)
+
+    metadata = _event_metadata(ist)
+    metadata_tool_inputs: Any = None
+    if isinstance(metadata, TraceMetadata):
+        metadata_tool_inputs = metadata.tool_inputs
+    elif isinstance(metadata, dict):
+        metadata_tool_inputs = metadata.get("tool_inputs")
+
+    if metadata_tool_inputs is not None:
+        return _parse_tool_arguments(metadata_tool_inputs)
+
+    return {}
+
+
 def _extract_subagent_delegation_flag(metadata: Any) -> bool:
     """Extract optional subagent delegation flag from metadata payload."""
     if isinstance(metadata, TraceMetadata):
@@ -273,8 +291,8 @@ def _record_observed_invocation(pending: _PendingAgentTurn, ist: IntermediateSte
         return
     tool_input: dict[str, Any] = {}
     tool_output = ""
+    tool_input = _extract_tool_arguments_from_ist(ist)
     if ist.data:
-        tool_input = _parse_tool_arguments(ist.data.input)
         tool_output = _safe_str(ist.data.output)
     event_uuid = _event_uuid(ist)
     if not event_uuid:
@@ -528,7 +546,9 @@ def _pass1_build_execution_structure(sorted_steps: list[IntermediateStep], *, se
         child_session_id = f"{session_id}:{wrapper_call_id}"
         child_session_by_wrapper_call_id[wrapper_call_id] = child_session_id
         child_events_by_session[child_session_id] = sorted(child_events, key=lambda s: s.event_timestamp)
-        child_agent_name_by_session[child_session_id] = wrapper.name or wrapper.function_ancestry.function_name or "nat-agent"
+        child_agent_name_by_session[child_session_id] = (
+            wrapper.name or wrapper.function_ancestry.function_name or "nat-agent"
+        )
         delegated_function_ids.update(subtree_ids)
 
     root_events = [
