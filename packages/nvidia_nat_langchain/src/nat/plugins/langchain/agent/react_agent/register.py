@@ -35,6 +35,7 @@ from nat.data_models.component_ref import FunctionRef
 from nat.data_models.optimizable import OptimizableField
 from nat.data_models.optimizable import OptimizableMixin
 from nat.data_models.optimizable import SearchSpace
+from nat.utils.io.model_processing import remove_r1_think_tags
 from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
@@ -223,17 +224,18 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
                         yield ChatResponseChunk.create_streaming_chunk(msg.content, id_=chunk_id)
                     else:
                         buffer += msg.content
-                        match = FINAL_ANSWER_PATTERN.search(buffer)
+                        cleaned_buffer = remove_r1_think_tags(buffer)
+                        match = FINAL_ANSWER_PATTERN.search(cleaned_buffer)
                         if match:
                             found_final_answer = True
-                            after_marker = buffer[match.end():]
+                            after_marker = cleaned_buffer[match.end():]
                             if after_marker:
                                 yield ChatResponseChunk.create_streaming_chunk(after_marker, id_=chunk_id)
                             buffer = ""
 
-            # fallback: if the LLM answered directly without ReAct format, yield the buffer as-is
+            # fallback: if the LLM answered directly without ReAct format, yield the stripped buffer
             if not found_final_answer and buffer:
-                yield ChatResponseChunk.create_streaming_chunk(buffer, id_=chunk_id)
+                yield ChatResponseChunk.create_streaming_chunk(remove_r1_think_tags(buffer), id_=chunk_id)
 
         except GraphRecursionError:
             logger.warning(
