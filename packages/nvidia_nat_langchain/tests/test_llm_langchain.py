@@ -74,13 +74,13 @@ class TestNimLangChain:
 
     @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
     @patch("langchain_nvidia_ai_endpoints.ChatNVIDIA")
-    async def test_verify_ssl_passed_to_chat_nvidia(self, mock_chat, nim_cfg, mock_builder, verify_ssl):
-        """Test that verify_ssl is passed to ChatNVIDIA."""
+    async def test_verify_ssl_excluded_from_chat_nvidia(self, mock_chat, nim_cfg, mock_builder, verify_ssl):
+        """Test that verify_ssl is excluded from ChatNVIDIA kwargs to prevent Azure rejection."""
         nim_cfg.verify_ssl = verify_ssl
         async with nim_langchain(nim_cfg, mock_builder):
             pass
         mock_chat.assert_called_once()
-        assert mock_chat.call_args.kwargs["verify_ssl"] is verify_ssl
+        assert "verify_ssl" not in mock_chat.call_args.kwargs
 
 
 # ---------------------------------------------------------------------------

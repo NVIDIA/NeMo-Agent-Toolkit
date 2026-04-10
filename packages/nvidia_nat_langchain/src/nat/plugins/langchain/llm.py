@@ -195,10 +195,9 @@ async def nim_langchain(llm_config: NIMModelConfig, _builder: Builder):
         pass
 
     # prefer max_completion_tokens over max_tokens
-    # verify_ssl is a supported keyword parameter for the ChatNVIDIA client
     client = ChatNVIDIA(
         **llm_config.model_dump(
-            exclude={"type", "max_tokens", "thinking", "api_type"},
+            exclude={"type", "max_tokens", "thinking", "api_type", "verify_ssl"},
             by_alias=True,
             exclude_none=True,
             exclude_unset=True,
