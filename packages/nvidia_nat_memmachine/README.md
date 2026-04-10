@@ -19,6 +19,9 @@ limitations under the License.
 
 This package provides integration with MemMachine for memory management in NeMo Agent toolkit.
 
+> [!WARNING]
+> **Experimental**: The `nvidia-nat-memmachine` plugin is Experimental and is not recommended for production use. Behavior may change without notice.
+
 ## Overview
 
 MemMachine is a unified memory management system that supports both episodic and semantic memory through a single interface. This integration allows you to use MemMachine as a memory backend for your NeMo Agent toolkit workflows.

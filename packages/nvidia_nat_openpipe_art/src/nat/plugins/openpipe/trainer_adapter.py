@@ -54,7 +54,6 @@ class ARTTrainerAdapter(TrainerAdapter):
         self._model_internal_config: art.dev.InternalModelConfig = art.dev.InternalModelConfig(
             init_args=self.adapter_config.backend.init_args,
             engine_args=self.adapter_config.backend.engine_args,
-            torchtune_args=self.adapter_config.backend.torchtune_args,
             trainer_args=self.adapter_config.training)
 
         self.model: art.TrainableModel = art.TrainableModel(

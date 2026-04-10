@@ -44,7 +44,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mcp]` or `nvidia-nat-mcp` - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - `nvidia-nat[mem0ai]` or `nvidia-nat-mem0ai` - [Mem0](https://mem0.ai/)
-- `nvidia-nat[memmachine]` or `nvidia-nat-memmachine` - [MemMachine](https://memmachine.ai/)
+- `nvidia-nat[memmachine]` or `nvidia-nat-memmachine` - [MemMachine](https://memmachine.ai/) (**Experimental; not recommended for production use**)
 - `nvidia-nat[mysql]` or `nvidia-nat-mysql` - [MySQL](https://www.mysql.com/)
 - `nvidia-nat[config-optimizer]` or `nvidia-nat-config-optimizer` - Parameter and prompt optimizer (required for `nat optimize`)
 - `nvidia-nat[openpipe-art]` or `nvidia-nat-openpipe-art` - [Agent Reinforcement Trainer](https://art.openpipe.ai/getting-started/about) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[crewai]`.

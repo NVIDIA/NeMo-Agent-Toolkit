@@ -14,10 +14,8 @@
 # limitations under the License.
 
 import re
-from collections.abc import Sequence
 
 import numpy as np
-import pandas as pd
 
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.profiler.inference_optimization.data_models import LLMUniquenessMetrics
@@ -28,8 +26,7 @@ from nat.plugins.profiler.utils import create_standardized_dataframe
 # ----------------------------------------------------------------
 # 1. Main Function
 # ----------------------------------------------------------------
-def compute_inter_query_token_uniqueness_by_llm(
-    all_steps: Sequence[Sequence[IntermediateStep]] | pd.DataFrame, ) -> LLMUniquenessMetricsByLLM:
+def compute_inter_query_token_uniqueness_by_llm(all_steps: list[list[IntermediateStep]]) -> LLMUniquenessMetricsByLLM:
     """
     Computes p90, p95, and p99 of 'new words added' between consecutive llm_start events,
     grouped by (llm_name, example_number).
@@ -44,10 +41,7 @@ def compute_inter_query_token_uniqueness_by_llm(
 
          { llm_name -> LLMUniquenessMetrics(p90, p95, p99) }.
     """
-    if isinstance(all_steps, pd.DataFrame):
-        df = all_steps
-    else:
-        df = create_standardized_dataframe(all_steps)
+    df = create_standardized_dataframe(all_steps)
     # Validate that the necessary columns exist
     required_cols = {'event_type', 'llm_name', 'example_number', 'event_timestamp', 'llm_text_input'}
     missing = required_cols - set(df.columns)

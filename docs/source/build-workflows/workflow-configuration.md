@@ -112,7 +112,7 @@ This section contains the evaluation settings for the workflow. Refer to [Evalua
 
 ### `memory`
 
-This section configures long-term memory backends such as [Mem0](https://mem0.ai/) or [MemMachine](https://memmachine.ai/). It follows the same format as the `llms` section. Refer to the [Memory Module](./memory.md) document for supported providers and examples.
+This section configures long-term memory backends such as [Mem0](https://mem0.ai/) or [MemMachine](https://memmachine.ai/) (note: MemMachine is experimental and is not recommended for production use). It follows the same format as the `llms` section. Refer to the [Memory Module](./memory.md) document for supported providers and examples.
 
 ### `retrievers`
 
