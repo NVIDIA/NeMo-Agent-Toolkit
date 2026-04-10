@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Converts NAT Function objects to AG2 Tool objects."""
+"""Converts nat Function objects to AG2 Tool objects."""
 
 import logging
 from dataclasses import is_dataclass
@@ -46,30 +46,39 @@ def ag2_tool_wrapper(
     fn: Function,
     _builder: Builder,
 ) -> Tool:
-    """Convert a NAT Function to an AG2 Tool."""
+    """Convert a nat Function to an AG2 Tool.
+
+    Args:
+        name: Tool name exposed to AG2 agents.
+        fn: The nat Function to wrap.
+        _builder: Builder instance (unused, required by the registration interface).
+
+    Returns:
+        Tool: AG2 Tool backed by the nat function.
+    """
 
     async def callable_ainvoke(**kwargs: Any) -> Any:
-        """Async function to invoke the NAT function.
+        """Invoke the nat function and return the result.
 
         Args:
-            **kwargs: Keyword arguments to pass to the NAT function.
+            **kwargs: Keyword arguments forwarded to ``fn.acall_invoke``.
 
         Returns:
-            Any: The result of invoking the NAT function.
+            Any: The result of invoking the nat function.
         """
         return await fn.acall_invoke(**kwargs)
 
     async def callable_astream_collected(**kwargs: Any) -> Any:
-        """Async function to collect all streamed results from the NAT function.
+        """Collect all streamed chunks from the nat function into a single value.
 
         AG2 tools return a single value, so streaming results are collected
         and joined into a single response.
 
         Args:
-            **kwargs: Keyword arguments to pass to the NAT function.
+            **kwargs: Keyword arguments forwarded to ``fn.acall_stream``.
 
         Returns:
-            Any: The collected streaming results.
+            Any: Joined string if all chunks are strings, otherwise a list of chunks.
         """
         chunks: list[Any] = []
         async for item in fn.acall_stream(**kwargs):
