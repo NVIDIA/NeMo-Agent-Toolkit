@@ -336,7 +336,7 @@ class EvaluationRun:
 
         from nat.plugins.profiler.profile_runner import ProfilerRunner
 
-        all_stats = [sample.trajectory for sample in self.atif_eval_samples]
+        all_stats = [item.trajectory for item in self.eval_input.eval_input_items]
 
         profiler_runner = ProfilerRunner(self.eval_config.general.profiler,
                                          self.eval_config.general.output_dir,
@@ -841,8 +841,7 @@ class EvaluationRun:
                     # Pre-evaluation process the workflow output
                     self.eval_input = dataset_handler.pre_eval_process_eval_input(self.eval_input)
                     evaluators = {name: eval_workflow.get_evaluator(name) for name in self.eval_config.evaluators}
-                    needs_atif = (self.eval_config.general.profiler
-                                  or any(isinstance(ev, AtifEvaluator) for ev in evaluators.values())
+                    needs_atif = (any(isinstance(ev, AtifEvaluator) for ev in evaluators.values())
                                   or (self.eval_config.general.output
                                       and self.eval_config.general.output.write_atif_workflow_output))
                     if needs_atif:
