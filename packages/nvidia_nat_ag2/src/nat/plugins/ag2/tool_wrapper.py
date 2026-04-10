@@ -15,9 +15,11 @@
 """Converts NAT Function objects to AG2 Tool objects."""
 
 import logging
+from dataclasses import is_dataclass
 from typing import Any
 
 from autogen.tools import Tool
+from pydantic import TypeAdapter
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -25,6 +27,17 @@ from nat.builder.function import Function
 from nat.cli.register_workflow import register_tool_wrapper
 
 logger = logging.getLogger(__name__)
+
+
+def _get_json_schema(input_schema: Any) -> dict[str, Any] | None:
+    """Extract JSON schema from a Pydantic model, pydantic dataclass, or stdlib dataclass."""
+    if input_schema is None:
+        return None
+    if hasattr(input_schema, "model_json_schema"):
+        return input_schema.model_json_schema()
+    if is_dataclass(input_schema):
+        return TypeAdapter(input_schema).json_schema()
+    return None
 
 
 @register_tool_wrapper(wrapper_type=LLMFrameworkEnum.AG2)
@@ -81,5 +94,5 @@ def ag2_tool_wrapper(
         name=name,
         description=fn.description or name,
         func_or_tool=call_function,
-        parameters_json_schema=(fn.input_schema.model_json_schema() if fn.input_schema else None),
+        parameters_json_schema=_get_json_schema(fn.input_schema),
     )

@@ -18,8 +18,11 @@ import asyncio
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
 
+from dataclasses import dataclass
+
 import pytest
 from pydantic import BaseModel
+from pydantic.dataclasses import dataclass as pydantic_dataclass
 
 from nat.builder.builder import Builder
 from nat.builder.function import Function
@@ -28,6 +31,22 @@ from nat.plugins.ag2.tool_wrapper import ag2_tool_wrapper
 
 class MockInputSchema(BaseModel):
     """Mock input schema for tool wrapper."""
+
+    query: str
+    limit: int = 10
+
+
+@dataclass
+class MockDataclassInputSchema:
+    """Mock stdlib dataclass input schema for tool wrapper."""
+
+    query: str
+    limit: int = 10
+
+
+@pydantic_dataclass
+class MockPydanticDataclassInputSchema:
+    """Mock pydantic dataclass input schema for tool wrapper."""
 
     query: str
     limit: int = 10
@@ -75,6 +94,20 @@ class TestAG2ToolWrapperBasic:
         schema = tool._func_schema
         assert schema is not None
         assert schema["function"]["parameters"] is not None
+
+    def test_tool_has_json_schema_for_stdlib_dataclass(self, mock_function, mock_builder):
+        """Test that schema extraction works for stdlib dataclass input schemas."""
+        mock_function.input_schema = MockDataclassInputSchema
+        tool = ag2_tool_wrapper("my_tool", mock_function, mock_builder)
+        assert tool._func_schema is not None
+        assert tool._func_schema["function"]["parameters"] is not None
+
+    def test_tool_has_json_schema_for_pydantic_dataclass(self, mock_function, mock_builder):
+        """Test that schema extraction works for pydantic dataclass input schemas."""
+        mock_function.input_schema = MockPydanticDataclassInputSchema
+        tool = ag2_tool_wrapper("my_tool", mock_function, mock_builder)
+        assert tool._func_schema is not None
+        assert tool._func_schema["function"]["parameters"] is not None
 
     def test_tool_no_schema_when_input_schema_none(self, mock_function, mock_builder):
         """Test that tool works when input_schema is None."""
