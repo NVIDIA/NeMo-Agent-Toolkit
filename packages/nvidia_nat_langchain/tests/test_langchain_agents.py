@@ -238,7 +238,7 @@ async def test_oci_langchain_agent(model_env_var: str, provider: str):
         compartment_id=os.environ["OCI_COMPARTMENT_ID"],
         region=os.environ.get("OCI_REGION", "us-chicago-1"),
         auth_type="API_KEY",
-        auth_profile="DEFAULT",
+        auth_profile=os.environ.get("OCI_AUTH_PROFILE", "DEFAULT"),
         provider=provider,
         temperature=0.0,
         max_tokens=64,
