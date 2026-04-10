@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import asyncio
+import logging
 from typing import Literal
 
 from pydantic import Field
@@ -24,6 +25,8 @@ from nat.cli.register_workflow import register_function
 from nat.data_models.common import SerializableSecretStr
 from nat.data_models.common import get_secret_value
 from nat.data_models.function import FunctionBaseConfig
+
+logger = logging.getLogger(__name__)
 
 
 # Internet Search tool
@@ -42,23 +45,25 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
     livecrawl: Literal["always", "fallback", "never"] = Field(
         default="fallback",
         description="Livecrawl behavior - 'always', 'fallback', or 'never'")
+    max_query_length: int = Field(
+        default=2000, ge=1,
+        description="Maximum query length in characters. Queries exceeding this limit will be truncated.")
 
 
 @register_function(config_type=ExaInternetSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder: Builder):
     import os
 
-    from exa_py import AsyncExa
+    from langchain_exa import ExaSearchResults
 
     api_key = get_secret_value(tool_config.api_key) if tool_config.api_key else ""
     resolved_api_key = api_key or os.environ.get("EXA_API_KEY", "")
-    exa_client = AsyncExa(api_key=resolved_api_key)
 
     async def _exa_internet_search(question: str) -> str:
         """This tool retrieves relevant contexts from web search (using Exa) for the given question.
 
         Args:
-            question (str): The question to be answered. Will be truncated to 2000 characters if longer.
+            question (str): The question to be answered.
 
         Returns:
             str: The web search results.
@@ -66,19 +71,26 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
         if not resolved_api_key:
             return "Web search is unavailable: `EXA_API_KEY` is not configured."
 
-        # Exa API supports longer queries than Tavily but truncate at a reasonable limit
-        if len(question) > 2000:
-            question = question[:1997] + "..."
+        exa_search = ExaSearchResults(exa_api_key=resolved_api_key)
+
+        # Truncate long queries to the configured limit
+        max_len = tool_config.max_query_length
+        if len(question) > max_len:
+            logger.warning("Exa query truncated from %d to %d characters", len(question), max_len)
+            question = question[:max_len - 3] + "..."
 
         for attempt in range(tool_config.max_retries):
             try:
-                search_response = await exa_client.search_and_contents(
+                search_response = await exa_search._arun(
                     question,
                     num_results=tool_config.max_results,
                     type=tool_config.search_type,
                     livecrawl=tool_config.livecrawl,
-                    text={"max_characters": 3000},
+                    text_contents_options={"max_characters": 3000},
                 )
+                # On error, ExaSearchResults may return a string error message
+                if isinstance(search_response, str):
+                    return f"No web search results found for: {question}"
                 if not search_response.results:
                     return f"No web search results found for: {question}"
                 # Format - SearchResponse.results contains Result objects with .url and .text attrs
