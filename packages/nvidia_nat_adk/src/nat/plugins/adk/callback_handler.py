@@ -59,6 +59,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
         # Original references to Google ADK Tool and LLM methods (for uninstrumenting if needed)
         self._original_tool_call = None
         self._original_llm_call = None
+        self._original_adk_llm_call = None
         self._instrumented = False
 
     def instrument(self) -> None:
@@ -77,6 +78,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
             logger.exception("litellm import failed; skipping instrumentation")
             return
         try:
+            import google.adk.models.lite_llm as adk_lite_llm
             from google.adk.tools.function_tool import FunctionTool
         except Exception as _e:
             logger.exception("ADK import failed; skipping instrumentation")
@@ -85,9 +87,12 @@ class ADKProfilerHandler(BaseProfilerCallback):
         # Save the originals
         self._original_tool_call = FunctionTool.run_async
         self._original_llm_call = litellm.acompletion
+        self._original_adk_llm_call = adk_lite_llm.acompletion
 
+        wrapped_llm = self._llm_call_monkey_patch()
         FunctionTool.run_async = self._tool_use_monkey_patch()
-        litellm.acompletion = self._llm_call_monkey_patch()
+        litellm.acompletion = wrapped_llm
+        adk_lite_llm.acompletion = wrapped_llm
 
         logger.debug("ADKProfilerHandler instrumentation applied successfully.")
         self._instrumented = True
@@ -97,6 +102,7 @@ class ADKProfilerHandler(BaseProfilerCallback):
         Add an explicit unpatch to avoid side-effects across tests/process lifetime.
         """
         try:
+            import google.adk.models.lite_llm as adk_lite_llm
             import litellm
             from google.adk.tools.function_tool import FunctionTool
             if self._original_tool_call is not None:
@@ -106,6 +112,10 @@ class ADKProfilerHandler(BaseProfilerCallback):
             if self._original_llm_call is not None:
                 litellm.acompletion = self._original_llm_call
                 self._original_llm_call = None
+
+            if self._original_adk_llm_call is not None:
+                adk_lite_llm.acompletion = self._original_adk_llm_call
+                self._original_adk_llm_call = None
 
             self._instrumented = False
             self.last_call_ts = 0.0
