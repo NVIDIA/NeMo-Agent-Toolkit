@@ -24,6 +24,7 @@ from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import _handle_litellm_verify_ssl  # ADK uses litellm under the hood
 from nat.utils.responses_api import validate_no_responses_api
 
 logger = logging.getLogger(__name__)
@@ -43,15 +44,16 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
 
     config_dict = config.model_dump(
         exclude={
-            "type",
-            "max_retries",
-            "thinking",
-            "azure_endpoint",
-            "azure_deployment",
-            "model_name",
-            "model",
             "api_type",
-            "request_timeout"
+            "azure_deployment",
+            "azure_endpoint",
+            "max_retries",
+            "model",
+            "model_name",
+            "request_timeout",
+            "thinking",
+            "type",
+            "verify_ssl"
         },
         by_alias=True,
         exclude_none=True,
@@ -63,6 +65,7 @@ async def azure_openai_adk(config: AzureOpenAIModelConfig, _builder: Builder):
         config_dict["timeout"] = config.request_timeout
 
     config_dict["api_version"] = config.api_version
+    _handle_litellm_verify_ssl(config)
 
     yield LiteLlm(f"azure/{config.azure_deployment}", **config_dict)
 
@@ -73,8 +76,9 @@ async def litellm_adk(litellm_config: LiteLlmModelConfig, _builder: Builder):
 
     validate_no_responses_api(litellm_config, LLMFrameworkEnum.ADK)
 
+    _handle_litellm_verify_ssl(litellm_config)
     yield LiteLlm(**litellm_config.model_dump(
-        exclude={"type", "max_retries", "thinking", "api_type"},
+        exclude={"api_type", "max_retries", "thinking", "type", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -102,13 +106,15 @@ async def nim_adk(config: NIMModelConfig, _builder: Builder):
         os.environ["NVIDIA_NIM_API_KEY"] = api_key
 
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type"},
+        exclude={"api_type", "base_url", "max_retries", "model", "model_name", "thinking", "type", "verify_ssl"},
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
     )
     if config.base_url:
         config_dict["api_base"] = config.base_url
+
+    _handle_litellm_verify_ssl(config)
 
     yield LiteLlm(f"nvidia_nim/{config.model_name}", **config_dict)
 
@@ -126,7 +132,17 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
     config_dict = config.model_dump(
-        exclude={"type", "max_retries", "thinking", "model_name", "model", "base_url", "api_type", "request_timeout"},
+        exclude={
+            "api_type",
+            "base_url",
+            "max_retries",
+            "model",
+            "model_name",
+            "request_timeout",
+            "thinking",
+            "type",
+            "verify_ssl"
+        },
         by_alias=True,
         exclude_none=True,
         exclude_unset=True,
@@ -138,6 +154,8 @@ async def openai_adk(config: OpenAIModelConfig, _builder: Builder):
         config_dict["api_base"] = base_url
     if config.request_timeout is not None:
         config_dict["timeout"] = config.request_timeout
+
+    _handle_litellm_verify_ssl(config)
 
     yield LiteLlm(config.model_name, **config_dict)
 
@@ -158,8 +176,9 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     import os
 
     from google.adk.models.lite_llm import LiteLlm
+    from openai import AsyncOpenAI
 
-    from nat.llm.dynamo_llm import create_httpx_client_with_dynamo_hooks
+    from nat.llm.dynamo_llm import _create_httpx_client_with_dynamo_hooks
 
     validate_no_responses_api(config, LLMFrameworkEnum.ADK)
 
@@ -182,36 +201,7 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
     if config.base_url:
         config_dict["api_base"] = config.base_url
 
-    if config.enable_nvext_hints:
-        from pathlib import Path
-
-        from openai import AsyncOpenAI
-
-        from nat.profiler.prediction_trie import load_prediction_trie
-        from nat.profiler.prediction_trie.trie_lookup import PredictionTrieLookup
-
-        prediction_lookup: PredictionTrieLookup | None = None
-        if config.nvext_prediction_trie_path:
-            try:
-                trie_path = Path(config.nvext_prediction_trie_path)
-                trie = load_prediction_trie(trie_path)
-                prediction_lookup = PredictionTrieLookup(trie)
-                logger.info("Loaded prediction trie from %s", config.nvext_prediction_trie_path)
-            except FileNotFoundError:
-                logger.warning("Prediction trie file not found: %s", config.nvext_prediction_trie_path)
-            except Exception as e:
-                logger.exception("Failed to load prediction trie: %s", e)
-
-        http_client = create_httpx_client_with_dynamo_hooks(
-            total_requests=config.nvext_prefix_total_requests,
-            osl=config.nvext_prefix_osl,
-            iat=config.nvext_prefix_iat,
-            timeout=config.request_timeout,
-            prediction_lookup=prediction_lookup,
-            cache_pin_type=config.nvext_cache_pin_type,
-            cache_control_mode=config.nvext_cache_control_mode,
-            max_sensitivity=config.nvext_max_sensitivity,
-        )
+    async with _create_httpx_client_with_dynamo_hooks(config) as http_client:
 
         api_key = (config.api_key.get_secret_value() if config.api_key else os.getenv("OPENAI_API_KEY", "unused"))
         base_url = config.base_url or os.getenv("OPENAI_BASE_URL", "http://localhost:8000/v1")
@@ -222,13 +212,4 @@ async def dynamo_adk(config: DynamoModelConfig, _builder: Builder):
             http_client=http_client,
         )
         config_dict["client"] = openai_client
-
-        logger.info(
-            "Dynamo agent hints enabled for ADK: total_requests=%d, osl=%s, iat=%s, prediction_trie=%s",
-            config.nvext_prefix_total_requests,
-            config.nvext_prefix_osl,
-            config.nvext_prefix_iat,
-            "loaded" if prediction_lookup else "disabled",
-        )
-
-    yield LiteLlm(config.model_name, **config_dict)
+        yield LiteLlm(config.model_name, **config_dict)

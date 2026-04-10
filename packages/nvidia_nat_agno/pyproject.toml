@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -56,7 +56,7 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "agno>=1.2.3,<2.0.0",
   "google-search-results>=2.4.2,<3.0.0",
-  "litellm~=1.74",
+  "litellm>=1.74,<1.82.7",  # pin to known-good version
   "openai~=1.106",
 ]
 

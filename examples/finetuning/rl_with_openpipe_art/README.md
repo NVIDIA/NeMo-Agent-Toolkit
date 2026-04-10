@@ -219,7 +219,9 @@ Once the evaluation completes, stop the vLLM server (`Ctrl+C`) to free GPU memor
 
 ## Step 2: Starting the OpenPipe ART Training Server
 
-The ART server handles both inference and training. It runs vLLM for serving the model and TorchTune for GRPO weight updates.
+The ART server handles both inference and training. It runs vLLM for serving the model and Unsloth for GRPO weight updates using LoRA adapters by default.
+
+> **Note**: The default configuration uses **Unsloth LoRA finetuning**. Full-weight training requires additional TorchTune configuration through the `torchtune_args` field in the trainer adapter backend config. Refer to the [OpenPipe ART documentation](https://art.openpipe.ai/) for details.
 
 In your **ART virtual environment**:
 
@@ -259,7 +261,11 @@ The training configuration is in `src/rl_with_openpipe_art/configs/config.yml`:
 llms:
   openpipe_llm:
     _type: openai
-    model_name: Qwen/Qwen2.5-3B-Instruct
+    # With LoRA finetuning (default): model_name must match backend.name below
+    # so that inference routes to the latest LoRA checkpoint, not the base model.
+    # With full-weight training: model_name must match backend.base_model below
+    # as updated weights are loaded directly into vLLM under the base model name.
+    model_name: tic_tac_toe_training_run
     base_url: http://localhost:8000/v1
     api_key: default
     temperature: 0.4  # Some randomness for exploration
@@ -275,7 +281,7 @@ eval:
     output_dir: .tmp/nat/examples/rl_openpipe/eval/finetune
     dataset:
       _type: json
-      file_path: examples/finetuning/rl_with_openpipe_art/data/data.json
+      file_path: examples/finetuning/rl_with_openpipe_art/src/rl_with_openpipe_art/data/data.json
 
   evaluators:
     rl_accuracy:
@@ -292,7 +298,7 @@ trainer_adapters:
     backend:
       ip: "0.0.0.0"
       port: 7623
-      name: "tic_tac_toe_training"
+      name: "tic_tac_toe_training_run"
       project: "tic_tac_toe_project"
       base_model: "Qwen/Qwen2.5-3B-Instruct"
       api_key: "default"
@@ -302,7 +308,8 @@ trainer_adapters:
         gpu_memory_utilization: 0.9
         tensor_parallel_size: 1
     training:
-      learning_rate: 1e-6  # Conservative learning rate
+      learning_rate: 1e-5
+      beta: 0.1
 
 finetuning:
   enabled: true
@@ -311,9 +318,11 @@ finetuning:
   trainer_adapter: openpipe_trainer_adapter
   reward_function:
     name: rl_accuracy
-  num_epochs: 10
+  num_epochs: 8
   output_dir: ./.tmp/nat/finetuning/tic_tac_toe
 ```
+
+> **Important**: With LoRA finetuning (the default), the ART backend registers each LoRA adapter in vLLM under the training run name (`backend.name`). The `model_name` in the LLM config **must match** this name so that inference requests are routed to the latest LoRA checkpoint. If `model_name` points to the base model (`Qwen/Qwen2.5-3B-Instruct`), every epoch will evaluate the unchanged base model, and GRPO training will have no effect.
 
 ### 3.2 Start Training
 

@@ -36,7 +36,8 @@ async def run_generation(configure_logging: bool,
                          db_url: str,
                          config_file_path: str,
                          job_id: str,
-                         payload: typing.Any):
+                         payload: typing.Any,
+                         serialized_request: dict | None = None):
     """
     Background async task to run the workflow.
 
@@ -57,6 +58,8 @@ async def run_generation(configure_logging: bool,
     payload : typing.Any
         The input payload for the workflow.
     """
+    from fastapi import Request
+
     from nat.front_ends.fastapi.async_jobs.job_store import JobStatus
     from nat.front_ends.fastapi.async_jobs.job_store import JobStore
     from nat.front_ends.fastapi.response_helpers import generate_single_response
@@ -68,8 +71,12 @@ async def run_generation(configure_logging: bool,
     try:
         job_store = JobStore(scheduler_address=scheduler_address, db_url=db_url)
         await job_store.update_status(job_id, JobStatus.RUNNING)
+        http_connection: Request | None = None
+        if serialized_request is not None:
+            http_connection = Request(scope=serialized_request)
+
         async with load_workflow(config_file_path) as local_session_manager:
-            async with local_session_manager.session() as session:
+            async with local_session_manager.session(http_connection=http_connection) as session:
                 result = await generate_single_response(payload,
                                                         session,
                                                         result_type=session.workflow.single_output_schema)

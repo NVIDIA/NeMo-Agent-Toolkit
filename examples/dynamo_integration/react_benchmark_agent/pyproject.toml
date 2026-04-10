@@ -35,7 +35,7 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[eval,profiling,langchain,test] == {version}",
+  "nvidia-nat[eval,langchain,profiler,test] == {version}",
 ]
 
 [tool.uv.sources]

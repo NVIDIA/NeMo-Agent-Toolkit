@@ -22,7 +22,6 @@ from unittest.mock import patch
 import pytest
 
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.finetuning import CurriculumLearningConfig
 from nat.data_models.finetuning import FinetuneConfig
 from nat.data_models.finetuning import FinetuneRunConfig
@@ -30,6 +29,7 @@ from nat.data_models.finetuning import RewardFunctionConfig
 from nat.data_models.finetuning import TrajectoryCollection
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.invocation_node import InvocationNode
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.openpipe.config import ARTTrajectoryBuilderConfig
 from nat.plugins.openpipe.trajectory_builder import ARTTrajectoryBuilder
 

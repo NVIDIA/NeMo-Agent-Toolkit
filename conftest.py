@@ -53,7 +53,7 @@ if typing.TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine
 
     from nat.data_models.intermediate_step import IntermediateStep
-    from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+    from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
 
 @pytest.fixture(name="project_dir", scope='session')
@@ -474,7 +474,7 @@ def rag_intermediate_property_adaptor_fixture(rag_intermediate_steps) -> list[li
     """
     Fixture to transform the rag_intermediate_steps fixture data into IntermediatePropertyAdaptor objects.
     """
-    from nat.plugins.eval.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
+    from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
     return [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]
             for steps in rag_intermediate_steps]

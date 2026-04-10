@@ -20,7 +20,6 @@ from contextlib import contextmanager
 
 from nat.authentication.interfaces import AuthProviderBase
 from nat.builder.builder import Builder
-from nat.builder.builder import UserManagerHolder
 from nat.builder.builder import _current_builder_context
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
@@ -319,10 +318,6 @@ class ChildBuilder(Builder):
     @override
     async def get_retriever_config(self, retriever_name: str) -> RetrieverBaseConfig:
         return await self._workflow_builder.get_retriever_config(retriever_name=retriever_name)
-
-    @override
-    def get_user_manager(self) -> UserManagerHolder:
-        return self._workflow_builder.get_user_manager()
 
     @override
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:

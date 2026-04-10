@@ -55,21 +55,20 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
-  "datasets~=4.4",
-  "nvidia-nat-core == {version}",
-  "openpyxl~=3.1",
-  "ragas~=0.2.14",
+  "nvidia-nat-atif == {version}",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
-profiling = [
-  "matplotlib~=3.9",
-  "prefixspan~=0.5.2",
-  "scikit-learn~=1.6",
+full = [
+  "datasets~=4.4",
+  "nvidia-nat-core == {version}",
+  "openpyxl~=3.1",
 ]
 test = [
+  "datasets~=4.4",
   "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",
+  "openpyxl~=3.1",
 ]
 
 [tool.uv]
@@ -78,6 +77,7 @@ managed = true
 config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
+nvidia-nat-atif = { path = "../nvidia_nat_atif", editable = true }
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
@@ -87,5 +87,3 @@ nat_evaluators = "nat.plugins.eval.register"
 
 [project.entry-points.'nat.cli']
 eval = "nat.plugins.eval.cli.commands:eval_command"
-red-team = "nat.plugins.eval.cli.commands:red_team_command"
-sizing = "nat.plugins.eval.cli.commands:sizing_command"

@@ -17,6 +17,8 @@ import asyncio
 import logging
 import secrets
 import webbrowser
+from urllib.parse import parse_qs
+from urllib.parse import urlparse
 
 import pkce
 from authlib.integrations.httpx_client import AsyncOAuth2Client
@@ -92,7 +94,6 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
         logger.info("Starting MCP OAuth2 authorization code flow")
 
         # Extract and validate host and port from redirect_uri for callback server
-        from urllib.parse import urlparse
         parsed_uri = urlparse(str(cfg.redirect_uri))
 
         # Validate scheme/host and choose a safe non-privileged bind port
@@ -133,12 +134,29 @@ class MCPAuthenticationFlowHandler(ConsoleAuthenticationFlowHandler):
             flow_state.challenge = challenge
             logger.debug("PKCE enabled for MCP authentication")
 
+        logger.debug("MCP OAuth authorize URL input: authorization_url=%s redirect_uri=%s",
+                     cfg.authorization_url,
+                     cfg.redirect_uri)
         auth_url, _ = client.create_authorization_url(
             cfg.authorization_url,
             state=state,
             code_verifier=flow_state.verifier if cfg.use_pkce else None,
             code_challenge=flow_state.challenge if cfg.use_pkce else None,
             **(cfg.authorization_kwargs or {})
+        )
+        parsed_auth_url = urlparse(auth_url)
+        parsed_auth_params = parse_qs(parsed_auth_url.query)
+        logger.debug(
+            "MCP OAuth authorize URL params: endpoint=%s://%s%s client_id=%s redirect_uri=%s scope=%s resource=%s "
+            "state_prefix=%s",
+            parsed_auth_url.scheme,
+            parsed_auth_url.netloc,
+            parsed_auth_url.path,
+            parsed_auth_params.get("client_id", [None])[0],
+            parsed_auth_params.get("redirect_uri", [None])[0],
+            parsed_auth_params.get("scope", [None])[0],
+            parsed_auth_params.get("resource", [None])[0],
+            state[:8],
         )
 
         async with self._server_lock:

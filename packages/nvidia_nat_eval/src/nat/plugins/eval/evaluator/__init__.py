@@ -12,3 +12,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+from .atif_base_evaluator import AtifBaseEvaluator
+
+__all__ = ["AtifBaseEvaluator"]
+
+try:  # Base evaluator requires core runtime models.
+    from .base_evaluator import BaseEvaluator as _BaseEvaluator
+    BaseEvaluator = _BaseEvaluator
+    __all__.append("BaseEvaluator")
+except ModuleNotFoundError:
+    # In base `nvidia-nat-eval` installs, `nat.data_models` is intentionally absent.
+    # Keep ATIF-native imports working without pulling core dependencies.
+    pass

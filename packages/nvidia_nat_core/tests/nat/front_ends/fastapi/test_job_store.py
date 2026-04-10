@@ -17,6 +17,8 @@ import asyncio
 import json
 import os
 import typing
+from datetime import UTC
+from datetime import datetime
 from datetime import timedelta
 from pathlib import Path
 
@@ -43,7 +45,6 @@ async def failing_job_function() -> None:
     raise ValueError("This job is designed to fail")
 
 
-@pytest.mark.asyncio
 async def test_job_store_init_with_engine(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test JobStore initialization with provided database engine."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -54,7 +55,6 @@ async def test_job_store_init_with_engine(db_engine: "AsyncEngine", dask_schedul
     assert job_store._session is not None
 
 
-@pytest.mark.asyncio
 async def test_job_store_init_with_db_url(db_url: str, dask_scheduler_address: str):
     """Test JobStore initialization with database URL."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -97,7 +97,6 @@ def test_ensure_job_id_generates_new_id(db_engine: "AsyncEngine", dask_scheduler
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_create_job_default_params(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test job creation with default parameters."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -119,7 +118,6 @@ async def test_create_job_default_params(db_engine: "AsyncEngine", dask_schedule
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_create_job_with_params(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test job creation with custom parameters."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -141,7 +139,6 @@ async def test_create_job_with_params(db_engine: "AsyncEngine", dask_scheduler_a
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_create_job_clamps_expiry(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test job creation clamps expiry seconds to valid range."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -162,7 +159,6 @@ async def test_create_job_clamps_expiry(db_engine: "AsyncEngine", dask_scheduler
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_submit_job_success(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test successful job submission."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -182,7 +178,6 @@ async def test_submit_job_success(db_engine: "AsyncEngine", dask_scheduler_addre
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_submit_job_with_sync_timeout(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test job submission with sync timeout to get immediate result."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -201,7 +196,6 @@ async def test_submit_job_with_sync_timeout(db_engine: "AsyncEngine", dask_sched
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_submit_job_with_kwargs(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test job submission with keyword arguments."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -222,7 +216,6 @@ async def test_submit_job_with_kwargs(db_engine: "AsyncEngine", dask_scheduler_a
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_update_status_basic(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test basic status update."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -248,7 +241,6 @@ async def test_update_status_basic(db_engine: "AsyncEngine", dask_scheduler_addr
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_update_status_with_error(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test status update with error message."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -268,7 +260,6 @@ async def test_update_status_with_error(db_engine: "AsyncEngine", dask_scheduler
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_update_status_with_pydantic_output(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test status update with Pydantic model output."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -292,7 +283,6 @@ async def test_update_status_with_pydantic_output(db_engine: "AsyncEngine", dask
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_update_status_with_dict_output(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test status update with dictionary output."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -316,7 +306,6 @@ async def test_update_status_with_dict_output(db_engine: "AsyncEngine", dask_sch
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_update_status_nonexistent_job(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test updating status of non-existent job raises error."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -329,7 +318,6 @@ async def test_update_status_nonexistent_job(db_engine: "AsyncEngine", dask_sche
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_job_existing(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting an existing job."""
     from nat.front_ends.fastapi.async_jobs import JobInfo
@@ -346,7 +334,6 @@ async def test_get_job_existing(db_engine: "AsyncEngine", dask_scheduler_address
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_job_nonexistent(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting a non-existent job returns None."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -358,7 +345,6 @@ async def test_get_job_nonexistent(db_engine: "AsyncEngine", dask_scheduler_addr
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_status_existing(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting status of an existing job."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -373,7 +359,6 @@ async def test_get_status_existing(db_engine: "AsyncEngine", dask_scheduler_addr
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_status_nonexistent(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting status of non-existent job returns NOT_FOUND."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -386,7 +371,6 @@ async def test_get_status_nonexistent(db_engine: "AsyncEngine", dask_scheduler_a
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_all_jobs_empty(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting all jobs when database is empty."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -398,7 +382,6 @@ async def test_get_all_jobs_empty(db_engine: "AsyncEngine", dask_scheduler_addre
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_all_jobs_multiple(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting all jobs with multiple jobs in database."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -418,7 +401,6 @@ async def test_get_all_jobs_multiple(db_engine: "AsyncEngine", dask_scheduler_ad
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_last_job_empty(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting last job when database is empty."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -430,7 +412,6 @@ async def test_get_last_job_empty(db_engine: "AsyncEngine", dask_scheduler_addre
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_last_job_multiple(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test getting last job with multiple jobs in database."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -450,7 +431,6 @@ async def test_get_last_job_multiple(db_engine: "AsyncEngine", dask_scheduler_ad
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_jobs_by_status(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test filtering jobs by status."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -485,7 +465,6 @@ async def test_get_jobs_by_status(db_engine: "AsyncEngine", dask_scheduler_addre
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_expires_at_active_job(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test get_expires_at for active jobs returns None."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -511,7 +490,6 @@ async def test_get_expires_at_active_job(db_engine: "AsyncEngine", dask_schedule
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_get_expires_at_finished_job(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test get_expires_at for finished jobs returns correct expiry time."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -540,7 +518,6 @@ async def test_get_expires_at_finished_job(db_engine: "AsyncEngine", dask_schedu
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_cleanup_expired_jobs_no_expired(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test cleanup when no jobs are expired."""
     from nat.front_ends.fastapi.async_jobs import JobStatus
@@ -569,7 +546,6 @@ async def test_cleanup_expired_jobs_no_expired(db_engine: "AsyncEngine", dask_sc
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine",
                                                       dask_scheduler_address: str,
                                                       tmp_path: Path,
@@ -623,7 +599,6 @@ async def test_cleanup_expired_jobs_with_output_files(db_engine: "AsyncEngine",
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_cleanup_expired_jobs_keeps_active(db_engine: "AsyncEngine",
                                                  dask_scheduler_address: str,
                                                  monkeypatch: pytest.MonkeyPatch):
@@ -735,7 +710,6 @@ def test_job_store_dask_client_property(dask_client: "DaskClient",
 
 
 @pytest.mark.usefixtures("setup_db")
-@pytest.mark.asyncio
 async def test_session_context_manager(db_engine: "AsyncEngine", dask_scheduler_address: str):
     """Test the session context manager works correctly."""
     from nat.front_ends.fastapi.async_jobs import JobStore
@@ -748,3 +722,34 @@ async def test_session_context_manager(db_engine: "AsyncEngine", dask_scheduler_
         from sqlalchemy import text
         result = await session.execute(text("SELECT 1"))
         assert result is not None
+
+
+@pytest.mark.usefixtures("setup_db")
+async def test_job_info_default_time_fields(db_engine: "AsyncEngine", dask_scheduler_address: str):
+    """Test to ensure that datetime fields in JobInfo are set correctly on job creation and update."""
+    from nat.front_ends.fastapi.async_jobs import JobInfo
+    from nat.front_ends.fastapi.async_jobs import JobStatus
+    from nat.front_ends.fastapi.async_jobs import JobStore
+
+    job_store = JobStore(scheduler_address=dask_scheduler_address, db_engine=db_engine)
+
+    test_start_time = datetime.now(UTC)
+    job_id = job_store.ensure_job_id(None)
+    job = JobInfo(job_id=job_id, status=JobStatus.SUBMITTED, expiry_seconds=30)
+
+    async with job_store.session() as session:
+        session.add(job)
+
+    job = await job_store.get_job(job_id)
+    assert job.created_at.replace(tzinfo=UTC) > test_start_time
+    assert job.updated_at.replace(tzinfo=UTC) > test_start_time
+
+    # Verify that updated_at changes on status update
+    initial_updated_at = job.updated_at
+    async with job_store.session() as session:
+        job.status = JobStatus.RUNNING
+        session.add(job)
+
+    job = await job_store.get_job(job_id)
+    assert job.status == JobStatus.RUNNING
+    assert job.updated_at > initial_updated_at

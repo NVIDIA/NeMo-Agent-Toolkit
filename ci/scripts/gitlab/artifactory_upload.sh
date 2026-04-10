@@ -54,8 +54,8 @@ if [[ -z "${URM_USER}" || -z "${URM_API_KEY}" ]]; then
     exit 1
 fi
 
-if [[ -z "${AIQ_ARTIFACTORY_URL}" || -z "${AIQ_ARTIFACTORY_NAME}" ]]; then
-    echo "Error: AIQ_ARTIFACTORY_URL or AIQ_ARTIFACTORY_NAME is not set. Exiting."
+if [[ -z "${NAT_ARTIFACTORY_URL}" || -z "${NAT_ARTIFACTORY_NAME}" ]]; then
+    echo "Error: NAT_ARTIFACTORY_URL or NAT_ARTIFACTORY_NAME is not set. Exiting."
     exit 1
 fi
 
@@ -113,11 +113,11 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
                 # as this is an already established path in artifactory
                 RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
                 RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|' | sed -e 's|^nat/|aiqtoolkit/|')
-                ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
+                ARTIFACTORY_PATH="${NAT_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
 
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
 
-                CI=true jf rt u --fail-no-op --url="${AIQ_ARTIFACTORY_URL}" \
+                CI=true jf rt u --fail-no-op --url="${NAT_ARTIFACTORY_URL}" \
                     --user="${URM_USER}" --password="${URM_API_KEY}" \
                     --flat=false "${WHEEL_FILE}" "${ARTIFACTORY_PATH}" \
                     --target-props "arch=${NAT_ARCH};os=${NAT_OS};branch=${GIT_TAG};component_name=${ARTIFACTORY_COMPONENT_FIXED_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
@@ -131,8 +131,8 @@ fi
 
 # List Artifactory contents (disabled by default as the output is very verbose)
 if [[ "${LIST_ARTIFACTORY_CONTENTS}" == "true" ]]; then
-    echo "Listing contents of Artifactory (${AIQ_ARTIFACTORY_NAME}):"
-    CI=true jf rt s --url="${AIQ_ARTIFACTORY_URL}" \
+    echo "Listing contents of Artifactory (${NAT_ARTIFACTORY_NAME}):"
+    CI=true jf rt s --url="${NAT_ARTIFACTORY_URL}" \
         --user="${URM_USER}" --password="${URM_API_KEY}" \
-        "${AIQ_ARTIFACTORY_NAME}/*/${GIT_TAG}/" --recursive
+        "${NAT_ARTIFACTORY_NAME}/*/${GIT_TAG}/" --recursive
 fi
