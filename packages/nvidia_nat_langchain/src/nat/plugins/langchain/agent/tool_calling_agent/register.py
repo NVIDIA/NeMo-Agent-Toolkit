@@ -101,7 +101,6 @@ class ToolCallAgentWorkflowConfig(AgentBaseConfig, name="tool_calling_agent"):
 
 @register_function(config_type=ToolCallAgentWorkflowConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, builder: Builder):
-    from langchain_core.messages import AIMessage
     from langchain_core.messages import AIMessageChunk
     from langchain_core.messages import trim_messages
     from langchain_core.messages.base import BaseMessage
@@ -219,7 +218,7 @@ async def tool_calling_agent_workflow(config: ToolCallAgentWorkflowConfig, build
                     state,
                     config={'recursion_limit': (config.max_iterations + 1) * 2},
                     stream_mode="messages"):
-                if not isinstance(msg, (AIMessage, AIMessageChunk)):
+                if not isinstance(msg, AIMessageChunk):
                     continue
                 if metadata.get("langgraph_node") != "agent":
                     continue
