@@ -67,6 +67,7 @@ dependencies = [
   "langchain-litellm>=0.3.5,<1.0.0",
   "langchain-milvus>=0.3.3,<1.0.0",
   "langchain-nvidia-ai-endpoints>=1.0.2,<2.0.0",
+  "langchain-oci>=0.2.4,<1.0.0",
   "langchain-openai>=1.1.6,<2.0.0",
   "langchain-tavily>=0.2.16,<1.0.0",
   "langgraph>=1.0.5,<2.0.0",
@@ -74,9 +75,6 @@ dependencies = [
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
-oci = [
-  "langchain-oci>=0.2.4,<1.0.0",
-]
 test = [
   "nvidia-nat-eval[profiling] == {version}",
   "nvidia-nat-test == {version}",
