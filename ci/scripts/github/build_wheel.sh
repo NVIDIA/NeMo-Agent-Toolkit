@@ -37,7 +37,7 @@ for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
 done
 
 # Build all examples with a pyproject.toml in the first directory below examples
-for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
+for NAT_EXAMPLE in "${NAT_EXAMPLES[@]}"; do
     # places all wheels flat under example
     build_wheel ${NAT_EXAMPLE} "examples"
 done
