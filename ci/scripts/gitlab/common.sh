@@ -65,5 +65,5 @@ function is_current_commit_release_tagged() {
 
 function install_slack_sdk() {
     echo "Installing slack-sdk"
-    uv pip install "slack-sdk~=3.36"
+    uv pip install "slack-sdk==3.40.1"
 }
