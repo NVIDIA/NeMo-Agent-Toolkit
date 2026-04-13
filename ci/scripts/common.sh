@@ -119,7 +119,7 @@ function set_versions() {
       set -e
 
       if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
-         rapids-logger "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
+         echo "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
          exit ${SETUPTOOLS_SCM_RESULT}
       fi
    fi
@@ -129,7 +129,7 @@ function set_versions() {
 }
 
 function build_wheel() {
-    rapids-logger "Building Wheel for $1"
+    echo "Building Wheel for $1"
     uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
 }
 
@@ -143,7 +143,7 @@ function build_package_wheel()
 
 function create_env() {
 
-    rapids-logger "Creating uv env"
+    echo "Creating uv env"
     VENV_DIR="${WORKSPACE_TMP}/.venv"
     uv venv --python=${PYTHON_VERSION} --seed ${VENV_DIR}
     source ${VENV_DIR}/bin/activate
@@ -172,31 +172,25 @@ function create_env() {
         exit 1
     fi
 
-    rapids-logger "Final Environment"
+    echo "Final Environment"
     uv pip list
 }
 
-function install_rapids_gha_tools()
-{
-   echo "Installing Rapids GHA tools"
-   wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
-}
-
 function get_lfs_files() {
-    rapids-logger "Installing git-lfs from apt"
+    echo "Installing git-lfs from apt"
     apt update
     apt install --no-install-recommends -y git-lfs
 
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
-        rapids-logger "Using host git, skipping git-lfs install"
+        echo "Using host git, skipping git-lfs install"
     else
-        rapids-logger "Calling git lfs fetch"
+        echo "Calling git lfs fetch"
         git lfs fetch
-        rapids-logger "Calling git lfs pull"
+        echo "Calling git lfs pull"
         git lfs pull
     fi
 
-    rapids-logger "git lfs ls-files"
+    echo "git lfs ls-files"
     git lfs ls-files
 }
 
@@ -218,11 +212,11 @@ function install_python_versions() {
       PYTHON_FIND_RESULT=$?
       set -e
       if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
-         rapids-logger "Downloading Python version ${pyver}"
+         echo "Downloading Python version ${pyver}"
 
          # In common.sh we set this to never, we want to override that here
          UV_PYTHON_DOWNLOADS="manual" uv python install --managed-python ${pyver}
-         rapids-logger "✓ Successfully installed Python ${pyver}"
+         echo "✓ Successfully installed Python ${pyver}"
       fi
    done
 }

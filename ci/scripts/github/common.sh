@@ -18,12 +18,10 @@ SCRIPT_DIR=$( dirname ${GITHUB_SCRIPT_DIR} )
 
 source ${SCRIPT_DIR}/common.sh
 
-install_rapids_gha_tools
-
 # Ensure the workspace tmp directory exists
 mkdir -p ${WORKSPACE_TMP}
 
-rapids-logger "Environment Variables"
+echo "Environment Variables"
 printenv | sort
 
 function get_git_tag() {

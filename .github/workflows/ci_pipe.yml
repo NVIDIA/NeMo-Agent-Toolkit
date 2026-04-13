@@ -57,7 +57,6 @@ env:
   GIT_COMMIT: "${{ github.sha }}"
   BASE_SHA: "${{ inputs.base_sha }}"
   BUILD_NAT_COMPAT: "true"
-  RAPIDS_CONDA_RETRY_MAX: "5"
   WORKSPACE: "${{ github.workspace }}/nat"
   WORKSPACE_TMP: "${{ github.workspace }}/tmp"
   UV_CACHE_DIR: .uv-cache

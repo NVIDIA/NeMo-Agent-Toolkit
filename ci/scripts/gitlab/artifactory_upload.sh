@@ -23,7 +23,7 @@ source ${GITLAB_SCRIPT_DIR}/common.sh
 
 GIT_TAG=$(get_git_tag)
 IS_TAGGED=$(is_current_commit_release_tagged)
-rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
+echo "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
 # change this to ready to publish. this should be done programmatically once
 # the release process is finalized.
@@ -94,7 +94,7 @@ install_jfrog_cli
 if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
     for NAT_COMPONENT_NAME  in ${NAT_COMPONENTS[@]}; do
         WHEELS_DIR="${WHEELS_BASE_DIR}/${NAT_COMPONENT_NAME}"
-        rapids-logger "NAT Component : ${NAT_COMPONENT_NAME} Dir : ${WHEELS_DIR}"
+        echo "NAT Component : ${NAT_COMPONENT_NAME} Dir : ${WHEELS_DIR}"
 
         for SUBDIR in $(find "${WHEELS_DIR}" -mindepth 1 -maxdepth 1 -type d); do
             SUBDIR_NAME=$(basename "${SUBDIR}")
@@ -124,9 +124,9 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
             done
         done
     done
-    rapids-logger "All wheels uploaded to Artifactory."
+    echo "All wheels uploaded to Artifactory."
 else
-    rapids-logger "UPLOAD_TO_ARTIFACTORY is set to 'false'. Skipping upload."
+    echo "UPLOAD_TO_ARTIFACTORY is set to 'false'. Skipping upload."
 fi
 
 # List Artifactory contents (disabled by default as the output is very verbose)
