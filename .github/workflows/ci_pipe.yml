@@ -89,7 +89,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           path: 'nat'
@@ -125,7 +125,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -137,7 +137,7 @@ jobs:
         run: ./nat/ci/scripts/github/tests.sh
 
       - name: Upload Test Results
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         # Upload test results even if the tests fail
         if: ${{ always() }}
         with:
@@ -145,7 +145,7 @@ jobs:
           path: "${{ github.workspace }}/tmp/reports/*.xml"
           if-no-files-found: error
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
         # Upload test results even if the tests fail
         if: ${{ always() }}
         with:
@@ -169,7 +169,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-tags: true
           path: 'nat'
@@ -179,7 +179,7 @@ jobs:
         run: ./nat/ci/scripts/github/docs.sh
 
       - name: Upload Documentation
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: "docs"
           path: "${{ github.workspace }}/tmp/docs.tar.bz2"
@@ -199,7 +199,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
           fetch-tags: true
@@ -210,7 +210,7 @@ jobs:
         run: ./nat/ci/scripts/github/build_wheel.sh
 
       - name: Upload Package Reports
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         if: ${{ always() }}
         with:
           name: "package_listings"
@@ -219,7 +219,7 @@ jobs:
           compression-level: 0
 
       - name: Upload Wheels
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: "wheels"
           path: "${{ github.workspace }}/tmp/wheels/*.whl"
