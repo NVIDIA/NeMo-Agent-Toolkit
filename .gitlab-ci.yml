@@ -325,6 +325,7 @@ package:wheel:
     - if: $CI_COMMIT_BRANCH =~ /^release\/.*$/
 
 upload:artifactory:
+  image: $CI_REGISTRY_IMAGE/artifactory:20260413
   stage: upload
   script:
     - echo "Uploading wheel to artifactory"
