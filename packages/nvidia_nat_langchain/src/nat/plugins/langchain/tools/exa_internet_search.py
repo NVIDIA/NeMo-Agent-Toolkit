@@ -102,6 +102,7 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
             except Exception:
                 # Return a graceful message instead of raising, so the agent can
                 # continue reasoning without web search rather than failing entirely.
+                logger.exception("Exa search attempt %d of %d failed", attempt + 1, tool_config.max_retries)
                 if attempt == tool_config.max_retries - 1:
                     return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
                 await asyncio.sleep(2**attempt)
