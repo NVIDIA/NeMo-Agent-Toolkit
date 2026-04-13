@@ -325,6 +325,7 @@ package:wheel:
     - if: $CI_COMMIT_BRANCH =~ /^release\/.*$/
 
 upload:artifactory:
+  # Container defined in ci/scripts/gitlab/artifactory/Dockerfile
   image: $CI_REGISTRY_IMAGE/artifactory:20260413
   stage: upload
   script:
