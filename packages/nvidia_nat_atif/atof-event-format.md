@@ -233,7 +233,7 @@ A profile is a JSON object with three reserved meta-fields (all prefixed with `$
 
 | Field                     | Type                           | Required | Description                                                                                                                                                                                                                             |
 | ------------------------- | ------------------------------ | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `$schema`                 | string or object (JSON Schema) | Yes      | Schema declaration. EITHER a string ID (e.g., `"default/llm.v1"`) resolved against a `StreamHeaderEvent` registry, OR an inline JSON Schema object (which MUST include its own `$id`). See §4.3 for the inline form.                    |
+| `$schema`                 | string or object (JSON Schema) | Yes      | Sc , `"default/llm.v1"`) resolved against a `StreamHeaderEvent` registry, OR an inline JSON Schema object (which MUST include its own `$id`). See §4.3 for the inline form.                                                             |
 | `$version`                | string                         | Yes      | Schema publisher's version identifier. This is NOT the ATOF protocol version (that lives in `schema_version` on every event — §2). Schema publishers SHOULD follow their own versioning convention; semantic versioning is recommended. |
 | `$mode`                   | string (enum) or absent        | No       | Per-event override of `StreamHeaderEvent.profile_mode_default`. One of `"header"`, `"inline"`, `"opaque"`. Absent means inherit the stream-wide default (§5).                                                                           |
 | *(vendor-defined fields)* | any                            | —        | Additional fields defined by the declared `$schema`. Shape, required/optional, and validation are governed entirely by the JSON Schema, not by this spec.                                                                               |
@@ -250,7 +250,7 @@ Schema IDs follow the convention `vendor/<id>` where `<id>` ends in `.v<N>` for 
 - `openai/llm.v1` — hypothetical vendor-published richer LLM profile
 - `nvidia/guardrail-content-safety.v2` — hypothetical vendor-published guardrail profile
 
-The `default/*` namespace is reserved for spec-defined reference implementations; vendors MUST NOT publish schemas in the `default/*` namespace. Each schema ID identifies one major-version line. Breaking changes require a new major-version suffix (`.v1` → `.v2`); backward-compatible additions MAY be folded into the same major version with an updated `$version` string on the profile.
+The `default/`* namespace is reserved for spec-defined reference implementations; vendors MUST NOT publish schemas in the `default/`* namespace. Each schema ID identifies one major-version line. Breaking changes require a new major-version suffix (`.v1` → `.v2`); backward-compatible additions MAY be folded into the same major version with an updated `$version` string on the profile.
 
 ### 4.3 Inline schema mode
 
@@ -327,17 +327,49 @@ When NO `StreamHeaderEvent` appears in the stream, the effective `profile_mode_d
 
 Three modes govern how consumers interpret a profile:
 
-- `**"header"`** — profiles reference schemas by string `$schema` ID. Consumers resolve the ID via the effective `StreamHeaderEvent` registry. Consumers that choose to validate look up the schema in the registry and validate against the body there.
-- `**"inline"**` — profiles carry their schema directly: `$schema` is a JSON Schema object (with an `$id`). Consumers that choose to validate validate against the embedded body. No registry lookup needed.
-- `**"opaque"**` — consumers preserve profile fields verbatim but do NOT validate. Used for streams where schema registration is not available or where downstream consumers are schema-unaware.
+- `"header"` — profiles reference schemas by string `$schema` ID. Consumers resolve the ID via the effective `StreamHeaderEvent` registry. Consumers that choose to validate look up the schema in the registry and validate against the body there.
+- `"inline"` — profiles carry their schema directly: `$schema` is a JSON Schema object (with an `$id`). Consumers that choose to validate validate against the embedded body. No registry lookup needed.
+- `"opaque"` — consumers preserve profile fields verbatim but do NOT validate. Used for streams where schema registration is not available or where downstream consumers are schema-unaware.
 
 Per-event `$mode` overrides (§4.4) apply uniformly to all three modes — a profile MAY declare `$mode: "inline"` and carry an inline schema even when the stream default is `"header"`, or vice versa.
 
 ### 5.4 Schema registration rules
 
-Each entry in `schemas[schema_id]` is a complete JSON Schema document (Draft 2020-12). Constraints:
+Each entry in `schemas[schema_id]` is a complete JSON Schema document (2020-12). Constraints:
 
 - If `schemas[schema_id]["$id"]` is present, it MUST equal the dict key `schema_id`. Producers SHOULD include `$id` for self-description; consumers that encounter a mismatched `$id` SHOULD log a warning and treat the dict key as authoritative.
+
+  ```json
+  {
+    "kind": "StreamHeader",
+    "schemas": {
+      "default/llm.v1": {
+        "$id": "default/llm.v1",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "properties": {"model_name": {"type": ["string", "null"]}},
+        "additionalProperties": true
+      }
+    }
+  }
+  ```
+
+  Valid: `$id` matches the dict key. Omitting `$id` is also conformant; producers MAY choose either form.
+
+  ```json
+  {
+    "kind": "StreamHeader",
+    "schemas": {
+      "default/llm.v1": {
+        "$id": "default/llm.v2",
+        "type": "object"
+      }
+    }
+  }
+  ```
+
+  Mismatch: consumer SHOULD log a warning and treat `"default/llm.v1"` (the dict key) as authoritative.
+
 - ATOF v0.2 uses JSON Schema Draft 2020-12 as the canonical dialect. Schema bodies MAY reference other dialects via `$schema`; consumers MAY choose whether to honor non-canonical dialects.
 - Entries MAY use any JSON Schema keywords permitted by Draft 2020-12 (`type`, `properties`, `required`, `additionalProperties`, `patternProperties`, `$ref`, etc.).
 
@@ -391,7 +423,7 @@ Both reference profiles set `additionalProperties: true` — vendors MAY extend 
 }
 ```
 
-**Non-default reference profiles are out of scope for this spec.** Vendor profiles (`openai/llm.v1`, `nvidia/guardrail-content-safety.v2`, `anthropic/messages.v1`, …) are published by their respective vendors following the §4.2 schema ID format. ATOF v0.2 reserves the `default/*` namespace for spec-defined reference implementations and makes no normative statement about other namespaces.
+**Non-default reference profiles are out of scope for this spec.** Vendor profiles (`openai/llm.v1`, `nvidia/guardrail-content-safety.v2`, `anthropic/messages.v1`, …) are published by their respective vendors following the §4.2 schema ID format. ATOF v0.2 reserves the `default/`* namespace for spec-defined reference implementations and makes no normative statement about other namespaces.
 
 ---
 
@@ -433,7 +465,7 @@ Each handle receives a unique UUID at creation time. The `uuid` is stable across
 Three distinct identifier namespaces appear in an ATOF stream:
 
 - `**uuid` / `parent_uuid`** — agent runtime identifiers attached to every event. Form the scope graph.
-- `**profile.tool_call_id**` (on `scope_type: "tool"`) — an LLM-provider identifier that bridges an LLM's tool-call response with the resulting tool execution. Null when the tool was not invoked via an LLM tool-use flow.
+- `**profile.tool_call_id`** (on `scope_type: "tool"`) — an LLM-provider identifier that bridges an LLM's tool-call response with the resulting tool execution. Null when the tool was not invoked via an LLM tool-use flow.
 - **Codec-decoded response IDs** (e.g., `chatcmpl-`* inside a decoded LLM response body) — provider tracking identifiers. Opaque to ATOF Core; see `[atof-codec-profiles.md](./atof-codec-profiles.md)`.
 
 ```text
