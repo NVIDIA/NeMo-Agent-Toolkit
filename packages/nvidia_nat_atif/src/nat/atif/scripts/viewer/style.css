@@ -1,0 +1,196 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, sans-serif;
+  background: #0d1117;
+  color: #c9d1d9;
+  line-height: 1.6;
+  padding: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+a { color: #58a6ff; }
+
+code,
+pre {
+  font-family: "SF Mono", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 13px;
+}
+
+pre {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* ---- header ---- */
+.header {
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+.header h1 { font-size: 20px; font-weight: 600; color: #f0f6fc; }
+.header-meta {
+  display: flex; flex-wrap: wrap; gap: 16px;
+  margin-top: 8px; font-size: 13px; color: #8b949e;
+}
+.header-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.header-notes {
+  margin-top: 10px; padding: 8px 12px;
+  background: #1c2128; border: 1px solid #30363d;
+  border-radius: 6px; font-size: 13px; color: #8b949e;
+  white-space: pre-wrap;
+}
+
+/* ---- metrics ---- */
+.metrics-summary {
+  display: flex; flex-wrap: wrap; gap: 24px;
+  margin-top: 12px; padding: 10px 14px;
+  background: #161b22; border: 1px solid #30363d;
+  border-radius: 6px; font-size: 13px;
+}
+.metric-item { display: flex; flex-direction: column; align-items: center; }
+.metric-value { font-size: 18px; font-weight: 600; color: #f0f6fc; }
+.metric-label {
+  color: #8b949e; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* ---- collapsible ---- */
+.collapsible-section {
+  margin-top: 12px; border: 1px solid #30363d;
+  border-radius: 6px; overflow: hidden;
+}
+.collapsible-header {
+  padding: 8px 12px; background: #21262d; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 600; user-select: none; color: #8b949e;
+}
+.collapsible-header:hover { background: #30363d; }
+.collapsible-body { padding: 10px 12px; display: none; }
+.collapsible-body.open { display: block; }
+
+/* ---- timeline ---- */
+.timeline { position: relative; padding-left: 32px; }
+.timeline::before {
+  content: ""; position: absolute; left: 11px; top: 0; bottom: 0;
+  width: 2px; background: #30363d;
+}
+
+/* ---- step ---- */
+.step { position: relative; margin-bottom: 20px; }
+.step::before {
+  content: ""; position: absolute; left: -25px; top: 14px;
+  width: 12px; height: 12px; border-radius: 50%;
+  border: 2px solid #30363d; background: #0d1117; z-index: 1;
+}
+.step.source-user::before   { border-color: #3fb950; background: #3fb950; }
+.step.source-agent::before  { border-color: #58a6ff; background: #58a6ff; }
+.step.source-system::before { border-color: #d29922; background: #d29922; }
+
+.step-card {
+  background: #161b22; border: 1px solid #30363d;
+  border-radius: 8px; padding: 14px 16px;
+  transition: border-color 0.15s;
+}
+.step-card:hover { border-color: #58a6ff; }
+
+.step-header {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 8px; flex-wrap: wrap;
+}
+.step-num { font-size: 12px; font-weight: 600; color: #8b949e; min-width: 24px; }
+
+.badge {
+  font-size: 11px; font-weight: 600; padding: 2px 8px;
+  border-radius: 12px; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.badge-user   { background: #238636; color: #fff; }
+.badge-agent  { background: #1f6feb; color: #fff; }
+.badge-system { background: #9e6a03; color: #fff; }
+
+.model-tag  { font-size: 11px; color: #8b949e; background: #21262d; padding: 2px 6px; border-radius: 4px; }
+.effort-tag { font-size: 11px; color: #d29922; background: #2d1b00; padding: 2px 6px; border-radius: 4px; }
+.copied-tag { font-size: 11px; color: #f85149; background: #3d1214; padding: 2px 6px; border-radius: 4px; }
+.timestamp  { font-size: 11px; color: #484f58; margin-left: auto; }
+
+/* ---- message ---- */
+.step-message { margin-bottom: 8px; }
+.message-text { white-space: pre-wrap; word-break: break-word; font-size: 14px; }
+.message-toggle {
+  color: #58a6ff; cursor: pointer; font-size: 12px;
+  border: none; background: none; padding: 0; text-decoration: underline;
+}
+
+/* ---- reasoning ---- */
+.reasoning-block {
+  margin: 8px 0; padding: 8px 12px;
+  background: #1c2128; border-left: 3px solid #d29922;
+  border-radius: 0 6px 6px 0; font-size: 13px;
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 300px; overflow-y: auto;
+}
+.reasoning-label {
+  font-size: 11px; color: #d29922;
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+}
+
+/* ---- tokens ---- */
+.token-metrics {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  font-size: 12px; color: #8b949e; margin-top: 6px;
+}
+.token-metrics span { display: flex; align-items: center; gap: 4px; }
+
+/* ---- tool calls ---- */
+.tool-calls { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.tool-card {
+  background: #0d1117; border: 1px solid #30363d;
+  border-radius: 6px; overflow: hidden;
+}
+.tool-header {
+  padding: 8px 12px; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; user-select: none;
+}
+.tool-header:hover { background: #21262d; }
+.tool-arrow { transition: transform 0.15s; font-size: 10px; color: #8b949e; }
+.tool-arrow.open { transform: rotate(90deg); }
+.tool-name { font-weight: 600; color: #d2a8ff; }
+.tool-body { padding: 0 12px 10px; display: none; }
+.tool-body.open { display: block; }
+.tool-section-label {
+  font-size: 11px; color: #8b949e;
+  text-transform: uppercase; letter-spacing: 0.5px; margin: 8px 0 4px;
+}
+
+/* ---- subagent ---- */
+.subagent-section {
+  margin-top: 20px; border: 1px solid #30363d;
+  border-radius: 8px; overflow: hidden;
+}
+.subagent-header {
+  padding: 10px 14px; background: #21262d; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 600; user-select: none;
+}
+.subagent-header:hover { background: #30363d; }
+.subagent-body { padding: 16px; display: none; }
+.subagent-body.open { display: block; }
+.subagent-body .timeline { padding-left: 28px; }
+.subagent-body .timeline::before { left: 9px; }
+
+.extra-section { margin-top: 8px; }
