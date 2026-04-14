@@ -150,6 +150,24 @@ general:
 
 With this configuration, the MCP server is accessible at `http://localhost:9902/api/v1/mcp`.
 
+### Publishing Structured Tool Output and ATIF Metadata
+
+You can enable FastMCP structured tool output and include ATIF metadata in tool responses.
+These options apply only to the FastMCP runtime.
+
+```yaml
+general:
+  front_end:
+    _type: fastmcp
+    structured_tool_output: true
+    include_atif_meta: true
+```
+
+When enabled, tools continue to emit text content for compatibility and also include:
+
+- `structuredContent` with a stable object payload (`result_text`, and `result_json` for JSON-like results)
+- `_meta.atif` metadata with inline trajectory details (`run_id`, `schema_version`, and `trajectory`)
+
 ## Inspecting and Running MCP Tools Published by a FastMCP Server
 
 Use `nat mcp client` to inspect and run tools exposed by an MCP server using the FastMCP server runtime.

@@ -55,6 +55,12 @@ class FastMCPFrontEndConfig(FrontEndBaseConfig, name="fastmcp"):
 
     server_auth: OAuth2ResourceServerConfig | None = Field(
         default=None, description=("OAuth 2.0 Resource Server configuration for token verification."))
+    structured_tool_output: bool = Field(
+        default=False,
+        description="Publish MCP tool output using FastMCP ToolResult structured content (default: False).")
+    include_atif_meta: bool = Field(
+        default=False,
+        description="Include ATIF metadata under ToolResult meta.atif (default: False).")
 
     @field_validator('base_path')
     @classmethod

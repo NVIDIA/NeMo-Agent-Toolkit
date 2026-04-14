@@ -16,7 +16,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
+from dataclasses import dataclass
 from abc import ABC
 from abc import abstractmethod
 from collections.abc import AsyncGenerator
@@ -24,9 +26,11 @@ from collections.abc import Callable
 from contextlib import AsyncExitStack
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from typing import Any
 
 import anyio
 import httpx
+from pydantic import ValidationError
 
 from mcp import ClientSession
 from mcp.client.sse import sse_client
@@ -37,6 +41,8 @@ from mcp.types import TextContent
 from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
 from nat.authentication.interfaces import AuthProviderBase
+from nat.data_models.mcp_tool_result import StructuredToolContent  # type: ignore[reportMissingImports]
+from nat.data_models.mcp_tool_result import ToolRuntimeMeta  # type: ignore[reportMissingImports]
 from nat.plugins.mcp.exception_handler import convert_to_mcp_error
 from nat.plugins.mcp.exception_handler import format_mcp_error
 from nat.plugins.mcp.exception_handler import mcp_exception_handler
@@ -46,6 +52,14 @@ from nat.plugins.mcp.utils import model_from_mcp_schema
 from nat.utils.type_utils import override
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class MCPToolCallResult:
+    """Normalized MCP tool call payload for clients that need metadata."""
+    text: str
+    structured_content: dict[str, Any] | None
+    meta: dict[str, Any] | None
 
 
 class AuthAdapter(httpx.Auth):
@@ -647,6 +661,7 @@ class MCPToolClient:
         self._tool_description = tool_description
         self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
         self._parent_client = parent_client
+        self._last_result: MCPToolCallResult | None = None
 
         if self._parent_client is None:
             raise RuntimeError("MCPToolClient initialized without a parent client.")
@@ -678,6 +693,46 @@ class MCPToolClient:
         """
         self._tool_description = description
 
+    @property
+    def last_result(self) -> MCPToolCallResult | None:
+        """Returns the last normalized MCP tool call result payload."""
+        return self._last_result
+
+    @staticmethod
+    def _extract_text_content(result: Any) -> str:
+        """Extract plain text content from MCP response blocks."""
+        output: list[str] = []
+        for res in result.content:
+            if isinstance(res, TextContent):
+                output.append(res.text)
+            else:
+                logger.warning("Got not-text output from MCP tool response block of type %s", type(res))
+        return "\n".join(output)
+
+    @staticmethod
+    def _extract_structured_content(result: Any) -> dict[str, Any] | None:
+        """Extract and validate structured content from MCP response."""
+        structured = getattr(result, "structuredContent", None)
+        if isinstance(structured, dict):
+            try:
+                return StructuredToolContent.model_validate(structured).model_dump(exclude_none=True)
+            except ValidationError:
+                logger.warning("structuredContent validation failed; using text content fallback")
+        return None
+
+    @staticmethod
+    def _extract_meta(result: Any) -> dict[str, Any] | None:
+        """Extract and validate response metadata from MCP response."""
+        meta = getattr(result, "meta", None)
+        if not isinstance(meta, dict):
+            meta = getattr(result, "_meta", None)
+        if isinstance(meta, dict):
+            try:
+                return ToolRuntimeMeta.model_validate(meta).model_dump(exclude_none=True)
+            except ValidationError:
+                logger.warning("meta validation failed; using text content fallback")
+        return None
+
     async def acall(self, tool_args: dict) -> str:
         """
         Call the MCP tool with the provided arguments.
@@ -694,14 +749,13 @@ class MCPToolClient:
             logger.info("Calling tool %s", self._tool_name)
             result = await self._parent_client.call_tool(self._tool_name, tool_args)
 
-            output = []
-            for res in result.content:
-                if isinstance(res, TextContent):
-                    output.append(res.text)
-                else:
-                    # Log non-text content for now
-                    logger.warning("Got not-text output from %s of type %s", self.name, type(res))
-            result_str = "\n".join(output)
+            result_str = self._extract_text_content(result)
+            structured_content = self._extract_structured_content(result)
+            meta = self._extract_meta(result)
+            self._last_result = MCPToolCallResult(text=result_str, structured_content=structured_content, meta=meta)
+
+            if not result_str and structured_content is not None:
+                result_str = json.dumps(structured_content, default=str)
 
             if result.isError:
                 mcp_error: MCPError = convert_to_mcp_error(RuntimeError(result_str), self._parent_client.server_name)
@@ -710,5 +764,6 @@ class MCPToolClient:
         except MCPError as e:
             format_mcp_error(e, include_traceback=False)
             result_str = f"MCPToolClient tool call failed: {e.original_exception}"
+            self._last_result = MCPToolCallResult(text=result_str, structured_content=None, meta=None)
 
         return result_str

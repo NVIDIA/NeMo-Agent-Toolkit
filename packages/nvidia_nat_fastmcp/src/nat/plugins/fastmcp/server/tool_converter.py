@@ -14,25 +14,37 @@
 # limitations under the License.
 """Convert NeMo Agent Toolkit functions to FastMCP tools."""
 
+import asyncio
 import json
 import logging
 from inspect import Parameter
 from inspect import Signature
 from typing import Any
+from uuid import uuid4
 
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 from fastmcp import FastMCP
+from fastmcp.tools.tool import ToolResult
 from nat.builder.function import Function  # type: ignore[reportMissingImports]
 from nat.builder.function_base import FunctionBase  # type: ignore[reportMissingImports]
+from nat.data_models.mcp_tool_result import AtifToolMeta  # type: ignore[reportMissingImports]
+from nat.data_models.mcp_tool_result import StructuredToolContent  # type: ignore[reportMissingImports]
+from nat.data_models.mcp_tool_result import ToolRuntimeMeta  # type: ignore[reportMissingImports]
 from nat.runtime.session import SessionManager  # type: ignore[reportMissingImports]
 
 logger = logging.getLogger(__name__)
 
 # Sentinel: marks "optional; let Pydantic supply default/factory"
 _USE_PYDANTIC_DEFAULT = object()
+
+
+class FastMCPToolOutputOptions(BaseModel):
+    """Internal options controlling FastMCP tool output behavior."""
+    structured_tool_output: bool = False
+    include_atif_meta: bool = False
 
 
 def _safe_json_schema(schema: Any) -> dict[str, Any]:
@@ -108,10 +120,61 @@ def _is_chat_request_schema(schema: Any) -> bool:
     return schema_name == "ChatRequest" or "ChatRequest" in schema_qualname
 
 
+def _format_result_text(result: Any) -> str:
+    """Format tool result as text for MCP content compatibility."""
+    if isinstance(result, str):
+        return result
+    if isinstance(result, dict | list):
+        return json.dumps(result, default=str)
+    return str(result)
+
+
+def _build_structured_content(result: Any, result_text: str) -> dict[str, Any]:
+    """Build structured content for ToolResult payload."""
+    payload = StructuredToolContent(result_text=result_text)
+    if isinstance(result, dict):
+        payload.result_json = result
+    elif isinstance(result, list):
+        payload.result_json = result
+    return payload.model_dump(exclude_none=True)
+
+
+def _build_output_schema() -> dict[str, Any]:
+    """Return output schema used when structured tool output is enabled."""
+    return StructuredToolContent.model_json_schema()
+
+
+def _build_atif_meta(function_name: str, intermediate_step_dicts: list[dict[str, Any]]) -> AtifToolMeta | None:
+    """Convert intermediate steps to inline ATIF metadata."""
+    if not intermediate_step_dicts:
+        return None
+
+    from nat.data_models.intermediate_step import IntermediateStep  # type: ignore[reportMissingImports]
+    from nat.utils.atif_converter import IntermediateStepToATIFConverter  # type: ignore[reportMissingImports]
+
+    validated_steps: list[IntermediateStep] = []
+    for raw_step in intermediate_step_dicts:
+        try:
+            validated_steps.append(IntermediateStep.model_validate(raw_step))
+        except Exception:  # pragma: no cover - defensive for malformed stream events
+            logger.exception("Skipping invalid intermediate step while building ATIF metadata")
+
+    if not validated_steps:
+        return None
+
+    converter = IntermediateStepToATIFConverter()
+    trajectory = converter.convert(validated_steps, agent_name=function_name)
+
+    return AtifToolMeta(run_id=uuid4().hex,
+                        schema_version=trajectory.schema_version,
+                        trajectory=trajectory)
+
+
 def create_function_wrapper(
     function_name: str,
     session_manager: "SessionManager",
     input_schema: Any,
+    output_options: FastMCPToolOutputOptions | None = None,
 ):
     """Create a wrapper function for MCP that invokes the workflow via `SessionManager`.
 
@@ -119,7 +182,9 @@ def create_function_wrapper(
         function_name: The name of the function to register.
         session_manager: The session manager for the workflow.
         input_schema: Input schema for the workflow/function.
+        output_options: Optional tool output behavior flags.
     """
+    output_options = output_options or FastMCPToolOutputOptions()
     signature = _build_signature_from_schema(input_schema)
 
     async def wrapper_func(**kwargs: Any) -> Any:
@@ -133,14 +198,30 @@ def create_function_wrapper(
             payload = input_schema.model_validate(cleaned_kwargs) if hasattr(input_schema,
                                                                              "model_validate") else cleaned_kwargs
 
+        intermediate_task: asyncio.Task | None = None
+        if output_options.include_atif_meta:
+            from nat.builder.runtime_event_subscriber import pull_intermediate  # type: ignore[reportMissingImports]
+            intermediate_task = asyncio.ensure_future(pull_intermediate())
+
         async with session_manager.run(payload) as runner:
             result = await runner.result()
 
-        if isinstance(result, str):
-            return result
-        if isinstance(result, dict | list):
-            return json.dumps(result, default=str)
-        return str(result)
+        result_text = _format_result_text(result)
+        use_tool_result = output_options.structured_tool_output or output_options.include_atif_meta
+        if not use_tool_result:
+            return result_text
+
+        structured_content = _build_structured_content(result, result_text) if output_options.structured_tool_output else None
+        meta: dict[str, Any] | None = None
+        if output_options.include_atif_meta:
+            intermediate_step_dicts: list[dict[str, Any]] = []
+            if intermediate_task is not None:
+                intermediate_step_dicts = await intermediate_task
+            atif_meta = _build_atif_meta(function_name, intermediate_step_dicts)
+            if atif_meta is not None:
+                meta = ToolRuntimeMeta(atif=atif_meta).model_dump(exclude_none=True)
+
+        return ToolResult(content=result_text, structured_content=structured_content, meta=meta)
 
     wrapper_func.__signature__ = signature  # type: ignore[attr-defined]
     wrapper_func.__annotations__ = _build_annotations_from_schema(input_schema)
@@ -178,7 +259,8 @@ def get_function_description(function: FunctionBase | None) -> str | None:
 def register_function_with_mcp(mcp: FastMCP,
                                function_name: str,
                                session_manager: 'SessionManager',
-                               function: FunctionBase | None = None) -> None:
+                               function: FunctionBase | None = None,
+                               output_options: FastMCPToolOutputOptions | None = None) -> None:
     """Register a NeMo Agent Toolkit function as a FastMCP tool.
 
     Each function is wrapped in a `SessionManager` so that all calls go through
@@ -206,8 +288,11 @@ def register_function_with_mcp(mcp: FastMCP,
     function_description = get_function_description(target_function)
 
     # Create and register the wrapper function with FastMCP
-    wrapper_func = create_function_wrapper(function_name, session_manager, input_schema)
-    mcp.tool(name=function_name, description=function_description)(wrapper_func)
+    wrapper_func = create_function_wrapper(function_name, session_manager, input_schema, output_options=output_options)
+    if output_options and output_options.structured_tool_output:
+        mcp.tool(name=function_name, description=function_description, output_schema=_build_output_schema())(wrapper_func)
+    else:
+        mcp.tool(name=function_name, description=function_description)(wrapper_func)
 
 
 def format_schema_for_display(schema: Any) -> str:
