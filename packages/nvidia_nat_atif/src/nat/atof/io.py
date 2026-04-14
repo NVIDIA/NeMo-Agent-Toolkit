@@ -9,14 +9,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from pydantic import TypeAdapter
 
 from nat.atof.events import Event
-
-if TYPE_CHECKING:
-    pass
 
 _event_adapter = TypeAdapter(Event)
 
