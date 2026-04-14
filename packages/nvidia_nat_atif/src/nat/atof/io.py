@@ -25,7 +25,10 @@ def read_jsonl(path: str | Path) -> list[Event]:
     """Read an ATOF JSON-Lines file and return a list of typed Event objects.
 
     Each line is parsed as a JSON object and validated against the Event
-    discriminated union. Blank lines are skipped.
+    discriminated union. Blank lines are skipped. Events are returned sorted
+    by ``.ts_micros`` (the normalized int-microsecond timestamp, spec §5.1)
+    so downstream consumers get a stable ordering across mixed str/int
+    timestamp streams.
     """
     path = Path(path)
     events: list[Event] = []
@@ -35,6 +38,7 @@ def read_jsonl(path: str | Path) -> list[Event]:
             continue
         raw = json.loads(line)
         events.append(_event_adapter.validate_python(raw))
+    events.sort(key=lambda e: e.ts_micros)
     return events
 
 
