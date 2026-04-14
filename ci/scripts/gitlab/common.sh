@@ -18,8 +18,6 @@ SCRIPT_DIR=$( dirname ${GITLAB_SCRIPT_DIR} )
 
 source ${SCRIPT_DIR}/common.sh
 
-install_rapids_gha_tools
-
 export NAT_AVOID_GH_CLI=1 # gh cli not working with gitlab, todo look into seeing if this can be fixed
 
 function get_git_tag() {
@@ -30,7 +28,7 @@ function get_git_tag() {
 
     if [[ "${CI_CRON_NIGHTLY}" == "1" ]]; then
         if [[ ${GIT_TAG} == "no-tag" ]]; then
-            rapids-logger "Error: No tag found. Exiting."
+            echo "Error: No tag found. Exiting."
             exit 1;
         fi
 
@@ -66,9 +64,9 @@ function is_current_commit_release_tagged() {
 }
 
 function install_slack_sdk() {
-    rapids-logger "Installing slack-sdk"
+    echo "Installing slack-sdk"
     uv pip install "slack-sdk~=3.36"
 }
 
-rapids-logger "Environment Variables"
+echo "Environment Variables"
 printenv | sort
