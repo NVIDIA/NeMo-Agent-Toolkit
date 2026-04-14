@@ -335,13 +335,13 @@ Each entry in `schemas[schema_id]` is a complete JSON Schema document (Draft 202
 
 ## 6. Reference Profile Implementations
 
-ATOF v0.2 defines exactly two reference profile implementations, one for LLM scopes and one for tool scopes. These schemas preserve the single profile field each carried in v0.1 (`model_name` and `tool_call_id`) as the minimum useful payload. Vendors publishing richer LLM or tool profiles (e.g., `openai/llm.v1` with provider/usage/finish-reason fields) SHOULD use these as structural starting points.
+ATOF v0.2 defines exactly two reference profile implementations, one for LLM scopes and one for tool scopes. Each carries a single optional field (`model_name` and `tool_call_id` respectively) as the minimum useful payload. Vendors publishing richer LLM or tool profiles (e.g., `openai/llm.v1` with provider/usage/finish-reason fields) SHOULD use these as structural starting points.
 
 Both reference profiles set `additionalProperties: true` — vendors MAY extend without subclassing or without republishing a new schema ID, and non-validating consumers preserve unknown fields verbatim.
 
 ### 6.1 default/llm.v1
 
-**Purpose.** The canonical reference profile for scopes carrying `scope_type: "llm"`. Preserves the v0.1 `LLMProfile.model_name` field as the sole optional vendor field. Vendors publishing richer LLM profiles (e.g., `openai/llm.v1`, `anthropic/messages.v1`) SHOULD use this as a structural reference.
+**Purpose.** The canonical reference profile for scopes carrying `scope_type: "llm"`. Carries `model_name` as the sole optional vendor field — the minimum useful payload for LLM scopes. Vendors publishing richer LLM profiles (e.g., `openai/llm.v1`, `anthropic/messages.v1`) SHOULD use this as a structural reference.
 
 **Python reference:** `nat.atof.profiles.DefaultLlmV1` — the Pydantic model in the NeMo Agent Toolkit reference implementation mirrors this schema body as a `JSON_SCHEMA: ClassVar[dict]` class attribute.
 
@@ -362,7 +362,7 @@ Both reference profiles set `additionalProperties: true` — vendors MAY extend 
 
 ### 6.2 default/tool.v1
 
-**Purpose.** The canonical reference profile for scopes carrying `scope_type: "tool"`. Preserves the v0.1 `ToolProfile.tool_call_id` field as the sole optional vendor field. Vendors publishing richer tool profiles SHOULD use this as a structural reference.
+**Purpose.** The canonical reference profile for scopes carrying `scope_type: "tool"`. Carries `tool_call_id` as the sole optional vendor field — a correlation ID from an LLM tool-call response, the minimum useful payload for tool scopes invoked via an LLM tool-use flow. Vendors publishing richer tool profiles SHOULD use this as a structural reference.
 
 **Python reference:** `nat.atof.profiles.DefaultToolV1` — the Pydantic model in the NeMo Agent Toolkit reference implementation mirrors this schema body as a `JSON_SCHEMA: ClassVar[dict]` class attribute.
 
@@ -385,16 +385,16 @@ Both reference profiles set `additionalProperties: true` — vendors MAY extend 
 
 ---
 
-## 5. Event Stream Semantics
+## 7. Event Stream Semantics
 
-### 5.1 Timestamp Format and Ordering
+### 7.1 Timestamp Format and Ordering
 
-**Accepted forms.** Every event's `timestamp` (Section 2) carries one of two interchangeable forms:
+**Accepted forms.** Every event's `timestamp` (§2) carries one of two interchangeable forms:
 
 - **RFC 3339 string** (e.g., `"2026-01-01T00:00:00.123456Z"`) — human-readable, interoperable with general-purpose date-handling libraries, default choice for debug and log-tailing contexts. MUST end with `Z` or an explicit UTC offset.
 - **Integer epoch microseconds UTC** (e.g., `1767225600123456`) — fast to parse (~15× faster than RFC 3339 in most runtimes), ~50% smaller on the wire, safe in JSON numbers through year 2255 (fits in IEEE 754 double integer precision). Chosen for high-throughput streams and columnar-storage pipelines.
 
-Emitters choose per event. A single stream MAY contain events in both forms (mixed-format streams are legal for the same reasons mixed-version streams are legal — see §5.7).
+Emitters choose per event. A single stream MAY contain events in both forms (mixed-format streams are legal for the same reasons mixed-version streams are legal — see §7.7).
 
 **Why microseconds and not nanoseconds.** JSON numbers are IEEE 754 doubles with 53 bits of integer precision (~9 × 10¹⁵). Nanoseconds since epoch for 2026 is ~1.76 × 10¹⁸ — exceeding safe integer range and causing silent precision loss in most parsers. Microseconds fits safely and remains precise enough for agent-scope event correlation. If nanosecond precision is required for a specific use case, emitters SHOULD use the RFC 3339 string form with a nanosecond fractional second.
 
@@ -402,23 +402,23 @@ Emitters choose per event. A single stream MAY contain events in both forms (mix
 
 **ATIF compatibility.** ATIF (see `[atof-to-atif-converter.md](./atof-to-atif-converter.md)`) requires timestamps as ISO 8601 strings on its optional `step.timestamp` field. The ATOF → ATIF converter serializes either ATOF form to an ISO 8601 string before emitting ATIF. No emitter-side action is required for ATIF compatibility regardless of which ATOF timestamp form is chosen.
 
-### 5.2 Scope Nesting and parent_uuid
+### 7.2 Scope Nesting and parent_uuid
 
 The runtime maintains a scope stack per async task. The `parent_uuid` of any event is the UUID of the scope that was on top of the stack when the handle was created. Following `parent_uuid` links upward reconstructs the full call graph.
 
-The root scope has `parent_uuid = null`. This is the only event in a well-formed stream that may have a null `parent_uuid` (once the root scope is established).
+The root scope has `parent_uuid = null`. This is the only event in a well-formed stream that may have a null `parent_uuid` (once the root scope is established). `StreamHeaderEvent`s (§5) typically carry `parent_uuid = null` — they are not part of any scope's lifecycle.
 
-### 5.3 Start/End Pairing
+### 7.3 Start/End Pairing
 
 Every `ScopeStart` event is paired with exactly one `ScopeEnd` event sharing the same `uuid`. `ScopeEnd` events always arrive after their matching `ScopeStart` in wall-clock order. All child events (events whose `parent_uuid` equals this scope's `uuid`) will have been emitted before the parent's `ScopeEnd` fires.
 
-`Mark` events have no paired event — they are single-shot.
+`Mark` events and `StreamHeaderEvent`s have no paired event — they are single-shot.
 
-### 5.4 UUID Uniqueness
+### 7.4 UUID Uniqueness
 
 Each handle receives a unique UUID at creation time. The `uuid` is stable across the Start and End events for the same handle, enabling correlation. In the Rust reference implementation, UUIDs are v7 (time-ordered).
 
-### 5.5 ID Relationships
+### 7.5 ID Relationships
 
 Three distinct identifier namespaces appear in an ATOF stream:
 
@@ -451,30 +451,30 @@ profile.tool_call_id     → "Which LLM request?" (LLM↔tool correlation)
 codec response.id        → "Which API call?"    (provider tracking, see codec profiles)
 ```
 
-### 5.6 Terminal Status and Cancellation Propagation
+### 7.6 Terminal Status and Cancellation Propagation
 
-Every `ScopeEnd` carries a terminal `status` (Section 3.2). The following rules govern how terminal status relates across the scope graph.
+Every `ScopeEnd` carries a terminal `status` (§3.2). The following rules govern how terminal status relates across the scope graph.
 
 **Each scope reports its own terminal status.** The `status` on a `ScopeEnd` describes the outcome of *that* scope, not its children or its parent. A parent whose child errored MAY itself report `status == "ok"` if the parent caught and handled the child's error; conversely, a parent MAY report `status == "error"` even if all its children completed cleanly.
 
-**Cascading cancellation.** When a parent cancels its children (e.g., due to parent timeout or parent error recovery), each child emits its own `ScopeEnd` with `status == "cancelled"` before the parent emits its `ScopeEnd`. Section 5.3 still holds: all child events precede the parent's `ScopeEnd` in wall-clock order. The parent's own `status` reflects the parent's outcome:
+**Cascading cancellation.** When a parent cancels its children (e.g., due to parent timeout or parent error recovery), each child emits its own `ScopeEnd` with `status == "cancelled"` before the parent emits its `ScopeEnd`. §7.3 still holds: all child events precede the parent's `ScopeEnd` in wall-clock order. The parent's own `status` reflects the parent's outcome:
 
 - `"cancelled"` if the parent was itself cancelled from above.
 - `"error"` if the parent raised (possibly because a child's failure propagated).
 - `"ok"` if the parent chose to cancel its children as normal control flow and then completed.
 
-**Dangling scopes.** If the runtime dies before emitting a paired `ScopeEnd`, no event appears in the stream. Section 5.3's pairing guarantee is contingent on orderly shutdown. Consumers that detect an unpaired `ScopeStart` after the stream ends MAY synthesize a `ScopeEnd` with `status == "cancelled"` for downstream processing; such synthetic events are out of scope for ATOF Core.
+**Dangling scopes.** If the runtime dies before emitting a paired `ScopeEnd`, no event appears in the stream. §7.3's pairing guarantee is contingent on orderly shutdown. Consumers that detect an unpaired `ScopeStart` after the stream ends MAY synthesize a `ScopeEnd` with `status == "cancelled"` for downstream processing; such synthetic events are out of scope for ATOF Core.
 
-**Start/End pairing unchanged.** Section 5.3's invariants still hold: every `ScopeStart` has exactly one matching `ScopeEnd` sharing the same `uuid`, and all child events of a scope precede the parent's `ScopeEnd`. `status` is a property of the End event, not a modifier of the pairing rule.
+**Start/End pairing unchanged.** §7.3's invariants still hold: every `ScopeStart` has exactly one matching `ScopeEnd` sharing the same `uuid`, and all child events of a scope precede the parent's `ScopeEnd`. `status` is a property of the End event, not a modifier of the pairing rule.
 
-### 5.7 Schema Version and Negotiation
+### 7.7 Schema Version and Negotiation
 
-Every ATOF event carries a required `schema_version` field (Section 2) formatted as `"MAJOR.MINOR"` — e.g., `"0.1"`. This section defines when producers bump the version, how consumers dispatch on it, and what guarantees exist across mixed-version streams.
+Every ATOF event carries a required `schema_version` field (§2) formatted as `"MAJOR.MINOR"` — e.g., `"0.2"`. This section defines when producers bump the version, how consumers dispatch on it, and what guarantees exist across mixed-version streams. `schema_version` is the ATOF *protocol* version — profile-schema versions live separately in `profile.$version` (§4.1).
 
 **Version bump policy.**
 
-- **Minor bump** (e.g., `0.1` → `0.2`) for additive, backward-compatible changes. Examples: adding a new optional field, adding a new flag name to an open vocabulary, adding a new enum value to an extensible enum, defining fields for a previously-empty scope profile, adding a new scope type.
-- **Major bump** (e.g., `0.1` → `1.0`) for breaking changes. Examples: removing a field, renaming a field, changing a field's type, changing a required field's nullability, redefining the semantics of an existing field or enum value, making a previously optional field required.
+- **Minor bump** (e.g., `0.2` → `0.3`) for additive, backward-compatible changes. Examples: adding a new optional field, adding a new flag name to an open vocabulary, adding a new enum value to an extensible enum, adding a new scope type convention.
+- **Major bump** (e.g., `0.x` → `1.0`) for breaking changes. Examples: removing a field, renaming a field, changing a field's type, changing a required field's nullability, redefining the semantics of an existing field or enum value, making a previously optional field required.
 
 Pre-release versions (`0.x`) are not subject to these rules — the spec may introduce breaking changes within the `0.x` series without a major bump. Major bump discipline begins with the first `1.0` release.
 
@@ -491,13 +491,15 @@ Implementations MAY choose stricter or more lenient behavior (e.g., strict equal
 
 **Mixed-version streams.** A single stream MAY contain events with differing `schema_version` values. This supports log concatenation, multi-emitter aggregation, and ETL pipelines that join streams from different emitter versions. Consumers that require a uniform stream version MUST enforce that invariant themselves (e.g., by checking the first event and rejecting subsequent divergent events); the core spec imposes no uniformity requirement.
 
-**Unknown-field preservation.** Pass-through tools (filters, pretty-printers, samplers, exporters that round-trip) MUST preserve any unknown fields encountered in an event when re-emitting it, regardless of `schema_version`. This preserves forward-compatibility for tools that sit between emitters and consumers with differing version expectations, and generalizes the existing preservation rules for unknown flag names (§4) and `"custom"` scope profiles (§4.7).
+**Unknown-field preservation.** Pass-through tools (filters, pretty-printers, samplers, exporters that round-trip) MUST preserve any unknown fields encountered in an event when re-emitting it, regardless of `schema_version`. This preserves forward-compatibility for tools that sit between emitters and consumers with differing version expectations, and generalizes the existing preservation rules for unknown flag names (§2.1) and unknown vendor-defined profile fields (§4.6).
 
 ---
 
-## 6. What ATOF Is Not
+## 8. What ATOF Is Not
 
 ATOF events are raw observations. They are not ATIF steps. See `[atof-to-atif-converter.md](./atof-to-atif-converter.md)` for the NeMo Agent Toolkit normative mapping from an ATOF stream to an ATIF trajectory.
+
+ATOF is also not a scope-type catalog. Earlier iterations of this spec enumerated typed profile shapes keyed on `scope_type`; v0.2 has replaced that model with the Profile Contract Protocol (§4). The scope-specific profile shape is now governed by JSON Schemas published out-of-band; the spec defines only the contract protocol and two reference profile implementations (§6).
 
 Key structural differences from ATIF:
 
@@ -512,46 +514,95 @@ Key structural differences from ATIF:
 | Computed fields   | None                                                            | `step_id` assigned sequentially; `final_metrics` computed from step metrics |
 
 
-**ATOF does not have:** `step_id`, `source` field, merged observations, `tool_ancestry` per step, `schema_version` (see §9), sequential guarantees beyond timestamp ordering.
+**ATOF does not have:** `step_id`, `source` field, merged observations, `tool_ancestry` per step, sequential guarantees beyond timestamp ordering.
 
 ---
 
-## 7. EXMP-01: Simple Tool Call
+## 9. Examples
 
-A minimal 6-event stream illustrating one complete tool call cycle. Each line is one JSON object.
+The three examples below demonstrate the three profile-contract modes (§5.3) against the same structural workflows used in earlier ATOF iterations: a single tool call (EXMP-01), a nested tool chain (EXMP-02), and a branching search-and-summarize (EXMP-03). Each example is a JSON Lines event stream with a `StreamHeaderEvent` as the first event. Every profile carries `$schema`, `$version`, and (where demonstrated) `$mode`.
 
-```jsonl
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"input":null,"data":null,"metadata":null}
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:01Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"What is 3 + 4?"}],"model":"nvidia/nemotron-3-super-v3","tools":[{"type":"function","function":{"name":"calculator__add","description":"Add two numbers","parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}}}]},"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:02Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},"status":"ok","error":null,"data":null,"metadata":null}
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:03Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_calc_001"},"input":{"a":3,"b":4},"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_calc_001"},"output":7,"status":"ok","error":null,"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:05Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"output":null,"status":"ok","error":null,"data":null,"metadata":null}
-```
+### 9.1 EXMP-01: header-mode (simple tool call)
 
-**Note on event ordering:** The LLM `ScopeEnd` arrives at `t=02` before the tool `ScopeStart` at `t=03`. This is the correct order: the LLM decides to call the tool (emitting `ScopeEnd` with `tool_calls` in `output`), then the runtime dispatches the tool call. The exporter sorts by timestamp, so the ordering `LLM-ScopeEnd → Tool-ScopeStart → Tool-ScopeEnd` is required for correct correlation.
-
-## 7.1 EXMP-02: Tool Error with Parent Recovery
-
-A 4-event stream illustrating a tool that raises an exception, while the parent agent handles the error and completes normally. Demonstrates `status: "error"` on the failed scope and `status: "ok"` on the parent that recovered.
+A 9-event stream — one `StreamHeaderEvent` plus the 8 scope events that constitute a single calculator turn. The header declares both `default/llm.v1` and `default/tool.v1` schemas; all subsequent profile events reference them by string `$schema` ID.
 
 ```jsonl
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"resilient_fetch_agent","scope_type":"agent","flags":[],"profile":null,"input":"Fetch https://example.invalid/data","data":null,"metadata":null}
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"tool-002","parent_uuid":"scope-agent-002","timestamp":"2026-01-01T00:00:01Z","name":"http_get","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_fetch_001"},"input":{"url":"https://example.invalid/data","timeout_s":5},"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"tool-002","parent_uuid":"scope-agent-002","timestamp":"2026-01-01T00:00:06Z","name":"http_get","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_fetch_001"},"output":null,"status":"error","error":{"type":"TimeoutError","message":"Request to https://example.invalid/data exceeded 5s timeout","stack":"Traceback (most recent call last):\n  File \"tools/http.py\", line 42, in http_get\n    resp = await client.get(url, timeout=timeout_s)\nTimeoutError: ..."},"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-01T00:00:07Z","name":"resilient_fetch_agent","scope_type":"agent","flags":[],"profile":null,"output":"Unable to fetch the requested URL; the endpoint timed out.","status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"StreamHeaderEvent","schema_version":"0.2","uuid":"hdr-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"exmp01_header","profile_mode_default":"header","schemas":{"default/llm.v1":{"$id":"default/llm.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"model_name":{"type":["string","null"]}},"required":[],"additionalProperties":true},"default/tool.v1":{"$id":"default/tool.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"tool_call_id":{"type":["string","null"]}},"required":[],"additionalProperties":true}},"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:01Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"input":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:02Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":"default/llm.v1","$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"What is 3 + 4?"}],"model":"nvidia/nemotron-3-super-v3","tools":[{"type":"function","function":{"name":"calculator__add","description":"Add two numbers","parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}}}]},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:03Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":"default/llm.v1","$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"$schema":"default/tool.v1","$version":"1.0","tool_call_id":"call_calc_001"},"input":{"a":3,"b":4},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:05Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"$schema":"default/tool.v1","$version":"1.0","tool_call_id":"call_calc_001"},"output":7,"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"llm-002","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:06Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":"default/llm.v1","$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"What is 3 + 4?"},{"role":"assistant","content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},{"role":"tool","tool_call_id":"call_calc_001","content":"7"}],"model":"nvidia/nemotron-3-super-v3"},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"llm-002","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:07Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":"default/llm.v1","$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":"3 + 4 equals 7."},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:08Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"output":"3 + 4 equals 7.","status":"ok","error":null,"data":null,"metadata":null}
 ```
 
-**Note on status propagation:** The tool scope reports `status: "error"` with a populated `error` object carrying the exception type, message, and a stack trace. The parent agent scope caught the tool error, synthesized a user-facing response, and reports `status: "ok"` with its own `output`. Each scope reports its own terminal status (Section 5.6) — error does not auto-propagate up the scope graph.
+**Header-mode semantics.** The `StreamHeaderEvent` publishes the two reference-profile schemas, and `profile_mode_default: "header"` signals that subsequent profiles reference those schemas by string ID. Every LLM and tool profile in the stream carries `"$schema": "default/llm.v1"` or `"$schema": "default/tool.v1"` plus `"$version": "1.0"` and the vendor field (`model_name` or `tool_call_id`). Consumers that validate resolve the string ID via the registry.
+
+### 9.2 EXMP-02: inline-mode (nested weather chain)
+
+A 13-event stream — one `StreamHeaderEvent` plus the 12 scope events that constitute a nested weather-lookup chain (one parent `"agent"` scope, two inner `"llm"` scopes bracketing a chain of two `"tool"` scopes, and a final `"llm"` summary). The header sets `profile_mode_default: "inline"` with an empty `schemas` registry; every profile carries its own inline JSON Schema dict.
+
+```jsonl
+{"kind":"StreamHeaderEvent","schema_version":"0.2","uuid":"hdr-002","parent_uuid":null,"timestamp":"2026-01-02T00:00:00Z","name":"exmp02_header","profile_mode_default":"inline","schemas":{},"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-02T00:00:01Z","name":"weather_chain_agent","scope_type":"agent","flags":[],"profile":null,"input":"What is the weather in Paris compared to Tokyo?","data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"llm-011","parent_uuid":"scope-agent-002","timestamp":"2026-01-02T00:00:02Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":{"$id":"default/llm.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"model_name":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"Paris vs Tokyo weather?"}]},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"llm-011","parent_uuid":"scope-agent-002","timestamp":"2026-01-02T00:00:03Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":{"$id":"default/llm.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"model_name":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":null,"tool_calls":[{"id":"call_weather_paris","type":"function","function":{"name":"get_weather","arguments":"{\"city\": \"Paris\"}"}},{"id":"call_weather_tokyo","type":"function","function":{"name":"get_weather","arguments":"{\"city\": \"Tokyo\"}"}}]},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"tool-011","parent_uuid":"scope-agent-002","timestamp":"2026-01-02T00:00:04Z","name":"get_weather","scope_type":"tool","flags":[],"profile":{"$schema":{"$id":"default/tool.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"tool_call_id":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","tool_call_id":"call_weather_paris"},"input":{"city":"Paris"},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"tool-011","parent_uuid":"scope-agent-002","timestamp":"2026-01-02T00:00:05Z","name":"get_weather","scope_type":"tool","flags":[],"profile":{"$schema":{"$id":"default/tool.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"tool_call_id":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","tool_call_id":"call_weather_paris"},"output":{"temp_c":14,"condition":"overcast"},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"tool-012","parent_uuid":"scope-agent-002","timestamp":"2026-01-02T00:00:06Z","name":"get_weather","scope_type":"tool","flags":[],"profile":{"$schema":{"$id":"default/tool.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"tool_call_id":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","tool_call_id":"call_weather_tokyo"},"input":{"city":"Tokyo"},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"tool-012","parent_uuid":"scope-agent-002","timestamp":"2026-01-02T00:00:07Z","name":"get_weather","scope_type":"tool","flags":[],"profile":{"$schema":{"$id":"default/tool.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"tool_call_id":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","tool_call_id":"call_weather_tokyo"},"output":{"temp_c":7,"condition":"clear"},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"llm-012","parent_uuid":"scope-agent-002","timestamp":"2026-01-02T00:00:08Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":{"$id":"default/llm.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"model_name":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"tool","tool_call_id":"call_weather_paris","content":"{\"temp_c\": 14, \"condition\": \"overcast\"}"},{"role":"tool","tool_call_id":"call_weather_tokyo","content":"{\"temp_c\": 7, \"condition\": \"clear\"}"}]},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"llm-012","parent_uuid":"scope-agent-002","timestamp":"2026-01-02T00:00:09Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":{"$id":"default/llm.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"model_name":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":"Paris is 14°C and overcast; Tokyo is 7°C and clear."},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-02T00:00:10Z","name":"weather_chain_agent","scope_type":"agent","flags":[],"profile":null,"output":"Paris is 14°C and overcast; Tokyo is 7°C and clear.","status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"Mark","schema_version":"0.2","uuid":"mark-011","parent_uuid":null,"timestamp":"2026-01-02T00:00:11Z","name":"chain_complete","data":{"notes":"weather comparison delivered"},"metadata":null}
+```
+
+**Inline-mode semantics.** The `StreamHeaderEvent` declares `profile_mode_default: "inline"` and an empty schema registry. Every profile event carries the full JSON Schema body inline as `$schema`. A consumer can validate any single profile in isolation without joining against a header registry. The 13th event is a `Mark` that records workflow completion. (Chain event counts: 1 header + 1 agent Start + 2 LLM calls × 2 events + 2 tool calls × 2 events + 1 agent End + 1 Mark = 13 events.)
+
+### 9.3 EXMP-03: mixed-mode (branching search and summarize)
+
+A 15-event stream — one `StreamHeaderEvent` plus the 14 scope events of a branching search workflow: the parent agent dispatches two parallel sub-searches, each with its own LLM and tool call, then a final summary LLM. `profile_mode_default: "header"` with the two default schemas, but the final summary LLM carries a per-event `"$mode": "inline"` override with an inline `$schema` dict, demonstrating the override path.
+
+```jsonl
+{"kind":"StreamHeaderEvent","schema_version":"0.2","uuid":"hdr-003","parent_uuid":null,"timestamp":"2026-01-03T00:00:00Z","name":"exmp03_header","profile_mode_default":"header","schemas":{"default/llm.v1":{"$id":"default/llm.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"model_name":{"type":["string","null"]}},"required":[],"additionalProperties":true},"default/tool.v1":{"$id":"default/tool.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"tool_call_id":{"type":["string","null"]}},"required":[],"additionalProperties":true}},"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"scope-agent-003","parent_uuid":null,"timestamp":"2026-01-03T00:00:01Z","name":"branching_search_agent","scope_type":"agent","flags":[],"profile":null,"input":"Summarize news about quantum computing and fusion energy.","data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"llm-021","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:02Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":["parallel"],"profile":{"$schema":"default/llm.v1","$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"Search quantum computing news."}]},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"llm-021","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:03Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":["parallel"],"profile":{"$schema":"default/llm.v1","$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":null,"tool_calls":[{"id":"call_search_qc","type":"function","function":{"name":"web_search","arguments":"{\"q\": \"quantum computing 2026\"}"}}]},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"tool-021","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:04Z","name":"web_search","scope_type":"tool","flags":["parallel"],"profile":{"$schema":"default/tool.v1","$version":"1.0","tool_call_id":"call_search_qc"},"input":{"q":"quantum computing 2026"},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"tool-021","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:05Z","name":"web_search","scope_type":"tool","flags":["parallel"],"profile":{"$schema":"default/tool.v1","$version":"1.0","tool_call_id":"call_search_qc"},"output":{"hits":[{"title":"Error-corrected logical qubit breakthrough"}]},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"llm-022","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:06Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":["parallel"],"profile":{"$schema":"default/llm.v1","$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"Search fusion energy news."}]},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"llm-022","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:07Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":["parallel"],"profile":{"$schema":"default/llm.v1","$version":"1.0","model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":null,"tool_calls":[{"id":"call_search_fe","type":"function","function":{"name":"web_search","arguments":"{\"q\": \"fusion energy 2026\"}"}}]},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"tool-022","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:08Z","name":"web_search","scope_type":"tool","flags":["parallel"],"profile":{"$schema":"default/tool.v1","$version":"1.0","tool_call_id":"call_search_fe"},"input":{"q":"fusion energy 2026"},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"tool-022","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:09Z","name":"web_search","scope_type":"tool","flags":["parallel"],"profile":{"$schema":"default/tool.v1","$version":"1.0","tool_call_id":"call_search_fe"},"output":{"hits":[{"title":"Net-energy-positive plasma run reported"}]},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.2","uuid":"llm-023","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:10Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":{"$id":"default/llm.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"model_name":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","$mode":"inline","model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"Summarize the two searches."}]},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"llm-023","parent_uuid":"scope-agent-003","timestamp":"2026-01-03T00:00:11Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"$schema":{"$id":"default/llm.v1","$schema":"https://json-schema.org/draft/2020-12/schema","type":"object","properties":{"model_name":{"type":["string","null"]}},"required":[],"additionalProperties":true},"$version":"1.0","$mode":"inline","model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":"Two notable breakthroughs: error-corrected logical qubits in quantum computing, and net-positive plasma runs in fusion energy."},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.2","uuid":"scope-agent-003","parent_uuid":null,"timestamp":"2026-01-03T00:00:12Z","name":"branching_search_agent","scope_type":"agent","flags":[],"profile":null,"output":"Two notable breakthroughs: error-corrected logical qubits in quantum computing, and net-positive plasma runs in fusion energy.","status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"Mark","schema_version":"0.2","uuid":"mark-021","parent_uuid":null,"timestamp":"2026-01-03T00:00:13Z","name":"search_branches_joined","data":{"branches":2},"metadata":null}
+{"kind":"Mark","schema_version":"0.2","uuid":"mark-022","parent_uuid":null,"timestamp":"2026-01-03T00:00:14Z","name":"summary_complete","data":null,"metadata":null}
+```
+
+**Mixed-mode semantics.** The first twelve scope events use header-mode references (`"$schema": "default/llm.v1"` / `"$schema": "default/tool.v1"` as string IDs resolved against the header registry). The summary LLM (`llm-023`) overrides with `"$mode": "inline"` and carries the full JSON Schema dict inline — this is the per-event override (§4.4). Consumers that validate use the inline schema for this one event and the registered schema for all others. (Event counts: 1 header + 1 agent Start + 3 LLMs × 2 + 2 tools × 2 + 1 agent End + 2 Marks = 15 events.)
+
+**Note on event ordering across all examples.** LLM `ScopeEnd` events arrive before the tool `ScopeStart` they triggered — the LLM decides to call a tool (emitting `ScopeEnd` with `tool_calls` in `output`), then the runtime dispatches the tool. Consumers sort by `timestamp` (§7.1) so the canonical order is `LLM-End → Tool-Start → Tool-End → next-LLM-Start` and correlation uses `profile.tool_call_id`.
 
 ---
 
-## 8. Design Rationale
+## 10. Design Rationale
 
-This section records design decisions made during the spec's pre-release development. References to "earlier iterations" describe shapes explored before landing on the current design; the spec is pre-release at version 0.1 and has not yet committed to a stable format.
+This section records design decisions made during the spec's pre-release development. References to "earlier iterations" describe shapes explored before landing on the current design; the spec is pre-release and has not yet committed to a stable format.
+
+**Why contract over enumeration (v0.2 reshape).**
+Earlier iterations of this spec enumerated typed profiles keyed on `scope_type` — one `LLMProfile`, one `ToolProfile`, and so on. That model had three structural problems: it made `scope_type` a closed vocabulary (vendors could not publish a new scope shape without a spec amendment), it bound the spec text to a specific field set (changes to `model_name`/`tool_call_id` shape required a spec revision), and it made cross-vendor profile extensions either structurally inexpressible or routed through a loose `"custom"` fallback that offered no validation guarantees.
+
+The contract-protocol approach flips these tradeoffs: the spec defines the *protocol* (`$schema` / `$version` / `$mode` meta-fields, producer- and consumer-side validation rules, cross-event invariance) and leaves vendor field shape to JSON Schemas published out-of-band. Vendors extend the ecosystem by publishing a new schema ID; `scope_type` becomes an open string for routing and labeling only. The two reference profiles (`default/llm.v1`, `default/tool.v1`) preserve continuity with earlier versions, but the *mechanism* for growth has shifted from spec amendment to schema publication.
+
+**Why a 4th event kind (StreamHeaderEvent) rather than an out-of-band schema registry.**
+Schemas could be published in a companion file, a package metadata field, or a runtime configuration. All three require the consumer to join a stream against out-of-band state — a fragile coupling when streams are concatenated, resumed, or replayed. A `StreamHeaderEvent` embedded in the stream makes the stream self-describing: a consumer reading from byte zero has everything it needs to validate the profiles it encounters. The placement rules (§5.2) — headers MAY appear anywhere before the first non-opaque profile event, multiple allowed, last-wins merge — accept the common cases of late header registration (e.g., a schema discovered mid-run) and stream concatenation (two streams with different headers merge cleanly) without adding a separate lifecycle event for header rotation.
 
 **Why collapse `LLMStart`/`LLMEnd`/`ToolStart`/`ToolEnd` into `ScopeStart`/`ScopeEnd`?**
-An earlier iteration gave each scope subject its own event kind, duplicating ~80% of the envelope fields across four types and requiring a new event kind for every new scope subject (retriever, guardrail, evaluator, …). The current design uses `scope_type` as the sole discriminator and delegates subject-specific shape to `profile` sub-schemas (Section 4). New scope types extend the format via a new profile entry, not a new event kind. This mirrors OpenTelemetry's single-span-shape-with-kind approach.
+An earlier iteration gave each scope subject its own event kind, duplicating ~80% of the envelope fields across four types and requiring a new event kind for every new scope subject (retriever, guardrail, evaluator, …). The current design uses `scope_type` as the sole routing discriminator and delegates subject-specific shape to the profile contract (§4). New scope types extend the format via a new schema ID, not a new event kind. This mirrors OpenTelemetry's single-span-shape-with-kind approach.
 
 **Tradeoff — grep distinctness.** A raw `grep LLMStart` no longer works; consumers must filter on `"scope_type":"llm"` instead. Tooling that consumes ATOF streams (pretty-printers, filters) is expected to offset this. Documented here so the tradeoff is explicit.
 
@@ -559,13 +610,13 @@ An earlier iteration gave each scope subject its own event kind, duplicating ~80
 An earlier iteration carried both `input`/`output` (raw, any) and `annotated_request`/`annotated_response` (structured, codec-decoded). This doubled the payload fields on LLM events and bound the wire format to a specific codec pipeline. The current design collapses to a single payload field per side: opaque by default, structured (per a codec profile) when a codec is registered. Emitters that wish to preserve both raw and structured forms place the structured form in `input`/`output` and stash the raw bytes in `data` or `metadata`.
 
 **Why is the per-scope structured field named `profile` and not `scope_data`?**
-An earlier iteration used `scope_data`, which was nearly identical to the free-form `data` field and consistently led readers to confuse them — one is spec-governed per `scope_type`, the other is an opaque caller payload. The name `profile` ties the field directly to the Section 4 terminology (*scope profiles*) and removes the collision.
+An earlier iteration used `scope_data`, which was nearly identical to the free-form `data` field and consistently led readers to confuse them — one is spec-governed, the other is an opaque caller payload. The name `profile` ties the field directly to the profile-contract vocabulary (§4) and removes the collision.
 
 **Why is the behavioral flag field named `flags` and not `attributes`?**
 An earlier iteration used `attributes`, which collided with the OpenTelemetry convention of an arbitrary key/value attribute map. In ATOF the field is strictly a set of boolean flag names. `flags` matches the shape (`string[]`), matches the prose vocabulary ("flag names", "flag vocabulary"), and sidesteps the false cognate.
 
 **Why does `ScopeEnd` repeat `name`, `scope_type`, and `flags` from `ScopeStart`?**
-So that each event is independently interpretable. Stream filters, sampling consumers, and partial-stream analyzers can classify a `ScopeEnd` without joining to its matching `ScopeStart`. A tail-and-filter pipeline such as `atof-stream | jq 'select(.scope_type == "llm" and .kind == "ScopeEnd")'` works directly; no in-memory `uuid → scope_state` table is required. The wire-size cost is small (and further reduced by transport compression); the consumer-side cost of "absent means inherit from Start" semantics — state-tracking per open scope, plus ambiguity when `profile` legitimately differs between Start and End — is disproportionately larger. This mirrors OpenTelemetry, where span-close carries the full attribute set, not a delta.
+So that each event is independently interpretable. Stream filters, sampling consumers, and partial-stream analyzers can classify a `ScopeEnd` without joining to its matching `ScopeStart`. A tail-and-filter pipeline such as `atof-stream | jq 'select(.scope_type == "llm" and .kind == "ScopeEnd")'` works directly; no in-memory `uuid → scope_state` table is required. The wire-size cost is small (and further reduced by transport compression); the consumer-side cost of "absent means inherit from Start" semantics — state-tracking per open scope, plus ambiguity when `profile` legitimately differs between Start and End (e.g., when a vendor adds fields at end time while preserving `$schema` and `$version` per §4.7) — is disproportionately larger. This mirrors OpenTelemetry, where span-close carries the full attribute set, not a delta.
 
 Note that `data` and `metadata` are *per-event* payloads, not per-scope. They are not "duplicated" on `ScopeEnd` — each event carries its own, and emitters MAY attach different values at Start and End (e.g., span-open vs. span-close tracing).
 
@@ -581,7 +632,7 @@ These three fields cover the debuggability essentials without imposing a taxonom
 Two reasons, both rooted in prior design decisions. First, it mirrors the principle laid out in "Why does `ScopeEnd` repeat `name`, `scope_type`, and `flags`?" above: every event is independently interpretable without joining to its siblings. Sampling consumers, stream filters, partial-stream analyzers, and log-tailing pipelines all benefit. A stream-header event would force any consumer that processes a single event in isolation to either maintain a uuid-to-version dispatch table or fail opaquely when the header was dropped, sampled out, or never present. Second, it makes mixed-version streams a first-class use case — concatenated logs, multi-emitter aggregation, and ETL joins across emitter generations produce streams with per-event version divergence, and `schema_version` lets consumers dispatch correctly without out-of-band coordination. The wire cost (≈22 bytes per event, near-zero after transport compression) is small compared to the consumer-side cost of working around a stream-header design.
 
 **Why string `"MAJOR.MINOR"` and not a structured version object or integer?**
-String `"MAJOR.MINOR"` is the minimum machine-parseable format that supports the dispatch rules in Section 5.7. A structured object (`{"major": 0, "minor": 1}`) costs more bytes per event and requires consumers to write an accessor on every access. An integer (e.g., `1` for v0.1, `2` for v0.2) loses the major/minor distinction and forces arbitrary mappings. String equality handles the common same-version case in a single comparison; consumers that need major/minor comparison split on `.` once.
+String `"MAJOR.MINOR"` is the minimum machine-parseable format that supports the dispatch rules in §7.7. A structured object (`{"major": 0, "minor": 2}`) costs more bytes per event and requires consumers to write an accessor on every access. An integer (e.g., `2` mapping to `0.2`) loses the major/minor distinction and forces arbitrary mappings. String equality handles the common same-version case in a single comparison; consumers that need major/minor comparison split on `.` once.
 
 **Why polymorphic `timestamp` (string or integer) instead of one canonical form?**
 The two timestamp uses — human debugging and high-throughput machine ingestion — have directly opposed performance and readability tradeoffs. RFC 3339 strings are ~15× slower to parse than integer casts in most runtimes and ~50% larger on the wire, but are self-documenting when a human reads raw log output. Forcing every emitter to pay the string cost penalizes throughput-sensitive pipelines; forcing every emitter to use integers penalizes ad-hoc debuggability. Polymorphism lets each emitter pick per its use case, at the cost of a one-line type dispatch on the consumer side. The cost is contained because the dispatch is trivial (isinstance/typeof) and the normalized form (integer microseconds) is the universal sort key.
@@ -594,24 +645,30 @@ Codec profiles (OpenAI Chat, Anthropic Messages, …) are provider-specific over
 
 ---
 
-## 9. Roadmapped Issues
+## 11. Roadmapped Issues
 
 The following structural gaps are acknowledged but deferred to keep the current pre-release scope bounded. They are non-normative and will be addressed in a subsequent revision.
 
 1. **Emitter / resource identity.** No analog to OpenTelemetry's Resource — useful when multiple services feed into one event store. Consider a `resource` block or a dedicated stream-header event carrying `service.name`, runtime version, host identity, etc.
-2. **Streaming chunk event type (conditional).** A dedicated `Chunk` event for incremental streaming output is deferred pending a concrete use case. The primary streaming concern — partial output on termination — is already handled: when a `"streaming"`-flagged scope terminates with `status == "error"` or `status == "cancelled"`, the `output` field MAY carry the chunks accumulated before the terminal event, representing a partial response (§3.2, §4.1). A `Chunk` event would only be warranted if a consumer required real-time visibility into in-flight chunks before `ScopeEnd` — e.g., a UI that renders tokens as they arrive rather than at scope close. Absent such a use case, the `"streaming"` flag plus `status`-gated partial output in `ScopeEnd` are sufficient.
-3. **Common Flags section placement.** §4.1 "Common Flags" is currently nested inside §4 "Scope Profiles", but flags are not a profile — they are a cross-cutting field on `ScopeStartEvent`/`ScopeEndEvent` that applies across all scope types regardless of profile. The current placement reflects that profile subsections reference flags inline, not that flags semantically belong to profiles. A subsequent revision should either (a) promote Common Flags to its own top-level section or (b) move it under §2 "Common Event Fields" alongside other shared fields. This is a documentation-only restructure; field semantics, wire format, and the `flags` enum vocabulary are unchanged. Downstream consumers that cite "spec §4.1" (including the `nvidia_nat_atif` reference implementation's `flags.py` docstring) will need to track the new section number.
+2. **Streaming chunk event type (conditional).** A dedicated `Chunk` event for incremental streaming output is deferred pending a concrete use case. The primary streaming concern — partial output on termination — is already handled: when a `"streaming"`-flagged scope terminates with `status == "error"` or `status == "cancelled"`, the `output` field MAY carry the chunks accumulated before the terminal event, representing a partial response (§3.2, §2.1). A `Chunk` event would only be warranted if a consumer required real-time visibility into in-flight chunks before `ScopeEnd` — e.g., a UI that renders tokens as they arrive rather than at scope close. Absent such a use case, the `"streaming"` flag plus `status`-gated partial output in `ScopeEnd` are sufficient.
+3. **Vendor profile registry document.** A community-maintained index of registered `vendor/scope.id` schemas with links (envisioned as `atof-profile-registry.md`) would help consumers discover published profiles and their versions. Deferred — vendors currently publish schemas through their own channels.
+4. **Schema fetching by URL.** Allow `$schema` to be a URL that resolves to a JSON Schema document fetched at runtime. Adds a network dependency to consumer validation; deferred.
+5. **Stream-end event.** A symmetric counterpart to `StreamHeaderEvent` for signaling "schema vocabulary frozen, end of registration window." Deferred unless a concrete need emerges.
 
 ---
 
-## 10. Reference Implementation
+## 12. Reference Implementation
 
-The Toolkit-native ATOF emitter and consumer live under `src/nat/atof/`. The ATOF→ATIF converter is specified in `[atof-to-atif-converter.md](./atof-to-atif-converter.md)` and implemented in `src/nat/atof/scripts/atof_to_atif_converter.py`.
+The Toolkit-native ATOF emitter and consumer live under `src/nat/atof/` in the `nvidia_nat_atif` package. The ATOF→ATIF converter is specified in `[atof-to-atif-converter.md](./atof-to-atif-converter.md)` and implemented in `src/nat/atof/scripts/atof_to_atif_converter.py`.
 
 
-| Module                                    | Entry Point                       | Description                                 |
-| ----------------------------------------- | --------------------------------- | ------------------------------------------- |
-| `nat.atof.scripts.atof_to_atif_converter` | `convert(events) → Trajectory`    | Convert typed Event list to ATIF Trajectory |
-| `nat.atof.scripts.atof_to_atif_converter` | `convert_file(path) → Trajectory` | Read JSONL file and convert                 |
-| `nat.atof.io`                             | `read_jsonl(path) → list[Event]`  | Parse ATOF JSONL to typed events            |
-| `nat.atof.io`                             | `write_jsonl(events, path)`       | Serialize events to JSONL                   |
+| Module                                    | Entry Point                                 | Description                                                                     |
+| ----------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------- |
+| `nat.atof.profile_contract`               | `ProfileContract`                           | Pydantic base class for profile contracts; implements `$schema`/`$version`/`$mode` wire format and producer-side validation (§4). |
+| `nat.atof.profiles`                       | `DefaultLlmV1`, `DefaultToolV1`             | Reference profile implementations for the `default/llm.v1` and `default/tool.v1` schemas (§6).                                     |
+| `nat.atof.validation`                     | `validate_profile(payload, schema) → None`  | JSON Schema validation wrapper (Draft 2020-12) used by `ProfileContract` at producer-side construction.                           |
+| `nat.atof.events`                         | `ScopeStartEvent`, `ScopeEndEvent`, `MarkEvent`, `StreamHeaderEvent`, `Event` | Pydantic wire models for all four event kinds + discriminated union type alias. |
+| `nat.atof.scripts.atof_to_atif_converter` | `convert(events) → Trajectory`              | Convert typed Event list to ATIF Trajectory                                      |
+| `nat.atof.scripts.atof_to_atif_converter` | `convert_file(path) → Trajectory`           | Read JSONL file and convert                                                      |
+| `nat.atof.io`                             | `read_jsonl(path) → list[Event]`            | Parse ATOF JSONL to typed events                                                 |
+| `nat.atof.io`                             | `write_jsonl(events, path)`                 | Serialize events to JSONL                                                        |
