@@ -338,7 +338,6 @@ Per-event `$mode` overrides (§4.4) apply uniformly to all three modes — a pro
 Each entry in `schemas[schema_id]` is a complete JSON Schema document (2020-12). Constraints:
 
 - If `schemas[schema_id]["$id"]` is present, it MUST equal the dict key `schema_id`. Producers SHOULD include `$id` for self-description; consumers that encounter a mismatched `$id` SHOULD log a warning and treat the dict key as authoritative.
-
   ```json
   {
     "kind": "StreamHeader",
@@ -353,9 +352,7 @@ Each entry in `schemas[schema_id]` is a complete JSON Schema document (2020-12).
     }
   }
   ```
-
   Valid: `$id` matches the dict key. Omitting `$id` is also conformant; producers MAY choose either form.
-
   ```json
   {
     "kind": "StreamHeader",
@@ -367,9 +364,7 @@ Each entry in `schemas[schema_id]` is a complete JSON Schema document (2020-12).
     }
   }
   ```
-
   Mismatch: consumer SHOULD log a warning and treat `"default/llm.v1"` (the dict key) as authoritative.
-
 - ATOF v0.2 uses JSON Schema Draft 2020-12 as the canonical dialect. Schema bodies MAY reference other dialects via `$schema`; consumers MAY choose whether to honor non-canonical dialects.
 - Entries MAY use any JSON Schema keywords permitted by Draft 2020-12 (`type`, `properties`, `required`, `additionalProperties`, `patternProperties`, `$ref`, etc.).
 
@@ -442,7 +437,7 @@ Emitters choose per event. A single stream MAY contain events in both forms (mix
 
 **Ordering.** Events are emitted in wall-clock order. Delivery order from subscriber callbacks MAY differ for concurrent operations. Consumers MUST sort by `timestamp` before processing. When sorting a mixed-format stream, consumers MUST normalize both forms to a common representation (typically integer microseconds) before comparison — lexicographic comparison of a string against an integer is undefined.
 
-**ATIF compatibility.** ATIF (see `[atof-to-atif-converter.md](./atof-to-atif-converter.md)`) requires timestamps as ISO 8601 strings on its optional `step.timestamp` field. The ATOF → ATIF converter serializes either ATOF form to an ISO 8601 string before emitting ATIF. No emitter-side action is required for ATIF compatibility regardless of which ATOF timestamp form is chosen.
+**ATIF compatibility.** ATIF (see `[atof-to-atif-converter.md](./atof-to-atif-converter.md)`) requires timestamps as ISO 8601 strings on its optional `step.timestamp` field. RFC 3339 is a strict subset of ISO 8601, so the ATOF → ATIF converter forwards the RFC 3339 string form **unchanged** as a zero-cost pass-through; only the integer microsecond form is serialized to an RFC 3339 string before emitting ATIF. No emitter-side action is required for ATIF compatibility regardless of which ATOF timestamp form is chosen.
 
 ### 7.2 Scope Nesting and parent_uuid
 
