@@ -80,7 +80,13 @@ class _EventBase(BaseModel):
     data: Any | None = Field(default=None, description="Application-specific payload")
     metadata: dict[str, Any] | None = Field(default=None, description="Tracing metadata")
 
-    model_config = ConfigDict(extra="allow")
+    # `populate_by_name=True` (WR-04 from Phase 8 review): none of the current
+    # `_EventBase` fields declare aliases, but ``ProfileContract`` intentionally
+    # sets this same flag to accept its ``$``-prefixed wire keys. Mirroring the
+    # setting here pre-empts breakage when a future subclass or spec revision
+    # adds an aliased event field (e.g., another ``$``-prefixed wire meta-key).
+    # Strictly widens accepted input; no effect on current wire shape.
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     @model_validator(mode="before")
     @classmethod
@@ -136,7 +142,10 @@ class ErrorInfo(BaseModel):
     message: str = Field(description="Human-readable error message")
     stack: str | None = Field(default=None, description="Optional stack trace")
 
-    model_config = ConfigDict(extra="allow")
+    # WR-04 (Phase 8 review): mirror ``_EventBase``'s ``populate_by_name=True`` so a
+    # future aliased field on ``ErrorInfo`` (none today) can be constructed either
+    # by Python name or wire alias without breaking existing callers.
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
 
 # ---------------------------------------------------------------------------
