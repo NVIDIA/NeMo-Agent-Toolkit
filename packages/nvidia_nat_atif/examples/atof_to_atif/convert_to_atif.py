@@ -1,10 +1,18 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Convert ATOF JSONL examples to ATIF trajectories.
+"""Convert ATOF v0.2 JSONL examples to ATIF trajectories.
 
-Reads each example JSONL file, converts to ATIF using
-``nat.atof.scripts.atof_to_atif_converter.convert_file``,
+Reads each example JSONL file produced by ``generate_examples.py`` (one per
+three-mode demonstration: EXMP-01 header, EXMP-02 inline, EXMP-03 mixed),
+converts to ATIF using ``nat.atof.scripts.atof_to_atif_converter.convert_file``,
 and writes the resulting trajectory as formatted JSON.
+
+The v0.2 converter (plan 08-04) transparently handles all four event kinds
+including ``StreamHeaderEvent`` (consumed by the schema-registry pre-pass,
+skipped in the main dispatch loop), so this script is unchanged in structure
+from its v0.1 counterpart — only the input filenames match the regenerated
+v0.2 streams (``exmpNN_atof.jsonl``) and the ATIF outputs follow the
+symmetric ``exmpNN_atif.json`` naming convention.
 
 Usage:
     python convert_to_atif.py [--input-dir DIR] [--output-dir DIR]
@@ -21,14 +29,14 @@ EXAMPLES_DIR = Path(__file__).parent
 OUTPUT_DIR = EXAMPLES_DIR / "output"
 
 EXAMPLES = [
-    "exmp01_simple_tool_call.jsonl",
-    "exmp02_nested_tool_chain.jsonl",
-    "exmp03_branching_nested.jsonl",
+    "exmp01_atof.jsonl",
+    "exmp02_atof.jsonl",
+    "exmp03_atof.jsonl",
 ]
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Convert ATOF JSONL to ATIF JSON")
+    parser = argparse.ArgumentParser(description="Convert ATOF v0.2 JSONL to ATIF JSON")
     parser.add_argument("--input-dir", type=Path, default=OUTPUT_DIR, help="Directory with JSONL files")
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR, help="Output directory for ATIF JSON")
     args = parser.parse_args()
@@ -41,7 +49,8 @@ def main() -> None:
             print(f"Skipping {filename} (not found)")
             continue
 
-        output_name = filename.replace(".jsonl", "_atif.json")
+        # Symmetric naming: exmpNN_atof.jsonl -> exmpNN_atif.json
+        output_name = filename.replace("_atof.jsonl", "_atif.json")
         output_path = args.output_dir / output_name
 
         trajectory = convert_file(input_path, output_path)
