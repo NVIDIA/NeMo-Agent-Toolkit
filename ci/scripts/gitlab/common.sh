@@ -65,8 +65,6 @@ function is_current_commit_release_tagged() {
 
 function install_slack_sdk() {
     echo "Installing slack-sdk"
-    uv pip install "slack-sdk~=3.36"
+    echo "slack-sdk==3.40.1 --hash=sha256:cd8902252979aa248092b0d77f3a9ea3cc605bc5d53663ad728e892e26e14a65" | \
+      uv pip install --require-hashes -r -
 }
-
-echo "Environment Variables"
-printenv | sort
