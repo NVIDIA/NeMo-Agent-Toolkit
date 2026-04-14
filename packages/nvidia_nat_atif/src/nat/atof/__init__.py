@@ -2,12 +2,19 @@
 # SPDX-License-Identifier: Apache-2.0
 """Pydantic models for the Agentic Trajectory Observability Format (ATOF).
 
-ATOF is a JSON-Lines wire format for agent runtime event streams.
-These models define the 3 event types (ScopeStart, ScopeEnd, Mark), the
-shared behavioral ``Flags`` enum, the typed ``ScopeType``-specific profile
-classes, and the codec schemas as standalone Pydantic models.
+ATOF is a JSON-Lines wire format for agent runtime event streams. These models
+define the 4 event types (ScopeStart, ScopeEnd, Mark, StreamHeaderEvent), the
+shared behavioral ``Flags`` enum, the :class:`ProfileContract` base, and the
+two reference profile implementations (``DefaultLlmV1``, ``DefaultToolV1``).
 
-See ``atof-event-format.md`` v0.1 for the full specification.
+See ``atof-event-format.md`` v0.2 for the full specification.
+
+NOTE: this file is in a transient state during phase 08 (ATOF v0.2 refactor).
+Plan 08-03 removes the v0.1 typed profile re-exports (``ToolProfile``,
+``LLMProfile``, ``CustomProfile``) and the ``ScopeType`` enum re-export. Plan
+08-04 will expand this module to export the full v0.2 public API including
+``StreamHeaderEvent``, ``ProfileContract``, ``DefaultLlmV1``, ``DefaultToolV1``,
+and the ``validate_profile`` helper.
 """
 
 from nat.atof.codec import AnnotatedLLMRequest
@@ -27,30 +34,22 @@ from nat.atof.events import ScopeStartEvent
 from nat.atof.flags import Flags
 from nat.atof.io import read_jsonl
 from nat.atof.io import write_jsonl
-from nat.atof.profiles import CustomProfile
-from nat.atof.profiles import LLMProfile
-from nat.atof.profiles import ToolProfile
-from nat.atof.scope_type import ScopeType
 
 __all__ = [
     "AnnotatedLLMRequest",
     "AnnotatedLLMResponse",
     "CodecContentPart",
-    "CustomProfile",
     "ErrorInfo",
     "Event",
     "Flags",
     "GenerationParams",
-    "LLMProfile",
     "MarkEvent",
     "Message",
     "RequestToolCall",
     "ResponseToolCall",
     "ScopeEndEvent",
     "ScopeStartEvent",
-    "ScopeType",
     "ToolDefinition",
-    "ToolProfile",
     "Usage",
     "read_jsonl",
     "write_jsonl",
