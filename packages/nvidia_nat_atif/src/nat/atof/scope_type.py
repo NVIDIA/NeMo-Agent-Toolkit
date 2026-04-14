@@ -1,26 +1,17 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Scope type enumeration for ATOF events.
+"""Scope type alias for ATOF events.
 
-Serializes as lowercase strings. See ATOF spec Section 3.1.
+In ATOF v0.2, ``scope_type`` is an open-vocabulary non-empty string. The
+``ScopeType`` name is retained as a type alias for documentation purposes
+only; it does NOT enumerate valid values. Common conventions (spec §3.1):
+agent, function, tool, llm, retriever, embedder, reranker, guardrail,
+evaluator, custom, unknown.
+
+See ATOF spec Section 3.1.
 """
 
 from __future__ import annotations
 
-from enum import StrEnum
-
-
-class ScopeType(StrEnum):
-    """Semantic scope type for ScopeStart/ScopeEnd events."""
-
-    AGENT = "agent"
-    FUNCTION = "function"
-    TOOL = "tool"
-    LLM = "llm"
-    RETRIEVER = "retriever"
-    EMBEDDER = "embedder"
-    RERANKER = "reranker"
-    GUARDRAIL = "guardrail"
-    EVALUATOR = "evaluator"
-    CUSTOM = "custom"
-    UNKNOWN = "unknown"
+# Documentation-only type alias. Any non-empty string is a valid scope_type.
+ScopeType = str
