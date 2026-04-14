@@ -212,101 +212,176 @@ Emitted to declare stream-wide profile schemas and the default profile-mode for 
 
 ---
 
-## 4. Scope Profiles
+## 4. Profile Contract Protocol
 
-`scope_type` is the sole discriminator for the shape of `profile`. New scope types extend the format without introducing new event kinds. Implementations MAY define ad-hoc scope types using `scope_type: "custom"` with a descriptive `name`, or MAY propose new enum values as spec extensions.
+The `profile` field on `ScopeStartEvent` and `ScopeEndEvent` carries a **profile contract** — a structured payload whose shape is governed by a declared JSON Schema (the *contract*). ATOF v0.2 standardizes the wire format of that contract (the `$schema` / `$version` / `$mode` meta-fields) and the validation rules that producers and consumers MUST follow; it does NOT fix the shape of the vendor fields inside the profile. That shape is published as a JSON Schema and referenced by `$schema`.
 
-Each scope profile below specifies:
+This section defines the contract in seven subsections. Two spec-defined reference implementations (`default/llm.v1`, `default/tool.v1`) live in §6. Vendors publishing richer profiles (`openai/llm.v1`, `nvidia/guardrail-content-safety.v2`, …) follow the same wire format.
 
-- **`profile` (Start)** — fields set at scope entry.
-- **`profile` (End)** — fields set at scope exit.
-- **`input` / `output` semantics** — what a registered codec, if any, produces.
+### 4.1 Profile object structure
 
-Flag semantics are shared across all scope types (§4.1). Profile-specific flags, if any, are noted inline.
+A profile is a JSON object with three reserved meta-fields (all prefixed with `$`) plus zero or more vendor-defined fields:
 
-**Flag extensibility.** The flag vocabulary is implementation-extensible. Beyond the common flags in §4.1, implementations MAY emit additional flag names for vendor extensions; to avoid collisions, non-canonical flags SHOULD be namespaced with a dotted prefix — for example, `"nvidia.speculative"`. Consumers MUST preserve unknown flag strings when re-emitting events and MUST NOT treat unknown flags as an error. Producers MUST emit `flags` in lexicographic order with no duplicates. Consumers SHOULD treat the array as an unordered set.
+| Field      | Type                              | Required | Description                                                                                                                                                                                                                                           |
+| ---------- | --------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$schema`  | string or object (JSON Schema)    | Yes      | Schema declaration. EITHER a string ID (e.g., `"default/llm.v1"`) resolved against a `StreamHeaderEvent` registry, OR an inline JSON Schema object (which MUST include its own `$id`). See §4.3 for the inline form.                                  |
+| `$version` | string                            | Yes      | Schema publisher's version identifier. This is NOT the ATOF protocol version (that lives in `schema_version` on every event — §2). Schema publishers SHOULD follow their own versioning convention; semantic versioning is recommended.              |
+| `$mode`    | string (enum) or absent           | No       | Per-event override of `StreamHeaderEvent.profile_mode_default`. One of `"header"`, `"inline"`, `"opaque"`. Absent means inherit the stream-wide default (§5).                                                                                         |
+| *(vendor-defined fields)* | any                | —        | Additional fields defined by the declared `$schema`. Shape, required/optional, and validation are governed entirely by the JSON Schema, not by this spec.                                                                                             |
 
-### 4.1 Common Flags
+**Reserved field prefix.** All `$`-prefixed fields are reserved by the ATOF spec. Vendor profiles MUST NOT introduce additional `$`-prefixed fields. Non-`$` field names are available to vendor schemas without restriction, subject to JSON object naming.
 
-The following flags describe general runtime properties of a scope and MAY appear on any `scope_type`. Each flag is a boolean indicator (present in `flags` → true; absent → false).
+### 4.2 Schema ID format
 
+Schema IDs follow the convention `vendor/<id>` where `<id>` ends in `.v<N>` for integer major version `N`. Examples:
 
-| Flag            | Meaning                                                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `"parallel"`    | Scope may execute concurrently with sibling scopes under the same parent.                                            |
-| `"relocatable"` | Scope may be moved across async task boundaries (e.g., between threads or event loops) without losing context.       |
-| `"stateless"`   | Scope does not maintain state between invocations — the same inputs produce the same behavior regardless of history. |
-| `"local"`       | Scope executes in the same process as the runtime, as opposed to dispatching to a remote service.                    |
-| `"streaming"`   | Scope produces its output incrementally as a sequence of chunks, rather than as a single payload at exit.            |
+- `default/llm.v1` — reference implementation for LLM scopes (§6.1)
+- `default/tool.v1` — reference implementation for tool scopes (§6.2)
+- `openai/llm.v1` — hypothetical vendor-published richer LLM profile
+- `nvidia/guardrail-content-safety.v2` — hypothetical vendor-published guardrail profile
 
+The `default/*` namespace is reserved for spec-defined reference implementations; vendors MUST NOT publish schemas in the `default/*` namespace. Each schema ID identifies one major-version line. Breaking changes require a new major-version suffix (`.v1` → `.v2`); backward-compatible additions MAY be folded into the same major version with an updated `$version` string on the profile.
 
-No flag is mandatory for any profile. Emitters SHOULD emit a flag only when the corresponding property is affirmatively true; absence is the default.
+### 4.3 Inline schema mode
 
-For scopes carrying the `"streaming"` flag: if the scope terminates with `status == "error"` or `status == "cancelled"` (Section 3.2), the `output` on `ScopeEnd` MAY contain the partial chunks accumulated before the terminal event. Consumers that replay streaming output MUST check `status` before treating `output` as a complete payload.
+When `$schema` is a JSON Schema object (not a string ID), the object MUST include an `$id` field identifying the schema it describes. Producers emitting inline schemas MUST embed the full JSON Schema body — partial references (e.g., just the `$id`) are not valid inline schemas; use the string-ID form with a `StreamHeaderEvent` registry instead.
 
-### 4.2 Profile: `"agent"`
+Inline schemas let a producer emit a self-contained event that a consumer can validate without external lookup. This is the `"inline"` mode (§5.3); it is useful for short streams, ad-hoc debugging output, and streams where no `StreamHeaderEvent` is present.
 
-A composite execution scope — typically the outermost scope for an agent turn or a sub-agent delegation.
+### 4.4 Stream-level mode default vs per-event override
 
-- **`profile` (Start):** null — reserved for future use.
-- **`profile` (End):** null — reserved for future use.
-- **`input` / `output`:** application-defined. Typically the task description (Start) and final answer (End).
+`StreamHeaderEvent.profile_mode_default` (§5) sets the stream-wide default mode for interpreting profile payloads. A profile's own `$mode` field, when present, overrides the default for that single event.
 
-### 4.3 Profile: `"function"`
+**Resolution order:**
 
-An arbitrary application-defined function boundary, used when no more specific scope type applies.
+1. If `profile.$mode` is present, use it.
+2. Else, if a prior `StreamHeaderEvent` has declared `profile_mode_default`, use that.
+3. Else, default to `"opaque"` — consumers preserve unknown profile fields and do NOT validate.
 
-- **`profile` (Start):** null.
-- **`profile` (End):** null.
-- **`input` / `output`:** function arguments and return value, application-defined.
+The three modes are defined in §5.3.
 
-### 4.4 Profile: `"tool"`
+### 4.5 Producer validation contract (MUST)
 
-A tool invocation — a unit of work dispatched by an LLM's tool-use flow or by application code.
+Producers MUST validate every profile payload against its declared `$schema` before emitting the containing event. Validation uses JSON Schema Draft 2020-12.
 
-- **`profile` (Start):**
+When the mode is `"header"` (string `$schema` ID), the producer MUST have published the corresponding schema in a `StreamHeaderEvent` registry before emitting the profile event; the producer validates against the registry entry. When the mode is `"inline"`, the producer validates against the embedded schema. When the mode is `"opaque"`, the producer MAY skip validation.
 
-  | Field          | Type           | Required | Description                                                                                                                                        |
-  | -------------- | -------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `tool_call_id` | string or null | No       | Correlation ID from the LLM's tool-call response — e.g., `"call_abc123"` (OpenAI convention). Null for tools invoked outside an LLM tool-use flow. |
+Validation failures MUST raise an error — emitting a profile payload that violates its declared schema is a producer bug. Implementations MAY choose the exception type (the Python reference implementation raises `pydantic.ValidationError` at profile construction). Producers MUST NOT silently truncate, coerce, or drop fields to make a payload validate.
 
-- **`profile` (End):**
+### 4.6 Consumer validation contract (MAY)
 
-  | Field          | Type           | Required | Description                                      |
-  | -------------- | -------------- | -------- | ------------------------------------------------ |
-  | `tool_call_id` | string or null | No       | Same value as on the matching `ScopeStartEvent`. |
+Consumers MAY validate profiles against the declared `$schema`; validation is OPTIONAL. Validation rules:
 
-- **`input` / `output`:** tool arguments and result. Opaque unless a codec is registered.
+- Consumers that do NOT validate MUST preserve unknown fields verbatim when re-emitting events. Pass-through tools (filters, pretty-printers, samplers) are consumers for this purpose.
+- Consumers MUST NOT drop events whose `$schema` ID is unknown to the consumer's local schema registry. Unknown schemas imply an opaque passthrough, not a rejection.
+- Consumers that DO validate and encounter a validation failure MUST log a warning (logger, not stream) and MUST NOT drop the event. The event continues to propagate downstream. This asymmetry — producer MUST raise, consumer MUST NOT drop — reflects the different tradeoffs at each side of the pipe: producers are the last point where a payload can be corrected, while consumers are last-mile and can do less damage by letting the event through than by discarding it.
 
-### 4.5 Profile: `"llm"`
+### 4.7 Cross-event invariance
 
-An LLM call.
+For every matched `(ScopeStartEvent, ScopeEndEvent)` pair sharing the same `uuid`:
 
-- **`profile` (Start):**
+- `ScopeStart.profile.$schema` MUST equal `ScopeEnd.profile.$schema`. Producers MUST NOT switch schemas mid-scope; if a paired `ScopeEnd` needs a different schema body, producers MUST emit a new `StreamHeaderEvent` that registers the supplemental schema and use a new `$schema` ID for both events (not half-upgrade an existing pair).
+- `ScopeStart.profile.$version` MUST equal `ScopeEnd.profile.$version`. A paired scope is versioned once.
 
-  | Field        | Type           | Required | Description                                                                |
-  | ------------ | -------------- | -------- | -------------------------------------------------------------------------- |
-  | `model_name` | string or null | No       | Model identifier set by the caller — e.g., `"nvidia/nemotron-3-super-v3"`. |
+The purpose of these invariants is to let consumers treat a `(Start, End)` pair as a single logical unit with a single contract — essential for metrics aggregation, ATIF conversion, and trajectory replay.
 
-- **`profile` (End):**
+---
 
-  | Field        | Type           | Required | Description                                                                                            |
-  | ------------ | -------------- | -------- | ------------------------------------------------------------------------------------------------------ |
-  | `model_name` | string or null | No       | Same value as on the matching `ScopeStartEvent`, unless the provider reports a different served model. |
+## 5. Stream Header Event
 
-- **`input` / `output`:** LLM request/response payload. Opaque by default. When a codec (e.g., `OpenAIChatCodec`) is registered, these hold the structured form defined in `[atof-codec-profiles.md](./atof-codec-profiles.md)`.
+`StreamHeaderEvent` is the fourth ATOF event kind (§3.4). It carries no scope data; its purpose is purely declarative — to publish a stream-wide registry of profile schemas and to declare the default mode for resolving them.
 
-### 4.6 Profiles: `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`
+### 5.1 Wire shape
 
-Reserved scope types for common agentic components. Currently, `profile` is null for all five. Future revisions of this spec MAY define profile-specific fields.
+`StreamHeaderEvent` inherits the `_EventBase` envelope fields (§2: `schema_version`, `uuid`, `parent_uuid`, `timestamp`, `name`, `data`, `metadata`). It adds two event-specific fields documented in §3.4:
 
-### 4.7 Profile: `"custom"`
+- `kind: "StreamHeaderEvent"` — the discriminator literal.
+- `profile_mode_default: Literal["header", "inline", "opaque"]` — default mode for subsequent profile events.
+- `schemas: dict[str, JSONSchemaObject]` — schema registry, keyed by schema ID (e.g., `"default/llm.v1"`).
 
-An application-defined scope type with no spec-imposed `profile` shape. Emitters using `"custom"` SHOULD set `data` or `profile` with a vendor-namespaced shape. Consumers MUST treat `profile` as opaque and MUST preserve it when re-emitting.
+`StreamHeaderEvent` does NOT carry `scope_type`, `flags`, `profile`, `input`, `output`, `status`, or `error`. Those fields describe scope lifecycle; the header is not part of any scope's lifecycle.
 
-### 4.8 Profile: `"unknown"`
+### 5.2 Placement rules
 
-Used when the emitter cannot identify a more specific profile. `profile` is null. Prefer a specific profile wherever possible — `"unknown"` is a fallback for legacy or introspection-limited sources.
+`StreamHeaderEvent` MAY appear anywhere in the stream before the first non-opaque profile event — it does NOT need to be the first event in the stream. This permits:
+
+- Logs that concatenate multiple sessions with distinct schema registries
+- Streams that emit structural scopes (with `profile == null`) before a schema is declared
+- Runtime flows where the schema registry is built incrementally
+
+**Multiple headers are allowed.** A stream MAY contain multiple `StreamHeaderEvent`s. For the same `$schema` ID appearing in more than one header, later schema definitions SUPERSEDE earlier ones (last-wins merge). Consumers building an effective registry walk the stream in timestamp order and merge headers as they encounter them.
+
+When NO `StreamHeaderEvent` appears in the stream, the effective `profile_mode_default` is `"opaque"` and the effective schema registry is empty.
+
+### 5.3 Mode semantics
+
+Three modes govern how consumers interpret a profile:
+
+- **`"header"`** — profiles reference schemas by string `$schema` ID. Consumers resolve the ID via the effective `StreamHeaderEvent` registry. Consumers that choose to validate look up the schema in the registry and validate against the body there.
+- **`"inline"`** — profiles carry their schema directly: `$schema` is a JSON Schema object (with an `$id`). Consumers that choose to validate validate against the embedded body. No registry lookup needed.
+- **`"opaque"`** — consumers preserve profile fields verbatim but do NOT validate. Used for streams where schema registration is not available or where downstream consumers are schema-unaware.
+
+Per-event `$mode` overrides (§4.4) apply uniformly to all three modes — a profile MAY declare `$mode: "inline"` and carry an inline schema even when the stream default is `"header"`, or vice versa.
+
+### 5.4 Schema registration rules
+
+Each entry in `schemas[schema_id]` is a complete JSON Schema document (Draft 2020-12). Constraints:
+
+- If `schemas[schema_id]["$id"]` is present, it MUST equal the dict key `schema_id`. Producers SHOULD include `$id` for self-description; consumers that encounter a mismatched `$id` SHOULD log a warning and treat the dict key as authoritative.
+- ATOF v0.2 uses JSON Schema Draft 2020-12 as the canonical dialect. Schema bodies MAY reference other dialects via `$schema`; consumers MAY choose whether to honor non-canonical dialects.
+- Entries MAY use any JSON Schema keywords permitted by Draft 2020-12 (`type`, `properties`, `required`, `additionalProperties`, `patternProperties`, `$ref`, etc.).
+
+---
+
+## 6. Reference Profile Implementations
+
+ATOF v0.2 defines exactly two reference profile implementations, one for LLM scopes and one for tool scopes. These schemas preserve the single profile field each carried in v0.1 (`model_name` and `tool_call_id`) as the minimum useful payload. Vendors publishing richer LLM or tool profiles (e.g., `openai/llm.v1` with provider/usage/finish-reason fields) SHOULD use these as structural starting points.
+
+Both reference profiles set `additionalProperties: true` — vendors MAY extend without subclassing or without republishing a new schema ID, and non-validating consumers preserve unknown fields verbatim.
+
+### 6.1 default/llm.v1
+
+**Purpose.** The canonical reference profile for scopes carrying `scope_type: "llm"`. Preserves the v0.1 `LLMProfile.model_name` field as the sole optional vendor field. Vendors publishing richer LLM profiles (e.g., `openai/llm.v1`, `anthropic/messages.v1`) SHOULD use this as a structural reference.
+
+**Python reference:** `nat.atof.profiles.DefaultLlmV1` — the Pydantic model in the NeMo Agent Toolkit reference implementation mirrors this schema body as a `JSON_SCHEMA: ClassVar[dict]` class attribute.
+
+**JSON Schema body:**
+
+```json
+{
+  "$id": "default/llm.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "model_name": {"type": ["string", "null"]}
+  },
+  "required": [],
+  "additionalProperties": true
+}
+```
+
+### 6.2 default/tool.v1
+
+**Purpose.** The canonical reference profile for scopes carrying `scope_type: "tool"`. Preserves the v0.1 `ToolProfile.tool_call_id` field as the sole optional vendor field. Vendors publishing richer tool profiles SHOULD use this as a structural reference.
+
+**Python reference:** `nat.atof.profiles.DefaultToolV1` — the Pydantic model in the NeMo Agent Toolkit reference implementation mirrors this schema body as a `JSON_SCHEMA: ClassVar[dict]` class attribute.
+
+**JSON Schema body:**
+
+```json
+{
+  "$id": "default/tool.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "tool_call_id": {"type": ["string", "null"]}
+  },
+  "required": [],
+  "additionalProperties": true
+}
+```
+
+**Non-default reference profiles are out of scope for this spec.** Vendor profiles (`openai/llm.v1`, `nvidia/guardrail-content-safety.v2`, `anthropic/messages.v1`, …) are published by their respective vendors following the §4.2 schema ID format. ATOF v0.2 reserves the `default/*` namespace for spec-defined reference implementations and makes no normative statement about other namespaces.
 
 ---
 
