@@ -16,6 +16,20 @@ profile classes were removed in phase 8 (see ``atof-event-format.md``
 §3.1, §4, §6). StreamHeaderEvents are consumed by a pre-pass to build
 the stream's schema registry and default profile mode; the main dispatch
 loop skips them.
+
+Known limitation (WR-03 from Phase 8 code review): The name-based
+``last_tool_call_map`` fallback used when a tool ``ScopeEndEvent`` carries
+no ``default/tool.v1`` profile (or no ``tool_call_id`` field) keys tool
+observations by ``function_name``. If two tool invocations share the same
+function name within a single LLM turn (e.g., two ``calculator__add``
+calls), the second ``tool_call_id`` overwrites the first in the map and
+both observations pair with the SAME (later) id. This is masked for
+streams that carry ``default/tool.v1`` profiles with explicit
+``tool_call_id`` (the primary v0.2 reference path). Opaque/vendor-profile
+streams MUST NOT repeat tool names within a single LLM turn, or consumers
+MUST supply an explicit ``tool_call_id`` via a ``default/tool.v1``-shaped
+profile. A FIFO queue keyed on ``function_name`` is a future extension if
+opaque-profile multi-call-same-tool scenarios become common.
 """
 
 from __future__ import annotations
@@ -276,6 +290,13 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             raw_output = event.output if isinstance(event.output, dict) else {}
             tool_call_dicts = _extract_tool_calls(raw_output)
 
+            # WR-03 (Phase 8 review): name-keyed map is a fallback for opaque /
+            # vendor-profile tool events that lack an explicit `tool_call_id`.
+            # Repeated tool names within a single LLM turn silently overwrite the
+            # earlier id — the limitation is documented in the module docstring.
+            # The primary v0.2 reference path carries `default/tool.v1` with an
+            # explicit `tool_call_id`, which is read at the tool-ScopeEnd branch
+            # below BEFORE consulting this fallback map.
             last_tool_call_map.clear()
             last_tool_call_order.clear()
             for tc in tool_call_dicts:
