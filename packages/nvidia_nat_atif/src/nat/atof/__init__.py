@@ -3,18 +3,22 @@
 """Pydantic models for the Agentic Trajectory Observability Format (ATOF).
 
 ATOF is a JSON-Lines wire format for agent runtime event streams. These models
-define the 4 event types (ScopeStart, ScopeEnd, Mark, StreamHeaderEvent), the
-shared behavioral ``Flags`` enum, the :class:`ProfileContract` base, and the
-two reference profile implementations (``DefaultLlmV1``, ``DefaultToolV1``).
+define the four event types — the 4-kind event model of ``ScopeStartEvent``,
+``ScopeEndEvent``, ``MarkEvent``, and ``StreamHeaderEvent`` — along with the
+profile-contract base (``ProfileContract``) and its two reference
+implementations (``DefaultLlmV1`` for ``default/llm.v1`` and ``DefaultToolV1``
+for ``default/tool.v1``), the ``validate_profile`` Draft 2020-12 JSON Schema
+helper, and the shared behavioral ``Flags`` enum.
 
-See ``atof-event-format.md`` v0.2 for the full specification.
+The ``ScopeType`` name is retained as a documentation-only type alias
+(``ScopeType = str``); ``scope_type`` on events is an open-vocabulary string
+(spec §3.1). The v0.1 typed profile classes (``ToolProfile``, ``LLMProfile``,
+``CustomProfile``) were removed in phase 8 — importing them from this package
+raises ``ImportError`` (pure break per D-21, no shims).
 
-NOTE: this file is in a transient state during phase 08 (ATOF v0.2 refactor).
-Plan 08-03 removes the v0.1 typed profile re-exports (``ToolProfile``,
-``LLMProfile``, ``CustomProfile``) and the ``ScopeType`` enum re-export. Plan
-08-04 will expand this module to export the full v0.2 public API including
-``StreamHeaderEvent``, ``ProfileContract``, ``DefaultLlmV1``, ``DefaultToolV1``,
-and the ``validate_profile`` helper.
+See ``atof-event-format.md`` v0.2 for the full specification, in particular
+§§4–6 (Profile Contract Protocol, Stream Header Event, Reference Profile
+Implementations).
 """
 
 from nat.atof.codec import AnnotatedLLMRequest
@@ -31,26 +35,38 @@ from nat.atof.events import Event
 from nat.atof.events import MarkEvent
 from nat.atof.events import ScopeEndEvent
 from nat.atof.events import ScopeStartEvent
+from nat.atof.events import StreamHeaderEvent
 from nat.atof.flags import Flags
 from nat.atof.io import read_jsonl
 from nat.atof.io import write_jsonl
+from nat.atof.profile_contract import ProfileContract
+from nat.atof.profiles import DefaultLlmV1
+from nat.atof.profiles import DefaultToolV1
+from nat.atof.scope_type import ScopeType
+from nat.atof.validation import validate_profile
 
 __all__ = [
     "AnnotatedLLMRequest",
     "AnnotatedLLMResponse",
     "CodecContentPart",
+    "DefaultLlmV1",
+    "DefaultToolV1",
     "ErrorInfo",
     "Event",
     "Flags",
     "GenerationParams",
     "MarkEvent",
     "Message",
+    "ProfileContract",
     "RequestToolCall",
     "ResponseToolCall",
     "ScopeEndEvent",
     "ScopeStartEvent",
+    "ScopeType",
+    "StreamHeaderEvent",
     "ToolDefinition",
     "Usage",
     "read_jsonl",
+    "validate_profile",
     "write_jsonl",
 ]
