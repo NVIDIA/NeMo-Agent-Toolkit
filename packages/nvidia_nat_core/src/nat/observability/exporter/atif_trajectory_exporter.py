@@ -34,7 +34,11 @@ Span hierarchy produced for each trajectory::
      │   └── TOOL span  (tool call 2)
      ├── LLM span  (next agent step)
      │   └── TOOL span
-     └── LLM span  (terminal agent step — final answer)
+     ├── LLM span  (terminal agent step — final answer)
+     ├── FUNCTION span  (system step with tool_calls, no LLM)
+     │   ├── TOOL span  (tool call 1)
+     │   └── TOOL span  (tool call 2, may nest under tool 1)
+     └── FUNCTION span  (terminal system step)
 
 Design notes
 ------------
@@ -204,10 +208,7 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
                     first_user_msg = msg
                 continue
 
-            if source == "system":
-                continue
-
-            # Agent step — needs valid AtifStepExtra
+            # Agent or system steps — need valid AtifStepExtra
             extra_raw = step.get("extra") or {}
             try:
                 step_extra = AtifStepExtra.model_validate(extra_raw)
@@ -218,7 +219,11 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
                 logger.debug("Skipping step %s: no valid AtifStepExtra", step.get("step_id"))
                 continue
 
+            is_system = source == "system"
+            has_tool_calls = bool(step.get("tool_calls"))
+
             if _is_terminal_agent_step(step):
+                # Terminal agent step — final answer with no tool_calls
                 last_agent_msg = _message_to_str(step.get("message", ""))
                 llm_span = self._create_llm_span(
                     step,
@@ -229,6 +234,30 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
                     root_fn_id,
                 )
                 spans.append(llm_span)
+            elif is_system and has_tool_calls:
+                # System step with tool_calls (no LLM involved)
+                system_spans = self._create_system_tool_spans(
+                    step,
+                    step_extra,
+                    trace_id,
+                    session_id,
+                    span_lookup,
+                    root_fn_id,
+                    delegation_refs,
+                )
+                spans.extend(system_spans)
+            elif is_system and not has_tool_calls and step.get("message"):
+                # Terminal system step — capture final output
+                last_agent_msg = _message_to_str(step.get("message", ""))
+                func_span = self._create_function_span(
+                    step,
+                    step_extra,
+                    trace_id,
+                    session_id,
+                    span_lookup,
+                    root_fn_id,
+                )
+                spans.append(func_span)
             else:
                 agent_spans = self._create_agent_spans(
                     step,
@@ -378,6 +407,117 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
                                    (json.dumps(content, default=str) if content else None))
 
                     # Track subagent delegation refs
+                    for ref in obs_results[idx].get("subagent_trajectory_ref") or []:
+                        sub_sid = ref.get("session_id")
+                        if sub_sid:
+                            delegation_refs[sub_sid] = t_anc.function_id
+
+                tool_span = self._create_tool_span(
+                    ancestry=t_anc,
+                    invocation=t_inv,
+                    tool_name=tc["function_name"],
+                    tool_args=tc.get("arguments", {}),
+                    tool_output=obs_content,
+                    trace_id=trace_id,
+                    session_id=session_id,
+                    span_lookup=span_lookup,
+                )
+                spans.append(tool_span)
+
+        return spans
+
+    def _create_function_span(
+        self,
+        step: dict[str, Any],
+        step_extra: AtifStepExtra,
+        trace_id: int,
+        session_id: str,
+        span_lookup: dict[str, Span],
+        root_fn_id: str,
+    ) -> Span:
+        """Create a FUNCTION span from a system step (no LLM, no tool_calls)."""
+        ancestry = step_extra.ancestry
+        inv = step_extra.invocation
+
+        start_epoch = inv.start_timestamp if inv else None
+        end_epoch = inv.end_timestamp if inv else None
+        if end_epoch is None and step.get("timestamp"):
+            end_epoch = _iso_to_epoch(step["timestamp"])
+        if start_epoch is None:
+            start_epoch = end_epoch or 0.0
+
+        parent_id = ancestry.parent_id
+        if not parent_id or parent_id == "root":
+            parent_id = root_fn_id
+
+        span = self._make_span(
+            name=ancestry.function_name,
+            function_id=ancestry.function_id,
+            function_name=ancestry.function_name,
+            parent_id=parent_id,
+            parent_name=ancestry.parent_name,
+            event_type_str="FUNCTION_END",
+            span_kind=SpanKind.FUNCTION,
+            trace_id=trace_id,
+            start_epoch=start_epoch,
+            end_epoch=end_epoch,
+            session_id=session_id,
+            span_lookup=span_lookup,
+        )
+
+        msg = _message_to_str(step.get("message", ""))
+        if msg:
+            span.set_attribute(SpanAttributes.OUTPUT_VALUE.value, msg)
+            span.set_attribute(SpanAttributes.OUTPUT_MIME_TYPE.value, MimeTypes.TEXT.value)
+
+        span_lookup[ancestry.function_id] = span
+        return span
+
+    def _create_system_tool_spans(
+        self,
+        step: dict[str, Any],
+        step_extra: AtifStepExtra,
+        trace_id: int,
+        session_id: str,
+        span_lookup: dict[str, Span],
+        root_fn_id: str,
+        delegation_refs: dict[str, str],
+    ) -> list[Span]:
+        """Create a FUNCTION parent span + TOOL child spans from a system step."""
+        spans: list[Span] = []
+
+        # Create a FUNCTION span as the parent (not LLM since no LLM is involved)
+        func_span = self._create_function_span(
+            step,
+            step_extra,
+            trace_id,
+            session_id,
+            span_lookup,
+            root_fn_id,
+        )
+        spans.append(func_span)
+
+        tool_calls = step.get("tool_calls") or []
+        tool_ancestry = step_extra.tool_ancestry
+        tool_invocations = step_extra.tool_invocations or []
+        obs_results = (step.get("observation") or {}).get("results") or []
+
+        if tool_calls and tool_ancestry:
+            sorted_indices = _topo_sort_indices(tool_ancestry)
+
+            for idx in sorted_indices:
+                if idx >= len(tool_calls):
+                    continue
+                tc = tool_calls[idx]
+                t_anc = tool_ancestry[idx]
+                t_inv = tool_invocations[idx] if idx < len(tool_invocations) else None
+
+                obs_content: str | None = None
+                if idx < len(obs_results):
+                    content = obs_results[idx].get("content")
+                    obs_content = (content if isinstance(content, str) else
+                                   (json.dumps(content, default=str) if content else None))
+
                     for ref in obs_results[idx].get("subagent_trajectory_ref") or []:
                         sub_sid = ref.get("session_id")
                         if sub_sid:
