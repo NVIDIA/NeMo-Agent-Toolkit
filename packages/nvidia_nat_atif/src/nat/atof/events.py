@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""ATOF event models for the 4 event kinds (ScopeStart, ScopeEnd, Mark, StreamHeaderEvent) per spec v0.2.
+"""ATOF event models for the 4 event kinds (ScopeStart, ScopeEnd, Mark, StreamHeader) per spec v0.2.
 
 Standalone Pydantic models for each event kind. The ``Event`` type is a
 discriminated union keyed on the ``kind`` field.
@@ -223,7 +223,7 @@ class MarkEvent(_EventBase):
 class StreamHeaderEvent(_EventBase):
     """Declares stream-wide profile schemas + default mode (spec §5)."""
 
-    kind: Literal["StreamHeaderEvent"] = "StreamHeaderEvent"
+    kind: Literal["StreamHeader"] = "StreamHeader"
     profile_mode_default: Literal["header", "inline", "opaque"] = Field(
         description="Default profile mode for the stream (spec §5.3).",
     )
@@ -254,15 +254,11 @@ def _get_event_kind(v: Any) -> str:
     return getattr(v, "kind", "")
 
 
-# NOTE: the Tag() value for StreamHeaderEvent is "StreamHeaderEvent" (with the
-# "Event" suffix, inconsistent with the other tags' "Event"-less convention)
-# because it MUST match the ``kind: Literal["StreamHeaderEvent"]`` value
-# verbatim (research Pitfall 3).
 Event = Annotated[
     Annotated[ScopeStartEvent, Tag("ScopeStart")]
     | Annotated[ScopeEndEvent, Tag("ScopeEnd")]
     | Annotated[MarkEvent, Tag("Mark")]
-    | Annotated[StreamHeaderEvent, Tag("StreamHeaderEvent")],
+    | Annotated[StreamHeaderEvent, Tag("StreamHeader")],
     Discriminator(_get_event_kind),
 ]
 """Discriminated union of all 4 ATOF event types, keyed on ``kind`` (spec §3)."""
