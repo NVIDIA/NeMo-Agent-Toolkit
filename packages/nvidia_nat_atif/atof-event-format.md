@@ -69,7 +69,7 @@ All four event kinds share these seven envelope fields. The `flags` field is doc
 
 | Field            | Type                                    | Required | Description                                                                                                                                                                                                                                                                                                                                                 |
 | ---------------- | --------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema_version` | string                                  | Yes      | ATOF protocol version this event conforms to, formatted as `"MAJOR.MINOR"` (e.g., `"0.2"`). This is the ATOF *wire-format* version; it is NOT the version of any particular profile schema (see §4 — profile version lives in `profile.$version`). Consumers dispatch on this value per the negotiation rules in §7.7. Mixed-version streams are permitted. |
+| `schema_version` | string                                  | Yes      | ATOF protocol version this event conforms to, formatted as `"MAJOR.MINOR"` (e.g., `"0.2"`). This is the ATOF *wire-format* version; it is NOT the version of any particular profile schema (see §4 — profile version lives in `profile.$version`). Consumers dispatch on this value per the negotiation rules in §7.6. Mixed-version streams are permitted. |
 | `parent_uuid`    | string (UUID) or null                   | No       | UUID of the scope that was on top of the stack when this handle was created. Null only on the root scope. Following `parent_uuid` links upward reconstructs the call graph.                                                                                                                                                                                 |
 | `uuid`           | string (UUID)                           | Yes      | Unique identifier for this handle. The matching Start and End events for the same handle carry the same `uuid`.                                                                                                                                                                                                                                             |
 | `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes      | Wall-clock time when this event was emitted. Accepts two interchangeable forms — RFC 3339 string (e.g., `"2026-01-01T00:00:00Z"`) or integer epoch microseconds UTC (e.g., `1767225600000000`). See §7.1 for format choice guidance. Start and End events for the same handle have different timestamps.                                                    |
@@ -431,9 +431,7 @@ Both reference profiles set `additionalProperties: true` — vendors MAY extend 
 - **RFC 3339 string** (e.g., `"2026-01-01T00:00:00.123456Z"`) — human-readable, interoperable with general-purpose date-handling libraries, default choice for debug and log-tailing contexts. MUST end with `Z` or an explicit UTC offset.
 - **Integer epoch microseconds UTC** (e.g., `1767225600123456`) — fast to parse (~15× faster than RFC 3339 in most runtimes), ~50% smaller on the wire, safe in JSON numbers through year 2255 (fits in IEEE 754 double integer precision). Chosen for high-throughput streams and columnar-storage pipelines.
 
-Emitters choose per event. A single stream MAY contain events in both forms (mixed-format streams are legal for the same reasons mixed-version streams are legal — see §7.7).
-
-**Why microseconds and not nanoseconds.** JSON numbers are IEEE 754 doubles with 53 bits of integer precision (~9 × 10¹⁵). Nanoseconds since epoch for 2026 is ~1.76 × 10¹⁸ — exceeding safe integer range and causing silent precision loss in most parsers. Microseconds fits safely and remains precise enough for agent-scope event correlation. If nanosecond precision is required for a specific use case, emitters SHOULD use the RFC 3339 string form with a nanosecond fractional second.
+Emitters choose per event. A single stream MAY contain events in both forms (mixed-format streams are legal for the same reasons mixed-version streams are legal — see §7.6).
 
 **Ordering.** Events are emitted in wall-clock order. Delivery order from subscriber callbacks MAY differ for concurrent operations. Consumers MUST sort by `timestamp` before processing. When sorting a mixed-format stream, consumers MUST normalize both forms to a common representation (typically integer microseconds) before comparison — lexicographic comparison of a string against an integer is undefined.
 
@@ -453,42 +451,9 @@ Every `ScopeStart` event is paired with exactly one `ScopeEnd` event sharing the
 
 ### 7.4 UUID Uniqueness
 
-Each handle receives a unique UUID at creation time. The `uuid` is stable across the Start and End events for the same handle, enabling correlation. In the Rust reference implementation, UUIDs are v7 (time-ordered).
+Each handle receives a unique UUID at creation time. The `uuid` is stable across the Start and End events for the same handle, enabling correlation.
 
-### 7.5 ID Relationships
-
-Three distinct identifier namespaces appear in an ATOF stream:
-
-- `**uuid` / `parent_uuid`** — agent runtime identifiers attached to every event. Form the scope graph.
-- `**profile.tool_call_id`** (on `scope_type: "tool"`) — an LLM-provider identifier that bridges an LLM's tool-call response with the resulting tool execution. Null when the tool was not invoked via an LLM tool-use flow.
-- **Codec-decoded response IDs** (e.g., `chatcmpl-`* inside a decoded LLM response body) — provider tracking identifiers. Opaque to ATOF Core; see `[atof-codec-profiles.md](./atof-codec-profiles.md)`.
-
-```text
-┌─ ScopeStart (scope_type=agent) ─────────────── ScopeEnd ────────────────┐
-│  uuid: "scope-001"                                                      │
-│  parent_uuid: null                                                      │
-│                                                                         │
-│  ┌─ ScopeStart (scope_type=llm) ─────────────── ScopeEnd ─┐             │
-│  │  uuid: "llm-001"                                       │             │
-│  │  parent_uuid: "scope-001" ─────────────────────────────┼──► graph    │
-│  │  profile.model_name: "..."                             │             │
-│  │  output.tool_calls[0].id ──────────────────────────────┼──► "call_1" │
-│  └────────────────────────────────────────────────────────┘             │
-│                                                                         │
-│  ┌─ ScopeStart (scope_type=tool) ────────────── ScopeEnd ─┐             │
-│  │  uuid: "tool-001"  (≠ "llm-001")                       │ ← handle id │
-│  │  parent_uuid: "scope-001" ─────────────────────────────┼──► graph    │
-│  │  profile.tool_call_id: "call_1" ────────────────────---┼──► LLM corr │
-│  └────────────────────────────────────────────────────────┘             │
-└─────────────────────────────────────────────────────────────────────────┘
-
-uuid                     → "Who am I?"          (handle identity, Start=End)
-parent_uuid              → "Who created me?"    (scope stack lineage)
-profile.tool_call_id     → "Which LLM request?" (LLM↔tool correlation)
-codec response.id        → "Which API call?"    (provider tracking, see codec profiles)
-```
-
-### 7.6 Terminal Status and Cancellation Propagation
+### 7.5 Terminal Status and Cancellation Propagation
 
 Every `ScopeEnd` carries a terminal `status` (§3.2). The following rules govern how terminal status relates across the scope graph.
 
@@ -504,7 +469,7 @@ Every `ScopeEnd` carries a terminal `status` (§3.2). The following rules govern
 
 **Start/End pairing unchanged.** §7.3's invariants still hold: every `ScopeStart` has exactly one matching `ScopeEnd` sharing the same `uuid`, and all child events of a scope precede the parent's `ScopeEnd`. `status` is a property of the End event, not a modifier of the pairing rule.
 
-### 7.7 Schema Version and Negotiation
+### 7.6 Schema Version and Negotiation
 
 Every ATOF event carries a required `schema_version` field (§2) formatted as `"MAJOR.MINOR"` — e.g., `"0.2"`. This section defines when producers bump the version, how consumers dispatch on it, and what guarantees exist across mixed-version streams. `schema_version` is the ATOF *protocol* version — profile-schema versions live separately in `profile.$version` (§4.1).
 
@@ -671,7 +636,7 @@ These three fields cover the debuggability essentials without imposing a taxonom
 Two reasons, both rooted in prior design decisions. First, it mirrors the principle laid out in "Why does `ScopeEnd` repeat `name`, `scope_type`, and `flags`?" above: every event is independently interpretable without joining to its siblings. Sampling consumers, stream filters, partial-stream analyzers, and log-tailing pipelines all benefit. A stream-header event would force any consumer that processes a single event in isolation to either maintain a uuid-to-version dispatch table or fail opaquely when the header was dropped, sampled out, or never present. Second, it makes mixed-version streams a first-class use case — concatenated logs, multi-emitter aggregation, and ETL joins across emitter generations produce streams with per-event version divergence, and `schema_version` lets consumers dispatch correctly without out-of-band coordination. The wire cost (≈22 bytes per event, near-zero after transport compression) is small compared to the consumer-side cost of working around a stream-header design.
 
 **Why string `"MAJOR.MINOR"` and not a structured version object or integer?**
-String `"MAJOR.MINOR"` is the minimum machine-parseable format that supports the dispatch rules in §7.7. A structured object (`{"major": 0, "minor": 2}`) costs more bytes per event and requires consumers to write an accessor on every access. An integer (e.g., `2` mapping to `0.2`) loses the major/minor distinction and forces arbitrary mappings. String equality handles the common same-version case in a single comparison; consumers that need major/minor comparison split on `.` once.
+String `"MAJOR.MINOR"` is the minimum machine-parseable format that supports the dispatch rules in §7.6. A structured object (`{"major": 0, "minor": 2}`) costs more bytes per event and requires consumers to write an accessor on every access. An integer (e.g., `2` mapping to `0.2`) loses the major/minor distinction and forces arbitrary mappings. String equality handles the common same-version case in a single comparison; consumers that need major/minor comparison split on `.` once.
 
 **Why polymorphic `timestamp` (string or integer) instead of one canonical form?**
 The two timestamp uses — human debugging and high-throughput machine ingestion — have directly opposed performance and readability tradeoffs. RFC 3339 strings are ~15× slower to parse than integer casts in most runtimes and ~50% larger on the wire, but are self-documenting when a human reads raw log output. Forcing every emitter to pay the string cost penalizes throughput-sensitive pipelines; forcing every emitter to use integers penalizes ad-hoc debuggability. Polymorphism lets each emitter pick per its use case, at the cost of a one-line type dispatch on the consumer side. The cost is contained because the dispatch is trivial (isinstance/typeof) and the normalized form (integer microseconds) is the universal sort key.
