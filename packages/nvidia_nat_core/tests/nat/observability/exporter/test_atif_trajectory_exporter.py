@@ -12,32 +12,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Unit tests for ATIFTrajectorySpanExporter.
 
 Tests the batch trajectory-to-span conversion:
     ATIF Trajectory (dict) -> list[Span]
 """
 
-import json
-
 import pytest
 
-from nat.data_models.span import Span
 from nat.data_models.span import SpanAttributes
 from nat.data_models.span import SpanKind
 from nat.observability.exporter.atif_trajectory_exporter import ATIFTrajectorySpanExporter
 from nat.observability.exporter.atif_trajectory_exporter import _is_terminal_agent_step
-
 
 # ---------------------------------------------------------------------------
 # Fixture trajectories (matching theoretical example patterns)
 # ---------------------------------------------------------------------------
 
 SIMPLE_TRAJECTORY = {
-    "schema_version": "ATIF-v1.6",
-    "session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "agent": {"name": "simple-calculator-agent", "version": "1.0.0"},
+    "schema_version":
+        "ATIF-v1.6",
+    "session_id":
+        "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "agent": {
+        "name": "simple-calculator-agent", "version": "1.0.0"
+    },
     "steps": [
         {
             "step_id": 1,
@@ -50,17 +49,17 @@ SIMPLE_TRAJECTORY = {
             "timestamp": "2026-01-01T00:00:01Z",
             "source": "agent",
             "message": "I will calculate 3 + 4 using the calculator tool.",
-            "tool_calls": [
-                {
-                    "tool_call_id": "call_calc_001",
-                    "function_name": "calculator__add",
-                    "arguments": {"a": 3, "b": 4},
-                }
-            ],
+            "tool_calls": [{
+                "tool_call_id": "call_calc_001",
+                "function_name": "calculator__add",
+                "arguments": {
+                    "a": 3, "b": 4
+                },
+            }],
             "observation": {
-                "results": [
-                    {"source_call_id": "call_calc_001", "content": "7"}
-                ]
+                "results": [{
+                    "source_call_id": "call_calc_001", "content": "7"
+                }]
             },
             "extra": {
                 "ancestry": {
@@ -74,21 +73,17 @@ SIMPLE_TRAJECTORY = {
                     "end_timestamp": 1735689602.5,
                     "invocation_id": "inv_simple_step_2",
                 },
-                "tool_ancestry": [
-                    {
-                        "function_id": "fn_calc_add",
-                        "function_name": "calculator__add",
-                        "parent_id": "fn_simple_agent_step",
-                        "parent_name": "simple_calculator_agent",
-                    }
-                ],
-                "tool_invocations": [
-                    {
-                        "start_timestamp": 1735689601.1,
-                        "end_timestamp": 1735689601.4,
-                        "invocation_id": "call_calc_001",
-                    }
-                ],
+                "tool_ancestry": [{
+                    "function_id": "fn_calc_add",
+                    "function_name": "calculator__add",
+                    "parent_id": "fn_simple_agent_step",
+                    "parent_name": "simple_calculator_agent",
+                }],
+                "tool_invocations": [{
+                    "start_timestamp": 1735689601.1,
+                    "end_timestamp": 1735689601.4,
+                    "invocation_id": "call_calc_001",
+                }],
             },
         },
         {
@@ -114,9 +109,13 @@ SIMPLE_TRAJECTORY = {
 }
 
 MULTI_AGENT_TRAJECTORY = {
-    "schema_version": "ATIF-v1.6",
-    "session_id": "ecafea93-d983-5e70-85e4-bf54b251d1b0",
-    "agent": {"name": "ChatAssistant", "version": "1.2.0"},
+    "schema_version":
+        "ATIF-v1.6",
+    "session_id":
+        "ecafea93-d983-5e70-85e4-bf54b251d1b0",
+    "agent": {
+        "name": "ChatAssistant", "version": "1.2.0"
+    },
     "steps": [
         {
             "step_id": 1,
@@ -155,26 +154,24 @@ MULTI_AGENT_TRAJECTORY = {
             "timestamp": "2026-02-23T12:06:26Z",
             "source": "agent",
             "message": "I'll look that up.",
-            "tool_calls": [
-                {
-                    "tool_call_id": "tooluse_p3ULs5EH",
-                    "function_name": "ConfluenceAgent",
-                    "arguments": {"question": "How does Carpenter work?"},
-                }
-            ],
+            "tool_calls": [{
+                "tool_call_id": "tooluse_p3ULs5EH",
+                "function_name": "ConfluenceAgent",
+                "arguments": {
+                    "question": "How does Carpenter work?"
+                },
+            }],
             "observation": {
-                "results": [
-                    {
-                        "source_call_id": "tooluse_p3ULs5EH",
-                        "content": "Carpenter is an ADK.",
-                        "subagent_trajectory_ref": [
-                            {
-                                "session_id": "c78ad2b0-5437-512e-bb3d-2807207a4e2b",
-                                "trajectory_path": None,
-                            }
-                        ],
-                    }
-                ]
+                "results": [{
+                    "source_call_id":
+                        "tooluse_p3ULs5EH",
+                    "content":
+                        "Carpenter is an ADK.",
+                    "subagent_trajectory_ref": [{
+                        "session_id": "c78ad2b0-5437-512e-bb3d-2807207a4e2b",
+                        "trajectory_path": None,
+                    }],
+                }]
             },
             "extra": {
                 "ancestry": {
@@ -187,20 +184,16 @@ MULTI_AGENT_TRAJECTORY = {
                     "start_timestamp": 1740312386.0,
                     "end_timestamp": 1740312401.0,
                 },
-                "tool_ancestry": [
-                    {
-                        "function_id": "fn_confluence_delegation",
-                        "function_name": "ConfluenceAgent",
-                        "parent_id": "fn_chat_step_4",
-                        "parent_name": "ChatAssistant",
-                    }
-                ],
-                "tool_invocations": [
-                    {
-                        "start_timestamp": 1740312386.0,
-                        "end_timestamp": 1740312401.0,
-                    }
-                ],
+                "tool_ancestry": [{
+                    "function_id": "fn_confluence_delegation",
+                    "function_name": "ConfluenceAgent",
+                    "parent_id": "fn_chat_step_4",
+                    "parent_name": "ChatAssistant",
+                }],
+                "tool_invocations": [{
+                    "start_timestamp": 1740312386.0,
+                    "end_timestamp": 1740312401.0,
+                }],
             },
         },
         {
@@ -224,98 +217,101 @@ MULTI_AGENT_TRAJECTORY = {
             },
         },
     ],
-    "subagent_trajectories": [
-        {
-            "schema_version": "ATIF-v1.6",
-            "session_id": "c78ad2b0-5437-512e-bb3d-2807207a4e2b",
-            "agent": {"name": "ConfluenceAgent", "version": "1.2.0"},
-            "steps": [
-                {
-                    "step_id": 1,
-                    "timestamp": "2026-02-23T12:06:30Z",
-                    "source": "user",
-                    "message": "How does Carpenter work?",
-                },
-                {
-                    "step_id": 2,
-                    "timestamp": "2026-02-23T12:06:30Z",
-                    "source": "agent",
-                    "message": "Read the page.",
-                    "tool_calls": [
-                        {
-                            "tool_call_id": "tooluse_285Hqm",
-                            "function_name": "ConfluenceReader",
-                            "arguments": {"url": "https://wiki.example.com/Carpenter"},
-                        }
-                    ],
-                    "observation": {
-                        "results": [
-                            {
-                                "source_call_id": "tooluse_285Hqm",
-                                "content": "Carpenter is an ADK.",
-                            }
-                        ]
+    "subagent_trajectories": [{
+        "schema_version":
+            "ATIF-v1.6",
+        "session_id":
+            "c78ad2b0-5437-512e-bb3d-2807207a4e2b",
+        "agent": {
+            "name": "ConfluenceAgent", "version": "1.2.0"
+        },
+        "steps": [
+            {
+                "step_id": 1,
+                "timestamp": "2026-02-23T12:06:30Z",
+                "source": "user",
+                "message": "How does Carpenter work?",
+            },
+            {
+                "step_id": 2,
+                "timestamp": "2026-02-23T12:06:30Z",
+                "source": "agent",
+                "message": "Read the page.",
+                "tool_calls": [{
+                    "tool_call_id": "tooluse_285Hqm",
+                    "function_name": "ConfluenceReader",
+                    "arguments": {
+                        "url": "https://wiki.example.com/Carpenter"
                     },
-                    "extra": {
-                        "ancestry": {
-                            "function_id": "fn_conf_step_2",
-                            "function_name": "ConfluenceAgent",
-                            "parent_id": None,
-                            "parent_name": None,
-                        },
-                        "invocation": {
-                            "start_timestamp": 1740312390.0,
-                            "end_timestamp": 1740312393.0,
-                        },
-                        "tool_ancestry": [
-                            {
-                                "function_id": "fn_conf_reader",
-                                "function_name": "ConfluenceReader",
-                                "parent_id": "fn_conf_step_2",
-                                "parent_name": "ConfluenceAgent",
-                            }
-                        ],
-                        "tool_invocations": [
-                            {
-                                "start_timestamp": 1740312390.0,
-                                "end_timestamp": 1740312390.5,
-                            }
-                        ],
-                    },
+                }],
+                "observation": {
+                    "results": [{
+                        "source_call_id": "tooluse_285Hqm",
+                        "content": "Carpenter is an ADK.",
+                    }]
                 },
-                {
-                    "step_id": 3,
-                    "timestamp": "2026-02-23T12:06:33Z",
-                    "source": "agent",
-                    "message": "Carpenter is an ADK for multi-agent apps.",
-                    "extra": {
-                        "ancestry": {
-                            "function_id": "fn_conf_step_3",
-                            "function_name": "ConfluenceAgent",
-                            "parent_id": None,
-                            "parent_name": None,
-                        },
-                        "invocation": {
-                            "start_timestamp": 1740312393.0,
-                            "end_timestamp": 1740312393.0,
-                        },
+                "extra": {
+                    "ancestry": {
+                        "function_id": "fn_conf_step_2",
+                        "function_name": "ConfluenceAgent",
+                        "parent_id": None,
+                        "parent_name": None,
+                    },
+                    "invocation": {
+                        "start_timestamp": 1740312390.0,
+                        "end_timestamp": 1740312393.0,
+                    },
+                    "tool_ancestry": [{
+                        "function_id": "fn_conf_reader",
+                        "function_name": "ConfluenceReader",
+                        "parent_id": "fn_conf_step_2",
+                        "parent_name": "ConfluenceAgent",
+                    }],
+                    "tool_invocations": [{
+                        "start_timestamp": 1740312390.0,
+                        "end_timestamp": 1740312390.5,
+                    }],
+                },
+            },
+            {
+                "step_id": 3,
+                "timestamp": "2026-02-23T12:06:33Z",
+                "source": "agent",
+                "message": "Carpenter is an ADK for multi-agent apps.",
+                "extra": {
+                    "ancestry": {
+                        "function_id": "fn_conf_step_3",
+                        "function_name": "ConfluenceAgent",
+                        "parent_id": None,
+                        "parent_name": None,
+                    },
+                    "invocation": {
+                        "start_timestamp": 1740312393.0,
+                        "end_timestamp": 1740312393.0,
                     },
                 },
-            ],
-        }
-    ],
+            },
+        ],
+    }],
 }
 
 NO_EXTRA_TRAJECTORY = {
-    "schema_version": "ATIF-v1.6",
-    "session_id": "00000000-0000-0000-0000-000000000001",
-    "agent": {"name": "bare-agent", "version": "1.0.0"},
+    "schema_version":
+        "ATIF-v1.6",
+    "session_id":
+        "00000000-0000-0000-0000-000000000001",
+    "agent": {
+        "name": "bare-agent", "version": "1.0.0"
+    },
     "steps": [
-        {"step_id": 1, "source": "user", "message": "Hello"},
-        {"step_id": 2, "source": "agent", "message": "Hi there!"},
+        {
+            "step_id": 1, "source": "user", "message": "Hello"
+        },
+        {
+            "step_id": 2, "source": "agent", "message": "Hi there!"
+        },
     ],
 }
-
 
 # ---------------------------------------------------------------------------
 # Tests
@@ -339,9 +335,7 @@ class TestIsTerminalAgentStep:
         assert _is_terminal_agent_step({"source": "agent", "message": "done"})
 
     def test_with_tools_is_not_terminal(self):
-        assert not _is_terminal_agent_step(
-            {"source": "agent", "message": "using tool", "tool_calls": [{}]}
-        )
+        assert not _is_terminal_agent_step({"source": "agent", "message": "using tool", "tool_calls": [{}]})
 
     def test_user_step_is_not_terminal(self):
         assert not _is_terminal_agent_step({"source": "user", "message": "hello"})
@@ -382,57 +376,39 @@ class TestSimpleTrajectory:
 
     def test_llm_span_created(self, exporter):
         spans = exporter.convert(SIMPLE_TRAJECTORY)
-        llm_spans = [
-            s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.LLM.value
-        ]
+        llm_spans = [s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.LLM.value]
         assert len(llm_spans) >= 1
 
     def test_tool_span_created(self, exporter):
         spans = exporter.convert(SIMPLE_TRAJECTORY)
-        tool_spans = [
-            s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value
-        ]
+        tool_spans = [s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value]
         assert len(tool_spans) == 1
         assert tool_spans[0].name == "calculator__add"
 
     def test_tool_span_has_io(self, exporter):
         spans = exporter.convert(SIMPLE_TRAJECTORY)
-        tool_spans = [
-            s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value
-        ]
+        tool_spans = [s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value]
         tool = tool_spans[0]
         assert '"a": 3' in tool.attributes.get(SpanAttributes.INPUT_VALUE.value, "")
         assert tool.attributes.get(SpanAttributes.OUTPUT_VALUE.value) == "7"
 
     def test_tool_span_is_child_of_llm(self, exporter):
         spans = exporter.convert(SIMPLE_TRAJECTORY)
-        tool_spans = [
-            s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value
-        ]
+        tool_spans = [s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value]
         tool = tool_spans[0]
         assert tool.parent is not None
         assert tool.parent.name == "simple_calculator_agent"
 
     def test_llm_spans_reparented_under_workflow(self, exporter):
         spans = exporter.convert(SIMPLE_TRAJECTORY)
-        llm_spans = [
-            s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.LLM.value
-        ]
+        llm_spans = [s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.LLM.value]
         for llm in llm_spans:
             assert llm.parent is not None
             assert llm.parent.attributes.get("nat.span.kind") == SpanKind.WORKFLOW.value
 
     def test_span_timing(self, exporter):
         spans = exporter.convert(SIMPLE_TRAJECTORY)
-        tool_spans = [
-            s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value
-        ]
+        tool_spans = [s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value]
         tool = tool_spans[0]
         expected_start_ns = int(1735689601.1 * 1e9)
         expected_end_ns = int(1735689601.4 * 1e9)
@@ -470,8 +446,7 @@ class TestMultiAgentTrajectory:
         # The subagent's root workflow span should be linked to the tool span
         sub_workflow_spans = [
             s for s in spans
-            if s.name == "ConfluenceAgent"
-            and s.attributes.get("nat.span.kind") == SpanKind.WORKFLOW.value
+            if s.name == "ConfluenceAgent" and s.attributes.get("nat.span.kind") == SpanKind.WORKFLOW.value
         ]
         assert len(sub_workflow_spans) == 1
         sub_root = sub_workflow_spans[0]
@@ -519,11 +494,17 @@ class TestTokenMetrics:
     @pytest.fixture
     def trajectory_with_metrics(self):
         return {
-            "schema_version": "ATIF-v1.6",
-            "session_id": "00000000-0000-0000-0000-000000000002",
-            "agent": {"name": "metric-agent", "version": "1.0.0"},
+            "schema_version":
+                "ATIF-v1.6",
+            "session_id":
+                "00000000-0000-0000-0000-000000000002",
+            "agent": {
+                "name": "metric-agent", "version": "1.0.0"
+            },
             "steps": [
-                {"step_id": 1, "source": "user", "message": "Count tokens"},
+                {
+                    "step_id": 1, "source": "user", "message": "Count tokens"
+                },
                 {
                     "step_id": 2,
                     "source": "agent",
@@ -551,10 +532,7 @@ class TestTokenMetrics:
     def test_token_counts_on_llm_span(self, trajectory_with_metrics):
         exporter = ATIFTrajectorySpanExporter()
         spans = exporter.convert(trajectory_with_metrics)
-        llm_spans = [
-            s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.LLM.value
-        ]
+        llm_spans = [s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.LLM.value]
         assert len(llm_spans) == 1
         llm = llm_spans[0]
         assert llm.attributes.get(SpanAttributes.LLM_TOKEN_COUNT_PROMPT.value) == 100
@@ -579,11 +557,17 @@ class TestNestedToolChain:
     @pytest.fixture
     def nested_trajectory(self):
         return {
-            "schema_version": "ATIF-v1.6",
-            "session_id": "00000000-0000-0000-0000-000000000003",
-            "agent": {"name": "nested-agent", "version": "1.0.0"},
+            "schema_version":
+                "ATIF-v1.6",
+            "session_id":
+                "00000000-0000-0000-0000-000000000003",
+            "agent": {
+                "name": "nested-agent", "version": "1.0.0"
+            },
             "steps": [
-                {"step_id": 1, "source": "user", "message": "Look up weather and convert"},
+                {
+                    "step_id": 1, "source": "user", "message": "Look up weather and convert"
+                },
                 {
                     "step_id": 2,
                     "source": "agent",
@@ -592,18 +576,26 @@ class TestNestedToolChain:
                         {
                             "tool_call_id": "call_weather",
                             "function_name": "weather__lookup",
-                            "arguments": {"city": "SF"},
+                            "arguments": {
+                                "city": "SF"
+                            },
                         },
                         {
                             "tool_call_id": "call_convert",
                             "function_name": "temperature__to_celsius",
-                            "arguments": {"fahrenheit": 68.0},
+                            "arguments": {
+                                "fahrenheit": 68.0
+                            },
                         },
                     ],
                     "observation": {
                         "results": [
-                            {"source_call_id": "call_weather", "content": "68.0 F"},
-                            {"source_call_id": "call_convert", "content": "20.0 C"},
+                            {
+                                "source_call_id": "call_weather", "content": "68.0 F"
+                            },
+                            {
+                                "source_call_id": "call_convert", "content": "20.0 C"
+                            },
                         ]
                     },
                     "extra": {
@@ -632,8 +624,12 @@ class TestNestedToolChain:
                             },
                         ],
                         "tool_invocations": [
-                            {"start_timestamp": 1000.1, "end_timestamp": 1000.8},
-                            {"start_timestamp": 1000.9, "end_timestamp": 1001.5},
+                            {
+                                "start_timestamp": 1000.1, "end_timestamp": 1000.8
+                            },
+                            {
+                                "start_timestamp": 1000.9, "end_timestamp": 1001.5
+                            },
                         ],
                     },
                 },
@@ -660,10 +656,7 @@ class TestNestedToolChain:
     def test_nested_tools_both_created(self, nested_trajectory):
         exporter = ATIFTrajectorySpanExporter()
         spans = exporter.convert(nested_trajectory)
-        tool_spans = [
-            s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value
-        ]
+        tool_spans = [s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value]
         assert len(tool_spans) == 2
         names = {s.name for s in tool_spans}
         assert names == {"weather__lookup", "temperature__to_celsius"}
@@ -671,10 +664,7 @@ class TestNestedToolChain:
     def test_child_tool_parents_parent_tool(self, nested_trajectory):
         exporter = ATIFTrajectorySpanExporter()
         spans = exporter.convert(nested_trajectory)
-        tool_spans = {
-            s.name: s for s in spans
-            if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value
-        }
+        tool_spans = {s.name: s for s in spans if s.attributes.get("nat.span.kind") == SpanKind.TOOL.value}
         convert_span = tool_spans["temperature__to_celsius"]
         assert convert_span.parent is not None
         assert convert_span.parent.name == "weather__lookup"
