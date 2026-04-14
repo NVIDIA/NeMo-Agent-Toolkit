@@ -1,8 +1,8 @@
 # Agentic Trajectory Observability Format (ATOF) Specification — Core
 
 **Status:** Active
-**Version:** 0.1
-**Date:** 2026-04-17
+**Version:** 0.2
+**Date:** 2026-04-14
 **NeMo Agent Toolkit Reference Implementation:** `src/nat/atof/`
 
 **Companion documents:**
@@ -16,13 +16,16 @@
 
 ATOF (Agentic Trajectory Observability Format) is the wire format for agent runtime subscriber callbacks. Events represent the lifecycle of scopes — composable units of agent work — within the runtime. Subscribers receive events in real time as the runtime executes agent workflows.
 
+ATOF is a **profile-contract protocol**: it defines the wire format and validation rules for the *contract* carried on every event (the `$schema` / `$version` / `$mode` meta-fields on `profile`), not the field shape for any particular category of scope work. Scope-specific payload shape is delegated to JSON Schemas published by vendors (and to the two reference profiles `default/llm.v1` and `default/tool.v1` defined in §6). New scope types extend the ecosystem by publishing a new schema ID, not by modifying this spec.
+
 Transport is JSON-Lines: each event is one JSON object per line. The `kind` field is the outer discriminator. Valid `kind` values are:
 
 - `"ScopeStart"` — a scope was opened
 - `"ScopeEnd"` — a scope was closed
 - `"Mark"` — a named checkpoint was emitted
+- `"StreamHeaderEvent"` — stream-wide schema registry and default profile-mode declaration (§3.4, §5)
 
-What *kind of work* a scope represents — an LLM call, a tool invocation, an agent turn, a retriever lookup — is carried by the `scope_type` field on `ScopeStart`/`ScopeEnd` and the companion `profile` sub-schema (Section 4).
+What *kind of work* a scope represents — an LLM call, a tool invocation, an agent turn, a retriever lookup — is carried by the `scope_type` string field on `ScopeStart`/`ScopeEnd` and by the companion `profile` contract (§4). `scope_type` is an open vocabulary (§3.1); `profile.$schema` declares the structured shape of the profile payload.
 
 **Wire envelope shape:**
 
@@ -43,41 +46,67 @@ Beyond the core envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`), A
 | **About the context** | —                   | `data`, `metadata` |
 
 
-- `flags` — behavioral flag set about the scope. Vocabulary is spec-defined per `scope_type` and extensible via dotted namespaces (Section 4). Type: `string[]`.
-- `profile` — structured subject fields for the scope (e.g., `model_name` for `"llm"`, `tool_call_id` for `"tool"`). The canonical spec-governed slot for typed data specific to this `scope_type`; null when the profile defines no such fields. Schema is spec-defined per `scope_type` (Section 4). Type: object or null.
+- `flags` — cross-cutting behavioral flag set on the scope. Vocabulary is documented in §2.1. Consumers MUST preserve unknown flag strings. Type: `string[]`.
+- `profile` — structured profile payload for the scope, following the profile-contract protocol (§4). Carries `$schema` (required), `$version` (required), optional `$mode`, and vendor-defined fields whose shape is specified by the declared `$schema`. Type: object or null.
 - `data` — application-defined payload. Opaque to ATOF. Consumers MUST NOT dispatch on `data` contents.
 - `metadata` — tracing and correlation envelope. Conventionally carries `trace_id`, `span_id`, and similar plumbing.
 
 **Choosing between them.** When attaching information to an event:
 
 1. Is it a boolean-ish *characteristic* of the scope? → `flags`
-2. Is it a typed field defined by the scope profile for this `scope_type`? → `profile`
+2. Is it a typed field defined by the scope's declared `profile.$schema`? → `profile`
 3. Is it tracing or correlation plumbing? → `metadata`
 4. Is it an application payload that the spec does not need to reason about? → `data`
 
-Emitters SHOULD NOT duplicate information already carried by `profile`, `input`, or `output` into `data`. `flags` and `profile` appear only on `ScopeStart` / `ScopeEnd`; `data` and `metadata` appear on all three event kinds.
+Emitters SHOULD NOT duplicate information already carried by `profile`, `input`, or `output` into `data`. `flags` and `profile` appear only on `ScopeStart` / `ScopeEnd`; `data` and `metadata` appear on all four event kinds (including `StreamHeaderEvent`).
 
 ---
 
 ## 2. Common Event Fields
 
-All three event types share these seven fields.
+All four event kinds share these seven envelope fields. The `flags` field is documented in §2.1 because it is cross-cutting across scope events (not a profile-level concern).
 
 
 | Field            | Type                  | Required | Description                                                                                                                                                                                                                                      |
 | ---------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `schema_version` | string                | Yes      | Spec version this event conforms to, formatted as `"MAJOR.MINOR"` (e.g., `"0.1"`). Consumers dispatch on this value per the negotiation rules in Section 5.7. Mixed-version streams are permitted.                                                |
+| `schema_version` | string                | Yes      | ATOF protocol version this event conforms to, formatted as `"MAJOR.MINOR"` (e.g., `"0.2"`). This is the ATOF *wire-format* version; it is NOT the version of any particular profile schema (see §4 — profile version lives in `profile.$version`). Consumers dispatch on this value per the negotiation rules in §7.7. Mixed-version streams are permitted. |
 | `parent_uuid`    | string (UUID) or null | No       | UUID of the scope that was on top of the stack when this handle was created. Null only on the root scope. Following `parent_uuid` links upward reconstructs the call graph.                                                                      |
 | `uuid`           | string (UUID)         | Yes      | Unique identifier for this handle. The matching Start and End events for the same handle carry the same `uuid`.                                                                                                                                  |
-| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | Wall-clock time when this event was emitted. Accepts two interchangeable forms — RFC 3339 string (e.g., `"2026-01-01T00:00:00Z"`) or integer epoch microseconds UTC (e.g., `1767225600000000`). See Section 5.1 for format choice guidance. Start and End events for the same handle have different timestamps.                                                                                                                                 |
+| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | Wall-clock time when this event was emitted. Accepts two interchangeable forms — RFC 3339 string (e.g., `"2026-01-01T00:00:00Z"`) or integer epoch microseconds UTC (e.g., `1767225600000000`). See §7.1 for format choice guidance. Start and End events for the same handle have different timestamps. |
 | `name`           | string                | Yes      | Human-readable label for this handle — e.g., `"my_agent"`, `"calculator__add"`, `"nvidia/nemotron-3-super-v3"`.                                                                                                                                  |
 | `data`           | object or null        | No       | Application-specific JSON payload attached by the caller.                                                                                                                                                                                        |
 | `metadata`       | object or null        | No       | Tracing and correlation metadata — e.g., `{"trace_id": "...", "span_id": "..."}`.                                                                                                                                                                |
 
 
+### 2.1 `flags` — behavioral flag set (ScopeStart / ScopeEnd only)
+
+`flags` is a cross-cutting field on `ScopeStartEvent` and `ScopeEndEvent` (it is NOT present on `MarkEvent` or `StreamHeaderEvent`). It carries a set of boolean indicators describing runtime properties of the scope — orthogonal to the scope's `$schema`-governed profile payload.
+
+| Field   | Type             | Required on ScopeStart / ScopeEnd | Description                                                                                                                                                                                                                                      |
+| ------- | ---------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `flags` | array of strings | Yes                               | Behavioral flag names in canonical form (lowercase, sorted, deduplicated). Empty array when no flags are set. Producers MUST emit `flags` in lexicographic order with no duplicates. Consumers SHOULD treat the array as an unordered set and MUST preserve unknown flag names when re-emitting. |
+
+The core flag vocabulary is:
+
+| Flag            | Meaning                                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `"parallel"`    | Scope may execute concurrently with sibling scopes under the same parent.                                            |
+| `"relocatable"` | Scope may be moved across async task boundaries (e.g., between threads or event loops) without losing context.       |
+| `"stateless"`   | Scope does not maintain state between invocations — the same inputs produce the same behavior regardless of history. |
+| `"local"`       | Scope executes in the same process as the runtime, as opposed to dispatching to a remote service.                    |
+| `"streaming"`   | Scope produces its output incrementally as a sequence of chunks, rather than as a single payload at exit.            |
+
+No flag is mandatory. Emitters SHOULD emit a flag only when the corresponding property is affirmatively true; absence is the default.
+
+**Flag extensibility.** Implementations MAY emit additional flag names for vendor extensions; to avoid collisions, non-canonical flags SHOULD be namespaced with a dotted prefix — for example, `"nvidia.speculative"`. Consumers MUST preserve unknown flag strings when re-emitting events and MUST NOT treat unknown flags as an error.
+
+**Streaming + terminal status.** For scopes carrying the `"streaming"` flag: if the scope terminates with `status == "error"` or `status == "cancelled"` (§3.2), the `output` on `ScopeEnd` MAY contain the partial chunks accumulated before the terminal event. Consumers that replay streaming output MUST check `status` before treating `output` as a complete payload.
+
 ---
 
 ## 3. Event Types
+
+ATOF v0.2 defines four event kinds: `ScopeStartEvent`, `ScopeEndEvent`, `MarkEvent`, and `StreamHeaderEvent`. The `kind` field is the outer discriminator. `ScopeStart` and `ScopeEnd` describe the lifecycle of typed scopes; `Mark` records named checkpoints; `StreamHeaderEvent` declares stream-wide profile schemas and the default profile-mode (§5).
 
 ### 3.1 ScopeStartEvent
 
@@ -86,36 +115,40 @@ Emitted when a new scope is pushed onto the scope stack.
 
 | Field            | Type                  | Required | Description                                                                                                                                                                                                                                                                                                                               |
 | ---------------- | --------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema_version` | string                | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `parent_uuid`    | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `uuid`           | string (UUID)         | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `name`           | string                | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `data`           | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `metadata`       | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `scope_type`     | string (enum)         | Yes      | Profile discriminator. One of: `"agent"`, `"function"`, `"tool"`, `"llm"`, `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`, `"custom"`, `"unknown"`. See Section 4.                                                                                                                                               |
-| `flags`       | array of strings      | Yes      | Behavioral flag names, canonical form (lowercase, sorted, deduplicated). Vocabulary depends on `scope_type` (see Section 4). Empty array when no flags are set.                                                                                                                                                                           |
-| `profile`     | object or null        | No       | Scope-type-specific structured fields known at scope entry (e.g., `model_name` for LLM, `tool_call_id` for tool). Shape is defined by the scope profile for `scope_type` (Section 4). Null when the profile defines no start-side fields.                                                                                                 |
-| `input`       | any or null           | No       | Sanitized input payload handed to the scope at entry (post request-sanitize guardrails). Opaque by default. When a codec is registered for this scope, `input` holds the structured form defined by the codec profile (see `[atof-codec-profiles.md](./atof-codec-profiles.md)`). Omitted or null when the scope has no meaningful input. |
+| `kind`           | string                | Yes      | Discriminator literal `"ScopeStart"`.                                                                                                                                                                                                                                                                                                     |
+| `schema_version` | string                | Yes      | See §2.                                                                                                                                                                                                                                                                                                                                   |
+| `parent_uuid`    | string (UUID) or null | No       | See §2.                                                                                                                                                                                                                                                                                                                                   |
+| `uuid`           | string (UUID)         | Yes      | See §2.                                                                                                                                                                                                                                                                                                                                   |
+| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | See §2.                                                                                                                                                                                                                                                                                                                                   |
+| `name`           | string                | Yes      | See §2.                                                                                                                                                                                                                                                                                                                                   |
+| `data`           | object or null        | No       | See §2.                                                                                                                                                                                                                                                                                                                                   |
+| `metadata`       | object or null        | No       | See §2.                                                                                                                                                                                                                                                                                                                                   |
+| `scope_type`     | string                | Yes      | Non-empty string identifying the kind of work this scope represents. Open vocabulary — see the conventions note below. Producers MUST emit a non-empty string; consumers MUST NOT reject unknown values.                                                                                                                                  |
+| `flags`          | array of strings      | Yes      | Behavioral flag names in canonical form (lowercase, sorted, deduplicated). See §2.1 for the shared vocabulary. Empty array when no flags are set.                                                                                                                                                                                         |
+| `profile`        | Profile (§4) or null  | No       | Profile-contract payload carrying `$schema` (required), `$version` (required), optional `$mode`, and vendor-defined fields whose shape is governed by the declared `$schema`. Null when the scope has no typed profile (e.g., a structural `"agent"` or `"function"` scope). Validation rules live in §4; the two spec-defined reference profiles live in §6. MAY be null. |
+| `input`          | any or null           | No       | Sanitized input payload handed to the scope at entry (post request-sanitize guardrails). Opaque by default. When a codec is registered for this scope, `input` holds the structured form defined by the codec profile (see `[atof-codec-profiles.md](./atof-codec-profiles.md)`). Omitted or null when the scope has no meaningful input. |
+
+**`scope_type` conventions (informational, not normative).** Common values encountered in practice include `"agent"`, `"function"`, `"tool"`, `"llm"`, `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`, `"custom"`, and `"unknown"`. Producers SHOULD use these conventional values when they accurately describe the scope; when none fit, producers MAY coin new values (optionally vendor-namespaced, e.g., `"nvidia.tool-bundle"`). Consumers MUST NOT treat any value as normatively restricted — in particular, consumers MUST NOT drop events with unrecognized `scope_type` values. The structural shape of the scope's `profile` is governed entirely by `profile.$schema` (§4), not by `scope_type`.
 
 
 ### 3.2 ScopeEndEvent
 
-Emitted when a scope is popped from the scope stack. Mirrors `ScopeStartEvent` except that `input` is replaced by `output`.
+Emitted when a scope is popped from the scope stack. Mirrors `ScopeStartEvent` except that `input` is replaced by `output` and the terminal `status` / `error` fields are added.
 
 
 | Field            | Type                  | Required | Description                                                                                                                                                                                                                                                                                                                                          |
 | ---------------- | --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `schema_version` | string                | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
-| `parent_uuid`    | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| `kind`           | string                | Yes      | Discriminator literal `"ScopeEnd"`.                                                                                                                                                                                                                                                                                                                  |
+| `schema_version` | string                | Yes      | See §2.                                                                                                                                                                                                                                                                                                                                              |
+| `parent_uuid`    | string (UUID) or null | No       | See §2.                                                                                                                                                                                                                                                                                                                                              |
 | `uuid`           | string (UUID)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
-| `timestamp`   | string (RFC 3339) or integer (epoch µs) | Yes | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| `timestamp`   | string (RFC 3339) or integer (epoch µs) | Yes | See §2.                                                                                                                                                                                                                                                                                                                                              |
 | `name`        | string                | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
-| `data`        | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
-| `metadata`    | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
-| `scope_type`  | string (enum)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
-| `flags`       | array of strings      | Yes      | Same value as the matching `ScopeStartEvent`. See Section 4.                                                                                                                                                                                                                                                                                         |
-| `profile`     | object or null        | No       | Scope-type-specific structured fields known at scope exit. MAY differ from the `ScopeStart` `profile` for the same handle (e.g., an LLM profile MAY add a response ID only known after the call completes). See Section 4.                                                                                                                           |
+| `data`        | object or null        | No       | See §2.                                                                                                                                                                                                                                                                                                                                              |
+| `metadata`    | object or null        | No       | See §2.                                                                                                                                                                                                                                                                                                                                              |
+| `scope_type`  | string                | Yes      | Same value as the matching `ScopeStartEvent` (see §3.1).                                                                                                                                                                                                                                                                                             |
+| `flags`       | array of strings      | Yes      | Same value as the matching `ScopeStartEvent`. See §2.1.                                                                                                                                                                                                                                                                                              |
+| `profile`     | Profile (§4) or null  | No       | Profile-contract payload for scope exit. MAY differ from the `ScopeStart` `profile` for the same handle (e.g., the publisher may populate additional vendor fields at end time). Cross-event invariance rules apply — `ScopeEnd.profile.$schema` MUST equal `ScopeStart.profile.$schema` and `ScopeEnd.profile.$version` MUST equal `ScopeStart.profile.$version` (§4.7). |
 | `output`      | any or null           | No       | Sanitized output payload produced by the scope at exit (post response-sanitize guardrails). Opaque by default. When a codec is registered for this scope, `output` holds the structured form defined by the codec profile (see `[atof-codec-profiles.md](./atof-codec-profiles.md)`). Omitted or null when the scope has no meaningful return value. |
 | `status`      | string (enum)         | Yes      | Terminal outcome of the scope. One of: `"ok"` (scope returned normally), `"error"` (scope raised an exception), `"cancelled"` (scope was terminated before completion, e.g., timeout, parent cancel, explicit cancel). See status semantics below.                                                                                                   |
 | `error`       | object or null        | No       | Structured exception/cancellation context. MUST be present when `status == "error"`; MAY be present when `status == "cancelled"`; MUST be null or absent when `status == "ok"`. See error object shape below.                                                                                                                                         |
@@ -147,13 +180,34 @@ Emitted when the application records a named checkpoint in the event stream. Mar
 
 | Field            | Type                  | Required | Description                                      |
 | ---------------- | --------------------- | -------- | ------------------------------------------------ |
-| `schema_version` | string                | Yes      | See Section 2.                                   |
-| `parent_uuid`    | string (UUID) or null | No       | See Section 2.                                   |
-| `uuid`           | string (UUID)         | Yes      | See Section 2.                                   |
-| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | See Section 2.                                   |
+| `kind`           | string                | Yes      | Discriminator literal `"Mark"`.                  |
+| `schema_version` | string                | Yes      | See §2.                                          |
+| `parent_uuid`    | string (UUID) or null | No       | See §2.                                          |
+| `uuid`           | string (UUID)         | Yes      | See §2.                                          |
+| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | See §2.                                          |
 | `name`           | string                | Yes      | Name of the marker checkpoint.                   |
 | `data`           | object or null        | No       | Application-specific payload for this milestone. |
-| `metadata`       | object or null        | No       | See Section 2.                                   |
+| `metadata`       | object or null        | No       | See §2.                                          |
+
+
+### 3.4 StreamHeaderEvent
+
+Emitted to declare stream-wide profile schemas and the default profile-mode for all subsequent events. `StreamHeaderEvent` is the fourth event kind in ATOF v0.2; it does NOT describe a scope's lifecycle. It carries no `scope_type`, no `flags`, no `profile`, no `status`, and no `error` — the full declarative reference for its fields, placement rules, and mode semantics lives in §5.
+
+| Field                  | Type                  | Required | Description                                                                                                                                                                                                                                       |
+| ---------------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`                 | string                | Yes      | Discriminator literal `"StreamHeaderEvent"`. Note: unlike the other three event kinds whose discriminators drop the "Event" suffix, this one retains it so that the wire discriminator matches the Python class name.                            |
+| `schema_version`       | string                | Yes      | See §2. ATOF protocol version (e.g., `"0.2"`) — NOT the version of any profile schema declared in `schemas`.                                                                                                                                      |
+| `parent_uuid`          | string (UUID) or null | No       | See §2. Typically null for header events.                                                                                                                                                                                                         |
+| `uuid`                 | string (UUID)         | Yes      | See §2. Unique identifier for the header event itself.                                                                                                                                                                                            |
+| `timestamp`            | string (RFC 3339) or integer (epoch µs) | Yes | See §2.                                                                                                                                                                                                                                           |
+| `name`                 | string                | Yes      | Human-readable label for the header — e.g., `"exmp01_header"`, `"run_initial_header"`.                                                                                                                                                            |
+| `data`                 | object or null        | No       | See §2.                                                                                                                                                                                                                                           |
+| `metadata`             | object or null        | No       | See §2.                                                                                                                                                                                                                                           |
+| `profile_mode_default` | string (enum)         | Yes      | Stream-wide default mode for profile events. One of: `"header"` (profiles reference schemas by string `$schema` ID, resolved via this event's `schemas` registry), `"inline"` (profiles carry their full JSON Schema as a dict in `$schema`), `"opaque"` (consumers preserve profiles but do NOT validate). A profile's own `$mode` field, when present, overrides this default for that one event (§4.4). |
+| `schemas`              | object                | Yes      | Schema registry keyed by schema ID (e.g., `"default/llm.v1"`). Each value is a complete JSON Schema document (Draft 2020-12). When a value contains an `$id` field, it MUST equal the dict key. MAY be empty (`{}`) — common when `profile_mode_default` is `"inline"` or `"opaque"`. See §5.4. |
+
+**Note:** `StreamHeaderEvent` does NOT carry `scope_type`, `flags`, `profile`, `status`, or `error` — those fields belong to scope-lifecycle events only.
 
 
 ---
