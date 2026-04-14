@@ -9,11 +9,13 @@ Implements the accumulator state machine described in
 ``atof-event-format.md`` Section 7. Uses ``nat.atof`` for input models
 and ``nat.atif`` for output models.
 
-Event model: 3 event types (ScopeStart/End + Mark, keyed by scope_type
-for LLM/Tool dispatch) per spec v0.1. The legacy 7-class model
-(LLMStart/End, ToolStart/End, ScopeStart/End, Mark) was collapsed in
-plan 07-03 and this converter now dispatches on
-``(kind, scope_type, profile.field)`` tuples.
+Event model: 4 event types (ScopeStart/End + Mark + StreamHeaderEvent) per
+spec v0.2. Dispatch keys on ``(kind, scope_type: str, profile.$schema)``
+tuples — the closed scope-type enum and the v0.1 per-scope-type typed
+profile classes were removed in phase 8 (see ``atof-event-format.md``
+§3.1, §4, §6). StreamHeaderEvents are consumed by a pre-pass to build
+the stream's schema registry and default profile mode; the main dispatch
+loop skips them.
 """
 
 from __future__ import annotations
@@ -29,16 +31,33 @@ from nat.atof.events import Event
 from nat.atof.events import MarkEvent
 from nat.atof.events import ScopeEndEvent
 from nat.atof.events import ScopeStartEvent
+from nat.atof.events import StreamHeaderEvent
 from nat.atof.io import read_jsonl
-from nat.atof.profiles import LLMProfile
-from nat.atof.profiles import ToolProfile
-from nat.atof.scope_type import ScopeType
+from nat.atof.profile_contract import ProfileContract  # noqa: F401  (type reference in docstrings)
+from nat.atof.profiles import DefaultLlmV1  # noqa: F401  (reference profile; surface available to callers)
+from nat.atof.profiles import DefaultToolV1  # noqa: F401  (reference profile; surface available to callers)
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _schema_id_string(schema_id: str | dict) -> str | None:
+    """Extract a canonical string ID from either string-ID or inline-schema form.
+
+    Per ATOF v0.2 §4.1, ``$schema`` on a profile is EITHER a string ID
+    (e.g., ``'default/llm.v1'``) OR an inline JSON Schema dict (which MUST
+    contain ``$id``). This helper normalizes both forms to the string ID.
+    Returns ``None`` for any other shape (defensive; should not occur for
+    well-formed profiles).
+    """
+    if isinstance(schema_id, str):
+        return schema_id
+    if isinstance(schema_id, dict):
+        return schema_id.get("$id")
+    return None
 
 
 def _build_ancestry(uuid: str, name: str, parent_uuid: str | None, name_map: dict[str, str]) -> dict:
@@ -89,11 +108,13 @@ def _extract_tool_calls(llm_output: dict | None) -> list[dict]:
                 args = json.loads(args)
             except json.JSONDecodeError:
                 args = {"raw": args}
-        result.append({
-            "tool_call_id": tc["id"],
-            "function_name": tc["name"],
-            "arguments": args,
-        })
+        result.append(
+            {
+                "tool_call_id": tc["id"],
+                "function_name": tc["name"],
+                "arguments": args,
+            }
+        )
     return result
 
 
@@ -138,6 +159,7 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
     - ScopeEnd   (scope_type=tool) → buffered observation, flushed on next LLMStart/Mark/end-of-stream
     - Other ScopeStart/ScopeEnd (agent/function/custom/etc.) → skip (structural events)
     - Mark (with data) → system step
+    - StreamHeaderEvent → consumed by pre-pass (schema registry + default mode); skipped in main loop
     """
     # Sort by normalized microsecond timestamp (spec §5.1, D-11). Polymorphic
     # str | int timestamps would otherwise raise TypeError on mixed compare.
@@ -152,6 +174,21 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             name_map[event.uuid] = event.name
         if isinstance(event, ScopeStartEvent):
             start_ts_map[event.uuid] = event.ts_micros
+
+    # Pre-pass: build schema registry from all StreamHeaderEvents.
+    # Per D-08: multiple headers allowed; later schema defs supersede earlier.
+    # Per D-09: absent any header → effective_mode="opaque".
+    # These values are reserved for optional consumer-side validation — the
+    # current converter does not validate, but the registry and mode are built
+    # so future extensions (e.g., per-event profile validation against the
+    # declared `$schema`) don't need another pre-pass.
+    effective_mode: str = "opaque"
+    schema_registry: dict[str, dict] = {}
+    for event in sorted_events:
+        if isinstance(event, StreamHeaderEvent):
+            effective_mode = event.profile_mode_default
+            schema_registry.update(event.schemas)
+    logger.debug("ATOF stream header: effective_mode=%s, %d schemas registered", effective_mode, len(schema_registry))
 
     # Accumulator state
     step_dicts: list[dict] = []
@@ -168,14 +205,14 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
         if not pending_observations:
             return
         sanitized = [{"content": obs["content"]} for obs in pending_observations]
-        step_dicts.append({
-            "source": "system",
-            "message": "",
-            "timestamp": pending_obs_timestamp,
-            "observation": {
-                "results": sanitized
-            },
-        })
+        step_dicts.append(
+            {
+                "source": "system",
+                "message": "",
+                "timestamp": pending_obs_timestamp,
+                "observation": {"results": sanitized},
+            }
+        )
         pending_observations = []
         pending_obs_timestamp = None
 
@@ -206,8 +243,12 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
 
     # Main event loop
     for event in sorted_events:
-        if isinstance(event, ScopeStartEvent) and event.scope_type == ScopeType.LLM:
-            # Replaces old LLMStartEvent branch.
+        if isinstance(event, StreamHeaderEvent):
+            # Already consumed by the schema-registry pre-pass; skip main dispatch.
+            continue
+
+        if isinstance(event, ScopeStartEvent) and event.scope_type == "llm":
+            # v0.2 dispatch: match on open-vocabulary scope_type string (spec §3.1, D-10).
             flush_observations()
             finalize_agent_extra()
 
@@ -216,19 +257,20 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
             message_str = json.dumps(messages, separators=(",", ":")) if messages else ""
 
-            step_dicts.append({
-                "source": "user",
-                "message": message_str,
-                "timestamp": event.timestamp,
-                "extra": {
-                    "ancestry": ancestry
-                },
-            })
+            step_dicts.append(
+                {
+                    "source": "user",
+                    "message": message_str,
+                    "timestamp": event.timestamp,
+                    "extra": {"ancestry": ancestry},
+                }
+            )
 
-        elif isinstance(event, ScopeEndEvent) and event.scope_type == ScopeType.LLM:
-            # Replaces old LLMEndEvent branch. model_name and tool_calls now
-            # come from event.profile.model_name and event.output respectively
-            # (D-13: AnnotatedLLMResponse dropped from the event class).
+        elif isinstance(event, ScopeEndEvent) and event.scope_type == "llm":
+            # v0.2 dispatch: model_name is read from the reference-profile vendor
+            # field when the profile declares `$schema == "default/llm.v1"`; any
+            # other schema falls through with no typed extraction (D-16 opaque
+            # passthrough — the profile itself is still preserved on the event).
             flush_observations()
 
             raw_output = event.output if isinstance(event.output, dict) else {}
@@ -262,12 +304,23 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             step_dicts.append(step_dict)
             current_agent_step_idx = len(step_dicts) - 1
 
-        elif isinstance(event, ScopeEndEvent) and event.scope_type == ScopeType.TOOL:
-            # Replaces old ToolEndEvent branch. tool_call_id is now carried
-            # on the typed profile (ToolProfile.tool_call_id).
+        elif isinstance(event, ScopeEndEvent) and event.scope_type == "tool":
+            # v0.2 dispatch: tool_call_id is read from the reference-profile vendor
+            # field when the profile declares `$schema == "default/tool.v1"`. Any
+            # other schema falls through to the name-based lookup (last_tool_call_map).
+            # Vendor fields on wire-deserialized profiles live in `model_extra` on the
+            # base `ProfileContract` class — attribute access would silently return
+            # `None` (Pitfall 7), so we use `model_dump(by_alias=True).get(...)`.
             tool_call_id: str | None = None
-            if isinstance(event.profile, ToolProfile):
-                tool_call_id = event.profile.tool_call_id
+            if event.profile is not None:
+                schema_id = _schema_id_string(event.profile.schema_id)
+                if schema_id == "default/tool.v1":
+                    # Vendor-field extraction via wire-alias dump (Pitfall 7): wire-deserialized
+                    # profiles are base `ProfileContract` instances; `tool_call_id` lives in
+                    # `model_extra`. Attribute access would silently return `None`.
+                    raw = event.profile.model_dump(by_alias=True).get("tool_call_id")
+                    if isinstance(raw, str):
+                        tool_call_id = raw
             if not tool_call_id:
                 tool_call_id = last_tool_call_map.get(event.name)
 
@@ -297,18 +350,20 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
         elif isinstance(event, MarkEvent) and event.data is not None:
             flush_observations()
             finalize_agent_extra()
-            step_dicts.append({
-                "source":
-                    "system",
-                "message":
-                    json.dumps(event.data, separators=(",", ":")) if isinstance(event.data, dict) else str(event.data),
-                "timestamp":
-                    event.timestamp,
-            })
+            step_dicts.append(
+                {
+                    "source": "system",
+                    "message": json.dumps(event.data, separators=(",", ":"))
+                    if isinstance(event.data, dict)
+                    else str(event.data),
+                    "timestamp": event.timestamp,
+                }
+            )
 
         else:
-            logger.debug("Skipping %s (scope_type=%s) event: %s", event.kind, getattr(event, "scope_type", None),
-                         event.name)
+            logger.debug(
+                "Skipping %s (scope_type=%s) event: %s", event.kind, getattr(event, "scope_type", None), event.name
+            )
 
     # Finalize remaining state
     finalize_agent_extra()
@@ -337,21 +392,30 @@ def convert(events: list[Event]) -> Trajectory:
     """
     step_dicts = _events_to_step_dicts(events)
 
-    # Extract agent info from events
+    # Extract agent info from events. scope_type is an open-vocabulary string
+    # in v0.2 (D-10); compare against the reference convention `"agent"` /
+    # `"llm"` rather than the removed ScopeType enum.
     agent_name = "unknown"
     model_name: str | None = None
     session_id = "atof-session"
 
     for event in events:
-        if isinstance(event, ScopeStartEvent) and event.scope_type == ScopeType.AGENT:
+        if isinstance(event, ScopeStartEvent) and event.scope_type == "agent":
             agent_name = event.name
             break
 
     for event in events:
-        if (isinstance(event, ScopeEndEvent) and event.scope_type == ScopeType.LLM
-                and isinstance(event.profile, LLMProfile)):
-            model_name = event.profile.model_name or event.name
-            break
+        if isinstance(event, ScopeEndEvent) and event.scope_type == "llm" and event.profile is not None:
+            # Reference-profile vendor-field extraction (D-14): only pull model_name
+            # when the profile declares `$schema == "default/llm.v1"`. Other schemas
+            # fall through to the event name fallback (preserves v0.1 behavior).
+            schema_id = _schema_id_string(event.profile.schema_id)
+            if schema_id == "default/llm.v1":
+                # Vendor-field extraction via wire-alias dump (Pitfall 7): see tool_call_id
+                # extraction above for the base-class / model_extra rationale.
+                raw_model_name = event.profile.model_dump(by_alias=True).get("model_name")
+                model_name = raw_model_name if isinstance(raw_model_name, str) else event.name
+                break
 
     return Trajectory(
         session_id=session_id,
