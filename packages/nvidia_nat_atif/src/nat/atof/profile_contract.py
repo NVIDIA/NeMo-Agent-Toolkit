@@ -25,6 +25,7 @@ from typing import ClassVar
 from typing import Literal
 from typing import Self
 
+from jsonschema.exceptions import ValidationError as JsonSchemaValidationError
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -81,7 +82,15 @@ class ProfileContract(BaseModel):
         )
         try:
             validate_profile(vendor_fields, target)
-        except Exception as e:  # jsonschema.ValidationError or swapped-lib analog
+        except JsonSchemaValidationError as e:
+            # Narrowed per WR-01 (Phase 8 review): only wrap the documented
+            # validator-failure type as a ValueError (Pydantic converts it
+            # into pydantic.ValidationError per D-15). Any other exception
+            # (TypeError from malformed inline schema, AttributeError from a
+            # misconfigured swapped validator, etc.) propagates unchanged so
+            # the root cause isn't masked as a "validation failure".
+            # `validate_profile`'s docstring is the contract: implementations
+            # MUST raise `jsonschema.exceptions.ValidationError` on failure.
             raise ValueError(f"Profile failed $schema validation: {e}") from e
         return self
 
