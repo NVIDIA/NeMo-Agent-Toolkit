@@ -52,5 +52,11 @@ def write_jsonl(events: list[Event], path: str | Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     lines = []
     for event in events:
-        lines.append(json.dumps(event.model_dump(exclude_none=True, mode="json")))
+        # `serialize_as_any=True` is REQUIRED for vendor-field round-trip: `profile` is typed as
+        # `ProfileContract | None` (base class, per D-22), and Pydantic v2's default "by attribute
+        # typing" serialization would drop subclass fields (e.g., DefaultLlmV1.model_name,
+        # DefaultToolV1.tool_call_id). With duck-typing enabled, the runtime-instance fields are
+        # serialized. `by_alias=True` ensures `$schema`/`$version`/`$mode` keys are emitted with
+        # their wire-format `$`-prefixed names rather than the Python attribute names.
+        lines.append(json.dumps(event.model_dump(by_alias=True, exclude_none=True, mode="json", serialize_as_any=True)))
     path.write_text("\n".join(lines) + "\n")
