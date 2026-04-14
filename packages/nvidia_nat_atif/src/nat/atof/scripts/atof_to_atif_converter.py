@@ -8,36 +8,37 @@ subscriber callbacks) into an ATIF Trajectory using NAT's native models.
 Implements the accumulator state machine described in
 ``atof-event-format.md`` Section 7. Uses ``nat.atof`` for input models
 and ``nat.atif`` for output models.
+
+Event model: 3 event types (ScopeStart/End + Mark, keyed by scope_type
+for LLM/Tool dispatch) per spec v0.1. The legacy 7-class model
+(LLMStart/End, ToolStart/End, ScopeStart/End, Mark) was collapsed in
+plan 07-03 and this converter now dispatches on
+``(kind, scope_type, profile.field)`` tuples.
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
 from pathlib import Path
 
 from nat.atif.agent import Agent
 from nat.atif.step import Step
 from nat.atif.trajectory import Trajectory
 from nat.atof.events import Event
-from nat.atof.events import LLMEndEvent
-from nat.atof.events import LLMStartEvent
 from nat.atof.events import MarkEvent
-from nat.atof.events import ToolEndEvent
+from nat.atof.events import ScopeEndEvent
+from nat.atof.events import ScopeStartEvent
 from nat.atof.io import read_jsonl
+from nat.atof.profiles import LLMProfile
+from nat.atof.profiles import ToolProfile
+from nat.atof.scope_type import ScopeType
 
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _iso_to_epoch(ts_str: str) -> float:
-    """Convert ISO 8601 timestamp to epoch seconds, truncated to milliseconds."""
-    dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-    return round(dt.timestamp(), 3)
 
 
 def _build_ancestry(uuid: str, name: str, parent_uuid: str | None, name_map: dict[str, str]) -> dict:
@@ -50,25 +51,36 @@ def _build_ancestry(uuid: str, name: str, parent_uuid: str | None, name_map: dic
     }
 
 
-def _build_invocation_info(start_ts: str | None, end_ts: str | None, invocation_id: str) -> dict:
-    """Build invocation info dict from timestamps and ID."""
+def _build_invocation_info(start_micros: int | None, end_micros: int | None, invocation_id: str) -> dict:
+    """Build invocation info dict from microsecond timestamps and ID.
+
+    Accepts normalized ``ts_micros`` integers (spec §5.1) and emits the
+    ATIF-expected seconds-as-float shape for ``start_timestamp`` /
+    ``end_timestamp`` at millisecond precision.
+    """
     info: dict = {
         "invocation_id": invocation_id,
         "framework": "nat",
         "status": "completed",
     }
-    if start_ts:
-        info["start_timestamp"] = _iso_to_epoch(start_ts)
-    if end_ts:
-        info["end_timestamp"] = _iso_to_epoch(end_ts)
+    if start_micros is not None:
+        info["start_timestamp"] = round(start_micros / 1_000_000, 3)
+    if end_micros is not None:
+        info["end_timestamp"] = round(end_micros / 1_000_000, 3)
     return info
 
 
-def _extract_tool_calls(annotated_response: dict | None) -> list[dict]:
-    """Extract tool call dicts from an annotated_response."""
-    if not annotated_response:
+def _extract_tool_calls(llm_output: dict | None) -> list[dict]:
+    """Extract tool call dicts from an LLM output payload.
+
+    ``llm_output`` is the raw dict from a ``ScopeEndEvent.output`` on an
+    ``scope_type="llm"`` event. The caller has already coerced non-dict
+    outputs to ``{}``. Returns a list of ATIF-shaped tool-call dicts
+    (``tool_call_id``, ``function_name``, ``arguments``).
+    """
+    if not llm_output:
         return []
-    raw_calls = annotated_response.get("tool_calls") or []
+    raw_calls = llm_output.get("tool_calls") or []
     result = []
     for tc in raw_calls:
         args = tc.get("arguments", {})
@@ -121,29 +133,30 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
     """Convert typed ATOF events to step dicts using the accumulator pattern.
 
     Mirrors the Rust AtifExporter processing loop (atof-event-format.md Section 7):
-    - LLMStart → user step (messages from input)
-    - LLMEnd → agent step (tool_calls from annotated_response)
-    - ToolEnd → buffered observation, flushed on next LLMStart/Mark/end-of-stream
-    - ScopeStart/ScopeEnd/ToolStart → skip (structural events)
+    - ScopeStart (scope_type=llm) → user step (messages from input)
+    - ScopeEnd   (scope_type=llm) → agent step (tool_calls from output)
+    - ScopeEnd   (scope_type=tool) → buffered observation, flushed on next LLMStart/Mark/end-of-stream
+    - Other ScopeStart/ScopeEnd (agent/function/custom/etc.) → skip (structural events)
     - Mark (with data) → system step
     """
-    # Sort by timestamp
-    sorted_events = sorted(events, key=lambda e: e.timestamp)
+    # Sort by normalized microsecond timestamp (spec §5.1, D-11). Polymorphic
+    # str | int timestamps would otherwise raise TypeError on mixed compare.
+    sorted_events = sorted(events, key=lambda e: e.ts_micros)
 
-    # Pre-pass: build uuid → name and uuid → start_timestamp maps
+    # Pre-pass: build uuid → name and uuid → start_ts_micros maps
     name_map: dict[str, str] = {}
-    start_ts_map: dict[str, str] = {}
+    start_ts_map: dict[str, int] = {}
 
     for event in sorted_events:
         if event.uuid and event.name:
             name_map[event.uuid] = event.name
-        if event.kind in ("LLMStart", "ToolStart", "ScopeStart"):
-            start_ts_map[event.uuid] = event.timestamp
+        if isinstance(event, ScopeStartEvent):
+            start_ts_map[event.uuid] = event.ts_micros
 
     # Accumulator state
     step_dicts: list[dict] = []
     pending_observations: list[dict] = []
-    pending_obs_timestamp: str | None = None
+    pending_obs_timestamp: str | int | None = None
     last_tool_call_map: dict[str, str] = {}
     last_tool_call_order: list[str] = []
     current_agent_step_idx: int | None = None
@@ -193,7 +206,8 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
 
     # Main event loop
     for event in sorted_events:
-        if isinstance(event, LLMStartEvent):
+        if isinstance(event, ScopeStartEvent) and event.scope_type == ScopeType.LLM:
+            # Replaces old LLMStartEvent branch.
             flush_observations()
             finalize_agent_extra()
 
@@ -211,12 +225,14 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
                 },
             })
 
-        elif isinstance(event, LLMEndEvent):
+        elif isinstance(event, ScopeEndEvent) and event.scope_type == ScopeType.LLM:
+            # Replaces old LLMEndEvent branch. model_name and tool_calls now
+            # come from event.profile.model_name and event.output respectively
+            # (D-13: AnnotatedLLMResponse dropped from the event class).
             flush_observations()
 
-            ann_resp = (event.annotated_response.model_dump(exclude_none=True, mode="json")
-                        if event.annotated_response else None)
-            tool_call_dicts = _extract_tool_calls(ann_resp)
+            raw_output = event.output if isinstance(event.output, dict) else {}
+            tool_call_dicts = _extract_tool_calls(raw_output)
 
             last_tool_call_map.clear()
             last_tool_call_order.clear()
@@ -225,12 +241,11 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
                 last_tool_call_order.append(tc["tool_call_id"])
 
             ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
-            start_ts = start_ts_map.get(event.uuid)
-            invocation = _build_invocation_info(start_ts, event.timestamp, event.uuid)
+            start_micros = start_ts_map.get(event.uuid)
+            invocation = _build_invocation_info(start_micros, event.ts_micros, event.uuid)
 
             extra: dict = {"ancestry": ancestry, "invocation": invocation}
 
-            raw_output = event.output if isinstance(event.output, dict) else {}
             try:
                 agent_msg = raw_output["choices"][0]["message"].get("content", "")
             except (KeyError, IndexError, TypeError):
@@ -247,8 +262,12 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             step_dicts.append(step_dict)
             current_agent_step_idx = len(step_dicts) - 1
 
-        elif isinstance(event, ToolEndEvent):
-            tool_call_id = event.tool_call_id
+        elif isinstance(event, ScopeEndEvent) and event.scope_type == ScopeType.TOOL:
+            # Replaces old ToolEndEvent branch. tool_call_id is now carried
+            # on the typed profile (ToolProfile.tool_call_id).
+            tool_call_id: str | None = None
+            if isinstance(event.profile, ToolProfile):
+                tool_call_id = event.profile.tool_call_id
             if not tool_call_id:
                 tool_call_id = last_tool_call_map.get(event.name)
 
@@ -271,8 +290,8 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             tool_ancestry["_sort_id"] = tool_call_id or ""
             pending_tool_ancestry.append(tool_ancestry)
 
-            start_ts = start_ts_map.get(event.uuid)
-            invocation = _build_invocation_info(start_ts, event.timestamp, tool_call_id or event.uuid)
+            start_micros = start_ts_map.get(event.uuid)
+            invocation = _build_invocation_info(start_micros, event.ts_micros, tool_call_id or event.uuid)
             pending_tool_invocations.append(invocation)
 
         elif isinstance(event, MarkEvent) and event.data is not None:
@@ -288,7 +307,8 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             })
 
         else:
-            logger.debug("Skipping %s event: %s", event.kind, event.name)
+            logger.debug("Skipping %s (scope_type=%s) event: %s", event.kind, getattr(event, "scope_type", None),
+                         event.name)
 
     # Finalize remaining state
     finalize_agent_extra()
@@ -323,15 +343,14 @@ def convert(events: list[Event]) -> Trajectory:
     session_id = "atof-session"
 
     for event in events:
-        if event.kind == "ScopeStart" and hasattr(event, "scope_type"):
-            scope_type = getattr(event, "scope_type", "")
-            if scope_type == "agent":
-                agent_name = event.name
-                break
+        if isinstance(event, ScopeStartEvent) and event.scope_type == ScopeType.AGENT:
+            agent_name = event.name
+            break
 
     for event in events:
-        if isinstance(event, LLMEndEvent):
-            model_name = event.model_name or event.name
+        if (isinstance(event, ScopeEndEvent) and event.scope_type == ScopeType.LLM
+                and isinstance(event.profile, LLMProfile)):
+            model_name = event.profile.model_name or event.name
             break
 
     return Trajectory(
