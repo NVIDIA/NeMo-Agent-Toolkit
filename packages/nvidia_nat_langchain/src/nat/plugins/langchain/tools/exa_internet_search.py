@@ -39,9 +39,9 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
     api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
                                            description="The API key for the Exa service.")
     max_retries: int = Field(default=3, ge=1, description="Maximum number of retries for the search request")
-    search_type: Literal["auto", "neural", "keyword"] = Field(
+    search_type: Literal["auto", "fast", "deep", "neural", "instant"] = Field(
         default="auto",
-        description="Type of search to perform - 'neural', 'keyword', or 'auto'")
+        description="Exa search type - 'auto', 'fast', 'deep', 'neural', or 'instant'")
     livecrawl: Literal["always", "fallback", "never"] = Field(
         default="fallback",
         description="Livecrawl behavior - 'always', 'fallback', or 'never'")
