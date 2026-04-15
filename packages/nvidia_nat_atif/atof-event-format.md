@@ -1,8 +1,6 @@
 # Agentic Trajectory Observability Format (ATOF) Specification — Core
 
-**Status:** Active
-**Version:** 0.1
-**Date:** 2026-04-15
+**Version:** 0.1  
 **NeMo Agent Toolkit Reference Implementation:** `src/nat/atof/`
 
 **Companion documents:**
@@ -16,7 +14,7 @@
 
 ATOF (Agentic Trajectory Observability Format) is the wire format for agent runtime subscriber callbacks. Events represent the lifecycle of scopes — composable units of agent work — within the runtime. Subscribers receive events in real time as the runtime executes agent workflows.
 
-**Primary purpose: replay-for-inspection.** An ATOF event stream MUST carry enough information to reconstruct what happened in an agent run — identity, call graph, LLM messages in/out, tool calls and results, status — so that humans and tools can debug, audit, and evaluate the run post-hoc.
+**Primary purpose:** lossless replay for inspection and evaluation**.** An ATOF event stream MUST carry enough information to reconstruct what happened in an agent run — identity, call graph, LLM messages in/out, tool calls and results, status — so that humans and tools can debug, audit, and evaluate the run post-hoc.
 
 Transport is JSON Lines: one JSON object per line. The `kind` field at the top of every event is the primary discriminator. ATOF v0.1 defines **three event kinds**:
 
@@ -40,7 +38,7 @@ ATOF is designed for progressive enrichment at the producer's discretion. A prod
 | Tier                    | Producer knows                                                       | Wire shape                                                                                                                      | Use case                                                                                                                                   |
 | ----------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | **1. Raw pass-through** | nothing semantic — just a payload                                    | event kind + envelope + opaque `input`/`output` JSON; `scope_type: "unknown"`; other typed fields are `null`                    | runtime wrapping third-party frameworks where callback provides a blob, not a classification                                               |
-| **2. Semantic-tagged**  | the kind of work (LLM, tool, specific scope type)                    | typed event kind + populated `scope_type` + kind-appropriate typed fields (`model_name`, `tool_call_id`, `attributes`)          | native runtime (NeMo-Flow) emitting its own events; langchain wrappers that can classify at the hook site                                  |
+| **2. Semantic-tagged**  | the kind of work (LLM, tool, specific scope type)                    | typed event kind + populated `scope_type` + kind-appropriate typed fields (`model_name`, `tool_call_id`, `attributes`)          | native agent runtimes emitting their own events; framework wrappers that can classify at the hook site                                     |
 | **3. Codec-annotated**  | the structured shape of the payload (messages, params, tool defs, …) | tier-2 plus `codec: {name, version}` identifier and optional `annotated_request`/`annotated_response` structured representation | producer has a registered codec (OpenAI Chat, Anthropic Messages, NVIDIA NIM, …) that decodes raw provider JSON into a canonical structure |
 
 
@@ -51,10 +49,10 @@ ATOF is designed for progressive enrichment at the producer's discretion. A prod
 Beyond the base envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`, `schema_version`), every lifecycle event carries three structured fields:
 
 
-|                       | Spec-governed shape                                                                                                            | Opaque to ATOF     |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+|                       | Spec-governed shape                                                                                                                                               | Opaque to ATOF     |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
 | **About the work**    | `input` (ScopeStart), `output` (ScopeEnd), `attributes`, `scope_type`, `subtype`, `model_name`, `tool_call_id`, `codec`, `annotated_request`/`annotated_response` | —                  |
-| **About the context** | —                                                                                                                              | `data`, `metadata` |
+| **About the context** | —                                                                                                                                                                 | `data`, `metadata` |
 
 
 - `input` / `output` — raw payload (post-guardrail). Opaque to the ATOF core; structure MAY be defined by a codec (tier-3) and carried as `annotated_request` / `annotated_response`.
@@ -69,12 +67,14 @@ Beyond the base envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`, `s
 
 **Field applicability by `scope_type`** (informative):
 
-| Field                  | `llm` | `tool` | `agent` / `function` / `retriever` / `embedder` / `reranker` / `guardrail` / `evaluator` | `custom` | `unknown` |
-| ---------------------- | :---: | :----: | :----------------------------------------------------------------------------------------: | :------: | :-------: |
-| `model_name`           |  ✓    |   —    |                                              —                                             |    —     |     —     |
-| `tool_call_id`         |  —    |   ✓    |                                              —                                             |    —     |     —     |
-| `codec` + `annotated_*`|  ✓    |   ✓*   |                                              —                                             |    —     |     —     |
-| `subtype`              |  —    |   —    |                                              —                                             |    ✓     |     —     |
+
+| Field                   | `llm` | `tool` | `agent` / `function` / `retriever` / `embedder` / `reranker` / `guardrail` / `evaluator` | `custom` | `unknown` |
+| ----------------------- | ----- | ------ | ---------------------------------------------------------------------------------------- | -------- | --------- |
+| `model_name`            | ✓     | —      | —                                                                                        | —        | —         |
+| `tool_call_id`          | —     | ✓      | —                                                                                        | —        | —         |
+| `codec` + `annotated_*` | ✓     | ✓*     | —                                                                                        | —        | —         |
+| `subtype`               | —     | —      | —                                                                                        | ✓        | —         |
+
 
 ✓ = populated when the producer knows it; — = null / absent. `*` tool codec annotations are optional even for `scope_type == "tool"` — see `atof-codec-profiles.md`.
 
@@ -85,36 +85,41 @@ Beyond the base envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`, `s
 Every event carries these six envelope fields. `ScopeStart`/`ScopeEnd` add fields on top; `Mark` adds only `data` / `metadata`.
 
 
-| Field            | Type                                    | Required | Description                                                                                                                     |
-| ---------------- | --------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `kind`           | string                                  | Yes      | Event kind discriminator. One of: `"ScopeStart"`, `"ScopeEnd"`, `"Mark"`.                                                       |
-| `schema_version` | string                                  | Yes      | ATOF protocol version, `"MAJOR.MINOR"` (e.g., `"0.1"`). See §6.6.                                                               |
-| `uuid`           | string (UUID)                           | Yes      | Unique identifier for this event or span. For `ScopeStart`/`ScopeEnd` pairs, the Start and End share a `uuid`.                  |
-| `parent_uuid`    | string (UUID) or null                   | No       | UUID of the containing scope when this event was emitted. Null only for root scope events and unparented `Mark` events.         |
-| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes      | Wall-clock time the event was emitted. See §6.1.                                                                                |
-| `name`           | string                                  | Yes      | Human-readable label — e.g., `"my_agent"`, `"calculator__add"`, `"gpt-4.1"`.                                                    |
-| `data`           | object or null                          | No       | Application-defined payload. Opaque to ATOF.                                                                                    |
-| `metadata`       | object or null                          | No       | Tracing/correlation envelope — e.g., `{"trace_id": "...", "span_id": "..."}`.                                                   |
+| Field            | Type                                    | Required | Description                                                                                                             |
+| ---------------- | --------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `kind`           | string                                  | Yes      | Event kind discriminator. One of: `"ScopeStart"`, `"ScopeEnd"`, `"Mark"`.                                               |
+| `schema_version` | string                                  | Yes      | ATOF protocol version, `"MAJOR.MINOR"` (e.g., `"0.1"`). See §6.6.                                                       |
+| `uuid`           | string (UUID)                           | Yes      | Unique identifier for this event or span. For `ScopeStart`/`ScopeEnd` pairs, the Start and End share a `uuid`.          |
+| `parent_uuid`    | string (UUID) or null                   | No       | UUID of the containing scope when this event was emitted. Null only for root scope events and unparented `Mark` events. |
+| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes      | Wall-clock time the event was emitted. See §6.1.                                                                        |
+| `name`           | string                                  | Yes      | Human-readable label — e.g., `"my_agent"`, `"calculator__add"`, `"gpt-4.1"`.                                            |
+| `data`           | object or null                          | No       | Application-defined payload. Opaque to ATOF.                                                                            |
+| `metadata`       | object or null                          | No       | Tracing/correlation envelope — e.g., `{"trace_id": "...", "span_id": "..."}`.                                           |
+
 
 ### 2.1 `attributes` — behavioral flag array
 
 `attributes` is a cross-cutting field on `ScopeStart` and `ScopeEnd`. `Mark` does NOT carry `attributes`.
 
-| Field        | Type             | Required | Description                                                                                                 |
-| ------------ | ---------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
-| `attributes` | array of strings | Yes      | Canonical lowercase flag names (sorted, deduplicated). Empty array `[]` when no flags are set.              |
+
+| Field        | Type             | Required | Description                                                                                    |
+| ------------ | ---------------- | -------- | ---------------------------------------------------------------------------------------------- |
+| `attributes` | array of strings | Yes      | Canonical lowercase flag names (sorted, deduplicated). Empty array `[]` when no flags are set. |
+
 
 Producers MUST emit `attributes` in lexicographic order with no duplicates. Consumers SHOULD treat the array as an unordered set and MUST preserve unknown flag names when re-emitting. Unknown flags SHOULD NOT be treated as errors.
 
 **Canonical flag vocabulary** (shared across all scope_types; individual flag applicability noted):
 
-| Flag            | Applies when                     | Meaning (when present)                                                                                   |
-| --------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `"parallel"`    | any `scope_type`                 | Scope executes concurrently with sibling scopes under the same parent.                                   |
-| `"relocatable"` | any `scope_type`                 | Scope may be moved across async task boundaries (e.g., between threads or event loops) without losing context. |
+
+| Flag            | Applies when                     | Meaning (when present)                                                                                           |
+| --------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `"parallel"`    | any `scope_type`                 | Scope executes concurrently with sibling scopes under the same parent.                                           |
+| `"relocatable"` | any `scope_type`                 | Scope may be moved across async task boundaries (e.g., between threads or event loops) without losing context.   |
 | `"stateless"`   | `scope_type == "llm"` primarily  | Scope does not maintain state between invocations — same inputs produce the same behavior regardless of history. |
-| `"streaming"`   | `scope_type == "llm"` primarily  | Scope produces its output incrementally as chunks, rather than as a single payload at exit.              |
-| `"local"`       | `scope_type == "tool"` primarily | Tool executes in the same process as the runtime, not dispatched to a remote service.                    |
+| `"streaming"`   | `scope_type == "llm"` primarily  | Scope produces its output incrementally as chunks, rather than as a single payload at exit.                      |
+| `"local"`       | `scope_type == "tool"` primarily | Tool executes in the same process as the runtime, not dispatched to a remote service.                            |
+
 
 **Why defaults are "absence":** Each flag describes the exceptional case. Absence means the default applies — serial (not parallel), pinned (not relocatable), stateful (not stateless), single-payload (not streaming), remote (not local).
 
@@ -130,64 +135,70 @@ Producers MUST emit `attributes` in lexicographic order with no duplicates. Cons
 
 Emitted when a scope is pushed onto the active scope stack.
 
-| Field               | Type                                    | Required | Description                                                                                                                                                  |
-| ------------------- | --------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `kind`              | string                                  | Yes      | Literal `"ScopeStart"`.                                                                                                                                      |
-| `schema_version`    | string                                  | Yes      | See §2.                                                                                                                                                      |
-| `uuid`              | string (UUID)                           | Yes      | See §2.                                                                                                                                                      |
-| `parent_uuid`       | string (UUID) or null                   | No       | See §2. Null on the root scope.                                                                                                                              |
-| `timestamp`         | string or integer                       | Yes      | See §2.                                                                                                                                                      |
-| `name`              | string                                  | Yes      | See §2.                                                                                                                                                      |
-| `attributes`        | array of strings                        | Yes      | See §2.1.                                                                                                                                                    |
-| `scope_type`        | string                                  | Yes      | Semantic category. See §4.                                                                                                                                   |
-| `subtype`           | string or null                          | No       | Free-form vendor name. REQUIRED when `scope_type == "custom"`; SHOULD be absent otherwise. See §4.2.                                                         |
-| `model_name`        | string or null                          | No       | LLM model identifier. Populated when `scope_type == "llm"` and the producer knows the model name; null otherwise.                                            |
-| `tool_call_id`      | string or null                          | No       | Tool-call correlation ID. Populated when `scope_type == "tool"` and the tool was invoked via an LLM tool-use flow; null otherwise.                           |
-| `codec`             | object or null                          | No       | Codec identifier `{name: string, version: string}` declaring which codec shaped `annotated_request`. See `atof-codec-profiles.md`. Applicable when `scope_type` is `"llm"` or `"tool"`. |
-| `input`             | any or null                             | No       | Raw input payload (post-guardrail). Opaque to ATOF core.                                                                                                     |
-| `annotated_request` | object or null                          | No       | Structured codec-decoded view of the input. Shape declared by `codec`. See `atof-codec-profiles.md`.                                                         |
-| `data`              | object or null                          | No       | See §2.                                                                                                                                                      |
-| `metadata`          | object or null                          | No       | See §2.                                                                                                                                                      |
+
+| Field               | Type                  | Required | Description                                                                                                                                                                             |
+| ------------------- | --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kind`              | string                | Yes      | Literal `"ScopeStart"`.                                                                                                                                                                 |
+| `schema_version`    | string                | Yes      | See §2.                                                                                                                                                                                 |
+| `uuid`              | string (UUID)         | Yes      | See §2.                                                                                                                                                                                 |
+| `parent_uuid`       | string (UUID) or null | No       | See §2. Null on the root scope.                                                                                                                                                         |
+| `timestamp`         | string or integer     | Yes      | See §2.                                                                                                                                                                                 |
+| `name`              | string                | Yes      | See §2.                                                                                                                                                                                 |
+| `attributes`        | array of strings      | Yes      | See §2.1.                                                                                                                                                                               |
+| `scope_type`        | string                | Yes      | Semantic category. See §4.                                                                                                                                                              |
+| `subtype`           | string or null        | No       | Free-form vendor name. REQUIRED when `scope_type == "custom"`; SHOULD be absent otherwise. See §4.2.                                                                                    |
+| `model_name`        | string or null        | No       | LLM model identifier. Populated when `scope_type == "llm"` and the producer knows the model name; null otherwise.                                                                       |
+| `tool_call_id`      | string or null        | No       | Tool-call correlation ID. Populated when `scope_type == "tool"` and the tool was invoked via an LLM tool-use flow; null otherwise.                                                      |
+| `codec`             | object or null        | No       | Codec identifier `{name: string, version: string}` declaring which codec shaped `annotated_request`. See `atof-codec-profiles.md`. Applicable when `scope_type` is `"llm"` or `"tool"`. |
+| `input`             | any or null           | No       | Raw input payload (post-guardrail). Opaque to ATOF core.                                                                                                                                |
+| `annotated_request` | object or null        | No       | Structured codec-decoded view of the input. Shape declared by `codec`. See `atof-codec-profiles.md`.                                                                                    |
+| `data`              | object or null        | No       | See §2.                                                                                                                                                                                 |
+| `metadata`          | object or null        | No       | See §2.                                                                                                                                                                                 |
+
 
 ### 3.2 `ScopeEndEvent`
 
 Emitted when a scope is popped from the active scope stack. Paired 1:1 with `ScopeStart` by `uuid`.
 
-| Field                | Type                                    | Required | Description                                                                                                                                                  |
-| -------------------- | --------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `kind`               | string                                  | Yes      | Literal `"ScopeEnd"`.                                                                                                                                        |
-| `schema_version`     | string                                  | Yes      | See §2.                                                                                                                                                      |
-| `uuid`               | string (UUID)                           | Yes      | Same UUID as the paired `ScopeStart`.                                                                                                                        |
-| `parent_uuid`        | string (UUID) or null                   | No       | Same as the paired `ScopeStart`.                                                                                                                             |
-| `timestamp`          | string or integer                       | Yes      | See §2. Differs from the `ScopeStart` timestamp (End occurs later).                                                                                          |
-| `name`               | string                                  | Yes      | Same as the paired `ScopeStart`.                                                                                                                             |
-| `attributes`         | array of strings                        | Yes      | Same as the paired `ScopeStart`.                                                                                                                             |
-| `scope_type`         | string                                  | Yes      | Same as the paired `ScopeStart`.                                                                                                                             |
-| `subtype`            | string or null                          | No       | Same as the paired `ScopeStart`.                                                                                                                             |
-| `model_name`         | string or null                          | No       | Same as the paired `ScopeStart`, or the actually-used model if different (e.g., after provider routing).                                                     |
-| `tool_call_id`       | string or null                          | No       | Same as the paired `ScopeStart`.                                                                                                                             |
-| `codec`              | object or null                          | No       | Same as the paired `ScopeStart`, applied to `annotated_response` on this event.                                                                              |
-| `output`             | any or null                             | No       | Raw output payload (post-guardrail). Opaque to ATOF core.                                                                                                    |
-| `annotated_response` | object or null                          | No       | Structured codec-decoded view of the output. Shape declared by `codec`. See `atof-codec-profiles.md`.                                                        |
-| `status`             | string (enum)                           | Yes      | Terminal outcome. One of: `"ok"`, `"error"`, `"cancelled"`. See §5.                                                                                          |
-| `error`              | object or null                          | No       | Structured error info when `status == "error"`. See §5.1.                                                                                                    |
-| `data`               | object or null                          | No       | See §2.                                                                                                                                                      |
-| `metadata`           | object or null                          | No       | See §2.                                                                                                                                                      |
+
+| Field                | Type                  | Required | Description                                                                                              |
+| -------------------- | --------------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `kind`               | string                | Yes      | Literal `"ScopeEnd"`.                                                                                    |
+| `schema_version`     | string                | Yes      | See §2.                                                                                                  |
+| `uuid`               | string (UUID)         | Yes      | Same UUID as the paired `ScopeStart`.                                                                    |
+| `parent_uuid`        | string (UUID) or null | No       | Same as the paired `ScopeStart`.                                                                         |
+| `timestamp`          | string or integer     | Yes      | See §2. Differs from the `ScopeStart` timestamp (End occurs later).                                      |
+| `name`               | string                | Yes      | Same as the paired `ScopeStart`.                                                                         |
+| `attributes`         | array of strings      | Yes      | Same as the paired `ScopeStart`.                                                                         |
+| `scope_type`         | string                | Yes      | Same as the paired `ScopeStart`.                                                                         |
+| `subtype`            | string or null        | No       | Same as the paired `ScopeStart`.                                                                         |
+| `model_name`         | string or null        | No       | Same as the paired `ScopeStart`, or the actually-used model if different (e.g., after provider routing). |
+| `tool_call_id`       | string or null        | No       | Same as the paired `ScopeStart`.                                                                         |
+| `codec`              | object or null        | No       | Same as the paired `ScopeStart`, applied to `annotated_response` on this event.                          |
+| `output`             | any or null           | No       | Raw output payload (post-guardrail). Opaque to ATOF core.                                                |
+| `annotated_response` | object or null        | No       | Structured codec-decoded view of the output. Shape declared by `codec`. See `atof-codec-profiles.md`.    |
+| `status`             | string (enum)         | Yes      | Terminal outcome. One of: `"ok"`, `"error"`, `"cancelled"`. See §5.                                      |
+| `error`              | object or null        | No       | Structured error info when `status == "error"`. See §5.1.                                                |
+| `data`               | object or null        | No       | See §2.                                                                                                  |
+| `metadata`           | object or null        | No       | See §2.                                                                                                  |
+
 
 ### 3.3 `MarkEvent`
 
 Emitted as a point-in-time checkpoint. Unpaired (no Start/End semantics).
 
-| Field            | Type                                    | Required | Description                                                                                                 |
-| ---------------- | --------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
-| `kind`           | string                                  | Yes      | Literal `"Mark"`.                                                                                           |
-| `schema_version` | string                                  | Yes      | See §2.                                                                                                     |
-| `uuid`           | string (UUID)                           | Yes      | See §2.                                                                                                     |
-| `parent_uuid`    | string (UUID) or null                   | No       | See §2.                                                                                                     |
-| `timestamp`      | string or integer                       | Yes      | See §2.                                                                                                     |
-| `name`           | string                                  | Yes      | Label for the checkpoint — e.g., `"workflow_start"`, `"retry_attempt_2"`.                                   |
-| `data`           | object or null                          | No       | Optional checkpoint payload.                                                                                |
-| `metadata`       | object or null                          | No       | See §2.                                                                                                     |
+
+| Field            | Type                  | Required | Description                                                               |
+| ---------------- | --------------------- | -------- | ------------------------------------------------------------------------- |
+| `kind`           | string                | Yes      | Literal `"Mark"`.                                                         |
+| `schema_version` | string                | Yes      | See §2.                                                                   |
+| `uuid`           | string (UUID)         | Yes      | See §2.                                                                   |
+| `parent_uuid`    | string (UUID) or null | No       | See §2.                                                                   |
+| `timestamp`      | string or integer     | Yes      | See §2.                                                                   |
+| `name`           | string                | Yes      | Label for the checkpoint — e.g., `"workflow_start"`, `"retry_attempt_2"`. |
+| `data`           | object or null        | No       | Optional checkpoint payload.                                              |
+| `metadata`       | object or null        | No       | See §2.                                                                   |
+
 
 `MarkEvent` does NOT carry `attributes`, `scope_type`, `status`, `input`, or `output`. It is deliberately minimal — a named timestamp with optional data.
 
@@ -197,19 +208,21 @@ Emitted as a point-in-time checkpoint. Unpaired (no Start/End semantics).
 
 `scope_type` on `ScopeStart`/`ScopeEnd` classifies the kind of work the scope represents. The canonical vocabulary is a closed set of lowercase strings:
 
-| `scope_type` value | Meaning                                                                       |
-| ------------------ | ----------------------------------------------------------------------------- |
-| `"agent"`          | Top-level agent or workflow scope.                                            |
-| `"function"`       | Generic function or application step.                                         |
-| `"llm"`            | LLM call scope. Populates `model_name` and MAY populate `codec` + `annotated_*`. |
+
+| `scope_type` value | Meaning                                                                                   |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| `"agent"`          | Top-level agent or workflow scope.                                                        |
+| `"function"`       | Generic function or application step.                                                     |
+| `"llm"`            | LLM call scope. Populates `model_name` and MAY populate `codec` + `annotated_`*.          |
 | `"tool"`           | Tool invocation scope. Populates `tool_call_id` and MAY populate `codec` + `annotated_*`. |
-| `"retriever"`      | Retrieval step (document search, index lookup).                               |
-| `"embedder"`       | Embedding-generation step.                                                    |
-| `"reranker"`       | Result reranking step.                                                        |
-| `"guardrail"`      | Guardrail or validation step.                                                 |
-| `"evaluator"`      | Evaluation or scoring step.                                                   |
-| `"custom"`         | Vendor-defined custom category. REQUIRES `subtype` to name the vendor scope.  |
-| `"unknown"`        | Producer does not know or cannot classify the scope.                          |
+| `"retriever"`      | Retrieval step (document search, index lookup).                                           |
+| `"embedder"`       | Embedding-generation step.                                                                |
+| `"reranker"`       | Result reranking step.                                                                    |
+| `"guardrail"`      | Guardrail or validation step.                                                             |
+| `"evaluator"`      | Evaluation or scoring step.                                                               |
+| `"custom"`         | Vendor-defined custom category. REQUIRES `subtype` to name the vendor scope.              |
+| `"unknown"`        | Producer does not know or cannot classify the scope.                                      |
+
 
 ### 4.1 `"unknown"` is the tier-1 escape hatch
 
@@ -245,11 +258,13 @@ Every `ScopeEnd` carries a required `status` field valued in:
 
 When `status == "error"`, an optional `error` field MAY carry structured error info:
 
-| Field       | Type                           | Description                                                                              |
-| ----------- | ------------------------------ | ---------------------------------------------------------------------------------------- |
-| `message`   | string                         | Human-readable error description.                                                        |
-| `type`      | string or null                 | Error class or category — e.g., `"TimeoutError"`, `"ValidationError"`, `"RateLimited"`.  |
-| `traceback` | string or null                 | Optional stack trace or debug trace.                                                     |
+
+| Field       | Type           | Description                                                                             |
+| ----------- | -------------- | --------------------------------------------------------------------------------------- |
+| `message`   | string         | Human-readable error description.                                                       |
+| `type`      | string or null | Error class or category — e.g., `"TimeoutError"`, `"ValidationError"`, `"RateLimited"`. |
+| `traceback` | string or null | Optional stack trace or debug trace.                                                    |
+
 
 When `status != "error"`, `error` SHOULD be absent or null.
 
@@ -308,9 +323,9 @@ Each scope span receives a unique UUID at creation time. The `uuid` is stable ac
 
 Three distinct identifier namespaces appear in an ATOF stream:
 
-- **`uuid` / `parent_uuid`** — runtime identifiers attached to every event. Form the scope graph.
-- **`tool_call_id`** (on `ScopeStart`/`ScopeEnd` when `scope_type == "tool"`) — an LLM-provider identifier that bridges an LLM's tool-call response with the resulting tool execution. Null when the tool was not invoked via an LLM tool-use flow.
-- **Codec-decoded response IDs** (e.g., `chatcmpl-*` inside a decoded LLM response body, under `annotated_response`) — provider tracking identifiers. Opaque to ATOF Core; see `atof-codec-profiles.md`.
+- `**uuid` / `parent_uuid`** — runtime identifiers attached to every event. Form the scope graph.
+- `**tool_call_id**` (on `ScopeStart`/`ScopeEnd` when `scope_type == "tool"`) — an LLM-provider identifier that bridges an LLM's tool-call response with the resulting tool execution. Null when the tool was not invoked via an LLM tool-use flow.
+- **Codec-decoded response IDs** (e.g., `chatcmpl-`* inside a decoded LLM response body, under `annotated_response`) — provider tracking identifiers. Opaque to ATOF Core; see `atof-codec-profiles.md`.
 
 ### 6.6 Schema Version and Negotiation
 
@@ -404,8 +419,8 @@ The `codec` field declares which codec's shape `annotated_request` conforms to; 
 ## 10. Reference Implementations
 
 - **Python (consumer + test-producer):** `src/nat/atof/` in `nvidia_nat_atif`. Pydantic models per event kind with `model_config = ConfigDict(extra="allow")` for lossless pass-through.
-- **Rust (primary producer):** `crates/core/src/api/event.rs` in `NeMo-Flow`. The Rust runtime MAY use more granular internal types (e.g., separate `LlmStartEvent`/`ToolStartEvent` structs) but serializes to ATOF's three-kind wire format on emission.
-- **Bindings:** Python/Go/Node.js/WASM bindings in NeMo-Flow re-export the Rust event types via language-idiomatic wrappers.
+- **Producer runtimes:** Agent runtimes emitting ATOF MAY use more granular internal types (e.g., separate `LlmStartEvent`/`ToolStartEvent` structs in typed languages) for type-safe construction, but MUST serialize to ATOF's three-kind wire format on emission.
+- **Language bindings:** Where a producer runtime exposes bindings to additional languages, those bindings SHOULD re-export the runtime's event types via language-idiomatic wrappers while preserving the wire format on serialization.
 
 See `atof-codec-profiles.md` for codec registry and structured payload shapes, and `atof-to-atif-converter.md` for the normative ATOF → ATIF conversion.
 
@@ -424,4 +439,5 @@ ATOF v0.1 is a ground-up specification drafted after several iterations of inter
 Prior design iterations that did not ship:
 
 - An earlier draft used open-string `scope_type` values with a `$schema`/`$version`/`$mode` profile-contract discriminator and a dedicated `StreamHeaderEvent` kind for schema registry declaration. That design required producers to have the profile's JSON Schema at emit time, which is not universally available. v0.1 drops this in favor of the optional codec layer.
-- An earlier draft split `LlmStart`/`LlmEnd`/`ToolStart`/`ToolEnd` into first-class event kinds mirroring the NeMo-Flow Rust runtime. That design privileged LLM and tool events and asymmetrically complicated the wire format for no net consumer-side gain. v0.1 uses three kinds for uniformity.
+- An earlier draft split `LlmStart`/`LlmEnd`/`ToolStart`/`ToolEnd` into first-class event kinds mirroring a typed-runtime producer's internal representation. That design privileged LLM and tool events and asymmetrically complicated the wire format for no net consumer-side gain. v0.1 uses three kinds for uniformity.
+
