@@ -449,7 +449,7 @@ response.id    → "Which API call?"    (provider billing/tracking, ephemeral)
 
 ## 7. Canonical ATOF-to-ATIF Mapping
 
-This section formalizes the mapping from ATOF events to ATIF steps. The NAT implementation is in [`src/nat/atof/scripts/atof_to_atif_converter.py`](src/nat/atof/scripts/atof_to_atif_converter.py).
+This section formalizes the mapping from ATOF events to ATIF steps. The Toolkit implementation is in [`src/nat/atof/scripts/atof_to_atif_converter.py`](src/nat/atof/scripts/atof_to_atif_converter.py).
 
 
 | ATOF Event         | ATIF Step            | ATIF `source` | Content Mapping                                                                                                                                                                                                                                                                                                                                          |
@@ -535,9 +535,9 @@ A minimal 6-event stream illustrating one complete tool call cycle. Each line is
 
 ## 10. Reference Implementations
 
-### 10.1 NAT Python (this package)
+### 10.1 NeMo Agent Toolkit Python (this package)
 
-The NAT-native ATOF-to-ATIF converter is in [`src/nat/atof/scripts/atof_to_atif_converter.py`](src/nat/atof/scripts/atof_to_atif_converter.py). It implements the same accumulator pattern as the Rust reference:
+The Toolkit-native ATOF-to-ATIF converter is in [`src/nat/atof/scripts/atof_to_atif_converter.py`](src/nat/atof/scripts/atof_to_atif_converter.py). It implements the same accumulator pattern as the Rust reference:
 
 1. Sorts all events by timestamp.
 2. Runs a pre-pass to build `uuid → name` and `uuid → start_timestamp` maps for ancestry and invocation-info resolution.
