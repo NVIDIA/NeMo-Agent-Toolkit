@@ -1,14 +1,12 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Common behavioral flags for ATOF scope events.
+"""Canonical attribute flags for ATOF scope events (spec §2.1).
 
 Serializes as a canonical (sorted, deduplicated) lowercase string array. The
-vocabulary is shared across all scope types per spec §2.1; there are no
-per-scope-type flag subclasses. Each flag names the exceptional case — absence
-means the documented default applies. Consumers MUST preserve unknown flag
-strings rather than discarding them.
-
-See ATOF spec Section 2.1.
+vocabulary is shared across all scope_types; applicability per scope_type is
+documented in spec §2.1. Consumers MUST preserve unknown flag strings when
+re-emitting and MUST NOT treat unknown flags as errors — vendor extensions
+following the ``vendor.name`` dotted-namespace convention are forward-compat.
 """
 
 from __future__ import annotations
@@ -20,12 +18,11 @@ class Flags(StrEnum):
     """Canonical behavioral flags for ScopeStart/ScopeEnd events (spec §2.1).
 
     Each flag describes the exceptional runtime property of a scope; absence
-    indicates the default. Defaults: parallel→serial, relocatable→pinned,
-    stateful→stateless, remote→local, streaming→single-payload.
+    means the documented default applies.
     """
 
-    PARALLEL = "parallel"
-    RELOCATABLE = "relocatable"
-    STATEFUL = "stateful"
-    REMOTE = "remote"
-    STREAMING = "streaming"
+    PARALLEL = "parallel"  # applies to any scope_type (default: serial)
+    RELOCATABLE = "relocatable"  # applies to any scope_type (default: pinned)
+    STATELESS = "stateless"  # applies primarily to scope_type=='llm' (default: stateful)
+    STREAMING = "streaming"  # applies primarily to scope_type=='llm' (default: single-payload)
+    LOCAL = "local"  # applies primarily to scope_type=='tool' (default: remote)
