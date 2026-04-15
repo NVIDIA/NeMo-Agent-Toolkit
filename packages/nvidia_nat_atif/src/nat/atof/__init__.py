@@ -3,14 +3,16 @@
 """Pydantic models for the Agentic Trajectory Observability Format (ATOF).
 
 ATOF is a JSON-Lines wire format for agent runtime event streams. These
-models define the three event kinds (``ScopeStartEvent``, ``ScopeEndEvent``,
-``MarkEvent``), the structured error payload (``ErrorInfo``), the behavioral
-flag enum (``Flags``), the canonical ``scope_type`` vocabulary (``ScopeType``),
-and the codec-annotated LLM request/response types (``AnnotatedLLMRequest``,
-``AnnotatedLLMResponse`` and their components).
+models define the four event kinds (``ScopeStartEvent``, ``ScopeEndEvent``,
+``MarkEvent``, ``StreamHeaderEvent``), the structured error payload
+(``ErrorInfo``), the behavioral flag enum (``Flags``), the canonical
+``scope_type`` vocabulary (``ScopeType``), and the codec-annotated LLM
+request/response types (``AnnotatedLLMRequest``, ``AnnotatedLLMResponse``
+and their components).
 
 See ``atof-event-format.md`` for the core wire format and
-``atof-codec-profiles.md`` for the codec-annotation layer.
+``atof-codec-profiles.md`` for the codec-annotation layer + 4-priority
+codec resolution protocol (§6).
 """
 
 from nat.atof.codec import AnnotatedLLMRequest
@@ -27,6 +29,7 @@ from nat.atof.events import Event
 from nat.atof.events import MarkEvent
 from nat.atof.events import ScopeEndEvent
 from nat.atof.events import ScopeStartEvent
+from nat.atof.events import StreamHeaderEvent
 from nat.atof.flags import Flags
 from nat.atof.io import read_jsonl
 from nat.atof.io import write_jsonl
@@ -47,6 +50,7 @@ __all__ = [
     "ScopeEndEvent",
     "ScopeStartEvent",
     "ScopeType",
+    "StreamHeaderEvent",
     "ToolDefinition",
     "Usage",
     "read_jsonl",

@@ -1,14 +1,16 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""ATOF event models for the 3 event kinds per spec v0.1.
+"""ATOF event models for the 4 event kinds per spec v0.1.
 
 Standalone Pydantic models for each event kind. The ``Event`` type is a
 discriminated union keyed on the ``kind`` field.
 
-Three event kinds:
-- ``ScopeStartEvent`` — a scope was opened
-- ``ScopeEndEvent``   — a scope was closed (carries terminal ``status``)
-- ``MarkEvent``       — a point-in-time checkpoint
+Four event kinds:
+- ``ScopeStartEvent``   — a scope was opened
+- ``ScopeEndEvent``     — a scope was closed (carries terminal ``status``)
+- ``MarkEvent``         — a point-in-time checkpoint
+- ``StreamHeaderEvent`` — optional stream metadata carrier (codec registry).
+                          MUST be the first event when present (spec §3.4).
 
 What kind of work a scope represents is carried by the ``scope_type`` field
 on ``ScopeStart`` / ``ScopeEnd``. Kind-specific typed fields (``model_name``,
@@ -20,6 +22,7 @@ See ATOF spec:
 - §3 (event kinds)
 - §4 (scope_type vocabulary)
 - §5 (status and error semantics)
+- atof-codec-profiles.md §6 (codec resolution protocol)
 """
 
 from __future__ import annotations
@@ -263,6 +266,29 @@ class MarkEvent(_EventBase):
     kind: Literal["Mark"] = "Mark"
 
 
+class StreamHeaderEvent(_EventBase):
+    """Stream-level metadata carrier (spec §3.4).
+
+    Optional structural event. When present, MUST be the first event in the stream
+    (position 0), and exactly one per stream. Declares a codec registry used by the
+    4-priority codec resolution chain (see atof-codec-profiles.md §6).
+
+    Does NOT carry attributes, scope_type, subtype, status, error, input, output,
+    model_name, tool_call_id, codec, or annotated_request/annotated_response.
+    The ``codecs`` dict is keyed by the canonical ID string ``"{name}.v{version}"``
+    (e.g., ``"openai/chat-completions.v1"``). Each value is a ``CodecEntry`` dict
+    that MAY carry an inline ``$schema`` body; entries with empty ``{}`` are
+    manifest declarations (the producer announces codec usage; consumers resolve
+    the schema via priority 3 in their local registry).
+    """
+
+    kind: Literal["StreamHeader"] = "StreamHeader"
+    codecs: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Codec registry keyed by canonical ID '{name}.v{version}' (spec §3.4; atof-codec-profiles.md §6)",
+    )
+
+
 # ---------------------------------------------------------------------------
 # Discriminated union (spec §3)
 # ---------------------------------------------------------------------------
@@ -278,7 +304,8 @@ def _get_event_kind(v: Any) -> str:
 Event = Annotated[
     Annotated[ScopeStartEvent, Tag("ScopeStart")]
     | Annotated[ScopeEndEvent, Tag("ScopeEnd")]
-    | Annotated[MarkEvent, Tag("Mark")],
+    | Annotated[MarkEvent, Tag("Mark")]
+    | Annotated[StreamHeaderEvent, Tag("StreamHeader")],
     Discriminator(_get_event_kind),
 ]
-"""Discriminated union of the 3 ATOF event kinds, keyed on ``kind`` (spec §3)."""
+"""Discriminated union of the 4 ATOF event kinds, keyed on ``kind`` (spec §3)."""

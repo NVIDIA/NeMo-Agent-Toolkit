@@ -16,11 +16,14 @@ ATOF (Agentic Trajectory Observability Format) is the wire format for agent runt
 
 **Primary purpose:** lossless replay for inspection and evaluation**.** An ATOF event stream MUST carry enough information to reconstruct what happened in an agent run — identity, call graph, LLM messages in/out, tool calls and results, status — so that humans and tools can debug, audit, and evaluate the run post-hoc.
 
-Transport is JSON Lines: one JSON object per line. The `kind` field at the top of every event is the primary discriminator. ATOF v0.1 defines **three event kinds**:
+Transport is JSON Lines: one JSON object per line. The `kind` field at the top of every event is the primary discriminator. ATOF v0.1 defines **four event kinds**:
 
+- `"StreamHeader"` — optional metadata carrier; MUST be the first event when present. Declares a codec registry for the stream (§3.4, §5.5).
 - `"ScopeStart"` — a scope was opened
 - `"ScopeEnd"` — a scope was closed
 - `"Mark"` — a point-in-time checkpoint was recorded
+
+`StreamHeader` is structural, not lifecycle — it carries no `scope_type` or `status` and participates in no Start/End pairing. `ScopeStart`/`ScopeEnd`/`Mark` are the lifecycle events proper.
 
 What *kind of work* a scope represents — an LLM call, a tool invocation, an agent turn, a retriever lookup, a vendor extension — is carried by the `scope_type` field on `ScopeStart`/`ScopeEnd`. Kind-specific typed fields (`model_name`, `tool_call_id`, codec annotations) live directly on `ScopeStart`/`ScopeEnd` and are null for scope types that don't need them.
 
@@ -201,6 +204,41 @@ Emitted as a point-in-time checkpoint. Unpaired (no Start/End semantics).
 
 
 `MarkEvent` does NOT carry `attributes`, `scope_type`, `status`, `input`, or `output`. It is deliberately minimal — a named timestamp with optional data.
+
+### 3.4 `StreamHeaderEvent`
+
+Structural event carrying stream-level metadata — specifically, the codec registry used by the 4-priority codec resolution chain (see `atof-codec-profiles.md` §6 for the full protocol). The `StreamHeader`, when present, MUST be the first event in the stream; exactly one `StreamHeader` is permitted per stream. If the first event is not a `StreamHeader`, no stream-level codec registry exists and events fall back to priority-3 (consumer-bundled) or priority-4 (opaque) resolution.
+
+
+| Field            | Type                  | Required | Description                                                                                                   |
+| ---------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
+| `kind`           | string                | Yes      | Literal `"StreamHeader"`.                                                                                     |
+| `schema_version` | string                | Yes      | See §2.                                                                                                       |
+| `uuid`           | string (UUID)         | Yes      | See §2.                                                                                                       |
+| `parent_uuid`    | string (UUID) or null | No       | SHOULD be null — `StreamHeader` is not nested under any scope.                                                |
+| `timestamp`      | string or integer     | Yes      | See §2. Typically the stream's opening timestamp.                                                             |
+| `name`           | string                | Yes      | Human-readable label — e.g., `"stream_header"`, `"exmp01_header"`.                                            |
+| `codecs`         | object                | No       | Codec registry keyed by canonical `{name}.v{version}` string. Each value is a `CodecEntry` object (see below). |
+| `data`           | object or null        | No       | See §2.                                                                                                       |
+| `metadata`       | object or null        | No       | See §2.                                                                                                       |
+
+`StreamHeaderEvent` does NOT carry `attributes`, `scope_type`, `subtype`, `status`, `error`, `input`, `output`, `model_name`, `tool_call_id`, `codec`, or `annotated_request` / `annotated_response`.
+
+**`CodecEntry` shape:**
+
+```json
+{
+  "$schema": { /* optional inline JSON Schema body */ }
+}
+```
+
+An entry with an inline `$schema` makes the stream self-sufficient for that codec — consumers validate `annotated_request` / `annotated_response` against the inline body. An entry without `$schema` (empty `{}`) is a **manifest declaration**: the producer is announcing "this stream uses codec X"; consumers resolve the schema body from their own bundled registry (priority 3). Manifest declarations help consumers surface early warnings when a declared codec isn't in their local registry.
+
+**Example `StreamHeader`:**
+
+```json
+{"kind":"StreamHeader","schema_version":"0.1","uuid":"hdr-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"stream_header","codecs":{"openai/chat-completions.v1":{},"nvidia/llm.v1":{"$schema":{"$id":"nvidia/llm.v1","type":"object","properties":{"model_name":{"type":["string","null"]}}}}},"data":null,"metadata":null}
+```
 
 ---
 

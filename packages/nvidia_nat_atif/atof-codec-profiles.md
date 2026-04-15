@@ -206,28 +206,77 @@ A new codec ID is appropriate when:
 
 Proposed new codecs go through spec review. Codec IDs are effectively a public contract — renaming or removing one is a MAJOR-level break.
 
-## 6. Consumer Dispatch
+## 6. Codec Resolution Protocol
 
-A consumer that wants structured access walks each event:
+When a consumer wants structured access to `annotated_request` or `annotated_response`, it resolves the codec schema via a four-priority chain. Each priority is independently optional; events and streams missing higher-priority sources fall through cleanly to lower-priority ones, ending at opaque pass-through if nothing resolves.
+
+### 6.1 The Four-Priority Chain
+
+| Priority | Source | Condition | Behavior |
+|---|---|---|---|
+| **1. Per-event inline** | `event.codec["$schema"]` | Event has `codec` with an inline `$schema` body | Use the inline body directly; no lookup needed |
+| **2. StreamHeader registry** | `stream_header.codecs[canonical_id]["$schema"]` | Event has `codec` (name + version) and the stream's `StreamHeaderEvent` registry contains a matching entry with inline `$schema` | Use the header's schema body |
+| **3. Consumer-bundled registry** | `consumer.local_registry[canonical_id]` | Event has `codec` (name + version); neither priorities 1 nor 2 provided a schema | Look up the canonical ID in the consumer's locally-bundled codec library |
+| **4. Opaque pass-through** | — | Event has no `codec` field at all, OR priorities 1-3 all failed | Preserve `annotated_request` / `annotated_response` verbatim as opaque dicts; no structured validation |
+
+**Key semantics:**
+
+- The **canonical ID** is the string `{codec.name}.v{codec.version}` — e.g., `"openai/chat-completions.v1"`, `"nvidia/llm.v1"`. Matching across the four priorities is by this canonical ID.
+- The `codec` declaration on the event is what **triggers** the resolution chain. Events with no `codec` field skip priorities 1-3 entirely and land at priority 4.
+- An event MAY declare a codec without inline schema (`codec: {"name": "...", "version": "..."}`) — the chain will find the schema via priority 2 or 3.
+- Consumers MUST NOT reject events at priority 4. Opaque pass-through is always legal.
+
+### 6.2 Canonical ID Naming Convention
+
+Canonical codec IDs follow the `{vendor}/{codec_name}.v{MAJOR}` format (see §3.1). The `.v{MAJOR}` suffix is part of the matching key, so bumping a codec from `v1` → `v2` creates a distinct registry entry; events declaring `v1` continue to resolve to the v1 schema.
+
+The priority-3 local registry (consumer-bundled) uses the **same keying convention**, so an event declaring `codec: {"name": "openai/chat-completions", "version": "v1"}` looks up `"openai/chat-completions.v1"` at every priority level. Consumer registries that follow this convention are automatically compatible with the resolution chain.
+
+### 6.3 Resolution Algorithm
 
 ```python
-codec = event.get("codec")
-annotated = event.get("annotated_request") or event.get("annotated_response")
+def resolve_codec_schema(event, stream_header, consumer_registry):
+    """Return the JSON Schema for validating an event's annotated_* payload,
+    or None for opaque pass-through (priority 4).
+    """
+    if event.get("codec") is None:
+        return None  # Priority 4: no codec declared → opaque
 
-if codec and annotated:
-    # tier 3 — structured access via codec shape
-    shape = codec_registry.get(f"{codec['name']}.v{codec['version']}")
-    if shape:
-        validate_or_parse(annotated, shape)
-    else:
-        # unknown codec — preserve verbatim, dispatch generically
-        use_as_opaque_dict(annotated)
-elif event.get("input") or event.get("output"):
-    # tier 1 or tier 2 — dispatch on raw payload
-    use_as_opaque_dict(event.get("input") or event.get("output"))
+    codec = event["codec"]
+    canonical_id = f"{codec['name']}.v{codec['version']}"
+
+    # Priority 1: inline schema on the event itself
+    inline = codec.get("$schema")
+    if inline is not None:
+        return inline
+
+    # Priority 2: StreamHeader registry with inline schema
+    if stream_header is not None:
+        header_codecs = stream_header.get("codecs", {})
+        entry = header_codecs.get(canonical_id)
+        if entry is not None and entry.get("$schema") is not None:
+            return entry["$schema"]
+
+    # Priority 3: consumer-bundled canonical registry
+    if canonical_id in consumer_registry:
+        return consumer_registry[canonical_id]
+
+    # Priority 4: opaque
+    return None
 ```
 
-**Consumer MUST NOT reject events with unknown codec IDs.** Preserve them verbatim; fall back to raw payload access. Codec registries are consumer-local concerns.
+### 6.4 Interaction with `scope_type`
+
+When codec resolution succeeds (priorities 1-3), validation is grounded in the codec schema and `scope_type` becomes a lightweight label — the codec is the source of truth for payload shape.
+
+When resolution falls through to opaque (priority 4), `scope_type` does more semantic heavy-lifting: it is the only spec-defined signal about what kind of work the event represents. A consumer inspecting an opaque event relies on `scope_type == "llm"` or `scope_type == "tool"` conventions to interpret the raw `input` / `output`.
+
+### 6.5 Consumer Resilience
+
+- **Unknown canonical ID (priorities 2-3 both miss):** preserve `annotated_*` verbatim; fall through to priority 4; MUST NOT reject the event.
+- **`StreamHeader` missing but events declare codecs:** priority 2 is skipped silently; chain proceeds to priorities 3-4 as usual.
+- **`StreamHeader` present but declares an unknown codec (empty `{}`, no inline schema, consumer registry doesn't have it):** consumer MAY log a manifest-warning at stream open; events using that codec still fall through to priority 4.
+- **Codec declared without `$schema` anywhere in the resolution chain:** priority 4 (opaque). The `annotated_*` payload is preserved, but not validated.
 
 ## 7. Producer Guidance
 
@@ -294,6 +343,23 @@ This document tracks the ATOF spec version. Codec registry entries have their ow
 - Removing a codec is a MAJOR change.
 - Changing the canonical structured shape (`AnnotatedLlmRequest` structure) is a MAJOR change to the ATOF spec.
 
+## 10. Future Work (roadmap)
+
+### 10.1 `scope_type` profiles (priority 3.5)
+
+The current resolution chain validates `annotated_request` / `annotated_response` when a codec is declared. When codec resolution falls through to priority 4 (opaque), `annotated_*` payloads are preserved but not validated — and `scope_type` becomes the only semantic signal about the event's shape.
+
+A future revision MAY introduce **scope_type profiles**: canonical default schemas keyed by `scope_type` that provide basic structural validation for opaque events. Sketch:
+
+- Spec defines canonical default schemas for common scope types — e.g., `default/llm.v1`, `default/tool.v1` — describing the minimum structural shape a consumer can expect for an opaque `scope_type == "llm"` or `scope_type == "tool"` event (shape of `input`, `output`, conventional fields).
+- Consumers bundle these defaults alongside explicit codecs.
+- A new "priority 3.5" slots in between priority 3 and priority 4: when no codec is declared but the event carries a known `scope_type`, the consumer MAY apply the corresponding scope_type profile as a structural-validation fallback.
+- Consumers retain discretion — scope_type profiles are opt-in, never mandated by the spec.
+
+This closes the "opaque but not unknown" gap: a tier-1 producer that emits `scope_type: "llm"` with no codec can still give downstream consumers a typed view if both sides agree on the scope_type profile convention.
+
+Not in v0.1 scope. Tracked for a future MINOR-level revision once concrete consumer demand surfaces.
+
 ---
 
-*Last updated: 2026-04-15 alongside ATOF v0.3.*
+*Last updated: 2026-04-15 alongside ATOF v0.1.*
