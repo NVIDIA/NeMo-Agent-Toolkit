@@ -308,9 +308,6 @@ class DynamicClientRegistration:
 class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
     """MCP OAuth2 authentication provider that delegates to NAT framework."""
 
-    # TODO Make this a config
-    DCR_CACHE_TTL = 270  # 4.5 minutes TTL for dynamic client registration
-
     def __init__(self, config: MCPOAuth2ProviderConfig, builder=None):
         super().__init__(config)
         self._builder = builder
@@ -353,6 +350,11 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         logger.warning("Invalidated cached OAuth2 registration: reason=%s previous_client_id=%s",
                        reason,
                        previous_client_id)
+
+    def _is_cached_credentials_expired(self) -> bool:
+        """Check if cached credentials are expired."""
+        return (self._credentials_cache_time is None
+                or (time.time() - self._credentials_cache_time) >= self.config.oauth_client_ttl)
 
     def _is_redirect_uri_registration_error(self, error: Exception) -> bool:
         """Check if error indicates AS rejected redirect URI registration for this client."""
@@ -428,8 +430,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         effective_scopes = self._effective_scopes
 
         # Client registration
-        if (not self._cached_credentials or self._credentials_cache_time is None
-                or (time.time() - self._credentials_cache_time) >= self.DCR_CACHE_TTL):
+        if (not self._cached_credentials or self._is_cached_credentials_expired()):
             self._invalidate_cached_registration(reason="registration-expired")
             if self.config.client_id:
                 # Manual registration mode
@@ -449,8 +450,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         """Perform the OAuth2 flow using MCP-specific authentication flow handler."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
 
-        if (not self._cached_endpoints or not self._cached_credentials or self._credentials_cache_time is None
-                or (time.time() - self._credentials_cache_time) >= self.DCR_CACHE_TTL):
+        if (not self._cached_endpoints or not self._cached_credentials or self._is_cached_credentials_expired()):
             # if discovery is yet to to be done return empty auth result
             logger.warning(
                 "OAuth2 endpoints or credentials not available or expired for user_id=%s. "
