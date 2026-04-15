@@ -1,0 +1,73 @@
+{
+  "$id": "nvidia/tools.v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NVIDIA Tools Profile v1",
+  "description": "Vendor profile for scope_type='tool' that captures every field needed to populate a complete ATIF ToolCall (tool_call_id + function_name + arguments) plus tool-execution metadata (provider, type, status, latency, retries, parent linkage). Extends ATOF default/tool.v1 (which carries only tool_call_id) so a tool ScopeEndEvent is self-describing — consumers can build the ATIF ToolCall from the tool event alone, without joining against the upstream LLM event. All fields are optional. Extension of: default/tool.v1 (atof-event-format.md §6.2). Schema ID format: vendor/<id>.v<N> (atof-event-format.md §4.2).",
+  "type": "object",
+  "properties": {
+
+    "tool_call_id": {
+      "type": ["string", "null"],
+      "description": "Inherited from default/tool.v1. Correlation ID from the LLM tool-call response — e.g., 'call_abc123' (OpenAI) or 'toolu_abc123' (Anthropic). Maps directly to ATIF ToolCall.tool_call_id and observation.results[*].source_call_id."
+    },
+
+    "function_name": {
+      "type": ["string", "null"],
+      "description": "The function or tool name being invoked — e.g., 'calculator__add', 'web_search', 'mcp.filesystem.read_file'. Maps directly to ATIF ToolCall.function_name. Duplicates info available in the LLM ScopeEnd's tool_calls list, but lets the tool event stand alone for streams where the LLM event is in a different session, was not captured, or for non-LLM-triggered tools (scheduled tasks, agentic loops)."
+    },
+
+    "arguments": {
+      "type": ["object", "null"],
+      "description": "Arguments dict passed to the function. Maps directly to ATIF ToolCall.arguments. When the upstream LLM emitted arguments as a JSON string, the producer SHOULD parse it to a dict here; if parsing fails, emit {'_raw': '<original-string>'}."
+    },
+
+    "tool_type": {
+      "type": ["string", "null"],
+      "enum": [null, "function", "web_search", "file_search", "code_interpreter", "computer", "image_generation", "mcp", "retrieval", "custom"],
+      "description": "Category of the tool. 'function' is the OpenAI-style schema-bound function call. 'mcp' is a Model Context Protocol server tool. 'custom' is a vendor-specific runtime extension."
+    },
+
+    "tool_provider": {
+      "type": ["string", "null"],
+      "description": "Provider/registry that supplied the tool — e.g., 'langchain', 'llama_index', 'crewai', 'mcp:filesystem', 'mcp:postgres', 'native', 'nvidia.guardrail'. For MCP servers use the 'mcp:<server_name>' convention."
+    },
+
+    "parent_tool_call_id": {
+      "type": ["string", "null"],
+      "description": "tool_call_id of the parent tool when this is a nested-tool invocation (e.g., a tool that internally calls another tool). Null at the top level. Lets consumers reconstruct the tool call graph without walking parent_uuid chains."
+    },
+
+    "execution": {
+      "type": ["object", "null"],
+      "description": "Runtime execution metadata captured at scope end. Distinct from ATOF's own ScopeEndEvent.status (which is the lifecycle outcome) — these fields carry richer detail for retry tracking, cache hits, and sub-status semantics.",
+      "properties": {
+        "status":             {"type": ["string", "null"], "enum": [null, "succeeded", "succeeded_with_retries", "failed", "timeout", "cancelled", "cached", "fallback"], "description": "Detailed execution outcome. SHOULD be consistent with ATOF ScopeEndEvent.status: 'succeeded'/'succeeded_with_retries'/'cached'/'fallback' map to status='ok'; 'failed'/'timeout' map to 'error'; 'cancelled' maps to 'cancelled'."},
+        "error_type":         {"type": ["string", "null"], "description": "Exception class or error category — e.g., 'TimeoutError', 'PermissionDenied', 'RateLimitExceeded'. Surface for filtering and aggregation; the human-readable message lives in ATOF ScopeEndEvent.error.message."},
+        "retries":            {"type": ["integer", "null"], "minimum": 0, "description": "Number of retry attempts made before this final result. 0 = succeeded on first try."},
+        "latency_ms":         {"type": ["integer", "null"], "minimum": 0, "description": "End-to-end execution latency in milliseconds (request to result). Convenience surface — derivable from ATOF Start/End ts_micros."},
+        "cached":             {"type": ["boolean", "null"], "description": "Whether the result was served from a cache without re-executing the underlying tool."},
+        "cache_key":          {"type": ["string", "null"], "description": "Cache key used or computed for this invocation. Useful for debugging cache hit/miss patterns."}
+      },
+      "additionalProperties": true
+    },
+
+    "input_size_bytes": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Serialized size of the arguments payload in bytes. Useful for tool throughput and cost analysis without re-serializing 'arguments'."
+    },
+
+    "output_size_bytes": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "description": "Serialized size of the tool's return value (which lives in ATOF ScopeEndEvent.output) in bytes."
+    },
+
+    "provider_metadata": {
+      "type": ["object", "null"],
+      "description": "Vendor-specific metadata bag — provider-defined keys that don't fit the canonical schema. Examples: MCP server response code, langchain run-id, web_search query expansion details, code_interpreter sandbox ID. Keep small (< 1 KB recommended); large blobs belong in ATOF data/metadata fields."
+    }
+  },
+  "required": [],
+  "additionalProperties": true
+}
