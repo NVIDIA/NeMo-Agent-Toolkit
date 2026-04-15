@@ -14,7 +14,7 @@
 
 ATOF (Agentic Trajectory Observability Format) is the wire format for agent runtime subscriber callbacks. Events represent the lifecycle of scopes — composable units of agent work — within the runtime. Subscribers receive events in real time as the runtime executes agent workflows.
 
-**Primary purpose:** lossless replay for inspection and evaluation**.** An ATOF event stream MUST carry enough information to reconstruct what happened in an agent run — identity, call graph, LLM messages in/out, tool calls and results, status — so that humans and tools can debug, audit, and evaluate the run post-hoc.
+**Primary purpose:** lossless replay for inspection and evaluation. An ATOF event stream MUST carry enough information to reconstruct what happened in an agent run — identity, call graph, LLM messages in/out, tool calls and results, status — so that humans and tools can debug, audit, and evaluate the run post-hoc.
 
 Transport is JSON Lines: one JSON object per line. The `kind` field at the top of every event is the primary discriminator. ATOF v0.1 defines **four event kinds**:
 
@@ -68,29 +68,16 @@ Beyond the base envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`, `s
 - `data` — application-defined payload. Opaque to ATOF. Consumers MUST NOT dispatch on `data` contents.
 - `metadata` — tracing/correlation envelope (`trace_id`, `span_id`, etc.).
 
-**Field applicability by `scope_type`** (informative):
-
-
-| Field                   | `llm` | `tool` | `agent` / `function` / `retriever` / `embedder` / `reranker` / `guardrail` / `evaluator` | `custom` | `unknown` |
-| ----------------------- | ----- | ------ | ---------------------------------------------------------------------------------------- | -------- | --------- |
-| `model_name`            | ✓     | —      | —                                                                                        | —        | —         |
-| `tool_call_id`          | —     | ✓      | —                                                                                        | —        | —         |
-| `codec` + `annotated_*` | ✓     | ✓*     | —                                                                                        | —        | —         |
-| `subtype`               | —     | —      | —                                                                                        | ✓        | —         |
-
-
-✓ = populated when the producer knows it; — = null / absent. `*` tool codec annotations are optional even for `scope_type == "tool"` — see `atof-codec-profiles.md`.
-
 ---
 
 ## 2. Base Event Envelope
 
-Every event carries these six envelope fields. `ScopeStart`/`ScopeEnd` add fields on top; `Mark` adds only `data` / `metadata`.
+Every event carries these six envelope fields. `ScopeStart`/`ScopeEnd` add fields on top; `Mark` adds only `data` / `metadata`; `StreamHeader` adds the `codecs` registry (§3.4).
 
 
 | Field            | Type                                    | Required | Description                                                                                                             |
 | ---------------- | --------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `kind`           | string                                  | Yes      | Event kind discriminator. One of: `"ScopeStart"`, `"ScopeEnd"`, `"Mark"`.                                               |
+| `kind`           | string                                  | Yes      | Event kind discriminator. One of: `"ScopeStart"`, `"ScopeEnd"`, `"Mark"`, `"StreamHeader"`.                             |
 | `schema_version` | string                                  | Yes      | ATOF protocol version, `"MAJOR.MINOR"` (e.g., `"0.1"`). See §6.6.                                                       |
 | `uuid`           | string (UUID)                           | Yes      | Unique identifier for this event or span. For `ScopeStart`/`ScopeEnd` pairs, the Start and End share a `uuid`.          |
 | `parent_uuid`    | string (UUID) or null                   | No       | UUID of the containing scope when this event was emitted. Null only for root scope events and unparented `Mark` events. |
@@ -207,24 +194,25 @@ Emitted as a point-in-time checkpoint. Unpaired (no Start/End semantics).
 
 ### 3.4 `StreamHeaderEvent`
 
-Structural event carrying stream-level metadata — specifically, the codec registry used by the 4-priority codec resolution chain (see `atof-codec-profiles.md` §6 for the full protocol). The `StreamHeader`, when present, MUST be the first event in the stream; exactly one `StreamHeader` is permitted per stream. If the first event is not a `StreamHeader`, no stream-level codec registry exists and events fall back to priority-3 (consumer-bundled) or priority-4 (opaque) resolution.
+Optional structural event carrying stream-level metadata — specifically, the codec registry used by the 4-priority codec resolution chain (see `atof-codec-profiles.md` §6 for the full protocol). The `StreamHeader`, when present, MUST be the first event in the stream; exactly one `StreamHeader` is permitted per stream. If the first event is not a `StreamHeader`, no stream-level codec registry exists and events fall back to priority-3 (consumer-bundled) or priority-4 (opaque) resolution.
 
 
-| Field            | Type                  | Required | Description                                                                                                   |
-| ---------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------- |
-| `kind`           | string                | Yes      | Literal `"StreamHeader"`.                                                                                     |
-| `schema_version` | string                | Yes      | See §2.                                                                                                       |
-| `uuid`           | string (UUID)         | Yes      | See §2.                                                                                                       |
-| `parent_uuid`    | string (UUID) or null | No       | SHOULD be null — `StreamHeader` is not nested under any scope.                                                |
-| `timestamp`      | string or integer     | Yes      | See §2. Typically the stream's opening timestamp.                                                             |
-| `name`           | string                | Yes      | Human-readable label — e.g., `"stream_header"`, `"exmp01_header"`.                                            |
+| Field            | Type                  | Required | Description                                                                                                    |
+| ---------------- | --------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `kind`           | string                | Yes      | Literal `"StreamHeader"`.                                                                                      |
+| `schema_version` | string                | Yes      | See §2.                                                                                                        |
+| `uuid`           | string (UUID)         | Yes      | See §2.                                                                                                        |
+| `parent_uuid`    | string (UUID) or null | No       | SHOULD be null — `StreamHeader` is not nested under any scope.                                                 |
+| `timestamp`      | string or integer     | Yes      | See §2. Typically the stream's opening timestamp.                                                              |
+| `name`           | string                | Yes      | Human-readable label — e.g., `"stream_header"`, `"exmp01_header"`.                                             |
 | `codecs`         | object                | No       | Codec registry keyed by canonical `{name}.v{version}` string. Each value is a `CodecEntry` object (see below). |
-| `data`           | object or null        | No       | See §2.                                                                                                       |
-| `metadata`       | object or null        | No       | See §2.                                                                                                       |
+| `data`           | object or null        | No       | See §2.                                                                                                        |
+| `metadata`       | object or null        | No       | See §2.                                                                                                        |
+
 
 `StreamHeaderEvent` does NOT carry `attributes`, `scope_type`, `subtype`, `status`, `error`, `input`, `output`, `model_name`, `tool_call_id`, `codec`, or `annotated_request` / `annotated_response`.
 
-**`CodecEntry` shape:**
+`**CodecEntry` shape:**
 
 ```json
 {
@@ -252,7 +240,7 @@ An entry with an inline `$schema` makes the stream self-sufficient for that code
 | `"agent"`          | Top-level agent or workflow scope.                                                        |
 | `"function"`       | Generic function or application step.                                                     |
 | `"llm"`            | LLM call scope. Populates `model_name` and MAY populate `codec` + `annotated`_*.          |
-| `"tool"`           | Tool invocation scope. Populates `tool_call_id` and MAY populate `codec` + `annotated_`*. |
+| `"tool"`           | Tool invocation scope. Populates `tool_call_id` and MAY populate `codec` + `annotated`_*. |
 | `"retriever"`      | Retrieval step (document search, index lookup).                                           |
 | `"embedder"`       | Embedding-generation step.                                                                |
 | `"reranker"`       | Result reranking step.                                                                    |
@@ -397,4 +385,3 @@ Every event carries a required `schema_version` field, formatted `"MAJOR.MINOR"`
 - **Language bindings:** Where a producer runtime exposes bindings to additional languages, those bindings SHOULD re-export the runtime's event types via language-idiomatic wrappers while preserving the wire format on serialization.
 
 See `atof-codec-profiles.md` for codec registry and structured payload shapes, and `atof-to-atif-converter.md` for the normative ATOF → ATIF conversion.
-
