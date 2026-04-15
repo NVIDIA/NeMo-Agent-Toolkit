@@ -353,8 +353,14 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
     def _is_cached_credentials_expired(self) -> bool:
         """Check if cached credentials are expired."""
-        return (self._credentials_cache_time is None
-                or (time.time() - self._credentials_cache_time) >= self.config.oauth_client_ttl)
+        if self._credentials_cache_time is None:
+            return True
+
+        # `0` means "do not reuse across attempts", not "invalidate within the same attempt".
+        if self.config.oauth_client_ttl == 0:
+            return False
+
+        return (time.time() - self._credentials_cache_time) >= self.config.oauth_client_ttl
 
     def _is_redirect_uri_registration_error(self, error: Exception) -> bool:
         """Check if error indicates AS rejected redirect URI registration for this client."""
@@ -430,7 +436,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         effective_scopes = self._effective_scopes
 
         # Client registration
-        if (not self._cached_credentials or self._is_cached_credentials_expired()):
+        if (not self._cached_credentials or self.config.oauth_client_ttl == 0 or self._is_cached_credentials_expired()):
             self._invalidate_cached_registration(reason="registration-expired")
             if self.config.client_id:
                 # Manual registration mode
