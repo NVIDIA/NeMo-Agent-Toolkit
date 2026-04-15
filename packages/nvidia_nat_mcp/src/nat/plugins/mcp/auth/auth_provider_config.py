@@ -57,9 +57,10 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     allow_default_user_id_for_tool_calls: bool = Field(default=True, description="Allow default user ID for tool calls")
 
     # OAuth client credential caching
-    oauth_client_ttl: int = Field(default=270,
-                                  ge=0,
-                                  description="Amount of time, in seconds, to cache oauth client credentials")
+    oauth_client_ttl: float = Field(default=270.0,
+                                    ge=0.0,
+                                    description="Amount of time, in seconds, to cache oauth client credentials. "
+                                    "Setting this to 0 disables caching.")
 
     # Token storage configuration
     token_storage_object_store: str | None = Field(
