@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import asyncio
-import time
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
