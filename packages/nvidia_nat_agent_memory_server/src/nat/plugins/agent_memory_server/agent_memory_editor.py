@@ -14,6 +14,9 @@
 # limitations under the License.
 
 import logging
+from typing import Any
+
+from agent_memory_client.models import MemoryAPIClient
 
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
@@ -37,7 +40,7 @@ class AgentMemoryServerEditor(MemoryEditor):
     (agent-memory-client) for long-term memory.
     """
 
-    def __init__(self, client):
+    def __init__(self, client: MemoryAPIClient):
         """
         Initialize with an agent-memory-client instance (MemoryAPIClient or similar).
 
@@ -69,7 +72,7 @@ class AgentMemoryServerEditor(MemoryEditor):
         if records:
             await self._client.create_long_term_memory(records)
 
-    async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
+    async def search(self, query: str, top_k: int = 5, **kwargs: Any) -> list[MemoryItem]:
         """Search long-term memory; user_id should be passed in kwargs."""
         from agent_memory_client.filters import UserId
 
@@ -81,7 +84,10 @@ class AgentMemoryServerEditor(MemoryEditor):
             text=query,
             limit=top_k,
             user_id=user_filter,
-            **{k: v for k, v in kwargs.items() if k != "user_id"},
+            **{
+                k: v
+                for k, v in kwargs.items() if k != "user_id"
+            },
         )
         out = []
         for m in getattr(results, "memories", []) or []:
@@ -93,15 +99,16 @@ class AgentMemoryServerEditor(MemoryEditor):
                 MemoryItem(
                     user_id=user_id,
                     memory=text,
-                    conversation=[{"role": "user", "content": text}],
+                    conversation=[{
+                        "role": "user", "content": text
+                    }],
                     tags=tags if isinstance(tags, list) else list(tags),
                     metadata=meta if isinstance(meta, dict) else {},
                     similarity_score=float(dist) if dist is not None else None,
-                )
-            )
+                ))
         return out
 
-    async def remove_items(self, **kwargs) -> None:
+    async def remove_items(self, **kwargs: Any) -> None:
         """Remove memories by user_id or memory_id if the client supports it."""
         memory_id = kwargs.get("memory_id")
         user_id = kwargs.get("user_id")
@@ -112,6 +119,4 @@ class AgentMemoryServerEditor(MemoryEditor):
             await self._client.forget(user_id=user_id)
             return
         if user_id is not None:
-            logger.warning(
-                "Agent Memory Server client does not expose forget/delete by user_id; remove_items no-op"
-            )
+            logger.warning("Agent Memory Server client does not expose forget/delete by user_id; remove_items no-op")
