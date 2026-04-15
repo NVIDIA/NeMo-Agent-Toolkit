@@ -2,13 +2,13 @@
   "$id": "nvidia/llm.v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "NVIDIA LLM Profile v1",
-  "description": "Vendor profile for scope_type='llm' that captures the canonical OpenAI Chat Completions request and response metadata. Extends ATOF default/llm.v1 (which carries only model_name) with sampling parameters, response identity, finish state, and full token-usage breakdown. All fields are optional — emit only what your runtime knows. Extension of: default/llm.v1 (atof-event-format.md §6.1). Schema ID format: vendor/<id>.v<N> (atof-event-format.md §4.2).",
+  "description": "Canonical codec output schema for ATOF scope_type='llm' events: describes the shape of annotated_request / annotated_response when the codec identifier is 'nvidia/llm.v1'. Captures OpenAI Chat Completions-style request and response metadata — model identity, sampling parameters, finish state, full token-usage breakdown. All fields are optional; producers emit what their runtime knows. See atof-codec-profiles.md §5 (Canonical Codec Registry) + §6 (Codec Resolution Protocol). Schema ID format: vendor/<id>.v<N> per atof-codec-profiles.md §3.1.",
   "type": "object",
   "properties": {
 
     "model_name": {
       "type": ["string", "null"],
-      "description": "Inherited from default/llm.v1. The model identifier sent to the provider — e.g., 'gpt-4.1', 'nvidia/nemotron-3-super-v3', 'meta/llama-3.1-70b-instruct'."
+      "description": "Model identifier sent to the provider — e.g., 'gpt-4.1', 'nvidia/nemotron-3-super-v3', 'meta/llama-3.1-70b-instruct'. Mirrors the ATOF event's typed 'model_name' field."
     },
 
     "provider": {
