@@ -529,11 +529,8 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
     ) -> Span:
         """Build a TOOL span for a single tool call."""
         end_epoch = invocation.end_timestamp if invocation and invocation.end_timestamp is not None else None
-        start_epoch = (
-            invocation.start_timestamp
-            if invocation and invocation.start_timestamp is not None
-            else (end_epoch if end_epoch is not None else 0.0)
-        )
+        start_epoch = (invocation.start_timestamp if invocation and invocation.start_timestamp is not None else
+                       (end_epoch if end_epoch is not None else 0.0))
 
         span = self._make_span(
             name=tool_name,
