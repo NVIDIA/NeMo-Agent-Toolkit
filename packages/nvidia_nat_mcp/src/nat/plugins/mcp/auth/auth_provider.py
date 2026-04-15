@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import logging
 from collections.abc import Awaitable
 from collections.abc import Callable
@@ -317,6 +318,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         # Client registration
         self._registrar = DynamicClientRegistration(config)
         self._cached_credentials: OAuth2Credentials | None = None
+        self._discover_register_lock = asyncio.Lock()
 
         # For the OAuth2 flow
         self._auth_code_provider = None
@@ -336,6 +338,30 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             # Default: use in-memory token storage
             from nat.authentication.token_storage import InMemoryTokenStorage
             self._token_storage = InMemoryTokenStorage()
+
+    def _invalidate_cached_registration(self, reason: str) -> None:
+        """Invalidate cached OAuth client registration and auth provider."""
+        previous_client_id = self._cached_credentials.client_id if self._cached_credentials else None
+        self._cached_credentials = None
+        self._auth_code_provider = None
+        logger.warning("Invalidated cached OAuth2 registration: reason=%s previous_client_id=%s",
+                       reason,
+                       previous_client_id)
+
+    def _is_redirect_uri_registration_error(self, error: Exception) -> bool:
+        """Check if error indicates AS rejected redirect URI registration for this client."""
+        msg = str(error).lower()
+        return ("redirect uri" in msg and "not registered for client" in msg)
+
+    async def _discover_and_register_locked(self,
+                                            response: httpx.Response | None = None,
+                                            *,
+                                            force_refresh: bool = False):
+        """Serialize discovery/registration to avoid races across concurrent auth flows."""
+        async with self._discover_register_lock:
+            if force_refresh:
+                self._invalidate_cached_registration(reason="forced-refresh")
+            await self._discover_and_register(response=response)
 
     def _set_custom_auth_callback(self,
                                   auth_callback: Callable[[OAuth2AuthCodeFlowProviderConfig, AuthFlowType],
@@ -364,9 +390,19 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         response = kwargs.get('response')
         if response and response.status_code == 401:
-            await self._discover_and_register(response=response)
+            await self._discover_and_register_locked(response=response)
 
-        return await self._nat_oauth2_authenticate(user_id=user_id)
+        try:
+            return await self._nat_oauth2_authenticate(user_id=user_id)
+        except RuntimeError as e:
+            # Some AS deployments intermittently reject authorize requests with
+            # "redirect URI not registered" for a cached client_id. Force one
+            # re-registration attempt to self-heal before failing the request.
+            if self._is_redirect_uri_registration_error(e):
+                logger.warning("Detected redirect URI registration error; forcing re-registration and retry")
+                await self._discover_and_register_locked(response=response, force_refresh=True)
+                return await self._nat_oauth2_authenticate(user_id=user_id)
+            raise
 
     @property
     def _effective_scopes(self) -> list[str]:
@@ -382,8 +418,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         self._cached_endpoints, endpoints_changed = await self._discoverer.discover(response=response)
         if endpoints_changed:
             logger.info("OAuth2 endpoints: %s", self._cached_endpoints)
-            self._cached_credentials = None  # invalidate credentials tied to old AS
-            self._auth_code_provider = None
+            self._invalidate_cached_registration(reason="endpoints-changed")
         effective_scopes = self._effective_scopes
 
         # Client registration
