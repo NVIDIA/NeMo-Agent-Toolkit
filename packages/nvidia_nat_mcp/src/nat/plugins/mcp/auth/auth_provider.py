@@ -430,6 +430,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         # Client registration
         if (not self._cached_credentials or self._credentials_cache_time is None
                 or (time.time() - self._credentials_cache_time) >= self.DCR_CACHE_TTL):
+            self._invalidate_cached_registration(reason="registration-expired")
             if self.config.client_id:
                 # Manual registration mode
                 self._cached_credentials = OAuth2Credentials(
