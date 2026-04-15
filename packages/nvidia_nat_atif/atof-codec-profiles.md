@@ -1,6 +1,6 @@
 # ATOF Codec Profiles
 
-**Version:** 0.3
+**Version:** 0.1
 **Date:** 2026-04-15
 **Status:** Active
 **Companion to:** [`atof-event-format.md`](./atof-event-format.md) (ATOF core wire format)
@@ -9,7 +9,7 @@
 
 ## 1. Purpose
 
-ATOF Core (`atof-event-format.md`) carries provider-specific payloads as opaque JSON in `input` and `output`. For consumers that want structured access — replay tools, evaluators, audit pipelines — **codec profiles** define canonical structured shapes that a producer's codec can decode raw provider JSON into and attach as `annotated_request` / `annotated_response` on `LlmStartEvent` / `LlmEndEvent`.
+ATOF Core (`atof-event-format.md`) carries provider-specific payloads as opaque JSON in `input` and `output`. For consumers that want structured access — replay tools, evaluators, audit pipelines — **codec profiles** define canonical structured shapes that a producer's codec can decode raw provider JSON into and attach as `annotated_request` on `ScopeStartEvent` and `annotated_response` on `ScopeEndEvent` (applicable when `scope_type == "llm"` or `scope_type == "tool"`).
 
 This document defines:
 
@@ -36,7 +36,7 @@ This document does NOT cover:
 
 ## 3. Codec Identifier
 
-The `codec` field on `LlmStartEvent` and `LlmEndEvent` is an object:
+The `codec` field on `ScopeStartEvent` and `ScopeEndEvent` (when `scope_type` is `"llm"` or `"tool"`) is an object:
 
 ```json
 {"name": "openai/chat-completions", "version": "v1"}
@@ -163,7 +163,7 @@ The **`default/passthrough` codec** declares these shapes as the ATOF-canonical 
   "tool_call_id": string | null,  # correlation ID from the LLM tool-call response
   "function_name": string | null, # tool/function name
   "arguments": object | null,     # parsed JSON argument dict
-  "result": any | null,           # tool return value (only on ToolEnd)
+  "result": any | null,           # tool return value (only on ScopeEnd with scope_type="tool")
   "tool_type": string | null,     # "function" | "web_search" | "file_search" | "code_interpreter" | "computer" | "mcp" | "retrieval" | "custom"
   "tool_provider": string | null, # "langchain" | "mcp:filesystem" | "native" | ...
   "parent_tool_call_id": string | null  # for nested tools
@@ -233,10 +233,10 @@ elif event.get("input") or event.get("output"):
 
 ### 7.1 Emitting tier-1 events
 
-Tier-1 producers don't have a codec. Emit `LlmStart` / `LlmEnd` with:
+Tier-1 producers don't have a codec. Emit `ScopeStart` / `ScopeEnd` with:
 
 ```json
-{"kind":"LlmStart", "codec":null, "input":<raw_provider_json>, "annotated_request":null, ...}
+{"kind":"ScopeStart", "scope_type":"llm", "codec":null, "input":<raw_provider_json>, "annotated_request":null, ...}
 ```
 
 Consumers fall back to the raw payload.
@@ -250,10 +250,10 @@ Tier-2 producers know the event is an LLM call and can provide `model_name` + `a
 Tier-3 producers have a codec registered. For every LLM call:
 
 1. Decode the raw provider JSON into the codec's structured shape.
-2. Attach the decoded object as `annotated_request` on `LlmStartEvent`.
+2. Attach the decoded object as `annotated_request` on `ScopeStartEvent` (`scope_type: "llm"`).
 3. Declare the codec via `codec: {name: "<id>", version: "v<N>"}`.
 4. Preserve the raw provider JSON in `input` alongside the decoded structure.
-5. Repeat for the response on `LlmEndEvent` (`annotated_response`).
+5. Repeat for the response on `ScopeEndEvent` (`annotated_response`).
 
 The raw `input`/`output` is always preserved for round-trip fidelity. The codec annotation is a consumer convenience, not a replacement.
 
@@ -268,8 +268,8 @@ Consumer-side validation: consumers that care about schema conformance MAY valid
 ### 8.1 Tier-3 OpenAI Chat Completions call
 
 ```jsonl
-{"kind":"LlmStart","schema_version":"0.3","uuid":"llm-005","parent_uuid":"agent-005","timestamp":"2026-01-05T00:00:01Z","name":"gpt-4.1","attributes":[],"model_name":"gpt-4.1","codec":{"name":"openai/chat-completions","version":"v1"},"input":{"model":"gpt-4.1","messages":[{"role":"user","content":"hello"}],"temperature":0.7},"annotated_request":{"model":"gpt-4.1","messages":[{"role":"user","content":"hello"}],"params":{"temperature":0.7}},"data":null,"metadata":null}
-{"kind":"LlmEnd","schema_version":"0.3","uuid":"llm-005","parent_uuid":"agent-005","timestamp":"2026-01-05T00:00:03Z","name":"gpt-4.1","attributes":[],"model_name":"gpt-4.1","codec":{"name":"openai/chat-completions","version":"v1"},"output":{"id":"chatcmpl-abc","choices":[{"index":0,"message":{"role":"assistant","content":"hi"},"finish_reason":"stop"}],"usage":{"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}},"annotated_response":{"id":"chatcmpl-abc","choices":[{"index":0,"message":{"role":"assistant","content":"hi"},"finish_reason":"stop"}],"usage":{"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.1","uuid":"llm-005","parent_uuid":"agent-005","timestamp":"2026-01-05T00:00:01Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","subtype":null,"model_name":"gpt-4.1","tool_call_id":null,"codec":{"name":"openai/chat-completions","version":"v1"},"input":{"model":"gpt-4.1","messages":[{"role":"user","content":"hello"}],"temperature":0.7},"annotated_request":{"model":"gpt-4.1","messages":[{"role":"user","content":"hello"}],"params":{"temperature":0.7}},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.1","uuid":"llm-005","parent_uuid":"agent-005","timestamp":"2026-01-05T00:00:03Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","subtype":null,"model_name":"gpt-4.1","tool_call_id":null,"codec":{"name":"openai/chat-completions","version":"v1"},"output":{"id":"chatcmpl-abc","choices":[{"index":0,"message":{"role":"assistant","content":"hi"},"finish_reason":"stop"}],"usage":{"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}},"annotated_response":{"id":"chatcmpl-abc","choices":[{"index":0,"message":{"role":"assistant","content":"hi"},"finish_reason":"stop"}],"usage":{"prompt_tokens":8,"completion_tokens":2,"total_tokens":10}},"status":"ok","error":null,"data":null,"metadata":null}
 ```
 
 The `input` and `annotated_request` happen to be identical here because the raw OpenAI request already matches the canonical shape. For providers whose wire format differs (e.g., Anthropic, NIM), the codec decodes into the canonical structure and `annotated_request` diverges from `input`.
@@ -279,10 +279,10 @@ The `input` and `annotated_request` happen to be identical here because the raw 
 An agent using both an OpenAI model for planning and a local NIM model for generation emits events with different `codec.name` values in the same stream. Consumers dispatch per-event.
 
 ```jsonl
-{"kind":"LlmStart","codec":{"name":"openai/chat-completions","version":"v1"},...}
-{"kind":"LlmEnd","codec":{"name":"openai/chat-completions","version":"v1"},...}
-{"kind":"LlmStart","codec":{"name":"nvidia/llm","version":"v1"},...}
-{"kind":"LlmEnd","codec":{"name":"nvidia/llm","version":"v1"},...}
+{"kind":"ScopeStart","scope_type":"llm","codec":{"name":"openai/chat-completions","version":"v1"},...}
+{"kind":"ScopeEnd","scope_type":"llm","codec":{"name":"openai/chat-completions","version":"v1"},...}
+{"kind":"ScopeStart","scope_type":"llm","codec":{"name":"nvidia/llm","version":"v1"},...}
+{"kind":"ScopeEnd","scope_type":"llm","codec":{"name":"nvidia/llm","version":"v1"},...}
 ```
 
 ## 9. Versioning and Evolution
