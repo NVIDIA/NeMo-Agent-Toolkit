@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import time
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -752,3 +754,75 @@ class TestMCPOAuth2Provider:
 
         scopes = provider._effective_scopes
         assert scopes == ['config_scope']  # Config should take precedence
+
+    @pytest.mark.parametrize("oauth_client_ttl", [0.01, 0.0], ids=["0.01", "disabled"])
+    async def test_oauth_client_ttl(self, mock_endpoints, oauth_client_ttl):
+        """Test that expired oauth_client_ttl causes re-registration with a new client_id."""
+        config = MCPOAuth2ProviderConfig(
+            server_url="https://example.com/mcp",  # type: ignore
+            redirect_uri="https://example.com/callback",  # type: ignore
+            enable_dynamic_registration=True,
+            oauth_client_ttl=oauth_client_ttl,
+        )
+        provider = MCPOAuth2Provider(config)
+
+        first_credentials = OAuth2Credentials(client_id="first_client_id", client_secret="secret")
+        second_credentials = OAuth2Credentials(client_id="second_client_id", client_secret="secret")
+
+        with patch.object(provider._discoverer, 'discover') as mock_discover:
+            mock_discover.return_value = (mock_endpoints, False)
+
+            with patch.object(provider._registrar, 'register') as mock_register:
+                mock_register.return_value = first_credentials
+
+                await provider._discover_and_register()
+
+                assert provider._cached_credentials.client_id == "first_client_id"
+                assert provider._auth_code_provider is None  # not built yet
+                first_cache_time = provider._credentials_cache_time
+
+                # Wait for TTL to expire
+                await asyncio.sleep(oauth_client_ttl)
+
+                mock_register.return_value = second_credentials
+                await provider._discover_and_register()
+
+                assert provider._cached_credentials.client_id == "second_client_id"
+                assert provider._credentials_cache_time > first_cache_time
+                assert provider._auth_code_provider is None  # reset on re-registration
+                assert mock_register.call_count == 2
+
+    async def test_oauth_client_ttl_not_expired(self, mock_endpoints):
+        """Test that credentials are not refreshed when oauth_client_ttl has not elapsed."""
+        config = MCPOAuth2ProviderConfig(
+            server_url="https://example.com/mcp",  # type: ignore
+            redirect_uri="https://example.com/callback",  # type: ignore
+            enable_dynamic_registration=True,
+            oauth_client_ttl=100,
+        )
+        provider = MCPOAuth2Provider(config)
+
+        first_credentials = OAuth2Credentials(client_id="first_client_id", client_secret="secret")
+        second_credentials = OAuth2Credentials(client_id="second_client_id", client_secret="secret")
+
+        with patch.object(provider._discoverer, 'discover') as mock_discover:
+            mock_discover.return_value = (mock_endpoints, False)
+
+            with patch.object(provider._registrar, 'register') as mock_register:
+                mock_register.return_value = first_credentials
+
+                await provider._discover_and_register()
+
+                assert provider._cached_credentials.client_id == "first_client_id"
+                first_cache_time = provider._credentials_cache_time
+
+                # Wait well under the TTL
+                await asyncio.sleep(0.01)
+
+                mock_register.return_value = second_credentials
+                await provider._discover_and_register()
+
+                # Credentials should be unchanged — no re-registration occurred
+                assert provider._cached_credentials.client_id == "first_client_id"
+                assert provider._credentials_cache_time == first_cache_time
+                assert mock_register.call_count == 1
