@@ -81,15 +81,6 @@ if [[ ! -d "$WHEELS_BASE_DIR" || -z "$(find "$WHEELS_BASE_DIR" -type f -name "*.
     exit 1
 fi
 
-# Function to install JFrog CLI if needed
-function install_jfrog_cli() {
-    if ! command -v jf &> /dev/null; then
-        echo "Installing JFrog CLI..."
-        curl -fL https://install-cli.jfrog.io | sh || { echo "JFrog CLI installation failed"; exit 1; }
-    fi
-}
-install_jfrog_cli
-
 # Upload wheels if enabled
 if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
     for NAT_COMPONENT_NAME  in ${NAT_COMPONENTS[@]}; do
