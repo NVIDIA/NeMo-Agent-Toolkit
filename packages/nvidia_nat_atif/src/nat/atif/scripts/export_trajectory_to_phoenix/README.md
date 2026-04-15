@@ -97,9 +97,9 @@ WORKFLOW span  (root -- covers entire trajectory duration)
 ```
 
 - **WORKFLOW** spans wrap the entire trajectory and carry the first
-  user message as input and the last agent/system response as output.
+  user message as input and the last agent or system response as output.
 - **LLM** spans represent agent steps backed by a language model.
-- **FUNCTION** spans represent system/pipeline steps with no LLM involvement.
+- **FUNCTION** spans represent system or pipeline steps with no LLM involvement.
 - **TOOL** spans represent individual tool calls. Nested tool ancestry
   (tool A calls tool B) is preserved via parent-child relationships.
 
@@ -107,10 +107,10 @@ WORKFLOW span  (root -- covers entire trajectory duration)
 
 - User steps in external ATIF files typically lack `extra.ancestry`.
   The converter synthesises a root WORKFLOW span from trajectory
-  metadata and reparents orphaned agent spans under it.
+  metadata and re-parents orphaned agent spans under it.
 - `subagent_trajectories` are processed recursively and share
   the parent trace ID so all spans appear in a single Phoenix trace.
-- Tool spans that delegate to subagents are linked via
+- Tool spans that delegate to sub-agents are linked via
   `subagent_trajectory_ref` in observation results.
 - Each call to `export()` creates a new trace (unique trace ID),
   so re-exporting the same file will not produce duplicate spans
@@ -123,6 +123,6 @@ WORKFLOW span  (root -- covers entire trajectory duration)
 
 | Module | Description |
 |--------|-------------|
-| `atif_trajectory_exporter.py` | Core converter: ATIF trajectory dict to NAT `Span` objects |
+| `atif_trajectory_exporter.py` | Core converter: ATIF trajectory dict to NeMo Agent Toolkit `Span` objects |
 | `atif_trajectory_phoenix_exporter.py` | Phoenix wrapper: converts spans to OTel and exports via HTTP |
 | `export_atif_trajectory_to_phoenix.py` | CLI entry point |
