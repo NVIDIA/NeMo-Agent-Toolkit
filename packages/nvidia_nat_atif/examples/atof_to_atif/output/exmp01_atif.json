@@ -2,9 +2,9 @@
   "schema_version": "ATIF-v1.6",
   "session_id": "atof-session",
   "agent": {
-    "name": "simple_calculator_agent",
+    "name": "calculator_agent",
     "version": "1.0.0",
-    "model_name": "nvidia/nemotron-3-super-v3"
+    "model_name": "gpt-4.1"
   },
   "steps": [
     {
@@ -15,9 +15,9 @@
       "extra": {
         "ancestry": {
           "function_id": "llm-001",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-001",
-          "parent_name": "simple_calculator_agent"
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-001",
+          "parent_name": "calculator_agent"
         }
       }
     },
@@ -25,13 +25,23 @@
       "step_id": 2,
       "timestamp": "2026-01-01T00:00:02Z",
       "source": "agent",
-      "message": "I'll calculate 3 + 4 for you.",
+      "message": "{\"content\":\"\",\"tool_calls\":[{\"id\":\"call_abc\",\"name\":\"calculator__add\",\"arguments\":{\"a\":3,\"b\":4}}]}",
+      "tool_calls": [
+        {
+          "tool_call_id": "call_abc",
+          "function_name": "calculator__add",
+          "arguments": {
+            "a": 3,
+            "b": 4
+          }
+        }
+      ],
       "extra": {
         "ancestry": {
           "function_id": "llm-001",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-001",
-          "parent_name": "simple_calculator_agent"
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-001",
+          "parent_name": "calculator_agent"
         },
         "invocation": {
           "invocation_id": "llm-001",
@@ -44,13 +54,13 @@
           {
             "function_id": "tool-001",
             "function_name": "calculator__add",
-            "parent_id": "scope-agent-001",
-            "parent_name": "simple_calculator_agent"
+            "parent_id": "agent-001",
+            "parent_name": "calculator_agent"
           }
         ],
         "tool_invocations": [
           {
-            "invocation_id": "call_calc_001",
+            "invocation_id": "call_abc",
             "framework": "nat",
             "status": "completed",
             "start_timestamp": 1767225603.0,
@@ -76,13 +86,13 @@
       "step_id": 4,
       "timestamp": "2026-01-01T00:00:05Z",
       "source": "user",
-      "message": "[{\"role\":\"user\",\"content\":\"What is 3 + 4?\"},{\"role\":\"assistant\",\"content\":\"I'll calculate 3 + 4 for you.\",\"tool_calls\":[{\"id\":\"call_calc_001\",\"type\":\"function\",\"function\":{\"name\":\"calculator__add\",\"arguments\":\"{\\\"a\\\": 3, \\\"b\\\": 4}\"}}]},{\"role\":\"tool\",\"content\":\"{\\\"result\\\": 7}\",\"tool_call_id\":\"call_calc_001\"}]",
+      "message": "[{\"role\":\"user\",\"content\":\"What is 3 + 4?\"},{\"role\":\"assistant\",\"tool_calls\":[{\"id\":\"call_abc\",\"name\":\"calculator__add\"}]},{\"role\":\"tool\",\"tool_call_id\":\"call_abc\",\"content\":\"7\"}]",
       "extra": {
         "ancestry": {
           "function_id": "llm-002",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-001",
-          "parent_name": "simple_calculator_agent"
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-001",
+          "parent_name": "calculator_agent"
         }
       }
     },
@@ -90,13 +100,13 @@
       "step_id": 5,
       "timestamp": "2026-01-01T00:00:06Z",
       "source": "agent",
-      "message": "The result of 3 + 4 is 7.",
+      "message": "{\"content\":\"3 + 4 = 7\"}",
       "extra": {
         "ancestry": {
           "function_id": "llm-002",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-001",
-          "parent_name": "simple_calculator_agent"
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-001",
+          "parent_name": "calculator_agent"
         },
         "invocation": {
           "invocation_id": "llm-002",

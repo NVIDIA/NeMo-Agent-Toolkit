@@ -2,125 +2,81 @@
   "schema_version": "ATIF-v1.6",
   "session_id": "atof-session",
   "agent": {
-    "name": "weather_converter_agent",
+    "name": "search_agent",
     "version": "1.0.0",
-    "model_name": "nvidia/nemotron-3-super-v3"
+    "model_name": "gpt-4.1"
   },
   "steps": [
     {
       "step_id": 1,
-      "timestamp": "2026-01-01T00:01:01Z",
+      "timestamp": "2026-01-02T00:00:01Z",
       "source": "user",
-      "message": "[{\"role\":\"user\",\"content\":\"What's the temperature in San Francisco in Celsius?\"}]",
+      "message": "[{\"role\":\"user\",\"content\":\"Find recent quantum-computing news.\"}]",
       "extra": {
         "ancestry": {
-          "function_id": "llm-010",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-002",
-          "parent_name": "weather_converter_agent"
+          "function_id": "llm-003",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-002",
+          "parent_name": "search_agent"
         }
       }
     },
     {
       "step_id": 2,
-      "timestamp": "2026-01-01T00:01:02Z",
+      "timestamp": "2026-01-02T00:00:02Z",
       "source": "agent",
-      "message": "",
+      "message": "{\"content\":\"\",\"tool_calls\":[{\"id\":\"call_xyz\",\"name\":\"web_search\",\"arguments\":{\"q\":\"quantum computing news\"}}]}",
+      "tool_calls": [
+        {
+          "tool_call_id": "call_xyz",
+          "function_name": "web_search",
+          "arguments": {
+            "q": "quantum computing news"
+          }
+        }
+      ],
       "extra": {
         "ancestry": {
-          "function_id": "llm-010",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-002",
-          "parent_name": "weather_converter_agent"
+          "function_id": "llm-003",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-002",
+          "parent_name": "search_agent"
         },
         "invocation": {
-          "invocation_id": "llm-010",
+          "invocation_id": "llm-003",
           "framework": "nat",
           "status": "completed",
-          "start_timestamp": 1767225661.0,
-          "end_timestamp": 1767225662.0
+          "start_timestamp": 1767312001.0,
+          "end_timestamp": 1767312002.0
         },
         "tool_ancestry": [
           {
-            "function_id": "tool-011",
-            "function_name": "temperature__to_celsius",
-            "parent_id": "scope-fn-001",
-            "parent_name": "weather__lookup"
-          },
-          {
-            "function_id": "tool-010",
-            "function_name": "weather__lookup",
-            "parent_id": "scope-fn-001",
-            "parent_name": "weather__lookup"
+            "function_id": "tool-002",
+            "function_name": "web_search",
+            "parent_id": "agent-002",
+            "parent_name": "search_agent"
           }
         ],
         "tool_invocations": [
           {
-            "invocation_id": "call_temp_001",
+            "invocation_id": "call_xyz",
             "framework": "nat",
             "status": "completed",
-            "start_timestamp": 1767225665.0,
-            "end_timestamp": 1767225666.0
-          },
-          {
-            "invocation_id": "call_weather_001",
-            "framework": "nat",
-            "status": "completed",
-            "start_timestamp": 1767225664.0,
-            "end_timestamp": 1767225667.0
+            "start_timestamp": 1767312003.0,
+            "end_timestamp": 1767312008.0
           }
         ]
       }
     },
     {
       "step_id": 3,
-      "timestamp": "2026-01-01T00:01:06Z",
+      "timestamp": "2026-01-02T00:00:08Z",
       "source": "system",
       "message": "",
       "observation": {
         "results": [
-          {
-            "content": "{\"celsius\":20.0}"
-          },
-          {
-            "content": "{\"city\":\"San Francisco\",\"temp_f\":68.0,\"temp_c\":20.0,\"condition\":\"sunny\"}"
-          }
+          {}
         ]
-      }
-    },
-    {
-      "step_id": 4,
-      "timestamp": "2026-01-01T00:01:09Z",
-      "source": "user",
-      "message": "[{\"role\":\"user\",\"content\":\"What's the temperature in San Francisco in Celsius?\"},{\"role\":\"tool\",\"content\":\"{\\\"city\\\":\\\"San Francisco\\\",\\\"temp_c\\\":20.0}\",\"tool_call_id\":\"call_weather_001\"}]",
-      "extra": {
-        "ancestry": {
-          "function_id": "llm-011",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-002",
-          "parent_name": "weather_converter_agent"
-        }
-      }
-    },
-    {
-      "step_id": 5,
-      "timestamp": "2026-01-01T00:01:10Z",
-      "source": "agent",
-      "message": "It's currently 20\u00b0C (68\u00b0F) and sunny in San Francisco.",
-      "extra": {
-        "ancestry": {
-          "function_id": "llm-011",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-002",
-          "parent_name": "weather_converter_agent"
-        },
-        "invocation": {
-          "invocation_id": "llm-011",
-          "framework": "nat",
-          "status": "completed",
-          "start_timestamp": 1767225669.0,
-          "end_timestamp": 1767225670.0
-        }
       }
     }
   ]

@@ -2,140 +2,118 @@
   "schema_version": "ATIF-v1.6",
   "session_id": "atof-session",
   "agent": {
-    "name": "search_and_analyze_agent",
+    "name": "calculator_agent",
     "version": "1.0.0",
-    "model_name": "nvidia/nemotron-3-super-v3"
+    "model_name": "gpt-4.1"
   },
   "steps": [
     {
       "step_id": 1,
-      "timestamp": "2026-01-01T00:02:01Z",
+      "timestamp": "2026-01-03T00:00:01Z",
       "source": "user",
-      "message": "[{\"role\":\"user\",\"content\":\"Search for ATIF spec and summarize it, also count the words.\"}]",
+      "message": "[{\"role\":\"user\",\"content\":\"What is 3 + 4?\"}]",
       "extra": {
         "ancestry": {
-          "function_id": "llm-020",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-003",
-          "parent_name": "search_and_analyze_agent"
+          "function_id": "llm-005",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-003",
+          "parent_name": "calculator_agent"
         }
       }
     },
     {
       "step_id": 2,
-      "timestamp": "2026-01-01T00:02:02Z",
+      "timestamp": "2026-01-03T00:00:02Z",
       "source": "agent",
       "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "call_abc",
+          "function_name": "calculator__add",
+          "arguments": {
+            "a": 3,
+            "b": 4
+          }
+        }
+      ],
       "extra": {
         "ancestry": {
-          "function_id": "llm-020",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-003",
-          "parent_name": "search_and_analyze_agent"
+          "function_id": "llm-005",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-003",
+          "parent_name": "calculator_agent"
         },
         "invocation": {
-          "invocation_id": "llm-020",
+          "invocation_id": "llm-005",
           "framework": "nat",
           "status": "completed",
-          "start_timestamp": 1767225721.0,
-          "end_timestamp": 1767225722.0
+          "start_timestamp": 1767398401.0,
+          "end_timestamp": 1767398402.0
         },
         "tool_ancestry": [
           {
-            "function_id": "tool-022",
-            "function_name": "text__summarize",
-            "parent_id": "scope-fn-010",
-            "parent_name": "search__web"
-          },
-          {
-            "function_id": "tool-020",
-            "function_name": "search__web",
-            "parent_id": "scope-fn-010",
-            "parent_name": "search__web"
-          },
-          {
-            "function_id": "tool-021",
-            "function_name": "text__word_count",
-            "parent_id": "scope-agent-003",
-            "parent_name": "search_and_analyze_agent"
+            "function_id": "tool-003",
+            "function_name": "calculator__add",
+            "parent_id": "agent-003",
+            "parent_name": "calculator_agent"
           }
         ],
         "tool_invocations": [
           {
-            "invocation_id": "call_summarize_001",
+            "invocation_id": "call_abc",
             "framework": "nat",
             "status": "completed",
-            "start_timestamp": 1767225725.0,
-            "end_timestamp": 1767225726.0
-          },
-          {
-            "invocation_id": "call_search_001",
-            "framework": "nat",
-            "status": "completed",
-            "start_timestamp": 1767225724.0,
-            "end_timestamp": 1767225727.0
-          },
-          {
-            "invocation_id": "call_wc_001",
-            "framework": "nat",
-            "status": "completed",
-            "start_timestamp": 1767225729.0,
-            "end_timestamp": 1767225730.0
+            "start_timestamp": 1767398403.0,
+            "end_timestamp": 1767398404.0
           }
         ]
       }
     },
     {
       "step_id": 3,
-      "timestamp": "2026-01-01T00:02:06Z",
+      "timestamp": "2026-01-03T00:00:04Z",
       "source": "system",
       "message": "",
       "observation": {
         "results": [
           {
-            "content": "{\"summary\":\"ATIF defines a standard trajectory format for evaluating AI agents.\"}"
-          },
-          {
-            "content": "{\"results\":[\"ATIF spec found\"],\"summary\":\"ATIF defines a standard trajectory format.\"}"
-          },
-          {
-            "content": "{\"word_count\":5}"
+            "content": "{\"result\":7}"
           }
         ]
       }
     },
     {
       "step_id": 4,
-      "timestamp": "2026-01-01T00:02:11Z",
+      "timestamp": "2026-01-03T00:00:05Z",
       "source": "user",
-      "message": "[{\"role\":\"user\",\"content\":\"Search for ATIF spec and summarize it, also count the words.\"},{\"role\":\"tool\",\"content\":\"{\\\"results\\\":[\\\"ATIF spec found\\\"]}\",\"tool_call_id\":\"call_search_001\"},{\"role\":\"tool\",\"content\":\"{\\\"word_count\\\":5}\",\"tool_call_id\":\"call_wc_001\"}]",
+      "message": "[{\"role\":\"user\",\"content\":\"What is 3 + 4?\"},{\"role\":\"assistant\",\"tool_calls\":[{\"id\":\"call_abc\",\"type\":\"function\",\"function\":{\"name\":\"calculator__add\",\"arguments\":\"{\\\"a\\\":3,\\\"b\\\":4}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_abc\",\"content\":\"7\"}]",
       "extra": {
         "ancestry": {
-          "function_id": "llm-021",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-003",
-          "parent_name": "search_and_analyze_agent"
+          "function_id": "llm-006",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-003",
+          "parent_name": "calculator_agent"
         }
       }
     },
     {
       "step_id": 5,
-      "timestamp": "2026-01-01T00:02:12Z",
+      "timestamp": "2026-01-03T00:00:06Z",
       "source": "agent",
-      "message": "ATIF defines a standard trajectory format for AI agent evaluation. The text contains 5 words.",
+      "message": "3 + 4 = 7",
       "extra": {
         "ancestry": {
-          "function_id": "llm-021",
-          "function_name": "nvidia/nemotron-3-super-v3",
-          "parent_id": "scope-agent-003",
-          "parent_name": "search_and_analyze_agent"
+          "function_id": "llm-006",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-003",
+          "parent_name": "calculator_agent"
         },
         "invocation": {
-          "invocation_id": "llm-021",
+          "invocation_id": "llm-006",
           "framework": "nat",
           "status": "completed",
-          "start_timestamp": 1767225731.0,
-          "end_timestamp": 1767225732.0
+          "start_timestamp": 1767398405.0,
+          "end_timestamp": 1767398406.0
         }
       }
     }

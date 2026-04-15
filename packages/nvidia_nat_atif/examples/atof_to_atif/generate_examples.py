@@ -1,33 +1,30 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Generate ATOF v0.2 example JSONL files for EXMP-01, EXMP-02, and EXMP-03.
+"""Generate ATOF v0.1 example JSONL files for EXMP-01, EXMP-02, and EXMP-03.
 
-Each scenario preserves the structural workflow of its v0.1 counterpart
-(simple calculator / nested weather lookup / branching search-and-summarize)
-but demonstrates one of the three profile declaration modes introduced by
-spec v0.2 §5 via a prepended ``StreamHeaderEvent``:
+Each scenario opens with a ``StreamHeaderEvent`` (always at position 0 per
+spec §3.4) and demonstrates one of the three producer enrichment tiers:
 
-- **EXMP-01 (header mode)**: ``StreamHeaderEvent`` advertises
-  ``profile_mode_default="header"`` and declares both reference schemas
-  (``default/llm.v1`` and ``default/tool.v1``). Subsequent profiles reference
-  these schemas by string ``$schema`` ID.
-- **EXMP-02 (inline mode)**: ``StreamHeaderEvent`` advertises
-  ``profile_mode_default="inline"`` with an empty ``schemas`` registry. Every
-  profile carries an inline JSON Schema dict as its ``$schema``.
-- **EXMP-03 (mixed mode)**: ``StreamHeaderEvent`` advertises
-  ``profile_mode_default="header"`` and declares both reference schemas; one
-  LLM event overrides the stream default via ``$mode="inline"`` + inline
-  ``$schema`` dict.
+- **EXMP-01 — tier-2 semantic-tagged (basic)**: Simple calculator with a single
+  tool call. StreamHeader is a minimal manifest (empty ``codecs``). LLM events
+  carry ``model_name`` but no codec; tool events carry ``tool_call_id``.
 
-Event counts: EXMP-01 = 9 events; EXMP-02 = 13 events; EXMP-03 = 15 events
-(each is the v0.1 event count + 1 StreamHeaderEvent). ATIF step counts
-remain unchanged from v0.1 (5 steps per scenario).
+- **EXMP-02 — tier-2 with error recovery**: Same shape as EXMP-01 but the tool
+  fails (``status: "error"`` + ``ErrorInfo``) and the parent agent catches it
+  and reports ``status: "ok"`` with a graceful failure message. Demonstrates
+  cascading-status semantics from spec §5.2-5.3.
+
+- **EXMP-03 — tier-3 codec-annotated**: Same calculator workflow as EXMP-01,
+  but the producer registers a codec (``openai/chat-completions.v1``) on each
+  LLM event and attaches structured ``annotated_request`` /
+  ``annotated_response`` payloads. The StreamHeader declares the codec in its
+  registry (priority-2 fallback for any consumer that doesn't have it locally).
 
 Usage:
     python generate_examples.py [--output-dir DIR]
 
-See ATOF spec §4 (Profile Contract Protocol), §5 (Stream Header Event),
-§6 (Reference Profile Implementations).
+See ATOF spec §1.1 (three enrichment tiers), §3 (event kinds), §5 (status),
+and ``atof-codec-profiles.md`` §6 (codec resolution protocol).
 """
 
 from __future__ import annotations
@@ -35,8 +32,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from nat.atof import DefaultLlmV1
-from nat.atof import DefaultToolV1
+from nat.atof import ErrorInfo
 from nat.atof import Event
 from nat.atof import ScopeEndEvent
 from nat.atof import ScopeStartEvent
@@ -47,646 +43,434 @@ OUTPUT_DIR = Path(__file__).parent / "output"
 
 
 # ---------------------------------------------------------------------------
-# EXMP-01: Simple Tool Call — HEADER MODE
+# Shared timestamps (deterministic for diff-able output)
+# ---------------------------------------------------------------------------
+
+
+def _ts(scenario: int, second: int) -> str:
+    """RFC 3339 timestamp helper — '2026-01-0{scenario}T00:00:0{second}Z'."""
+    return f"2026-01-0{scenario}T00:00:{second:02d}Z"
+
+
+# ---------------------------------------------------------------------------
+# EXMP-01: Simple Tool Call — tier-2 semantic-tagged (no codec)
 # ---------------------------------------------------------------------------
 
 
 def generate_exmp01() -> list[Event]:
-    """EXMP-01 (9 events, header mode): single LLM -> calculator__add -> LLM cycle.
+    """A single calculator tool call. Eight events plus a StreamHeader.
 
-    The StreamHeaderEvent declares both reference schemas (``default/llm.v1``
-    and ``default/tool.v1``); all profiles reference them by string ``$schema``
-    ID. This is the compact-stream case: many profiles, small fixed schema set.
+    Workflow: agent → llm (decides to call calculator__add) → tool runs →
+    llm (formulates final answer) → agent done.
     """
-    header = StreamHeaderEvent(
-        uuid="stream-header-001",
-        parent_uuid=None,
-        timestamp="2026-01-01T00:00:00Z",
-        name="exmp01_header",
-        profile_mode_default="header",
-        schemas={
-            "default/llm.v1": DefaultLlmV1.JSON_SCHEMA,
-            "default/tool.v1": DefaultToolV1.JSON_SCHEMA,
-        },
-    )
-    return [
-        header,
-        ScopeStartEvent(
-            uuid="scope-agent-001",
+    events: list[Event] = [
+        StreamHeaderEvent(
+            uuid="hdr-001",
             parent_uuid=None,
-            timestamp="2026-01-01T00:00:00Z",
-            name="simple_calculator_agent",
+            timestamp=_ts(1, 0),
+            name="exmp01_header",
+            codecs={},  # tier-2: no codecs declared
+        ),
+        ScopeStartEvent(
+            uuid="agent-001",
+            parent_uuid=None,
+            timestamp=_ts(1, 0),
+            name="calculator_agent",
+            attributes=[],
             scope_type="agent",
-            flags=[],
+            input="What is 3 + 4?",
         ),
         ScopeStartEvent(
             uuid="llm-001",
-            parent_uuid="scope-agent-001",
-            timestamp="2026-01-01T00:00:01Z",
-            name="nvidia/nemotron-3-super-v3",
+            parent_uuid="agent-001",
+            timestamp=_ts(1, 1),
+            name="gpt-4.1",
+            attributes=[],
             scope_type="llm",
-            flags=[],
-            profile=DefaultLlmV1(model_name="nvidia/nemotron-3-super-v3"),
-            input={
-                "messages": [{"role": "user", "content": "What is 3 + 4?"}],
-                "model": "nvidia/nemotron-3-super-v3",
-                "tools": [
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "calculator__add",
-                            "description": "Add two numbers",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {
-                                    "a": {"type": "number"},
-                                    "b": {"type": "number"},
-                                },
-                            },
-                        },
-                    }
-                ],
-            },
+            model_name="gpt-4.1",
+            input={"messages": [{"role": "user", "content": "What is 3 + 4?"}]},
         ),
         ScopeEndEvent(
             uuid="llm-001",
-            parent_uuid="scope-agent-001",
-            timestamp="2026-01-01T00:00:02Z",
-            name="nvidia/nemotron-3-super-v3",
+            parent_uuid="agent-001",
+            timestamp=_ts(1, 2),
+            name="gpt-4.1",
+            attributes=[],
             scope_type="llm",
-            flags=[],
-            status="ok",
-            profile=DefaultLlmV1(model_name="nvidia/nemotron-3-super-v3"),
+            model_name="gpt-4.1",
             output={
-                "choices": [
-                    {
-                        "message": {
-                            "content": "I'll calculate 3 + 4 for you.",
-                            "tool_calls": [
-                                {
-                                    "id": "call_calc_001",
-                                    "type": "function",
-                                    "function": {
-                                        "name": "calculator__add",
-                                        "arguments": '{"a": 3, "b": 4}',
-                                    },
-                                }
-                            ],
-                        },
-                        "finish_reason": "tool_calls",
-                    }
+                "content": "",
+                "tool_calls": [
+                    {"id": "call_abc", "name": "calculator__add", "arguments": {"a": 3, "b": 4}},
                 ],
             },
+            status="ok",
         ),
         ScopeStartEvent(
             uuid="tool-001",
-            parent_uuid="scope-agent-001",
-            timestamp="2026-01-01T00:00:03Z",
+            parent_uuid="agent-001",
+            timestamp=_ts(1, 3),
             name="calculator__add",
+            attributes=["local"],
             scope_type="tool",
-            flags=[],
-            profile=DefaultToolV1(tool_call_id="call_calc_001"),
+            tool_call_id="call_abc",
             input={"a": 3, "b": 4},
         ),
         ScopeEndEvent(
             uuid="tool-001",
-            parent_uuid="scope-agent-001",
-            timestamp="2026-01-01T00:00:04Z",
+            parent_uuid="agent-001",
+            timestamp=_ts(1, 4),
             name="calculator__add",
+            attributes=["local"],
             scope_type="tool",
-            flags=[],
-            status="ok",
-            profile=DefaultToolV1(tool_call_id="call_calc_001"),
+            tool_call_id="call_abc",
             output={"result": 7},
+            status="ok",
         ),
         ScopeStartEvent(
             uuid="llm-002",
-            parent_uuid="scope-agent-001",
-            timestamp="2026-01-01T00:00:05Z",
-            name="nvidia/nemotron-3-super-v3",
+            parent_uuid="agent-001",
+            timestamp=_ts(1, 5),
+            name="gpt-4.1",
+            attributes=[],
             scope_type="llm",
-            flags=[],
-            profile=DefaultLlmV1(model_name="nvidia/nemotron-3-super-v3"),
+            model_name="gpt-4.1",
             input={
                 "messages": [
                     {"role": "user", "content": "What is 3 + 4?"},
-                    {
-                        "role": "assistant",
-                        "content": "I'll calculate 3 + 4 for you.",
-                        "tool_calls": [
-                            {
-                                "id": "call_calc_001",
-                                "type": "function",
-                                "function": {
-                                    "name": "calculator__add",
-                                    "arguments": '{"a": 3, "b": 4}',
-                                },
-                            }
-                        ],
-                    },
-                    {"role": "tool", "content": '{"result": 7}', "tool_call_id": "call_calc_001"},
-                ],
-                "model": "nvidia/nemotron-3-super-v3",
+                    {"role": "assistant", "tool_calls": [{"id": "call_abc", "name": "calculator__add"}]},
+                    {"role": "tool", "tool_call_id": "call_abc", "content": "7"},
+                ]
             },
         ),
         ScopeEndEvent(
             uuid="llm-002",
-            parent_uuid="scope-agent-001",
-            timestamp="2026-01-01T00:00:06Z",
-            name="nvidia/nemotron-3-super-v3",
+            parent_uuid="agent-001",
+            timestamp=_ts(1, 6),
+            name="gpt-4.1",
+            attributes=[],
             scope_type="llm",
-            flags=[],
+            model_name="gpt-4.1",
+            output={"content": "3 + 4 = 7"},
             status="ok",
-            profile=DefaultLlmV1(model_name="nvidia/nemotron-3-super-v3"),
-            output={
-                "choices": [{"message": {"content": "The result of 3 + 4 is 7."}, "finish_reason": "stop"}],
-            },
         ),
         ScopeEndEvent(
-            uuid="scope-agent-001",
+            uuid="agent-001",
             parent_uuid=None,
-            timestamp="2026-01-01T00:00:07Z",
-            name="simple_calculator_agent",
+            timestamp=_ts(1, 7),
+            name="calculator_agent",
+            attributes=[],
             scope_type="agent",
-            flags=[],
+            output="3 + 4 = 7",
             status="ok",
         ),
     ]
+    return events
 
 
 # ---------------------------------------------------------------------------
-# EXMP-02: Nested Tool Chain — INLINE MODE
+# EXMP-02: Tool Error with Parent Recovery — tier-2
 # ---------------------------------------------------------------------------
-
-
-def _inline_llm_profile(model_name: str) -> DefaultLlmV1:
-    """Construct a DefaultLlmV1 with inline ``$schema`` dict (inline-mode helper).
-
-    The profile carries the full JSON Schema body under ``$schema`` (not a
-    string ID); this is the canonical wire shape for ``profile_mode_default``
-    = ``"inline"`` (spec §4.1, §5.3).
-    """
-    return DefaultLlmV1.model_validate(
-        {
-            "$schema": DefaultLlmV1.JSON_SCHEMA,
-            "$version": "1.0",
-            "model_name": model_name,
-        }
-    )
-
-
-def _inline_tool_profile(tool_call_id: str) -> DefaultToolV1:
-    """Construct a DefaultToolV1 with inline ``$schema`` dict (inline-mode helper)."""
-    return DefaultToolV1.model_validate(
-        {
-            "$schema": DefaultToolV1.JSON_SCHEMA,
-            "$version": "1.0",
-            "tool_call_id": tool_call_id,
-        }
-    )
 
 
 def generate_exmp02() -> list[Event]:
-    """EXMP-02 (13 events, inline mode): LLM -> weather__lookup (containing temperature__to_celsius) -> LLM.
+    """A web-search tool times out; the parent agent catches and reports OK.
 
-    The StreamHeaderEvent advertises ``profile_mode_default="inline"`` with an
-    empty ``schemas`` registry; each profile carries its full JSON Schema body
-    inline. This is the self-describing-stream case: no central registry
-    required.
+    Demonstrates spec §5.2-5.3: each scope reports its own terminal status;
+    parents may catch child errors and complete normally.
     """
-    header = StreamHeaderEvent(
-        uuid="stream-header-002",
-        parent_uuid=None,
-        timestamp="2026-01-01T00:01:00Z",
-        name="exmp02_header",
-        profile_mode_default="inline",
-        schemas={},
-    )
-    return [
-        header,
-        ScopeStartEvent(
-            uuid="scope-agent-002",
+    events: list[Event] = [
+        StreamHeaderEvent(
+            uuid="hdr-002",
             parent_uuid=None,
-            timestamp="2026-01-01T00:01:00Z",
-            name="weather_converter_agent",
-            scope_type="agent",
-            flags=[],
+            timestamp=_ts(2, 0),
+            name="exmp02_header",
+            codecs={},
         ),
         ScopeStartEvent(
-            uuid="llm-010",
-            parent_uuid="scope-agent-002",
-            timestamp="2026-01-01T00:01:01Z",
-            name="nvidia/nemotron-3-super-v3",
-            scope_type="llm",
-            flags=[],
-            profile=_inline_llm_profile("nvidia/nemotron-3-super-v3"),
-            input={
-                "messages": [{"role": "user", "content": "What's the temperature in San Francisco in Celsius?"}],
-                "model": "nvidia/nemotron-3-super-v3",
-            },
-        ),
-        ScopeEndEvent(
-            uuid="llm-010",
-            parent_uuid="scope-agent-002",
-            timestamp="2026-01-01T00:01:02Z",
-            name="nvidia/nemotron-3-super-v3",
-            scope_type="llm",
-            flags=[],
-            status="ok",
-            profile=_inline_llm_profile("nvidia/nemotron-3-super-v3"),
-            output={
-                "choices": [
-                    {
-                        "message": {
-                            "content": "",
-                            "tool_calls": [
-                                {
-                                    "id": "call_weather_001",
-                                    "type": "function",
-                                    "function": {
-                                        "name": "weather__lookup",
-                                        "arguments": '{"city": "San Francisco"}',
-                                    },
-                                }
-                            ],
-                        },
-                        "finish_reason": "tool_calls",
-                    }
-                ],
-            },
-        ),
-        # Function scope wraps the nested tool chain
-        ScopeStartEvent(
-            uuid="scope-fn-001",
-            parent_uuid="scope-agent-002",
-            timestamp="2026-01-01T00:01:03Z",
-            name="weather__lookup",
-            scope_type="function",
-            flags=[],
-        ),
-        ScopeStartEvent(
-            uuid="tool-010",
-            parent_uuid="scope-fn-001",
-            timestamp="2026-01-01T00:01:04Z",
-            name="weather__lookup",
-            scope_type="tool",
-            flags=[],
-            profile=_inline_tool_profile("call_weather_001"),
-            input={"city": "San Francisco"},
-        ),
-        # Inner tool: temperature conversion
-        ScopeStartEvent(
-            uuid="tool-011",
-            parent_uuid="scope-fn-001",
-            timestamp="2026-01-01T00:01:05Z",
-            name="temperature__to_celsius",
-            scope_type="tool",
-            flags=[],
-            profile=_inline_tool_profile("call_temp_001"),
-            input={"fahrenheit": 68.0},
-        ),
-        ScopeEndEvent(
-            uuid="tool-011",
-            parent_uuid="scope-fn-001",
-            timestamp="2026-01-01T00:01:06Z",
-            name="temperature__to_celsius",
-            scope_type="tool",
-            flags=[],
-            status="ok",
-            profile=_inline_tool_profile("call_temp_001"),
-            output={"celsius": 20.0},
-        ),
-        ScopeEndEvent(
-            uuid="tool-010",
-            parent_uuid="scope-fn-001",
-            timestamp="2026-01-01T00:01:07Z",
-            name="weather__lookup",
-            scope_type="tool",
-            flags=[],
-            status="ok",
-            profile=_inline_tool_profile("call_weather_001"),
-            output={"city": "San Francisco", "temp_f": 68.0, "temp_c": 20.0, "condition": "sunny"},
-        ),
-        ScopeEndEvent(
-            uuid="scope-fn-001",
-            parent_uuid="scope-agent-002",
-            timestamp="2026-01-01T00:01:08Z",
-            name="weather__lookup",
-            scope_type="function",
-            flags=[],
-            status="ok",
-        ),
-        # Final LLM turn
-        ScopeStartEvent(
-            uuid="llm-011",
-            parent_uuid="scope-agent-002",
-            timestamp="2026-01-01T00:01:09Z",
-            name="nvidia/nemotron-3-super-v3",
-            scope_type="llm",
-            flags=[],
-            profile=_inline_llm_profile("nvidia/nemotron-3-super-v3"),
-            input={
-                "messages": [
-                    {"role": "user", "content": "What's the temperature in San Francisco in Celsius?"},
-                    {
-                        "role": "tool",
-                        "content": '{"city":"San Francisco","temp_c":20.0}',
-                        "tool_call_id": "call_weather_001",
-                    },
-                ],
-                "model": "nvidia/nemotron-3-super-v3",
-            },
-        ),
-        ScopeEndEvent(
-            uuid="llm-011",
-            parent_uuid="scope-agent-002",
-            timestamp="2026-01-01T00:01:10Z",
-            name="nvidia/nemotron-3-super-v3",
-            scope_type="llm",
-            flags=[],
-            status="ok",
-            profile=_inline_llm_profile("nvidia/nemotron-3-super-v3"),
-            output={
-                "choices": [
-                    {
-                        "message": {"content": "It's currently 20°C (68°F) and sunny in San Francisco."},
-                        "finish_reason": "stop",
-                    }
-                ],
-            },
-        ),
-        ScopeEndEvent(
-            uuid="scope-agent-002",
+            uuid="agent-002",
             parent_uuid=None,
-            timestamp="2026-01-01T00:01:11Z",
-            name="weather_converter_agent",
+            timestamp=_ts(2, 0),
+            name="search_agent",
+            attributes=[],
             scope_type="agent",
-            flags=[],
+            input="Find recent quantum-computing news.",
+        ),
+        ScopeStartEvent(
+            uuid="llm-003",
+            parent_uuid="agent-002",
+            timestamp=_ts(2, 1),
+            name="gpt-4.1",
+            attributes=[],
+            scope_type="llm",
+            model_name="gpt-4.1",
+            input={"messages": [{"role": "user", "content": "Find recent quantum-computing news."}]},
+        ),
+        ScopeEndEvent(
+            uuid="llm-003",
+            parent_uuid="agent-002",
+            timestamp=_ts(2, 2),
+            name="gpt-4.1",
+            attributes=[],
+            scope_type="llm",
+            model_name="gpt-4.1",
+            output={
+                "content": "",
+                "tool_calls": [
+                    {"id": "call_xyz", "name": "web_search", "arguments": {"q": "quantum computing news"}},
+                ],
+            },
+            status="ok",
+        ),
+        ScopeStartEvent(
+            uuid="tool-002",
+            parent_uuid="agent-002",
+            timestamp=_ts(2, 3),
+            name="web_search",
+            attributes=[],
+            scope_type="tool",
+            tool_call_id="call_xyz",
+            input={"q": "quantum computing news"},
+        ),
+        # Tool fails after 5s timeout
+        ScopeEndEvent(
+            uuid="tool-002",
+            parent_uuid="agent-002",
+            timestamp=_ts(2, 8),
+            name="web_search",
+            attributes=[],
+            scope_type="tool",
+            tool_call_id="call_xyz",
+            output=None,
+            status="error",
+            error=ErrorInfo(message="request timed out after 5s", type="TimeoutError"),
+        ),
+        # Parent agent catches the failure and reports OK with a graceful message
+        ScopeEndEvent(
+            uuid="agent-002",
+            parent_uuid=None,
+            timestamp=_ts(2, 10),
+            name="search_agent",
+            attributes=[],
+            scope_type="agent",
+            output="Sorry — the search service is temporarily unavailable. Please try again shortly.",
             status="ok",
         ),
     ]
+    return events
 
 
 # ---------------------------------------------------------------------------
-# EXMP-03: Branching Nested — MIXED MODE
+# EXMP-03: Tier-3 Codec-Annotated — same calculator workflow as EXMP-01
 # ---------------------------------------------------------------------------
 
 
-def _inline_override_llm_profile(model_name: str) -> DefaultLlmV1:
-    """Construct a DefaultLlmV1 with ``$mode="inline"`` override.
+_OPENAI_CODEC = {"name": "openai/chat-completions", "version": "v1"}
 
-    Used in EXMP-03 to override the stream-level ``profile_mode_default =
-    "header"`` on a single event. The profile still validates against the
-    declared inline JSON Schema (D-15 producer-side validation applies
-    regardless of mode).
-    """
-    return DefaultLlmV1.model_validate(
-        {
-            "$schema": DefaultLlmV1.JSON_SCHEMA,
-            "$version": "1.0",
-            "$mode": "inline",
-            "model_name": model_name,
-        }
-    )
+# Inline schema body for openai/chat-completions.v1 — minimal stub for the
+# example. A production schema would describe the full request/response shape.
+_OPENAI_CHAT_SCHEMA = {
+    "$id": "openai/chat-completions.v1",
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "additionalProperties": True,
+}
+
+
+def _annotated_request_calc_q1() -> dict:
+    """Codec-decoded request for the first LLM turn of EXMP-03."""
+    return {
+        "model": "gpt-4.1",
+        "messages": [{"role": "user", "content": "What is 3 + 4?"}],
+        "params": {"temperature": 0.7, "max_tokens": 1024},
+        "tools": [
+            {
+                "type": "function",
+                "function": {
+                    "name": "calculator__add",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"a": {"type": "number"}, "b": {"type": "number"}},
+                    },
+                },
+            },
+        ],
+    }
+
+
+def _annotated_response_calc_q1() -> dict:
+    """Codec-decoded response for the first LLM turn (tool call decision)."""
+    return {
+        "id": "chatcmpl-exmp03-001",
+        "model": "gpt-4.1",
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": "call_abc",
+                            "type": "function",
+                            "function": {"name": "calculator__add", "arguments": '{"a":3,"b":4}'},
+                        },
+                    ],
+                },
+                "finish_reason": "tool_calls",
+            },
+        ],
+        "usage": {"prompt_tokens": 84, "completion_tokens": 18, "total_tokens": 102},
+    }
+
+
+def _annotated_request_calc_q2() -> dict:
+    """Second LLM turn — formulates the final answer with the tool result."""
+    return {
+        "model": "gpt-4.1",
+        "messages": [
+            {"role": "user", "content": "What is 3 + 4?"},
+            {
+                "role": "assistant",
+                "tool_calls": [
+                    {
+                        "id": "call_abc",
+                        "type": "function",
+                        "function": {"name": "calculator__add", "arguments": '{"a":3,"b":4}'},
+                    },
+                ],
+            },
+            {"role": "tool", "tool_call_id": "call_abc", "content": "7"},
+        ],
+        "params": {"temperature": 0.7, "max_tokens": 1024},
+    }
+
+
+def _annotated_response_calc_q2() -> dict:
+    """Second LLM turn response — final answer."""
+    return {
+        "id": "chatcmpl-exmp03-002",
+        "model": "gpt-4.1",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": "3 + 4 = 7"},
+                "finish_reason": "stop",
+            },
+        ],
+        "usage": {"prompt_tokens": 124, "completion_tokens": 8, "total_tokens": 132},
+    }
 
 
 def generate_exmp03() -> list[Event]:
-    """EXMP-03 (15 events, mixed mode): branching search-and-summarize.
+    """EXMP-01 workflow + tier-3 codec annotations on every LLM event.
 
-    Workflow: LLM -> T1(search__web) + T2(text__word_count) as siblings,
-    with T3(text__summarize) nested under T1 -> LLM.
-
-    The StreamHeaderEvent advertises ``profile_mode_default="header"`` with
-    both reference schemas declared; the final LLM event overrides via
-    ``$mode="inline"`` + inline ``$schema`` dict to demonstrate the per-event
-    override pattern (e.g., staging a new schema version without touching the
-    central registry).
+    StreamHeader declares ``openai/chat-completions.v1`` with an inline
+    ``$schema`` body — consumers can validate without bundling the schema
+    locally (priority-2 resolution).
     """
-    header = StreamHeaderEvent(
-        uuid="stream-header-003",
-        parent_uuid=None,
-        timestamp="2026-01-01T00:02:00Z",
-        name="exmp03_header",
-        profile_mode_default="header",
-        schemas={
-            "default/llm.v1": DefaultLlmV1.JSON_SCHEMA,
-            "default/tool.v1": DefaultToolV1.JSON_SCHEMA,
-        },
-    )
-    return [
-        header,
-        ScopeStartEvent(
-            uuid="scope-agent-003",
+    events: list[Event] = [
+        StreamHeaderEvent(
+            uuid="hdr-003",
             parent_uuid=None,
-            timestamp="2026-01-01T00:02:00Z",
-            name="search_and_analyze_agent",
-            scope_type="agent",
-            flags=[],
-        ),
-        ScopeStartEvent(
-            uuid="llm-020",
-            parent_uuid="scope-agent-003",
-            timestamp="2026-01-01T00:02:01Z",
-            name="nvidia/nemotron-3-super-v3",
-            scope_type="llm",
-            flags=[],
-            profile=DefaultLlmV1(model_name="nvidia/nemotron-3-super-v3"),
-            input={
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": "Search for ATIF spec and summarize it, also count the words.",
-                    }
-                ],
-                "model": "nvidia/nemotron-3-super-v3",
+            timestamp=_ts(3, 0),
+            name="exmp03_header",
+            codecs={
+                "openai/chat-completions.v1": {"$schema": _OPENAI_CHAT_SCHEMA},
             },
         ),
-        ScopeEndEvent(
-            uuid="llm-020",
-            parent_uuid="scope-agent-003",
-            timestamp="2026-01-01T00:02:02Z",
-            name="nvidia/nemotron-3-super-v3",
-            scope_type="llm",
-            flags=[],
-            status="ok",
-            profile=DefaultLlmV1(model_name="nvidia/nemotron-3-super-v3"),
-            output={
-                "choices": [
-                    {
-                        "message": {
-                            "content": "",
-                            "tool_calls": [
-                                {
-                                    "id": "call_search_001",
-                                    "type": "function",
-                                    "function": {
-                                        "name": "search__web",
-                                        "arguments": '{"query": "ATIF spec"}',
-                                    },
-                                },
-                                {
-                                    "id": "call_wc_001",
-                                    "type": "function",
-                                    "function": {
-                                        "name": "text__word_count",
-                                        "arguments": '{"text": "The ATIF specification defines..."}',
-                                    },
-                                },
-                            ],
-                        },
-                        "finish_reason": "tool_calls",
-                    }
-                ],
-            },
-        ),
-        # T1: search__web with nested T3
         ScopeStartEvent(
-            uuid="scope-fn-010",
-            parent_uuid="scope-agent-003",
-            timestamp="2026-01-01T00:02:03Z",
-            name="search__web",
-            scope_type="function",
-            flags=[],
-        ),
-        ScopeStartEvent(
-            uuid="tool-020",
-            parent_uuid="scope-fn-010",
-            timestamp="2026-01-01T00:02:04Z",
-            name="search__web",
-            scope_type="tool",
-            flags=[],
-            profile=DefaultToolV1(tool_call_id="call_search_001"),
-            input={"query": "ATIF spec"},
-        ),
-        # T3: nested under T1's scope
-        ScopeStartEvent(
-            uuid="tool-022",
-            parent_uuid="scope-fn-010",
-            timestamp="2026-01-01T00:02:05Z",
-            name="text__summarize",
-            scope_type="tool",
-            flags=[],
-            profile=DefaultToolV1(tool_call_id="call_summarize_001"),
-            input={"text": "ATIF is a trajectory format for agent evaluation..."},
-        ),
-        ScopeEndEvent(
-            uuid="tool-022",
-            parent_uuid="scope-fn-010",
-            timestamp="2026-01-01T00:02:06Z",
-            name="text__summarize",
-            scope_type="tool",
-            flags=[],
-            status="ok",
-            profile=DefaultToolV1(tool_call_id="call_summarize_001"),
-            output={"summary": "ATIF defines a standard trajectory format for evaluating AI agents."},
-        ),
-        ScopeEndEvent(
-            uuid="tool-020",
-            parent_uuid="scope-fn-010",
-            timestamp="2026-01-01T00:02:07Z",
-            name="search__web",
-            scope_type="tool",
-            flags=[],
-            status="ok",
-            profile=DefaultToolV1(tool_call_id="call_search_001"),
-            output={
-                "results": ["ATIF spec found"],
-                "summary": "ATIF defines a standard trajectory format.",
-            },
-        ),
-        ScopeEndEvent(
-            uuid="scope-fn-010",
-            parent_uuid="scope-agent-003",
-            timestamp="2026-01-01T00:02:08Z",
-            name="search__web",
-            scope_type="function",
-            flags=[],
-            status="ok",
-        ),
-        # T2: text__word_count (sibling of T1)
-        ScopeStartEvent(
-            uuid="tool-021",
-            parent_uuid="scope-agent-003",
-            timestamp="2026-01-01T00:02:09Z",
-            name="text__word_count",
-            scope_type="tool",
-            flags=[],
-            profile=DefaultToolV1(tool_call_id="call_wc_001"),
-            input={"text": "The ATIF specification defines..."},
-        ),
-        ScopeEndEvent(
-            uuid="tool-021",
-            parent_uuid="scope-agent-003",
-            timestamp="2026-01-01T00:02:10Z",
-            name="text__word_count",
-            scope_type="tool",
-            flags=[],
-            status="ok",
-            profile=DefaultToolV1(tool_call_id="call_wc_001"),
-            output={"word_count": 5},
-        ),
-        # Final LLM turn — MIXED-MODE PER-EVENT OVERRIDE.
-        # Stream default is "header"; this profile overrides via $mode="inline"
-        # and carries the full JSON Schema dict inline. Consumers see $mode
-        # and validate against the inline schema rather than the registry.
-        ScopeStartEvent(
-            uuid="llm-021",
-            parent_uuid="scope-agent-003",
-            timestamp="2026-01-01T00:02:11Z",
-            name="nvidia/nemotron-3-super-v3",
-            scope_type="llm",
-            flags=[],
-            profile=_inline_override_llm_profile("meta/llama-3.1-70b-instruct"),
-            input={
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": "Search for ATIF spec and summarize it, also count the words.",
-                    },
-                    {
-                        "role": "tool",
-                        "content": '{"results":["ATIF spec found"]}',
-                        "tool_call_id": "call_search_001",
-                    },
-                    {"role": "tool", "content": '{"word_count":5}', "tool_call_id": "call_wc_001"},
-                ],
-                "model": "meta/llama-3.1-70b-instruct",
-            },
-        ),
-        ScopeEndEvent(
-            uuid="llm-021",
-            parent_uuid="scope-agent-003",
-            timestamp="2026-01-01T00:02:12Z",
-            name="nvidia/nemotron-3-super-v3",
-            scope_type="llm",
-            flags=[],
-            status="ok",
-            profile=_inline_override_llm_profile("meta/llama-3.1-70b-instruct"),
-            output={
-                "choices": [
-                    {
-                        "message": {
-                            "content": (
-                                "ATIF defines a standard trajectory format"
-                                " for AI agent evaluation."
-                                " The text contains 5 words."
-                            )
-                        },
-                        "finish_reason": "stop",
-                    }
-                ],
-            },
-        ),
-        ScopeEndEvent(
-            uuid="scope-agent-003",
+            uuid="agent-003",
             parent_uuid=None,
-            timestamp="2026-01-01T00:02:13Z",
-            name="search_and_analyze_agent",
+            timestamp=_ts(3, 0),
+            name="calculator_agent",
+            attributes=[],
             scope_type="agent",
-            flags=[],
+            input="What is 3 + 4?",
+        ),
+        ScopeStartEvent(
+            uuid="llm-005",
+            parent_uuid="agent-003",
+            timestamp=_ts(3, 1),
+            name="gpt-4.1",
+            attributes=[],
+            scope_type="llm",
+            model_name="gpt-4.1",
+            codec=_OPENAI_CODEC,
+            input=_annotated_request_calc_q1(),
+            annotated_request=_annotated_request_calc_q1(),
+        ),
+        ScopeEndEvent(
+            uuid="llm-005",
+            parent_uuid="agent-003",
+            timestamp=_ts(3, 2),
+            name="gpt-4.1",
+            attributes=[],
+            scope_type="llm",
+            model_name="gpt-4.1",
+            codec=_OPENAI_CODEC,
+            output=_annotated_response_calc_q1(),
+            annotated_response=_annotated_response_calc_q1(),
+            status="ok",
+        ),
+        ScopeStartEvent(
+            uuid="tool-003",
+            parent_uuid="agent-003",
+            timestamp=_ts(3, 3),
+            name="calculator__add",
+            attributes=["local"],
+            scope_type="tool",
+            tool_call_id="call_abc",
+            input={"a": 3, "b": 4},
+        ),
+        ScopeEndEvent(
+            uuid="tool-003",
+            parent_uuid="agent-003",
+            timestamp=_ts(3, 4),
+            name="calculator__add",
+            attributes=["local"],
+            scope_type="tool",
+            tool_call_id="call_abc",
+            output={"result": 7},
+            status="ok",
+        ),
+        ScopeStartEvent(
+            uuid="llm-006",
+            parent_uuid="agent-003",
+            timestamp=_ts(3, 5),
+            name="gpt-4.1",
+            attributes=[],
+            scope_type="llm",
+            model_name="gpt-4.1",
+            codec=_OPENAI_CODEC,
+            input=_annotated_request_calc_q2(),
+            annotated_request=_annotated_request_calc_q2(),
+        ),
+        ScopeEndEvent(
+            uuid="llm-006",
+            parent_uuid="agent-003",
+            timestamp=_ts(3, 6),
+            name="gpt-4.1",
+            attributes=[],
+            scope_type="llm",
+            model_name="gpt-4.1",
+            codec=_OPENAI_CODEC,
+            output=_annotated_response_calc_q2(),
+            annotated_response=_annotated_response_calc_q2(),
+            status="ok",
+        ),
+        ScopeEndEvent(
+            uuid="agent-003",
+            parent_uuid=None,
+            timestamp=_ts(3, 7),
+            name="calculator_agent",
+            attributes=[],
+            scope_type="agent",
+            output="3 + 4 = 7",
             status="ok",
         ),
     ]
+    return events
 
 
 # ---------------------------------------------------------------------------
@@ -695,21 +479,26 @@ def generate_exmp03() -> list[Event]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate ATOF v0.2 example JSONL files")
-    parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR, help="Output directory")
+    parser = argparse.ArgumentParser(description=__doc__.split("\n", maxsplit=1)[0])
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=OUTPUT_DIR,
+        help=f"Output directory for the generated JSONL files (default: {OUTPUT_DIR})",
+    )
     args = parser.parse_args()
 
     scenarios = [
-        ("exmp01_atof.jsonl", "header", generate_exmp01),
-        ("exmp02_atof.jsonl", "inline", generate_exmp02),
-        ("exmp03_atof.jsonl", "mixed", generate_exmp03),
+        ("exmp01_atof.jsonl", "tier-2 semantic-tagged", generate_exmp01),
+        ("exmp02_atof.jsonl", "tier-2 with error recovery", generate_exmp02),
+        ("exmp03_atof.jsonl", "tier-3 codec-annotated", generate_exmp03),
     ]
 
-    for filename, mode, generator in scenarios:
+    for filename, label, generator in scenarios:
         events = generator()
         path = args.output_dir / filename
         write_jsonl(events, path)
-        print(f"Wrote {len(events)} events ({mode} mode) to {path}")
+        print(f"Wrote {len(events)} events ({label}) to {path}")
 
 
 if __name__ == "__main__":

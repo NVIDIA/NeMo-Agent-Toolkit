@@ -1,54 +1,59 @@
 # ATOF-to-ATIF Examples
 
-End-to-end examples exercising the ATOF v0.2 reference implementation:
+End-to-end examples exercising the ATOF v0.1 reference implementation:
 regenerate three canonical event streams, then convert each to an ATIF
-trajectory. Each scenario demonstrates one of the three profile declaration
-modes introduced by `StreamHeaderEvent` (spec §5).
+trajectory. Each scenario demonstrates one of the **three producer
+enrichment tiers** (spec §1.1).
 
 ## Scripts
 
 - `generate_examples.py` — produces `output/exmpNN_atof.jsonl` for each
-  scenario using the v0.2 public API (`DefaultLlmV1`, `DefaultToolV1`,
-  `StreamHeaderEvent`, `ScopeStartEvent`, `ScopeEndEvent`, `write_jsonl`).
+  scenario using the v0.1 public API (`StreamHeaderEvent`, `ScopeStartEvent`,
+  `ScopeEndEvent`, `ErrorInfo`, `write_jsonl`).
 - `convert_to_atif.py` — reads each regenerated JSONL, runs the ATOF→ATIF
   converter (`nat.atof.scripts.atof_to_atif_converter.convert_file`), and
   writes `output/exmpNN_atif.json` as a formatted ATIF `Trajectory`.
 
-## The three profile modes
+## The three producer tiers
 
-Per ATOF spec §4.4, a profile's schema may be declared in one of three
-modes. `StreamHeaderEvent.profile_mode_default` advertises the stream-wide
-default; individual profiles may override via `$mode`.
+ATOF supports progressive enrichment at the producer's discretion. Tier 1
+must always work — a consumer that doesn't understand higher tiers MUST
+preserve the event verbatim and fall back to opaque pass-through.
 
-### Header mode (EXMP-01)
+### EXMP-01 — tier-2 semantic-tagged (basic)
 
-A `StreamHeaderEvent` at the top of the stream declares a schema registry
-mapping schema IDs → full JSON Schema bodies. Each subsequent profile
-references a schema by string `$schema` ID (e.g., `"default/llm.v1"`).
-Consumers validate by looking up the ID in the registry.
+Single calculator tool call. The producer knows **the kind of work**
+(LLM call, tool invocation) and emits typed sidecar fields (`model_name`,
+`tool_call_id`) but does not have a codec for the LLM payload shape. The
+`StreamHeader` is a minimal manifest with empty `codecs`.
 
-**When to use:** many profiles share a small set of schemas; registry
-centralization keeps the stream compact.
+**When to use:** native producers that classify events at the hook site
+but don't decode provider-specific request/response shapes.
 
-### Inline mode (EXMP-02)
+### EXMP-02 — tier-2 with error recovery
 
-Each profile carries its full JSON Schema inline — `$schema` is a dict
-containing `$id` and the full schema body. The `StreamHeaderEvent`
-advertises `profile_mode_default: "inline"` and an empty `schemas` registry.
-Profiles are self-describing and consumers validate without a lookup.
+A web-search tool times out (`status: "error"` + `ErrorInfo`); the parent
+agent catches the failure and reports `status: "ok"` with a graceful
+output message. Demonstrates spec §5.2-5.3 — each scope reports its own
+terminal status; parents may catch child errors.
 
-**When to use:** heterogeneous vendor schemas, one-off streams, or when
-recipients cannot pre-load a schema registry.
+**When to use:** showcase status semantics, error propagation, and
+parent-side recovery patterns.
 
-### Mixed mode (EXMP-03)
+### EXMP-03 — tier-3 codec-annotated
 
-The stream-level default is `header` (schemas centralized in the registry),
-but individual profiles override via `$mode: "inline"` and carry inline
-schemas for that single event. Useful for introducing a schema variant
-without modifying the central registry.
+Same calculator workflow as EXMP-01, but the producer registers a codec
+(`openai/chat-completions.v1`) on each LLM event and attaches structured
+`annotated_request` / `annotated_response` payloads. The `StreamHeader`
+declares the codec in its registry with an inline `$schema` body —
+priority-2 fallback for any consumer that doesn't have it locally.
 
-**When to use:** most events follow the registry, but a few need per-event
-overrides (e.g., staging a new schema version).
+**When to use:** producers wrapping a known provider API; consumers that
+want structured access to messages, params, tool defs, usage metrics
+without bespoke per-provider parsing.
+
+See `../../atof-codec-profiles.md` §6 for the full 4-priority codec
+resolution protocol.
 
 ## Running
 
@@ -61,22 +66,20 @@ python convert_to_atif.py
 
 ## Event counts
 
-| Scenario | Events | ATIF steps | Mode   | Workflow                                          |
-| -------- | ------ | ---------- | ------ | ------------------------------------------------- |
-| EXMP-01  | 9      | 5          | header | Calculator (simple LLM → tool → LLM)              |
-| EXMP-02  | 13     | 5          | inline | Nested weather lookup (LLM → weather(temp) → LLM) |
-| EXMP-03  | 15     | 5          | mixed  | Branching search + summarize                      |
+| Scenario | Events | ATIF steps | Tier | Workflow                                        |
+| -------- | ------ | ---------- | ---- | ----------------------------------------------- |
+| EXMP-01  | 9      | 5          | 2    | Calculator: agent → llm → tool → llm → agent    |
+| EXMP-02  | 7      | 3          | 2    | Search: agent → llm → tool (timeout) → agent    |
+| EXMP-03  | 9      | 5          | 3    | Calculator with OpenAI codec annotations        |
 
-Each event count includes exactly one `StreamHeaderEvent` at the head of
-the stream; the remaining events are the same v0.1 structural events
-preserved per D-24.
+Each event count includes exactly one `StreamHeaderEvent` at the head
+of the stream (spec §3.4 — MUST be first when present).
 
 ## See also
 
-- `../../atof-event-format.md` — canonical v0.2 spec (see §4 Profile
-  Contract Protocol, §5 Stream Header Event, §6 Reference Profile
-  Implementations)
-- `../../src/nat/atof/profiles.py` — `DefaultLlmV1` and `DefaultToolV1`
-  reference profile implementations
-- `../../src/nat/atof/scripts/atof_to_atif_converter.py` — the converter
-  that translates ATOF streams into ATIF trajectories
+- `../../atof-event-format.md` — canonical v0.1 spec
+- `../../atof-codec-profiles.md` — codec identifiers, canonical registry,
+  4-priority codec resolution protocol (§6)
+- `../../atof-to-atif-converter.md` — normative ATOF → ATIF mapping
+- `../../src/nat/atof/scripts/atof_to_atif_converter.py` — reference
+  converter implementation

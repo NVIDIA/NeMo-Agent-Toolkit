@@ -74,19 +74,42 @@ def _extract_tool_calls(llm_output: dict | None) -> list[dict]:
     """
     if not llm_output:
         return []
-    raw_calls = llm_output.get("tool_calls") or []
+
+    # Try flat shape first (NAT-native producers, EXMP-01-style).
+    raw_calls = llm_output.get("tool_calls")
+
+    # Fall back to OpenAI Chat Completions shape (output.choices[0].message.tool_calls).
+    if not raw_calls:
+        try:
+            raw_calls = llm_output["choices"][0]["message"].get("tool_calls", [])
+        except (KeyError, IndexError, TypeError):
+            raw_calls = []
+
     result = []
-    for tc in raw_calls:
-        args = tc.get("arguments", {})
+    for tc in raw_calls or []:
+        # Normalize OpenAI-shaped tool calls — they wrap name/arguments under
+        # an inner 'function' object: {id, type, function: {name, arguments}}.
+        # Flat shape uses {id, name, arguments} directly.
+        if "function" in tc and isinstance(tc["function"], dict):
+            inner = tc["function"]
+            tool_id = tc["id"]
+            name = inner.get("name", "")
+            args = inner.get("arguments", {})
+        else:
+            tool_id = tc["id"]
+            name = tc.get("name", "")
+            args = tc.get("arguments", {})
+
         if isinstance(args, str):
             try:
                 args = json.loads(args)
             except json.JSONDecodeError:
                 args = {"raw": args}
+
         result.append(
             {
-                "tool_call_id": tc["id"],
-                "function_name": tc["name"],
+                "tool_call_id": tool_id,
+                "function_name": name,
                 "arguments": args,
             }
         )

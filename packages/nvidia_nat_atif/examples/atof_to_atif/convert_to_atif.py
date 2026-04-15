@@ -1,18 +1,17 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Convert ATOF v0.2 JSONL examples to ATIF trajectories.
+"""Convert ATOF v0.1 JSONL examples to ATIF trajectories.
 
-Reads each example JSONL file produced by ``generate_examples.py`` (one per
-three-mode demonstration: EXMP-01 header, EXMP-02 inline, EXMP-03 mixed),
-converts to ATIF using ``nat.atof.scripts.atof_to_atif_converter.convert_file``,
-and writes the resulting trajectory as formatted JSON.
+Reads each example JSONL file produced by ``generate_examples.py`` (the three
+three-tier demonstration scenarios: EXMP-01 tier-2 basic, EXMP-02 tier-2 with
+error recovery, EXMP-03 tier-3 codec-annotated) and writes the resulting ATIF
+trajectory as formatted JSON.
 
-The v0.2 converter (plan 08-04) transparently handles all four event kinds
-including ``StreamHeaderEvent`` (consumed by the schema-registry pre-pass,
-skipped in the main dispatch loop), so this script is unchanged in structure
-from its v0.1 counterpart — only the input filenames match the regenerated
-v0.2 streams (``exmpNN_atof.jsonl``) and the ATIF outputs follow the
-symmetric ``exmpNN_atif.json`` naming convention.
+Uses ``nat.atof.scripts.atof_to_atif_converter.convert_file`` — the v0.1
+converter dispatches on ``(kind, scope_type)`` and reads typed fields
+(``model_name``, ``tool_call_id``) directly. ``StreamHeader`` events are
+skipped by the converter's main dispatch loop (no schema-registry pre-pass
+needed in v0.1; the optional codec layer is consumer-side opt-in).
 
 Usage:
     python convert_to_atif.py [--input-dir DIR] [--output-dir DIR]
