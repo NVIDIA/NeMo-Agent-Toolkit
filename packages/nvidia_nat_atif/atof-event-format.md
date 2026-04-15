@@ -170,7 +170,7 @@ Emitted when a scope is popped from the active scope stack. Paired 1:1 with `Sco
 | `timestamp`          | string or integer     | Yes      | See §2. Differs from the `ScopeStart` timestamp (End occurs later).                                      |
 | `name`               | string                | Yes      | Same as the paired `ScopeStart`.                                                                         |
 | `attributes`         | array of strings      | Yes      | Same as the paired `ScopeStart`.                                                                         |
-| `scope_type`         | string                | Yes      | Same as the paired `ScopeStart`.                                                                         |
+| `scope_type`         | string                | Yes      | Same as the paired `ScopeStart`.code                                                                     |
 | `subtype`            | string or null        | No       | Same as the paired `ScopeStart`.                                                                         |
 | `model_name`         | string or null        | No       | Same as the paired `ScopeStart`, or the actually-used model if different (e.g., after provider routing). |
 | `tool_call_id`       | string or null        | No       | Same as the paired `ScopeStart`.                                                                         |
@@ -213,8 +213,8 @@ Emitted as a point-in-time checkpoint. Unpaired (no Start/End semantics).
 | ------------------ | ----------------------------------------------------------------------------------------- |
 | `"agent"`          | Top-level agent or workflow scope.                                                        |
 | `"function"`       | Generic function or application step.                                                     |
-| `"llm"`            | LLM call scope. Populates `model_name` and MAY populate `codec` + `annotated_`*.          |
-| `"tool"`           | Tool invocation scope. Populates `tool_call_id` and MAY populate `codec` + `annotated_*`. |
+| `"llm"`            | LLM call scope. Populates `model_name` and MAY populate `codec` + `annotated`_*.          |
+| `"tool"`           | Tool invocation scope. Populates `tool_call_id` and MAY populate `codec` + `annotated_`*. |
 | `"retriever"`      | Retrieval step (document search, index lookup).                                           |
 | `"embedder"`       | Embedding-generation step.                                                                |
 | `"reranker"`       | Result reranking step.                                                                    |
@@ -324,7 +324,7 @@ Each scope span receives a unique UUID at creation time. The `uuid` is stable ac
 Three distinct identifier namespaces appear in an ATOF stream:
 
 - `**uuid` / `parent_uuid`** — runtime identifiers attached to every event. Form the scope graph.
-- `**tool_call_id**` (on `ScopeStart`/`ScopeEnd` when `scope_type == "tool"`) — an LLM-provider identifier that bridges an LLM's tool-call response with the resulting tool execution. Null when the tool was not invoked via an LLM tool-use flow.
+- `**tool_call_id`** (on `ScopeStart`/`ScopeEnd` when `scope_type == "tool"`) — an LLM-provider identifier that bridges an LLM's tool-call response with the resulting tool execution. Null when the tool was not invoked via an LLM tool-use flow.
 - **Codec-decoded response IDs** (e.g., `chatcmpl-`* inside a decoded LLM response body, under `annotated_response`) — provider tracking identifiers. Opaque to ATOF Core; see `atof-codec-profiles.md`.
 
 ### 6.6 Schema Version and Negotiation
@@ -352,92 +352,11 @@ Every event carries a required `schema_version` field, formatted `"MAJOR.MINOR"`
 
 ---
 
-## 8. Examples
-
-### 8.1 EXMP-01: Simple Tool Call
-
-Single-LLM turn with one tool call. Tier-2 enrichment (semantic tagging via `scope_type`, no codec).
-
-```jsonl
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"calculator_agent","attributes":[],"scope_type":"agent","subtype":null,"model_name":null,"tool_call_id":null,"codec":null,"input":"What is 3+4?","annotated_request":null,"data":null,"metadata":null}
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"llm-001","parent_uuid":"agent-001","timestamp":"2026-01-01T00:00:01Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","subtype":null,"model_name":"gpt-4.1","tool_call_id":null,"codec":null,"input":{"messages":[{"role":"user","content":"What is 3+4?"}]},"annotated_request":null,"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"llm-001","parent_uuid":"agent-001","timestamp":"2026-01-01T00:00:02Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","subtype":null,"model_name":"gpt-4.1","tool_call_id":null,"codec":null,"output":{"content":"","tool_calls":[{"id":"call_abc","name":"calculator__add","arguments":{"a":3,"b":4}}]},"annotated_response":null,"status":"ok","error":null,"data":null,"metadata":null}
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"tool-001","parent_uuid":"agent-001","timestamp":"2026-01-01T00:00:03Z","name":"calculator__add","attributes":["local"],"scope_type":"tool","subtype":null,"model_name":null,"tool_call_id":"call_abc","codec":null,"input":{"a":3,"b":4},"annotated_request":null,"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"tool-001","parent_uuid":"agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","attributes":["local"],"scope_type":"tool","subtype":null,"model_name":null,"tool_call_id":"call_abc","codec":null,"output":{"result":7},"annotated_response":null,"status":"ok","error":null,"data":null,"metadata":null}
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"llm-002","parent_uuid":"agent-001","timestamp":"2026-01-01T00:00:05Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","subtype":null,"model_name":"gpt-4.1","tool_call_id":null,"codec":null,"input":{"messages":[{"role":"user","content":"What is 3+4?"},{"role":"assistant","tool_calls":[...]},{"role":"tool","tool_call_id":"call_abc","content":"7"}]},"annotated_request":null,"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"llm-002","parent_uuid":"agent-001","timestamp":"2026-01-01T00:00:06Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","subtype":null,"model_name":"gpt-4.1","tool_call_id":null,"codec":null,"output":{"content":"3+4=7"},"annotated_response":null,"status":"ok","error":null,"data":null,"metadata":null}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:07Z","name":"calculator_agent","attributes":[],"scope_type":"agent","subtype":null,"model_name":null,"tool_call_id":null,"codec":null,"output":"3+4=7","annotated_response":null,"status":"ok","error":null,"data":null,"metadata":null}
-```
-
-### 8.2 EXMP-02: Tool Error with Parent Recovery
-
-LLM calls a tool that fails; agent catches and reports success.
-
-```jsonl
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"agent-002","parent_uuid":null,"timestamp":"2026-01-02T00:00:00Z","name":"search_agent","attributes":[],"scope_type":"agent","subtype":null,"input":"Find quantum news.",...}
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"llm-003","parent_uuid":"agent-002","timestamp":"2026-01-02T00:00:01Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","model_name":"gpt-4.1","input":{...},...}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"llm-003","parent_uuid":"agent-002","timestamp":"2026-01-02T00:00:02Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","model_name":"gpt-4.1","output":{"tool_calls":[{"id":"call_xyz","name":"web_search","arguments":{"q":"quantum"}}]},"status":"ok","error":null,...}
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"tool-002","parent_uuid":"agent-002","timestamp":"2026-01-02T00:00:03Z","name":"web_search","attributes":[],"scope_type":"tool","tool_call_id":"call_xyz","input":{"q":"quantum"},...}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"tool-002","parent_uuid":"agent-002","timestamp":"2026-01-02T00:00:08Z","name":"web_search","attributes":[],"scope_type":"tool","tool_call_id":"call_xyz","output":null,"status":"error","error":{"message":"request timed out after 5s","type":"TimeoutError","traceback":null},...}
-{"kind":"ScopeEnd","schema_version":"0.1","uuid":"agent-002","parent_uuid":null,"timestamp":"2026-01-02T00:00:10Z","name":"search_agent","attributes":[],"scope_type":"agent","output":"Unable to search; service timed out.","status":"ok","error":null,...}
-```
-
-Note: tool failed (`status: "error"`), but parent agent caught and reported `status: "ok"` with a helpful output — demonstrates §5.3.
-
-### 8.3 EXMP-03: Tier-3 Codec Annotation
-
-Same simple tool call pattern as EXMP-01, but producer has an OpenAI Chat codec registered. `codec` is declared; `annotated_request`/`annotated_response` carry the structured shape.
-
-```jsonl
-{"kind":"ScopeStart","schema_version":"0.1","uuid":"llm-004","parent_uuid":"agent-003","timestamp":"2026-01-03T00:00:01Z","name":"gpt-4.1","attributes":[],"scope_type":"llm","subtype":null,"model_name":"gpt-4.1","tool_call_id":null,"codec":{"name":"openai/chat-completions","version":"v1"},"input":{...raw OpenAI request JSON...},"annotated_request":{"messages":[{"role":"user","content":"What is 3+4?"}],"model":"gpt-4.1","params":{"temperature":0.7,"max_tokens":1024},"tools":[{"type":"function","function":{"name":"calculator__add","parameters":{...}}}]},"data":null,"metadata":null}
-```
-
-The `codec` field declares which codec's shape `annotated_request` conforms to; the shape itself is defined in `atof-codec-profiles.md`.
-
----
-
-## 9. Design Rationale
-
-**Why three event kinds instead of seven?** An earlier draft split LLM and tool calls into first-class event kinds (`LlmStart`/`LlmEnd`/`ToolStart`/`ToolEnd`). The consolidation to three kinds is simpler in every way that matters on the wire: one shape for all scope lifecycle events, a single dispatch key (`scope_type`), and no privileged treatment of LLM/tool relative to other scope categories. The type-safety arguments for separate event kinds apply to producer-side runtime implementations (which can keep their own typed representations internally), not to the wire format. Consumers dispatch on `scope_type`; producers serialize whatever they have.
-
-**Why string arrays for `attributes` and not bitfields?** JSONL round-trip robustness. Strings deduplicate obviously, sort naturally, and are legible in log inspection. A bitfield integer saves bytes but costs every consumer a decode step and obscures the wire format.
-
-**Why closed `scope_type` enum with `custom`+`subtype`?** Producers may not know what scope a payload represents, which requires an `unknown` variant; extensibility requires either open strings or a `custom`+`subtype` pair. Open strings historically led to fragmentation (each vendor picks their own name and consumers can't safely assume vocabulary). Closed enum + namespaced `subtype` preserves extensibility without surrendering consumer dispatch cleanliness.
-
-**Why all kind-specific fields are optional?** Per §1.1 three-tier enrichment: tier-1 producers don't have `model_name` or `tool_call_id` or a codec. Making these optional (null default) means the same wire shape works for all tiers — consumers check for population rather than event kind.
-
-**Why optional codec identifier instead of required?** Tier 1 (raw pass-through) must always be legal. Requiring `codec` would break tier-1 producers. Optional `codec` is opt-in for tier-3 without taxing tier-1 or tier-2.
-
-**Why required `status` on `ScopeEnd`?** Post-hoc inspection requires reliable failure detection. Making `status` optional would force downstream tools to infer error state from data shape — brittle and incompatible across providers. A required `status` enum is a tiny wire cost and a large correctness win.
-
-**Why `schema_version` as required `"MAJOR.MINOR"` string?** Forward-compat negotiation needs to be machine-parseable but also human-inspectable. `"0.1"` equality is a one-line check for same-version; split-on-dot handles major/minor comparisons when needed.
-
-**Why not inline error traces?** Tracebacks can be large and often sensitive. The `error` sub-object makes `traceback` optional; producers that want audit-grade error info emit it, producers that value privacy or stream size omit it.
-
----
-
-## 10. Reference Implementations
+## 8. Reference Implementations
 
 - **Python (consumer + test-producer):** `src/nat/atof/` in `nvidia_nat_atif`. Pydantic models per event kind with `model_config = ConfigDict(extra="allow")` for lossless pass-through.
 - **Producer runtimes:** Agent runtimes emitting ATOF MAY use more granular internal types (e.g., separate `LlmStartEvent`/`ToolStartEvent` structs in typed languages) for type-safe construction, but MUST serialize to ATOF's three-kind wire format on emission.
 - **Language bindings:** Where a producer runtime exposes bindings to additional languages, those bindings SHOULD re-export the runtime's event types via language-idiomatic wrappers while preserving the wire format on serialization.
 
 See `atof-codec-profiles.md` for codec registry and structured payload shapes, and `atof-to-atif-converter.md` for the normative ATOF → ATIF conversion.
-
----
-
-## Appendix A: Design History
-
-ATOF v0.1 is a ground-up specification drafted after several iterations of internal design exploration. The key structural decisions that shape v0.1:
-
-- **Three event kinds** (not seven). LLM and tool calls are `scope_type` values on `ScopeStart`/`ScopeEnd`, not dedicated event kinds. See §9.
-- **Closed `scope_type` vocabulary** with `"custom"`+`subtype` for vendor extension and `"unknown"` for tier-1 pass-through. See §4.
-- **Required `status` on `ScopeEnd`** with `ok`/`error`/`cancelled` values. See §5.
-- **Optional codec layer** (`codec` + `annotated_request`/`annotated_response`) instead of a schema-contract discriminator. Codec specifications live out-of-band in `atof-codec-profiles.md`.
-- **Three-tier producer enrichment model** (raw pass-through → semantic tagging → codec annotation). See §1.1.
-
-Prior design iterations that did not ship:
-
-- An earlier draft used open-string `scope_type` values with a `$schema`/`$version`/`$mode` profile-contract discriminator and a dedicated `StreamHeaderEvent` kind for schema registry declaration. That design required producers to have the profile's JSON Schema at emit time, which is not universally available. v0.1 drops this in favor of the optional codec layer.
-- An earlier draft split `LlmStart`/`LlmEnd`/`ToolStart`/`ToolEnd` into first-class event kinds mirroring a typed-runtime producer's internal representation. That design privileged LLM and tool events and asymmetrically complicated the wire format for no net consumer-side gain. v0.1 uses three kinds for uniformity.
 
