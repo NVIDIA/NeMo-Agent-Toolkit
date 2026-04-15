@@ -32,6 +32,8 @@ Prerequisites:
     - A running Phoenix server (e.g. ``python -m phoenix.server.main serve``)
 """
 
+
+
 import argparse
 import json
 import logging
@@ -39,57 +41,6 @@ import sys
 from pathlib import Path
 
 from nat.plugins.phoenix.atif_trajectory_phoenix_exporter import ATIFTrajectoryPhoenixExporter
-
-
-def _rebase_timestamps(trajectory: dict) -> None:
-    """Shift all epoch timestamps so the trajectory ends at 'now'.
-
-    This makes traces visible in Phoenix's default time window which
-    typically only shows recent activity.  ISO ``step.timestamp`` fields
-    are removed since they would conflict with the rebased epochs.
-    """
-    import time as _time
-
-    # Collect all epoch timestamps to find the range
-    epochs: list[float] = []
-    for step in trajectory.get("steps", []):
-        extra = step.get("extra") or {}
-        inv = extra.get("invocation") or {}
-        for key in ("start_timestamp", "end_timestamp"):
-            if inv.get(key):
-                epochs.append(inv[key])
-        for ti in extra.get("tool_invocations") or []:
-            if ti:
-                for key in ("start_timestamp", "end_timestamp"):
-                    if ti.get(key):
-                        epochs.append(ti[key])
-
-    if not epochs:
-        return
-
-    max_epoch = max(epochs)
-    offset = _time.time() - max_epoch
-
-    # Shift all epoch timestamps
-    for step in trajectory.get("steps", []):
-        step.pop("timestamp", None)  # remove ISO timestamps to avoid conflicts
-        extra = step.get("extra") or {}
-        inv = extra.get("invocation")
-        if inv:
-            if inv.get("start_timestamp"):
-                inv["start_timestamp"] += offset
-            if inv.get("end_timestamp"):
-                inv["end_timestamp"] += offset
-        for ti in extra.get("tool_invocations") or []:
-            if ti:
-                if ti.get("start_timestamp"):
-                    ti["start_timestamp"] += offset
-                if ti.get("end_timestamp"):
-                    ti["end_timestamp"] += offset
-
-    # Recurse into subagent trajectories
-    for sub in trajectory.get("subagent_trajectories", []):
-        _rebase_timestamps(sub)
 
 
 def main() -> None:
@@ -110,11 +61,6 @@ def main() -> None:
         "--project",
         default="atif-trajectories",
         help="Phoenix project name (default: atif-trajectories).",
-    )
-    parser.add_argument(
-        "--rebase-time",
-        action="store_true",
-        help="Shift all timestamps to end at 'now' so traces appear in Phoenix's default time window.",
     )
     parser.add_argument(
         "--verbose",
@@ -141,9 +87,6 @@ def main() -> None:
 
         with open(path) as f:
             trajectory = json.load(f)
-
-        if args.rebase_time:
-            _rebase_timestamps(trajectory)
 
         agent_name = trajectory.get("agent", {}).get("name", "unknown")
         session_id = trajectory.get("session_id", "unknown")
