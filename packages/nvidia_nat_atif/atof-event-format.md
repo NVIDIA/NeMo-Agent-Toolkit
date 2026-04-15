@@ -1,4 +1,19 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
 
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
 
 # ATOF Event Contract Specification
 
@@ -8,14 +23,14 @@
 | **Status**  | Active                 |
 | **Version** | 0.1                    |
 | **Date**    | 2026-04-12             |
-| **Source**  | [`src/nat/atof/`](src/nat/atof/) (NAT Pydantic models), upstream Rust: NeMo-Flow `crates/core/src/types/` |
+| **Source**  | [`src/nat/atof/`](src/nat/atof/) (NeMo Agent Toolkit Pydantic models)|
 
 
 ---
 
 ## 1. Overview
 
-ATOF (Agentic Trajectory Observability Format) is the wire format for NeMo-Flow subscriber callbacks. Events represent the lifecycle of scopes, LLM calls, and tool invocations within the NeMo-Flow runtime. Subscribers receive events in real time as the runtime executes agent workflows.
+ATOF (Agentic Trajectory Observability Format) is the wire format for agent runtime subscriber callbacks. Events represent the lifecycle of scopes, LLM calls, and tool invocations within the agent runtime. Subscribers receive events in real time as the runtime executes agent workflows.
 
 Transport is JSON-Lines: each event is one JSON object per line. The `kind` field is the outer discriminator. Valid `kind` values are:
 
@@ -426,7 +441,7 @@ response.id    → "Which API call?"    (provider billing/tracking, ephemeral)
 
 **Key distinctions:**
 
-- `uuid` and `parent_uuid` are NeMo-Flow runtime identifiers. Every event has them. They form the scope graph.
+- `uuid` and `parent_uuid` are agent runtime identifiers. Every event has them. They form the scope graph.
 - `tool_call_id` is an LLM-provider identifier that bridges the LLM's tool-call request (`LLMEnd.output.tool_calls[].id`) with the tool execution (`ToolStart.tool_call_id`). It is null for tools invoked outside an LLM tool-use flow.
 - `annotated_response.id` is a provider tracking identifier (e.g., OpenAI's `chatcmpl-*`). It has no relationship to the other three ID types and exists only inside codec-decoded responses.
 
@@ -434,7 +449,7 @@ response.id    → "Which API call?"    (provider billing/tracking, ephemeral)
 
 ## 7. Canonical ATOF-to-ATIF Mapping
 
-This section formalizes the mapping from ATOF events to ATIF steps. The NAT implementation is in [`src/nat/atof/scripts/atof_to_atif_converter.py`](src/nat/atof/scripts/atof_to_atif_converter.py). The upstream Rust reference is NeMo-Flow's `crates/core/src/atif.rs`.
+This section formalizes the mapping from ATOF events to ATIF steps. The NAT implementation is in [`src/nat/atof/scripts/atof_to_atif_converter.py`](src/nat/atof/scripts/atof_to_atif_converter.py).
 
 
 | ATOF Event         | ATIF Step            | ATIF `source` | Content Mapping                                                                                                                                                                                                                                                                                                                                          |
@@ -529,27 +544,13 @@ The NAT-native ATOF-to-ATIF converter is in [`src/nat/atof/scripts/atof_to_atif_
 3. Iterates through sorted events, emitting ATIF steps per the mapping in Section 7.
 4. Implements the deferred `step.extra` write pattern: agent step extra is written when the next `LLMStart` arrives (or at end of stream), after all `ToolEnd` ancestry records have been accumulated.
 5. Sorts `tool_ancestry` and `tool_invocations` by `tool_call_id` declaration order from `LLMEnd` (not by `ToolEnd` arrival order), ensuring index alignment with `tool_calls[]` even for concurrent tool execution.
-6. Unwraps the NeMo-Flow transport envelope (`{"content": ..., "headers": ...}`) from `LLMRequest` payloads before extracting `messages` for the user step.
+6. Unwraps the transport envelope (`{"content": ..., "headers": ...}`) from `LLMRequest` payloads before extracting `messages` for the user step.
 
 | Module | Entry Point | Description |
 | ------ | ----------- | ----------- |
-| `nat.atof.converter` | `convert(events) → Trajectory` | Convert typed Event list to ATIF Trajectory |
-| `nat.atof.converter` | `convert_file(path) → Trajectory` | Read JSONL file and convert |
+| `nat.atof.scripts.atof_to_atif_converter` | `convert(events) → Trajectory` | Convert typed Event list to ATIF Trajectory |
+| `nat.atof.scripts.atof_to_atif_converter` | `convert_file(path) → Trajectory` | Read JSONL file and convert |
 | `nat.atof.io` | `read_jsonl(path) → list[Event]` | Parse ATOF JSONL to typed events |
 | `nat.atof.io` | `write_jsonl(events, path)` | Serialize events to JSONL |
-
-### 10.2 NeMo-Flow Rust (upstream reference)
-
-The upstream Rust implementation is in NeMo-Flow's `crates/core/src/atif.rs`, specifically the `events_to_steps()` function. It additionally collects events via a thread-safe subscriber callback buffer.
-
-NeMo-Flow language bindings expose the exporter interface:
-
-| Binding | Class                       | Export method                                   |
-| ------- | --------------------------- | ----------------------------------------------- |
-| Python  | `AtifExporter`              | `.export()` → dict, `.export_json()` → string   |
-| Node.js | `JsAtifExporter`            | `.export()` → object, `.export_json()` → string |
-| WASM    | `WasmAtifExporter`          | `.export()` → object, `.export_json()` → string |
-| Go      | `AtifExporter`              | `.ExportJSON()` → string                        |
-| C FFI   | `nemo_flow_atif_exporter_`* | `_export`, `_export_json` C functions           |
 
 
