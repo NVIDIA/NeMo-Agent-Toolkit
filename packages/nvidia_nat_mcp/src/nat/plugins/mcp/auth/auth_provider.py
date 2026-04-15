@@ -360,7 +360,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if self.config.oauth_client_ttl == 0:
             return False
 
-        return (time.time() - self._credentials_cache_time) >= self.config.oauth_client_ttl
+        return (time.monotonic() - self._credentials_cache_time) >= self.config.oauth_client_ttl
 
     def _is_redirect_uri_registration_error(self, error: Exception) -> bool:
         """Check if error indicates AS rejected redirect URI registration for this client."""
@@ -450,7 +450,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
-            self._credentials_cache_time = time.time()
+            self._credentials_cache_time = time.monotonic()
 
     async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using MCP-specific authentication flow handler."""
