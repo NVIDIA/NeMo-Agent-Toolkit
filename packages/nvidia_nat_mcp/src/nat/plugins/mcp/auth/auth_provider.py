@@ -335,7 +335,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         if self.config.token_storage_object_store:
             # Store object store name, will be resolved later when builder context is available
             self._token_storage_object_store_name = self.config.token_storage_object_store
-            logger.info(f"Configured to use object store '{self._token_storage_object_store_name}' for token storage")
+            logger.info("Configured to use object store '%s' for token storage", self._token_storage_object_store_name)
         else:
             # Default: use in-memory token storage
             from nat.authentication.token_storage import InMemoryTokenStorage
@@ -347,9 +347,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         self._credentials_cache_time = None
         self._cached_credentials = None
         self._auth_code_provider = None
-        logger.warning("Invalidated cached OAuth2 registration: reason=%s previous_client_id=%s",
-                       reason,
-                       previous_client_id)
+        logger.info("Invalidated cached OAuth2 registration: reason=%s previous_client_id=%s",
+                    reason,
+                    previous_client_id)
 
     def _is_cached_credentials_expired(self) -> bool:
         """Check if cached credentials are expired."""
@@ -479,8 +479,10 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 logger.info(f"Initialized token storage with object store '{self._token_storage_object_store_name}'")
             except Exception as e:
                 logger.warning(
-                    f"Failed to resolve object store '{self._token_storage_object_store_name}' for token storage: {e}. "
-                    "Falling back to in-memory storage.")
+                    "Failed to resolve object store '%s' for token storage: %s. Falling back to in-memory storage.",
+                    self._token_storage_object_store_name,
+                    e,
+                )
                 from nat.authentication.token_storage import InMemoryTokenStorage
                 self._token_storage = InMemoryTokenStorage()
 
