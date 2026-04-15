@@ -16,7 +16,7 @@
 import logging
 from typing import Any
 
-from agent_memory_client.models import MemoryAPIClient
+from agent_memory_client import MemoryAPIClient
 
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.models import MemoryItem
@@ -94,7 +94,15 @@ class AgentMemoryServerEditor(MemoryEditor):
             dist = getattr(m, "dist", None)
             text = getattr(m, "text", "") or ""
             meta = getattr(m, "metadata", None) or {}
-            tags = getattr(m, "topics", None) or []
+            topics_raw = getattr(m, "topics", None)
+            if topics_raw is None:
+                tags = []
+            elif isinstance(topics_raw, str):
+                tags = [topics_raw]
+            elif isinstance(topics_raw, list):
+                tags = topics_raw
+            else:
+                tags = list(topics_raw)
             out.append(
                 MemoryItem(
                     user_id=user_id,
@@ -102,7 +110,7 @@ class AgentMemoryServerEditor(MemoryEditor):
                     conversation=[{
                         "role": "user", "content": text
                     }],
-                    tags=tags if isinstance(tags, list) else list(tags),
+                    tags=tags,
                     metadata=meta if isinstance(meta, dict) else {},
                     similarity_score=float(dist) if dist is not None else None,
                 ))

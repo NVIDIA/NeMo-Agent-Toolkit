@@ -83,7 +83,9 @@ async def test_add_items_uses_conversation_when_memory_empty(
 ):
     """Test that add_items derives text from conversation when memory field is empty."""
     item = MemoryItem(
-        conversation=[{"role": "user", "content": "I love pizza."}],
+        conversation=[{
+            "role": "user", "content": "I love pizza."
+        }],
         user_id="user456",
         memory=None,
         tags=[],
@@ -153,6 +155,31 @@ async def test_search_success(
     assert call_kwargs["text"] == "test query"
     assert call_kwargs["limit"] == 5
     assert call_kwargs["user_id"].eq == "user123"
+
+
+async def test_search_topics_string_becomes_single_tag(
+    agent_memory_editor: AgentMemoryServerEditor,
+    mock_client: AsyncMock,
+):
+    """Topics returned as a string must become one tag, not a list of characters."""
+    mock_memory = MagicMock()
+    mock_memory.text = "Sample memory"
+    mock_memory.dist = None
+    mock_memory.metadata = {}
+    mock_memory.topics = "single-topic"
+
+    mock_results = MagicMock()
+    mock_results.memories = [mock_memory]
+    mock_client.search_long_term_memory.return_value = mock_results
+
+    result = await agent_memory_editor.search(
+        query="test query",
+        top_k=5,
+        user_id="user123",
+    )
+
+    assert len(result) == 1
+    assert result[0].tags == ["single-topic"]
 
 
 async def test_search_missing_user_id(agent_memory_editor: AgentMemoryServerEditor):
