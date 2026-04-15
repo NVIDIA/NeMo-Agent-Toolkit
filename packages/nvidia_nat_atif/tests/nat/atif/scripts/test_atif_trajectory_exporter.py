@@ -12,18 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Unit tests for ATIFTrajectorySpanExporter.
-
-Tests the batch trajectory-to-span conversion:
-    ATIF Trajectory (dict) -> list[Span]
-"""
+"""Unit tests for ATIFTrajectorySpanExporter."""
 
 import pytest
 
 from nat.data_models.span import SpanAttributes
 from nat.data_models.span import SpanKind
-from nat.observability.exporter.atif_trajectory_exporter import ATIFTrajectorySpanExporter
-from nat.observability.exporter.atif_trajectory_exporter import _is_terminal_agent_step
+from nat.atif.scripts.export_trajectory_to_phoenix.atif_trajectory_exporter import ATIFTrajectorySpanExporter
+from nat.atif.scripts.export_trajectory_to_phoenix.atif_trajectory_exporter import _is_terminal_agent_step
 
 # ---------------------------------------------------------------------------
 # Fixture trajectories (matching theoretical example patterns)
@@ -552,7 +548,7 @@ class TestSpanPrefix:
 
 
 class TestNestedToolChain:
-    """Tests for nested tool ancestry (parent tool → child tool)."""
+    """Tests for nested tool ancestry (parent tool -> child tool)."""
 
     @pytest.fixture
     def nested_trajectory(self):

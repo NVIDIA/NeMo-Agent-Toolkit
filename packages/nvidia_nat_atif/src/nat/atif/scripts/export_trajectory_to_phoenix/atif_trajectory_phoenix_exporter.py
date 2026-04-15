@@ -14,16 +14,7 @@
 # limitations under the License.
 """Phoenix exporter for complete ATIF trajectories.
 
-Converts ATIF trajectory dicts into OpenTelemetry spans and exports
-them to a Phoenix server for visualization.
-
-Usage::
-
-    exporter = ATIFTrajectoryPhoenixExporter(
-        endpoint="http://localhost:6006/v1/traces",
-        project="my-project",
-    )
-    exporter.export(trajectory_dict)
+See ``README.md`` in this directory for usage guidance.
 """
 
 from __future__ import annotations
@@ -34,7 +25,7 @@ from typing import Any
 from openinference.instrumentation import dangerously_using_project
 from opentelemetry.sdk.resources import Resource
 
-from nat.observability.exporter.atif_trajectory_exporter import ATIFTrajectorySpanExporter
+from nat.atif.scripts.export_trajectory_to_phoenix.atif_trajectory_exporter import ATIFTrajectorySpanExporter
 from nat.plugins.opentelemetry.span_converter import convert_spans_to_otel_batch
 from phoenix.otel import HTTPSpanExporter
 
@@ -43,11 +34,6 @@ logger = logging.getLogger(__name__)
 
 class ATIFTrajectoryPhoenixExporter:
     """Exports ATIF trajectories to Phoenix as OpenTelemetry spans.
-
-    This is the batch/offline counterpart to ``ATIFPhoenixOtelExporter``.
-    While the streaming exporter processes ``IntermediateStep`` events
-    in real time, this exporter takes fully-formed ATIF trajectory dicts
-    and batch-exports all spans to Phoenix.
 
     Parameters
     ----------

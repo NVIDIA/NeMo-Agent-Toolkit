@@ -14,42 +14,7 @@
 # limitations under the License.
 """ATIF trajectory-to-span converter.
 
-Converts complete ATIF trajectories into NAT Span objects for
-visualization in Phoenix or other OpenTelemetry-compatible UIs.
-
-Unlike the streaming ``ATIFSpanExporter`` (which processes
-IntermediateStep events one at a time via ``ATIFStreamConverter``),
-this module operates on fully-formed ATIF trajectory dicts — suitable
-for offline analysis, replay, or importing external ATIF files.
-
-Processing flow::
-
-    ATIF Trajectory (dict) -> list[Span]
-
-Span hierarchy produced for each trajectory::
-
-    WORKFLOW span  (root — covers entire trajectory duration)
-     ├── LLM span  (agent step with tool_calls)
-     │   ├── TOOL span  (tool call 1)
-     │   └── TOOL span  (tool call 2)
-     ├── LLM span  (next agent step)
-     │   └── TOOL span
-     ├── LLM span  (terminal agent step — final answer)
-     ├── FUNCTION span  (system step with tool_calls, no LLM)
-     │   ├── TOOL span  (tool call 1)
-     │   └── TOOL span  (tool call 2, may nest under tool 1)
-     └── FUNCTION span  (terminal system step)
-
-Design notes
-------------
-* User steps in external ATIF files typically lack ``extra.ancestry``.
-  This converter synthesises a root WORKFLOW span from trajectory
-  metadata and reparents orphaned agent spans under it.
-* ``subagent_trajectories`` (present in the JSON but absent from the
-  ``Trajectory`` Pydantic model) are processed recursively and share
-  the parent trace ID so all spans appear in a single Phoenix trace.
-* Tool spans that delegate to subagents are linked via
-  ``subagent_trajectory_ref`` in observation results.
+See ``README.md`` in this directory for usage guidance and span hierarchy details.
 """
 
 from __future__ import annotations
@@ -130,11 +95,6 @@ def _message_to_str(message: Any) -> str:
 
 class ATIFTrajectorySpanExporter(SerializeMixin):
     """Converts complete ATIF trajectories to NAT Span objects.
-
-    This is the batch/offline counterpart to ``ATIFSpanExporter``.
-    It takes fully-formed trajectory dicts (parsed ATIF JSON) and
-    produces a flat list of ``Span`` objects with parent-child
-    relationships encoded via ``Span.parent``.
 
     Parameters
     ----------

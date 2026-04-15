@@ -13,26 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Export an ATIF trajectory JSON file to Phoenix for visualization.
+"""Export ATIF trajectory JSON files to Phoenix for visualization.
 
-Usage::
-
-    # Single file
-    python export_atif_trajectory_to_phoenix.py trajectory.json
-
-    # Multiple files
-    python export_atif_trajectory_to_phoenix.py *.json
-
-    # Custom endpoint and project
-    python export_atif_trajectory_to_phoenix.py trajectory.json \\
-        --endpoint http://localhost:6006/v1/traces \\
-        --project my-project
-
-Prerequisites:
-    - A running Phoenix server (e.g. ``python -m phoenix.server.main serve``)
+See ``README.md`` in this directory for usage guidance and prerequisites.
 """
-
-
 
 import argparse
 import json
@@ -40,7 +24,7 @@ import logging
 import sys
 from pathlib import Path
 
-from nat.plugins.phoenix.atif_trajectory_phoenix_exporter import ATIFTrajectoryPhoenixExporter
+from nat.atif.scripts.export_trajectory_to_phoenix.atif_trajectory_phoenix_exporter import ATIFTrajectoryPhoenixExporter
 
 
 def main() -> None:
