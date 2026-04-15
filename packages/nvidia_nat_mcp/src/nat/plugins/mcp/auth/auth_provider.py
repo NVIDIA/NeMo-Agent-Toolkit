@@ -15,6 +15,7 @@
 
 import asyncio
 import logging
+import time
 from collections.abc import Awaitable
 from collections.abc import Callable
 from urllib.parse import urljoin
@@ -307,6 +308,9 @@ class DynamicClientRegistration:
 class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
     """MCP OAuth2 authentication provider that delegates to NAT framework."""
 
+    # TODO Make this a config
+    DCR_CACHE_TTL = 270  # 4.5 minutes TTL for dynamic client registration
+
     def __init__(self, config: MCPOAuth2ProviderConfig, builder=None):
         super().__init__(config)
         self._builder = builder
@@ -317,6 +321,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
 
         # Client registration
         self._registrar = DynamicClientRegistration(config)
+        self._credentials_cache_time: float | None = None
         self._cached_credentials: OAuth2Credentials | None = None
         self._discover_register_lock = asyncio.Lock()
 
@@ -342,6 +347,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
     def _invalidate_cached_registration(self, reason: str) -> None:
         """Invalidate cached OAuth client registration and auth provider."""
         previous_client_id = self._cached_credentials.client_id if self._cached_credentials else None
+        self._credentials_cache_time = None
         self._cached_credentials = None
         self._auth_code_provider = None
         logger.warning("Invalidated cached OAuth2 registration: reason=%s previous_client_id=%s",
@@ -422,7 +428,8 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         effective_scopes = self._effective_scopes
 
         # Client registration
-        if not self._cached_credentials:
+        if (not self._cached_credentials or self._credentials_cache_time is None
+                or (time.time() - self._credentials_cache_time) >= self.DCR_CACHE_TTL):
             if self.config.client_id:
                 # Manual registration mode
                 self._cached_credentials = OAuth2Credentials(
@@ -435,12 +442,20 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 self._cached_credentials = await self._registrar.register(self._cached_endpoints, effective_scopes)
                 logger.info("Registered OAuth2 client: %s", self._cached_credentials.client_id)
 
+            self._credentials_cache_time = time.time()
+
     async def _nat_oauth2_authenticate(self, user_id: str | None = None) -> AuthResult:
         """Perform the OAuth2 flow using MCP-specific authentication flow handler."""
         from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider
 
-        if not self._cached_endpoints or not self._cached_credentials:
+        if (not self._cached_endpoints or not self._cached_credentials or self._credentials_cache_time is None
+                or (time.time() - self._credentials_cache_time) >= self.DCR_CACHE_TTL):
             # if discovery is yet to to be done return empty auth result
+            logger.warning(
+                "OAuth2 endpoints or credentials not available or expired for user_id=%s. "
+                "Discovery and registration must be performed before authentication. "
+                "Returning empty AuthResult.",
+                user_id)
             return AuthResult(credentials=[], token_expires_at=None, raw={})
 
         endpoints = self._cached_endpoints
