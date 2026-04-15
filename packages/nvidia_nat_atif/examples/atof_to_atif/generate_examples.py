@@ -2,9 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Generate ATOF example JSONL files for EXMP-01, EXMP-02, and EXMP-03.
 
-Constructs ATOF event objects directly using ``nat.atof`` Pydantic models —
-no NeMo-Flow runtime dependency. The generated files are self-contained
-examples of the ATOF wire format.
+Constructs ATOF event objects directly using ``nat.atof`` Pydantic models.
+The generated files are self-contained examples of the ATOF wire format.
 
 Usage:
     python generate_examples.py [--output-dir DIR]

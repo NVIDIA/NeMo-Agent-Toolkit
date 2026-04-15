@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 """Attribute bitflag types for ATOF events.
 
-Mirrors NeMo-Flow's Rust ``bitflags!`` definitions without importing them.
 Each type is a Python :class:`enum.IntFlag` that serializes as a plain integer
 in JSON (e.g., ``PARALLEL | RELOCATABLE`` → ``3``).
 """

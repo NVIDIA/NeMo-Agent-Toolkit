@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Pydantic models for the Agentic Trajectory Observability Format (ATOF).
 
-ATOF is the JSON-Lines wire format for NeMo-Flow subscriber callbacks.
-These models mirror the NeMo-Flow Rust event types as standalone Pydantic
-models with no NeMo-Flow runtime dependency.
+ATOF is a JSON-Lines wire format for agent runtime event streams.
+These models define the 7 event types, attribute flags, and codec schemas
+as standalone Pydantic models.
 
 See ``atof-event-format.md`` for the full specification.
 """

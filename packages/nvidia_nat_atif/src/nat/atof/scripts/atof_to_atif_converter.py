@@ -2,14 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """ATOF-to-ATIF converter.
 
-Converts a list of ATOF events (JSON-Lines wire format from NeMo-Flow
+Converts a list of ATOF events (JSON-Lines wire format from agent runtime
 subscriber callbacks) into an ATIF Trajectory using NAT's native models.
 
-Implements the same accumulator state machine as the Rust ``AtifExporter``
-in ``crates/core/src/atif.rs``. See ``atof-event-format.md`` Section 7 for
-the canonical mapping.
-
-No NeMo-Flow or Harbor dependencies — uses ``nat.atof`` for input models
+Implements the accumulator state machine described in
+``atof-event-format.md`` Section 7. Uses ``nat.atof`` for input models
 and ``nat.atif`` for output models.
 """
 
@@ -57,7 +54,7 @@ def _build_invocation_info(start_ts: str | None, end_ts: str | None, invocation_
     """Build invocation info dict from timestamps and ID."""
     info: dict = {
         "invocation_id": invocation_id,
-        "framework": "nemo_flow",
+        "framework": "nat",
         "status": "completed",
     }
     if start_ts:
@@ -91,7 +88,7 @@ def _extract_tool_calls(annotated_response: dict | None) -> list[dict]:
 def _unwrap_llm_messages(input_obj: dict | None) -> list[dict]:
     """Extract messages from LLMStart input payload.
 
-    Handles both NeMo-Flow envelope format (``{"content": {"messages": [...]}}``)
+    Handles both envelope format (``{"content": {"messages": [...]}}``)
     and direct format (``{"messages": [...]}``).
     """
     if not input_obj:

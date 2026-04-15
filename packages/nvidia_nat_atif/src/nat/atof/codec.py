@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Codec schemas for annotated LLM request/response payloads.
 
-Mirrors NeMo-Flow's codec types (``crates/core/src/codec/request.rs`` and
-``response.rs``) as standalone Pydantic models. These appear on
-``LLMStartEvent.annotated_request`` and ``LLMEndEvent.annotated_response``.
+Standalone Pydantic models for structured LLM request and response data.
+These appear on ``LLMStartEvent.annotated_request`` and
+``LLMEndEvent.annotated_response``.
 
 See ATOF spec Section 5.
 """

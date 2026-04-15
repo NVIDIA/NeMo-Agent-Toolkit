@@ -1,10 +1,9 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""ATOF event models for the 7 NeMo-Flow event types.
+"""ATOF event models for the 7 agent runtime event types.
 
-Mirrors the Rust event structs in ``crates/core/src/types/event.rs`` as
-standalone Pydantic models. The ``Event`` type is a discriminated union
-keyed on the ``kind`` field.
+Standalone Pydantic models for each event kind. The ``Event`` type is a
+discriminated union keyed on the ``kind`` field.
 
 See ATOF spec Sections 2–3.
 """

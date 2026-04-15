@@ -2,8 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Scope type enumeration for ATOF events.
 
-Mirrors NeMo-Flow's ``ScopeType`` enum (``crates/core/src/types/scope.rs``)
-without importing it. Serializes as lowercase strings.
+Serializes as lowercase strings. See ATOF spec Section 3.1.
 """
 
 from __future__ import annotations
