@@ -14,7 +14,6 @@ from __future__ import annotations
 from typing import Annotated
 from typing import Any
 from typing import Literal
-from typing import Union
 
 from pydantic import BaseModel
 from pydantic import ConfigDict
@@ -22,13 +21,8 @@ from pydantic import Discriminator
 from pydantic import Field
 from pydantic import Tag
 
-from nat.atof.attributes import LLMAttributes
-from nat.atof.attributes import ScopeAttributes
-from nat.atof.attributes import ToolAttributes
 from nat.atof.codec import AnnotatedLLMRequest
 from nat.atof.codec import AnnotatedLLMResponse
-from nat.atof.scope_type import ScopeType
-
 
 # ---------------------------------------------------------------------------
 # Base fields shared by all event types (Section 2)
@@ -76,9 +70,8 @@ class LLMStartEvent(_EventBase):
     attributes: int = Field(default=0, description="LLMAttributes bitflags")
     input: Any | None = Field(default=None, description="Post-sanitize LLM request payload")
     model_name: str | None = Field(default=None, description="Model identifier")
-    annotated_request: AnnotatedLLMRequest | None = Field(
-        default=None, description="Codec-decoded request (if codec registered)"
-    )
+    annotated_request: AnnotatedLLMRequest | None = Field(default=None,
+                                                          description="Codec-decoded request (if codec registered)")
 
 
 class LLMEndEvent(_EventBase):
@@ -88,9 +81,8 @@ class LLMEndEvent(_EventBase):
     attributes: int = Field(default=0, description="Same flags as matching LLMStartEvent")
     output: Any | None = Field(default=None, description="Post-sanitize LLM response payload")
     model_name: str | None = Field(default=None, description="Model identifier")
-    annotated_response: AnnotatedLLMResponse | None = Field(
-        default=None, description="Codec-decoded response (if codec registered)"
-    )
+    annotated_response: AnnotatedLLMResponse | None = Field(default=None,
+                                                            description="Codec-decoded response (if codec registered)")
 
 
 class ToolStartEvent(_EventBase):
@@ -99,9 +91,7 @@ class ToolStartEvent(_EventBase):
     kind: Literal["ToolStart"] = "ToolStart"
     attributes: int = Field(default=0, description="ToolAttributes bitflags")
     input: Any | None = Field(default=None, description="Post-sanitize tool input arguments")
-    tool_call_id: str | None = Field(
-        default=None, description="Correlation ID from LLM tool-call response"
-    )
+    tool_call_id: str | None = Field(default=None, description="Correlation ID from LLM tool-call response")
 
 
 class ToolEndEvent(_EventBase):
@@ -110,9 +100,7 @@ class ToolEndEvent(_EventBase):
     kind: Literal["ToolEnd"] = "ToolEnd"
     attributes: int = Field(default=0, description="Same flags as matching ToolStartEvent")
     output: Any | None = Field(default=None, description="Post-sanitize tool result")
-    tool_call_id: str | None = Field(
-        default=None, description="Same as matching ToolStartEvent"
-    )
+    tool_call_id: str | None = Field(default=None, description="Same as matching ToolStartEvent")
 
 
 class MarkEvent(_EventBase):
@@ -134,15 +122,10 @@ def _get_event_kind(v: Any) -> str:
 
 
 Event = Annotated[
-    Union[
-        Annotated[ScopeStartEvent, Tag("ScopeStart")],
-        Annotated[ScopeEndEvent, Tag("ScopeEnd")],
-        Annotated[LLMStartEvent, Tag("LLMStart")],
-        Annotated[LLMEndEvent, Tag("LLMEnd")],
-        Annotated[ToolStartEvent, Tag("ToolStart")],
-        Annotated[ToolEndEvent, Tag("ToolEnd")],
-        Annotated[MarkEvent, Tag("Mark")],
-    ],
+    Annotated[ScopeStartEvent, Tag("ScopeStart")] | Annotated[ScopeEndEvent, Tag("ScopeEnd")]
+    | Annotated[LLMStartEvent, Tag("LLMStart")] | Annotated[LLMEndEvent, Tag("LLMEnd")]
+    | Annotated[ToolStartEvent, Tag("ToolStart")] | Annotated[ToolEndEvent, Tag("ToolEnd")]
+    | Annotated[MarkEvent, Tag("Mark")],
     Discriminator(_get_event_kind),
 ]
 """Discriminated union of all 7 ATOF event types, keyed on ``kind``."""

@@ -12,7 +12,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
 from nat.atof.scripts.atof_to_atif_converter import convert_file

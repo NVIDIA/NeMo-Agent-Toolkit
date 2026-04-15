@@ -7,13 +7,15 @@
 # Allow AIQ for AIQ Blueprint
 AIQ
 [Aa]llowlist
+Anthropic
 [Aa]nonymize(d?)
 API(s?)
 Arize
 ART
 arXiv
 [Aa]sync
-Anthropic
+ATIF
+ATOF
 Authlib
 [Aa]utoencoder
 [Bb]ackdoor(s?)

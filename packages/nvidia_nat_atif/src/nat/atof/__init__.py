@@ -42,13 +42,11 @@ __all__ = [
     "LLMEndEvent",
     "ToolStartEvent",
     "ToolEndEvent",
-    "MarkEvent",
-    # Enums and flags
+    "MarkEvent",  # Enums and flags
     "ScopeType",
     "ScopeAttributes",
     "LLMAttributes",
-    "ToolAttributes",
-    # Codec types
+    "ToolAttributes",  # Codec types
     "AnnotatedLLMRequest",
     "AnnotatedLLMResponse",
     "CodecContentPart",
@@ -57,8 +55,7 @@ __all__ = [
     "RequestToolCall",
     "ResponseToolCall",
     "ToolDefinition",
-    "Usage",
-    # I/O
+    "Usage",  # I/O
     "read_jsonl",
     "write_jsonl",
 ]

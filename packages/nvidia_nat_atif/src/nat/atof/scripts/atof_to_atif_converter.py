@@ -21,12 +21,7 @@ from datetime import datetime
 from pathlib import Path
 
 from nat.atif.agent import Agent
-from nat.atif.atif_step_extra import AtifAncestry
-from nat.atif.atif_step_extra import AtifInvocationInfo
-from nat.atif.observation import Observation
-from nat.atif.observation_result import ObservationResult
 from nat.atif.step import Step
-from nat.atif.tool_call import ToolCall
 from nat.atif.trajectory import Trajectory
 from nat.atof.events import Event
 from nat.atof.events import LLMEndEvent
@@ -36,7 +31,6 @@ from nat.atof.events import ToolEndEvent
 from nat.atof.io import read_jsonl
 
 logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -168,7 +162,9 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             "source": "system",
             "message": "",
             "timestamp": pending_obs_timestamp,
-            "observation": {"results": sanitized},
+            "observation": {
+                "results": sanitized
+            },
         })
         pending_observations = []
         pending_obs_timestamp = None
@@ -213,17 +209,16 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
                 "source": "user",
                 "message": message_str,
                 "timestamp": event.timestamp,
-                "extra": {"ancestry": ancestry},
+                "extra": {
+                    "ancestry": ancestry
+                },
             })
 
         elif isinstance(event, LLMEndEvent):
             flush_observations()
 
-            ann_resp = (
-                event.annotated_response.model_dump(exclude_none=True, mode="json")
-                if event.annotated_response
-                else None
-            )
+            ann_resp = (event.annotated_response.model_dump(exclude_none=True, mode="json")
+                        if event.annotated_response else None)
             tool_call_dicts = _extract_tool_calls(ann_resp)
 
             last_tool_call_map.clear()
@@ -287,9 +282,12 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             flush_observations()
             finalize_agent_extra()
             step_dicts.append({
-                "source": "system",
-                "message": json.dumps(event.data, separators=(",", ":")) if isinstance(event.data, dict) else str(event.data),
-                "timestamp": event.timestamp,
+                "source":
+                    "system",
+                "message":
+                    json.dumps(event.data, separators=(",", ":")) if isinstance(event.data, dict) else str(event.data),
+                "timestamp":
+                    event.timestamp,
             })
 
         else:

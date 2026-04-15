@@ -18,7 +18,6 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-
 # ---------------------------------------------------------------------------
 # Request-side types (Section 5.1–5.6)
 # ---------------------------------------------------------------------------

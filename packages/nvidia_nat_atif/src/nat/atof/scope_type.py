@@ -8,10 +8,10 @@ without importing it. Serializes as lowercase strings.
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class ScopeType(str, Enum):
+class ScopeType(StrEnum):
     """Semantic scope type for ScopeStart/ScopeEnd events."""
 
     AGENT = "agent"

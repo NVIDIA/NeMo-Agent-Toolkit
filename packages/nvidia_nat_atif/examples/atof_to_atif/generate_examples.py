@@ -13,23 +13,19 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 
-from nat.atof import (
-    AnnotatedLLMResponse,
-    LLMEndEvent,
-    LLMStartEvent,
-    ResponseToolCall,
-    ScopeEndEvent,
-    ScopeStartEvent,
-    ToolEndEvent,
-    ToolStartEvent,
-    write_jsonl,
-)
+from nat.atof import AnnotatedLLMResponse
+from nat.atof import LLMEndEvent
+from nat.atof import LLMStartEvent
+from nat.atof import ResponseToolCall
+from nat.atof import ScopeEndEvent
+from nat.atof import ScopeStartEvent
+from nat.atof import ToolEndEvent
+from nat.atof import ToolStartEvent
+from nat.atof import write_jsonl
 
 OUTPUT_DIR = Path(__file__).parent / "output"
-
 
 # ---------------------------------------------------------------------------
 # EXMP-01: Simple Tool Call
@@ -54,21 +50,28 @@ def generate_exmp01() -> list:
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
             input={
-                "messages": [{"role": "user", "content": "What is 3 + 4?"}],
-                "model": "nvidia/nemotron-3-super-v3",
-                "tools": [
-                    {
-                        "type": "function",
-                        "function": {
-                            "name": "calculator__add",
-                            "description": "Add two numbers",
-                            "parameters": {
-                                "type": "object",
-                                "properties": {"a": {"type": "number"}, "b": {"type": "number"}},
+                "messages": [{
+                    "role": "user", "content": "What is 3 + 4?"
+                }],
+                "model":
+                    "nvidia/nemotron-3-super-v3",
+                "tools": [{
+                    "type": "function",
+                    "function": {
+                        "name": "calculator__add",
+                        "description": "Add two numbers",
+                        "parameters": {
+                            "type": "object",
+                            "properties": {
+                                "a": {
+                                    "type": "number"
+                                }, "b": {
+                                    "type": "number"
+                                }
                             },
                         },
-                    }
-                ],
+                    },
+                }],
             },
             model_name="nvidia/nemotron-3-super-v3",
         ),
@@ -79,31 +82,28 @@ def generate_exmp01() -> list:
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
             output={
-                "choices": [
-                    {
-                        "message": {
-                            "content": "I'll calculate 3 + 4 for you.",
-                            "tool_calls": [
-                                {
-                                    "id": "call_calc_001",
-                                    "type": "function",
-                                    "function": {
-                                        "name": "calculator__add",
-                                        "arguments": '{"a": 3, "b": 4}',
-                                    },
-                                }
-                            ],
-                        },
-                        "finish_reason": "tool_calls",
-                    }
-                ]
+                "choices": [{
+                    "message": {
+                        "content":
+                            "I'll calculate 3 + 4 for you.",
+                        "tool_calls": [{
+                            "id": "call_calc_001",
+                            "type": "function",
+                            "function": {
+                                "name": "calculator__add",
+                                "arguments": '{"a": 3, "b": 4}',
+                            },
+                        }],
+                    },
+                    "finish_reason": "tool_calls",
+                }]
             },
             model_name="nvidia/nemotron-3-super-v3",
             annotated_response=AnnotatedLLMResponse(
                 message="I'll calculate 3 + 4 for you.",
-                tool_calls=[
-                    ResponseToolCall(id="call_calc_001", name="calculator__add", arguments={"a": 3, "b": 4})
-                ],
+                tool_calls=[ResponseToolCall(id="call_calc_001", name="calculator__add", arguments={
+                    "a": 3, "b": 4
+                })],
                 finish_reason="tool_use",
             ),
         ),
@@ -113,7 +113,9 @@ def generate_exmp01() -> list:
             timestamp="2026-01-01T00:00:03Z",
             name="calculator__add",
             attributes=0,
-            input={"a": 3, "b": 4},
+            input={
+                "a": 3, "b": 4
+            },
             tool_call_id="call_calc_001",
         ),
         ToolEndEvent(
@@ -133,19 +135,25 @@ def generate_exmp01() -> list:
             attributes=0,
             input={
                 "messages": [
-                    {"role": "user", "content": "What is 3 + 4?"},
                     {
-                        "role": "assistant",
-                        "content": "I'll calculate 3 + 4 for you.",
-                        "tool_calls": [
-                            {
-                                "id": "call_calc_001",
-                                "type": "function",
-                                "function": {"name": "calculator__add", "arguments": '{"a": 3, "b": 4}'},
-                            }
-                        ],
+                        "role": "user", "content": "What is 3 + 4?"
                     },
-                    {"role": "tool", "content": '{"result": 7}', "tool_call_id": "call_calc_001"},
+                    {
+                        "role":
+                            "assistant",
+                        "content":
+                            "I'll calculate 3 + 4 for you.",
+                        "tool_calls": [{
+                            "id": "call_calc_001",
+                            "type": "function",
+                            "function": {
+                                "name": "calculator__add", "arguments": '{"a": 3, "b": 4}'
+                            },
+                        }],
+                    },
+                    {
+                        "role": "tool", "content": '{"result": 7}', "tool_call_id": "call_calc_001"
+                    },
                 ],
                 "model": "nvidia/nemotron-3-super-v3",
             },
@@ -157,11 +165,11 @@ def generate_exmp01() -> list:
             timestamp="2026-01-01T00:00:06Z",
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
-            output={
-                "choices": [
-                    {"message": {"content": "The result of 3 + 4 is 7."}, "finish_reason": "stop"}
-                ]
-            },
+            output={"choices": [{
+                "message": {
+                    "content": "The result of 3 + 4 is 7."
+                }, "finish_reason": "stop"
+            }]},
             model_name="nvidia/nemotron-3-super-v3",
             annotated_response=AnnotatedLLMResponse(
                 message="The result of 3 + 4 is 7.",
@@ -202,7 +210,9 @@ def generate_exmp02() -> list:
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
             input={
-                "messages": [{"role": "user", "content": "What's the temperature in San Francisco in Celsius?"}],
+                "messages": [{
+                    "role": "user", "content": "What's the temperature in San Francisco in Celsius?"
+                }],
                 "model": "nvidia/nemotron-3-super-v3",
             },
             model_name="nvidia/nemotron-3-super-v3",
@@ -214,32 +224,27 @@ def generate_exmp02() -> list:
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
             output={
-                "choices": [
-                    {
-                        "message": {
-                            "content": "",
-                            "tool_calls": [
-                                {
-                                    "id": "call_weather_001",
-                                    "type": "function",
-                                    "function": {
-                                        "name": "weather__lookup",
-                                        "arguments": '{"city": "San Francisco"}',
-                                    },
-                                }
-                            ],
-                        },
-                        "finish_reason": "tool_calls",
-                    }
-                ]
+                "choices": [{
+                    "message": {
+                        "content":
+                            "",
+                        "tool_calls": [{
+                            "id": "call_weather_001",
+                            "type": "function",
+                            "function": {
+                                "name": "weather__lookup",
+                                "arguments": '{"city": "San Francisco"}',
+                            },
+                        }],
+                    },
+                    "finish_reason": "tool_calls",
+                }]
             },
             model_name="nvidia/nemotron-3-super-v3",
             annotated_response=AnnotatedLLMResponse(
                 message="",
                 tool_calls=[
-                    ResponseToolCall(
-                        id="call_weather_001", name="weather__lookup", arguments={"city": "San Francisco"}
-                    )
+                    ResponseToolCall(id="call_weather_001", name="weather__lookup", arguments={"city": "San Francisco"})
                 ],
                 finish_reason="tool_use",
             ),
@@ -287,7 +292,9 @@ def generate_exmp02() -> list:
             timestamp="2026-01-01T00:01:07Z",
             name="weather__lookup",
             attributes=0,
-            output={"city": "San Francisco", "temp_f": 68.0, "temp_c": 20.0, "condition": "sunny"},
+            output={
+                "city": "San Francisco", "temp_f": 68.0, "temp_c": 20.0, "condition": "sunny"
+            },
             tool_call_id="call_weather_001",
         ),
         ScopeEndEvent(
@@ -307,8 +314,14 @@ def generate_exmp02() -> list:
             attributes=0,
             input={
                 "messages": [
-                    {"role": "user", "content": "What's the temperature in San Francisco in Celsius?"},
-                    {"role": "tool", "content": '{"city":"San Francisco","temp_c":20.0}', "tool_call_id": "call_weather_001"},
+                    {
+                        "role": "user", "content": "What's the temperature in San Francisco in Celsius?"
+                    },
+                    {
+                        "role": "tool",
+                        "content": '{"city":"San Francisco","temp_c":20.0}',
+                        "tool_call_id": "call_weather_001"
+                    },
                 ],
                 "model": "nvidia/nemotron-3-super-v3",
             },
@@ -321,9 +334,12 @@ def generate_exmp02() -> list:
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
             output={
-                "choices": [
-                    {"message": {"content": "It's currently 20°C (68°F) and sunny in San Francisco."}, "finish_reason": "stop"}
-                ]
+                "choices": [{
+                    "message": {
+                        "content": "It's currently 20°C (68°F) and sunny in San Francisco."
+                    },
+                    "finish_reason": "stop"
+                }]
             },
             model_name="nvidia/nemotron-3-super-v3",
             annotated_response=AnnotatedLLMResponse(
@@ -365,7 +381,9 @@ def generate_exmp03() -> list:
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
             input={
-                "messages": [{"role": "user", "content": "Search for ATIF spec and summarize it, also count the words."}],
+                "messages": [{
+                    "role": "user", "content": "Search for ATIF spec and summarize it, also count the words."
+                }],
                 "model": "nvidia/nemotron-3-super-v3",
             },
             model_name="nvidia/nemotron-3-super-v3",
@@ -377,29 +395,30 @@ def generate_exmp03() -> list:
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
             output={
-                "choices": [
-                    {
-                        "message": {
-                            "content": "",
-                            "tool_calls": [
-                                {
-                                    "id": "call_search_001",
-                                    "type": "function",
-                                    "function": {"name": "search__web", "arguments": '{"query": "ATIF spec"}'},
+                "choices": [{
+                    "message": {
+                        "content":
+                            "",
+                        "tool_calls": [
+                            {
+                                "id": "call_search_001",
+                                "type": "function",
+                                "function": {
+                                    "name": "search__web", "arguments": '{"query": "ATIF spec"}'
                                 },
-                                {
-                                    "id": "call_wc_001",
-                                    "type": "function",
-                                    "function": {
-                                        "name": "text__word_count",
-                                        "arguments": '{"text": "The ATIF specification defines..."}',
-                                    },
+                            },
+                            {
+                                "id": "call_wc_001",
+                                "type": "function",
+                                "function": {
+                                    "name": "text__word_count",
+                                    "arguments": '{"text": "The ATIF specification defines..."}',
                                 },
-                            ],
-                        },
-                        "finish_reason": "tool_calls",
-                    }
-                ]
+                            },
+                        ],
+                    },
+                    "finish_reason": "tool_calls",
+                }]
             },
             model_name="nvidia/nemotron-3-super-v3",
             annotated_response=AnnotatedLLMResponse(
@@ -458,7 +477,9 @@ def generate_exmp03() -> list:
             timestamp="2026-01-01T00:02:07Z",
             name="search__web",
             attributes=0,
-            output={"results": ["ATIF spec found"], "summary": "ATIF defines a standard trajectory format."},
+            output={
+                "results": ["ATIF spec found"], "summary": "ATIF defines a standard trajectory format."
+            },
             tool_call_id="call_search_001",
         ),
         ScopeEndEvent(
@@ -497,9 +518,15 @@ def generate_exmp03() -> list:
             attributes=0,
             input={
                 "messages": [
-                    {"role": "user", "content": "Search for ATIF spec and summarize it, also count the words."},
-                    {"role": "tool", "content": '{"results":["ATIF spec found"]}', "tool_call_id": "call_search_001"},
-                    {"role": "tool", "content": '{"word_count":5}', "tool_call_id": "call_wc_001"},
+                    {
+                        "role": "user", "content": "Search for ATIF spec and summarize it, also count the words."
+                    },
+                    {
+                        "role": "tool", "content": '{"results":["ATIF spec found"]}', "tool_call_id": "call_search_001"
+                    },
+                    {
+                        "role": "tool", "content": '{"word_count":5}', "tool_call_id": "call_wc_001"
+                    },
                 ],
                 "model": "nvidia/nemotron-3-super-v3",
             },
@@ -512,14 +539,14 @@ def generate_exmp03() -> list:
             name="nvidia/nemotron-3-super-v3",
             attributes=0,
             output={
-                "choices": [
-                    {
-                        "message": {
-                            "content": "ATIF defines a standard trajectory format for AI agent evaluation. The text contains 5 words."
-                        },
-                        "finish_reason": "stop",
-                    }
-                ]
+                "choices": [{
+                    "message": {
+                        "content": ("ATIF defines a standard trajectory format"
+                                    " for AI agent evaluation."
+                                    " The text contains 5 words.")
+                    },
+                    "finish_reason": "stop",
+                }]
             },
             model_name="nvidia/nemotron-3-super-v3",
             annotated_response=AnnotatedLLMResponse(
