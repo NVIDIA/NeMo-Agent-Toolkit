@@ -32,7 +32,7 @@ This document does NOT cover:
 
 - The ATOF wire format — see `atof-event-format.md`
 - ATIF conversion — see `atof-to-atif-converter.md`
-- Producer-side codec implementation (Rust codec trait, Python adapter patterns) — see `NeMo-Flow/crates/core/src/codec/` source
+- Producer-side codec implementation (typed codec traits, adapter patterns in specific languages) — out of scope for this spec; consult producer-runtime documentation
 
 ## 3. Codec Identifier
 
