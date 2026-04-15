@@ -5,7 +5,7 @@
 Standalone Pydantic models for each event kind. The ``Event`` type is a
 discriminated union keyed on the ``kind`` field.
 
-See ATOF spec Sections 2–3.
+See ATOF spec Sections 2-3.
 """
 
 from __future__ import annotations

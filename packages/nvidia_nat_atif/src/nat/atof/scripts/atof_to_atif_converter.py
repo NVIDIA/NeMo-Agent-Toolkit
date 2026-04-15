@@ -325,7 +325,7 @@ def convert(events: list[Event]) -> Trajectory:
     for event in events:
         if event.kind == "ScopeStart" and hasattr(event, "scope_type"):
             scope_type = getattr(event, "scope_type", "")
-            if scope_type in ("agent", "Agent", "ScopeType.Agent"):
+            if scope_type == "agent":
                 agent_name = event.name
                 break
 

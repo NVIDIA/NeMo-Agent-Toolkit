@@ -19,7 +19,7 @@ from pydantic import ConfigDict
 from pydantic import Field
 
 # ---------------------------------------------------------------------------
-# Request-side types (Section 5.1–5.6)
+# Request-side types (Section 5.1-5.6)
 # ---------------------------------------------------------------------------
 
 
@@ -130,7 +130,7 @@ class AnnotatedLLMRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Response-side types (Section 5.7–5.10)
+# Response-side types (Section 5.7-5.10)
 # ---------------------------------------------------------------------------
 
 

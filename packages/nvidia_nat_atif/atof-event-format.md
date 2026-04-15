@@ -527,7 +527,7 @@ A minimal 6-event stream illustrating one complete tool call cycle. Each line is
 {"kind":"ScopeEnd","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:05Z","name":"simple_calculator_agent","scope_type":"agent","attributes":0,"data":null,"metadata":null}
 ```
 
-**Resulting ATIF output:** From this 6-event stream, `AtifExporter.events_to_steps()` produces 3 ATIF steps: (1) a user step from `LLMStart` with `message = [{"role": "user", "content": "What is 3 + 4?"}]`; (2) an agent step from `LLMEnd` with `message = "The result of 3 + 4 is 7."` and promoted `tool_calls`; (3) a system step from the buffered `ToolEnd` observation with `source_call_id = "call_calc_001"` and `content = 7`. The observation flush occurs at end of stream (no subsequent `LLMStart`).
+**Resulting ATIF output:** From this 6-event stream, the converter produces 3 ATIF steps: (1) a user step from `LLMStart` with `message = [{"role": "user", "content": "What is 3 + 4?"}]`; (2) an agent step from `LLMEnd` with `message = "The result of 3 + 4 is 7."` and promoted `tool_calls`; (3) a system step from the buffered `ToolEnd` observation with `source_call_id = "call_calc_001"` and `content = "7"` (stringified from the integer output). The observation flush occurs at end of stream (no subsequent `LLMStart`).
 
 **Note on event ordering:** `LLMEnd` arrives at `t=02` before `ToolStart` at `t=03`. This is the correct order: the LLM decides to call the tool (emitting `LLMEnd` with `tool_calls` in `output`), then the runtime dispatches the tool call. The exporter sorts by timestamp, so the ordering `LLMEnd → ToolStart → ToolEnd` is required for correct correlation.
 

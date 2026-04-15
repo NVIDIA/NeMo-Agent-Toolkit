@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 """Convert ATOF JSONL examples to ATIF trajectories.
 
-Reads each example JSONL file, converts to ATIF using ``nat.atof.convert``,
+Reads each example JSONL file, converts to ATIF using
+``nat.atof.scripts.atof_to_atif_converter.convert_file``,
 and writes the resulting trajectory as formatted JSON.
 
 Usage:

@@ -34,28 +34,27 @@ from nat.atof.io import write_jsonl
 from nat.atof.scope_type import ScopeType
 
 __all__ = [
-    # Event types
-    "Event",
-    "ScopeStartEvent",
-    "ScopeEndEvent",
-    "LLMStartEvent",
-    "LLMEndEvent",
-    "ToolStartEvent",
-    "ToolEndEvent",
-    "MarkEvent",  # Enums and flags
-    "ScopeType",
-    "ScopeAttributes",
-    "LLMAttributes",
-    "ToolAttributes",  # Codec types
     "AnnotatedLLMRequest",
     "AnnotatedLLMResponse",
     "CodecContentPart",
+    "Event",
     "GenerationParams",
+    "LLMAttributes",
+    "LLMEndEvent",
+    "LLMStartEvent",
+    "MarkEvent",
     "Message",
     "RequestToolCall",
     "ResponseToolCall",
+    "ScopeAttributes",
+    "ScopeEndEvent",
+    "ScopeStartEvent",
+    "ScopeType",
+    "ToolAttributes",
     "ToolDefinition",
-    "Usage",  # I/O
+    "ToolEndEvent",
+    "ToolStartEvent",
+    "Usage",
     "read_jsonl",
     "write_jsonl",
 ]
