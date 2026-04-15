@@ -120,7 +120,6 @@ async def test_add_items_skips_item_with_no_text(
     mock_client.create_long_term_memory.assert_not_called()
 
 
-@pytest.mark.asyncio
 async def test_search_success(
     agent_memory_editor: AgentMemoryServerEditor,
     mock_client: AsyncMock,
