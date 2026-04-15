@@ -71,7 +71,7 @@ python -m nat.atif.scripts.export_trajectory_to_phoenix.export_atif_trajectory_t
 
 ### Processing flow
 
-```
+```text
 ATIF Trajectory (dict)
   -> ATIFTrajectorySpanExporter.convert()  -> list[Span]
   -> convert_spans_to_otel_batch()         -> list[OtelSpan]
@@ -82,7 +82,7 @@ ATIF Trajectory (dict)
 
 Each trajectory produces the following span tree:
 
-```
+```text
 WORKFLOW span  (root -- covers entire trajectory duration)
  |-- LLM span  (agent step with tool_calls)
  |   |-- TOOL span  (tool call 1)

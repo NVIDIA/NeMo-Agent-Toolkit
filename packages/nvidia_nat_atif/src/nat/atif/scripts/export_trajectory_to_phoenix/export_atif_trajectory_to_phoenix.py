@@ -64,13 +64,21 @@ def main() -> None:
         project=args.project,
     )
 
-    for path in args.files:
-        if not path.exists():
-            logging.error("File not found: %s", path)
-            sys.exit(1)
+    has_failure = False
 
-        with open(path) as f:
-            trajectory = json.load(f)
+    for path in args.files:
+        if not path.exists() or not path.is_file():
+            logging.error("File not found or not a regular file: %s", path)
+            has_failure = True
+            continue
+
+        try:
+            with open(path) as f:
+                trajectory = json.load(f)
+        except (PermissionError, json.JSONDecodeError) as e:
+            logging.error("Failed to read/parse %s: %s", path, e)
+            has_failure = True
+            continue
 
         agent_name = trajectory.get("agent", {}).get("name", "unknown")
         session_id = trajectory.get("session_id", "unknown")
@@ -83,9 +91,18 @@ def main() -> None:
             num_steps,
             session_id,
         )
-        exporter.export(trajectory)
+
+        try:
+            exporter.export(trajectory)
+        except Exception as e:
+            logging.error("Failed to export %s: %s", path, e)
+            has_failure = True
+            continue
 
     logging.info("Done — open %s and select project '%s'", args.endpoint.rsplit("/v1/traces", 1)[0], args.project)
+
+    if has_failure:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

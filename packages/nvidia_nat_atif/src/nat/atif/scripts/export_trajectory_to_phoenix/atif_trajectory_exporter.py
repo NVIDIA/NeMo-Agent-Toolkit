@@ -127,9 +127,28 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
             Flat list of Span objects.  The first element is always
             the root WORKFLOW span.
         """
-        session_id: str = trajectory_data["session_id"]
-        agent_name: str = trajectory_data["agent"]["name"]
-        steps: list[dict[str, Any]] = trajectory_data["steps"]
+        if not isinstance(trajectory_data, dict):
+            logger.error("Trajectory data is not a dict (got %s), skipping", type(trajectory_data).__name__)
+            return []
+
+        session_id = trajectory_data.get("session_id")
+        if not isinstance(session_id, str) or not session_id:
+            logger.error("Trajectory missing or invalid 'session_id': %r, skipping", session_id)
+            return []
+
+        agent = trajectory_data.get("agent")
+        if not isinstance(agent, dict):
+            logger.error("Trajectory %s: 'agent' is not a dict (got %r), skipping", session_id, type(agent).__name__)
+            return []
+        agent_name = agent.get("name")
+        if not isinstance(agent_name, str) or not agent_name:
+            logger.error("Trajectory %s: 'agent.name' missing or empty, skipping", session_id)
+            return []
+
+        steps = trajectory_data.get("steps")
+        if not isinstance(steps, list):
+            logger.error("Trajectory %s: 'steps' is not a list (got %r), skipping", session_id, type(steps).__name__)
+            return []
         trace_id = _new_trace_id()
 
         span_lookup: dict[str, Span] = {}
@@ -509,8 +528,12 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
         span_lookup: dict[str, Span],
     ) -> Span:
         """Build a TOOL span for a single tool call."""
-        start_epoch = invocation.start_timestamp if invocation and invocation.start_timestamp else 0.0
-        end_epoch = invocation.end_timestamp if invocation else None
+        end_epoch = invocation.end_timestamp if invocation and invocation.end_timestamp is not None else None
+        start_epoch = (
+            invocation.start_timestamp
+            if invocation and invocation.start_timestamp is not None
+            else (end_epoch if end_epoch is not None else 0.0)
+        )
 
         span = self._make_span(
             name=tool_name,
@@ -681,14 +704,15 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
                 if ti and ti.get("end_timestamp"):
                     inv_last = max(inv_last, ti["end_timestamp"])
 
-        # Prefer invocation timestamps; fall back to ISO timestamps
-        has_inv = inv_first != float("inf")
-        first_ts = inv_first if has_inv else iso_first
-        last_ts = inv_last if has_inv else iso_last
+        # Prefer invocation timestamps per-boundary; fall back to ISO independently
+        has_inv_first = inv_first != float("inf")
+        has_inv_last = inv_last != 0.0
+        first_ts = inv_first if has_inv_first else iso_first
+        last_ts = inv_last if has_inv_last else iso_last
 
         if first_ts == float("inf"):
             first_ts = 0.0
-        if last_ts == 0.0:
+        if last_ts == float("inf") or last_ts == 0.0:
             last_ts = first_ts
 
         return first_ts, last_ts

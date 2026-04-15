@@ -87,5 +87,6 @@ class ATIFTrajectoryPhoenixExporter:
                 trajectory_data.get("session_id", "unknown"),
                 self._project,
             )
-        except Exception:
-            logger.exception("Error exporting trajectory spans to Phoenix")
+        except Exception as e:
+            logger.error("Error exporting trajectory spans to Phoenix: %s", e)
+            raise
