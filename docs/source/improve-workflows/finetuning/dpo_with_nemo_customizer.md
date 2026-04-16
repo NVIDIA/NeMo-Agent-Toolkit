@@ -19,7 +19,7 @@ limitations under the License.
 
 # DPO with NeMo Customizer
 
-This guide covers Direct Preference Optimization (DPO) training using the NeMo Agent Toolkit finetuning harness integrated with [NVIDIA NeMo Customizer](https://docs.nvidia.com/nemo/microservices/latest/customizer/tutorials/embedding-customization-job.html).
+This guide covers Direct Preference Optimization (DPO) training using the NeMo Agent Toolkit finetuning harness integrated with [NVIDIA NeMo Customizer](https://docs.nvidia.com/nemo/microservices/latest/customizer/index.html).
 This integration enables preference-based finetuning of large language models using NVIDIA's enterprise-grade training infrastructure.
 
 ## Understanding DPO
@@ -947,4 +947,4 @@ See the example's README for detailed instructions.
 - [Extending the Finetuning Harness](../../extend/custom-components/finetuning.md) - Creating custom components
 - [OpenPipe ART Integration](rl_with_openpipe.md) - Alternative RL training with ART
 - [Custom Evaluators](../../extend/custom-components/custom-evaluator.md) - Creating reward functions
-- [NeMo Customizer Documentation](https://docs.nvidia.com/nemo/microservices/latest/customizer/tutorials/embedding-customization-job.html) - Official NeMo Customizer documentation
+- [NeMo Customizer Documentation](https://docs.nvidia.com/nemo/microservices/latest/customizer/index.html) - Official NeMo Customizer documentation
