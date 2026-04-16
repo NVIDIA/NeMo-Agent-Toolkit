@@ -20,6 +20,8 @@ natural language queries and perform basic text completion tasks.
 Supports OpenAI-style message history when used with the chat completions API.
 """
 
+import logging
+
 from pydantic import Field
 
 from nat.builder.builder import Builder
@@ -33,6 +35,8 @@ from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import LLMRef
 from nat.data_models.function import FunctionBaseConfig
 from nat.utils.type_converter import GlobalTypeConverter
+
+logger = logging.getLogger(__name__)
 
 
 class ChatCompletionConfig(FunctionBaseConfig, name="chat_completion"):
@@ -114,6 +118,13 @@ async def register_chat_completion(config: ChatCompletionConfig, builder: Builde
             return chat_response
 
         except Exception as e:
+            # Log the full exception server-side for operators to triage.
+            # Do NOT include the exception message, traceback class names, or
+            # other internal details in the user-facing response: the response
+            # is returned to the caller (potentially over the network) and may
+            # surface stack frames, DB schemas, API endpoints, or file paths
+            # that constitute an information-disclosure risk.
+            logger.exception("chat completion failed")
             last_content = ""
             try:
                 msg = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequest)
@@ -121,10 +132,11 @@ async def register_chat_completion(config: ChatCompletionConfig, builder: Builde
                     last = msg.messages[-1].content
                     last_content = last if isinstance(last, str) else str(last)
             except Exception:
-                pass
+                logger.debug("failed to extract last user message for error response", exc_info=True)
+            del e  # explicitly drop the reference; do not leak it into the response
             return (f"I apologize, but I encountered an error while processing your "
                     f"query: '{last_content}'. Please try rephrasing your question or try "
-                    f"again later. Error: {str(e)}")
+                    f"again later.")
 
     yield FunctionInfo.from_fn(
         _chat_completion,
