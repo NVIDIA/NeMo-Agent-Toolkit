@@ -26,7 +26,7 @@ from openinference.instrumentation import dangerously_using_project
 from opentelemetry.sdk.resources import Resource
 from phoenix.otel import HTTPSpanExporter
 
-from nat.atif.scripts.export_trajectory_to_phoenix.atif_trajectory_exporter import ATIFTrajectorySpanExporter
+from nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.atif_trajectory_exporter import ATIFTrajectorySpanExporter
 from nat.plugins.opentelemetry.span_converter import convert_spans_to_otel_batch
 
 logger = logging.getLogger(__name__)

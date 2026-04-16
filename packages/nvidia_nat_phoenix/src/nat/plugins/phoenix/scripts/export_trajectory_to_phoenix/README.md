@@ -27,7 +27,7 @@ OpenTelemetry-compatible visualization tools such as Phoenix.
 From the repository root, install the required packages from source:
 
 ```bash
-uv pip install -e packages/nvidia_nat_core -e packages/nvidia_nat_atif -e packages/nvidia_nat_phoenix -e packages/nvidia_nat_opentelemetry
+uv pip install -e packages/nvidia_nat_phoenix
 ```
 
 ### Starting the Phoenix Server
@@ -44,18 +44,18 @@ Once running, the Phoenix UI is available at `http://localhost:6006`.
 
 ```bash
 # Single file
-python -m nat.atif.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix trajectory.json
+python -m nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix trajectory.json
 
 # Multiple files
-python -m nat.atif.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix *.json
+python -m nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix *.json
 
 # Custom endpoint and project
-python -m nat.atif.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix trajectory.json \
+python -m nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix trajectory.json \
     --endpoint http://localhost:6006/v1/traces \
     --project my-project
 
 # Enable debug logging
-python -m nat.atif.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix -v trajectory.json
+python -m nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix -v trajectory.json
 ```
 
 ### CLI options

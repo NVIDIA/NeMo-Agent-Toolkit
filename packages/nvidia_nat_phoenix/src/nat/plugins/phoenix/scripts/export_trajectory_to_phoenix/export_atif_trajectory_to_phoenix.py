@@ -24,7 +24,7 @@ import logging
 import sys
 from pathlib import Path
 
-from nat.atif.scripts.export_trajectory_to_phoenix.atif_trajectory_phoenix_exporter import ATIFTrajectoryPhoenixExporter
+from nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.atif_trajectory_phoenix_exporter import ATIFTrajectoryPhoenixExporter
 
 
 def main() -> None:
