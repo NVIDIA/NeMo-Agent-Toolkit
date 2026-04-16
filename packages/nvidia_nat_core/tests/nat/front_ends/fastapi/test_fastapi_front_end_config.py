@@ -141,3 +141,63 @@ def test_fast_api_front_end_config(config_kwargs: dict):
         assert isinstance(model.use_gunicorn, bool)
         assert (isinstance(model.runner_class, str) or model.runner_class is None)
         assert (isinstance(model.object_store, str) or model.object_store is None)
+
+
+class TestCorsWildcardCredentialsValidator:
+    """The CORS validator must reject wildcard origin combined with credentials."""
+
+    def test_wildcard_origin_with_credentials_is_rejected(self):
+        """allow_origins=['*'] + allow_credentials=True must fail validation.
+
+        Per the CORS spec, browsers reject this combination. Accepting it in
+        config silently produces a server that looks permissive but is broken
+        in every browser, and signals operator intent that would be genuinely
+        unsafe if the browser check were bypassed. CWE-942.
+        """
+        with pytest.raises(ValueError, match="cannot be combined"):
+            FastApiFrontEndConfig.CrossOriginResourceSharing(
+                allow_origins=["*"],
+                allow_credentials=True,
+            )
+
+    def test_wildcard_origin_without_credentials_is_allowed(self):
+        """Wildcard origin alone (no credentials) is a valid CORS config."""
+        cors = FastApiFrontEndConfig.CrossOriginResourceSharing(
+            allow_origins=["*"],
+            allow_credentials=False,
+        )
+        assert cors.allow_origins == ["*"]
+        assert cors.allow_credentials is False
+
+    def test_explicit_origins_with_credentials_is_allowed(self):
+        """Explicit origin list + credentials is the intended pattern for authenticated CORS."""
+        cors = FastApiFrontEndConfig.CrossOriginResourceSharing(
+            allow_origins=["https://app.example.com"],
+            allow_credentials=True,
+        )
+        assert cors.allow_credentials is True
+
+    @pytest.mark.parametrize("regex", [".*", ".+", "^.*$", "^.+$"])
+    def test_match_everything_regex_with_credentials_is_rejected(self, regex):
+        """A match-everything regex + credentials is the same foot-gun as '*'."""
+        with pytest.raises(ValueError, match="match-everything"):
+            FastApiFrontEndConfig.CrossOriginResourceSharing(
+                allow_origin_regex=regex,
+                allow_credentials=True,
+            )
+
+    def test_specific_regex_with_credentials_is_allowed(self):
+        """A bounded regex that matches specific origins + credentials is allowed."""
+        cors = FastApiFrontEndConfig.CrossOriginResourceSharing(
+            allow_origin_regex=r"^https://(app|admin)\.example\.com$",
+            allow_credentials=True,
+        )
+        assert cors.allow_credentials is True
+
+    def test_wildcard_origin_in_list_with_credentials_is_rejected(self):
+        """Wildcard mixed with explicit origins + credentials also fails."""
+        with pytest.raises(ValueError, match="cannot be combined"):
+            FastApiFrontEndConfig.CrossOriginResourceSharing(
+                allow_origins=["*", "https://app.example.com"],
+                allow_credentials=True,
+            )

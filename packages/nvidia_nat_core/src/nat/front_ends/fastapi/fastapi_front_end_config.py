@@ -24,6 +24,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import SerializeAsAny
 from pydantic import field_validator
+from pydantic import model_validator
 
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.evaluator import EvalInputItem
@@ -217,6 +218,36 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             default=600,
             description="Sets a maximum time in seconds for browsers to cache CORS responses.",
         )
+
+        @model_validator(mode="after")
+        def _reject_wildcard_origin_with_credentials(self):
+            """Reject configs that pair wildcard origins with credentials.
+
+            Per the CORS spec (Fetch §3.2, MDN CORS), a response cannot set
+            Access-Control-Allow-Origin: * while Access-Control-Allow-Credentials
+            is true — browsers refuse such responses. Accepting the combination
+            in the config silently produces a server that looks permissive but
+            is broken in every browser, AND signals operator intent that would
+            be genuinely unsafe if the browser check were ever bypassed
+            (CVE-class misconfiguration). Fail fast with a clear error.
+
+            CWE-942 — Permissive Cross-domain Policy with Untrusted Domains.
+            """
+            if self.allow_credentials:
+                if self.allow_origins and "*" in self.allow_origins:
+                    raise ValueError(
+                        "CORS misconfiguration: 'allow_credentials=True' cannot be combined with "
+                        "'allow_origins=[\"*\"]'. Per the CORS spec, browsers reject responses that "
+                        "set Access-Control-Allow-Origin: * when credentials are allowed. "
+                        "Specify an explicit list of trusted origins (e.g. ['https://app.example.com']) "
+                        "or disable credentials.")
+                if self.allow_origin_regex and self.allow_origin_regex.strip() in (".*", ".+", "^.*$", "^.+$"):
+                    raise ValueError(
+                        "CORS misconfiguration: 'allow_credentials=True' cannot be combined with a "
+                        "match-everything 'allow_origin_regex' ({!r}). Use an explicit regex that "
+                        "matches only trusted origins (e.g. r'^https://(app|admin)\\.example\\.com$') "
+                        "or disable credentials.".format(self.allow_origin_regex))
+            return self
 
     root_path: str = Field(default="", description="The root path for the API")
     host: str = Field(default="localhost", description="Host to bind the server to")
