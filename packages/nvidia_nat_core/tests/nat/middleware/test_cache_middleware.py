@@ -346,6 +346,19 @@ class TestSimilarityThresholdFloor:
         with pytest.raises(ValueError, match="must be a number"):
             CacheMiddleware(enabled_mode="always", similarity_threshold="high")  # type: ignore[arg-type]
 
+    @pytest.mark.parametrize("bad_bool", [True, False])
+    def test_threshold_bool_is_rejected(self, bad_bool):
+        """`isinstance(True, int)` is True in Python — reject bools explicitly
+        so a config with the wrong key type doesn't silently become 1.0 or 0.0."""
+        with pytest.raises(ValueError, match="got bool"):
+            CacheMiddleware(enabled_mode="always", similarity_threshold=bad_bool)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
+    def test_threshold_non_finite_is_rejected(self, bad_value):
+        """NaN, +inf, -inf must be rejected before the range comparison."""
+        with pytest.raises(ValueError, match="must be finite"):
+            CacheMiddleware(enabled_mode="always", similarity_threshold=bad_value)
+
 
 class TestMaxEntriesLruEviction:
     """The cache must bound its size to prevent memory-exhaustion DoS.
@@ -366,6 +379,16 @@ class TestMaxEntriesLruEviction:
     def test_negative_max_entries_is_rejected(self):
         with pytest.raises(ValueError, match="positive integer"):
             CacheMiddleware(enabled_mode="always", similarity_threshold=1.0, max_entries=-5)
+
+    @pytest.mark.parametrize("bad_bool", [True, False])
+    def test_bool_max_entries_is_rejected(self, bad_bool):
+        """Same bool-as-int foot-gun protection as similarity_threshold."""
+        with pytest.raises(ValueError, match="positive integer"):
+            CacheMiddleware(
+                enabled_mode="always",
+                similarity_threshold=1.0,
+                max_entries=bad_bool,  # type: ignore[arg-type]
+            )
 
     async def test_cache_evicts_oldest_when_exceeding_max_entries(self, middleware_context):
         """Insert more unique entries than max_entries; verify size stays bounded."""
