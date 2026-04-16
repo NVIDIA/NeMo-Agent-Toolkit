@@ -52,6 +52,7 @@ dependencies = [
 # Keep sorted!!!
 a2a = ["nvidia-nat-a2a == {version}"]
 adk = ["nvidia-nat-adk == {version}"]
+agent-memory-server = ["nvidia-nat-agent-memory-server == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
 app = ["nvidia-nat-app == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
@@ -94,6 +95,7 @@ pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
 most = [
   "nvidia-nat-a2a == {version}",
   "nvidia-nat-adk == {version}",
+  "nvidia-nat-agent-memory-server == {version}",
   "nvidia-nat-agno == {version}",
   "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
@@ -232,6 +234,7 @@ managed = true
 # Packages
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
 nvidia-nat-adk = { path = "packages/nvidia_nat_adk", editable = true }
+nvidia-nat-agent-memory-server = { workspace = true }
 nvidia-nat-agno = { path = "packages/nvidia_nat_agno", editable = true }
 nvidia-nat-app = { path = "packages/nvidia_nat_app", editable = true }
 nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
@@ -315,6 +318,11 @@ nat_simple_web_query_eval = { path = "examples/evaluation_and_profiling/simple_w
 nat_strands_demo = { path = "examples/frameworks/strands_demo", editable = true }
 nat_user_report = { path = "examples/object_store/user_report", editable = true }
 text_file_ingest = { path = "examples/documentation_guides/workflows/text_file_ingest", editable = true }
+
+[tool.uv.workspace]
+members = [
+    "packages/nvidia_nat_agent_memory_server",
+]
 
 [tool.ruff]
 # Set the maximum line length to 120.
