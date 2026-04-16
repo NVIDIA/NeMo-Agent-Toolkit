@@ -101,6 +101,12 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SALT: ${LANGFUSE_SALT:-mysalt}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 
   langfuse-web:
@@ -119,6 +125,13 @@ services:
       LANGFUSE_INIT_USER_EMAIL: test@localhost.dev
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PW:-password123}
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-mysecret}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/public/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 
   local-sandbox:
     build:
@@ -178,6 +191,10 @@ services:
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-my_password}
     restart: unless-stopped
+    healthcheck:
+        test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+        timeout: 20s
+        retries: 10
 
   nginx-rewrite-models:
     build: ./nginx
@@ -186,7 +203,6 @@ services:
       # This needs to include the port even if it is the default port for the protocol
       # ex: "https://some-server.com:443" and "http://some-server.com:80"
       - NAT_CI_PROXIED_OPENAI_BASE_URL
-
     ports:
       - 8088:8088
     restart: unless-stopped
@@ -231,11 +247,17 @@ services:
       - plugins.security.disabled=true
 
   phoenix:
-    image: arizephoenix/phoenix:latest
+    image: arizephoenix/phoenix:13.22
     container_name: test-phoenix
     ports:
       - "6006:6006"  # UI and OTLP HTTP collector
       - "4317:4317"  # OTLP gRPC collector
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:6006/healthz')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   postgres:
     container_name: test-postgres
