@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from collections import OrderedDict
 from collections.abc import AsyncIterator
 from typing import Any
@@ -108,9 +109,19 @@ class CacheMiddleware(FunctionMiddleware):
             ValueError: If similarity_threshold is outside [_MIN_FUZZY_THRESHOLD, 1.0]
                 or max_entries is not a positive integer.
         """
+        # Reject bool explicitly — `isinstance(True, int)` is True in Python,
+        # and `True`/`False` silently sneaking through as numeric is a classic
+        # config bug (user passes the wrong key, gets no error). Check bool
+        # FIRST so the "must be a number" message doesn't lie.
+        if isinstance(similarity_threshold, bool):
+            raise ValueError(
+                f"similarity_threshold must be a number, got bool ({similarity_threshold!r})")
         if not isinstance(similarity_threshold, (int, float)):
             raise ValueError(
                 f"similarity_threshold must be a number, got {type(similarity_threshold).__name__}")
+        if not math.isfinite(similarity_threshold):
+            raise ValueError(
+                f"similarity_threshold must be finite, got {similarity_threshold!r}")
         if similarity_threshold < _MIN_FUZZY_THRESHOLD or similarity_threshold > 1.0:
             raise ValueError(
                 f"similarity_threshold={similarity_threshold} is outside the safe range "
@@ -118,7 +129,8 @@ class CacheMiddleware(FunctionMiddleware):
                 "a crafted input can collide with a legitimate user's cached key. Use 1.0 "
                 "for exact matching (recommended), or a value >= "
                 f"{_MIN_FUZZY_THRESHOLD} for fuzzy matching.")
-        if not isinstance(max_entries, int) or max_entries < 1:
+        # Same bool-as-int foot-gun applies to max_entries.
+        if isinstance(max_entries, bool) or not isinstance(max_entries, int) or max_entries < 1:
             raise ValueError(f"max_entries must be a positive integer, got {max_entries!r}")
 
         super().__init__(is_final=True)

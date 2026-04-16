@@ -19,6 +19,8 @@ from typing import Literal
 from pydantic import Field
 
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
+from nat.middleware.cache.cache_middleware import _DEFAULT_MAX_CACHE_ENTRIES
+from nat.middleware.cache.cache_middleware import _MIN_FUZZY_THRESHOLD
 
 
 class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
@@ -31,14 +33,33 @@ class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
         enabled_mode: Controls when caching is active:
             - "always": Cache is always enabled
             - "eval": Cache only active when Context.is_evaluating is True
-        similarity_threshold: Float between 0 and 1 for input matching:
-            - 1.0: Exact string matching (fastest)
-            - < 1.0: Fuzzy matching using difflib similarity
+        similarity_threshold: Float in [_MIN_FUZZY_THRESHOLD, 1.0] for input
+            matching:
+            - 1.0: Exact string matching (fastest, recommended)
+            - >= _MIN_FUZZY_THRESHOLD: Fuzzy matching via difflib. Values
+              below this bound are rejected as a cache-poisoning risk —
+              crafted inputs at lower thresholds can collide with a
+              legitimate user's cached key.
+        max_entries: Upper bound on cached entries. When exceeded, the
+            least-recently-used entry is evicted. Must be a positive int;
+            defaults to _DEFAULT_MAX_CACHE_ENTRIES.
     """
 
     enabled_mode: Literal["always", "eval"] = Field(
         default="eval", description="When caching is enabled: 'always' or 'eval' (only during evaluation)")
-    similarity_threshold: float = Field(default=1.0,
-                                        ge=0.0,
-                                        le=1.0,
-                                        description="Similarity threshold between 0 and 1. Use 1.0 for exact matching")
+    similarity_threshold: float = Field(
+        default=1.0,
+        ge=_MIN_FUZZY_THRESHOLD,
+        le=1.0,
+        description=(
+            f"Similarity threshold in [{_MIN_FUZZY_THRESHOLD}, 1.0]. Use 1.0 for exact matching "
+            "(recommended). Lower values enable fuzzy matching but are bounded below to prevent "
+            "cache-poisoning collisions with legitimate cached keys."),
+    )
+    max_entries: int = Field(
+        default=_DEFAULT_MAX_CACHE_ENTRIES,
+        ge=1,
+        description=("Maximum number of cache entries before LRU eviction. Must be >= 1. "
+                     "Prevents memory-exhaustion DoS from unbounded cache growth under "
+                     "sustained unique inputs."),
+    )
