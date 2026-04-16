@@ -35,19 +35,21 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
     Tool that retrieves relevant contexts from web search (using Exa) for the given question.
     Requires an EXA_API_KEY.
     """
-    max_results: int = Field(default=3, ge=1, description="Maximum number of search results to return.")
+    max_results: int = Field(default=10, ge=1, description="Maximum number of search results to return.")
     api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
                                            description="The API key for the Exa service.")
     max_retries: int = Field(default=3, ge=1, description="Maximum number of retries for the search request")
     search_type: Literal["auto", "fast", "deep", "neural", "instant"] = Field(
-        default="auto",
-        description="Exa search type - 'auto', 'fast', 'deep', 'neural', or 'instant'")
-    livecrawl: Literal["always", "fallback", "never"] = Field(
-        default="fallback",
-        description="Livecrawl behavior - 'always', 'fallback', or 'never'")
+        default="auto", description="Exa search type - 'auto', 'fast', 'deep', 'neural', or 'instant'")
+    livecrawl: Literal["always", "fallback",
+                       "never"] = Field(default="fallback",
+                                        description="Livecrawl behavior - 'always', 'fallback', or 'never'")
     max_query_length: int = Field(
-        default=2000, ge=1,
+        default=2000,
+        ge=1,
         description="Maximum query length in characters. Queries exceeding this limit will be truncated.")
+    highlights: bool = Field(default=True, description="Whether to include highlights in search results.")
+    text: bool = Field(default=True, description="Whether to include full text content in search results.")
 
 
 @register_function(config_type=ExaInternetSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -86,7 +88,8 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
                     num_results=tool_config.max_results,
                     type=tool_config.search_type,
                     livecrawl=tool_config.livecrawl,
-                    text_contents_options={"max_characters": 3000},
+                    text_contents_options={"max_characters": 3000} if tool_config.text else None,
+                    highlights=tool_config.highlights or None,
                 )
                 # On error, ExaSearchResults may return a string error message
                 if isinstance(search_response, str):
@@ -95,8 +98,8 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
                     return f"No web search results found for: {question}"
                 # Format - SearchResponse.results contains Result objects with .url and .text attrs
                 web_search_results = "\n\n---\n\n".join([
-                    f'<Document href="{doc.url}"/>\n{doc.text}\n</Document>'
-                    for doc in search_response.results if doc.text
+                    f'<Document href="{doc.url}"/>\n{doc.text}\n</Document>' for doc in search_response.results
+                    if doc.text
                 ])
                 return web_search_results or f"No web search results found for: {question}"
             except Exception:

@@ -23,6 +23,7 @@ from pydantic import ValidationError
 
 # -- Config validation tests --
 
+
 @pytest.mark.parametrize("constructor_args", [{}, {
     "api_key": ""
 }, {
@@ -78,6 +79,7 @@ def test_invalid_livecrawl_rejected():
 
 
 # -- Tool behavior tests --
+
 
 @pytest.fixture
 def tool_config():
