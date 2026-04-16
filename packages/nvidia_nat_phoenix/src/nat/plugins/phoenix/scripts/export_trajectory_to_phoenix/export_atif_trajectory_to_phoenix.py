@@ -24,9 +24,12 @@ import logging
 import sys
 from pathlib import Path
 
+# yapf: disable
 from nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.atif_trajectory_phoenix_exporter import (
     ATIFTrajectoryPhoenixExporter,
 )
+
+# yapf: enable
 
 
 def main() -> None:
