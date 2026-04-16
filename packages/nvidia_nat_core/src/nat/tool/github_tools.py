@@ -372,6 +372,45 @@ async def github_tool(config: GithubGroupConfig, _builder: Builder):
 
 class GithubFilesGroupConfig(FunctionBaseConfig, name="github_files_tool"):
     timeout: int = Field(default=5, description="Timeout in seconds for HTTP requests")
+    allowed_repos: list[str] | None = Field(
+        default=None,
+        description=(
+            "Optional allowlist of GitHub repositories the tool may fetch from. "
+            "Each entry is either a full 'org/repo' or an 'org/*' wildcard. "
+            "When None (the default), any public GitHub repository is reachable — "
+            "which means a prompt-injected agent can read arbitrary public source "
+            "code (secrets in public forks, private PoC repos, etc.). Operators who "
+            "need a specific scope (e.g., only their own org) should set this to "
+            "['my-org/*'] or an explicit repo list. Matching is case-insensitive."),
+    )
+
+
+def _repo_path_is_allowed(repo_path: str, allowed_repos: list[str] | None) -> bool:
+    """Check whether a repo_path ('org/repo') matches the configured allowlist.
+
+    Returns True if:
+      - allowed_repos is None (no restriction — backward compatible default), or
+      - repo_path matches an explicit 'org/repo' entry (case-insensitive), or
+      - repo_path matches an 'org/*' wildcard entry (case-insensitive).
+
+    Returns False for any malformed entry or non-matching repo_path.
+    """
+    if allowed_repos is None:
+        return True
+    if not repo_path or "/" not in repo_path:
+        return False
+    repo_lower = repo_path.lower()
+    repo_org = repo_lower.split("/", 1)[0]
+    for entry in allowed_repos:
+        if not isinstance(entry, str) or "/" not in entry:
+            continue
+        entry_lower = entry.lower()
+        if entry_lower == repo_lower:
+            return True
+        entry_org, entry_repo = entry_lower.split("/", 1)
+        if entry_repo == "*" and entry_org == repo_org:
+            return True
+    return False
 
 
 @register_function(config_type=GithubFilesGroupConfig)
@@ -420,6 +459,15 @@ async def github_files_tool(config: GithubFilesGroupConfig, _builder: Builder):
                         "or 'https://github.com/org/repo/blob/main/README.md#L409-L417'")
 
             file_metadata = FileMetadata(**match.groupdict())
+
+            # Allowlist check: if the operator has configured `allowed_repos`, refuse
+            # URLs outside that scope. With no allowlist the default stays permissive
+            # for backward compatibility — the description on the config field calls
+            # out the security implication so the operator can decide.
+            if not _repo_path_is_allowed(file_metadata.repo_path, config.allowed_repos):
+                return (f"Repository '{file_metadata.repo_path}' is not in the configured "
+                        "allowed_repos list for this tool. Ask the operator to add it to "
+                        "the github_files_tool configuration if this fetch is expected.")
 
             # The following URL is the raw URL of the file. refs/heads/ always points to the top commit of the branch
             raw_url = f"https://raw.githubusercontent.com/{file_metadata.repo_path}/refs/heads/{file_metadata.file_path}"
