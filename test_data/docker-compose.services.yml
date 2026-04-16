@@ -102,7 +102,7 @@ services:
       REDIS_PORT: 6379
       SALT: ${LANGFUSE_SALT:-mysalt}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3030/api/health"]
+      test: ["CMD-SHELL", "wget -q --spider http://$(hostname):3030/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -126,7 +126,7 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PW:-password123}
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-mysecret}
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/public/health"]
+      test: ["CMD-SHELL", "wget -q --spider http://$(hostname):3000/api/public/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -206,6 +206,11 @@ services:
     ports:
       - 8088:8088
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8088"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   oauth2-server:
     build: ../examples/front_ends/simple_auth
@@ -245,6 +250,12 @@ services:
     environment:
       - discovery.type=single-node
       - plugins.security.disabled=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   phoenix:
     image: arizephoenix/phoenix:13.22
