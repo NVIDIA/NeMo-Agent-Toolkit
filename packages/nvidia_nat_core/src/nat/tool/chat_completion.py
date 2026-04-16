@@ -132,7 +132,7 @@ async def register_chat_completion(config: ChatCompletionConfig, builder: Builde
                     last = msg.messages[-1].content
                     last_content = last if isinstance(last, str) else str(last)
             except Exception:
-                logger.debug("failed to extract last user message for error response", exc_info=True)
+                logger.exception("failed to extract last user message for error response")
             del e  # explicitly drop the reference; do not leak it into the response
             return (f"I apologize, but I encountered an error while processing your "
                     f"query: '{last_content}'. Please try rephrasing your question or try "
