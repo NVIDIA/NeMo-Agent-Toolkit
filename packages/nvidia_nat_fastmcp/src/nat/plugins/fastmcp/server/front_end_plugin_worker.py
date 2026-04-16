@@ -107,6 +107,7 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
 
     async def _default_add_routes(self, mcp: FastMCP, builder: WorkflowBuilder) -> None:
         """Default implementation for adding routes to FastMCP."""
+        from nat.plugins.fastmcp.server.tool_converter import FastMCPToolOutputOptions
         from nat.plugins.fastmcp.server.tool_converter import register_function_with_mcp
 
         # Set up the health endpoint
@@ -146,8 +147,16 @@ class FastMCPFrontEndPluginWorkerBase(ABC):
                                                                               entry_function=function_name)
 
         # Register each function with FastMCP, passing SessionManager for observability
+        output_options = FastMCPToolOutputOptions(
+            structured_tool_output=self.front_end_config.structured_tool_output,
+            include_atif_meta=self.front_end_config.include_atif_meta,
+        )
         for function_name, session_manager in session_managers.items():
-            register_function_with_mcp(mcp, function_name, session_manager, function=functions.get(function_name))
+            register_function_with_mcp(mcp,
+                                       function_name,
+                                       session_manager,
+                                       function=functions.get(function_name),
+                                       output_options=output_options)
 
         if not session_managers:
             raise RuntimeError("No functions found in workflow. Please check your configuration.")

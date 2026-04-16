@@ -14,10 +14,15 @@
 # limitations under the License.
 """Tests for FastMCP CLI and server wiring."""
 
+import asyncio
 from pathlib import Path
+from unittest.mock import AsyncMock
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import pytest
 from fastmcp import FastMCP
+from fastmcp.tools.tool import ToolResult
 from fastmcp.server.auth import RemoteAuthProvider
 from fastmcp.server.auth.providers.introspection import IntrospectionTokenVerifier
 from pydantic import BaseModel
@@ -35,6 +40,9 @@ from nat.plugins.fastmcp.cli.utils import _filter_change_set
 from nat.plugins.fastmcp.cli.utils import iter_file_changes
 from nat.plugins.fastmcp.server.front_end_config import FastMCPFrontEndConfig
 from nat.plugins.fastmcp.server.front_end_plugin_worker import FastMCPFrontEndPluginWorker
+from nat.plugins.fastmcp.server.tool_converter import FastMCPToolOutputOptions
+from nat.plugins.fastmcp.server.tool_converter import create_function_wrapper
+from nat.plugins.fastmcp.server.tool_converter import register_function_with_mcp
 
 
 class _MockTestSchema(BaseModel):
@@ -84,6 +92,19 @@ class _NoSchemaFunction(FunctionBase[str, str, str]):
 
     async def _astream(self, value: str):
         yield value
+
+
+def _create_mock_session_manager(result_value):
+    mock_session_manager = MagicMock()
+    mock_session_manager.workflow = MagicMock()
+    mock_session_manager.workflow.input_schema = _MockTestSchema
+
+    mock_runner = MagicMock()
+    mock_runner.__aenter__ = AsyncMock(return_value=mock_runner)
+    mock_runner.__aexit__ = AsyncMock(return_value=None)
+    mock_runner.result = AsyncMock(return_value=result_value)
+    mock_session_manager.run = MagicMock(return_value=mock_runner)
+    return mock_session_manager
 
 
 def test_fastmcp_cli_groups() -> None:
@@ -241,3 +262,69 @@ def test_fastmcp_health_endpoint():
         data = resp.json()
         assert data["status"] == "healthy"
         assert data["server_name"] == "Test Server"
+
+
+async def test_create_function_wrapper_returns_structured_tool_result():
+    session_manager = _create_mock_session_manager({"value": 42})
+    wrapper = create_function_wrapper(
+        "structured_tool",
+        session_manager,
+        _MockTestSchema,
+        output_options=FastMCPToolOutputOptions(structured_tool_output=True),
+    )
+
+    result = await wrapper(text="hello", number=1)
+
+    assert isinstance(result, ToolResult)
+    assert result.structured_content == {
+        "result_text": "{\"value\": 42}",
+        "result_json": {
+            "value": 42
+        }
+    }
+    assert result.meta is None
+
+
+async def test_create_function_wrapper_includes_atif_meta():
+    session_manager = _create_mock_session_manager("ok")
+    wrapper = create_function_wrapper(
+        "atif_tool",
+        session_manager,
+        _MockTestSchema,
+        output_options=FastMCPToolOutputOptions(include_atif_meta=True),
+    )
+
+    future = asyncio.Future()
+    future.set_result([{"mock": "step"}])
+    with patch("nat.builder.runtime_event_subscriber.pull_intermediate", return_value=future):
+        with patch("nat.plugins.fastmcp.server.tool_converter._build_atif_meta",
+                   return_value={
+                       "run_id": "run-123",
+                       "schema_version": "1.6",
+                       "trajectory": {
+                           "steps": []
+                       }
+                   }):
+            result = await wrapper(text="hello", number=1)
+
+    assert isinstance(result, ToolResult)
+    assert result.meta == {"atif": {"run_id": "run-123", "schema_version": "1.6", "trajectory": {"steps": []}}}
+
+
+def test_register_function_with_mcp_sets_output_schema_for_structured_mode():
+    mock_mcp = MagicMock()
+    mock_session_manager = MagicMock()
+    mock_workflow = MagicMock()
+    mock_workflow.input_schema = _MockTestSchema
+    mock_session_manager.workflow = mock_workflow
+
+    register_function_with_mcp(
+        mock_mcp,
+        "structured_tool",
+        mock_session_manager,
+        output_options=FastMCPToolOutputOptions(structured_tool_output=True),
+    )
+
+    tool_kwargs = mock_mcp.tool.call_args.kwargs
+    assert "output_schema" in tool_kwargs
+    assert tool_kwargs["output_schema"]["type"] == "object"

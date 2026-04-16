@@ -17,6 +17,7 @@ import asyncio
 import os
 from contextlib import asynccontextmanager
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -635,6 +636,59 @@ class TestMCPToolClient:
         # Should raise RuntimeError when parent_client is None
         with pytest.raises(RuntimeError, match="MCPToolClient initialized without a parent client"):
             MCPToolClient(session=mock_session, parent_client=None, tool_name="test_tool", tool_description="Test tool")
+
+    async def test_acall_preserves_structured_content_and_meta(self):
+        from nat.plugins.mcp.client.client_base import MCPToolClient
+
+        mock_session = MagicMock()
+        mock_parent_client = MagicMock()
+        mock_parent_client.server_name = "streamable-http:test"
+        mock_parent_client.call_tool = AsyncMock(
+            return_value=SimpleNamespace(
+                content=[TextContent(type="text", text="hello")],
+                structuredContent={"result_text": "hello"},
+                _meta={"atif": {"run_id": "run-1", "schema_version": "1.6", "trajectory": {"steps": []}}},
+                isError=False,
+            ))
+
+        tool_client = MCPToolClient(session=mock_session,
+                                    parent_client=mock_parent_client,
+                                    tool_name="test_tool",
+                                    tool_description="Test tool")
+        result_text = await tool_client.acall({"input": "value"})
+
+        assert result_text == "hello"
+        assert tool_client.last_result is not None
+        assert tool_client.last_result.structured_content == {"result_text": "hello"}
+        assert tool_client.last_result.meta == {
+            "atif": {
+                "run_id": "run-1", "schema_version": "1.6", "trajectory": {
+                    "steps": []
+                }
+            }
+        }
+
+    async def test_acall_falls_back_to_structured_content_when_text_missing(self):
+        from nat.plugins.mcp.client.client_base import MCPToolClient
+
+        mock_session = MagicMock()
+        mock_parent_client = MagicMock()
+        mock_parent_client.server_name = "streamable-http:test"
+        mock_parent_client.call_tool = AsyncMock(
+            return_value=SimpleNamespace(
+                content=[],
+                structuredContent={"result_text": "hello", "result_json": {"value": 1}},
+                _meta=None,
+                isError=False,
+            ))
+
+        tool_client = MCPToolClient(session=mock_session,
+                                    parent_client=mock_parent_client,
+                                    tool_name="test_tool",
+                                    tool_description="Test tool")
+        result_text = await tool_client.acall({"input": "value"})
+
+        assert result_text == "{\"result_text\": \"hello\", \"result_json\": {\"value\": 1}}"
 
 
 class TestMCPStreamableHTTPClientSessionIdAndHeaders:
