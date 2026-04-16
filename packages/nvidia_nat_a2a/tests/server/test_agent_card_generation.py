@@ -117,6 +117,9 @@ class TestAgentCardGeneration:
             port=10000,
             public_base_url="https://agents.example.com/calculator",
             version="1.0.0",
+            # Required for non-localhost bind without server_auth (see
+            # validate_security_configuration in front_end_config.py).
+            allow_unauthenticated_network_bind=True,
         )))
         worker = A2AFrontEndPluginWorker(config)
         agent_card = await worker.create_agent_card(mock_workflow_with_functions)

@@ -121,17 +121,46 @@ class A2AFrontEndConfig(FrontEndBaseConfig, name="a2a"):
                      "opaque token validation (via RFC 7662 introspection)."),
     )
 
+    # Explicit acknowledgement required to bind to a non-localhost interface without server_auth.
+    # Default is False: the validator below will reject the config rather than silently warning
+    # and proceeding. Operators who intentionally run A2A on a non-localhost interface behind
+    # an external auth layer (ingress, service mesh, network policy) can set this to True to
+    # override the check.
+    allow_unauthenticated_network_bind: bool = Field(
+        default=False,
+        description=("Explicit acknowledgement to allow binding to a non-localhost interface without "
+                     "server_auth configured. Required when host is not localhost/127.0.0.1/::1 and "
+                     "server_auth is None. Set this only when an external authentication layer "
+                     "(ingress, service mesh, mTLS, network policy) protects the A2A endpoint. "
+                     "Default: False (reject the config to prevent accidental unauthenticated exposure)."),
+    )
+
     @model_validator(mode="after")
     def validate_security_configuration(self):
-        """Validate security configuration to prevent accidental misconfigurations."""
-        # Check if server is bound to a non-localhost interface without authentication
+        """Validate security configuration to prevent accidental misconfigurations.
+
+        Reject any configuration that binds the A2A server to a non-localhost interface
+        without either (a) server_auth configured or (b) an explicit
+        allow_unauthenticated_network_bind acknowledgement. The previous behavior of
+        warn-and-proceed meant a single misconfiguration could silently expose an
+        unauthenticated A2A endpoint on the network. CWE-306.
+        """
         localhost_hosts = {"localhost", "127.0.0.1", "::1"}
         if self.host not in localhost_hosts and self.server_auth is None:
+            if not self.allow_unauthenticated_network_bind:
+                raise ValueError(
+                    f"A2A server is configured to bind to '{self.host}' without authentication. "
+                    "This would expose the server to unauthenticated network access. "
+                    "Fix one of the following:\n"
+                    "  (1) Bind to 'localhost', '127.0.0.1', or '::1' for local-only access.\n"
+                    "  (2) Configure 'server_auth' with OAuth2 token verification.\n"
+                    "  (3) If an external auth layer (ingress, service mesh, mTLS, network policy) "
+                    "protects this endpoint, set 'allow_unauthenticated_network_bind: true' to "
+                    "explicitly acknowledge the configuration.")
             logger.warning(
-                "A2A server is configured to bind to '%s' without authentication. "
-                "This may expose your server to unauthorized access. "
-                "Consider either: (1) binding to localhost for local-only access, "
-                "or (2) configuring server_auth for production deployments on public interfaces.",
+                "A2A server is bound to '%s' without server_auth; relying on "
+                "'allow_unauthenticated_network_bind=True'. Ensure an external authentication "
+                "layer is in place.",
                 self.host,
             )
 
