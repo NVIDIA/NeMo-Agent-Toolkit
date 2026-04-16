@@ -57,6 +57,21 @@ class TestNonLocalhostBindRequiresAuth:
         assert cfg.allow_unauthenticated_network_bind is True
         assert cfg.server_auth is None
 
+    def test_non_localhost_bind_allowed_with_server_auth(self):
+        """The primary intended path: non-localhost bind + configured server_auth = OK.
+
+        Closes the authenticated branch of the validator matrix — if someone
+        accidentally tightens the validator to reject server_auth too, this
+        test catches it.
+        """
+        from nat.authentication.oauth2.oauth2_resource_server_config import OAuth2ResourceServerConfig
+        oauth = OAuth2ResourceServerConfig(issuer_url="https://auth.example.com")
+        cfg = A2AFrontEndConfig(host="0.0.0.0", server_auth=oauth)
+        assert cfg.host == "0.0.0.0"
+        assert cfg.server_auth is oauth
+        # The opt-in flag should NOT be needed when server_auth is present.
+        assert cfg.allow_unauthenticated_network_bind is False
+
     def test_allow_unauthenticated_network_bind_defaults_false(self):
         """The opt-in acknowledgement must be off by default."""
         cfg = A2AFrontEndConfig(host="localhost")
