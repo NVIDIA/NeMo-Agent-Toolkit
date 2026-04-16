@@ -62,15 +62,49 @@ class TestRepoPathAllowlist:
         assert _repo_path_is_allowed("custom-org/my-repo", allowlist) is True
         assert _repo_path_is_allowed("custom-org/OTHER", allowlist) is False
 
-    @pytest.mark.parametrize("bad_entry", ["", "no-slash", None, 123])
+    @pytest.mark.parametrize(
+        "bad_entry",
+        [
+            "",
+            "no-slash",
+            None,
+            123,
+            "/repo",           # empty org
+            "org/",            # empty repo
+            "org/repo/extra",  # three segments
+            "a/b/c/d",         # many segments
+            "//",              # all empty
+            "/",               # single slash, two empty sides
+        ],
+    )
     def test_malformed_allowlist_entries_are_ignored(self, bad_entry):
-        """A junk entry mixed in with valid ones must not short-circuit to True."""
+        """A malformed entry mixed in with valid ones must not short-circuit to True."""
         allowlist = [bad_entry, "NVIDIA/*"]
         assert _repo_path_is_allowed("NVIDIA/toolkit", allowlist) is True
         assert _repo_path_is_allowed("attacker/exfil", allowlist) is False
+        # The bad entry alone should not match anything.
+        assert _repo_path_is_allowed("NVIDIA/toolkit", [bad_entry]) is False
 
-    @pytest.mark.parametrize("bad_path", ["", "orgonly", "/repo", "org/"])
+    @pytest.mark.parametrize(
+        "bad_path",
+        [
+            "",
+            "orgonly",
+            "/repo",
+            "org/",
+            "org/repo/extra",  # previously accepted by the 'contains /' check
+            "a/b/c/d",         # previously accepted by the 'contains /' check
+            "//",
+            "/",
+        ],
+    )
     def test_malformed_repo_path_is_rejected(self, bad_path):
+        """Tighter validation: repo_path must be exactly 'org/repo'.
+
+        The earlier 'contains /' check accepted 'org/repo/extra' and 'org/'
+        as partial matches against allowlist prefixes — a narrow but real
+        scope-widening bug. Now split+segment-count enforces the intent.
+        """
         assert _repo_path_is_allowed(bad_path, ["NVIDIA/*"]) is False
 
     def test_empty_allowlist_blocks_everything(self):

@@ -385,6 +385,30 @@ class GithubFilesGroupConfig(FunctionBaseConfig, name="github_files_tool"):
     )
 
 
+def _split_org_repo(value: str) -> tuple[str, str] | None:
+    """Split a string into exactly two non-empty 'org' and 'repo' segments.
+
+    Returns None for anything that isn't strictly 'org/repo':
+      - missing '/'  ("NVIDIA")                -> None
+      - trailing '/' ("NVIDIA/")               -> None
+      - leading '/'  ("/repo")                 -> None
+      - extra segments ("NVIDIA/repo/extra")   -> None
+      - empty org or repo                      -> None
+
+    The previous `"/" in repo_path` check accepted all of the above, which
+    let malformed allowlist entries and malformed URLs partially match.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    parts = value.split("/")
+    if len(parts) != 2:
+        return None
+    org, repo = parts
+    if not org or not repo:
+        return None
+    return org, repo
+
+
 def _repo_path_is_allowed(repo_path: str, allowed_repos: list[str] | None) -> bool:
     """Check whether a repo_path ('org/repo') matches the configured allowlist.
 
@@ -393,22 +417,33 @@ def _repo_path_is_allowed(repo_path: str, allowed_repos: list[str] | None) -> bo
       - repo_path matches an explicit 'org/repo' entry (case-insensitive), or
       - repo_path matches an 'org/*' wildcard entry (case-insensitive).
 
-    Returns False for any malformed entry or non-matching repo_path.
+    Returns False for:
+      - any repo_path that isn't exactly 'org/repo' (two non-empty segments),
+      - any allowlist entry that isn't 'org/repo' or 'org/*' (two non-empty
+        segments with the second optionally '*').
     """
     if allowed_repos is None:
         return True
-    if not repo_path or "/" not in repo_path:
+
+    split = _split_org_repo(repo_path)
+    if split is None:
         return False
-    repo_lower = repo_path.lower()
-    repo_org = repo_lower.split("/", 1)[0]
+    repo_org_lower = split[0].lower()
+    repo_lower = f"{split[0]}/{split[1]}".lower()
+
     for entry in allowed_repos:
-        if not isinstance(entry, str) or "/" not in entry:
+        entry_split = _split_org_repo(entry) if isinstance(entry, str) else None
+        if entry_split is None:
+            # Malformed entry (missing or extra segments, empty parts, etc.)
+            # — ignore rather than accidentally matching.
             continue
-        entry_lower = entry.lower()
-        if entry_lower == repo_lower:
+        entry_org_lower = entry_split[0].lower()
+        entry_repo_lower = entry_split[1].lower()
+        # Exact match: 'org/repo'
+        if f"{entry_org_lower}/{entry_repo_lower}" == repo_lower:
             return True
-        entry_org, entry_repo = entry_lower.split("/", 1)
-        if entry_repo == "*" and entry_org == repo_org:
+        # Wildcard match: 'org/*'
+        if entry_repo_lower == "*" and entry_org_lower == repo_org_lower:
             return True
     return False
 
