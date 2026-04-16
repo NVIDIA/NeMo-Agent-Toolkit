@@ -117,14 +117,34 @@ class AgentMemoryServerEditor(MemoryEditor):
         return out
 
     async def remove_items(self, **kwargs: Any) -> None:
-        """Remove memories by user_id or memory_id if the client supports it."""
+        """
+        Remove long-term memories through the Agent Memory Server client.
+
+        If ``memory_id`` is provided, deletes that record via ``delete_long_term_memory`` and returns.
+        Otherwise, if ``user_id`` is provided, clears that user's memories via ``forget``.
+        If the client lacks the corresponding method, logs a warning and performs no operation.
+
+        Args:
+            **kwargs: Keyword arguments. Supported keys:
+
+                - ``memory_id`` (str, optional): ID of a single long-term memory to delete.
+                - ``user_id`` (str, optional): User whose long-term memories should be removed.
+                  Ignored when ``memory_id`` is provided.
+        """
         memory_id = kwargs.get("memory_id")
         user_id = kwargs.get("user_id")
-        if memory_id is not None and hasattr(self._client, "delete_long_term_memory"):
-            await self._client.delete_long_term_memory(memory_id)
+        if memory_id is not None:
+            if hasattr(self._client, "delete_long_term_memory"):
+                await self._client.delete_long_term_memory(memory_id)
+            else:
+                logger.warning(
+                    "Agent Memory Client does not support delete_long_term_memory; "
+                    "remove_items no-op for memory_id", )
             return
-        if user_id is not None and hasattr(self._client, "forget"):
-            await self._client.forget(user_id=user_id)
-            return
+
         if user_id is not None:
-            logger.warning("Agent Memory Server client does not expose forget/delete by user_id; remove_items no-op")
+            if hasattr(self._client, "forget"):
+                await self._client.forget(user_id=user_id)
+            else:
+                logger.warning("Agent Memory Client does not expose forget by user_id; remove_items no-op", )
+            return
