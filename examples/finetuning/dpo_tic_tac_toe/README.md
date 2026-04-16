@@ -53,7 +53,7 @@ The model learns to prefer responses similar to the chosen examples while avoidi
 ## Prerequisites
 
 > [!IMPORTANT]
-> This example assumes you are already familiar with the NVIDIA NeMo Microservices platform and have it set up and running. If you're new to NeMo Microservices, please refer to the [NeMo Microservices Setup Guide](https://docs.nvidia.com/nemo/microservices/latest/set-up/index.html) first.
+> This example assumes you are already familiar with the NVIDIA NeMo Microservices platform and have it set up and running. If you're new to NeMo Microservices, please refer to the [NeMo Microservices Setup Guide](https://docs.nvidia.com/nemo/microservices/latest/index.html) first.
 
 ### 1. Python Environment
 
