@@ -18,6 +18,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Literal
 
+from nvidia_prompt_optimization import PromptMutationInput
 from pydantic import BaseModel
 from pydantic import Field
 
@@ -40,12 +41,9 @@ class OptimizerMetric(BaseModel):
     weight: float = Field(description="Weight of the metric in the optimization process.", default=1.0)
 
 
-class PromptOptimizerInputSchema(BaseModel):
-    """Input schema for prompt optimizer mutator/recombiner helper functions."""
-
-    original_prompt: str
-    objective: str
-    oracle_feedback: str | None = None
+# Compatibility alias for existing NAT imports while the standalone prompt optimizer
+# package becomes the source of truth for prompt callback payloads.
+PromptOptimizerInputSchema = PromptMutationInput
 
 
 class SamplerType(StrEnum):

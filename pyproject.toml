@@ -251,6 +251,7 @@ nvidia-nat-config-optimizer = { path = "packages/nvidia_nat_config_optimizer", e
 nvidia-nat-openpipe-art = { path = "packages/nvidia_nat_openpipe_art", editable = true }
 nvidia-nat-opentelemetry = { path = "packages/nvidia_nat_opentelemetry", editable = true }
 nvidia-nat-phoenix = { path = "packages/nvidia_nat_phoenix", editable = true }
+nvidia-nat-prompt-optimization = { path = "packages/nvidia_nat_prompt_optimization", editable = true }
 nvidia-nat-profiler = { path = "packages/nvidia_nat_profiler", editable = true }
 nvidia-nat-rag = { path = "packages/nvidia_nat_rag", editable = true }
 nvidia-nat-ragas = { path = "packages/nvidia_nat_ragas", editable = true }
