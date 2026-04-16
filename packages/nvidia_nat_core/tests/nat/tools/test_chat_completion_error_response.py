@@ -26,7 +26,6 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.api_server import ChatRequest
 from nat.data_models.api_server import Message
 from nat.tool.chat_completion import ChatCompletionConfig
@@ -40,7 +39,11 @@ _SENTINEL = "UNIQUE-LEAK-SENTINEL-8c3b9fba"
 
 async def _get_registered_callable(failing_llm: AsyncMock):
     """Drive the async generator register_chat_completion returns and pull
-    the registered callable out of the yielded FunctionInfo."""
+    the registered callable out of the yielded FunctionInfo.
+
+    If the callable cannot be located, close the async generator before
+    raising so the fixture doesn't leak an open generator.
+    """
     config = ChatCompletionConfig(llm_name="test_llm")  # type: ignore[arg-type]
 
     builder = MagicMock()
@@ -54,23 +57,47 @@ async def _get_registered_callable(failing_llm: AsyncMock):
         inner = getattr(fn_info, attr, None)
         if inner is not None and callable(inner):
             return inner, gen
+    await gen.aclose()
     raise RuntimeError("could not locate the registered callable on FunctionInfo")
+
+
+@pytest.fixture(name="failing_llm_runtime_error")
+async def fixture_failing_llm_runtime_error():
+    """Mocked chat completion wired to an LLM that raises RuntimeError.
+
+    Yields (fn, llm) where `fn` is the registered callable and `llm` is the
+    mocked failing LLM. Closes the underlying async generator on teardown so
+    there's no resource leak across tests.
+    """
+    llm = AsyncMock()
+    llm.ainvoke.side_effect = RuntimeError(_SENTINEL)
+    fn, gen = await _get_registered_callable(llm)
+    try:
+        yield fn, llm
+    finally:
+        await gen.aclose()
+
+
+@pytest.fixture(name="failing_llm_value_error")
+async def fixture_failing_llm_value_error():
+    """Same as above but the LLM raises ValueError with an embedded sentinel."""
+    llm = AsyncMock()
+    llm.ainvoke.side_effect = ValueError(f"boom {_SENTINEL}")
+    fn, gen = await _get_registered_callable(llm)
+    try:
+        yield fn, llm
+    finally:
+        await gen.aclose()
 
 
 class TestChatCompletionErrorSanitization:
     """The error response must never contain any part of the caught exception."""
 
-    async def test_error_response_drops_exception_message(self):
+    async def test_error_response_drops_exception_message(self, failing_llm_runtime_error):
         """LLM raises → response omits the exception text entirely."""
-        failing_llm = AsyncMock()
-        failing_llm.ainvoke.side_effect = RuntimeError(_SENTINEL)
-
-        fn, gen = await _get_registered_callable(failing_llm)
-        try:
-            request = ChatRequest(messages=[Message(role="user", content="hello there")])
-            result = await fn(request)
-        finally:
-            await gen.aclose()
+        fn, _llm = failing_llm_runtime_error
+        request = ChatRequest(messages=[Message(role="user", content="hello there")])
+        result = await fn(request)
 
         # Result may be str or ChatResponse depending on the `is_string` branch —
         # the ChatRequest path returns ChatResponse; coerce to string for the
@@ -82,35 +109,23 @@ class TestChatCompletionErrorSanitization:
         # The user-safe apology is what callers should see.
         assert "I apologize" in text
 
-    async def test_error_response_echoes_user_query_but_not_exception(self):
+    async def test_error_response_echoes_user_query_but_not_exception(self, failing_llm_value_error):
         """Response should include the user's last message but not the exception."""
-        failing_llm = AsyncMock()
-        failing_llm.ainvoke.side_effect = ValueError(f"boom {_SENTINEL}")
-
-        fn, gen = await _get_registered_callable(failing_llm)
-        try:
-            request = ChatRequest(messages=[Message(role="user", content="what is my balance?")])
-            result = await fn(request)
-        finally:
-            await gen.aclose()
+        fn, _llm = failing_llm_value_error
+        request = ChatRequest(messages=[Message(role="user", content="what is my balance?")])
+        result = await fn(request)
 
         text = result if isinstance(result, str) else str(result)
         assert "what is my balance?" in text  # the user's query is echoed
         assert _SENTINEL not in text  # but the exception text is not
         assert "ValueError" not in text
 
-    async def test_server_side_logger_still_captures_full_exception(self):
+    async def test_server_side_logger_still_captures_full_exception(self, failing_llm_runtime_error):
         """Operators must still see the traceback in logs for triage."""
-        failing_llm = AsyncMock()
-        failing_llm.ainvoke.side_effect = RuntimeError(_SENTINEL)
-
-        fn, gen = await _get_registered_callable(failing_llm)
-        try:
-            request = ChatRequest(messages=[Message(role="user", content="test")])
-            with patch("nat.tool.chat_completion.logger") as mock_logger:
-                await fn(request)
-                # logger.exception is the required call — it records the
-                # traceback AND the message at ERROR level.
-                mock_logger.exception.assert_any_call("chat completion failed")
-        finally:
-            await gen.aclose()
+        fn, _llm = failing_llm_runtime_error
+        request = ChatRequest(messages=[Message(role="user", content="test")])
+        with patch("nat.tool.chat_completion.logger") as mock_logger:
+            await fn(request)
+            # logger.exception is the required call — it records the
+            # traceback AND the message at ERROR level.
+            mock_logger.exception.assert_any_call("chat completion failed")
