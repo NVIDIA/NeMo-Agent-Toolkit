@@ -1,43 +1,47 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Attribute bitflag types for ATOF events.
+"""Attribute flag types for ATOF events.
 
-Each type is a Python :class:`enum.IntFlag` that serializes as a plain integer
-in JSON (e.g., ``PARALLEL | RELOCATABLE`` → ``3``).
+Each type is a :class:`enum.StrEnum` whose members carry lowercase string
+values. Attributes serialize on the JSON wire as a canonical (sorted,
+deduplicated) array of strings — for example, ``["parallel", "relocatable"]``.
+
+The flag sets defined here are the canonical names recognized by the ATOF
+spec; the set is implementation-defined and extensible. Consumers MUST
+preserve unknown flag strings rather than discarding them.
+
+See ATOF spec Section 4.
 """
 
 from __future__ import annotations
 
-from enum import IntFlag
+from enum import StrEnum
 
 
-class ScopeAttributes(IntFlag):
-    """Behavioral flags for ScopeStart/ScopeEnd events.
+class ScopeAttributes(StrEnum):
+    """Canonical behavioral flags for ScopeStart/ScopeEnd events.
 
     See ATOF spec Section 4.1.
     """
 
-    NONE = 0
-    PARALLEL = 1
-    RELOCATABLE = 2
+    PARALLEL = "parallel"
+    RELOCATABLE = "relocatable"
 
 
-class LLMAttributes(IntFlag):
-    """Behavioral flags for LLMStart/LLMEnd events.
+class LLMAttributes(StrEnum):
+    """Canonical behavioral flags for LLMStart/LLMEnd events.
 
     See ATOF spec Section 4.2.
     """
 
-    NONE = 0
-    STATELESS = 1
-    STREAMING = 2
+    STATELESS = "stateless"
+    STREAMING = "streaming"
 
 
-class ToolAttributes(IntFlag):
-    """Behavioral flags for ToolStart/ToolEnd events.
+class ToolAttributes(StrEnum):
+    """Canonical behavioral flags for ToolStart/ToolEnd events.
 
     See ATOF spec Section 4.3.
     """
 
-    NONE = 0
-    LOCAL = 1
+    LOCAL = "local"

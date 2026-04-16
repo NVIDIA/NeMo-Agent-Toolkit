@@ -19,9 +19,29 @@ from pydantic import ConfigDict
 from pydantic import Discriminator
 from pydantic import Field
 from pydantic import Tag
+from pydantic import field_validator
 
 from nat.atof.codec import AnnotatedLLMRequest
 from nat.atof.codec import AnnotatedLLMResponse
+
+
+def _canonicalize_attributes(v: Any) -> list[str]:
+    """Normalize an ``attributes`` field to a sorted, deduplicated list of strings.
+
+    Accepts either a list of strings or :class:`enum.StrEnum` members. Unknown
+    flag names are preserved — the spec requires consumers to round-trip them.
+    """
+    if v is None:
+        return []
+    if not isinstance(v, (list, tuple, set)):
+        raise TypeError(f"attributes must be a list of strings, got {type(v).__name__}")
+    normalized: set[str] = set()
+    for item in v:
+        if not isinstance(item, str):
+            raise TypeError(f"attributes entries must be strings, got {type(item).__name__}")
+        normalized.add(str(item))
+    return sorted(normalized)
+
 
 # ---------------------------------------------------------------------------
 # Base fields shared by all event types (Section 2)
@@ -50,56 +70,71 @@ class ScopeStartEvent(_EventBase):
     """Emitted when a scope is pushed onto the scope stack (Section 3.1)."""
 
     kind: Literal["ScopeStart"] = "ScopeStart"
-    attributes: int = Field(default=0, description="ScopeAttributes bitflags")
+    attributes: list[str] = Field(default_factory=list,
+                                  description="Canonical ScopeAttributes flag names (sorted, deduped)")
     scope_type: str = Field(description="Scope type enum value")
+
+    _normalize_attributes = field_validator("attributes", mode="before")(_canonicalize_attributes)
 
 
 class ScopeEndEvent(_EventBase):
     """Emitted when a scope is popped from the scope stack (Section 3.2)."""
 
     kind: Literal["ScopeEnd"] = "ScopeEnd"
-    attributes: int = Field(default=0, description="ScopeAttributes bitflags")
+    attributes: list[str] = Field(default_factory=list, description="Same flags as matching ScopeStartEvent")
     scope_type: str = Field(description="Same as matching ScopeStartEvent")
+
+    _normalize_attributes = field_validator("attributes", mode="before")(_canonicalize_attributes)
 
 
 class LLMStartEvent(_EventBase):
     """Emitted when an LLM call begins (Section 3.3)."""
 
     kind: Literal["LLMStart"] = "LLMStart"
-    attributes: int = Field(default=0, description="LLMAttributes bitflags")
+    attributes: list[str] = Field(default_factory=list,
+                                  description="Canonical LLMAttributes flag names (sorted, deduped)")
     input: Any | None = Field(default=None, description="Post-sanitize LLM request payload")
     model_name: str | None = Field(default=None, description="Model identifier")
     annotated_request: AnnotatedLLMRequest | None = Field(default=None,
                                                           description="Codec-decoded request (if codec registered)")
+
+    _normalize_attributes = field_validator("attributes", mode="before")(_canonicalize_attributes)
 
 
 class LLMEndEvent(_EventBase):
     """Emitted when an LLM call completes (Section 3.4)."""
 
     kind: Literal["LLMEnd"] = "LLMEnd"
-    attributes: int = Field(default=0, description="Same flags as matching LLMStartEvent")
+    attributes: list[str] = Field(default_factory=list, description="Same flags as matching LLMStartEvent")
     output: Any | None = Field(default=None, description="Post-sanitize LLM response payload")
     model_name: str | None = Field(default=None, description="Model identifier")
     annotated_response: AnnotatedLLMResponse | None = Field(default=None,
                                                             description="Codec-decoded response (if codec registered)")
+
+    _normalize_attributes = field_validator("attributes", mode="before")(_canonicalize_attributes)
 
 
 class ToolStartEvent(_EventBase):
     """Emitted when a tool invocation begins (Section 3.5)."""
 
     kind: Literal["ToolStart"] = "ToolStart"
-    attributes: int = Field(default=0, description="ToolAttributes bitflags")
+    attributes: list[str] = Field(default_factory=list,
+                                  description="Canonical ToolAttributes flag names (sorted, deduped)")
     input: Any | None = Field(default=None, description="Post-sanitize tool input arguments")
     tool_call_id: str | None = Field(default=None, description="Correlation ID from LLM tool-call response")
+
+    _normalize_attributes = field_validator("attributes", mode="before")(_canonicalize_attributes)
 
 
 class ToolEndEvent(_EventBase):
     """Emitted when a tool invocation completes (Section 3.6)."""
 
     kind: Literal["ToolEnd"] = "ToolEnd"
-    attributes: int = Field(default=0, description="Same flags as matching ToolStartEvent")
+    attributes: list[str] = Field(default_factory=list, description="Same flags as matching ToolStartEvent")
     output: Any | None = Field(default=None, description="Post-sanitize tool result")
     tool_call_id: str | None = Field(default=None, description="Same as matching ToolStartEvent")
+
+    _normalize_attributes = field_validator("attributes", mode="before")(_canonicalize_attributes)
 
 
 class MarkEvent(_EventBase):

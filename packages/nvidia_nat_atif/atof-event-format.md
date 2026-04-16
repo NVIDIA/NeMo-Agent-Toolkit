@@ -45,7 +45,7 @@ Transport is JSON-Lines: each event is one JSON object per line. The `kind` fiel
 **Wire envelope shape:**
 
 ```json
-{"kind": "LLMStart", "uuid": "...", "parent_uuid": "...", "timestamp": "...", "name": "...", "attributes": 0, "input": {...}, "model_name": "nvidia/nemotron-3-super-v3", "data": null, "metadata": null}
+{"kind": "LLMStart", "uuid": "...", "parent_uuid": "...", "timestamp": "...", "name": "...", "attributes": [], "input": {...}, "model_name": "nvidia/nemotron-3-super-v3", "data": null, "metadata": null}
 ```
 
 ATOF events are the raw, un-merged observations from the runtime. A separate conversion layer (see Section 7) maps them to ATIF steps.
@@ -84,7 +84,7 @@ Emitted when a new scope is pushed onto the scope stack.
 | `name`        | string                | Yes      | See Section 2.                                                                                                                                            |
 | `data`        | object or null        | No       | See Section 2.                                                                                                                                            |
 | `metadata`    | object or null        | No       | See Section 2.                                                                                                                                            |
-| `attributes`  | integer (bitflags)    | Yes      | Behavioral flags encoded as a JSON integer. `PARALLEL = 1`, `RELOCATABLE = 2`. Additive: `PARALLEL\|RELOCATABLE = 3`. See Section 4 for flag descriptions. |
+| `attributes`  | array of strings      | Yes      | Behavioral flag names, canonical form (lowercase, sorted, deduplicated). Canonical values: `"parallel"`, `"relocatable"`. Empty array when no flags are set. See Section 4 for flag descriptions and the extensibility rule. |
 | `scope_type`  | string (enum)         | Yes      | One of: `"agent"`, `"function"`, `"tool"`, `"llm"`, `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`, `"custom"`, `"unknown"`.     |
 
 
@@ -101,7 +101,7 @@ Emitted when a scope is popped from the scope stack. Fields are identical to `Sc
 | `name`        | string                | Yes      | Same value as the matching `ScopeStartEvent`.                |
 | `data`        | object or null        | No       | See Section 2.                                               |
 | `metadata`    | object or null        | No       | See Section 2.                                               |
-| `attributes`  | integer (bitflags)    | Yes      | Same value as the matching `ScopeStartEvent`. See Section 4. |
+| `attributes`  | array of strings      | Yes      | Same value as the matching `ScopeStartEvent`. See Section 4. |
 | `scope_type`  | string (enum)         | Yes      | Same value as the matching `ScopeStartEvent`.                |
 
 
@@ -118,7 +118,7 @@ Emitted when an LLM call begins. Carries the post request-sanitize guardrail pay
 | `name`              | string                | Yes      | See Section 2.                                                                                                                                                                                     |
 | `data`              | object or null        | No       | See Section 2.                                                                                                                                                                                     |
 | `metadata`          | object or null        | No       | See Section 2.                                                                                                                                                                                     |
-| `attributes`        | integer (bitflags)    | Yes      | LLM behavioral flags. `STATELESS = 1`, `STREAMING = 2`. See Section 4.                                                                                                                             |
+| `attributes`        | array of strings      | Yes      | LLM behavioral flag names, canonical form (lowercase, sorted, deduplicated). Canonical values: `"stateless"`, `"streaming"`. Empty array when no flags are set. See Section 4.                     |
 | `input`             | any or null           | No       | Sanitized LLM request payload (post request-sanitize guardrails). Typically an object with `messages`, `model`, `tools`, and other parameters.                                                     |
 | `model_name`        | string or null        | No       | Model identifier set by the caller — e.g., `"nvidia/nemotron-3-super-v3"`.                                                                                                                         |
 | `annotated_request` | object or null        | No       | Structured decoded form of `input`. Present only when a codec (e.g., `OpenAIChatCodec`) is registered on this LLM call. Omitted from serialized JSON when null. See Section 5 for the full schema. |
@@ -137,7 +137,7 @@ Emitted when an LLM call completes. Carries the post-guardrail-sanitized respons
 | `name`               | string                | Yes      | Same value as the matching `LLMStartEvent`.                                                                                                                                       |
 | `data`               | object or null        | No       | See Section 2.                                                                                                                                                                    |
 | `metadata`           | object or null        | No       | See Section 2.                                                                                                                                                                    |
-| `attributes`         | integer (bitflags)    | Yes      | Same flags as the matching `LLMStartEvent`. See Section 4.                                                                                                                        |
+| `attributes`         | array of strings      | Yes      | Same value as the matching `LLMStartEvent`. See Section 4.                                                                                                                        |
 | `output`             | any or null           | No       | Sanitized LLM response payload (post response-sanitize guardrails).                                                                                                               |
 | `model_name`         | string or null        | No       | Same value as on the matching `LLMStartEvent`.                                                                                                                                    |
 | `annotated_response` | object or null        | No       | Structured decoded form of `output`. Present only when a response codec is active and decode succeeds. Omitted from serialized JSON when null. See Section 5 for the full schema. |
@@ -156,7 +156,7 @@ Emitted when a tool invocation begins.
 | `name`         | string                | Yes      | The tool function name — e.g., `"calculator__add"`.                                                                                                |
 | `data`         | object or null        | No       | See Section 2.                                                                                                                                     |
 | `metadata`     | object or null        | No       | See Section 2.                                                                                                                                     |
-| `attributes`   | integer (bitflags)    | Yes      | Tool behavioral flags. `LOCAL = 1`. See Section 4.                                                                                                 |
+| `attributes`   | array of strings      | Yes      | Tool behavioral flag names, canonical form (lowercase, sorted, deduplicated). Canonical values: `"local"`. Empty array when no flags are set. See Section 4. |
 | `input`        | any or null           | No       | Sanitized tool input arguments (post request-sanitize guardrails).                                                                                 |
 | `tool_call_id` | string or null        | No       | Correlation ID from the LLM's tool-call response — e.g., `"call_abc123"` (OpenAI convention). Null for tools invoked outside an LLM tool-use flow. |
 
@@ -174,7 +174,7 @@ Emitted when a tool invocation completes.
 | `name`         | string                | Yes      | Same value as the matching `ToolStartEvent`.                                                     |
 | `data`         | object or null        | No       | See Section 2.                                                                                   |
 | `metadata`     | object or null        | No       | See Section 2.                                                                                   |
-| `attributes`   | integer (bitflags)    | Yes      | Same flags as the matching `ToolStartEvent`. See Section 4.                                      |
+| `attributes`   | array of strings      | Yes      | Same value as the matching `ToolStartEvent`. See Section 4.                                      |
 | `output`       | any or null           | No       | Sanitized tool result (post response-sanitize guardrails). Null if the tool raised an exception. |
 | `tool_call_id` | string or null        | No       | Same value as on the matching `ToolStartEvent`.                                                  |
 
@@ -198,30 +198,32 @@ Emitted when the application records a named checkpoint in the event stream. Mar
 
 ## 4. Attribute Types
 
-Attribute fields serialize as JSON integers. Flags are additive: to combine flags, add their integer values.
+Attribute fields serialize on the wire as a JSON array of lowercase string flag names. The canonical form is sorted and deduplicated — producers MUST emit attributes in lexicographic order with no duplicates, and consumers SHOULD treat the array as an unordered set. Empty `[]` means no flags are set.
+
+**Extensibility.** The flag sets below are the names recognized by this version of the spec, but the set is implementation-defined and open-ended. Implementations MAY emit additional flag names (for vendor extensions or experimental features); to avoid collisions, non-canonical flags SHOULD be namespaced with a dotted prefix — for example, `"nvidia.speculative"`. Consumers MUST preserve unknown flag strings when re-emitting events and MUST NOT treat unknown flags as an error.
 
 ### 4.1 ScopeAttributes
 
 Used in `ScopeStartEvent.attributes` and `ScopeEndEvent.attributes`.
 
 
-| Flag          | Integer Value | Description                                                                 |
-| ------------- | ------------- | --------------------------------------------------------------------------- |
-| `PARALLEL`    | 1             | The scope may execute concurrently with siblings on the scope stack.        |
-| `RELOCATABLE` | 2             | The scope may be moved across async task boundaries without losing context. |
+| Flag            | Description                                                                 |
+| --------------- | --------------------------------------------------------------------------- |
+| `"parallel"`    | The scope may execute concurrently with siblings on the scope stack.        |
+| `"relocatable"` | The scope may be moved across async task boundaries without losing context. |
 
 
-Example: a scope that is both parallel and relocatable has `attributes = 3`.
+Example: a scope that is both parallel and relocatable serializes as `"attributes": ["parallel", "relocatable"]`.
 
 ### 4.2 LLMAttributes
 
 Used in `LLMStartEvent.attributes` and `LLMEndEvent.attributes`.
 
 
-| Flag        | Integer Value | Description                                                                       |
-| ----------- | ------------- | --------------------------------------------------------------------------------- |
-| `STATELESS` | 1             | The LLM call does not maintain conversation state across invocations.             |
-| `STREAMING` | 2             | The LLM response is delivered as a stream of chunks rather than a single payload. |
+| Flag          | Description                                                                       |
+| ------------- | --------------------------------------------------------------------------------- |
+| `"stateless"` | The LLM call does not maintain conversation state across invocations.             |
+| `"streaming"` | The LLM response is delivered as a stream of chunks rather than a single payload. |
 
 
 ### 4.3 ToolAttributes
@@ -229,9 +231,9 @@ Used in `LLMStartEvent.attributes` and `LLMEndEvent.attributes`.
 Used in `ToolStartEvent.attributes` and `ToolEndEvent.attributes`.
 
 
-| Flag    | Integer Value | Description                                                                   |
-| ------- | ------------- | ----------------------------------------------------------------------------- |
-| `LOCAL` | 1             | The tool executes in the same process as the runtime (not via a remote call). |
+| Flag      | Description                                                                   |
+| --------- | ----------------------------------------------------------------------------- |
+| `"local"` | The tool executes in the same process as the runtime (not via a remote call). |
 
 
 ---
@@ -519,12 +521,12 @@ ATOF events are not ATIF steps. The distinctions are structural:
 A minimal 6-event stream illustrating one complete tool call cycle. Each line is one JSON object.
 
 ```jsonl
-{"kind":"ScopeStart","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"simple_calculator_agent","scope_type":"agent","attributes":0,"data":null,"metadata":null}
-{"kind":"LLMStart","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:01Z","name":"nvidia/nemotron-3-super-v3","attributes":0,"input":{"messages":[{"role":"user","content":"What is 3 + 4?"}],"model":"nvidia/nemotron-3-super-v3","tools":[{"type":"function","function":{"name":"calculator__add","description":"Add two numbers","parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}}}]},"model_name":"nvidia/nemotron-3-super-v3","data":null,"metadata":null}
-{"kind":"LLMEnd","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:02Z","name":"nvidia/nemotron-3-super-v3","attributes":0,"output":{"content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},"model_name":"nvidia/nemotron-3-super-v3","data":null,"metadata":null}
-{"kind":"ToolStart","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:03Z","name":"calculator__add","attributes":0,"input":{"a":3,"b":4},"tool_call_id":"call_calc_001","data":null,"metadata":null}
-{"kind":"ToolEnd","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","attributes":0,"output":7,"tool_call_id":"call_calc_001","data":null,"metadata":null}
-{"kind":"ScopeEnd","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:05Z","name":"simple_calculator_agent","scope_type":"agent","attributes":0,"data":null,"metadata":null}
+{"kind":"ScopeStart","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"simple_calculator_agent","scope_type":"agent","attributes":[],"data":null,"metadata":null}
+{"kind":"LLMStart","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:01Z","name":"nvidia/nemotron-3-super-v3","attributes":[],"input":{"messages":[{"role":"user","content":"What is 3 + 4?"}],"model":"nvidia/nemotron-3-super-v3","tools":[{"type":"function","function":{"name":"calculator__add","description":"Add two numbers","parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}}}]},"model_name":"nvidia/nemotron-3-super-v3","data":null,"metadata":null}
+{"kind":"LLMEnd","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:02Z","name":"nvidia/nemotron-3-super-v3","attributes":[],"output":{"content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},"model_name":"nvidia/nemotron-3-super-v3","data":null,"metadata":null}
+{"kind":"ToolStart","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:03Z","name":"calculator__add","attributes":[],"input":{"a":3,"b":4},"tool_call_id":"call_calc_001","data":null,"metadata":null}
+{"kind":"ToolEnd","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","attributes":[],"output":7,"tool_call_id":"call_calc_001","data":null,"metadata":null}
+{"kind":"ScopeEnd","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:05Z","name":"simple_calculator_agent","scope_type":"agent","attributes":[],"data":null,"metadata":null}
 ```
 
 **Resulting ATIF output:** From this 6-event stream, the converter produces 3 ATIF steps: (1) a user step from `LLMStart` with `message = [{"role": "user", "content": "What is 3 + 4?"}]`; (2) an agent step from `LLMEnd` with `message = "The result of 3 + 4 is 7."` and promoted `tool_calls`; (3) a system step from the buffered `ToolEnd` observation with `source_call_id = "call_calc_001"` and `content = "7"` (stringified from the integer output). The observation flush occurs at end of stream (no subsequent `LLMStart`).

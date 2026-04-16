@@ -40,14 +40,14 @@ def generate_exmp01() -> list:
             timestamp="2026-01-01T00:00:00Z",
             name="simple_calculator_agent",
             scope_type="agent",
-            attributes=0,
+            attributes=[],
         ),
         LLMStartEvent(
             uuid="llm-001",
             parent_uuid="scope-agent-001",
             timestamp="2026-01-01T00:00:01Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             input={
                 "messages": [{
                     "role": "user", "content": "What is 3 + 4?"
@@ -79,7 +79,7 @@ def generate_exmp01() -> list:
             parent_uuid="scope-agent-001",
             timestamp="2026-01-01T00:00:02Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             output={
                 "choices": [{
                     "message": {
@@ -111,7 +111,7 @@ def generate_exmp01() -> list:
             parent_uuid="scope-agent-001",
             timestamp="2026-01-01T00:00:03Z",
             name="calculator__add",
-            attributes=0,
+            attributes=[],
             input={
                 "a": 3, "b": 4
             },
@@ -122,7 +122,7 @@ def generate_exmp01() -> list:
             parent_uuid="scope-agent-001",
             timestamp="2026-01-01T00:00:04Z",
             name="calculator__add",
-            attributes=0,
+            attributes=[],
             output={"result": 7},
             tool_call_id="call_calc_001",
         ),
@@ -131,7 +131,7 @@ def generate_exmp01() -> list:
             parent_uuid="scope-agent-001",
             timestamp="2026-01-01T00:00:05Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             input={
                 "messages": [
                     {
@@ -163,7 +163,7 @@ def generate_exmp01() -> list:
             parent_uuid="scope-agent-001",
             timestamp="2026-01-01T00:00:06Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             output={"choices": [{
                 "message": {
                     "content": "The result of 3 + 4 is 7."
@@ -181,7 +181,7 @@ def generate_exmp01() -> list:
             timestamp="2026-01-01T00:00:07Z",
             name="simple_calculator_agent",
             scope_type="agent",
-            attributes=0,
+            attributes=[],
         ),
     ]
 
@@ -200,14 +200,14 @@ def generate_exmp02() -> list:
             timestamp="2026-01-01T00:01:00Z",
             name="weather_converter_agent",
             scope_type="agent",
-            attributes=0,
+            attributes=[],
         ),
         LLMStartEvent(
             uuid="llm-010",
             parent_uuid="scope-agent-002",
             timestamp="2026-01-01T00:01:01Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             input={
                 "messages": [{
                     "role": "user", "content": "What's the temperature in San Francisco in Celsius?"
@@ -221,7 +221,7 @@ def generate_exmp02() -> list:
             parent_uuid="scope-agent-002",
             timestamp="2026-01-01T00:01:02Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             output={
                 "choices": [{
                     "message": {
@@ -255,14 +255,14 @@ def generate_exmp02() -> list:
             timestamp="2026-01-01T00:01:03Z",
             name="weather__lookup",
             scope_type="function",
-            attributes=0,
+            attributes=[],
         ),
         ToolStartEvent(
             uuid="tool-010",
             parent_uuid="scope-fn-001",
             timestamp="2026-01-01T00:01:04Z",
             name="weather__lookup",
-            attributes=0,
+            attributes=[],
             input={"city": "San Francisco"},
             tool_call_id="call_weather_001",
         ),
@@ -272,7 +272,7 @@ def generate_exmp02() -> list:
             parent_uuid="scope-fn-001",
             timestamp="2026-01-01T00:01:05Z",
             name="temperature__to_celsius",
-            attributes=0,
+            attributes=[],
             input={"fahrenheit": 68.0},
             tool_call_id="call_temp_001",
         ),
@@ -281,7 +281,7 @@ def generate_exmp02() -> list:
             parent_uuid="scope-fn-001",
             timestamp="2026-01-01T00:01:06Z",
             name="temperature__to_celsius",
-            attributes=0,
+            attributes=[],
             output={"celsius": 20.0},
             tool_call_id="call_temp_001",
         ),
@@ -290,7 +290,7 @@ def generate_exmp02() -> list:
             parent_uuid="scope-fn-001",
             timestamp="2026-01-01T00:01:07Z",
             name="weather__lookup",
-            attributes=0,
+            attributes=[],
             output={
                 "city": "San Francisco", "temp_f": 68.0, "temp_c": 20.0, "condition": "sunny"
             },
@@ -302,7 +302,7 @@ def generate_exmp02() -> list:
             timestamp="2026-01-01T00:01:08Z",
             name="weather__lookup",
             scope_type="function",
-            attributes=0,
+            attributes=[],
         ),
         # Final LLM turn
         LLMStartEvent(
@@ -310,7 +310,7 @@ def generate_exmp02() -> list:
             parent_uuid="scope-agent-002",
             timestamp="2026-01-01T00:01:09Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             input={
                 "messages": [
                     {
@@ -331,7 +331,7 @@ def generate_exmp02() -> list:
             parent_uuid="scope-agent-002",
             timestamp="2026-01-01T00:01:10Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             output={
                 "choices": [{
                     "message": {
@@ -352,7 +352,7 @@ def generate_exmp02() -> list:
             timestamp="2026-01-01T00:01:11Z",
             name="weather_converter_agent",
             scope_type="agent",
-            attributes=0,
+            attributes=[],
         ),
     ]
 
@@ -371,14 +371,14 @@ def generate_exmp03() -> list:
             timestamp="2026-01-01T00:02:00Z",
             name="search_and_analyze_agent",
             scope_type="agent",
-            attributes=0,
+            attributes=[],
         ),
         LLMStartEvent(
             uuid="llm-020",
             parent_uuid="scope-agent-003",
             timestamp="2026-01-01T00:02:01Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             input={
                 "messages": [{
                     "role": "user", "content": "Search for ATIF spec and summarize it, also count the words."
@@ -392,7 +392,7 @@ def generate_exmp03() -> list:
             parent_uuid="scope-agent-003",
             timestamp="2026-01-01T00:02:02Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             output={
                 "choices": [{
                     "message": {
@@ -440,14 +440,14 @@ def generate_exmp03() -> list:
             timestamp="2026-01-01T00:02:03Z",
             name="search__web",
             scope_type="function",
-            attributes=0,
+            attributes=[],
         ),
         ToolStartEvent(
             uuid="tool-020",
             parent_uuid="scope-fn-010",
             timestamp="2026-01-01T00:02:04Z",
             name="search__web",
-            attributes=0,
+            attributes=[],
             input={"query": "ATIF spec"},
             tool_call_id="call_search_001",
         ),
@@ -457,7 +457,7 @@ def generate_exmp03() -> list:
             parent_uuid="scope-fn-010",
             timestamp="2026-01-01T00:02:05Z",
             name="text__summarize",
-            attributes=0,
+            attributes=[],
             input={"text": "ATIF is a trajectory format for agent evaluation..."},
             tool_call_id="call_summarize_001",
         ),
@@ -466,7 +466,7 @@ def generate_exmp03() -> list:
             parent_uuid="scope-fn-010",
             timestamp="2026-01-01T00:02:06Z",
             name="text__summarize",
-            attributes=0,
+            attributes=[],
             output={"summary": "ATIF defines a standard trajectory format for evaluating AI agents."},
             tool_call_id="call_summarize_001",
         ),
@@ -475,7 +475,7 @@ def generate_exmp03() -> list:
             parent_uuid="scope-fn-010",
             timestamp="2026-01-01T00:02:07Z",
             name="search__web",
-            attributes=0,
+            attributes=[],
             output={
                 "results": ["ATIF spec found"], "summary": "ATIF defines a standard trajectory format."
             },
@@ -487,7 +487,7 @@ def generate_exmp03() -> list:
             timestamp="2026-01-01T00:02:08Z",
             name="search__web",
             scope_type="function",
-            attributes=0,
+            attributes=[],
         ),
         # T2: text__word_count (sibling of T1)
         ToolStartEvent(
@@ -495,7 +495,7 @@ def generate_exmp03() -> list:
             parent_uuid="scope-agent-003",
             timestamp="2026-01-01T00:02:09Z",
             name="text__word_count",
-            attributes=0,
+            attributes=[],
             input={"text": "The ATIF specification defines..."},
             tool_call_id="call_wc_001",
         ),
@@ -504,7 +504,7 @@ def generate_exmp03() -> list:
             parent_uuid="scope-agent-003",
             timestamp="2026-01-01T00:02:10Z",
             name="text__word_count",
-            attributes=0,
+            attributes=[],
             output={"word_count": 5},
             tool_call_id="call_wc_001",
         ),
@@ -514,7 +514,7 @@ def generate_exmp03() -> list:
             parent_uuid="scope-agent-003",
             timestamp="2026-01-01T00:02:11Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             input={
                 "messages": [
                     {
@@ -536,7 +536,7 @@ def generate_exmp03() -> list:
             parent_uuid="scope-agent-003",
             timestamp="2026-01-01T00:02:12Z",
             name="nvidia/nemotron-3-super-v3",
-            attributes=0,
+            attributes=[],
             output={
                 "choices": [{
                     "message": {
@@ -559,7 +559,7 @@ def generate_exmp03() -> list:
             timestamp="2026-01-01T00:02:13Z",
             name="search_and_analyze_agent",
             scope_type="agent",
-            attributes=0,
+            attributes=[],
         ),
     ]
 
