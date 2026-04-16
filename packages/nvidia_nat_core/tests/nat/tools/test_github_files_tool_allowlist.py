@@ -12,12 +12,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Tests for the github_files_tool allowed_repos allowlist.
+"""Tests for the `github_files_tool` `allowed_repos` allowlist.
 
-Direct unit coverage of the _repo_path_is_allowed helper plus the
-GithubFilesGroupConfig shape. End-to-end test_tool coverage of the get()
-closure is more involved (requires a mock httpx transport) and is out of
-scope for this defensive hardening PR.
+Direct unit coverage of the `_repo_path_is_allowed` helper plus the
+`GithubFilesGroupConfig` shape. End-to-end `test_tool` coverage of the
+`get()` closure is more involved (requires a mock `httpx` transport) and
+is out of scope for this defensive hardening PR.
 """
 
 import pytest
@@ -27,10 +27,10 @@ from nat.tool.github_tools import _repo_path_is_allowed
 
 
 class TestRepoPathAllowlist:
-    """_repo_path_is_allowed should pass with no allowlist and enforce scope when set."""
+    """`_repo_path_is_allowed` should pass with no allowlist and enforce scope when set."""
 
     def test_none_allowlist_permits_everything(self):
-        """Backward compat: allowed_repos=None keeps the current permissive default."""
+        """Backward compat: `allowed_repos=None` keeps the current permissive default."""
         assert _repo_path_is_allowed("NVIDIA/NeMo-Agent-Toolkit", None) is True
         assert _repo_path_is_allowed("any-org/any-repo", None) is True
 
@@ -99,7 +99,7 @@ class TestRepoPathAllowlist:
         ],
     )
     def test_malformed_repo_path_is_rejected(self, bad_path):
-        """Tighter validation: repo_path must be exactly 'org/repo'.
+        """Tighter validation: `repo_path` must be exactly `'org/repo'`.
 
         The earlier 'contains /' check accepted 'org/repo/extra' and 'org/'
         as partial matches against allowlist prefixes — a narrow but real
@@ -114,7 +114,7 @@ class TestRepoPathAllowlist:
 
 
 class TestGithubFilesGroupConfigShape:
-    """Config must expose the allowed_repos field and default it to None."""
+    """Config must expose the `allowed_repos` field and default it to `None`."""
 
     def test_default_allowed_repos_is_none(self):
         cfg = GithubFilesGroupConfig()
