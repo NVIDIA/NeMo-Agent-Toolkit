@@ -87,7 +87,6 @@ def tool_config():
     return ExaInternetSearchToolConfig(api_key="test-key", max_retries=2, max_query_length=50)
 
 
-@pytest.mark.asyncio
 async def test_empty_key_returns_unavailable(tool_config):
     from nat.plugins.langchain.tools.exa_internet_search import ExaInternetSearchToolConfig
     from nat.plugins.langchain.tools.exa_internet_search import exa_internet_search
@@ -99,7 +98,6 @@ async def test_empty_key_returns_unavailable(tool_config):
         assert "EXA_API_KEY" in result
 
 
-@pytest.mark.asyncio
 async def test_query_truncation(tool_config):
     from nat.plugins.langchain.tools.exa_internet_search import exa_internet_search
 
@@ -123,7 +121,6 @@ async def test_query_truncation(tool_config):
             assert truncated_query.endswith("...")
 
 
-@pytest.mark.asyncio
 async def test_empty_results(tool_config):
     from nat.plugins.langchain.tools.exa_internet_search import exa_internet_search
 
@@ -140,7 +137,6 @@ async def test_empty_results(tool_config):
             assert "No web search results found" in result
 
 
-@pytest.mark.asyncio
 async def test_retries_on_exception(tool_config):
     from nat.plugins.langchain.tools.exa_internet_search import exa_internet_search
 
