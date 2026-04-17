@@ -87,6 +87,7 @@ dependencies = [
   "python-multipart>=0.0.21",
   "PyYAML~=6.0",
   "rich~=14.0",
+  "starlette >=0.51,<2.0",
   "tabulate~=0.9",
   "tzlocal~=5.3",
   "uvicorn[standard]~=0.38",
