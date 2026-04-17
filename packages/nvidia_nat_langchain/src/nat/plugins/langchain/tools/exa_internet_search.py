@@ -52,7 +52,8 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
         description="Maximum query length in characters. Queries exceeding this limit will be truncated.")
     highlights: bool = Field(default=True, description="Whether to include highlights in search results.")
     max_content_length: int | None = Field(
-        default=10000, ge=1,
+        default=10000,
+        ge=1,
         description="Maximum characters of text content per result. Set to None to disable text content.")
 
 
@@ -92,10 +93,9 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
                     num_results=tool_config.max_results,
                     type=tool_config.search_type,
                     livecrawl=tool_config.livecrawl,
-                    text_contents_options=(
-                        {"max_characters": tool_config.max_content_length}
-                        if tool_config.max_content_length else None
-                    ),
+                    text_contents_options=({
+                        "max_characters": tool_config.max_content_length
+                    } if tool_config.max_content_length else None),
                     highlights=tool_config.highlights or None,
                 )
                 # On error, ExaSearchResults may return a string error message
