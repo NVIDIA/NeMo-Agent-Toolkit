@@ -27,7 +27,7 @@ What *kind of work* a scope represents — an LLM call, a tool invocation, an ag
 **Wire envelope shape:**
 
 ```json
-{"kind": "ScopeStart", "uuid": "...", "parent_uuid": "...", "timestamp": "...", "name": "...", "scope_type": "llm", "flags": [], "profile": {...}, "input": {...}, "data": null, "metadata": null}
+{"kind": "ScopeStart", "schema_version": "0.1", "uuid": "...", "parent_uuid": "...", "timestamp": "...", "name": "...", "scope_type": "llm", "flags": [], "profile": {...}, "input": {...}, "data": null, "metadata": null}
 ```
 
 ATOF events are the raw, un-merged observations from the runtime. Downstream layers (ATIF conversion, observability export) consume them separately.
@@ -61,17 +61,18 @@ Emitters SHOULD NOT duplicate information already carried by `profile`, `input`,
 
 ## 2. Common Event Fields
 
-All three event types share these six fields.
+All three event types share these seven fields.
 
 
-| Field         | Type                  | Required | Description                                                                                                                                                                 |
-| ------------- | --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parent_uuid` | string (UUID) or null | No       | UUID of the scope that was on top of the stack when this handle was created. Null only on the root scope. Following `parent_uuid` links upward reconstructs the call graph. |
-| `uuid`        | string (UUID)         | Yes      | Unique identifier for this handle. The matching Start and End events for the same handle carry the same `uuid`.                                                             |
-| `timestamp`   | string (RFC 3339)     | Yes      | Wall-clock time when this event was emitted. Start and End events for the same handle have different timestamps.                                                            |
-| `name`        | string                | Yes      | Human-readable label for this handle — e.g., `"my_agent"`, `"calculator__add"`, `"nvidia/nemotron-3-super-v3"`.                                                             |
-| `data`        | object or null        | No       | Application-specific JSON payload attached by the caller.                                                                                                                   |
-| `metadata`    | object or null        | No       | Tracing and correlation metadata — e.g., `{"trace_id": "...", "span_id": "..."}`.                                                                                           |
+| Field            | Type                  | Required | Description                                                                                                                                                                                                                                      |
+| ---------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `schema_version` | string                | Yes      | Spec version this event conforms to, formatted as `"MAJOR.MINOR"` (e.g., `"0.1"`). Consumers dispatch on this value per the negotiation rules in Section 5.7. Mixed-version streams are permitted.                                                |
+| `parent_uuid`    | string (UUID) or null | No       | UUID of the scope that was on top of the stack when this handle was created. Null only on the root scope. Following `parent_uuid` links upward reconstructs the call graph.                                                                      |
+| `uuid`           | string (UUID)         | Yes      | Unique identifier for this handle. The matching Start and End events for the same handle carry the same `uuid`.                                                                                                                                  |
+| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | Wall-clock time when this event was emitted. Accepts two interchangeable forms — RFC 3339 string (e.g., `"2026-01-01T00:00:00Z"`) or integer epoch microseconds UTC (e.g., `1767225600000000`). See Section 5.1 for format choice guidance. Start and End events for the same handle have different timestamps.                                                                                                                                 |
+| `name`           | string                | Yes      | Human-readable label for this handle — e.g., `"my_agent"`, `"calculator__add"`, `"nvidia/nemotron-3-super-v3"`.                                                                                                                                  |
+| `data`           | object or null        | No       | Application-specific JSON payload attached by the caller.                                                                                                                                                                                        |
+| `metadata`       | object or null        | No       | Tracing and correlation metadata — e.g., `{"trace_id": "...", "span_id": "..."}`.                                                                                                                                                                |
 
 
 ---
@@ -83,15 +84,16 @@ All three event types share these six fields.
 Emitted when a new scope is pushed onto the scope stack.
 
 
-| Field         | Type                  | Required | Description                                                                                                                                                                                                                                                                                                                               |
-| ------------- | --------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `uuid`        | string (UUID)         | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `name`        | string                | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `data`        | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `metadata`    | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
-| `scope_type`  | string (enum)         | Yes      | Profile discriminator. One of: `"agent"`, `"function"`, `"tool"`, `"llm"`, `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`, `"custom"`, `"unknown"`. See Section 4.                                                                                                                                               |
+| Field            | Type                  | Required | Description                                                                                                                                                                                                                                                                                                                               |
+| ---------------- | --------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema_version` | string                | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `parent_uuid`    | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `uuid`           | string (UUID)         | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `name`           | string                | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `data`           | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `metadata`       | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `scope_type`     | string (enum)         | Yes      | Profile discriminator. One of: `"agent"`, `"function"`, `"tool"`, `"llm"`, `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`, `"custom"`, `"unknown"`. See Section 4.                                                                                                                                               |
 | `flags`       | array of strings      | Yes      | Behavioral flag names, canonical form (lowercase, sorted, deduplicated). Vocabulary depends on `scope_type` (see Section 4). Empty array when no flags are set.                                                                                                                                                                           |
 | `profile`     | object or null        | No       | Scope-type-specific structured fields known at scope entry (e.g., `model_name` for LLM, `tool_call_id` for tool). Shape is defined by the scope profile for `scope_type` (Section 4). Null when the profile defines no start-side fields.                                                                                                 |
 | `input`       | any or null           | No       | Sanitized input payload handed to the scope at entry (post request-sanitize guardrails). Opaque by default. When a codec is registered for this scope, `input` holds the structured form defined by the codec profile (see `[atof-codec-profiles.md](./atof-codec-profiles.md)`). Omitted or null when the scope has no meaningful input. |
@@ -102,11 +104,12 @@ Emitted when a new scope is pushed onto the scope stack.
 Emitted when a scope is popped from the scope stack. Mirrors `ScopeStartEvent` except that `input` is replaced by `output`.
 
 
-| Field         | Type                  | Required | Description                                                                                                                                                                                                                                                                                                                                          |
-| ------------- | --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
-| `uuid`        | string (UUID)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
-| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| Field            | Type                  | Required | Description                                                                                                                                                                                                                                                                                                                                          |
+| ---------------- | --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema_version` | string                | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| `parent_uuid`    | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| `uuid`           | string (UUID)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
+| `timestamp`   | string (RFC 3339) or integer (epoch µs) | Yes | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
 | `name`        | string                | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
 | `data`        | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
 | `metadata`    | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
@@ -142,14 +145,15 @@ Vendor- or domain-specific error context (HTTP status codes, provider error code
 Emitted when the application records a named checkpoint in the event stream. Mark is the simplest event type — it has no `scope_type`, `flags`, `profile`, `input`, or `output`.
 
 
-| Field         | Type                  | Required | Description                                      |
-| ------------- | --------------------- | -------- | ------------------------------------------------ |
-| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                   |
-| `uuid`        | string (UUID)         | Yes      | See Section 2.                                   |
-| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                   |
-| `name`        | string                | Yes      | Name of the marker checkpoint.                   |
-| `data`        | object or null        | No       | Application-specific payload for this milestone. |
-| `metadata`    | object or null        | No       | See Section 2.                                   |
+| Field            | Type                  | Required | Description                                      |
+| ---------------- | --------------------- | -------- | ------------------------------------------------ |
+| `schema_version` | string                | Yes      | See Section 2.                                   |
+| `parent_uuid`    | string (UUID) or null | No       | See Section 2.                                   |
+| `uuid`           | string (UUID)         | Yes      | See Section 2.                                   |
+| `timestamp`      | string (RFC 3339) or integer (epoch µs) | Yes | See Section 2.                                   |
+| `name`           | string                | Yes      | Name of the marker checkpoint.                   |
+| `data`           | object or null        | No       | Application-specific payload for this milestone. |
+| `metadata`       | object or null        | No       | See Section 2.                                   |
 
 
 ---
@@ -254,9 +258,20 @@ Used when the emitter cannot identify a more specific profile. `profile` is null
 
 ## 5. Event Stream Semantics
 
-### 5.1 Timestamp Ordering
+### 5.1 Timestamp Format and Ordering
 
-Events are emitted in wall-clock order. Delivery order from subscriber callbacks MAY differ for concurrent operations. Consumers MUST sort by `timestamp` before processing.
+**Accepted forms.** Every event's `timestamp` (Section 2) carries one of two interchangeable forms:
+
+- **RFC 3339 string** (e.g., `"2026-01-01T00:00:00.123456Z"`) — human-readable, interoperable with general-purpose date-handling libraries, default choice for debug and log-tailing contexts. MUST end with `Z` or an explicit UTC offset.
+- **Integer epoch microseconds UTC** (e.g., `1767225600123456`) — fast to parse (~15× faster than RFC 3339 in most runtimes), ~50% smaller on the wire, safe in JSON numbers through year 2255 (fits in IEEE 754 double integer precision). Chosen for high-throughput streams and columnar-storage pipelines.
+
+Emitters choose per event. A single stream MAY contain events in both forms (mixed-format streams are legal for the same reasons mixed-version streams are legal — see §5.7).
+
+**Why microseconds and not nanoseconds.** JSON numbers are IEEE 754 doubles with 53 bits of integer precision (~9 × 10¹⁵). Nanoseconds since epoch for 2026 is ~1.76 × 10¹⁸ — exceeding safe integer range and causing silent precision loss in most parsers. Microseconds fits safely and remains precise enough for agent-scope event correlation. If nanosecond precision is required for a specific use case, emitters SHOULD use the RFC 3339 string form with a nanosecond fractional second.
+
+**Ordering.** Events are emitted in wall-clock order. Delivery order from subscriber callbacks MAY differ for concurrent operations. Consumers MUST sort by `timestamp` before processing. When sorting a mixed-format stream, consumers MUST normalize both forms to a common representation (typically integer microseconds) before comparison — lexicographic comparison of a string against an integer is undefined.
+
+**ATIF compatibility.** ATIF (see `[atof-to-atif-converter.md](./atof-to-atif-converter.md)`) requires timestamps as ISO 8601 strings on its optional `step.timestamp` field. The ATOF → ATIF converter serializes either ATOF form to an ISO 8601 string before emitting ATIF. No emitter-side action is required for ATIF compatibility regardless of which ATOF timestamp form is chosen.
 
 ### 5.2 Scope Nesting and parent_uuid
 
@@ -290,14 +305,14 @@ Three distinct identifier namespaces appear in an ATOF stream:
 │  ┌─ ScopeStart (scope_type=llm) ─────────────── ScopeEnd ─┐             │
 │  │  uuid: "llm-001"                                       │             │
 │  │  parent_uuid: "scope-001" ─────────────────────────────┼──► graph    │
-│  │  profile.model_name: "..."                          │                │
+│  │  profile.model_name: "..."                             │             │
 │  │  output.tool_calls[0].id ──────────────────────────────┼──► "call_1" │
 │  └────────────────────────────────────────────────────────┘             │
 │                                                                         │
 │  ┌─ ScopeStart (scope_type=tool) ────────────── ScopeEnd ─┐             │
 │  │  uuid: "tool-001"  (≠ "llm-001")                       │ ← handle id │
 │  │  parent_uuid: "scope-001" ─────────────────────────────┼──► graph    │
-│  │  profile.tool_call_id: "call_1" ────────────────────┼──► LLM corr    │
+│  │  profile.tool_call_id: "call_1" ────────────────────---┼──► LLM corr │
 │  └────────────────────────────────────────────────────────┘             │
 └─────────────────────────────────────────────────────────────────────────┘
 
@@ -322,6 +337,32 @@ Every `ScopeEnd` carries a terminal `status` (Section 3.2). The following rules 
 **Dangling scopes.** If the runtime dies before emitting a paired `ScopeEnd`, no event appears in the stream. Section 5.3's pairing guarantee is contingent on orderly shutdown. Consumers that detect an unpaired `ScopeStart` after the stream ends MAY synthesize a `ScopeEnd` with `status == "cancelled"` for downstream processing; such synthetic events are out of scope for ATOF Core.
 
 **Start/End pairing unchanged.** Section 5.3's invariants still hold: every `ScopeStart` has exactly one matching `ScopeEnd` sharing the same `uuid`, and all child events of a scope precede the parent's `ScopeEnd`. `status` is a property of the End event, not a modifier of the pairing rule.
+
+### 5.7 Schema Version and Negotiation
+
+Every ATOF event carries a required `schema_version` field (Section 2) formatted as `"MAJOR.MINOR"` — e.g., `"0.1"`. This section defines when producers bump the version, how consumers dispatch on it, and what guarantees exist across mixed-version streams.
+
+**Version bump policy.**
+
+- **Minor bump** (e.g., `0.1` → `0.2`) for additive, backward-compatible changes. Examples: adding a new optional field, adding a new flag name to an open vocabulary, adding a new enum value to an extensible enum, defining fields for a previously-empty scope profile, adding a new scope type.
+- **Major bump** (e.g., `0.1` → `1.0`) for breaking changes. Examples: removing a field, renaming a field, changing a field's type, changing a required field's nullability, redefining the semantics of an existing field or enum value, making a previously optional field required.
+
+Pre-release versions (`0.x`) are not subject to these rules — the spec may introduce breaking changes within the `0.x` series without a major bump. Major bump discipline begins with the first `1.0` release.
+
+**Consumer dispatch on version mismatch.** Given an event's `schema_version` `SEEN` and the consumer's expected version `EXPECTED`, consumers SHOULD behave as follows:
+
+| Comparison                                     | Consumer behavior                                                                                                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SEEN == EXPECTED`                             | Process normally.                                                                                                                                     |
+| `SEEN.major == EXPECTED.major`, `SEEN.minor > EXPECTED.minor` | Process best-effort. Event shape is a forward-compatible superset. Unknown fields, flag names, and enum values MUST NOT cause errors and MUST be preserved when re-emitting. Consumers MAY log a soft warning. |
+| `SEEN.major == EXPECTED.major`, `SEEN.minor < EXPECTED.minor` | Process normally. Event shape is a backward-compatible subset of what the consumer expects.                                                           |
+| `SEEN.major != EXPECTED.major`                 | Reject or log a loud warning. Major-version mismatch indicates breaking changes the consumer cannot safely handle via forward-compat.                 |
+
+Implementations MAY choose stricter or more lenient behavior (e.g., strict equality, loose best-effort for all mismatches). Implementations that deviate from the recommended dispatch SHOULD document their policy.
+
+**Mixed-version streams.** A single stream MAY contain events with differing `schema_version` values. This supports log concatenation, multi-emitter aggregation, and ETL pipelines that join streams from different emitter versions. Consumers that require a uniform stream version MUST enforce that invariant themselves (e.g., by checking the first event and rejecting subsequent divergent events); the core spec imposes no uniformity requirement.
+
+**Unknown-field preservation.** Pass-through tools (filters, pretty-printers, samplers, exporters that round-trip) MUST preserve any unknown fields encountered in an event when re-emitting it, regardless of `schema_version`. This preserves forward-compatibility for tools that sit between emitters and consumers with differing version expectations, and generalizes the existing preservation rules for unknown flag names (§4) and `"custom"` scope profiles (§4.7).
 
 ---
 
@@ -351,12 +392,12 @@ Key structural differences from ATIF:
 A minimal 6-event stream illustrating one complete tool call cycle. Each line is one JSON object.
 
 ```jsonl
-{"kind":"ScopeStart","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"input":null,"data":null,"metadata":null}
-{"kind":"ScopeStart","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:01Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"What is 3 + 4?"}],"model":"nvidia/nemotron-3-super-v3","tools":[{"type":"function","function":{"name":"calculator__add","description":"Add two numbers","parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}}}]},"data":null,"metadata":null}
-{"kind":"ScopeEnd","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:02Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},"status":"ok","error":null,"data":null,"metadata":null}
-{"kind":"ScopeStart","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:03Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_calc_001"},"input":{"a":3,"b":4},"data":null,"metadata":null}
-{"kind":"ScopeEnd","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_calc_001"},"output":7,"status":"ok","error":null,"data":null,"metadata":null}
-{"kind":"ScopeEnd","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:05Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"output":null,"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.1","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"input":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.1","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:01Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"What is 3 + 4?"}],"model":"nvidia/nemotron-3-super-v3","tools":[{"type":"function","function":{"name":"calculator__add","description":"Add two numbers","parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}}}]},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.1","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:02Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.1","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:03Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_calc_001"},"input":{"a":3,"b":4},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.1","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_calc_001"},"output":7,"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.1","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:05Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"output":null,"status":"ok","error":null,"data":null,"metadata":null}
 ```
 
 **Note on event ordering:** The LLM `ScopeEnd` arrives at `t=02` before the tool `ScopeStart` at `t=03`. This is the correct order: the LLM decides to call the tool (emitting `ScopeEnd` with `tool_calls` in `output`), then the runtime dispatches the tool call. The exporter sorts by timestamp, so the ordering `LLM-ScopeEnd → Tool-ScopeStart → Tool-ScopeEnd` is required for correct correlation.
@@ -366,10 +407,10 @@ A minimal 6-event stream illustrating one complete tool call cycle. Each line is
 A 4-event stream illustrating a tool that raises an exception, while the parent agent handles the error and completes normally. Demonstrates `status: "error"` on the failed scope and `status: "ok"` on the parent that recovered.
 
 ```jsonl
-{"kind":"ScopeStart","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"resilient_fetch_agent","scope_type":"agent","flags":[],"profile":null,"input":"Fetch https://example.invalid/data","data":null,"metadata":null}
-{"kind":"ScopeStart","uuid":"tool-002","parent_uuid":"scope-agent-002","timestamp":"2026-01-01T00:00:01Z","name":"http_get","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_fetch_001"},"input":{"url":"https://example.invalid/data","timeout_s":5},"data":null,"metadata":null}
-{"kind":"ScopeEnd","uuid":"tool-002","parent_uuid":"scope-agent-002","timestamp":"2026-01-01T00:00:06Z","name":"http_get","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_fetch_001"},"output":null,"status":"error","error":{"type":"TimeoutError","message":"Request to https://example.invalid/data exceeded 5s timeout","stack":"Traceback (most recent call last):\n  File \"tools/http.py\", line 42, in http_get\n    resp = await client.get(url, timeout=timeout_s)\nTimeoutError: ..."},"data":null,"metadata":null}
-{"kind":"ScopeEnd","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-01T00:00:07Z","name":"resilient_fetch_agent","scope_type":"agent","flags":[],"profile":null,"output":"Unable to fetch the requested URL; the endpoint timed out.","status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.1","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"resilient_fetch_agent","scope_type":"agent","flags":[],"profile":null,"input":"Fetch https://example.invalid/data","data":null,"metadata":null}
+{"kind":"ScopeStart","schema_version":"0.1","uuid":"tool-002","parent_uuid":"scope-agent-002","timestamp":"2026-01-01T00:00:01Z","name":"http_get","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_fetch_001"},"input":{"url":"https://example.invalid/data","timeout_s":5},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.1","uuid":"tool-002","parent_uuid":"scope-agent-002","timestamp":"2026-01-01T00:00:06Z","name":"http_get","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_fetch_001"},"output":null,"status":"error","error":{"type":"TimeoutError","message":"Request to https://example.invalid/data exceeded 5s timeout","stack":"Traceback (most recent call last):\n  File \"tools/http.py\", line 42, in http_get\n    resp = await client.get(url, timeout=timeout_s)\nTimeoutError: ..."},"data":null,"metadata":null}
+{"kind":"ScopeEnd","schema_version":"0.1","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-01T00:00:07Z","name":"resilient_fetch_agent","scope_type":"agent","flags":[],"profile":null,"output":"Unable to fetch the requested URL; the endpoint timed out.","status":"ok","error":null,"data":null,"metadata":null}
 ```
 
 **Note on status propagation:** The tool scope reports `status: "error"` with a populated `error` object carrying the exception type, message, and a stack trace. The parent agent scope caught the tool error, synthesized a user-facing response, and reports `status: "ok"` with its own `output`. Each scope reports its own terminal status (Section 5.6) — error does not auto-propagate up the scope graph.
@@ -407,19 +448,29 @@ Without an explicit status, `output=null` is ambiguous between "scope returned n
 **Why keep the `error` object minimal (`type`, `message`, optional `stack`)?**
 These three fields cover the debuggability essentials without imposing a taxonomy. Additional context — HTTP status codes, provider error codes, retry hints, nested cause chains — is inherently vendor- or domain-specific and does not generalize across emitters. Such context belongs in `data`, where it is opaque to ATOF and safely ignored by consumers that do not care about the specific emitter's shape. The error object avoids bundling a flat list of ten rarely-populated fields and keeps the core contract small.
 
+**Why carry `schema_version` on every event rather than once per stream?**
+Two reasons, both rooted in prior design decisions. First, it mirrors the principle laid out in "Why does `ScopeEnd` repeat `name`, `scope_type`, and `flags`?" above: every event is independently interpretable without joining to its siblings. Sampling consumers, stream filters, partial-stream analyzers, and log-tailing pipelines all benefit. A stream-header event would force any consumer that processes a single event in isolation to either maintain a uuid-to-version dispatch table or fail opaquely when the header was dropped, sampled out, or never present. Second, it makes mixed-version streams a first-class use case — concatenated logs, multi-emitter aggregation, and ETL joins across emitter generations produce streams with per-event version divergence, and `schema_version` lets consumers dispatch correctly without out-of-band coordination. The wire cost (≈22 bytes per event, near-zero after transport compression) is small compared to the consumer-side cost of working around a stream-header design.
+
+**Why string `"MAJOR.MINOR"` and not a structured version object or integer?**
+String `"MAJOR.MINOR"` is the minimum machine-parseable format that supports the dispatch rules in Section 5.7. A structured object (`{"major": 0, "minor": 1}`) costs more bytes per event and requires consumers to write an accessor on every access. An integer (e.g., `1` for v0.1, `2` for v0.2) loses the major/minor distinction and forces arbitrary mappings. String equality handles the common same-version case in a single comparison; consumers that need major/minor comparison split on `.` once.
+
+**Why polymorphic `timestamp` (string or integer) instead of one canonical form?**
+The two timestamp uses — human debugging and high-throughput machine ingestion — have directly opposed performance and readability tradeoffs. RFC 3339 strings are ~15× slower to parse than integer casts in most runtimes and ~50% larger on the wire, but are self-documenting when a human reads raw log output. Forcing every emitter to pay the string cost penalizes throughput-sensitive pipelines; forcing every emitter to use integers penalizes ad-hoc debuggability. Polymorphism lets each emitter pick per its use case, at the cost of a one-line type dispatch on the consumer side. The cost is contained because the dispatch is trivial (isinstance/typeof) and the normalized form (integer microseconds) is the universal sort key.
+
+**Why epoch microseconds and not epoch nanoseconds as the integer form?**
+JSON numbers are IEEE 754 doubles with 53 bits of integer precision. Nanoseconds since epoch exceed that range today and would silently lose precision in any JSON parser that follows the spec. Microseconds fits safely and preserves enough precision for agent-scope event correlation (the tightest observed agent schedulers resolve events at tens of microseconds, not nanoseconds). Use cases requiring nanosecond precision — e.g., OpenTelemetry-compatible distributed tracing at hardware-level granularity — can use the RFC 3339 string form, which preserves arbitrary sub-second precision via its decimal fraction.
+
 **Why split codec profiles and the ATIF converter into companion documents?**
 Codec profiles (OpenAI Chat, Anthropic Messages, …) are provider-specific overlays, not core ATOF. The ATOF→ATIF converter is a consumer-specific downstream layer. Keeping both out of the core spec lets non-NAT emitters adopt ATOF without reading converter or codec content, and lets NAT evolve those layers independently of the wire format.
 
 ---
 
-## 9. Follow-up Issues
+## 9. Roadmapped Issues
 
 The following structural gaps are acknowledged but deferred to keep the current pre-release scope bounded. They are non-normative and will be addressed in a subsequent revision.
 
-1. **Per-event `schema_version`.** Consumers cannot currently detect format version at the event level. Add `schema_version` either per event or via a dedicated stream-header event.
-2. **Emitter / resource identity.** No analog to OpenTelemetry's Resource — useful when multiple services feed into one event store. Consider a `resource` block or a dedicated stream-header event carrying `service.name`, runtime version, host identity, etc.
-3. **Streaming chunk event type.** LLMs with streaming output currently emit one `ScopeEnd` carrying the fully assembled response. The spec should define whether and how incremental deltas appear (e.g., a `Chunk` event associated with an open LLM scope) before the `"streaming"` flag becomes meaningful end-to-end.
-4. **Timestamp format cost.** RFC 3339 strings are ~4× slower to parse than epoch nanoseconds at scale. Decide between standardizing on numeric epoch, allowing both with explicit precedence, or keeping RFC 3339 and documenting the throughput tradeoff.
+1. **Emitter / resource identity.** No analog to OpenTelemetry's Resource — useful when multiple services feed into one event store. Consider a `resource` block or a dedicated stream-header event carrying `service.name`, runtime version, host identity, etc.
+2. **Streaming chunk event type (conditional).** A dedicated `Chunk` event for incremental streaming output is deferred pending a concrete use case. The primary streaming concern — partial output on termination — is already handled: when a `"streaming"`-flagged scope terminates with `status == "error"` or `status == "cancelled"`, the `output` field MAY carry the chunks accumulated before the terminal event, representing a partial response (§3.2, §4.1). A `Chunk` event would only be warranted if a consumer required real-time visibility into in-flight chunks before `ScopeEnd` — e.g., a UI that renders tokens as they arrive rather than at scope close. Absent such a use case, the `"streaming"` flag plus `status`-gated partial output in `ScopeEnd` are sufficient.
 
 ---
 
@@ -434,5 +485,3 @@ The Toolkit-native ATOF emitter and consumer live under `src/nat/atof/`. The ATO
 | `nat.atof.scripts.atof_to_atif_converter` | `convert_file(path) → Trajectory` | Read JSONL file and convert                 |
 | `nat.atof.io`                             | `read_jsonl(path) → list[Event]`  | Parse ATOF JSONL to typed events            |
 | `nat.atof.io`                             | `write_jsonl(events, path)`       | Serialize events to JSONL                   |
-
-
