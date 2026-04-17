@@ -24,9 +24,9 @@ mkdir -p ${REPORTS_DIR}
 get_lfs_files
 
 create_env
-rapids-logger "Git Version: $(get_git_tag)"
+echo "Git Version: $(get_git_tag)"
 
-rapids-logger "Running tests with Python version $(python --version) and pytest version $(pytest --version) on $(arch)"
+echo "Running tests with Python version $(python --version) and pytest version $(pytest --version) on $(arch)"
 set +e
 
 REPORT_IDENT_SLUG="$(arch)-py${PYTHON_VERSION}"
