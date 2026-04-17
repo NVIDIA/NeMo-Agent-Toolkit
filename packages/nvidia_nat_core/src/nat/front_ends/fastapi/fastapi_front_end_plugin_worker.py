@@ -111,6 +111,11 @@ class FastApiFrontEndPluginWorkerBase(ABC):
                 await self.configure(starting_app, builder)
 
                 yield
+                # Ensure session manager resources are cleaned up when the app shuts down
+                starting_app.cleanup_session_managers()
+
+                # Ensure evaluator resources are cleaned up when the app shuts down
+                starting_app.cleanup_evaluators()
 
             logger.debug("Closing NAT server from process %s", os.getpid())
 
@@ -316,12 +321,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Initialize evaluators for single-item evaluation
         # TODO: we need config control over this as it's not always needed
         await self.initialize_evaluators(self._config)
-
-        # Ensure session manager resources are cleaned up when the app shuts down
-        app.add_event_handler("shutdown", self.cleanup_session_managers)
-
-        # Ensure evaluator resources are cleaned up when the app shuts down
-        app.add_event_handler("shutdown", self.cleanup_evaluators)
 
         await self.add_routes(app, builder)
 
