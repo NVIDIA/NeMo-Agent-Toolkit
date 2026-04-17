@@ -112,10 +112,12 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
                 yield
                 # Ensure session manager resources are cleaned up when the app shuts down
-                starting_app.cleanup_session_managers()
+                if hasattr(starting_app, "cleanup_session_managers"):
+                    starting_app.cleanup_session_managers()
 
                 # Ensure evaluator resources are cleaned up when the app shuts down
-                starting_app.cleanup_evaluators()
+                if hasattr(starting_app, "cleanup_evaluators"):
+                    starting_app.cleanup_evaluators()
 
             logger.debug("Closing NAT server from process %s", os.getpid())
 
