@@ -102,6 +102,7 @@ services:
       REDIS_PORT: 6379
       SALT: ${LANGFUSE_SALT:-mysalt}
     healthcheck:
+      # Using $(hostname) since the service binds to the container id rather than localhost
       test: ["CMD-SHELL", "wget -q --spider http://$(hostname):3030/api/health"]
       interval: 30s
       timeout: 10s
@@ -126,6 +127,7 @@ services:
       LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_USER_PW:-password123}
       NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-mysecret}
     healthcheck:
+      # Using $(hostname) since the service binds to the container id rather than localhost
       test: ["CMD-SHELL", "wget -q --spider http://$(hostname):3000/api/public/health"]
       interval: 30s
       timeout: 10s
