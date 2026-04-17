@@ -15,16 +15,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# ATOF Event Contract Specification
+# Agentic Trajectory Observability Format (ATOF) Specification
 
-
-| Field       | Value                  |
-| ----------- | ---------------------- |
-| **Status**  | Active                 |
-| **Version** | 0.1                    |
-| **Date**    | 2026-04-12             |
-| **Source**  | [`src/nat/atof/`](src/nat/atof/) (NeMo Agent Toolkit Pydantic models)|
-
+**Status:** Active  
+**Version:** 0.1  
+**Date:** 2026-04-12  
+**Reference Implementation:** `src/nat/atof/`
 
 ---
 
@@ -86,23 +82,25 @@ Emitted when a new scope is pushed onto the scope stack.
 | `metadata`    | object or null        | No       | See Section 2.                                                                                                                                            |
 | `attributes`  | array of strings      | Yes      | Behavioral flag names, canonical form (lowercase, sorted, deduplicated). Canonical values: `"parallel"`, `"relocatable"`. Empty array when no flags are set. See Section 4 for flag descriptions and the extensibility rule. |
 | `scope_type`  | string (enum)         | Yes      | One of: `"agent"`, `"function"`, `"tool"`, `"llm"`, `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`, `"custom"`, `"unknown"`.     |
+| `input`       | any or null           | No       | Optional sanitized input payload handed to the scope at entry (post request-sanitize guardrails). Omitted or null when the scope has no meaningful input, or the emitter does not capture one. |
 
 
 ### 3.2 ScopeEndEvent
 
-Emitted when a scope is popped from the scope stack. Fields are identical to `ScopeStartEvent`.
+Emitted when a scope is popped from the scope stack. Fields mirror `ScopeStartEvent` except that `input` is replaced by an optional `output`.
 
 
-| Field         | Type                  | Required | Description                                                  |
-| ------------- | --------------------- | -------- | ------------------------------------------------------------ |
-| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                               |
-| `uuid`        | string (UUID)         | Yes      | Same value as the matching `ScopeStartEvent`.                |
-| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                               |
-| `name`        | string                | Yes      | Same value as the matching `ScopeStartEvent`.                |
-| `data`        | object or null        | No       | See Section 2.                                               |
-| `metadata`    | object or null        | No       | See Section 2.                                               |
-| `attributes`  | array of strings      | Yes      | Same value as the matching `ScopeStartEvent`. See Section 4. |
-| `scope_type`  | string (enum)         | Yes      | Same value as the matching `ScopeStartEvent`.                |
+| Field         | Type                  | Required | Description                                                                                                                                                           |
+| ------------- | --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                                                                                                                                        |
+| `uuid`        | string (UUID)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                         |
+| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                                        |
+| `name`        | string                | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                         |
+| `data`        | object or null        | No       | See Section 2.                                                                                                                                                        |
+| `metadata`    | object or null        | No       | See Section 2.                                                                                                                                                        |
+| `attributes`  | array of strings      | Yes      | Same value as the matching `ScopeStartEvent`. See Section 4.                                                                                                          |
+| `scope_type`  | string (enum)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                         |
+| `output`      | any or null           | No       | Optional sanitized output payload produced by the scope at exit (post response-sanitize guardrails). Omitted or null when the scope has no meaningful return value, or the emitter does not capture one. |
 
 
 ### 3.3 LLMStartEvent

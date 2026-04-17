@@ -73,6 +73,7 @@ class ScopeStartEvent(_EventBase):
     attributes: list[str] = Field(default_factory=list,
                                   description="Canonical ScopeAttributes flag names (sorted, deduped)")
     scope_type: str = Field(description="Scope type enum value")
+    input: Any | None = Field(default=None, description="Post-sanitize scope input payload (optional)")
 
     _normalize_attributes = field_validator("attributes", mode="before")(_canonicalize_attributes)
 
@@ -83,6 +84,7 @@ class ScopeEndEvent(_EventBase):
     kind: Literal["ScopeEnd"] = "ScopeEnd"
     attributes: list[str] = Field(default_factory=list, description="Same flags as matching ScopeStartEvent")
     scope_type: str = Field(description="Same as matching ScopeStartEvent")
+    output: Any | None = Field(default=None, description="Post-sanitize scope output payload (optional)")
 
     _normalize_attributes = field_validator("attributes", mode="before")(_canonicalize_attributes)
 
