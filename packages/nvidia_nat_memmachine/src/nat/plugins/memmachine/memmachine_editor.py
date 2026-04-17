@@ -1,0 +1,473 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import asyncio
+import logging
+from typing import Any
+
+import requests
+from memmachine_common.api import MemoryType
+
+from nat.memory.interfaces import MemoryEditor
+from nat.memory.models import MemoryItem
+
+logger = logging.getLogger(__name__)
+
+
+class MemMachineEditor(MemoryEditor):
+    """
+    Wrapper class that implements `nat` interfaces for `MemMachine` integrations.
+    Uses the `MemMachine` Python SDK (`MemMachineClient`) as documented at:
+    https://github.com/MemMachine/MemMachine/blob/main/docs/examples/python.mdx
+
+    Supports both episodic and semantic memory through the unified SDK interface.
+
+    User needs to add `MemMachine` SDK ids as metadata to the MemoryItem:
+
+    - `session_id`
+    - `agent_id`
+    - `project_id`
+    - `org_id`
+    """
+
+    def __init__(self, memmachine_instance: Any):
+        """
+        Initialize class with MemMachine instance.
+
+        Args:
+            memmachine_instance: Preinstantiated MemMachineClient or Project object.
+        """
+        self._memmachine = memmachine_instance
+        # Check if it's a client or project
+        self._is_client = hasattr(memmachine_instance, 'create_project')
+        self._is_project = hasattr(memmachine_instance, 'memory') and not self._is_client
+
+    def _get_memory_instance(self,
+                             user_id: str,
+                             session_id: str,
+                             agent_id: str,
+                             project_id: str | None = None,
+                             org_id: str | None = None) -> Any:
+        """
+        Get or create a memory instance for the given context using the MemMachine SDK.
+
+        Args:
+            user_id: User identifier
+            session_id: Session identifier
+            agent_id: Agent identifier
+            project_id: Optional project identifier (default: "default-project")
+            org_id: Optional organization identifier (default: "default-org")
+
+        Returns:
+            Memory instance from MemMachine SDK
+        """
+        # Use defaults if not provided
+        if not org_id:
+            org_id = "default-org"
+        if not project_id:
+            project_id = "default-project"
+
+        # If we have a client, get or create the project first
+        if self._is_client:
+            # Use get_or_create_project which handles existing projects gracefully
+            # It will get the project if it exists, or create it if it doesn't
+            try:
+                project = self._memmachine.get_or_create_project(org_id=org_id,
+                                                                 project_id=project_id,
+                                                                 description=f"Project for {user_id}")
+            except requests.HTTPError as e:
+                # If get_or_create_project fails with 409 conflict, project already exists
+                # Get the existing project instead
+                if e.response.status_code == 409:
+                    project = self._memmachine.get_project(org_id=org_id, project_id=project_id)
+                else:
+                    # Re-raise other HTTP errors
+                    raise
+        elif self._is_project:
+            # Use the project directly
+            project = self._memmachine
+        else:
+            # Fallback: assume it's already a memory instance or try to use it directly
+            return self._memmachine
+
+        # Create memory instance from project
+        return project.memory(user_id=user_id, agent_id=agent_id, session_id=session_id)
+
+    async def add_items(self, items: list[MemoryItem]) -> None:
+        """
+        Insert Multiple MemoryItems into the memory using the MemMachine SDK.
+        Each MemoryItem is translated and uploaded through the MemMachine API.
+
+        All memories are added to both episodic and semantic memory types.
+
+        Conversation messages within a single MemoryItem are added sequentially to
+        preserve chronological order. Separate MemoryItems (and non-conversation
+        memories) are still dispatched concurrently via asyncio.gather.
+        """
+
+        async def add_item(memory_item: MemoryItem) -> None:
+            """Upload a single MemoryItem, adding conversation messages sequentially."""
+            # Make a copy of metadata to avoid modifying the original
+            item_meta = memory_item.metadata.copy() if memory_item.metadata else {}
+            conversation = memory_item.conversation
+            user_id = memory_item.user_id
+            tags = memory_item.tags
+            memory_text = memory_item.memory
+
+            # Extract session_id, agent_id, project_id, and org_id from metadata if present
+            session_id = item_meta.pop("session_id", "default_session")
+            agent_id = item_meta.pop("agent_id", "default_agent")
+            project_id = item_meta.pop("project_id", None)
+            org_id = item_meta.pop("org_id", None)
+
+            # Get memory instance using MemMachine SDK
+            memory = self._get_memory_instance(user_id, session_id, agent_id, project_id, org_id)
+
+            # All memories are added to BOTH episodic and semantic memory types
+            memory_types = [MemoryType.Episodic, MemoryType.Semantic]
+
+            # Prepare content for MemMachine
+            # If we have a conversation, add each message separately
+            # Otherwise, use memory_text or skip if no content
+            if conversation:
+                # Add each message sequentially to preserve conversation order.
+                # asyncio.to_thread tasks dispatched via gather() complete in
+                # nondeterministic order, so we await each one before the next.
+                for msg in conversation:
+                    msg_role = msg.get('role', 'user')
+                    msg_content = msg.get('content', '')
+
+                    if not msg_content:
+                        continue
+
+                    # Add tags to metadata if present
+                    # MemMachine SDK expects tags as a string, not a list
+                    metadata = item_meta.copy() if item_meta else {}
+                    if tags:
+                        # Convert list to comma-separated string
+                        metadata["tags"] = ", ".join(tags) if isinstance(tags, list) else str(tags)
+
+                    def add_memory(
+                        content=msg_content,
+                        role=msg_role,
+                        mem=memory,
+                        mem_types=memory_types,
+                        meta=metadata,
+                    ):
+                        # Use MemMachine SDK add() method
+                        # API: memory.add(content, role="user", metadata={}, memory_types=[...])
+                        # episode_type should be None (defaults to "message") or EpisodeType.MESSAGE
+                        mem.add(
+                            content=content,
+                            role=role,
+                            metadata=meta if meta else None,
+                            memory_types=mem_types,
+                            episode_type=None  # Use default (MESSAGE)
+                        )
+
+                    await asyncio.to_thread(add_memory)
+            elif memory_text:
+                # Add as a single memory item (direct memory without conversation)
+                # Add tags to metadata if present
+                # MemMachine SDK expects tags as a string, not a list
+                metadata = item_meta.copy() if item_meta else {}
+                if tags:
+                    # Convert list to comma-separated string
+                    metadata["tags"] = ", ".join(tags) if isinstance(tags, list) else str(tags)
+
+                def add_memory(content=memory_text, mem=memory, meta=metadata, mem_types=memory_types):
+                    # Use MemMachine SDK add() method
+                    # API: memory.add(content, role="user", metadata={}, memory_types=[...])
+                    mem.add(
+                        content=content,
+                        role="user",
+                        metadata=meta if meta else None,
+                        memory_types=mem_types,
+                        episode_type=None  # Use default (MESSAGE)
+                    )
+
+                await asyncio.to_thread(add_memory)
+
+        if items:
+            await asyncio.gather(*(add_item(item) for item in items))
+
+    async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
+        """
+        Retrieve items relevant to the given query using the MemMachine SDK.
+
+        Args:
+            query (str): The query string to match.
+            top_k (int): Maximum number of items to return.
+            kwargs: Other keyword arguments for search.
+
+        Keyword arguments must include ``user_id``. May also include
+        ``session_id``, ``agent_id``, ``project_id``, ``org_id``.
+
+        Returns:
+            list[MemoryItem]: The most relevant MemoryItems for the given query.
+        """
+        user_id = kwargs.pop("user_id")  # Ensure user ID is in keyword arguments
+        session_id = kwargs.pop("session_id", "default_session")
+        agent_id = kwargs.pop("agent_id", "default_agent")
+        project_id = kwargs.pop("project_id", None)
+        org_id = kwargs.pop("org_id", None)
+
+        # Get memory instance using MemMachine SDK
+        memory = self._get_memory_instance(user_id, session_id, agent_id, project_id, org_id)
+
+        # Perform search using MemMachine SDK
+        def perform_search():
+            # MemMachine SDK search() method signature:
+            # search(query, limit=None, filter_dict=None, timeout=None)
+            # Returns dict with 'episodic_memory', 'semantic_memory', 'episode_summary'
+            return memory.search(query=query, limit=top_k)
+
+        search_results = await asyncio.to_thread(perform_search)
+
+        # Construct MemoryItem instances from search results
+        memories = []
+
+        if not search_results:
+            return memories
+
+        # MemMachine SDK returns a SearchResult Pydantic model with status and content fields
+        # The content field is a dict with episodic_memory and semantic_memory
+        # Extract the content dict from the SearchResult object
+        if hasattr(search_results, 'content'):
+            # SearchResult is a Pydantic model with content field
+            results_content = search_results.content
+        elif isinstance(search_results, dict):
+            # Fallback for dict response
+            results_content = search_results
+        else:
+            # Unknown format, return empty
+            return memories
+
+        # episodic_memory is a dict with long_term_memory and short_term_memory
+        # Each contains an 'episodes' list with the actual memory episodes
+        # semantic_memory is a list of semantic features
+        episodic_memory_dict = results_content.get("episodic_memory", {})
+        semantic_results = results_content.get("semantic_memory", [])
+
+        # Extract episodes from the nested structure
+        # episodic_memory = { 'long_term_memory': { 'episodes': [...] }, 'short_term_memory': { 'episodes': [...] } }
+        episodic_results = []
+        if isinstance(episodic_memory_dict, dict):
+            for memory_type in ['long_term_memory', 'short_term_memory']:
+                memory_data = episodic_memory_dict.get(memory_type, {})
+                if isinstance(memory_data, dict):
+                    episodes = memory_data.get('episodes', [])
+                    if isinstance(episodes, list):
+                        episodic_results.extend(episodes)
+
+        # Process episodic memories - group by conversation if possible
+        # Episodes from the same conversation should be grouped together
+        episodic_by_conversation = {}  # Key: conversation identifier, Value: list of episodes
+        standalone_episodic = []  # Episodes that don't belong to a conversation
+
+        for episode in episodic_results:
+            if isinstance(episode, dict):
+                # Check if episode has role information (producer_role field)
+                episode_role = episode.get("producer_role") or episode.get("role")
+                episode_metadata = episode.get("metadata", {})
+
+                # Group episodes by test_id or similar identifier in metadata
+                # This groups episodes from the same conversation
+                conv_id = episode_metadata.get("test_id") or episode_metadata.get("conversation_id")
+
+                if episode_role and conv_id:
+                    # This is part of a conversation - group it
+                    if conv_id not in episodic_by_conversation:
+                        episodic_by_conversation[conv_id] = []
+                    episodic_by_conversation[conv_id].append(episode)
+                else:
+                    # Standalone episode
+                    standalone_episodic.append(episode)
+            else:
+                standalone_episodic.append(episode)
+
+        # Reconstruct conversations from grouped episodes
+        for conv_key, conv_episodes in episodic_by_conversation.items():
+            # Sort episodes by created_at timestamp if available
+            try:
+                conv_episodes.sort(key=lambda e: e.get("created_at") or e.get("timestamp") or "")
+            except (TypeError, AttributeError, ValueError) as e:
+                # Skip sorting if timestamps are missing or incompatible
+                logger.exception(f"Failed to sort episodes for conversation '{conv_key}': {e}. "
+                                 "Continuing without sorting.")
+
+            # Extract conversation messages
+            conversation_messages = []
+            memory_text = None
+            item_meta = {}
+            tags = []
+
+            for episode in conv_episodes:
+                # Get role from producer_role field
+                episode_role = episode.get("producer_role") or episode.get("role") or "user"
+                episode_content = episode.get("content") or episode.get("text") or ""
+
+                if episode_content:
+                    conversation_messages.append({"role": episode_role, "content": episode_content})
+
+                    # Use first episode's metadata and tags
+                    if not item_meta:
+                        item_meta = episode.get("metadata", {}).copy()
+
+            # Extract tags from metadata
+            if "tags" in item_meta:
+                tags_raw = item_meta.pop("tags", [])
+                if isinstance(tags_raw, str):
+                    tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+                elif isinstance(tags_raw, list):
+                    tags = tags_raw
+                else:
+                    tags = []
+
+            # Create memory text from conversation (use first message or combine)
+            if conversation_messages:
+                memory_text = conversation_messages[0].get("content", "")
+                # Only set conversation if we have multiple messages
+                memories.append(
+                    MemoryItem(conversation=conversation_messages if len(conversation_messages) > 1 else None,
+                               user_id=user_id,
+                               memory=memory_text,
+                               tags=tags,
+                               metadata=item_meta))
+
+        # Process standalone episodic memories
+        for result in standalone_episodic:
+            memory_text = None
+            conversation = None
+            item_meta = {}
+            tags = []
+
+            if isinstance(result, dict):
+                memory_text = result.get("content") or result.get("text")
+                item_meta = result.get("metadata", {})
+
+                # Extract tags
+                if "tags" in item_meta:
+                    tags_raw = item_meta.pop("tags", [])
+                    if isinstance(tags_raw, str):
+                        tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+                    elif isinstance(tags_raw, list):
+                        tags = tags_raw
+                    else:
+                        tags = []
+            elif hasattr(result, 'content'):
+                memory_text = result.content
+                if hasattr(result, 'metadata'):
+                    item_meta = result.metadata or {}
+                if hasattr(result, 'tags'):
+                    tags = result.tags or []
+            else:
+                memory_text = str(result)
+
+            if memory_text:
+                memories.append(
+                    MemoryItem(conversation=conversation,
+                               user_id=user_id,
+                               memory=memory_text,
+                               tags=tags,
+                               metadata=item_meta))
+
+        # Process semantic memories
+        for result in semantic_results:
+            memory_text = None
+            item_meta = {}
+            tags = []
+
+            if isinstance(result, dict):
+                memory_text = result.get("feature") or result.get("content") or result.get("text")
+                item_meta = result.get("metadata", {})
+
+                # Extract tags
+                if "tags" in item_meta:
+                    tags_raw = item_meta.pop("tags", [])
+                    if isinstance(tags_raw, str):
+                        tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+                    elif isinstance(tags_raw, list):
+                        tags = tags_raw
+                    else:
+                        tags = []
+            elif hasattr(result, 'feature'):
+                memory_text = result.feature
+                if hasattr(result, 'metadata'):
+                    item_meta = result.metadata or {}
+            else:
+                memory_text = str(result)
+
+            if memory_text:
+                memories.append(
+                    MemoryItem(conversation=None, user_id=user_id, memory=memory_text, tags=tags, metadata=item_meta))
+
+        # Limit to top_k
+        return memories[:top_k]
+
+    async def remove_items(self, **kwargs) -> None:
+        """
+        Remove items using the MemMachine SDK.
+
+        Args:
+            kwargs (dict): Keyword arguments to pass to the remove-items method.
+
+        Should include either ``memory_id`` or ``user_id``. May also include
+        ``session_id``, ``agent_id``, ``project_id``, ``org_id``.
+        For ``memory_id`` deletion, may include ``memory_type``
+        ('episodic' or 'semantic').
+        """
+        if "memory_id" in kwargs:
+            memory_id = kwargs.pop("memory_id")
+            memory_type = kwargs.pop("memory_type", "episodic")  # Default to episodic
+            user_id = kwargs.pop("user_id", None)
+            session_id = kwargs.pop("session_id", "default_session")
+            agent_id = kwargs.pop("agent_id", "default_agent")
+            project_id = kwargs.pop("project_id", None)
+            org_id = kwargs.pop("org_id", None)
+
+            if not user_id:
+                raise ValueError("user_id is required when deleting by memory_id. "
+                                 "A memory instance is needed to perform deletion, which requires user_id.")
+
+            def delete_memory():
+                memory = self._get_memory_instance(user_id, session_id, agent_id, project_id, org_id)
+                # Use MemMachine SDK to delete specific memory
+                # API: memory.delete_episodic(episodic_id) or memory.delete_semantic(semantic_id)
+                if memory_type.lower() == "semantic":
+                    memory.delete_semantic(semantic_id=memory_id)
+                else:
+                    memory.delete_episodic(episodic_id=memory_id)
+
+            await asyncio.to_thread(delete_memory)
+
+        elif "user_id" in kwargs:
+            user_id = kwargs.pop("user_id")
+            session_id = kwargs.pop("session_id", "default_session")
+            agent_id = kwargs.pop("agent_id", "default_agent")
+            project_id = kwargs.pop("project_id", None)
+            org_id = kwargs.pop("org_id", None)
+            # Note: delete_semantic_memory flag is not yet implemented for bulk deletion
+
+            # Note: MemMachine SDK doesn't have a delete_all method
+            # We would need to search for all memories and delete them individually
+            # For now, we'll raise a NotImplementedError with guidance
+            raise NotImplementedError(
+                "Bulk deletion by user_id is not directly supported by MemMachine SDK. "
+                "To delete all memories for a user, you would need to: "
+                "1. Search for all memories with that user_id "
+                "2. Extract memory IDs from results "
+                "3. Delete each memory individually using delete_episodic() or delete_semantic(). "
+                "Alternatively, delete specific memories using memory_id parameter.")

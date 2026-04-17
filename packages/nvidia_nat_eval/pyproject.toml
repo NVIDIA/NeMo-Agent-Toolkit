@@ -55,15 +55,20 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
+  "nvidia-nat-atif == {version}",
+]
+
+[tool.setuptools_dynamic_dependencies.optional-dependencies]
+full = [
   "datasets~=4.4",
   "nvidia-nat-core == {version}",
   "openpyxl~=3.1",
 ]
-
-[tool.setuptools_dynamic_dependencies.optional-dependencies]
 test = [
+  "datasets~=4.4",
   "nvidia-nat-core[async_endpoints] == {version}",
   "nvidia-nat-test == {version}",
+  "openpyxl~=3.1",
 ]
 
 [tool.uv]
@@ -72,6 +77,7 @@ managed = true
 config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
+nvidia-nat-atif = { path = "../nvidia_nat_atif", editable = true }
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 

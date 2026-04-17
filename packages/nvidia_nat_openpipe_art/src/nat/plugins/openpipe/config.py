@@ -56,8 +56,6 @@ class ARTBackendConfig(BaseModel):
 
     engine_args: art.dev.EngineArgs | None = Field(description="Engine args for Remote Backend", default=None)
 
-    torchtune_args: art.dev.TorchtuneArgs | None = Field(description="Torchtune args for Remote Backend", default=None)
-
     server_config: art.dev.OpenAIServerConfig | None = Field(description="Server args for Remote Backend", default=None)
 
 

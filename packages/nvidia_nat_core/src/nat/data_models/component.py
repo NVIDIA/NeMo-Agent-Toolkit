@@ -36,6 +36,7 @@ class ComponentEnum(StrEnum):
     LOGGING = "logging"
     MEMORY = "memory"
     OBJECT_STORE = "object_store"
+    OPTIMIZER = "optimizer"
     PACKAGE = "package"
     REGISTRY_HANDLER = "registry_handler"
     RETRIEVER_CLIENT = "retriever_client"

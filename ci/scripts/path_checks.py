@@ -124,12 +124,18 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config_with_eval.yml",
         r"^examples/frameworks/auto_wrapper/langchain_deep_research/data/DeepConsult_top10.csv",
     ),
+    # Allow deploy README to reference memmachine configuration
+    (
+        r"^examples/deploy/README\.md",
+        r"^examples/memory/memmachine/",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
     "A/B",
     "and/or",
     "application/json",
+    "arizephoenix/phoenix",
     "CI/CD",
     "commit/push",
     "Continue/Cancel",
@@ -162,6 +168,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "read/write",
     "run/host",
     "run/serve",
+    "start/stop",
     "search/edit/score/select",
     "size/time",
     "SSL/TLS",

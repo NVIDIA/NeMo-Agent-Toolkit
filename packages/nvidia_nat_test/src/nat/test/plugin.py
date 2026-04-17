@@ -376,7 +376,8 @@ def catalyst_dataset_name_fixture(catalyst_project_name: str, project_name: str)
 
     from ragaai_catalyst import Dataset
     ds = Dataset(catalyst_project_name)
-    if dataset_name in ds.list_datasets():
+    datasets = ds.list_datasets()
+    if datasets and dataset_name in datasets:
         ds.delete_dataset(dataset_name)
 
 
@@ -541,7 +542,7 @@ def phoenix_url_fixture(fail_missing: bool) -> str:
     """
     To run these tests, a phoenix server must be running.
     The phoenix server can be started by running the following command:
-    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
+    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:13.22
     """
     import requests
 

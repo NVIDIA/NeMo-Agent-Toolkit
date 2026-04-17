@@ -55,7 +55,7 @@ uv pip install "nvidia-nat[phoenix]"
 
 Run the following command to start Phoenix server locally:
 ```bash
-phoenix serve
+docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
 ```
 Phoenix should now be accessible at `http://0.0.0.0:6006`.
 

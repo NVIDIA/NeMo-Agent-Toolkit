@@ -1,0 +1,689 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""GA prompt optimizer: genetic-algorithm implementation for evolving prompts."""
+
+from __future__ import annotations
+
+import asyncio
+import csv
+import json
+import logging
+import random
+from collections.abc import Sequence
+from pathlib import Path
+from typing import TYPE_CHECKING
+from typing import Any
+
+from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.config import Config
+from nat.data_models.evaluate_runtime import EvaluationRunConfig
+from nat.data_models.optimizable import SearchSpace
+from nat.data_models.optimizer import OptimizerConfig
+from nat.data_models.optimizer import OptimizerRunConfig
+from nat.data_models.optimizer import PromptOptimizerInputSchema
+from nat.experimental.decorators.experimental_warning_decorator import experimental
+from nat.plugins.config_optimizer.eval_runtime_loader import load_evaluation_run
+from nat.plugins.config_optimizer.prompts.base import BasePromptOptimizer
+from nat.plugins.config_optimizer.prompts.ga_individual import Individual
+from nat.plugins.config_optimizer.prompts.oracle_feedback import build_oracle_feedback
+from nat.plugins.config_optimizer.prompts.oracle_feedback import check_adaptive_triggers
+from nat.plugins.config_optimizer.prompts.oracle_feedback import extract_worst_reasoning
+from nat.plugins.config_optimizer.prompts.oracle_feedback import should_inject_feedback
+from nat.plugins.config_optimizer.update_helpers import apply_suggestions
+
+if TYPE_CHECKING:
+    from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
+
+logger = logging.getLogger(__name__)
+
+
+def _on_prompt_trial_end(
+    callback_manager: OptimizerCallbackManager | None,
+    population: Sequence[Individual],
+    eval_metrics: list[str],
+    frozen_params: dict[str, Any] | None,
+    prompt_format_map: dict[str, str | None],
+    best: Individual,
+) -> None:
+    """Build TrialResults for each individual in a GA generation and fire on_trial_end."""
+    if callback_manager is None:
+        return
+    from nat.plugins.eval.eval_callbacks import build_eval_result
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    for ind in population:
+        eval_result = None
+        if ind.eval_output is not None:
+            try:
+                eval_result = build_eval_result(
+                    eval_input_items=ind.eval_output.eval_input.eval_input_items,
+                    evaluation_results=ind.eval_output.evaluation_results,
+                    metric_scores=ind.metrics or {},
+                    usage_stats=ind.eval_output.usage_stats,
+                )
+            except Exception:
+                logger.warning("Failed to build EvalResult for prompt optimizer callback", exc_info=True)
+
+        callback_manager.on_trial_end(
+            TrialResult(
+                trial_number=ind.trial_number,
+                parameters=frozen_params or {},
+                metric_scores=ind.metrics or {},
+                is_best=(ind is best),
+                prompts=dict(ind.prompts),
+                prompt_formats={
+                    k: v
+                    for k, v in prompt_format_map.items() if v
+                },
+                eval_result=eval_result,
+            ))
+        ind.eval_output = None
+
+
+def _on_prompt_study_end(
+    callback_manager: OptimizerCallbackManager | None,
+    best: Individual,
+    frozen_params: dict[str, Any] | None,
+    prompt_format_map: dict[str, str | None],
+    trial_number_offset: int,
+    generations: int,
+    pop_size: int,
+) -> None:
+    """Fire on_study_end for a completed prompt GA optimisation study."""
+    if callback_manager is None:
+        return
+    from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    callback_manager.on_study_end(
+        best_trial=TrialResult(
+            trial_number=best.trial_number or 0,
+            parameters=frozen_params or {},
+            metric_scores=best.metrics or {},
+            is_best=True,
+            prompts=dict(best.prompts),
+            prompt_formats={
+                k: v
+                for k, v in prompt_format_map.items() if v
+            },
+        ),
+        total_trials=trial_number_offset + generations * pop_size,
+    )
+
+
+@experimental(feature_name="Optimizer")
+async def optimize_prompts(
+    *,
+    base_cfg: Config,
+    full_space: dict[str, SearchSpace],
+    optimizer_config: OptimizerConfig,
+    opt_run_config: OptimizerRunConfig,
+    callback_manager: OptimizerCallbackManager | None = None,
+    trial_number_offset: int = 0,
+    frozen_params: dict[str, Any] | None = None,
+) -> None:
+    """Entry point: run GA prompt optimizer (thin wrapper around GAPromptOptimizer)."""
+    runner = GAPromptOptimizer()
+    await runner.run(
+        base_cfg=base_cfg,
+        full_space=full_space,
+        optimizer_config=optimizer_config,
+        opt_run_config=opt_run_config,
+        callback_manager=callback_manager,
+        trial_number_offset=trial_number_offset,
+        frozen_params=frozen_params,
+    )
+
+
+class GAPromptOptimizer(BasePromptOptimizer):
+    """Genetic-algorithm prompt optimizer."""
+
+    async def _evaluate_single_given_trial(
+        self,
+        ind: Individual,
+        cfg_trial: Config,
+        optimizer_config: OptimizerConfig,
+        opt_run_config: OptimizerRunConfig,
+        oracle_feedback_worst_n: int,
+    ) -> None:
+        """Run EvaluationRun for an already-built trial config; fill ind.metrics."""
+        EvaluationRun = load_evaluation_run()
+        eval_cfg = EvaluationRunConfig(
+            config_file=cfg_trial,
+            dataset=opt_run_config.dataset,
+            result_json_path=opt_run_config.result_json_path,
+            endpoint=opt_run_config.endpoint,
+            endpoint_timeout=opt_run_config.endpoint_timeout,
+            override=opt_run_config.override,
+        )
+        metric_cfg = optimizer_config.eval_metrics or {}
+        eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
+        reps = max(1, getattr(optimizer_config, "reps_per_param_set", 1))
+
+        all_results: list[list[tuple[str, Any]]] = []
+        all_eval_outputs: list[Any] = []
+        for _ in range(reps):
+            eval_output = await EvaluationRun(config=eval_cfg).run_and_evaluate()
+            res = eval_output.evaluation_results
+            all_results.append(res)
+            all_eval_outputs.append(eval_output)
+        ind.eval_output = all_eval_outputs[-1] if all_eval_outputs else None
+
+        metrics: dict[str, float] = {}
+        for metric_name in eval_metrics:
+            scores: list[float] = []
+            for run_results in all_results:
+                for name, result in run_results:
+                    if name == metric_name:
+                        scores.append(result.average_score)
+                        break
+            metrics[metric_name] = float(sum(scores) / len(scores)) if scores else 0.0
+        ind.metrics = metrics
+        await self._post_evaluate_single(
+            ind,
+            all_results,
+            optimizer_config,
+            opt_run_config,
+            oracle_feedback_worst_n=oracle_feedback_worst_n,
+        )
+
+    async def _post_evaluate_single(
+        self,
+        ind: Individual,
+        all_results: list[list[tuple[str, Any]]],
+        optimizer_config: OptimizerConfig,
+        opt_run_config: OptimizerRunConfig,
+        oracle_feedback_worst_n: int,
+    ) -> None:
+        """Extract worst_items_reasoning for oracle feedback."""
+        if all_results and optimizer_config.prompt.oracle_feedback_mode != "never":
+            metric_cfg = optimizer_config.eval_metrics or {}
+            weights_by_name = {v.evaluator_name: v.weight for v in metric_cfg.values()}
+            directions_by_name = {v.evaluator_name: v.direction for v in metric_cfg.values()}
+            ind.worst_items_reasoning = extract_worst_reasoning(
+                evaluation_results=all_results[-1],
+                weights_by_name=weights_by_name,
+                directions_by_name=directions_by_name,
+                worst_n=oracle_feedback_worst_n,
+            )
+
+    async def _evaluate_population(
+        self,
+        population: list[Individual],
+        base_cfg: Config,
+        optimizer_config: OptimizerConfig,
+        opt_run_config: OptimizerRunConfig,
+        max_concurrency: int = 8,
+        callback_manager: OptimizerCallbackManager | None = None,
+        oracle_feedback_worst_n: int = 5,
+    ) -> None:
+        """Evaluate all individuals (concurrently)."""
+        unevaluated = [ind for ind in population if not ind.metrics]
+        if unevaluated:
+            sem = asyncio.Semaphore(max_concurrency)
+
+            async def _eval_one(ind: Individual) -> None:
+                async with sem:
+                    cfg_trial = apply_suggestions(base_cfg, ind.prompts)
+
+                    if callback_manager and ind.trial_number is not None:
+                        trial_project = callback_manager.get_trial_project_name(ind.trial_number)
+                        if trial_project:
+                            from nat.observability.utils.tracing_utils import get_tracing_configs
+                            tracing = get_tracing_configs(cfg_trial)
+                            for exporter_config in tracing.values():
+                                if hasattr(exporter_config, 'project'):
+                                    exporter_config.project = trial_project
+
+                    await self._evaluate_single_given_trial(
+                        ind,
+                        cfg_trial,
+                        optimizer_config,
+                        opt_run_config,
+                        oracle_feedback_worst_n=oracle_feedback_worst_n,
+                    )
+
+            await asyncio.gather(*[_eval_one(ind) for ind in unevaluated])
+
+    # ---------- fitness ---------- #
+
+    @staticmethod
+    def _normalize_generation(
+        individuals: Sequence[Individual],
+        metric_names: Sequence[str],
+        directions: Sequence[str],
+        eps: float = 1e-12,
+    ) -> list[dict[str, float]]:
+        """Return per-individual dict of normalised scores in [0,1] where higher is better."""
+        arrays = {m: [ind.metrics.get(m, 0.0) if ind.metrics else 0.0 for ind in individuals] for m in metric_names}
+        normed: list[dict[str, float]] = []
+        for i in range(len(individuals)):
+            entry: dict[str, float] = {}
+            for m, dirn in zip(metric_names, directions):
+                vals = arrays[m]
+                vmin = min(vals)
+                vmax = max(vals)
+                v = vals[i]
+                if vmax - vmin < eps:
+                    score01 = 0.5
+                else:
+                    score01 = (v - vmin) / (vmax - vmin)
+                if dirn == "minimize":
+                    score01 = 1.0 - score01
+                entry[m] = float(score01)
+            normed.append(entry)
+        return normed
+
+    @staticmethod
+    def _scalarize(
+        norm_scores: dict[str, float],
+        *,
+        mode: str,
+        weights: Sequence[float] | None,
+    ) -> float:
+        """Collapse normalised scores to a single scalar (higher is better)."""
+        vals = list(norm_scores.values())
+        if not vals:
+            return 0.0
+        if mode == "harmonic":
+            inv_sum = sum(1.0 / max(v, 1e-12) for v in vals)
+            return len(vals) / max(inv_sum, 1e-12)
+        if mode == "sum":
+            if weights is None:
+                return float(sum(vals))
+            if len(weights) != len(vals):
+                raise ValueError("weights length must equal number of objectives")
+            return float(sum(w * v for w, v in zip(weights, vals)))
+        if mode == "chebyshev":
+            return float(min(vals))
+        raise ValueError(f"Unknown combination mode: {mode}")
+
+    @staticmethod
+    def _apply_diversity_penalty(
+        individuals: Sequence[Individual],
+        diversity_lambda: float,
+    ) -> list[float]:
+        """Per-individual diversity penalty (exact-string key)."""
+        if diversity_lambda <= 0.0:
+            return [0.0 for _ in individuals]
+        seen: dict[str, int] = {}
+        keys: list[str] = []
+        for ind in individuals:
+            key = "\u241f".join(ind.prompts.get(k, "") for k in sorted(ind.prompts.keys()))
+            keys.append(key)
+            seen[key] = seen.get(key, 0) + 1
+        return [diversity_lambda * float(seen[key] - 1) for key in keys]
+
+    def _compute_fitness(
+        self,
+        population: list[Individual],
+        optimizer_config: OptimizerConfig,
+        diversity_lambda: float = 0.0,
+    ) -> None:
+        """Set scalar_fitness on each individual (normalize, scalarize, diversity penalty)."""
+        metric_cfg = optimizer_config.eval_metrics or {}
+        if not metric_cfg:
+            return
+        eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
+        directions = [v.direction for v in metric_cfg.values()]
+        weights = [v.weight for v in metric_cfg.values()]
+        mode = optimizer_config.multi_objective_combination_mode
+
+        norm_per_ind = self._normalize_generation(population, eval_metrics, directions)
+        penalties = self._apply_diversity_penalty(population, diversity_lambda)
+        for ind, norm_scores, penalty in zip(population, norm_per_ind, penalties):
+            ind.scalar_fitness = (self._scalarize(norm_scores, mode=mode, weights=weights) - penalty)
+
+    # ---------- persistence ---------- #
+
+    @staticmethod
+    def _persist_checkpoint(
+        gen: int,
+        best: Individual,
+        prompt_space: dict[str, tuple[str, str]],
+        out_dir: Path,
+    ) -> None:
+        """Write generation checkpoint JSON."""
+        checkpoint = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
+        path = out_dir / f"optimized_prompts_gen{gen}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w") as fh:
+            json.dump(checkpoint, fh, indent=2)
+        logger.info(
+            "[Evolutionary] Saved checkpoint: %s (fitness=%.4f)",
+            path,
+            best.scalar_fitness or 0.0,
+        )
+
+    @staticmethod
+    def _persist_final(
+        best: Individual,
+        history_rows: list[dict[str, Any]],
+        prompt_space: dict[str, tuple[str, str]],
+        out_dir: Path,
+    ) -> None:
+        """Write final optimized_prompts.json and ga_history_prompts.csv."""
+        out_dir.mkdir(parents=True, exist_ok=True)
+        best_prompts = {k: (best.prompts[k], prompt_space[k][1]) for k in prompt_space}
+        final_path = out_dir / "optimized_prompts.json"
+        with final_path.open("w") as fh:
+            json.dump(best_prompts, fh, indent=2)
+        logger.info("Optimization finished. Final prompts saved to: %s", final_path)
+
+        csv_path = out_dir / "ga_history_prompts.csv"
+        try:
+            fieldnames = sorted({k for row in history_rows for k in row.keys()})
+            with csv_path.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                for row in history_rows:
+                    writer.writerow(row)
+            logger.info("History saved to: %s", csv_path)
+        except Exception as e:  # pragma: no cover
+            logger.warning("Failed to write history CSV: %s", e)
+
+    @staticmethod
+    def _tournament_select(pop: Sequence[Individual], k: int) -> Individual:
+        """Select one individual by tournament (max fitness)."""
+        contenders = random.sample(pop, k=min(k, len(pop)))
+        return max(contenders, key=lambda i: (i.scalar_fitness or 0.0))
+
+    async def run(
+        self,
+        *,
+        base_cfg: Config,
+        full_space: dict[str, SearchSpace],
+        optimizer_config: OptimizerConfig,
+        opt_run_config: OptimizerRunConfig,
+        callback_manager: OptimizerCallbackManager | None = None,
+        trial_number_offset: int = 0,
+        frozen_params: dict[str, Any] | None = None,
+    ) -> None:
+        prompt_space: dict[str, tuple[str, str]] = {
+            k: (v.prompt, v.prompt_purpose)
+            for k, v in full_space.items() if v.is_prompt
+        }
+        prompt_format_map: dict[str, str | None] = {k: v.prompt_format for k, v in full_space.items() if v.is_prompt}
+        if not prompt_space:
+            logger.info("No prompts to optimize – skipping.")
+            return
+
+        metric_cfg = optimizer_config.eval_metrics
+        if not metric_cfg or len(metric_cfg) == 0:
+            raise ValueError("optimizer_config.eval_metrics must be provided for GA prompt optimization")
+        eval_metrics = [v.evaluator_name for v in metric_cfg.values()]
+
+        if optimizer_config.output_path is None:
+            raise ValueError("optimizer_config.output_path cannot be None for GA prompt optimization")
+        out_dir = optimizer_config.output_path
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        prompt_cfg = optimizer_config.prompt
+        pop_size = max(2, int(prompt_cfg.ga_population_size))
+        generations = max(1, int(prompt_cfg.ga_generations))
+        elitism = max(0, int(prompt_cfg.ga_elitism))
+        crossover_rate = float(prompt_cfg.ga_crossover_rate)
+        mutation_rate = float(prompt_cfg.ga_mutation_rate)
+        selection_method = prompt_cfg.ga_selection_method
+        tournament_size = max(2, int(prompt_cfg.ga_tournament_size))
+        max_eval_concurrency = max(1, int(prompt_cfg.ga_parallel_evaluations))
+        diversity_lambda = float(prompt_cfg.ga_diversity_lambda)
+
+        oracle_feedback_mode = prompt_cfg.oracle_feedback_mode
+        oracle_feedback_worst_n = prompt_cfg.oracle_feedback_worst_n
+        oracle_feedback_max_chars = prompt_cfg.oracle_feedback_max_chars
+        oracle_feedback_fitness_threshold = prompt_cfg.oracle_feedback_fitness_threshold
+        oracle_feedback_stagnation_generations = prompt_cfg.oracle_feedback_stagnation_generations
+        oracle_feedback_fitness_variance_threshold = prompt_cfg.oracle_feedback_fitness_variance_threshold
+        oracle_feedback_diversity_threshold = prompt_cfg.oracle_feedback_diversity_threshold
+
+        best_fitness_history: list[float] = []
+        adaptive_state: dict[str, bool] = {"enabled": False}
+
+        async with WorkflowBuilder(general_config=base_cfg.general, registry=None) as builder:
+            await builder.populate_builder(base_cfg)
+            init_fn_name = prompt_cfg.prompt_population_init_function
+            if not init_fn_name:
+                raise ValueError("No prompt optimization function configured. "
+                                 "Set optimizer.prompt.prompt_population_init_function")
+            init_fn = await builder.get_function(init_fn_name)
+            recombine_fn = None
+            if prompt_cfg.prompt_recombination_function:
+                recombine_fn = await builder.get_function(prompt_cfg.prompt_recombination_function)
+            logger.info(
+                "GA Prompt optimization ready: init_fn=%s, recombine_fn=%s",
+                init_fn_name,
+                prompt_cfg.prompt_recombination_function,
+            )
+
+            async def _mutate_prompt(
+                original_prompt: str,
+                purpose: str,
+                parent: Individual | None = None,
+            ) -> str:
+                feedback = None
+                if parent and should_inject_feedback(
+                        mode=oracle_feedback_mode,
+                        scalar_fitness=parent.scalar_fitness or 0.0,
+                        fitness_threshold=oracle_feedback_fitness_threshold,
+                        adaptive_enabled=adaptive_state["enabled"],
+                ):
+                    feedback = build_oracle_feedback(
+                        parent.worst_items_reasoning or [],
+                        oracle_feedback_max_chars,
+                    )
+                return await init_fn.acall_invoke(
+                    PromptOptimizerInputSchema(
+                        original_prompt=original_prompt,
+                        objective=purpose,
+                        oracle_feedback=feedback,
+                    ))
+
+            async def _recombine_prompts(a: str, b: str, purpose: str) -> str:
+                if recombine_fn is None:
+                    return random.choice([a, b])
+                payload = {
+                    "original_prompt": a,
+                    "objective": purpose,
+                    "oracle_feedback": None,
+                    "parent_b": b,
+                }
+                return await recombine_fn.acall_invoke(payload)
+
+            def _make_individual(prompts: dict[str, str]) -> Individual:
+                return Individual(prompts=dict(prompts))
+
+            async def _initial_population() -> list[Individual]:
+                individuals: list[Individual] = []
+                originals = {k: prompt_space[k][0] for k in prompt_space}
+                individuals.append(_make_individual(originals))
+                init_sem = asyncio.Semaphore(max_eval_concurrency)
+
+                async def _create_one() -> Individual:
+                    async with init_sem:
+                        mutated: dict[str, str] = {}
+                        for param, (base_prompt, purpose) in prompt_space.items():
+                            try:
+                                new_p = await _mutate_prompt(base_prompt, purpose)
+                            except Exception as e:
+                                logger.warning(
+                                    "Mutation failed for %s: %s; using original.",
+                                    param,
+                                    e,
+                                )
+                                new_p = base_prompt
+                            mutated[param] = new_p
+                        return _make_individual(mutated)
+
+                needed = max(0, pop_size - 1)
+                tasks = [_create_one() for _ in range(needed)]
+                individuals.extend(await asyncio.gather(*tasks))
+                return individuals
+
+            async def _make_child(
+                parent_a: Individual,
+                parent_b: Individual,
+            ) -> Individual:
+                child_prompts: dict[str, str] = {}
+                for param, (base_prompt, purpose) in prompt_space.items():
+                    pa = parent_a.prompts.get(param, base_prompt)
+                    pb = parent_b.prompts.get(param, base_prompt)
+                    child = pa
+                    if random.random() < crossover_rate:
+                        try:
+                            child = await _recombine_prompts(pa, pb, purpose)
+                        except Exception as e:
+                            logger.warning(
+                                "Recombination failed for %s: %s; falling back to parent.",
+                                param,
+                                e,
+                            )
+                            child = random.choice([pa, pb])
+                    if random.random() < mutation_rate:
+                        try:
+                            child = await _mutate_prompt(child, purpose, parent=parent_a)
+                        except Exception as e:
+                            logger.warning(
+                                "Mutation failed for %s: %s; keeping child as-is.",
+                                param,
+                                e,
+                            )
+                    child_prompts[param] = child
+                return _make_individual(child_prompts)
+
+            def _select_parent(curr_pop: list[Individual]) -> Individual:
+                if selection_method == "tournament":
+                    return self._tournament_select(curr_pop, tournament_size)
+                elif selection_method == "roulette":
+                    total = sum(max(ind.scalar_fitness or 0.0, 0.0) for ind in curr_pop)
+                    if total <= 0.0:
+                        return random.choice(curr_pop)
+                    r = random.random() * total
+                    acc = 0.0
+                    for ind in curr_pop:
+                        acc += max(ind.scalar_fitness or 0.0, 0.0)
+                        if acc >= r:
+                            return ind
+                    return curr_pop[-1]
+                else:
+                    raise ValueError(f"Invalid ga_selection_method: {selection_method!r}. "
+                                     "Must be 'tournament' or 'roulette'.")
+
+            population = await _initial_population()
+            history_rows: list[dict[str, Any]] = []
+
+            for gen in range(1, generations + 1):
+                for idx, ind in enumerate(population):
+                    if ind.trial_number is None:
+                        ind.trial_number = trial_number_offset + (gen - 1) * pop_size + idx
+                logger.info(
+                    "[GA] Generation %d/%d: evaluating population of %d",
+                    gen,
+                    generations,
+                    len(population),
+                )
+                await self._evaluate_population(
+                    population,
+                    base_cfg,
+                    optimizer_config,
+                    opt_run_config,
+                    max_concurrency=max_eval_concurrency,
+                    callback_manager=callback_manager,
+                    oracle_feedback_worst_n=oracle_feedback_worst_n,
+                )
+                self._compute_fitness(population, optimizer_config, diversity_lambda)
+
+                best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
+                self._persist_checkpoint(gen, best, prompt_space, out_dir)
+                best_fitness_history.append(best.scalar_fitness or 0.0)
+
+                if oracle_feedback_mode == "adaptive" and not adaptive_state["enabled"]:
+                    prompt_keys = [tuple(sorted(ind.prompts.items())) for ind in population]
+                    fitness_values = [ind.scalar_fitness or 0.0 for ind in population]
+                    trigger_result = check_adaptive_triggers(
+                        best_fitness_history=best_fitness_history,
+                        population_fitness_values=fitness_values,
+                        population_prompt_keys=prompt_keys,
+                        stagnation_generations=oracle_feedback_stagnation_generations,
+                        fitness_variance_threshold=oracle_feedback_fitness_variance_threshold,
+                        diversity_threshold=oracle_feedback_diversity_threshold,
+                    )
+                    if trigger_result["triggered"]:
+                        adaptive_state["enabled"] = True
+                        logger.info(
+                            "[GA] Adaptive oracle feedback ENABLED (reason=%s)",
+                            trigger_result["reason"],
+                        )
+
+                for idx, ind in enumerate(population):
+                    row: dict[str, Any] = {
+                        "generation": gen,
+                        "index": idx,
+                        "scalar_fitness": ind.scalar_fitness,
+                    }
+                    if ind.metrics:
+                        row.update({f"metric::{m}": ind.metrics[m] for m in eval_metrics})
+                    history_rows.append(row)
+
+                _on_prompt_trial_end(
+                    callback_manager,
+                    population,
+                    eval_metrics,
+                    frozen_params,
+                    prompt_format_map,
+                    best,
+                )
+
+                next_population: list[Individual] = []
+                if elitism > 0:
+                    elites = sorted(
+                        population,
+                        key=lambda i: (i.scalar_fitness or 0.0),
+                        reverse=True,
+                    )[:elitism]
+                    next_population.extend([_make_individual(e.prompts) for e in elites])
+
+                needed = pop_size - len(next_population)
+                offspring: list[Individual] = []
+                while len(offspring) < needed:
+                    p1 = _select_parent(population)
+                    p2 = _select_parent(population)
+                    if p2 is p1 and len(population) > 1:
+                        p2 = random.choice([ind for ind in population if ind is not p1])
+                    child = await _make_child(p1, p2)
+                    offspring.append(child)
+                population = next_population + offspring
+
+            await self._evaluate_population(
+                population,
+                base_cfg,
+                optimizer_config,
+                opt_run_config,
+                max_concurrency=max_eval_concurrency,
+                callback_manager=callback_manager,
+                oracle_feedback_worst_n=oracle_feedback_worst_n,
+            )
+            self._compute_fitness(population, optimizer_config, diversity_lambda)
+            best = max(population, key=lambda i: (i.scalar_fitness or 0.0))
+            _on_prompt_study_end(
+                callback_manager,
+                best,
+                frozen_params,
+                prompt_format_map,
+                trial_number_offset,
+                generations,
+                pop_size,
+            )
+            self._persist_final(best, history_rows, prompt_space, out_dir)
+            logger.info("Prompt GA optimization finished successfully!")

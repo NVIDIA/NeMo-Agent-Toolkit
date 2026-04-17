@@ -24,8 +24,8 @@ from typing import runtime_checkable
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.data_models.atif import ATIFTrajectory
-from nat.data_models.evaluator import EvalOutput
+from nat.atif import ATIFTrajectory
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 
 
 class AtifEvalSample(BaseModel):

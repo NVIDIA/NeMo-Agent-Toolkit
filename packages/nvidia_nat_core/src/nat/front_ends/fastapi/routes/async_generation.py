@@ -29,6 +29,7 @@ from pydantic import Field
 from nat.front_ends.fastapi.async_jobs.async_job import run_generation
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerateResponse
 from nat.front_ends.fastapi.fastapi_front_end_config import AsyncGenerationStatusResponse
+from nat.front_ends.fastapi.routes.common_utils import _serialize_request
 from nat.front_ends.fastapi.routes.common_utils import _with_annotation
 from nat.runtime.session import SessionManager
 
@@ -78,6 +79,7 @@ def post_async_generation(*, worker: Any, session_manager: SessionManager, reque
                     worker._config_file_path,
                     job_id,
                     request.model_dump(mode="json", exclude=["job_id", "sync_timeout", "expiry_seconds"]),
+                    _serialize_request(http_request),
                 ],
             )
 
@@ -116,6 +118,7 @@ async def add_async_generation_routes(
     session_manager: SessionManager,
     generate_body_type: Any,
     response_500: dict[str, Any],
+    disable_legacy_routes: bool = False,
 ) -> None:
     """Register async generation submission and status routes."""
 
@@ -172,3 +175,28 @@ async def add_async_generation_routes(
             }, 500: response_500
         },
     )
+
+    if not disable_legacy_routes and getattr(endpoint, "legacy_path", None):
+        app.add_api_route(
+            path=f"{endpoint.legacy_path}/async",
+            endpoint=post_async_generation(worker=worker,
+                                           session_manager=session_manager,
+                                           request_type=AsyncGenerateRequest),
+            methods=[endpoint.method],
+            response_model=AsyncGenerateResponse | AsyncGenerationStatusResponse,
+            description="Start an async generate job (legacy path)",
+            responses={500: response_500},
+        )
+
+        app.add_api_route(
+            path=f"{endpoint.legacy_path}/async/job/{{job_id}}",
+            endpoint=get_async_job_status(worker=worker, session_manager=session_manager),
+            methods=["GET"],
+            response_model=AsyncGenerationStatusResponse,
+            description="Get the status of an async job (legacy path)",
+            responses={
+                404: {
+                    "description": "Job not found"
+                }, 500: response_500
+            },
+        )

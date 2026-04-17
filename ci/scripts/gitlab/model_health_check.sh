@@ -22,7 +22,7 @@ source ${GITLAB_SCRIPT_DIR}/common.sh
 
 create_env
 
-rapids-logger "Running NIM model health check"
+echo "Running NIM model health check"
 HEALTH_JSON=${CI_PROJECT_DIR:-${PROJECT_ROOT}}/model_health_results.json
 
 set +e
@@ -32,13 +32,13 @@ set -e
 
 set +e
 install_slack_sdk
-rapids-logger "Reporting model health results to Slack"
+echo "Reporting model health results to Slack"
 ${GITLAB_SCRIPT_DIR}/report_test_results.py --model-health-json "${HEALTH_JSON}"
 REPORT_RESULT=$?
 set -e
 
 if [ ${REPORT_RESULT} -ne 0 ]; then
-    rapids-logger "Failed to report model health results to Slack"
+    echo "Failed to report model health results to Slack"
 fi
 
 exit ${HEALTH_RESULT}

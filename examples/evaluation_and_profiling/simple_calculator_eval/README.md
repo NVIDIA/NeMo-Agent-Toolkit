@@ -40,6 +40,23 @@ This example demonstrates how to evaluate and profile AI agent performance using
 
 1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
+3. **Phoenix tracing backend**: Start Phoenix before running trajectory-based configurations in this example.
+
+### Using Docker Container for Phoenix
+Start Phoenix using a Docker container with the following command:
+```bash
+docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
+```
+
+### Using a Separate Virtual Environment for Phoenix
+Alternately, you can run Phoenix from a separate virtual environment than the one used for NeMo Agent Toolkit evaluation runs. In either case using a Docker container or a separate virtual environment is needed to avoid dependency and version conflicts between Phoenix packages and toolkit plus evaluator dependencies.
+
+```bash
+# Create a new virtual environment for Phoenix, must be performed in a different directory
+uv venv -p 3.13 --seed .venv
+uv pip install arize-phoenix
+phoenix serve
+```
 
 ## Installation
 
@@ -77,3 +94,47 @@ The evaluation generates comprehensive metrics including:
 - **Question-by-Question Analysis**: Detailed breakdown of individual responses
 - **Performance Metrics**: Overall quality assessments
 - **Error Analysis**: Identification of common failure patterns
+
+### Running Nested Trajectory Evaluation
+
+Evaluate a workflow that performs a nested tool call (`power_of_two` -> `calculator__multiply`) and inspect how it appears in the ATIF trajectory output:
+
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml
+```
+
+This command:
+- Uses `examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_of_two.json`
+- Runs the built-in `trajectory` evaluator
+- Writes workflow trajectories to `.tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json`
+
+To inspect the call hierarchy from the generated ATIF file:
+
+```bash
+python packages/nvidia_nat_eval/scripts/print_atif_function_tree.py \
+  .tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json \
+  --view ancestry \
+  --item-id 1
+```
+
+### Running Branching Nested Trajectory Evaluation
+
+Evaluate a workflow where one top-level tool (`power_branch`) fans out to two internal tools (`square_via_multiply` and `cube_via_multiply_chain`) and each branch calls `calculator__multiply`.
+
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-branching-nested-trajectory-eval.yml
+```
+
+This command:
+- Uses `examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_branch.json`
+- Runs the built-in `trajectory` evaluator
+- Writes trajectories to `.tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json`
+
+To inspect one input item:
+
+```bash
+python packages/nvidia_nat_eval/scripts/print_atif_function_tree.py \
+  .tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json \
+  --view ancestry \
+  --item-id 1
+```

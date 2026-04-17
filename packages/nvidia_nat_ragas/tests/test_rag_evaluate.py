@@ -48,11 +48,11 @@ class ExampleModel(BaseModel):
 @pytest.fixture(name="atif_samples")
 def fixture_atif_samples(rag_user_inputs, rag_expected_outputs, rag_generated_outputs):
     """ATIF-native samples for testing RAG ATIF evaluator path."""
-    from nat.data_models.atif import ATIFAgentConfig
-    from nat.data_models.atif import ATIFObservation
-    from nat.data_models.atif import ATIFObservationResult
-    from nat.data_models.atif import ATIFStep
-    from nat.data_models.atif import ATIFTrajectory
+    from nat.atif import ATIFAgentConfig
+    from nat.atif import ATIFObservation
+    from nat.atif import ATIFObservationResult
+    from nat.atif import ATIFStep
+    from nat.atif import ATIFTrajectory
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 
     samples = []
@@ -152,7 +152,7 @@ async def test_rag_evaluate_failure(rag_evaluator, rag_eval_input):
     Validate evaluate processing when metric scoring raises an exception.
     """
 
-    from nat.data_models.evaluator import EvalOutput
+    from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 
     error_message = "Mocked exception in metric.ascore"
 
@@ -217,11 +217,11 @@ def test_rag_legacy_and_atif_dataset_parity(rag_evaluator,
                                             rag_eval_input,
                                             intermediate_step_adapter):
     """Ensure legacy and ATIF lanes produce equivalent ragas input samples."""
-    from nat.data_models.atif import ATIFAgentConfig
-    from nat.data_models.atif import ATIFObservation
-    from nat.data_models.atif import ATIFObservationResult
-    from nat.data_models.atif import ATIFStep
-    from nat.data_models.atif import ATIFTrajectory
+    from nat.atif import ATIFAgentConfig
+    from nat.atif import ATIFObservation
+    from nat.atif import ATIFObservationResult
+    from nat.atif import ATIFStep
+    from nat.atif import ATIFTrajectory
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
@@ -275,8 +275,8 @@ def test_atif_samples_to_ragas_edge_cases(ragas_judge_llm,
                                           expected_user_input,
                                           expected_contexts):
     """Ensure ATIF lane handles missing/partial trajectory content gracefully."""
-    from nat.data_models.atif import ATIFAgentConfig
-    from nat.data_models.atif import ATIFTrajectory
+    from nat.atif import ATIFAgentConfig
+    from nat.atif import ATIFTrajectory
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 
@@ -299,11 +299,11 @@ async def test_rag_legacy_and_atif_score_parity(rag_evaluator,
                                                 rag_eval_input,
                                                 intermediate_step_adapter):
     """Ensure legacy and ATIF evaluator lanes produce parity scores on the same dataset."""
-    from nat.data_models.atif import ATIFAgentConfig
-    from nat.data_models.atif import ATIFObservation
-    from nat.data_models.atif import ATIFObservationResult
-    from nat.data_models.atif import ATIFStep
-    from nat.data_models.atif import ATIFTrajectory
+    from nat.atif import ATIFAgentConfig
+    from nat.atif import ATIFObservation
+    from nat.atif import ATIFObservationResult
+    from nat.atif import ATIFStep
+    from nat.atif import ATIFTrajectory
     from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
     from nat.plugins.ragas.rag_evaluator.atif_evaluate import RAGAtifEvaluator
 

@@ -30,7 +30,7 @@ The following [LLM](../build-workflows/llms/index.md) API providers are supporte
 
 ## Packages
 
-To keep the library lightweight, many of the first-party plugins supported by NeMo Agent Toolkit are located in separate distribution packages. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific and LangGraph-specific plugins, and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
+The default `nvidia-nat` install includes `nvidia-nat-core`. To keep the library lightweight, many first-party plugins (including the config optimizer) are optional. For example, the `nvidia-nat[config-optimizer]` extra adds parameter and prompt optimization. For example, the `nvidia-nat-langchain` distribution contains all the LangChain-specific and LangGraph-specific plugins, and the `nvidia-nat-mem0ai` distribution contains the Mem0-specific plugins.
 
 To install these first-party plugin libraries, you can use the full distribution name (for example, `nvidia-nat-langchain`) or use the `nvidia-nat[langchain]` extra distribution. The following extras are supported:
 
@@ -38,12 +38,15 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
-- `nvidia-nat[eval]` or `nvidia-nat-eval` - Evaluation orchestration package
+- `nvidia-nat[eval]` or `nvidia-nat-eval[full]` - Full evaluation runtime dependencies for config-driven `nat eval` workflows
+- `nvidia-nat-eval` - Evaluation package for ATIF-native and standalone custom evaluator workflows
 - `nvidia-nat[langchain]` or `nvidia-nat-langchain` - [LangChain](https://www.langchain.com/), [LangGraph](https://www.langchain.com/langgraph)
 - `nvidia-nat[llama-index]` or `nvidia-nat-llama-index` - [LlamaIndex](https://www.llamaindex.ai/)
 - `nvidia-nat[mcp]` or `nvidia-nat-mcp` - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - `nvidia-nat[mem0ai]` or `nvidia-nat-mem0ai` - [Mem0](https://mem0.ai/)
+- `nvidia-nat[memmachine]` or `nvidia-nat-memmachine` - [MemMachine](https://memmachine.ai/) (**Experimental; not recommended for production use**)
 - `nvidia-nat[mysql]` or `nvidia-nat-mysql` - [MySQL](https://www.mysql.com/)
+- `nvidia-nat[config-optimizer]` or `nvidia-nat-config-optimizer` - Parameter and prompt optimizer (required for `nat optimize`)
 - `nvidia-nat[openpipe-art]` or `nvidia-nat-openpipe-art` - [Agent Reinforcement Trainer](https://art.openpipe.ai/getting-started/about) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[crewai]`.
 - `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/)
 - `nvidia-nat[phoenix]` or `nvidia-nat-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)

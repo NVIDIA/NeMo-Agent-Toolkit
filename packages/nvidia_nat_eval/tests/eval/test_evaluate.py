@@ -40,13 +40,13 @@ from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.data_models.evaluate_runtime import ProfilerResults
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutput
-from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.invocation_node import InvocationNode
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.exporters.file_eval_callback import FileEvalCallback
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 from nat.runtime.session import SessionManager
@@ -226,7 +226,7 @@ def session_manager(generated_answer, mock_pull_intermediate):
 
     # Define an async context manager for session
     @asynccontextmanager
-    async def mock_session_cm(user_id=None):
+    async def mock_session_cm(http_connection=None, user_id=None):
         """Mock async context manager for session."""
         yield mock_session
 
@@ -323,7 +323,7 @@ async def test_run_workflow_local_workflow_interrupted(evaluation_run, eval_inpu
 
     # Get the mock session from session_manager.session and update its run method
     @asynccontextmanager
-    async def mock_error_session(user_id=None):
+    async def mock_error_session(http_connection=None, user_id=None):
         mock_session = MagicMock()
         mock_session.run = mock_error_run
         mock_session.workflow = session_manager.workflow
@@ -376,7 +376,7 @@ async def test_workflow_continues_after_one_item_fails(evaluation_run, session_m
         yield mock_runner
 
     @asynccontextmanager
-    async def mock_session_cm(user_id=None):
+    async def mock_session_cm(http_connection=None, user_id=None):
         mock_session = MagicMock()
         mock_session.run = mock_run
         mock_session.workflow = session_manager.workflow
@@ -413,7 +413,7 @@ async def test_run_workflow_local_reuse_coroutine_on_error(evaluation_run, eval_
         yield mock_error_runner
 
     @asynccontextmanager
-    async def mock_error_session(user_id=None):
+    async def mock_error_session(http_connection=None, user_id=None):
         mock_session = MagicMock()
         mock_session.run = mock_error_run
         mock_session.workflow = session_manager.workflow
@@ -449,7 +449,7 @@ async def test_run_workflow_local_cancels_pending_intermediate(evaluation_run, e
         yield mock_error_runner
 
     @asynccontextmanager
-    async def mock_error_session(user_id=None):
+    async def mock_error_session(http_connection=None, user_id=None):
         mock_session = MagicMock()
         mock_session.run = mock_error_run
         mock_session.workflow = session_manager.workflow
@@ -535,17 +535,18 @@ async def test_run_single_evaluator_atif_lane(evaluation_run, eval_output):
     assert evaluation_run.evaluation_results[-1][1] == eval_output
 
 
-async def test_run_single_evaluator_atif_lane_lazy_builds_samples(evaluation_run, eval_output):
-    """ATIF lane should lazily build samples when run outside run_and_evaluate."""
+async def test_run_single_evaluator_atif_lane_uses_prebuilt_samples(evaluation_run, eval_output):
+    """ATIF lane should use prebuilt samples when run outside run_and_evaluate."""
     atif_evaluator = AsyncMock()
     atif_evaluator.evaluate_atif_fn = AsyncMock(return_value=eval_output)
     atif_evaluator.evaluate_fn = AsyncMock(side_effect=AssertionError("legacy path should not be called"))
+    evaluation_run.atif_eval_samples = evaluation_run.atif_adapter.build_samples(evaluation_run.eval_input)
 
     with patch.object(evaluation_run.atif_adapter, "build_samples",
                       wraps=evaluation_run.atif_adapter.build_samples) as mock_build:
         await evaluation_run.run_single_evaluator("AtifEvaluator", atif_evaluator)
 
-    mock_build.assert_called_once()
+    mock_build.assert_not_called()
     atif_evaluator.evaluate_atif_fn.assert_awaited_once()
 
 

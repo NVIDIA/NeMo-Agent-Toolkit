@@ -60,7 +60,7 @@ dependencies = [
   "presidio-anonymizer~=2.2",
   # Weave is pinned to a specfic version as we have seen breaking changes with minor releases
   # Both eval and trace exporting must be tested on any version change
-  "weave==0.52.22",
+  "weave==0.52.36",
   # transitive dependencies
   # Without this pin, anyone installing nvidia-nat-weave with Python 3.13 gets blis 0.7.11 which doesn't contain a
   # pre-built binary wheel for Python 3.13, leading to a build from source that fails to build.
@@ -71,6 +71,7 @@ dependencies = [
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 test = [
   "nvidia-nat-core[async_endpoints] == {version}",
+  "nvidia-nat-eval == {version}",
   "nvidia-nat-test == {version}",
 ]
 
@@ -81,6 +82,7 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
+nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 
 [project.entry-points.'nat.components']

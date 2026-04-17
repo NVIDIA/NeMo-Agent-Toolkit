@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import pytest
 
-from nat.data_models.atif import ATIFAgentConfig
-from nat.data_models.atif import ATIFStep
-from nat.data_models.atif import ATIFTrajectory
-from nat.data_models.atif import Metrics
+from nat.atif import ATIFAgentConfig
+from nat.atif import ATIFStep
+from nat.atif import ATIFTrajectory
+from nat.atif import Metrics
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.profiler.runtime_evaluator.atif_evaluate import AverageLLMLatencyAtifEvaluator
 from nat.plugins.profiler.runtime_evaluator.atif_evaluate import AverageNumberOfLLMCallsAtifEvaluator
