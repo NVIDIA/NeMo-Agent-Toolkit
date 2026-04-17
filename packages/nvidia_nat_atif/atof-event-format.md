@@ -1,56 +1,67 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
+# Agentic Trajectory Observability Format (ATOF) Specification — Core
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
-# Agentic Trajectory Observability Format (ATOF) Specification
-
-**Status:** Active  
-**Version:** 0.1  
-**Date:** 2026-04-12  
+**Status:** Active
+**Version:** 0.1
+**Date:** 2026-04-17
 **Reference Implementation:** `src/nat/atof/`
+
+**Companion documents:**
+
+- `[atof-codec-profiles.md](./atof-codec-profiles.md)` — provider-specific structured payload schemas (OpenAI Chat, Anthropic Messages, …) that may appear in `input`/`output` when a codec is registered.
+- `[atof-to-atif-converter.md](./atof-to-atif-converter.md)` — normative mapping from an ATOF event stream to an ATIF trajectory.
 
 ---
 
 ## 1. Overview
 
-ATOF (Agentic Trajectory Observability Format) is the wire format for agent runtime subscriber callbacks. Events represent the lifecycle of scopes, LLM calls, and tool invocations within the agent runtime. Subscribers receive events in real time as the runtime executes agent workflows.
+ATOF (Agentic Trajectory Observability Format) is the wire format for agent runtime subscriber callbacks. Events represent the lifecycle of scopes — composable units of agent work — within the runtime. Subscribers receive events in real time as the runtime executes agent workflows.
 
 Transport is JSON-Lines: each event is one JSON object per line. The `kind` field is the outer discriminator. Valid `kind` values are:
 
 - `"ScopeStart"` — a scope was opened
 - `"ScopeEnd"` — a scope was closed
-- `"LLMStart"` — an LLM call began
-- `"LLMEnd"` — an LLM call completed
-- `"ToolStart"` — a tool invocation began
-- `"ToolEnd"` — a tool invocation completed
 - `"Mark"` — a named checkpoint was emitted
+
+What *kind of work* a scope represents — an LLM call, a tool invocation, an agent turn, a retriever lookup — is carried by the `scope_type` field on `ScopeStart`/`ScopeEnd` and the companion `profile` sub-schema (Section 4).
 
 **Wire envelope shape:**
 
 ```json
-{"kind": "LLMStart", "uuid": "...", "parent_uuid": "...", "timestamp": "...", "name": "...", "attributes": [], "input": {...}, "model_name": "nvidia/nemotron-3-super-v3", "data": null, "metadata": null}
+{"kind": "ScopeStart", "uuid": "...", "parent_uuid": "...", "timestamp": "...", "name": "...", "scope_type": "llm", "flags": [], "profile": {...}, "input": {...}, "data": null, "metadata": null}
 ```
 
-ATOF events are the raw, un-merged observations from the runtime. A separate conversion layer (see Section 7) maps them to ATIF steps.
+ATOF events are the raw, un-merged observations from the runtime. Downstream layers (ATIF conversion, observability export) consume them separately.
+
+### 1.1 The Four Structured Fields at a Glance
+
+Beyond the core envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`), ATOF events carry four structured "bag" fields. Two are spec-governed and describe the scope itself; two are opaque to ATOF and describe the surrounding context:
+
+
+|                       | Spec-governed shape | Opaque to ATOF     |
+| --------------------- | ------------------- | ------------------ |
+| **About the scope**   | `flags`, `profile`  | —                  |
+| **About the context** | —                   | `data`, `metadata` |
+
+
+- `flags` — behavioral flag set about the scope. Vocabulary is spec-defined per `scope_type` and extensible via dotted namespaces (Section 4). Type: `string[]`.
+- `profile` — structured subject fields for the scope (e.g., `model_name` for `"llm"`, `tool_call_id` for `"tool"`). The canonical spec-governed slot for typed data specific to this `scope_type`; null when the profile defines no such fields. Schema is spec-defined per `scope_type` (Section 4). Type: object or null.
+- `data` — application-defined payload. Opaque to ATOF. Consumers MUST NOT dispatch on `data` contents.
+- `metadata` — tracing and correlation envelope. Conventionally carries `trace_id`, `span_id`, and similar plumbing.
+
+**Choosing between them.** When attaching information to an event:
+
+1. Is it a boolean-ish *characteristic* of the scope? → `flags`
+2. Is it a typed field defined by the scope profile for this `scope_type`? → `profile`
+3. Is it tracing or correlation plumbing? → `metadata`
+4. Is it an application payload that the spec does not need to reason about? → `data`
+
+Emitters SHOULD NOT duplicate information already carried by `profile`, `input`, or `output` into `data`. `flags` and `profile` appear only on `ScopeStart` / `ScopeEnd`; `data` and `metadata` appear on all three event kinds.
 
 ---
 
 ## 2. Common Event Fields
 
-All seven event types share these six fields.
+All three event types share these six fields.
 
 
 | Field         | Type                  | Required | Description                                                                                                                                                                 |
@@ -72,485 +83,356 @@ All seven event types share these six fields.
 Emitted when a new scope is pushed onto the scope stack.
 
 
-| Field         | Type                  | Required | Description                                                                                                                                               |
-| ------------- | --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                                                                                                                            |
-| `uuid`        | string (UUID)         | Yes      | See Section 2.                                                                                                                                            |
-| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                            |
-| `name`        | string                | Yes      | See Section 2.                                                                                                                                            |
-| `data`        | object or null        | No       | See Section 2.                                                                                                                                            |
-| `metadata`    | object or null        | No       | See Section 2.                                                                                                                                            |
-| `attributes`  | array of strings      | Yes      | Behavioral flag names, canonical form (lowercase, sorted, deduplicated). Canonical values: `"parallel"`, `"relocatable"`. Empty array when no flags are set. See Section 4 for flag descriptions and the extensibility rule. |
-| `scope_type`  | string (enum)         | Yes      | One of: `"agent"`, `"function"`, `"tool"`, `"llm"`, `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`, `"custom"`, `"unknown"`.     |
-| `input`       | any or null           | No       | Optional sanitized input payload handed to the scope at entry (post request-sanitize guardrails). Omitted or null when the scope has no meaningful input, or the emitter does not capture one. |
+| Field         | Type                  | Required | Description                                                                                                                                                                                                                                                                                                                               |
+| ------------- | --------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `uuid`        | string (UUID)         | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `name`        | string                | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `data`        | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `metadata`    | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                            |
+| `scope_type`  | string (enum)         | Yes      | Profile discriminator. One of: `"agent"`, `"function"`, `"tool"`, `"llm"`, `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`, `"custom"`, `"unknown"`. See Section 4.                                                                                                                                               |
+| `flags`       | array of strings      | Yes      | Behavioral flag names, canonical form (lowercase, sorted, deduplicated). Vocabulary depends on `scope_type` (see Section 4). Empty array when no flags are set.                                                                                                                                                                           |
+| `profile`     | object or null        | No       | Scope-type-specific structured fields known at scope entry (e.g., `model_name` for LLM, `tool_call_id` for tool). Shape is defined by the scope profile for `scope_type` (Section 4). Null when the profile defines no start-side fields.                                                                                                 |
+| `input`       | any or null           | No       | Sanitized input payload handed to the scope at entry (post request-sanitize guardrails). Opaque by default. When a codec is registered for this scope, `input` holds the structured form defined by the codec profile (see `[atof-codec-profiles.md](./atof-codec-profiles.md)`). Omitted or null when the scope has no meaningful input. |
 
 
 ### 3.2 ScopeEndEvent
 
-Emitted when a scope is popped from the scope stack. Fields mirror `ScopeStartEvent` except that `input` is replaced by an optional `output`.
+Emitted when a scope is popped from the scope stack. Mirrors `ScopeStartEvent` except that `input` is replaced by `output`.
 
 
-| Field         | Type                  | Required | Description                                                                                                                                                           |
-| ------------- | --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                                                                                                                                        |
-| `uuid`        | string (UUID)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                         |
-| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                                        |
-| `name`        | string                | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                         |
-| `data`        | object or null        | No       | See Section 2.                                                                                                                                                        |
-| `metadata`    | object or null        | No       | See Section 2.                                                                                                                                                        |
-| `attributes`  | array of strings      | Yes      | Same value as the matching `ScopeStartEvent`. See Section 4.                                                                                                          |
-| `scope_type`  | string (enum)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                         |
-| `output`      | any or null           | No       | Optional sanitized output payload produced by the scope at exit (post response-sanitize guardrails). Omitted or null when the scope has no meaningful return value, or the emitter does not capture one. |
+| Field         | Type                  | Required | Description                                                                                                                                                                                                                                                                                                                                          |
+| ------------- | --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| `uuid`        | string (UUID)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
+| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| `name`        | string                | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
+| `data`        | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| `metadata`    | object or null        | No       | See Section 2.                                                                                                                                                                                                                                                                                                                                       |
+| `scope_type`  | string (enum)         | Yes      | Same value as the matching `ScopeStartEvent`.                                                                                                                                                                                                                                                                                                        |
+| `flags`       | array of strings      | Yes      | Same value as the matching `ScopeStartEvent`. See Section 4.                                                                                                                                                                                                                                                                                         |
+| `profile`     | object or null        | No       | Scope-type-specific structured fields known at scope exit. MAY differ from the `ScopeStart` `profile` for the same handle (e.g., an LLM profile MAY add a response ID only known after the call completes). See Section 4.                                                                                                                           |
+| `output`      | any or null           | No       | Sanitized output payload produced by the scope at exit (post response-sanitize guardrails). Opaque by default. When a codec is registered for this scope, `output` holds the structured form defined by the codec profile (see `[atof-codec-profiles.md](./atof-codec-profiles.md)`). Omitted or null when the scope has no meaningful return value. |
+| `status`      | string (enum)         | Yes      | Terminal outcome of the scope. One of: `"ok"` (scope returned normally), `"error"` (scope raised an exception), `"cancelled"` (scope was terminated before completion, e.g., timeout, parent cancel, explicit cancel). See status semantics below.                                                                                                   |
+| `error`       | object or null        | No       | Structured exception/cancellation context. MUST be present when `status == "error"`; MAY be present when `status == "cancelled"`; MUST be null or absent when `status == "ok"`. See error object shape below.                                                                                                                                         |
 
 
-### 3.3 LLMStartEvent
+**Status semantics.** The `status` field is required on every `ScopeEnd` and distinguishes three outcomes that would otherwise all present as `output=null`:
 
-Emitted when an LLM call begins. Carries the post request-sanitize guardrail payload (guardrails have already run on the request before the event is emitted).
+| `status`      | `output` behavior                                                                   | `error` behavior                                                                 |
+| ------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `"ok"`        | MAY be any value; null means "scope returned but produced nothing".                 | MUST be null or absent.                                                          |
+| `"error"`     | SHOULD be null, but MAY carry partial output (e.g., streamed tokens before failure). | MUST be present. `type` and `message` are required.                             |
+| `"cancelled"` | SHOULD be null, but MAY carry partial output accumulated before cancellation.        | MAY be present (e.g., a `CancelledError` with location context); MAY be null.    |
 
+**Error object shape.** When `error` is present, it is a JSON object with the following fields:
 
-| Field               | Type                  | Required | Description                                                                                                                                                                                        |
-| ------------------- | --------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parent_uuid`       | string (UUID) or null | No       | See Section 2.                                                                                                                                                                                     |
-| `uuid`              | string (UUID)         | Yes      | See Section 2. Stable across the matching `LLMStartEvent` and `LLMEndEvent`.                                                                                                                       |
-| `timestamp`         | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                                                                     |
-| `name`              | string                | Yes      | See Section 2.                                                                                                                                                                                     |
-| `data`              | object or null        | No       | See Section 2.                                                                                                                                                                                     |
-| `metadata`          | object or null        | No       | See Section 2.                                                                                                                                                                                     |
-| `attributes`        | array of strings      | Yes      | LLM behavioral flag names, canonical form (lowercase, sorted, deduplicated). Canonical values: `"stateless"`, `"streaming"`. Empty array when no flags are set. See Section 4.                     |
-| `input`             | any or null           | No       | Sanitized LLM request payload (post request-sanitize guardrails). Typically an object with `messages`, `model`, `tools`, and other parameters.                                                     |
-| `model_name`        | string or null        | No       | Model identifier set by the caller — e.g., `"nvidia/nemotron-3-super-v3"`.                                                                                                                         |
-| `annotated_request` | object or null        | No       | Structured decoded form of `input`. Present only when a codec (e.g., `OpenAIChatCodec`) is registered on this LLM call. Omitted from serialized JSON when null. See Section 5 for the full schema. |
+| Field     | Type            | Required | Description                                                                                                                                 |
+| --------- | --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`    | string          | Yes      | Native exception or error class name — e.g., `"TimeoutError"`, `"anthropic.RateLimitError"`, `"tokio::time::error::Elapsed"`. Free-form; no canonical vocabulary. |
+| `message` | string          | Yes      | Human-readable error message.                                                                                                               |
+| `stack`   | string or null  | No       | Stack trace as a single multi-line string. Implementations MAY redact for security. Null when unavailable or withheld.                      |
 
-
-### 3.4 LLMEndEvent
-
-Emitted when an LLM call completes. Carries the post-guardrail-sanitized response payload.
+Vendor- or domain-specific error context (HTTP status codes, provider error codes, retry hints, cause chains) belongs in `data`, not in `error`. Keeping `error` minimal lets any emitter satisfy the spec without imposing a taxonomy that does not generalize.
 
 
-| Field                | Type                  | Required | Description                                                                                                                                                                       |
-| -------------------- | --------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parent_uuid`        | string (UUID) or null | No       | See Section 2.                                                                                                                                                                    |
-| `uuid`               | string (UUID)         | Yes      | Same value as the matching `LLMStartEvent`.                                                                                                                                       |
-| `timestamp`          | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                                                    |
-| `name`               | string                | Yes      | Same value as the matching `LLMStartEvent`.                                                                                                                                       |
-| `data`               | object or null        | No       | See Section 2.                                                                                                                                                                    |
-| `metadata`           | object or null        | No       | See Section 2.                                                                                                                                                                    |
-| `attributes`         | array of strings      | Yes      | Same value as the matching `LLMStartEvent`. See Section 4.                                                                                                                        |
-| `output`             | any or null           | No       | Sanitized LLM response payload (post response-sanitize guardrails).                                                                                                               |
-| `model_name`         | string or null        | No       | Same value as on the matching `LLMStartEvent`.                                                                                                                                    |
-| `annotated_response` | object or null        | No       | Structured decoded form of `output`. Present only when a response codec is active and decode succeeds. Omitted from serialized JSON when null. See Section 5 for the full schema. |
+### 3.3 MarkEvent
+
+Emitted when the application records a named checkpoint in the event stream. Mark is the simplest event type — it has no `scope_type`, `flags`, `profile`, `input`, or `output`.
 
 
-### 3.5 ToolStartEvent
-
-Emitted when a tool invocation begins.
-
-
-| Field          | Type                  | Required | Description                                                                                                                                        |
-| -------------- | --------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parent_uuid`  | string (UUID) or null | No       | See Section 2.                                                                                                                                     |
-| `uuid`         | string (UUID)         | Yes      | See Section 2. Stable across the matching `ToolStartEvent` and `ToolEndEvent`.                                                                     |
-| `timestamp`    | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                                     |
-| `name`         | string                | Yes      | The tool function name — e.g., `"calculator__add"`.                                                                                                |
-| `data`         | object or null        | No       | See Section 2.                                                                                                                                     |
-| `metadata`     | object or null        | No       | See Section 2.                                                                                                                                     |
-| `attributes`   | array of strings      | Yes      | Tool behavioral flag names, canonical form (lowercase, sorted, deduplicated). Canonical values: `"local"`. Empty array when no flags are set. See Section 4. |
-| `input`        | any or null           | No       | Sanitized tool input arguments (post request-sanitize guardrails).                                                                                 |
-| `tool_call_id` | string or null        | No       | Correlation ID from the LLM's tool-call response — e.g., `"call_abc123"` (OpenAI convention). Null for tools invoked outside an LLM tool-use flow. |
-
-
-### 3.6 ToolEndEvent
-
-Emitted when a tool invocation completes.
-
-
-| Field          | Type                  | Required | Description                                                                                      |
-| -------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------------ |
-| `parent_uuid`  | string (UUID) or null | No       | See Section 2.                                                                                   |
-| `uuid`         | string (UUID)         | Yes      | Same value as the matching `ToolStartEvent`.                                                     |
-| `timestamp`    | string (RFC 3339)     | Yes      | See Section 2.                                                                                   |
-| `name`         | string                | Yes      | Same value as the matching `ToolStartEvent`.                                                     |
-| `data`         | object or null        | No       | See Section 2.                                                                                   |
-| `metadata`     | object or null        | No       | See Section 2.                                                                                   |
-| `attributes`   | array of strings      | Yes      | Same value as the matching `ToolStartEvent`. See Section 4.                                      |
-| `output`       | any or null           | No       | Sanitized tool result (post response-sanitize guardrails). Null if the tool raised an exception. |
-| `tool_call_id` | string or null        | No       | Same value as on the matching `ToolStartEvent`.                                                  |
-
-
-### 3.7 MarkEvent
-
-Emitted when the application records a named checkpoint in the event stream. Mark is the simplest event type — it has no `attributes`, `scope_type`, `input`, `output`, `model_name`, or `tool_call_id`.
-
-
-| Field         | Type                  | Required | Description                                                                                                                                |
-| ------------- | --------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                                                                                                             |
-| `uuid`        | string (UUID)         | Yes      | See Section 2.                                                                                                                             |
-| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                                                                                                             |
-| `name`        | string                | Yes      | Name of the marker checkpoint.                                                                                                             |
-| `data`        | object or null        | No       | Application-specific payload for this milestone. When present, this value becomes the `message` field of the resulting ATIF `system` step. |
-| `metadata`    | object or null        | No       | See Section 2.                                                                                                                             |
+| Field         | Type                  | Required | Description                                      |
+| ------------- | --------------------- | -------- | ------------------------------------------------ |
+| `parent_uuid` | string (UUID) or null | No       | See Section 2.                                   |
+| `uuid`        | string (UUID)         | Yes      | See Section 2.                                   |
+| `timestamp`   | string (RFC 3339)     | Yes      | See Section 2.                                   |
+| `name`        | string                | Yes      | Name of the marker checkpoint.                   |
+| `data`        | object or null        | No       | Application-specific payload for this milestone. |
+| `metadata`    | object or null        | No       | See Section 2.                                   |
 
 
 ---
 
-## 4. Attribute Types
+## 4. Scope Profiles
 
-Attribute fields serialize on the wire as a JSON array of lowercase string flag names. The canonical form is sorted and deduplicated — producers MUST emit attributes in lexicographic order with no duplicates, and consumers SHOULD treat the array as an unordered set. Empty `[]` means no flags are set.
+`scope_type` is the sole discriminator for the shape of `profile`. New scope types extend the format without introducing new event kinds. Implementations MAY define ad-hoc scope types using `scope_type: "custom"` with a descriptive `name`, or MAY propose new enum values as spec extensions.
 
-**Extensibility.** The flag sets below are the names recognized by this version of the spec, but the set is implementation-defined and open-ended. Implementations MAY emit additional flag names (for vendor extensions or experimental features); to avoid collisions, non-canonical flags SHOULD be namespaced with a dotted prefix — for example, `"nvidia.speculative"`. Consumers MUST preserve unknown flag strings when re-emitting events and MUST NOT treat unknown flags as an error.
+Each scope profile below specifies:
 
-### 4.1 ScopeAttributes
+- **`profile` (Start)** — fields set at scope entry.
+- **`profile` (End)** — fields set at scope exit.
+- **`input` / `output` semantics** — what a registered codec, if any, produces.
 
-Used in `ScopeStartEvent.attributes` and `ScopeEndEvent.attributes`.
+Flag semantics are shared across all scope types (§4.1). Profile-specific flags, if any, are noted inline.
 
+**Flag extensibility.** The flag vocabulary is implementation-extensible. Beyond the common flags in §4.1, implementations MAY emit additional flag names for vendor extensions; to avoid collisions, non-canonical flags SHOULD be namespaced with a dotted prefix — for example, `"nvidia.speculative"`. Consumers MUST preserve unknown flag strings when re-emitting events and MUST NOT treat unknown flags as an error. Producers MUST emit `flags` in lexicographic order with no duplicates. Consumers SHOULD treat the array as an unordered set.
 
-| Flag            | Description                                                                 |
-| --------------- | --------------------------------------------------------------------------- |
-| `"parallel"`    | The scope may execute concurrently with siblings on the scope stack.        |
-| `"relocatable"` | The scope may be moved across async task boundaries without losing context. |
+### 4.1 Common Flags
 
-
-Example: a scope that is both parallel and relocatable serializes as `"attributes": ["parallel", "relocatable"]`.
-
-### 4.2 LLMAttributes
-
-Used in `LLMStartEvent.attributes` and `LLMEndEvent.attributes`.
+The following flags describe general runtime properties of a scope and MAY appear on any `scope_type`. Each flag is a boolean indicator (present in `flags` → true; absent → false).
 
 
-| Flag          | Description                                                                       |
-| ------------- | --------------------------------------------------------------------------------- |
-| `"stateless"` | The LLM call does not maintain conversation state across invocations.             |
-| `"streaming"` | The LLM response is delivered as a stream of chunks rather than a single payload. |
+| Flag            | Meaning                                                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `"parallel"`    | Scope may execute concurrently with sibling scopes under the same parent.                                            |
+| `"relocatable"` | Scope may be moved across async task boundaries (e.g., between threads or event loops) without losing context.       |
+| `"stateless"`   | Scope does not maintain state between invocations — the same inputs produce the same behavior regardless of history. |
+| `"local"`       | Scope executes in the same process as the runtime, as opposed to dispatching to a remote service.                    |
+| `"streaming"`   | Scope produces its output incrementally as a sequence of chunks, rather than as a single payload at exit.            |
 
 
-### 4.3 ToolAttributes
+No flag is mandatory for any profile. Emitters SHOULD emit a flag only when the corresponding property is affirmatively true; absence is the default.
 
-Used in `ToolStartEvent.attributes` and `ToolEndEvent.attributes`.
+For scopes carrying the `"streaming"` flag: if the scope terminates with `status == "error"` or `status == "cancelled"` (Section 3.2), the `output` on `ScopeEnd` MAY contain the partial chunks accumulated before the terminal event. Consumers that replay streaming output MUST check `status` before treating `output` as a complete payload.
 
+### 4.2 Profile: `"agent"`
 
-| Flag      | Description                                                                   |
-| --------- | ----------------------------------------------------------------------------- |
-| `"local"` | The tool executes in the same process as the runtime (not via a remote call). |
+A composite execution scope — typically the outermost scope for an agent turn or a sub-agent delegation.
 
+- **`profile` (Start):** null — reserved for future use.
+- **`profile` (End):** null — reserved for future use.
+- **`input` / `output`:** application-defined. Typically the task description (Start) and final answer (End).
+
+### 4.3 Profile: `"function"`
+
+An arbitrary application-defined function boundary, used when no more specific scope type applies.
+
+- **`profile` (Start):** null.
+- **`profile` (End):** null.
+- **`input` / `output`:** function arguments and return value, application-defined.
+
+### 4.4 Profile: `"tool"`
+
+A tool invocation — a unit of work dispatched by an LLM's tool-use flow or by application code.
+
+- **`profile` (Start):**
+
+  | Field          | Type           | Required | Description                                                                                                                                        |
+  | -------------- | -------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `tool_call_id` | string or null | No       | Correlation ID from the LLM's tool-call response — e.g., `"call_abc123"` (OpenAI convention). Null for tools invoked outside an LLM tool-use flow. |
+
+- **`profile` (End):**
+
+  | Field          | Type           | Required | Description                                      |
+  | -------------- | -------------- | -------- | ------------------------------------------------ |
+  | `tool_call_id` | string or null | No       | Same value as on the matching `ScopeStartEvent`. |
+
+- **`input` / `output`:** tool arguments and result. Opaque unless a codec is registered.
+
+### 4.5 Profile: `"llm"`
+
+An LLM call.
+
+- **`profile` (Start):**
+
+  | Field        | Type           | Required | Description                                                                |
+  | ------------ | -------------- | -------- | -------------------------------------------------------------------------- |
+  | `model_name` | string or null | No       | Model identifier set by the caller — e.g., `"nvidia/nemotron-3-super-v3"`. |
+
+- **`profile` (End):**
+
+  | Field        | Type           | Required | Description                                                                                            |
+  | ------------ | -------------- | -------- | ------------------------------------------------------------------------------------------------------ |
+  | `model_name` | string or null | No       | Same value as on the matching `ScopeStartEvent`, unless the provider reports a different served model. |
+
+- **`input` / `output`:** LLM request/response payload. Opaque by default. When a codec (e.g., `OpenAIChatCodec`) is registered, these hold the structured form defined in `[atof-codec-profiles.md](./atof-codec-profiles.md)`.
+
+### 4.6 Profiles: `"retriever"`, `"embedder"`, `"reranker"`, `"guardrail"`, `"evaluator"`
+
+Reserved scope types for common agentic components. Currently, `profile` is null for all five. Future revisions of this spec MAY define profile-specific fields.
+
+### 4.7 Profile: `"custom"`
+
+An application-defined scope type with no spec-imposed `profile` shape. Emitters using `"custom"` SHOULD set `data` or `profile` with a vendor-namespaced shape. Consumers MUST treat `profile` as opaque and MUST preserve it when re-emitting.
+
+### 4.8 Profile: `"unknown"`
+
+Used when the emitter cannot identify a more specific profile. `profile` is null. Prefer a specific profile wherever possible — `"unknown"` is a fallback for legacy or introspection-limited sources.
 
 ---
 
-## 5. Codec Schemas
+## 5. Event Stream Semantics
 
-Codec fields appear on `LLMStartEvent.annotated_request` and `LLMEndEvent.annotated_response`. Both are optional — present only when a codec (e.g., `OpenAIChatCodec`) is registered on the LLM call. Omitted from serialized JSON when null.
+### 5.1 Timestamp Ordering
 
-### 5.1 AnnotatedLLMRequest
+Events are emitted in wall-clock order. Delivery order from subscriber callbacks MAY differ for concurrent operations. Consumers MUST sort by `timestamp` before processing.
 
-A structured, codec-decoded view of the LLM request. Unmodeled provider-specific keys are flattened into the top level (`serde(flatten)`).
-
-
-| Field         | Type                            | Required | Description                                                                                                                      |
-| ------------- | ------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `messages`    | array of Message                | Yes      | Conversation history. Each entry is discriminated by `role`. See Section 5.2.                                                    |
-| `model`       | string or null                  | No       | Model identifier requested by the caller — e.g., `"nvidia/nemotron-3-super-v3"`. Omitted when null.                              |
-| `params`      | object or null                  | No       | Normalized generation parameters. See Section 5.6. Omitted when null.                                                            |
-| `tools`       | array of ToolDefinition or null | No       | Tool and function schemas available to the model. See Section 5.5. Omitted when null.                                            |
-| `tool_choice` | string or object or null        | No       | Tool selection control: `"auto"`, `"none"`, `"required"`, or a `ToolChoiceFunction` object. Omitted when null. See Section 5.11. |
-
-Any additional provider-specific keys not listed above appear as top-level fields in the serialized JSON (`serde(flatten)`). These are preserved for lossless round-trip through codec encode/decode but are not part of the normalized schema.
-
-### 5.2 Message (discriminated by `role`)
-
-Each message in the `messages` array has a `role` field that acts as a discriminator. Additional fields depend on role.
-
-
-| Role          | Additional Fields                                                                                                                                                             |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `"system"`    | `content`: string or array of ContentPart (see 5.3); `name`: string or null (omitted when null)                                                                               |
-| `"user"`      | `content`: string or array of ContentPart; `name`: string or null (omitted when null)                                                                                         |
-| `"assistant"` | `content`: string, array of ContentPart, or null (omitted when null); `tool_calls`: array of ToolCall or null (omitted when null); `name`: string or null (omitted when null) |
-| `"tool"`      | `content`: string or array of ContentPart; `tool_call_id`: string (required)                                                                                                  |
-
-
-### 5.3 ContentPart (discriminated by `type`)
-
-Used inside `messages[*].content` when the content is an array (multimodal). The `type` field is the discriminator.
-
-
-| Type     | Additional Fields                              |
-| -------- | ---------------------------------------------- |
-| `"text"` | `text`: string — the text content of this part |
-
-
-### 5.4 ToolCall (request-side)
-
-Represents a tool call in the `assistant` message's `tool_calls` array. Note that `arguments` is a JSON string on the request side (OpenAI wire convention).
-
-
-| Field      | Type   | Required | Description                                                                                             |
-| ---------- | ------ | -------- | ------------------------------------------------------------------------------------------------------- |
-| `id`       | string | Yes      | Unique identifier for this tool call.                                                                   |
-| `type`     | string | Yes      | Type of call — typically `"function"`.                                                                  |
-| `function` | object | Yes      | A `FunctionCall` object with `name` (string) and `arguments` (string — raw JSON per OpenAI convention). |
-
-
-**Key distinction:** `ToolCall.function.arguments` here is a **JSON string** (e.g., `"{\"a\": 3, \"b\": 4}"`). The response-side `ResponseToolCall.arguments` (Section 5.8) is a **parsed JSON object**.
-
-### 5.5 ToolDefinition
-
-Describes a tool or function available to the model.
-
-
-| Field      | Type   | Required | Description                                                                                                                                                                     |
-| ---------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`     | string | Yes      | Type of tool — typically `"function"`.                                                                                                                                          |
-| `function` | object | Yes      | A `FunctionDefinition` object with: `name` (string, required), `description` (string or null, omitted when null), `parameters` (JSON Schema object or null, omitted when null). |
-
-
-### 5.6 GenerationParams
-
-Normalized generation parameters, shared across providers.
-
-
-| Field         | Type                    | Required | Description                                                  |
-| ------------- | ----------------------- | -------- | ------------------------------------------------------------ |
-| `temperature` | number or null          | No       | Sampling temperature. Omitted when null.                     |
-| `max_tokens`  | integer or null         | No       | Maximum number of tokens to generate. Omitted when null.     |
-| `top_p`       | number or null          | No       | Nucleus sampling probability threshold. Omitted when null.   |
-| `stop`        | array of string or null | No       | Stop sequences that terminate generation. Omitted when null. |
-
-
-### 5.7 AnnotatedLLMResponse
-
-A structured, codec-decoded view of the LLM response. Unmodeled top-level fields are flattened into the top level (`serde(flatten)`).
-
-
-| Field           | Type                                   | Required | Description                                                                                                                 |
-| --------------- | -------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `id`            | string or null                         | No       | Response ID from the provider — e.g., `"chatcmpl-abc123"`. Omitted when null.                                               |
-| `model`         | string or null                         | No       | Model that actually served the request (may differ from the requested model). Omitted when null.                            |
-| `message`       | string or array of ContentPart or null | No       | The assistant's response content. Omitted when null.                                                                        |
-| `tool_calls`    | array of ResponseToolCall or null      | No       | Tool calls requested by the model, normalized across APIs. Omitted when null. See Section 5.8.                              |
-| `finish_reason` | string or null                         | No       | Normalized stop reason. One of: `"complete"`, `"length"`, `"tool_use"`, `"content_filter"`, `"unknown"`. Omitted when null. |
-| `usage`         | object or null                         | No       | Token usage statistics. See Section 5.9. Omitted when null.                                                                 |
-| `api_specific`  | object or null                         | No       | Provider-specific fields that cannot be normalized. See Section 5.10. Omitted when null.                                    |
-
-Any additional provider-specific keys not listed above appear as top-level fields in the serialized JSON (`serde(flatten)`). These are preserved for lossless round-trip through codec encode/decode but are not part of the normalized schema.
-
-### 5.8 ResponseToolCall (response-side)
-
-Represents a tool call in the response's `tool_calls` array. Note that `arguments` is parsed JSON on the response side (codec-normalized).
-
-
-| Field       | Type   | Required | Description                                                                                     |
-| ----------- | ------ | -------- | ----------------------------------------------------------------------------------------------- |
-| `id`        | string | Yes      | Unique identifier for this tool call.                                                           |
-| `name`      | string | Yes      | The function or tool name.                                                                      |
-| `arguments` | object | Yes      | Parsed JSON arguments — **NOT a string**. Codecs parse OpenAI's string arguments during decode. |
-
-
-**Key distinction:** Request-side `ToolCall.function.arguments` is a JSON string. Response-side `ResponseToolCall.arguments` is a parsed JSON object. This asymmetry matches the OpenAI API convention but is normalized by codecs on the response side.
-
-### 5.9 Usage
-
-Token usage statistics from the LLM API response. All fields are optional because not every provider reports every counter.
-
-
-| Field                | Type            | Required | Description                                     |
-| -------------------- | --------------- | -------- | ----------------------------------------------- |
-| `prompt_tokens`      | integer or null | No       | Tokens consumed by the prompt input.            |
-| `completion_tokens`  | integer or null | No       | Tokens generated in the completion output.      |
-| `total_tokens`       | integer or null | No       | Total tokens (prompt plus completion).          |
-| `cache_read_tokens`  | integer or null | No       | Tokens served from the provider's prompt cache. |
-| `cache_write_tokens` | integer or null | No       | Tokens written to the provider's prompt cache.  |
-
-
-### 5.10 ApiSpecificResponse (discriminated by `api`)
-
-Holds provider-specific response fields that cannot be normalized across APIs. The `api` field is the discriminator.
-
-
-| `api` value            | Additional Fields                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------------- |
-| `"openai_chat"`        | `logprobs` (object or null), `system_fingerprint` (string or null), `service_tier` (string or null) |
-| `"openai_responses"`   | `output_items` (array or null), `status` (string or null), `incomplete_details` (object or null)    |
-| `"anthropic_messages"` | `stop_sequence` (string or null), `content_blocks` (array or null)                                  |
-| `"custom"`             | `api_name` (string — the custom API identifier), `data` (any object — opaque API-specific payload)  |
-
-
-### 5.11 ToolChoice Serialization
-
-The `tool_choice` field on `AnnotatedLLMRequest` has four possible wire forms:
-
-| Value | JSON | Meaning |
-| ----- | ---- | ------- |
-| Auto | `"auto"` | Model decides whether to call a tool |
-| None | `"none"` | Model must not call any tool |
-| Required | `"required"` | Model must call some tool (but can pick which) |
-| Specific | `{"type": "function", "function": {"name": "calculator__add"}}` | Model must call this specific function |
-
-The first three serialize as plain JSON strings. The `Specific` variant serializes as a `ToolChoiceFunction` object with fields: `type` (string, typically `"function"`) and `function` (object with `name` string).
-
----
-
-## 6. Event Stream Semantics
-
-### 6.1 Timestamp Ordering
-
-Events are emitted in wall-clock order. However, delivery order from subscriber callbacks may differ for concurrent operations. Consumers MUST sort by `timestamp` before processing. `AtifExporter.events_to_steps()` always sorts collected events by timestamp as its first step.
-
-### 6.2 Scope Nesting and parent_uuid
+### 5.2 Scope Nesting and parent_uuid
 
 The runtime maintains a scope stack per async task. The `parent_uuid` of any event is the UUID of the scope that was on top of the stack when the handle was created. Following `parent_uuid` links upward reconstructs the full call graph.
 
 The root scope has `parent_uuid = null`. This is the only event in a well-formed stream that may have a null `parent_uuid` (once the root scope is established).
 
-### 6.3 Start/End Pairing
+### 5.3 Start/End Pairing
 
-Every Start event is paired with exactly one End event sharing the same `uuid`. End events always arrive after their matching Start events in wall-clock order. All child events (events whose `parent_uuid` equals this scope's `uuid`) will have been emitted before the parent's End event fires.
+Every `ScopeStart` event is paired with exactly one `ScopeEnd` event sharing the same `uuid`. `ScopeEnd` events always arrive after their matching `ScopeStart` in wall-clock order. All child events (events whose `parent_uuid` equals this scope's `uuid`) will have been emitted before the parent's `ScopeEnd` fires.
 
-### 6.4 UUID Uniqueness
+`Mark` events have no paired event — they are single-shot.
 
-Each handle (scope, tool invocation, LLM call) receives a unique UUID at creation time. The `uuid` is stable across the Start and End events for the same handle, enabling correlation. In the Rust implementation, UUIDs are v7 (time-ordered).
+### 5.4 UUID Uniqueness
 
-### 6.5 ID Relationships
+Each handle receives a unique UUID at creation time. The `uuid` is stable across the Start and End events for the same handle, enabling correlation. In the Rust reference implementation, UUIDs are v7 (time-ordered).
 
-Four distinct identifier types appear in ATOF events. They serve different purposes and belong to different namespaces. The following diagram shows how they relate within a single tool-call cycle (EXMP-01):
+### 5.5 ID Relationships
+
+Three distinct identifier namespaces appear in an ATOF stream:
+
+- **`uuid` / `parent_uuid`** — agent runtime identifiers attached to every event. Form the scope graph.
+- **`profile.tool_call_id`** (on `scope_type: "tool"`) — an LLM-provider identifier that bridges an LLM's tool-call response with the resulting tool execution. Null when the tool was not invoked via an LLM tool-use flow.
+- **Codec-decoded response IDs** (e.g., `chatcmpl-`* inside a decoded LLM response body) — provider tracking identifiers. Opaque to ATOF Core; see `[atof-codec-profiles.md](./atof-codec-profiles.md)`.
 
 ```text
-┌─ ScopeStart ──────────────────────────────────────────────── ScopeEnd -─┐
+┌─ ScopeStart (scope_type=agent) ─────────────── ScopeEnd ────────────────┐
 │  uuid: "scope-001"                                                      │
 │  parent_uuid: null                                                      │
 │                                                                         │
-│  ┌─ LLMStart ─────────────────────-─ LLMEnd ─┐                          │
-│  │  uuid: "llm-001"                          │                          │
-│  │  parent_uuid: "scope-001"  ───────────────┼──► scope graph edge      │
-│  │                                           │                          │
-│  │  output.tool_calls[0].id ─────────────────┼──► "call_calc_001"       │
-│  │  annotated_response.id ───────────────────┼──► "chatcmpl-abc123"     │
-│  └───────────────────────────────────────────┘                          │
+│  ┌─ ScopeStart (scope_type=llm) ─────────────── ScopeEnd ─┐             │
+│  │  uuid: "llm-001"                                       │             │
+│  │  parent_uuid: "scope-001" ─────────────────────────────┼──► graph    │
+│  │  profile.model_name: "..."                          │                │
+│  │  output.tool_calls[0].id ──────────────────────────────┼──► "call_1" │
+│  └────────────────────────────────────────────────────────┘             │
 │                                                                         │
-│  ┌─ ToolStart ──────────────────── ToolEnd ──┐                          │
-│  │  uuid: "tool-001"          (≠ "llm-001")  │  ← own handle identity   │
-│  │  parent_uuid: "scope-001"  ───────────────┼──► scope graph edge      │
-│  │  tool_call_id: "call_calc_001" ───────────┼──► LLM correlation       │
-│  └───────────────────────────────────────────┘                          │
+│  ┌─ ScopeStart (scope_type=tool) ────────────── ScopeEnd ─┐             │
+│  │  uuid: "tool-001"  (≠ "llm-001")                       │ ← handle id │
+│  │  parent_uuid: "scope-001" ─────────────────────────────┼──► graph    │
+│  │  profile.tool_call_id: "call_1" ────────────────────┼──► LLM corr    │
+│  └────────────────────────────────────────────────────────┘             │
 └─────────────────────────────────────────────────────────────────────────┘
 
-uuid           → "Who am I?"          (handle identity, Start=End)
-parent_uuid    → "Who created me?"    (scope stack lineage, call graph)
-tool_call_id   → "Which LLM request?" (LLM↔tool correlation, OpenAI convention)
-response.id    → "Which API call?"    (provider billing/tracking, ephemeral)
+uuid                     → "Who am I?"          (handle identity, Start=End)
+parent_uuid              → "Who created me?"    (scope stack lineage)
+profile.tool_call_id     → "Which LLM request?" (LLM↔tool correlation)
+codec response.id        → "Which API call?"    (provider tracking, see codec profiles)
 ```
 
-**Key distinctions:**
+### 5.6 Terminal Status and Cancellation Propagation
 
-- `uuid` and `parent_uuid` are agent runtime identifiers. Every event has them. They form the scope graph.
-- `tool_call_id` is an LLM-provider identifier that bridges the LLM's tool-call request (`LLMEnd.output.tool_calls[].id`) with the tool execution (`ToolStart.tool_call_id`). It is null for tools invoked outside an LLM tool-use flow.
-- `annotated_response.id` is a provider tracking identifier (e.g., OpenAI's `chatcmpl-*`). It has no relationship to the other three ID types and exists only inside codec-decoded responses.
+Every `ScopeEnd` carries a terminal `status` (Section 3.2). The following rules govern how terminal status relates across the scope graph.
 
----
+**Each scope reports its own terminal status.** The `status` on a `ScopeEnd` describes the outcome of *that* scope, not its children or its parent. A parent whose child errored MAY itself report `status == "ok"` if the parent caught and handled the child's error; conversely, a parent MAY report `status == "error"` even if all its children completed cleanly.
 
-## 7. Canonical ATOF-to-ATIF Mapping
+**Cascading cancellation.** When a parent cancels its children (e.g., due to parent timeout or parent error recovery), each child emits its own `ScopeEnd` with `status == "cancelled"` before the parent emits its `ScopeEnd`. Section 5.3 still holds: all child events precede the parent's `ScopeEnd` in wall-clock order. The parent's own `status` reflects the parent's outcome:
 
-This section formalizes the mapping from ATOF events to ATIF steps. The Toolkit implementation is in [`src/nat/atof/scripts/atof_to_atif_converter.py`](src/nat/atof/scripts/atof_to_atif_converter.py).
+- `"cancelled"` if the parent was itself cancelled from above.
+- `"error"` if the parent raised (possibly because a child's failure propagated).
+- `"ok"` if the parent chose to cancel its children as normal control flow and then completed.
 
+**Dangling scopes.** If the runtime dies before emitting a paired `ScopeEnd`, no event appears in the stream. Section 5.3's pairing guarantee is contingent on orderly shutdown. Consumers that detect an unpaired `ScopeStart` after the stream ends MAY synthesize a `ScopeEnd` with `status == "cancelled"` for downstream processing; such synthetic events are out of scope for ATOF Core.
 
-| ATOF Event         | ATIF Step            | ATIF `source` | Content Mapping                                                                                                                                                                                                                                                                                                                                          |
-| ------------------ | -------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LLMStart`         | user step            | `"user"`      | `step.message` = `messages` array extracted from `input` (stripping `model`, `tools`, and other LLM config fields). `step.timestamp` = event timestamp.                                                                                                                                                                                                  |
-| `LLMEnd`           | agent step           | `"agent"`     | `step.message` = extracted `content` from response output. `step.tool_calls` = promoted from response `tool_calls` array (with arguments parsed from JSON string to JSON object). `step.metrics` = extracted from `token_usage`. `step.extra.ancestry`, `invocation`, `tool_ancestry` are deferred — written when the next `LLMStart` arrives (see 7.1). |
-| `ToolStart`        | embedded in agent step | `"agent"`   | Already captured in the preceding `LLMEnd` agent step's `tool_calls[]` array. `ToolStart` adds no new information — the function name, arguments, and `tool_call_id` are all present in the LLM response.                                                                                                                                                |
-| `ToolEnd`          | buffered observation | —             | Buffered as an `AtifObservationResult`. Consecutive `ToolEnd` events within the same turn are merged into a single `system` step. `source_call_id` is correlated using two strategies: (a) explicit `tool_call_id` on the event, (b) function-name lookup against the preceding `LLMEnd`'s promoted `tool_calls`.                                        |
-| `Mark` (with data) | system step          | `"system"`    | `step.message` = event `data`.                                                                                                                                                                                                                                                                                                                           |
-| `ScopeStart`       | embedded in `parent_uuid` graph | —  | Structural event used for scope-graph reconstruction (Section 6.2). No ATIF step is produced; ancestry information is captured in `step.extra.ancestry` and `step.extra.tool_ancestry` on the agent step.                                                                                                                                                |
-| `ScopeEnd`         | embedded in `parent_uuid` graph | —  | Structural event closing the scope opened by the matching `ScopeStart`. No ATIF step is produced; timing information is captured in `step.extra.invocation` on the agent step.                                                                                                                                                                           |
-
-
-### 7.1 Observation Flush Rule
-
-Buffered `ToolEnd` observations are flushed (emitted as a single `system` step) when any of the following conditions occur:
-
-- The next `LLMStart` event arrives (closing the previous turn).
-- The next `Mark` event arrives.
-- End of event stream.
-
-Consecutive `ToolEnd` events within the same turn are merged into a single observation step with multiple results.
-
-### 7.2 Key Design Decisions
-
-**ToolStart is skipped.** Tool calls are promoted from the `LLMEnd` response, which is the authoritative source. Recording `ToolStart` separately would duplicate entries already in the agent step's `tool_calls` array.
-
-**Consecutive ToolEnd events merge.** When an LLM dispatches multiple tools in parallel, their observations arrive as separate `ToolEnd` events but belong to a single logical response turn. The exporter merges them into one `system` step with multiple observation results.
-
-**Two-strategy tool_call_id correlation.** (a) Explicit: `ToolEnd.tool_call_id` matches a `tool_call_id` in the preceding `LLMEnd`'s promoted `tool_calls` — used directly as `source_call_id`. (b) Function-name fallback: if `tool_call_id` is absent, `ToolEnd.name` is matched against the `function_name` of the preceding `LLMEnd`'s promoted `tool_calls`.
-
-**Deferred step.extra.** When `LLMEnd` arrives, `step.extra` cannot be written immediately because `ToolEnd` ancestry records accumulate afterward. The exporter defers writing `step.extra` (ancestry, invocation, tool_ancestry) until the next `LLMStart` arrives — or at end of stream — when all tool ancestry is known.
-
-**Timestamp representations.** ATIF `step.timestamp` is ISO 8601 UTC (e.g., `"2026-01-01T00:00:00Z"`). `AtifInvocationInfo.start_timestamp` and `end_timestamp` (inside `step.extra.invocation`) are epoch seconds (float, e.g., `1735689600.0`). These are distinct representations for distinct purposes.
+**Start/End pairing unchanged.** Section 5.3's invariants still hold: every `ScopeStart` has exactly one matching `ScopeEnd` sharing the same `uuid`, and all child events of a scope precede the parent's `ScopeEnd`. `status` is a property of the End event, not a modifier of the pairing rule.
 
 ---
 
-## 8. What ATOF Is Not
+## 6. What ATOF Is Not
 
-ATOF events are not ATIF steps. The distinctions are structural:
+ATOF events are raw observations. They are not ATIF steps. See `[atof-to-atif-converter.md](./atof-to-atif-converter.md)` for the NeMo Agent Toolkit normative mapping from an ATOF stream to an ATIF trajectory.
 
-
-| Property          | ATOF events                                                                | ATIF steps                                                                  |
-| ----------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Start/End pairing | Un-merged: `LLMStart` and `LLMEnd` are separate events                     | Merged: a single agent step captures the full LLM call                      |
-| Sequencing        | No `step_id`; ordered only by `timestamp`                                  | Sequential 1-based `step_id`; no gaps allowed                               |
-| Source field      | No `source` discriminator                                                  | Required field: `"user"`, `"agent"`, or `"system"`                          |
-| Tool ancestry     | No per-step `tool_ancestry`; only `parent_uuid` for scope-graph navigation | `step.extra.tool_ancestry[]` aligns by index with `step.tool_calls[]`       |
-| Observations      | `ToolEnd` events carry raw output independently                            | Consecutive `ToolEnd` events merged into a single `system` step             |
-| Computed fields   | None                                                                       | `step_id` assigned sequentially; `final_metrics` computed from step metrics |
-| Scope events      | `ScopeStart`/`ScopeEnd` exist in the stream                                | Scope events produce no ATIF steps                                          |
+Key structural differences from ATIF:
 
 
-**ATOF does not have:**
+| Property          | ATOF events                                                     | ATIF steps                                                                  |
+| ----------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Start/End pairing | Un-merged: `ScopeStart` and `ScopeEnd` are separate events      | Merged: a single step captures a full LLM call                              |
+| Sequencing        | No `step_id`; ordered only by `timestamp`                       | Sequential 1-based `step_id`; no gaps allowed                               |
+| Source field      | No `source` discriminator                                       | Required field: `"user"`, `"agent"`, or `"system"`                          |
+| Tool ancestry     | Only `parent_uuid` for scope-graph navigation                   | `step.extra.tool_ancestry[]` aligns by index with `step.tool_calls[]`       |
+| Observations      | `ScopeEnd` events on tool scopes carry raw output independently | Consecutive tool results merged into a single `system` step                 |
+| Computed fields   | None                                                            | `step_id` assigned sequentially; `final_metrics` computed from step metrics |
 
-- `step_id`
-- `source` field
-- Merged observations
-- `tool_ancestry` per step
-- `schema_version`
-- Sequential guarantees beyond timestamp ordering
+
+**ATOF does not have:** `step_id`, `source` field, merged observations, `tool_ancestry` per step, `schema_version` (see §9), sequential guarantees beyond timestamp ordering.
 
 ---
 
-## 9. EXMP-01: Simple Tool Call
+## 7. EXMP-01: Simple Tool Call
 
 A minimal 6-event stream illustrating one complete tool call cycle. Each line is one JSON object.
 
 ```jsonl
-{"kind":"ScopeStart","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"simple_calculator_agent","scope_type":"agent","attributes":[],"data":null,"metadata":null}
-{"kind":"LLMStart","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:01Z","name":"nvidia/nemotron-3-super-v3","attributes":[],"input":{"messages":[{"role":"user","content":"What is 3 + 4?"}],"model":"nvidia/nemotron-3-super-v3","tools":[{"type":"function","function":{"name":"calculator__add","description":"Add two numbers","parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}}}]},"model_name":"nvidia/nemotron-3-super-v3","data":null,"metadata":null}
-{"kind":"LLMEnd","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:02Z","name":"nvidia/nemotron-3-super-v3","attributes":[],"output":{"content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},"model_name":"nvidia/nemotron-3-super-v3","data":null,"metadata":null}
-{"kind":"ToolStart","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:03Z","name":"calculator__add","attributes":[],"input":{"a":3,"b":4},"tool_call_id":"call_calc_001","data":null,"metadata":null}
-{"kind":"ToolEnd","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","attributes":[],"output":7,"tool_call_id":"call_calc_001","data":null,"metadata":null}
-{"kind":"ScopeEnd","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:05Z","name":"simple_calculator_agent","scope_type":"agent","attributes":[],"data":null,"metadata":null}
+{"kind":"ScopeStart","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"input":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:01Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"model_name":"nvidia/nemotron-3-super-v3"},"input":{"messages":[{"role":"user","content":"What is 3 + 4?"}],"model":"nvidia/nemotron-3-super-v3","tools":[{"type":"function","function":{"name":"calculator__add","description":"Add two numbers","parameters":{"type":"object","properties":{"a":{"type":"number"},"b":{"type":"number"}}}}}]},"data":null,"metadata":null}
+{"kind":"ScopeEnd","uuid":"llm-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:02Z","name":"nvidia/nemotron-3-super-v3","scope_type":"llm","flags":[],"profile":{"model_name":"nvidia/nemotron-3-super-v3"},"output":{"content":"The result of 3 + 4 is 7.","tool_calls":[{"id":"call_calc_001","type":"function","function":{"name":"calculator__add","arguments":"{\"a\": 3, \"b\": 4}"}}]},"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeStart","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:03Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_calc_001"},"input":{"a":3,"b":4},"data":null,"metadata":null}
+{"kind":"ScopeEnd","uuid":"tool-001","parent_uuid":"scope-agent-001","timestamp":"2026-01-01T00:00:04Z","name":"calculator__add","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_calc_001"},"output":7,"status":"ok","error":null,"data":null,"metadata":null}
+{"kind":"ScopeEnd","uuid":"scope-agent-001","parent_uuid":null,"timestamp":"2026-01-01T00:00:05Z","name":"simple_calculator_agent","scope_type":"agent","flags":[],"profile":null,"output":null,"status":"ok","error":null,"data":null,"metadata":null}
 ```
 
-**Resulting ATIF output:** From this 6-event stream, the converter produces 3 ATIF steps: (1) a user step from `LLMStart` with `message = [{"role": "user", "content": "What is 3 + 4?"}]`; (2) an agent step from `LLMEnd` with `message = "The result of 3 + 4 is 7."` and promoted `tool_calls`; (3) a system step from the buffered `ToolEnd` observation with `source_call_id = "call_calc_001"` and `content = "7"` (stringified from the integer output). The observation flush occurs at end of stream (no subsequent `LLMStart`).
+**Note on event ordering:** The LLM `ScopeEnd` arrives at `t=02` before the tool `ScopeStart` at `t=03`. This is the correct order: the LLM decides to call the tool (emitting `ScopeEnd` with `tool_calls` in `output`), then the runtime dispatches the tool call. The exporter sorts by timestamp, so the ordering `LLM-ScopeEnd → Tool-ScopeStart → Tool-ScopeEnd` is required for correct correlation.
 
-**Note on event ordering:** `LLMEnd` arrives at `t=02` before `ToolStart` at `t=03`. This is the correct order: the LLM decides to call the tool (emitting `LLMEnd` with `tool_calls` in `output`), then the runtime dispatches the tool call. The exporter sorts by timestamp, so the ordering `LLMEnd → ToolStart → ToolEnd` is required for correct correlation.
+## 7.1 EXMP-02: Tool Error with Parent Recovery
+
+A 4-event stream illustrating a tool that raises an exception, while the parent agent handles the error and completes normally. Demonstrates `status: "error"` on the failed scope and `status: "ok"` on the parent that recovered.
+
+```jsonl
+{"kind":"ScopeStart","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-01T00:00:00Z","name":"resilient_fetch_agent","scope_type":"agent","flags":[],"profile":null,"input":"Fetch https://example.invalid/data","data":null,"metadata":null}
+{"kind":"ScopeStart","uuid":"tool-002","parent_uuid":"scope-agent-002","timestamp":"2026-01-01T00:00:01Z","name":"http_get","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_fetch_001"},"input":{"url":"https://example.invalid/data","timeout_s":5},"data":null,"metadata":null}
+{"kind":"ScopeEnd","uuid":"tool-002","parent_uuid":"scope-agent-002","timestamp":"2026-01-01T00:00:06Z","name":"http_get","scope_type":"tool","flags":[],"profile":{"tool_call_id":"call_fetch_001"},"output":null,"status":"error","error":{"type":"TimeoutError","message":"Request to https://example.invalid/data exceeded 5s timeout","stack":"Traceback (most recent call last):\n  File \"tools/http.py\", line 42, in http_get\n    resp = await client.get(url, timeout=timeout_s)\nTimeoutError: ..."},"data":null,"metadata":null}
+{"kind":"ScopeEnd","uuid":"scope-agent-002","parent_uuid":null,"timestamp":"2026-01-01T00:00:07Z","name":"resilient_fetch_agent","scope_type":"agent","flags":[],"profile":null,"output":"Unable to fetch the requested URL; the endpoint timed out.","status":"ok","error":null,"data":null,"metadata":null}
+```
+
+**Note on status propagation:** The tool scope reports `status: "error"` with a populated `error` object carrying the exception type, message, and a stack trace. The parent agent scope caught the tool error, synthesized a user-facing response, and reports `status: "ok"` with its own `output`. Each scope reports its own terminal status (Section 5.6) — error does not auto-propagate up the scope graph.
 
 ---
 
-## 10. Reference Implementations
+## 8. Design Rationale
 
-### 10.1 NeMo Agent Toolkit Python (this package)
+This section records design decisions made during the spec's pre-release development. References to "earlier iterations" describe shapes explored before landing on the current design; the spec is pre-release at version 0.1 and has not yet committed to a stable format.
 
-The Toolkit-native ATOF-to-ATIF converter is in [`src/nat/atof/scripts/atof_to_atif_converter.py`](src/nat/atof/scripts/atof_to_atif_converter.py). It implements the same accumulator pattern as the Rust reference:
+**Why collapse `LLMStart`/`LLMEnd`/`ToolStart`/`ToolEnd` into `ScopeStart`/`ScopeEnd`?**
+An earlier iteration gave each scope subject its own event kind, duplicating ~80% of the envelope fields across four types and requiring a new event kind for every new scope subject (retriever, guardrail, evaluator, …). The current design uses `scope_type` as the sole discriminator and delegates subject-specific shape to `profile` sub-schemas (Section 4). New scope types extend the format via a new profile entry, not a new event kind. This mirrors OpenTelemetry's single-span-shape-with-kind approach.
 
-1. Sorts all events by timestamp.
-2. Runs a pre-pass to build `uuid → name` and `uuid → start_timestamp` maps for ancestry and invocation-info resolution.
-3. Iterates through sorted events, emitting ATIF steps per the mapping in Section 7.
-4. Implements the deferred `step.extra` write pattern: agent step extra is written when the next `LLMStart` arrives (or at end of stream), after all `ToolEnd` ancestry records have been accumulated.
-5. Sorts `tool_ancestry` and `tool_invocations` by `tool_call_id` declaration order from `LLMEnd` (not by `ToolEnd` arrival order), ensuring index alignment with `tool_calls[]` even for concurrent tool execution.
-6. Unwraps the transport envelope (`{"content": ..., "headers": ...}`) from `LLMRequest` payloads before extracting `messages` for the user step.
+**Tradeoff — grep distinctness.** A raw `grep LLMStart` no longer works; consumers must filter on `"scope_type":"llm"` instead. Tooling that consumes ATOF streams (pretty-printers, filters) is expected to offset this. Documented here so the tradeoff is explicit.
 
-| Module | Entry Point | Description |
-| ------ | ----------- | ----------- |
-| `nat.atof.scripts.atof_to_atif_converter` | `convert(events) → Trajectory` | Convert typed Event list to ATIF Trajectory |
-| `nat.atof.scripts.atof_to_atif_converter` | `convert_file(path) → Trajectory` | Read JSONL file and convert |
-| `nat.atof.io` | `read_jsonl(path) → list[Event]` | Parse ATOF JSONL to typed events |
-| `nat.atof.io` | `write_jsonl(events, path)` | Serialize events to JSONL |
+**Why a single `input` / `output` pair and not separate raw + structured payloads?**
+An earlier iteration carried both `input`/`output` (raw, any) and `annotated_request`/`annotated_response` (structured, codec-decoded). This doubled the payload fields on LLM events and bound the wire format to a specific codec pipeline. The current design collapses to a single payload field per side: opaque by default, structured (per a codec profile) when a codec is registered. Emitters that wish to preserve both raw and structured forms place the structured form in `input`/`output` and stash the raw bytes in `data` or `metadata`.
+
+**Why is the per-scope structured field named `profile` and not `scope_data`?**
+An earlier iteration used `scope_data`, which was nearly identical to the free-form `data` field and consistently led readers to confuse them — one is spec-governed per `scope_type`, the other is an opaque caller payload. The name `profile` ties the field directly to the Section 4 terminology (*scope profiles*) and removes the collision.
+
+**Why is the behavioral flag field named `flags` and not `attributes`?**
+An earlier iteration used `attributes`, which collided with the OpenTelemetry convention of an arbitrary key/value attribute map. In ATOF the field is strictly a set of boolean flag names. `flags` matches the shape (`string[]`), matches the prose vocabulary ("flag names", "flag vocabulary"), and sidesteps the false cognate.
+
+**Why does `ScopeEnd` repeat `name`, `scope_type`, and `flags` from `ScopeStart`?**
+So that each event is independently interpretable. Stream filters, sampling consumers, and partial-stream analyzers can classify a `ScopeEnd` without joining to its matching `ScopeStart`. A tail-and-filter pipeline such as `atof-stream | jq 'select(.scope_type == "llm" and .kind == "ScopeEnd")'` works directly; no in-memory `uuid → scope_state` table is required. The wire-size cost is small (and further reduced by transport compression); the consumer-side cost of "absent means inherit from Start" semantics — state-tracking per open scope, plus ambiguity when `profile` legitimately differs between Start and End — is disproportionately larger. This mirrors OpenTelemetry, where span-close carries the full attribute set, not a delta.
+
+Note that `data` and `metadata` are *per-event* payloads, not per-scope. They are not "duplicated" on `ScopeEnd` — each event carries its own, and emitters MAY attach different values at Start and End (e.g., span-open vs. span-close tracing).
+
+**Why a three-state `status` enum (`"ok"`, `"error"`, `"cancelled"`) on `ScopeEnd`?**
+Without an explicit status, `output=null` is ambiguous between "scope returned nothing", "scope raised an exception", and "scope was cancelled" — three outcomes that consumers (metrics, error reporting, ATIF conversion) need to distinguish. Making `status` a required, first-class field separates the question "how did this scope terminate?" from "what did it return?", so consumers do not have to sniff `output` shape or look for sentinel values.
+
+`"cancelled"` is distinct from `"error"` because cancellation is a normal control-flow outcome (timeout, parent cancel, explicit cancel) that most consumers should handle differently from an exception. For example, ATIF conversion should treat cancelled scopes as non-failures when computing aggregate success metrics, and trace viewers typically surface cancelled scopes with different styling from errored ones.
+
+**Why keep the `error` object minimal (`type`, `message`, optional `stack`)?**
+These three fields cover the debuggability essentials without imposing a taxonomy. Additional context — HTTP status codes, provider error codes, retry hints, nested cause chains — is inherently vendor- or domain-specific and does not generalize across emitters. Such context belongs in `data`, where it is opaque to ATOF and safely ignored by consumers that do not care about the specific emitter's shape. The error object avoids bundling a flat list of ten rarely-populated fields and keeps the core contract small.
+
+**Why split codec profiles and the ATIF converter into companion documents?**
+Codec profiles (OpenAI Chat, Anthropic Messages, …) are provider-specific overlays, not core ATOF. The ATOF→ATIF converter is a consumer-specific downstream layer. Keeping both out of the core spec lets non-NAT emitters adopt ATOF without reading converter or codec content, and lets NAT evolve those layers independently of the wire format.
+
+---
+
+## 9. Follow-up Issues
+
+The following structural gaps are acknowledged but deferred to keep the current pre-release scope bounded. They are non-normative and will be addressed in a subsequent revision.
+
+1. **Per-event `schema_version`.** Consumers cannot currently detect format version at the event level. Add `schema_version` either per event or via a dedicated stream-header event.
+2. **Emitter / resource identity.** No analog to OpenTelemetry's Resource — useful when multiple services feed into one event store. Consider a `resource` block or a dedicated stream-header event carrying `service.name`, runtime version, host identity, etc.
+3. **Streaming chunk event type.** LLMs with streaming output currently emit one `ScopeEnd` carrying the fully assembled response. The spec should define whether and how incremental deltas appear (e.g., a `Chunk` event associated with an open LLM scope) before the `"streaming"` flag becomes meaningful end-to-end.
+4. **Timestamp format cost.** RFC 3339 strings are ~4× slower to parse than epoch nanoseconds at scale. Decide between standardizing on numeric epoch, allowing both with explicit precedence, or keeping RFC 3339 and documenting the throughput tradeoff.
+
+---
+
+## 10. Reference Implementation
+
+The Toolkit-native ATOF emitter and consumer live under `src/nat/atof/`. The ATOF→ATIF converter is specified in `[atof-to-atif-converter.md](./atof-to-atif-converter.md)` and implemented in `src/nat/atof/scripts/atof_to_atif_converter.py`.
+
+
+| Module                                    | Entry Point                       | Description                                 |
+| ----------------------------------------- | --------------------------------- | ------------------------------------------- |
+| `nat.atof.scripts.atof_to_atif_converter` | `convert(events) → Trajectory`    | Convert typed Event list to ATIF Trajectory |
+| `nat.atof.scripts.atof_to_atif_converter` | `convert_file(path) → Trajectory` | Read JSONL file and convert                 |
+| `nat.atof.io`                             | `read_jsonl(path) → list[Event]`  | Parse ATOF JSONL to typed events            |
+| `nat.atof.io`                             | `write_jsonl(events, path)`       | Serialize events to JSONL                   |
 
 
