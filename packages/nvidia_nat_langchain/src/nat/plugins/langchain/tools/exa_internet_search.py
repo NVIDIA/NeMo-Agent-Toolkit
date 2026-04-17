@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from __future__ import annotations
+
 import asyncio
 import logging
 from typing import Literal
@@ -35,7 +37,7 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
     Tool that retrieves relevant contexts from web search (using Exa) for the given question.
     Requires an EXA_API_KEY.
     """
-    max_results: int = Field(default=10, ge=1, description="Maximum number of search results to return.")
+    max_results: int = Field(default=5, ge=1, description="Maximum number of search results to return.")
     api_key: SerializableSecretStr = Field(default_factory=lambda: SerializableSecretStr(""),
                                            description="The API key for the Exa service.")
     max_retries: int = Field(default=3, ge=1, description="Maximum number of retries for the search request")
@@ -49,7 +51,9 @@ class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"
         ge=1,
         description="Maximum query length in characters. Queries exceeding this limit will be truncated.")
     highlights: bool = Field(default=True, description="Whether to include highlights in search results.")
-    text: bool = Field(default=True, description="Whether to include full text content in search results.")
+    max_content_length: int | None = Field(
+        default=10000, ge=1,
+        description="Maximum characters of text content per result. Set to None to disable text content.")
 
 
 @register_function(config_type=ExaInternetSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
@@ -88,7 +92,10 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
                     num_results=tool_config.max_results,
                     type=tool_config.search_type,
                     livecrawl=tool_config.livecrawl,
-                    text_contents_options={"max_characters": 3000} if tool_config.text else None,
+                    text_contents_options=(
+                        {"max_characters": tool_config.max_content_length}
+                        if tool_config.max_content_length else None
+                    ),
                     highlights=tool_config.highlights or None,
                 )
                 # On error, ExaSearchResults may return a string error message

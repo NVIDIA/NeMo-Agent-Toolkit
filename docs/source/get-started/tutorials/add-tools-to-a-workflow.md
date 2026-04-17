@@ -181,13 +181,13 @@ The `exa_internet_search` tool supports additional configuration options:
 functions:
   internet_search:
     _type: exa_internet_search
-    max_results: 10
+    max_results: 5
     search_type: neural  # 'auto', 'fast', 'deep', 'neural', or 'instant'
     livecrawl: fallback  # 'always', 'fallback', or 'never'
     max_retries: 3
     max_query_length: 2000  # queries longer than this are truncated
     highlights: true  # include highlights in results
-    text: true  # include full text content in results
+    max_content_length: 10000  # max chars of text per result; set to None to disable
 ```
 
 Then ensure the tool is included in the workflow tool list:
