@@ -244,10 +244,14 @@ def main(junit_xml: str | None,
 
     failures = 0
 
+    orig_handler = signal.getsignal(signal.SIGINT)
+
+    def _restore_handler():
+        if orig_handler is not None:
+            signal.signal(signal.SIGINT, orig_handler)
+
     with Pool(processes=jobs) as pool:
         ex = pool
-
-        orig_handler = signal.getsignal(signal.SIGINT)
 
         def shutdown_pool(_signum, _frame):
             nonlocal ex
@@ -263,7 +267,7 @@ def main(junit_xml: str | None,
             else:
                 print("Pool not found")
 
-            signal.signal(signal.SIGINT, orig_handler)
+            _restore_handler()
             raise SystemExit(shutdown_msg)
 
         signal.signal(signal.SIGINT, shutdown_pool)
@@ -291,6 +295,7 @@ def main(junit_xml: str | None,
             shutdown_pool(None, None)
         finally:
             ex = None
+            _restore_handler()
             for p in projects:
                 sh(["rm", "-rf", str(p / ".venv")])
 
