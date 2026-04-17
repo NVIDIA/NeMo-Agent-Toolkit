@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+# This is a static OAuth2 example for Outlook MCP authentication.
+# It demonstrates manual OAuth2 (no DCR) using a pre-registered client_id.
+# Ensure NAT_REDIRECT_URI is registered/allowlisted for NAT_CORPORATE_MCP_OUTLOOK_CLIENT_ID,
+# or the OAuth flow will fail with "redirect_uri not allowed for this client".
+
+function_groups:
+  mcp_outlook:
+    _type: per_user_mcp_client
+    server:
+      url: ${NAT_CORPORATE_MCP_OUTLOOK_URL}
+      auth_provider: mcp_oauth2_outlook
+
+authentication:
+  mcp_oauth2_outlook:
+    _type: mcp_oauth2
+    server_url: ${NAT_CORPORATE_MCP_OUTLOOK_URL}
+    redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
+    client_id: ${NAT_CORPORATE_MCP_OUTLOOK_CLIENT_ID}
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: per_user_react_agent
+  tool_names:
+    - mcp_outlook
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3

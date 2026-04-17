@@ -28,7 +28,11 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
 
     Supported modes:
       - Endpoints discovery + Dynamic Client Registration (DCR) (enable_dynamic_registration=True, no client_id)
-      - Endpoints discovery + Manual Client Registration (client_id + client_secret provided)
+      - Endpoints discovery + Manual Client Registration (client_id with optional client_secret)
+
+    Precedence:
+      - If client_id is provided, manual registration mode is used even when
+        enable_dynamic_registration is True.
     """
     server_url: HttpUrl = Field(
         ...,
@@ -39,8 +43,10 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
     client_id: str | None = Field(default=None, description="OAuth2 client ID for pre-registered clients")
     client_secret: OptionalSecretStr = Field(default=None,
                                              description="OAuth2 client secret for pre-registered clients")
-    enable_dynamic_registration: bool = Field(default=True,
-                                              description="Enable OAuth2 Dynamic Client Registration (RFC 7591)")
+    enable_dynamic_registration: bool = Field(
+        default=True,
+        description=
+        "Enable OAuth2 Dynamic Client Registration (RFC 7591). Ignored when client_id is provided.")
     client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name for dynamic registration")
 
     # OAuth2 flow configuration
@@ -74,20 +80,20 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
         # if default_user_id is not provided, use the server_url as the default user id
         if not self.default_user_id:
             self.default_user_id = str(self.server_url)
-        # Dynamic registration + MCP discovery
-        if self.enable_dynamic_registration and not self.client_id:
-            # Pure dynamic registration - no explicit credentials needed
+        # Manual registration + MCP discovery (public and confidential clients).
+        # NOTE: client_id takes precedence over enable_dynamic_registration.
+        if self.client_id:
+            # Has pre-registered client ID; client_secret is optional.
             pass
-
-        # Manual registration + MCP discovery
-        elif self.client_id and self.client_secret:
-            # Has credentials but will discover URLs from MCP server
+        # Dynamic registration + MCP discovery
+        elif self.enable_dynamic_registration:
+            # Pure dynamic registration - no explicit credentials needed
             pass
 
         # Invalid configuration
         else:
             raise ValueError("Must provide either: "
-                             "1) enable_dynamic_registration=True (dynamic), or "
-                             "2) client_id + client_secret (hybrid)")
+                             "1) enable_dynamic_registration=True without client_id (dynamic), or "
+                             "2) client_id with optional client_secret (manual)")
 
         return self
