@@ -92,7 +92,6 @@ dependencies = [
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
   # transitive dependencies
-  "starlette~=0.51",  # Added due to breaking 1.0 changes
   "urllib3>=2.6.3,<3.0.0",
 ]
 
