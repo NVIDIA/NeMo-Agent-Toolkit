@@ -249,16 +249,13 @@ def main(junit_xml: str | None,
 
         orig_handler = signal.getsignal(signal.SIGINT)
 
-        def shutdown_pool(_signum, _frame, wait: bool = False):
+        def shutdown_pool(_signum, _frame):
             nonlocal ex
 
             shutdown_msg = "Exiting"
             if ex is not None:
                 print("Shutting down pool...")
-                if wait:
-                    ex.close()
-                else:
-                    ex.terminate()
+                ex.terminate()
                 ex.join()
                 if _signum is not None:
                     shutdown_msg = f"Received signal {_signum}, exiting"
@@ -291,7 +288,7 @@ def main(junit_xml: str | None,
 
         except TestFailure:
             print("Cancelling remaining tests...")
-            shutdown_pool(None, None, wait=True)
+            shutdown_pool(None, None)
         finally:
             ex = None
             for p in projects:
