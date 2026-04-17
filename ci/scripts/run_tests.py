@@ -247,8 +247,12 @@ def main(junit_xml: str | None,
     with Pool(processes=jobs) as pool:
         ex = pool
 
+        orig_handler = signal.getsignal(signal.SIGINT)
+
         def shutdown_pool(_signum, _frame, wait: bool = False):
             nonlocal ex
+
+            shutdown_msg = "Exiting"
             if ex is not None:
                 print("Shutting down pool...")
                 if wait:
@@ -257,12 +261,13 @@ def main(junit_xml: str | None,
                     ex.terminate()
                 ex.join()
                 if _signum is not None:
-                    msg = f"Received signal {_signum}, exiting"
-                else:
-                    msg = "Exiting"
-                raise SystemExit(msg)
+                    shutdown_msg = f"Received signal {_signum}, exiting"
+
             else:
                 print("Pool not found")
+
+            signal.signal(signal.SIGINT, orig_handler)
+            raise SystemExit(shutdown_msg)
 
         signal.signal(signal.SIGINT, shutdown_pool)
         futs = [
