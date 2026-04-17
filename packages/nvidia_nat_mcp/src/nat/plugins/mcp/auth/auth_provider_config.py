@@ -45,8 +45,7 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
                                              description="OAuth2 client secret for pre-registered clients")
     enable_dynamic_registration: bool = Field(
         default=True,
-        description=
-        "Enable OAuth2 Dynamic Client Registration (RFC 7591). Ignored when client_id is provided.")
+        description="Enable OAuth2 Dynamic Client Registration (RFC 7591). Ignored when client_id is provided.")
     client_name: str = Field(default="NAT MCP Client", description="OAuth2 client name for dynamic registration")
 
     # OAuth2 flow configuration
