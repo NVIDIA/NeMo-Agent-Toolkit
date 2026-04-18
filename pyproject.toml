@@ -52,6 +52,7 @@ dependencies = [
 # Keep sorted!!!
 a2a = ["nvidia-nat-a2a == {version}"]
 adk = ["nvidia-nat-adk == {version}"]
+ag2 = ["nvidia-nat-ag2 == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
 app = ["nvidia-nat-app == {version}"]
 autogen = ["nvidia-nat-autogen == {version}"]
@@ -94,6 +95,7 @@ pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
 most = [
   "nvidia-nat-a2a == {version}",
   "nvidia-nat-adk == {version}",
+  "nvidia-nat-ag2 == {version}",
   "nvidia-nat-agno == {version}",
   "nvidia-nat-app == {version}",
   "nvidia-nat-autogen == {version}",
@@ -131,6 +133,7 @@ examples = [
   "nat_agno_personal_finance",
   "nat_agents_examples",
   "nat_alert_triage_agent",
+  "nat_ag2_demo",
   "nat_autogen_demo",
   "nat_automated_description_generation",
   "nat_currency_agent_a2a",
@@ -232,6 +235,7 @@ managed = true
 # Packages
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
 nvidia-nat-adk = { path = "packages/nvidia_nat_adk", editable = true }
+nvidia-nat-ag2 = { path = "packages/nvidia_nat_ag2", editable = true }
 nvidia-nat-agno = { path = "packages/nvidia_nat_agno", editable = true }
 nvidia-nat-app = { path = "packages/nvidia_nat_app", editable = true }
 nvidia-nat-autogen = { path = "packages/nvidia_nat_autogen", editable = true }
@@ -271,6 +275,7 @@ nat_adk_demo = { path = "examples/frameworks/adk_demo", editable = true }
 nat_agno_personal_finance = { path = "examples/frameworks/agno_personal_finance", editable = true }
 nat_agents_examples = { path = "examples/agents", editable = true }
 nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent", editable = true }
+nat_ag2_demo = { path = "examples/frameworks/nat_ag2_demo", editable = true }
 nat_autogen_demo = { path = "examples/frameworks/nat_autogen_demo", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
