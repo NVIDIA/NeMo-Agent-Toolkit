@@ -115,6 +115,8 @@ authentication:
 | `redirect_uri` | The redirect URI for OAuth 2.0 authentication. Must match the registered redirect URI with the OAuth provider.|
 | `scopes` | List of permissions to the API provider (e.g., `read`, `write`). |
 | `use_pkce` | Whether to use PKCE (Proof Key for Code Exchange) in the OAuth 2.0 flow, defaults to `False` |
+| `use_eager_auth` | Whether to trigger authentication at WebSocket connection time before the workflow requires credentials, defaults to `False`. When enabled, tokens are cached for the session to avoid re-authentication on reconnect. |
+| `use_redirect_auth` | Whether to use a redirect-based flow or open the OAuth consent page in a popup window, defaults to `False` (popup) |
 | `authorization_kwargs` | Additional keyword arguments to include in the authorization request. |
 
 

@@ -319,6 +319,13 @@ class FastApiFrontEndConfig(FrontEndBaseConfig, name="fastapi"):
             "request to '/static' and files will be served from the object store. The files will be served from the "
             "object store at '/static/{file_name}'."))
 
+    oauth_token_store: ObjectStoreRef | None = Field(
+        default=None,
+        description=("Object store reference used to persist WebSocket OAuth tokens across replicas. "
+                     "When set, tokens are stored in the named object store (e.g. Redis) so that "
+                     "re-authentication is not required after pod restarts or when requests land on "
+                     "different replicas. When unset, an in-process dict is used (single-replica only)."))
+
     disable_legacy_routes: bool = Field(
         default=False,
         description="Disable the legacy routes for the FastAPI app. If True, the legacy routes are disabled.")

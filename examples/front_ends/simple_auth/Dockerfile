@@ -27,6 +27,12 @@ RUN apt-get update && apt-get install -y \
 # Clone the OAuth2 server example
 RUN git clone https://github.com/authlib/example-oauth2-server.git oauth2-server
 
+# Apply patches: add an explicit Cancel button to the authorize route and
+# template so that declining the OAuth2 consent redirects back with
+# error=access_denied instead of leaving the client app waiting indefinitely.
+COPY patches/oauth2-server.patch /tmp/oauth2-server.patch
+RUN patch -p1 -d /app/oauth2-server < /tmp/oauth2-server.patch
+
 # Change to the OAuth2 server directory
 WORKDIR /app/oauth2-server
 

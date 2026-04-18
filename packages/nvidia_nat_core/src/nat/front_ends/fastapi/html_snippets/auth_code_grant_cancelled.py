@@ -15,38 +15,38 @@
 
 import json
 
-AUTH_REDIRECT_SUCCESS_HTML = """
+AUTH_REDIRECT_CANCELLED_POPUP_HTML = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Authentication Complete</title>
+    <title>Authorization Cancelled</title>
     <script>
         (function () {
             window.history.replaceState(null, "", window.location.pathname);
 
-            window.opener?.postMessage({ type: 'AUTH_SUCCESS' }, '*');
+            window.opener?.postMessage({ type: 'AUTH_CANCELLED' }, '*');
 
             window.close();
         })();
     </script>
 </head>
 <body>
-    <p>Authentication complete. You may now close this window.</p>
+    <p>Authorization cancelled. You may now close this window.</p>
 </body>
 </html>
 """
 
-_AUTH_REDIRECT_SUCCESS_HTML_REDIRECT_TEMPLATE = """\
+_AUTH_REDIRECT_CANCELLED_HTML_TEMPLATE = """\
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Authentication Complete</title>
+    <title>Authorization Cancelled</title>
     <script>
         (function () {
             var returnTo = RETURN_URL_PLACEHOLDER;
             if (returnTo) {
                 var url = new URL(returnTo);
-                url.searchParams.set('oauth_auth_completed', 'true');
+                url.searchParams.set('oauth_auth_error', 'cancelled');
                 window.location.replace(url.toString());
             } else {
                 window.history.back();
@@ -55,23 +55,23 @@ _AUTH_REDIRECT_SUCCESS_HTML_REDIRECT_TEMPLATE = """\
     </script>
 </head>
 <body>
-    <p>Authentication complete. Redirecting&hellip;</p>
+    <p>Authorization cancelled. Redirecting&hellip;</p>
 </body>
 </html>
 """
 
 
-def build_auth_redirect_success_html(return_url: str | None = None) -> str:
-    """Build the redirect-based authentication success HTML page.
+def build_auth_redirect_cancelled_html(return_url: str | None = None) -> str:
+    """Build the same-page authorization-cancelled HTML page.
 
     Args:
-        return_url: The URL to redirect to after successful authentication. When
-            provided the page navigates there immediately with an ``oauth_auth_completed``
-            query parameter so the UI can distinguish a successful return from the user
-            pressing back; otherwise it falls back to ``window.history.back()``.
+        return_url: The URL to redirect to after cancellation. When
+            provided the page navigates there immediately with an ``oauth_auth_error``
+            query parameter so the UI can detect the cancellation and avoid a
+            pre-auth redirect loop; otherwise it falls back to ``window.history.back()``.
 
     Returns:
-        An HTML string for the post-authentication redirect page.
+        An HTML string for the post-cancellation redirect page.
     """
     safe_json = json.dumps(return_url).replace('<', '\\u003c').replace('>', '\\u003e').replace('/', '\\u002f')
-    return _AUTH_REDIRECT_SUCCESS_HTML_REDIRECT_TEMPLATE.replace("RETURN_URL_PLACEHOLDER", safe_json)
+    return _AUTH_REDIRECT_CANCELLED_HTML_TEMPLATE.replace("RETURN_URL_PLACEHOLDER", safe_json)
