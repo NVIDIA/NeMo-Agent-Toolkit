@@ -28,12 +28,14 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.oci_llm import OCIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.plugins.langchain.llm import aws_bedrock_langchain
 from nat.plugins.langchain.llm import azure_openai_langchain
 from nat.plugins.langchain.llm import dynamo_langchain
 from nat.plugins.langchain.llm import litellm_langchain
 from nat.plugins.langchain.llm import nim_langchain
+from nat.plugins.langchain.llm import oci_langchain
 from nat.plugins.langchain.llm import openai_langchain
 
 # ---------------------------------------------------------------------------
@@ -180,6 +182,111 @@ class TestAzureOpenAILangChain:
             pass
         mock_httpx_async_client.assert_called_once()
         assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+
+class TestOCILangChain:
+    """Tests for the oci_langchain wrapper."""
+
+    @pytest.fixture
+    def oci_cfg(self):
+        return OCIModelConfig(
+            model_name="nvidia/Llama-3.1-Nemotron-Nano-8B-v1",
+            compartment_id="ocid1.compartment.oc1..example",
+            region="us-chicago-1",
+            auth_profile="DEFAULT",
+            temperature=0.2,
+            top_p=0.9,
+            max_tokens=512,
+            seed=7,
+        )
+
+    @pytest.fixture
+    def oci_cfg_wrong_api(self):
+        return OCIModelConfig(
+            model_name="nvidia/Llama-3.1-Nemotron-Nano-8B-v1",
+            compartment_id="ocid1.compartment.oc1..example",
+            region="us-chicago-1",
+            api_type=APITypeEnum.RESPONSES,
+        )
+
+    @patch("oci.generative_ai_inference.GenerativeAiInferenceClient")
+    @patch("langchain_oci.common.auth.create_oci_client_kwargs")
+    @patch("nat.plugins.langchain.llm._get_langchain_oci_chat_model")
+    async def test_basic_creation(self,
+                                  mock_get_chat,
+                                  mock_create_client_kwargs,
+                                  mock_oci_client,
+                                  oci_cfg,
+                                  mock_builder):
+        mock_chat_class = MagicMock()
+        mock_get_chat.return_value = mock_chat_class
+        mock_create_client_kwargs.return_value = {
+            "config": {
+                "region": "us-chicago-1"
+            },
+            "service_endpoint": oci_cfg.endpoint,
+            "retry_strategy": object(),
+            "timeout": (10, 240),
+        }
+        oci_cfg.max_retries = 6
+        oci_cfg.request_timeout = 42.0
+
+        async with oci_langchain(oci_cfg, mock_builder) as client:
+            mock_create_client_kwargs.assert_called_once_with(
+                auth_type=oci_cfg.auth_type,
+                service_endpoint=oci_cfg.endpoint,
+                auth_file_location=oci_cfg.auth_file_location,
+                auth_profile=oci_cfg.auth_profile,
+            )
+            mock_oci_client.assert_called_once()
+            assert mock_oci_client.call_args.kwargs["timeout"] == (10, 42.0)
+            mock_chat_class.assert_called_once()
+            kwargs = mock_chat_class.call_args.kwargs
+            assert kwargs["client"] is mock_oci_client.return_value
+            assert kwargs["model_id"] == "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
+            assert kwargs["service_endpoint"] == "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com"
+            assert kwargs["compartment_id"] == "ocid1.compartment.oc1..example"
+            assert kwargs["auth_profile"] == "DEFAULT"
+            assert kwargs["model_kwargs"] == {
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "max_tokens": 512,
+                "seed": 7,
+            }
+            assert client is mock_chat_class.return_value
+
+    @patch("oci.generative_ai_inference.GenerativeAiInferenceClient")
+    @patch("langchain_oci.common.auth.create_oci_client_kwargs")
+    @patch("nat.plugins.langchain.llm._get_langchain_oci_chat_model")
+    async def test_openai_provider_uses_max_completion_tokens(self,
+                                                              mock_get_chat,
+                                                              mock_create_client_kwargs,
+                                                              mock_oci_client,
+                                                              mock_builder):
+        mock_chat_class = MagicMock()
+        mock_get_chat.return_value = mock_chat_class
+        mock_create_client_kwargs.return_value = {"config": {}}
+
+        cfg = OCIModelConfig(
+            model_name="openai.gpt-5.4",
+            compartment_id="ocid1.compartment.oc1..example",
+            region="us-chicago-1",
+            provider="openai",
+            max_tokens=128,
+        )
+
+        async with oci_langchain(cfg, mock_builder) as _:
+            kwargs = mock_chat_class.call_args.kwargs
+            assert "max_completion_tokens" in kwargs["model_kwargs"]
+            assert "max_tokens" not in kwargs["model_kwargs"]
+            assert kwargs["model_kwargs"]["max_completion_tokens"] == 128
+
+    @patch("nat.plugins.langchain.llm._get_langchain_oci_chat_model")
+    async def test_api_type_validation(self, mock_get_chat, oci_cfg_wrong_api, mock_builder):
+        with pytest.raises(ValueError):
+            async with oci_langchain(oci_cfg_wrong_api, mock_builder):
+                pass
+        mock_get_chat.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -432,11 +539,13 @@ def test_decorator_registration(mock_global_registry):
     registry._llm_client_map = {
         (NIMModelConfig, LLMFrameworkEnum.LANGCHAIN): nim_langchain,
         (OpenAIModelConfig, LLMFrameworkEnum.LANGCHAIN): openai_langchain,
+        (OCIModelConfig, LLMFrameworkEnum.LANGCHAIN): oci_langchain,
         (AWSBedrockModelConfig, LLMFrameworkEnum.LANGCHAIN): aws_bedrock_langchain,
         (DynamoModelConfig, LLMFrameworkEnum.LANGCHAIN): dynamo_langchain,
     }
 
     assert registry._llm_client_map[(NIMModelConfig, LLMFrameworkEnum.LANGCHAIN)] is nim_langchain
     assert registry._llm_client_map[(OpenAIModelConfig, LLMFrameworkEnum.LANGCHAIN)] is openai_langchain
+    assert registry._llm_client_map[(OCIModelConfig, LLMFrameworkEnum.LANGCHAIN)] is oci_langchain
     assert registry._llm_client_map[(AWSBedrockModelConfig, LLMFrameworkEnum.LANGCHAIN)] is aws_bedrock_langchain
     assert registry._llm_client_map[(DynamoModelConfig, LLMFrameworkEnum.LANGCHAIN)] is dynamo_langchain

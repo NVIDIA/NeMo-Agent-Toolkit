@@ -27,4 +27,5 @@ from . import huggingface_inference_llm
 from . import huggingface_llm
 from . import litellm_llm
 from . import nim_llm
+from . import oci_llm
 from . import openai_llm

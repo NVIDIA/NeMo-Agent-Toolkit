@@ -27,6 +27,7 @@ The following [LLM](../build-workflows/llms/index.md) API providers are supporte
 - OpenAI
 - AWS Bedrock
 - Azure OpenAI
+- OCI Generative AI
 
 ## Packages
 
