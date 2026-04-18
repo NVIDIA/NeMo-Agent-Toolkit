@@ -22,7 +22,6 @@ import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
-from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 
 from nat.plugins.langchain.agent.base import BaseAgent
@@ -40,21 +39,21 @@ class MockBaseAgent(BaseAgent):
         self.callbacks = []
         self.detailed_logs = detailed_logs
         self.log_response_max_chars = log_response_max_chars
-        self._runnable_config = RunnableConfig()
+        self.graph = None
 
     async def _build_graph(self, state_schema: type) -> CompiledStateGraph:
         """Mock implementation."""
         return Mock(spec=CompiledStateGraph)
 
 
-@pytest.fixture
-def base_agent():
+@pytest.fixture(name="base_agent")
+def fixture_base_agent():
     """Create a mock agent for testing with detailed logs enabled."""
     return MockBaseAgent(detailed_logs=True)
 
 
-@pytest.fixture
-def base_agent_no_logs():
+@pytest.fixture(name="base_agent_no_logs")
+def fixture_base_agent_no_logs():
     """Create a mock agent for testing with detailed logs disabled."""
     return MockBaseAgent(detailed_logs=False)
 

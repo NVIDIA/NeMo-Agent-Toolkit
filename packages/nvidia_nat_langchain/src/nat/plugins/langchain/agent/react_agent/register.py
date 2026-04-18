@@ -100,6 +100,7 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     from nat.plugins.langchain.agent.react_agent.agent import ReActAgentGraph
     from nat.plugins.langchain.agent.react_agent.agent import ReActGraphState
     from nat.plugins.langchain.agent.react_agent.agent import create_react_agent_prompt
+    from nat.plugins.langchain.callback_handler import LangchainProfilerHandler
 
     prompt = create_react_agent_prompt(config)
 
@@ -110,12 +111,13 @@ async def react_agent_workflow(config: ReActAgentWorkflowConfig, builder: Builde
     tools = await builder.get_tools(tool_names=config.tool_names, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     if not tools:
         raise ValueError(f"No tools specified for ReAct Agent '{config.llm_name}'")
-    # configure callbacks, for sending intermediate steps
+    # configure callbacks for sending intermediate steps (LLM_START/LLM_END, TOOL_*) and thought process
     # construct the ReAct Agent Graph from the configured llm, prompt, and tools
     graph: CompiledStateGraph = await ReActAgentGraph(
         llm=llm,
         prompt=prompt,
         tools=tools,
+        callbacks=[LangchainProfilerHandler],
         use_tool_schema=config.include_tool_input_schema_in_tool_description,
         detailed_logs=config.verbose,
         log_response_max_chars=config.log_response_max_chars,

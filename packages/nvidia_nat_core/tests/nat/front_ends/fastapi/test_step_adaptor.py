@@ -26,14 +26,14 @@ from nat.data_models.step_adaptor import StepAdaptorMode
 from nat.front_ends.fastapi.step_adaptor import StepAdaptor
 
 
-@pytest.fixture
-def default_config():
+@pytest.fixture(name="default_config")
+def fixture_default_config():
     """Return a default StepAdaptorConfig object (mode=DEFAULT)."""
     return StepAdaptorConfig(mode=StepAdaptorMode.DEFAULT, custom_event_types=[])
 
 
-@pytest.fixture
-def custom_config():
+@pytest.fixture(name="custom_config")
+def fixture_custom_config():
     """Return a custom StepAdaptorConfig object (mode=CUSTOM) with custom types."""
     return StepAdaptorConfig(
         mode=StepAdaptorMode.CUSTOM,
@@ -44,8 +44,8 @@ def custom_config():
     )
 
 
-@pytest.fixture
-def disabled_config():
+@pytest.fixture(name="disabled_config")
+def fixture_disabled_config():
     """Return a custom StepAdaptorConfig object that disables intermediate steps."""
     return StepAdaptorConfig(
         mode=StepAdaptorMode.OFF,
@@ -56,26 +56,26 @@ def disabled_config():
     )
 
 
-@pytest.fixture
-def step_adaptor_default(default_config):
+@pytest.fixture(name="step_adaptor_default")
+def fixture_step_adaptor_default(default_config):
     """Return a StepAdaptor using the default config."""
     return StepAdaptor(config=default_config)
 
 
-@pytest.fixture
-def step_adaptor_custom(custom_config):
+@pytest.fixture(name="step_adaptor_custom")
+def fixture_step_adaptor_custom(custom_config):
     """Return a StepAdaptor using the custom config."""
     return StepAdaptor(config=custom_config)
 
 
-@pytest.fixture
-def step_adaptor_disabled(disabled_config):
+@pytest.fixture(name="step_adaptor_disabled")
+def fixture_step_adaptor_disabled(disabled_config):
     """Return a StepAdaptor using the disabled config."""
     return StepAdaptor(config=disabled_config)
 
 
-@pytest.fixture
-def make_intermediate_step():
+@pytest.fixture(name="make_intermediate_step")
+def fixture_make_intermediate_step():
     """A factory fixture to create an IntermediateStep with minimal defaults."""
 
     def _make_step(event_type: IntermediateStepType, data_input=None, data_output=None, name=None, UUID=None):
@@ -112,6 +112,146 @@ def test_process_llm_events_in_default(step_adaptor_default, make_intermediate_s
     assert result is not None, f"Expected LLM event '{event_type}' to be processed in DEFAULT mode."
     assert isinstance(result, ResponseIntermediateStep)
     assert step_adaptor_default._history[-1] is step, "Step must be appended to _history."
+
+
+def test_process_llm_start_shows_thinking_placeholder(step_adaptor_default, make_intermediate_step):
+    """LLM_START sets thought_text='Thinking...' as placeholder."""
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_START,
+            data_input="User question",
+            data_output=None,
+            UUID="llm-uuid-start",
+        ))
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "_Thinking..._"
+
+
+def test_process_llm_end_extracts_thought_text(step_adaptor_default, make_intermediate_step):
+    """LLM_END with ReAct-style 'Thought: ...' sets thought_text on the response step."""
+    uid = "llm-uuid-thought"
+    step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_START,
+            data_input="User question",
+            data_output=None,
+            UUID=uid,
+        ))
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_END,
+            data_input=None,
+            data_output=("Thought: I need to use the calculator to add 2 and 3.\n"
+                         "Action: calculator add\n"
+                         "Action Input: {\"a\": 2, \"b\": 3}\n"),
+            UUID=uid,
+        ))
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "I need to use the calculator to add 2 and 3."
+
+
+def test_extract_react_thought_no_thought_returns_thinking_fallback(step_adaptor_default, make_intermediate_step):
+    """LLM_END without 'Thought:' falls back to 'Completed thought.' to prevent UI jumping."""
+    uid = "llm-uuid-no-thought"
+    step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_START,
+            data_input="Input",
+            data_output=None,
+            UUID=uid,
+        ))
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.LLM_END,
+            data_input=None,
+            data_output="Action: foo\nAction Input: bar",
+            UUID=uid,
+        ))
+    assert result is not None
+    # Should keep "Thinking..." instead of None to avoid UI flicker
+    assert result.thought_text == "Completed thought."
+
+
+def test_tool_start_has_thought_text(step_adaptor_default, make_intermediate_step):
+    """TOOL_START events should set thought_text indicating tool invocation."""
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.TOOL_START,
+        data_input="Tool Input Data",
+        name="calculator_tool",
+        UUID="tool-uuid-1",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Using tool: calculator_tool..."
+
+
+def test_tool_end_has_thought_text(step_adaptor_default, make_intermediate_step):
+    """TOOL_END events should set thought_text indicating tool completion."""
+    uuid = "tool-uuid-2"
+    step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.TOOL_START,
+            data_input="Tool Input Data",
+            name="calculator_tool",
+            UUID=uuid,
+        ))
+
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.TOOL_END,
+            data_output="Tool Output Data",
+            name="calculator_tool",
+            UUID=uuid,
+        ))
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Using tool: calculator_tool... completed"
+
+
+def test_function_start_has_thought_text(step_adaptor_default, make_intermediate_step):
+    """FUNCTION_START events should set thought_text indicating function execution."""
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_START,
+        data_input="Function Input Data",
+        name="process_data",
+        UUID="function-uuid-1",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Running function: process_data..."
+
+
+def test_function_end_has_thought_text(step_adaptor_default, make_intermediate_step):
+    """FUNCTION_END events should set thought_text indicating function completion."""
+    uuid = "function-uuid-2"
+    step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.FUNCTION_START,
+            data_input="Function Input Data",
+            name="process_data",
+            UUID=uuid,
+        ))
+
+    result = step_adaptor_default.process(
+        make_intermediate_step(
+            event_type=IntermediateStepType.FUNCTION_END,
+            data_output="Function Output Data",
+            name="process_data",
+            UUID=uuid,
+        ))
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Running function: process_data... completed"
 
 
 def test_process_tool_in_default(step_adaptor_default, make_intermediate_step):
@@ -525,3 +665,245 @@ def test_function_events_in_custom_mode(step_adaptor_custom, make_intermediate_s
     # Steps should still be added to history
     assert step_adaptor_custom._history[-2] is step_start
     assert step_adaptor_custom._history[-1] is step_end
+
+
+# --------------------
+# Tests for thought_description override
+# --------------------
+def test_function_start_with_thought_description_override(step_adaptor_default):
+    """FUNCTION_START events use custom thought_description from metadata when provided."""
+    custom_thought = "Authenticating user credentials"
+    payload = IntermediateStepPayload(
+        event_type=IntermediateStepType.FUNCTION_START,
+        name="user_authentication",
+        data=StreamEventData(input="auth_token_123"),
+        UUID="function-uuid-custom-thought",
+        metadata={"thought_description": custom_thought},
+    )
+    step = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+        payload=payload,
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == f"{custom_thought}..."
+
+
+def test_function_end_with_thought_description_override(step_adaptor_default):
+    """FUNCTION_END events use custom thought_description from start event metadata."""
+    uuid = "function-uuid-custom-end"
+    custom_thought = "Generating SQL query"
+
+    # Process start event with custom thought
+    payload_start = IntermediateStepPayload(
+        event_type=IntermediateStepType.FUNCTION_START,
+        name="sql_query_generation",
+        data=StreamEventData(input="user query"),
+        UUID=uuid,
+        metadata={"thought_description": custom_thought},
+    )
+    step_start = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+        payload=payload_start,
+    )
+    step_adaptor_default.process(step_start)
+
+    # Process end event
+    payload_end = IntermediateStepPayload(
+        event_type=IntermediateStepType.FUNCTION_END,
+        name="sql_query_generation",
+        data=StreamEventData(output="SELECT * FROM table"),
+        UUID=uuid,
+    )
+    step_end = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+        payload=payload_end,
+    )
+    result = step_adaptor_default.process(step_end)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == f"{custom_thought}... completed"
+
+
+def test_function_without_thought_description_uses_default(step_adaptor_default, make_intermediate_step):
+    """FUNCTION_START events use default thought text when no custom thought_description is provided."""
+    step = make_intermediate_step(
+        event_type=IntermediateStepType.FUNCTION_START,
+        data_input="Function Input",
+        name="test_function",
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == "Running function: test_function..."
+
+
+def test_tool_start_with_thought_description_override(step_adaptor_default):
+    """TOOL_START events use custom thought_description from metadata when provided."""
+    custom_thought = "Executing database query"
+    payload = IntermediateStepPayload(
+        event_type=IntermediateStepType.TOOL_START,
+        name="database_tool",
+        data=StreamEventData(input="query_data"),
+        UUID="tool-uuid-custom-thought",
+        metadata={"thought_description": custom_thought},
+    )
+    step = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+        payload=payload,
+    )
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == f"{custom_thought}..."
+
+
+def test_tool_end_with_thought_description_override(step_adaptor_default):
+    """TOOL_END events use custom thought_description from start event metadata."""
+    uuid = "tool-uuid-custom-end"
+    custom_thought = "Executing database query"
+
+    # Process start event with custom thought
+    payload_start = IntermediateStepPayload(
+        event_type=IntermediateStepType.TOOL_START,
+        name="database_tool",
+        data=StreamEventData(input="query_data"),
+        UUID=uuid,
+        metadata={"thought_description": custom_thought},
+    )
+    step_start = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+        payload=payload_start,
+    )
+    step_adaptor_default.process(step_start)
+
+    # Process end event
+    payload_end = IntermediateStepPayload(
+        event_type=IntermediateStepType.TOOL_END,
+        name="database_tool",
+        data=StreamEventData(output="query_results"),
+        UUID=uuid,
+    )
+    step_end = IntermediateStep(
+        parent_id="root",
+        function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+        payload=payload_end,
+    )
+    result = step_adaptor_default.process(step_end)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == f"{custom_thought}... completed"
+
+
+# --------------------
+# Tests for custom thought emission via SPAN events
+# --------------------
+def test_span_start_with_custom_thought(step_adaptor_default):
+    """Test that SPAN_START events with thought_text in data.input are processed correctly."""
+    custom_thought = "Processing data: initializing..."
+    payload = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
+                                      name="custom_thought",
+                                      data=StreamEventData(input=custom_thought),
+                                      UUID="span-uuid-1")
+    step = IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+                            payload=payload)
+
+    result = step_adaptor_default.process(step)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == custom_thought
+    assert result.name == "custom_thought"
+
+
+def test_span_chunk_with_custom_thought(step_adaptor_default):
+    """Test that SPAN_CHUNK events update the thought text."""
+    uuid = "span-uuid-chunk"
+
+    payload_start = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
+                                            name="custom_thought",
+                                            data=StreamEventData(input="Processing: 0%"),
+                                            UUID=uuid)
+    step_start = IntermediateStep(parent_id="root",
+                                  function_ancestry=InvocationNode(parent_id="abc",
+                                                                   function_id="def",
+                                                                   function_name="xyz"),
+                                  payload=payload_start)
+    step_adaptor_default.process(step_start)
+
+    custom_thought_update = "Processing: 50%"
+    payload_chunk = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_CHUNK,
+                                            name="custom_thought",
+                                            data=StreamEventData(chunk=custom_thought_update),
+                                            UUID=uuid)
+    step_chunk = IntermediateStep(parent_id="root",
+                                  function_ancestry=InvocationNode(parent_id="abc",
+                                                                   function_id="def",
+                                                                   function_name="xyz"),
+                                  payload=payload_chunk)
+    result = step_adaptor_default.process(step_chunk)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == custom_thought_update
+
+
+def test_span_end_with_custom_thought(step_adaptor_default):
+    """Test that SPAN_END events extract thought_text from data.output."""
+    uuid = "span-uuid-end"
+
+    payload_start = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
+                                            name="custom_thought",
+                                            data=StreamEventData(input="Starting process..."),
+                                            UUID=uuid)
+    step_start = IntermediateStep(parent_id="root",
+                                  function_ancestry=InvocationNode(parent_id="abc",
+                                                                   function_id="def",
+                                                                   function_name="xyz"),
+                                  payload=payload_start)
+    step_adaptor_default.process(step_start)
+
+    custom_thought_final = "Process completed successfully"
+    payload_end = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_END,
+                                          name="custom_thought",
+                                          data=StreamEventData(output=custom_thought_final),
+                                          UUID=uuid)
+    step_end = IntermediateStep(parent_id="root",
+                                function_ancestry=InvocationNode(parent_id="abc",
+                                                                 function_id="def",
+                                                                 function_name="xyz"),
+                                payload=payload_end)
+    result = step_adaptor_default.process(step_end)
+
+    assert result is not None
+    assert isinstance(result, ResponseIntermediateStep)
+    assert result.thought_text == custom_thought_final
+
+
+def test_span_without_thought_text_returns_none(step_adaptor_default):
+    """Test that SPAN events without thought_text in data return None."""
+    payload = IntermediateStepPayload(event_type=IntermediateStepType.SPAN_START,
+                                      name="regular_span",
+                                      data=StreamEventData(input=None),
+                                      UUID="span-uuid-no-thought")
+    step = IntermediateStep(parent_id="root",
+                            function_ancestry=InvocationNode(parent_id="abc", function_id="def", function_name="xyz"),
+                            payload=payload)
+
+    result = step_adaptor_default.process(step)
+    assert result is None

@@ -15,6 +15,8 @@
 
 import html
 import logging
+import re
+import typing
 from functools import reduce
 from textwrap import dedent
 
@@ -39,6 +41,13 @@ class StepAdaptor:
         self._history: list[IntermediateStep] = []
         self.config = config
 
+    def _get_thought_description(self, metadata: dict[str, typing.Any] | None, default: str, suffix: str = "") -> str:
+        """Extract thought_description from metadata if present, otherwise return default."""
+        if not metadata or "thought_description" not in metadata:
+            return default + suffix
+
+        return metadata["thought_description"] + suffix
+
     def _step_matches_filter(self, step: IntermediateStep, config: StepAdaptorConfig) -> bool:
         """
         Returns True if this intermediate step should be included (based on the config.mode).
@@ -48,12 +57,14 @@ class StepAdaptor:
             return False
 
         if config.mode == StepAdaptorMode.DEFAULT:
-            # default existing behavior: show LLM events + TOOL_END + FUNCTION events
+            # default existing behavior: show LLM events + TOOL_END + FUNCTION events + SPAN events
             if step.event_category == IntermediateStepCategory.LLM:
                 return True
             if step.event_category == IntermediateStepCategory.TOOL:
                 return True
             if step.event_category == IntermediateStepCategory.FUNCTION:
+                return True
+            if step.event_category == IntermediateStepCategory.SPAN:
                 return True
             return False
 
@@ -62,6 +73,22 @@ class StepAdaptor:
             return step.event_type in config.custom_event_types
 
         return False
+
+    @staticmethod
+    def _extract_react_thought(output: str, fallback: str = "_Thinking..._") -> str:
+        """Extract ReAct-style 'Thought: ...' from LLM output for thought process display."""
+        if not output or not isinstance(output, str):
+            return fallback
+        # Match "Thought:" (case-insensitive, optional colon) and capture until Action/Final Answer/end
+        match = re.search(
+            r"thought\s*:?\s*(.*?)(?=\s*(?:action\s*\d*\s*:|final\s+answer\s*:)|$)",
+            output,
+            re.DOTALL | re.IGNORECASE,
+        )
+        if not match:
+            return fallback
+        text = match.group(1).strip()
+        return text if text else fallback
 
     def _handle_llm(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         input_str: str | None = None
@@ -113,10 +140,20 @@ class StepAdaptor:
             {output_value}
             """).strip("\n").format(payload=payload, output_value=escaped_output)
 
+        thought_text = None
+        if step.event_type == IntermediateStepType.LLM_START:
+            # Show "Thinking..." placeholder at START
+            thought_text = "_Thinking..._"
+        elif step.event_type == IntermediateStepType.LLM_NEW_TOKEN:
+            thought_text = self._extract_react_thought(output_str or "", fallback="_Thinking..._")
+        elif step.event_type == IntermediateStepType.LLM_END:
+            thought_text = self._extract_react_thought(output_str or "", fallback="Completed thought.")
+
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=step.name or "",
                                          payload=payload,
-                                         parent_id=ancestry.function_id)
+                                         parent_id=ancestry.function_id,
+                                         thought_text=thought_text)
 
         return event
 
@@ -168,10 +205,19 @@ class StepAdaptor:
             ```
             """).strip("\n").format(payload=payload, output_value=escaped_output, format_output_type=format_output_type)
 
+        thought_text = None
+        if step.event_type == IntermediateStepType.TOOL_START:
+            thought_text = self._get_thought_description(start_step.metadata, f"Using tool: {step.name}", "...")
+        elif step.event_type == IntermediateStepType.TOOL_END:
+            thought_text = self._get_thought_description(start_step.metadata,
+                                                         f"Using tool: {step.name}",
+                                                         "... completed")
+
         event = ResponseIntermediateStep(id=step.UUID,
                                          name=f"Tool: {step.name}",
                                          payload=payload,
-                                         parent_id=ancestry.function_id)
+                                         parent_id=ancestry.function_id,
+                                         thought_text=thought_text)
 
         return event
 
@@ -203,10 +249,16 @@ class StepAdaptor:
             ```
             """).strip("\n").format(input_value=escaped_input, format_input_type=format_input_type)
 
+            # Omit thought_text for top-level workflow function (parent is root)
+            thought_text = None
+            if ancestry.parent_id != "root":
+                thought_text = self._get_thought_description(step.metadata, f"Running function: {step.name}", "...")
+
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Start: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id)
+                                             parent_id=ancestry.parent_id,
+                                             thought_text=thought_text)
             return event
 
         if step.event_type == IntermediateStepType.FUNCTION_END:
@@ -256,13 +308,44 @@ class StepAdaptor:
                                     output_value=escaped_output,
                                     format_output_type=format_output_type)
 
+            # Omit thought_text for top-level workflow function (parent is root)
+            thought_text = None
+            if ancestry.parent_id != "root":
+                thought_text = self._get_thought_description(start_step.metadata if start_step else None,
+                                                             f"Running function: {step.name}",
+                                                             "... completed")
+
             event = ResponseIntermediateStep(id=step.UUID,
                                              name=f"Function Complete: {step.name}",
                                              payload=payload_str,
-                                             parent_id=ancestry.parent_id)
+                                             parent_id=ancestry.parent_id,
+                                             thought_text=thought_text)
             return event
 
         return None
+
+    def _handle_span(self, step: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
+        """
+        Handles SPAN events (SPAN_START, SPAN_CHUNK, SPAN_END) for custom thoughts.
+        """
+        # Extract thought_text from data field based on event type
+        thought_text = None
+        if step.event_type == IntermediateStepType.SPAN_START and step.data:
+            thought_text = step.data.input
+        elif step.event_type == IntermediateStepType.SPAN_CHUNK and step.data:
+            thought_text = step.data.chunk
+        elif step.event_type == IntermediateStepType.SPAN_END and step.data:
+            thought_text = step.data.output
+
+        if not thought_text:
+            return None
+
+        # All SPAN event types (START, CHUNK, END) share the same response structure
+        return ResponseIntermediateStep(id=step.UUID,
+                                        name=step.name or "Span",
+                                        payload="",
+                                        parent_id=ancestry.function_id,
+                                        thought_text=str(thought_text))
 
     def _handle_custom(self, payload: IntermediateStepPayload, ancestry: InvocationNode) -> ResponseSerializable | None:
         """
@@ -309,6 +392,9 @@ class StepAdaptor:
 
             if step.event_category == IntermediateStepCategory.FUNCTION:
                 return self._handle_function(payload, ancestry)
+
+            if step.event_category == IntermediateStepCategory.SPAN:
+                return self._handle_span(payload, ancestry)
 
             if step.event_category == IntermediateStepCategory.CUSTOM:
                 return self._handle_custom(payload, ancestry)

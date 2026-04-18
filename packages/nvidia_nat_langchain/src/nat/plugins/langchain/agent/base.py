@@ -18,6 +18,7 @@ import json
 import logging
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Callable
 from enum import Enum
 from typing import Any
 
@@ -71,7 +72,7 @@ class BaseAgent(ABC):
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
-                 callbacks: list[AsyncCallbackHandler] | None = None,
+                 callbacks: list[Callable[[], AsyncCallbackHandler]] | None = None,
                  detailed_logs: bool = False,
                  log_response_max_chars: int = 1000) -> None:
         logger.debug("Initializing Agent Graph")
@@ -81,8 +82,17 @@ class BaseAgent(ABC):
         self.detailed_logs = detailed_logs
         self.log_response_max_chars = log_response_max_chars
         self.graph = None
-        self._runnable_config = RunnableConfig(callbacks=self.callbacks,
-                                               configurable={"__pregel_runtime": DEFAULT_RUNTIME})
+
+    @property
+    def _runnable_config(self) -> RunnableConfig:
+        return self._make_runnable_config()
+
+    def _make_runnable_config(self) -> RunnableConfig:
+        """
+        Create a fresh RunnableConfig with isolated callback instances per invocation.
+        """
+        return RunnableConfig(callbacks=[c() for c in self.callbacks],
+                              configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
     async def _stream_llm(self, runnable: Any, inputs: dict[str, Any]) -> AIMessage:
         """

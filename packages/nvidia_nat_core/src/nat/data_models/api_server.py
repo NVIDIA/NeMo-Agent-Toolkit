@@ -505,6 +505,7 @@ class ResponseIntermediateStep(ResponseBaseModelIntermediate):
     type: str = "markdown"
     name: str
     payload: str
+    thought_text: str | None = None
 
 
 class ResponseObservabilityTrace(BaseModel, ResponseSerializable):
@@ -740,6 +741,7 @@ class SystemIntermediateStepContent(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str
     payload: str
+    thought_text: str | None = None
 
 
 class WebSocketSystemIntermediateStepMessage(BaseModel):

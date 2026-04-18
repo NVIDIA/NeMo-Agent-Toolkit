@@ -165,7 +165,9 @@ class MessageValidator:
                 return SystemResponseContent(text=data_model.choices[0].delta.content)
 
             elif (isinstance(data_model, ResponseIntermediateStep)):
-                return SystemIntermediateStepContent(name=data_model.name, payload=data_model.payload)
+                return SystemIntermediateStepContent(name=data_model.name,
+                                                     payload=data_model.payload,
+                                                     thought_text=data_model.thought_text)
 
             elif (isinstance(data_model, ResponseObservabilityTrace)):
                 return ObservabilityTraceContent(observability_trace_id=data_model.observability_trace_id)
