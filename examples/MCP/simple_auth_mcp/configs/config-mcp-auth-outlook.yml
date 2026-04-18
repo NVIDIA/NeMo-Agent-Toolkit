@@ -16,7 +16,7 @@
 
 # This is a static OAuth2 example for Outlook MCP authentication.
 # It demonstrates manual OAuth2 (no DCR) using a pre-registered client_id.
-# Ensure NAT_REDIRECT_URI is registered/allowlisted for NAT_CORPORATE_MCP_OUTLOOK_CLIENT_ID,
+# Ensure NAT_REDIRECT_URI is registered or allowlisted for NAT_CORPORATE_MCP_OUTLOOK_CLIENT_ID,
 # or the OAuth flow will fail with "redirect_uri not allowed for this client".
 
 function_groups:
