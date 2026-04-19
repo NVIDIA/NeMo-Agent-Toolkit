@@ -3,7 +3,7 @@
 **Status:** Active
 **Version:** 0.1
 **Date:** 2026-04-17
-**Reference Implementation:** `src/nat/atof/`
+**NeMo Agent Toolkit Reference Implementation:** `src/nat/atof/`
 
 **Companion documents:**
 
