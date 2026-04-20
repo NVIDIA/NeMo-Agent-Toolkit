@@ -77,7 +77,7 @@ def validate_trajectory_accuracy(trajectory_output_file: Path):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_eval(tmp_path: Path):
+async def test_eval(tmp_path: Path, root_repo_dir: Path):
     """
     1. nat-eval writes the workflow output to workflow_output.json
     2. nat-eval creates a file with scores for each evaluation metric.
@@ -98,6 +98,9 @@ async def test_eval(tmp_path: Path):
         config_data = yaml.safe_load(fh)
 
     dataset_file = Path(config_data['eval']['general']['dataset']['file_path'])
+    if not dataset_file.is_absolute() and not dataset_file.exists():
+        # When these paths are relative, resolve them against the root repository directory
+        dataset_file = root_repo_dir / dataset_file
 
     with dataset_file.open(encoding="utf-8") as fh:
         dataset = json.load(fh)
