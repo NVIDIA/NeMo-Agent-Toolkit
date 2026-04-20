@@ -30,7 +30,6 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 from collections import OrderedDict
 from collections.abc import AsyncIterator
 from typing import Any
@@ -45,13 +44,6 @@ from nat.middleware.middleware import InvocationContext
 
 logger = logging.getLogger(__name__)
 
-# Lower bound on fuzzy-match similarity to reduce the cache-poisoning surface.
-# A threshold below this makes it trivial to craft an input that is "similar
-# enough" to a legitimate user's cached key to hijack their response (for the
-# current process, which is how the in-memory cache is scoped). 0.85 is the
-# smallest value that we're comfortable shipping as an unconditional default;
-# operators with strict needs should use 1.0 (exact match only).
-_MIN_FUZZY_THRESHOLD = 0.85
 
 # Default bound on cache size. The previous implementation used an unbounded
 # dict which, under sustained unique input, grew without limit — a memory-
@@ -96,43 +88,17 @@ class CacheMiddleware(FunctionMiddleware):
         Args:
             enabled_mode: Either "always" or "eval". If "eval", only caches
                 when Context.is_evaluating is True.
-            similarity_threshold: Similarity threshold in [_MIN_FUZZY_THRESHOLD, 1.0].
-                If 1.0, performs exact matching. Lower values enable difflib-
-                based fuzzy matching. Values below _MIN_FUZZY_THRESHOLD are
-                rejected to prevent cache-poisoning where a crafted input
-                collides with a legitimate user's cached key.
+            similarity_threshold: Similarity threshold in [0, 1.0]. If 1.0,
+                performs exact matching. Lower values enable difflib-based
+                fuzzy matching; note that difflib is quadratic in the worst
+                case, so large caches with low thresholds may have a
+                performance cost. Values near 0 increase the risk of cache
+                collisions where different inputs return the same cached
+                response.
             max_entries: Maximum number of cache entries. When exceeded, the
                 oldest entry is evicted (LRU). Defaults to
-                _DEFAULT_MAX_CACHE_ENTRIES. Must be >= 1.
-
-        Raises:
-            ValueError: If similarity_threshold is outside [_MIN_FUZZY_THRESHOLD, 1.0]
-                or max_entries is not a positive integer.
+                _DEFAULT_MAX_CACHE_ENTRIES.
         """
-        # Reject bool explicitly — `isinstance(True, int)` is True in Python,
-        # and `True`/`False` silently sneaking through as numeric is a classic
-        # config bug (user passes the wrong key, gets no error). Check bool
-        # FIRST so the "must be a number" message doesn't lie.
-        if isinstance(similarity_threshold, bool):
-            raise ValueError(
-                f"similarity_threshold must be a number, got bool ({similarity_threshold!r})")
-        if not isinstance(similarity_threshold, (int, float)):
-            raise ValueError(
-                f"similarity_threshold must be a number, got {type(similarity_threshold).__name__}")
-        if not math.isfinite(similarity_threshold):
-            raise ValueError(
-                f"similarity_threshold must be finite, got {similarity_threshold!r}")
-        if similarity_threshold < _MIN_FUZZY_THRESHOLD or similarity_threshold > 1.0:
-            raise ValueError(
-                f"similarity_threshold={similarity_threshold} is outside the safe range "
-                f"[{_MIN_FUZZY_THRESHOLD}, 1.0]. Lower values make cache-poisoning trivial — "
-                "a crafted input can collide with a legitimate user's cached key. Use 1.0 "
-                "for exact matching (recommended), or a value >= "
-                f"{_MIN_FUZZY_THRESHOLD} for fuzzy matching.")
-        # Same bool-as-int foot-gun applies to max_entries.
-        if isinstance(max_entries, bool) or not isinstance(max_entries, int) or max_entries < 1:
-            raise ValueError(f"max_entries must be a positive integer, got {max_entries!r}")
-
         super().__init__(is_final=True)
         self._enabled_mode = enabled_mode
         self._similarity_threshold = similarity_threshold
@@ -202,22 +168,13 @@ class CacheMiddleware(FunctionMiddleware):
             # Exact matching - fast path
             return input_str if input_str in self._cache else None
 
-        # Fuzzy matching using difflib
         import difflib
 
-        best_match = None
-        best_ratio = 0.0
-
-        for cached_key in self._cache:
-            # Use SequenceMatcher for similarity computation
-            matcher = difflib.SequenceMatcher(None, input_str, cached_key)
-            ratio = matcher.ratio()
-
-            if ratio >= self._similarity_threshold and ratio > best_ratio:
-                best_ratio = ratio
-                best_match = cached_key
-
-        return best_match
+        best_matches = difflib.get_close_matches(
+            input_str, self._cache.keys(), n=1, cutoff=self._similarity_threshold)
+        if best_matches:
+            return best_matches[0]
+        return None
 
     async def function_middleware_invoke(self,
                                          *args: Any,

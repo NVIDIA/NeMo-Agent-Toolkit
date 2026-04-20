@@ -62,7 +62,6 @@ class TestCacheMiddlewareInitialization:
 
     def test_custom_initialization(self):
         """Test custom initialization."""
-        # Use 0.9 (above the enforced minimum) to exercise non-default fuzzy mode.
         middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.9)
         # Check attributes are set
         assert hasattr(middleware, '_enabled_mode')
@@ -109,11 +108,7 @@ class TestCacheMiddlewareCaching:
         assert result3.result == "Result for test"
 
     async def test_fuzzy_match_caching(self, middleware_context):
-        """Test fuzzy matching with similarity_threshold < 1.0.
-
-        Uses 0.9 (above the enforced minimum) — 0.8 is no longer a valid
-        threshold after the cache-poisoning hardening.
-        """
+        """Test fuzzy matching with similarity_threshold < 1.0."""
         middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.9)
 
         call_count = 0
@@ -272,9 +267,6 @@ class TestCacheMiddlewareEdgeCases:
 
     def test_similarity_computation_for_different_thresholds(self):
         """Test similarity computation for different thresholds."""
-        # This is more of a unit test for the similarity logic.
-        # Uses 0.9 (above the enforced minimum) to exercise fuzzy matching
-        # without enabling cache-poisoning-prone low thresholds.
         middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.9)
 
         # Directly test internal methods
@@ -291,11 +283,7 @@ class TestCacheMiddlewareEdgeCases:
         assert middleware._find_similar_key("xyz123abc") is None  # noqa
 
     async def test_multiple_similar_entries(self, middleware_context):
-        """Test behavior with multiple similar cached entries.
-
-        Uses 0.85 (the enforced minimum) instead of the original 0.7 —
-        below 0.85 is now rejected as a cache-poisoning risk.
-        """
+        """Test behavior with multiple similar cached entries."""
         middleware = CacheMiddleware(enabled_mode="always", similarity_threshold=0.85)
 
         # Pre-populate cache with similar entries
@@ -319,47 +307,6 @@ class TestCacheMiddlewareEdgeCases:
         # The exact behavior depends on which cached key is most similar
 
 
-class TestSimilarityThresholdFloor:
-    """The constructor must reject similarity thresholds below the safe floor.
-
-    Below ~0.85, crafting an input whose difflib ratio exceeds the threshold
-    against a legitimate cached key is trivial (small edits, common prefixes,
-    shared structural tokens). Accepting those values silently produces a
-    cache where one caller can hijack another caller's response.
-    """
-
-    @pytest.mark.parametrize("threshold", [0.0, 0.3, 0.5, 0.7, 0.84])
-    def test_below_floor_is_rejected(self, threshold):
-        with pytest.raises(ValueError, match="outside the safe range"):
-            CacheMiddleware(enabled_mode="always", similarity_threshold=threshold)
-
-    @pytest.mark.parametrize("threshold", [0.85, 0.9, 0.95, 1.0])
-    def test_at_or_above_floor_is_allowed(self, threshold):
-        mw = CacheMiddleware(enabled_mode="always", similarity_threshold=threshold)
-        assert mw._similarity_threshold == threshold  # noqa: SLF001
-
-    def test_threshold_above_one_is_rejected(self):
-        with pytest.raises(ValueError, match="outside the safe range"):
-            CacheMiddleware(enabled_mode="always", similarity_threshold=1.5)
-
-    def test_threshold_non_numeric_is_rejected(self):
-        with pytest.raises(ValueError, match="must be a number"):
-            CacheMiddleware(enabled_mode="always", similarity_threshold="high")  # type: ignore[arg-type]
-
-    @pytest.mark.parametrize("bad_bool", [True, False])
-    def test_threshold_bool_is_rejected(self, bad_bool):
-        """`isinstance(True, int)` is True in Python — reject bools explicitly
-        so a config with the wrong key type doesn't silently become 1.0 or 0.0."""
-        with pytest.raises(ValueError, match="got bool"):
-            CacheMiddleware(enabled_mode="always", similarity_threshold=bad_bool)  # type: ignore[arg-type]
-
-    @pytest.mark.parametrize("bad_value", [float("nan"), float("inf"), float("-inf")])
-    def test_threshold_non_finite_is_rejected(self, bad_value):
-        """NaN, +inf, -inf must be rejected before the range comparison."""
-        with pytest.raises(ValueError, match="must be finite"):
-            CacheMiddleware(enabled_mode="always", similarity_threshold=bad_value)
-
-
 class TestMaxEntriesLruEviction:
     """The cache must bound its size to prevent memory-exhaustion DoS.
 
@@ -371,24 +318,6 @@ class TestMaxEntriesLruEviction:
     async def test_default_max_entries_is_positive(self):
         mw = CacheMiddleware(enabled_mode="always", similarity_threshold=1.0)
         assert mw._max_entries > 0  # noqa: SLF001
-
-    def test_zero_max_entries_is_rejected(self):
-        with pytest.raises(ValueError, match="positive integer"):
-            CacheMiddleware(enabled_mode="always", similarity_threshold=1.0, max_entries=0)
-
-    def test_negative_max_entries_is_rejected(self):
-        with pytest.raises(ValueError, match="positive integer"):
-            CacheMiddleware(enabled_mode="always", similarity_threshold=1.0, max_entries=-5)
-
-    @pytest.mark.parametrize("bad_bool", [True, False])
-    def test_bool_max_entries_is_rejected(self, bad_bool):
-        """Same bool-as-int foot-gun protection as similarity_threshold."""
-        with pytest.raises(ValueError, match="positive integer"):
-            CacheMiddleware(
-                enabled_mode="always",
-                similarity_threshold=1.0,
-                max_entries=bad_bool,  # type: ignore[arg-type]
-            )
 
     async def test_cache_evicts_oldest_when_exceeding_max_entries(self, middleware_context):
         """Insert more unique entries than max_entries; verify size stays bounded."""
