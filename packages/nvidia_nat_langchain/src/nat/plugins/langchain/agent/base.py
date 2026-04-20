@@ -29,6 +29,7 @@ from langchain_core.messages import BaseMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import Runnable
 from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables.config import merge_configs
 from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import DEFAULT_RUNTIME
@@ -84,9 +85,16 @@ class BaseAgent(ABC):
         self._runnable_config = RunnableConfig(callbacks=self.callbacks,
                                                configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
-    async def _stream_llm(self, runnable: Any, inputs: dict[str, Any]) -> AIMessage:
+    async def _stream_llm(self,
+                          runnable: Any,
+                          inputs: dict[str, Any],
+                          config: RunnableConfig | None = None) -> AIMessage:
         """
         Stream from LLM runnable. Retry logic is handled automatically by the underlying LLM client.
+
+        When a LangGraph runtime config is provided (for example, from an injected node config),
+        it is merged with the local runnable config so that both LangGraph's streaming callbacks
+        and the profiler callbacks fire together.
 
         Parameters
         ----------
@@ -94,6 +102,8 @@ class BaseAgent(ABC):
             The LLM runnable (prompt | llm or similar)
         inputs : Dict[str, Any]
             The inputs to pass to the runnable
+        config : RunnableConfig | None
+            Optional LangGraph runtime config to merge with the local runnable config.
 
         Returns
         -------
@@ -102,7 +112,9 @@ class BaseAgent(ABC):
         """
         content_parts = []
         reasoning_parts = []
-        async for event in runnable.astream(inputs, config=self._runnable_config):
+        effective_config = merge_configs(self._runnable_config, config) if config is not None else self._runnable_config
+
+        async for event in runnable.astream(inputs, config=effective_config):
             content_parts.append(event.content)
             extra = getattr(event, 'additional_kwargs', None)
             if isinstance(extra, dict):
