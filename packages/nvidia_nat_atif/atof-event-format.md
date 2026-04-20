@@ -478,8 +478,6 @@ Every ATOF event carries a required `schema_version` field (§2) formatted as `"
 - **Minor bump** (e.g., `0.2` → `0.3`) for additive, backward-compatible changes. Examples: adding a new optional field, adding a new flag name to an open vocabulary, adding a new enum value to an extensible enum, adding a new scope type convention.
 - **Major bump** (e.g., `0.x` → `1.0`) for breaking changes. Examples: removing a field, renaming a field, changing a field's type, changing a required field's nullability, redefining the semantics of an existing field or enum value, making a previously optional field required.
 
-Pre-release versions (`0.x`) are not subject to these rules — the spec may introduce breaking changes within the `0.x` series without a major bump. Major bump discipline begins with the first `1.0` release.
-
 **Consumer dispatch on version mismatch.** Given an event's `schema_version` `SEEN` and the consumer's expected version `EXPECTED`, consumers SHOULD behave as follows:
 
 
@@ -503,7 +501,7 @@ Implementations MAY choose stricter or more lenient behavior (e.g., strict equal
 
 ATOF events are raw observations. They are not ATIF steps. See `[atof-to-atif-converter.md](./atof-to-atif-converter.md)` for the NeMo Agent Toolkit normative mapping from an ATOF stream to an ATIF trajectory.
 
-ATOF is also not a scope-type catalog. Earlier iterations of this spec enumerated typed profile shapes keyed on `scope_type`; v0.2 has replaced that model with the Profile Contract Protocol (§4). The scope-specific profile shape is now governed by JSON Schemas published out-of-band; the spec defines only the contract protocol and two reference profile implementations (§6).
+ATOF is also not a scope-type catalog. Rather than enumerating fixed profile shapes keyed on `scope_type`, ATOF defines the Profile Contract Protocol (§4), which specifies that scope-specific profile shapes are governed by JSON Schemas published out-of-band. The spec itself defines only the contract protocol and two reference profile implementations (§6).
 
 Key structural differences from ATIF:
 
@@ -676,5 +674,84 @@ The Toolkit-native ATOF emitter and consumer live under `src/nat/atof/` in the `
 | `nat.atof.scripts.atof_to_atif_converter` | `convert_file(path) → Trajectory`                                             | Read JSONL file and convert                                                                                                       |
 | `nat.atof.io`                             | `read_jsonl(path) → list[Event]`                                              | Parse ATOF JSONL to typed events                                                                                                  |
 | `nat.atof.io`                             | `write_jsonl(events, path)`                                                   | Serialize events to JSONL                                                                                                         |
+
+---
+
+## Appendix A. Profile-Mode Resolution Diagram
+
+Visual companion to §3.4 (`profile_mode_default`) and §4.4 (per-event `$mode` override). The three modes determine how a profile's `$schema` is interpreted and whether consumers validate.
+
+```
+                      ATOF profile-mode resolution
+                      ─────────────────────────────
+
+  Every profile carries three reserved meta-fields:
+    $schema   — ID string OR inline JSON Schema object
+    $version  — publisher's schema version (e.g. "1.0")
+    $mode     — optional per-event override
+
+  The effective mode for any profile is resolved in this order:
+
+    profile.$mode  ──►  header.profile_mode_default  ──►  "opaque"
+      (§4.4)              (§3.4 / §5)                    (no header)
+
+
+  ┌────────────── MODE: "header"  (shared registry) ───────────────┐
+  │                                                                │
+  │    StreamHeaderEvent                   ScopeStart / ScopeEnd   │
+  │    ┌──────────────────────┐            ┌───────────────────┐   │
+  │    │ profile_mode_default │            │ profile:          │   │
+  │    │    = "header"        │            │   $schema:        │   │
+  │    │ schemas: {           │   resolve  │     "default/     │   │
+  │    │   "default/llm.v1":  │◄───────────│      llm.v1" ─────┤   │
+  │    │     { full body }    │   by ID    │   $version: "1.0" │   │
+  │    │ }                    │            │   model_name: ... │   │
+  │    └──────────────────────┘            └───────────────────┘   │
+  │                                                                │
+  │   Consumer: look up $schema ID in registry, validate body.     │
+  │   Use when: many events share one schema (compact wire).       │
+  └────────────────────────────────────────────────────────────────┘
+
+  ┌────────────── MODE: "inline"  (self-contained) ────────────────┐
+  │                                                                │
+  │    StreamHeaderEvent                   ScopeStart / ScopeEnd   │
+  │    ┌──────────────────────┐            ┌───────────────────┐   │
+  │    │ profile_mode_default │            │ profile:          │   │
+  │    │    = "inline"        │            │   $schema: {      │   │
+  │    │ schemas: {}          │            │     $id: "...",   │   │
+  │    │    (empty — OK)      │            │     full body     │   │
+  │    │                      │            │   }               │   │
+  │    │                      │            │   $version: "1.0" │   │
+  │    │                      │            │   model_name: ... │   │
+  │    └──────────────────────┘            └───────────────────┘   │
+  │                                                                │
+  │   Consumer: validate against the embedded $schema object.      │
+  │   Use when: ad-hoc output, no header, short streams.           │
+  └────────────────────────────────────────────────────────────────┘
+
+  ┌────────────── MODE: "opaque"  (preserve, don't validate) ──────┐
+  │                                                                │
+  │    StreamHeaderEvent (optional)        ScopeStart / ScopeEnd   │
+  │    ┌──────────────────────┐            ┌───────────────────┐   │
+  │    │ profile_mode_default │            │ profile:          │   │
+  │    │    = "opaque"        │     ✗      │   $schema: <any>  │   │
+  │    │ schemas: {} or {..}  │  no-op     │   $version: "1.0" │   │
+  │    │  (registry ignored)  │            │   <vendor fields> │   │
+  │    └──────────────────────┘            └───────────────────┘   │
+  │                                                                │
+  │   Consumer: pass through verbatim — unknown fields preserved.  │
+  │   Use when: schema-unaware pipelines, filters, pretty-printers.│
+  └────────────────────────────────────────────────────────────────┘
+
+                      Per-event override ($mode)
+  ┌────────────────────────────────────────────────────────────────┐
+  │  header.profile_mode_default = "header"                        │
+  │                                                                │
+  │      profile A:                  profile B (override):         │
+  │        $schema: "default/llm.v1"   $schema: { full body }      │
+  │        (no $mode)                  $mode: "inline"  ◄── wins   │
+  │        ── resolves via registry    ── validated inline, once   │
+  └────────────────────────────────────────────────────────────────┘
+```
 
 
