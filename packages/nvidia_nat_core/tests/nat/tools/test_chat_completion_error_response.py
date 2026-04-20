@@ -31,7 +31,6 @@ from nat.data_models.api_server import Message
 from nat.tool.chat_completion import ChatCompletionConfig
 from nat.tool.chat_completion import register_chat_completion
 
-
 # A distinctive, unlikely-to-appear-anywhere-else string so any substring match
 # is definitive: either the exception leaks or it doesn't.
 _SENTINEL = "UNIQUE-LEAK-SENTINEL-8c3b9fba"

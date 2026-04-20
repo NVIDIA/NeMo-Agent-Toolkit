@@ -117,7 +117,7 @@ async def register_chat_completion(config: ChatCompletionConfig, builder: Builde
                 return GlobalTypeConverter.get().convert(chat_response, to_type=str)
             return chat_response
 
-        except Exception as e:
+        except Exception:
             # Log the full exception server-side for operators to triage.
             # Do NOT include the exception message, traceback class names, or
             # other internal details in the user-facing response: the response
