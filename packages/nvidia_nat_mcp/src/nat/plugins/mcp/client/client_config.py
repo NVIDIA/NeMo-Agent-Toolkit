@@ -40,7 +40,8 @@ class MCPServerConfig(BaseModel):
     streamable-http is the recommended default for HTTP-based connections.
     """
     transport: Literal["stdio", "sse", "streamable-http"] = Field(
-        ..., description="Transport type to connect to the MCP server (stdio, sse, or streamable-http)")
+        default="streamable-http",
+        description="Transport type to connect to the MCP server (stdio, sse, or streamable-http)")
     url: HttpUrl | None = Field(default=None,
                                 description="URL of the MCP server (for sse or streamable-http transport)")
     command: str | None = Field(default=None,
