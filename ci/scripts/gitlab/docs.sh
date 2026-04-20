@@ -20,10 +20,10 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
-rapids-logger "Installing non-pip deps"
+echo "Installing non-pip deps"
 get_lfs_files
 
 create_env
 
-rapids-logger "Building documentation"
+echo "Building documentation"
 make -C docs html
