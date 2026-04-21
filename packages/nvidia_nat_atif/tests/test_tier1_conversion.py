@@ -112,7 +112,7 @@ def _tier1_stream() -> list:
             name="calculator_agent",
             attributes=[],
             category="unknown",
-            data="3 + 4 = 7",
+            data={"result": "3 + 4 = 7"},
         ),
     ]
 
@@ -151,12 +151,11 @@ def test_tier1_preserves_opaque_payloads() -> None:
     events = _tier1_stream()
     trajectory = convert(events)
 
-    # First three steps come from inner scope-ends with dict data → JSON-encoded.
+    # All four steps come from scope-ends with dict data → JSON-encoded.
     assert trajectory.steps[0].message == json.dumps({"raw": "opaque response 1"}, separators=(",", ":"))
     assert trajectory.steps[1].message == json.dumps({"raw": "opaque response 2"}, separators=(",", ":"))
     assert trajectory.steps[2].message == json.dumps({"raw": "opaque response 3"}, separators=(",", ":"))
-    # Fourth step is the root scope-end with a plain string data.
-    assert trajectory.steps[3].message == "3 + 4 = 7"
+    assert trajectory.steps[3].message == json.dumps({"result": "3 + 4 = 7"}, separators=(",", ":"))
 
 
 def test_tier1_preserves_ancestry_and_invocation_timing() -> None:

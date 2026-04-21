@@ -81,11 +81,11 @@ def _canonicalize_attributes(v: Any) -> list[str]:
     if v is None:
         return []
     if not isinstance(v, (list, tuple, set)):
-        raise TypeError(f"attributes must be a list of strings, got {type(v).__name__}")
+        raise ValueError(f"attributes must be a list of strings, got {type(v).__name__}")
     normalized: set[str] = set()
     for item in v:
         if not isinstance(item, str):
-            raise TypeError(f"attributes entries must be strings, got {type(item).__name__}")
+            raise ValueError(f"attributes entries must be strings, got {type(item).__name__}")
         normalized.add(str(item))
     return sorted(normalized)
 

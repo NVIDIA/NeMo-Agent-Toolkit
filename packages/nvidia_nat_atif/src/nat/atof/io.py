@@ -42,7 +42,9 @@ def write_jsonl(events: list[Event], path: str | Path) -> None:
     """Write a list of Event objects to a JSON-Lines file.
 
     Each event is serialized as a single JSON line. The file ends with a
-    trailing newline.
+    trailing newline. Optional fields with ``None`` values are emitted as
+    explicit ``null`` on the wire (matching the spec wire envelope example
+    in atof-event-format.md §1).
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -50,5 +52,5 @@ def write_jsonl(events: list[Event], path: str | Path) -> None:
     for event in events:
         # Exclude the computed ``ts_micros`` field from wire output — it's an
         # in-memory sorting convenience, not part of the wire envelope (spec §2).
-        lines.append(json.dumps(event.model_dump(exclude_none=True, exclude={"ts_micros"}, mode="json", by_alias=True)))
+        lines.append(json.dumps(event.model_dump(exclude={"ts_micros"}, mode="json", by_alias=True)))
     path.write_text("\n".join(lines) + "\n")

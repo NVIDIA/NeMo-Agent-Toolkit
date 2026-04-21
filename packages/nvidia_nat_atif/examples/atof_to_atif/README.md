@@ -1,6 +1,6 @@
 # ATOF-to-ATIF Examples
 
-End-to-end examples exercising the ATOF v0.1 reference implementation. The two scenarios walk through the producer enrichment tiers — EXMP-01 is tier-1 (raw pass-through), EXMP-02 is tier-2 (semantic-tagged). See spec §1.1 in [`../../atof-event-format.md`](../../atof-event-format.md) for tier definitions.
+End-to-end examples exercising the ATOF v0.1 reference implementation. EXMP-01 is tier-1 (raw pass-through), EXMP-02 is tier-2 (semantic-tagged), and EXMP-03 demonstrates `mark` events. See spec §1.1 in [`../../atof-event-format.md`](../../atof-event-format.md) for tier definitions and §3 for event kinds.
 
 This README doubles as the ATOF → ATIF conversion reference: the mapping table, dispatch conventions, and known limitations live in the [Conversion reference](#conversion-reference) section at the bottom.
 
@@ -21,11 +21,19 @@ Converts to a 4-step ATIF trajectory of opaque `system` steps via the reference 
 
 ### EXMP-02 — tier-2 semantic-tagged
 
-Same calculator workflow as EXMP-01 but with every scope classified (`category: "agent"` / `"llm"` / `"tool"`) and `category_profile` populated (`category_profile.model_name` for llm events, `category_profile.tool_call_id` for tool events — see spec §4.4).
+Same calculator workflow as EXMP-01 but with every scope classified (`category: "agent"` / `"llm"` / `"tool"`) and `category_profile` populated (`category_profile.model_name` for llm events, `category_profile.tool_call_id` for tool events — see spec §4.4). Additionally demonstrates `attributes: ["remote"]` on the tool scope (the tool is dispatched out-of-process, spec §2.1) and `data_schema` on the llm scopes pointing at `openai/chat-completions.v1` (spec §2).
 
 Converts to a 5-step rich ATIF trajectory (user → agent → system → user → agent) with `Trajectory.agent.name` derived from the `category: "agent"` scope's `name`.
 
 **When to use:** native producers that classify events at the hook site.
+
+### EXMP-03 — mark events
+
+A short chat agent bracketed by two `mark` events — a `session_start` mark before the agent opens and a `session_end` mark after it closes. Both marks are generic checkpoints (`category` absent, `category_profile` absent), carrying `data` that records session-level metadata (session/user IDs, message count).
+
+Converts to a 4-step ATIF trajectory (system → user → agent → system): each mark with non-null `data` materialises as a `source: "system"` step whose `message` is the serialized `data`; the single LLM turn produces the user/agent pair.
+
+**When to use:** demonstrating the `mark` event kind — point-in-time checkpoints that sit outside the start/end scope-pairing semantics.
 
 ## Running
 
@@ -38,12 +46,13 @@ python convert_atof_examples_to_atif.py
 
 ## Event counts
 
-| Scenario | Events | ATIF steps | Tier | Workflow                                       |
-| -------- | ------ | ---------- | ---- | ---------------------------------------------- |
-| EXMP-01  | 8      | 4          | 1    | Opaque wrapper: 3 unclassified inner callbacks |
-| EXMP-02  | 8      | 5          | 2    | Calculator: agent → llm → tool → llm → agent   |
+| Scenario | Events | ATIF steps | Tier | Workflow                                         |
+| -------- | ------ | ---------- | ---- | ------------------------------------------------ |
+| EXMP-01  | 8      | 4          | 1    | Opaque wrapper: 3 unclassified inner callbacks   |
+| EXMP-02  | 8      | 5          | 2    | Calculator: agent → llm → tool → llm → agent     |
+| EXMP-03  | 6      | 4          | 2    | Chat agent bracketed by session-boundary marks   |
 
-Each scenario consists of 4 paired `scope` events (4 start + 4 end). Neither scenario emits a stream header — the ATOF v0.1 spec has no stream-level metadata event.
+EXMP-01 and EXMP-02 each consist of 4 paired `scope` events (4 start + 4 end). EXMP-03 consists of 2 paired `scope` events plus 2 `mark` events. The ATOF v0.1 spec has no stream-level metadata event.
 
 ---
 

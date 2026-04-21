@@ -28,6 +28,7 @@ OUTPUT_DIR = EXAMPLES_DIR / "output"
 EXAMPLES = [
     "exmp01_atof.jsonl",
     "exmp02_atof.jsonl",
+    "exmp03_atof.jsonl",
 ]
 
 
