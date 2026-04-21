@@ -75,6 +75,35 @@ class A365FrontEndPluginWorker:
         from microsoft_agents.hosting.core import MemoryStorage
         return MemoryStorage()
 
+    def _build_connection_configurations(
+        self, service_connection: "AgentAuthConfiguration"
+    ) -> dict[str, "AgentAuthConfiguration"]:
+        """Build SDK connection configs, including optional JWT audience aliases.
+
+        The Microsoft Agents SDK validates inbound JWT audiences against the
+        ``CLIENT_ID`` values present in ``AgentAuthConfiguration._connections``.
+        We keep ``SERVICE_CONNECTION`` as the default outbound auth config and add
+        alias-only connections so Bot Framework / Teams tokens with alternate
+        audiences are accepted without modifying SDK internals.
+        """
+        from microsoft_agents.hosting.core import AgentAuthConfiguration
+
+        connections = {"SERVICE_CONNECTION": service_connection}
+
+        for index, audience in enumerate(self.front_end_config.allowed_audiences, start=1):
+            if audience.lower() == service_connection.CLIENT_ID.lower():
+                continue
+
+            connections[f"AUDIENCE_ALIAS_{index}"] = AgentAuthConfiguration(
+                client_id=audience,
+                client_secret=get_secret_value(self.front_end_config.app_password),
+                auth_type=service_connection.AUTH_TYPE,
+                connection_name=f"AUDIENCE_ALIAS_{index}",
+                tenant_id=self.front_end_config.tenant_id,
+            )
+
+        return connections
+
     def _get_connection_manager(self, service_connection: "AgentAuthConfiguration") -> Connections:
         """Get the connection manager instance for the AgentApplication.
 
@@ -90,7 +119,7 @@ class A365FrontEndPluginWorker:
         from microsoft_agents.authentication.msal import MsalConnectionManager
 
         return MsalConnectionManager(
-            connections_configurations={"SERVICE_CONNECTION": service_connection}
+            connections_configurations=self._build_connection_configurations(service_connection)
         )
 
     async def create_agent_application(

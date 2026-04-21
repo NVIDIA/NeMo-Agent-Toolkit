@@ -16,6 +16,8 @@
 
 """Registration for Microsoft Agent 365 front-end."""
 
+import os
+
 from nat.cli.register_workflow import register_front_end
 from nat.data_models.common import set_secret_from_env
 from nat.plugins.a365.front_end.front_end_config import A365FrontEndConfig
@@ -39,6 +41,15 @@ async def a365_front_end(config: A365FrontEndConfig, full_config):
     Raises:
         ValueError: If app_password is not provided in config or A365_APP_PASSWORD environment variable
     """
+    if not config.allowed_audiences:
+        env_audiences = os.environ.get("A365_ALLOWED_AUDIENCES", "")
+        if env_audiences:
+            config.allowed_audiences = [
+                audience.strip()
+                for audience in env_audiences.split(",")
+                if audience.strip()
+            ]
+
     if not config.app_password:
         set_secret_from_env(config, "app_password", "A365_APP_PASSWORD")
     
