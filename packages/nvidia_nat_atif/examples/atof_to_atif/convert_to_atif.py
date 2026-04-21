@@ -4,14 +4,15 @@
 
 Reads each example JSONL file produced by ``generate_examples.py`` (the three
 three-tier demonstration scenarios: EXMP-01 tier-2 basic, EXMP-02 tier-2 with
-error recovery, EXMP-03 tier-3 codec-annotated) and writes the resulting ATIF
+error recovery, EXMP-03 tier-3 schema-annotated) and writes the resulting ATIF
 trajectory as formatted JSON.
 
 Uses ``nat.atof.scripts.atof_to_atif_converter.convert_file`` — the v0.1
-converter dispatches on ``(kind, scope_type)`` and reads typed fields
-(``model_name``, ``tool_call_id``) directly. ``StreamHeader`` events are
-skipped by the converter's main dispatch loop (no schema-registry pre-pass
-needed in v0.1; the optional codec layer is consumer-side opt-in).
+converter dispatches on ``(kind, scope_type)`` and reads scope-type-specific
+fields from the ``profile`` sub-object (``profile.model_name``,
+``profile.tool_call_id``). ``StreamHeader`` events are skipped by the
+converter's main dispatch loop (no schema-registry pre-pass needed in v0.1;
+the optional schema layer is consumer-side opt-in).
 
 Usage:
     python convert_to_atif.py [--input-dir DIR] [--output-dir DIR]

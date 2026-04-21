@@ -2,13 +2,13 @@
   "$id": "nvidia/tools.v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "NVIDIA Tools Profile v1",
-  "description": "Canonical codec output schema for ATOF scope_type='tool' events: describes the shape of annotated_request / annotated_response when the codec identifier is 'nvidia/tools.v1'. Captures every field needed to populate a complete ATIF ToolCall (tool_call_id + function_name + arguments) plus tool-execution metadata (provider, type, status, latency, retries, parent linkage) — making a tool ScopeEndEvent self-describing so consumers can build the ATIF ToolCall from the tool event alone, without joining against the upstream LLM event. All fields are optional. See atof-codec-profiles.md §5 (Canonical Codec Registry) + §6 (Codec Resolution Protocol). Schema ID format: vendor/<id>.v<N> per atof-codec-profiles.md §3.1.",
+  "description": "Canonical annotation schema for ATOF scope_type='tool' events: describes the shape of annotated_request / annotated_response when the schema identifier is 'nvidia/tools.v1'. Captures every field needed to populate a complete ATIF ToolCall (tool_call_id + function_name + arguments) plus tool-execution metadata (provider, type, status, latency, retries, parent linkage) — making a tool ScopeEndEvent self-describing so consumers can build the ATIF ToolCall from the tool event alone, without joining against the upstream LLM event. All fields are optional. See atof-schema-profiles.md §5 (Canonical Schema Registry) + §6 (Schema Resolution Protocol). Schema ID format: vendor/<id>.v<N> per atof-schema-profiles.md §3.1.",
   "type": "object",
   "properties": {
 
     "tool_call_id": {
       "type": ["string", "null"],
-      "description": "Correlation ID from the LLM tool-call response — e.g., 'call_abc123' (OpenAI) or 'toolu_abc123' (Anthropic). Mirrors the ATOF event's typed 'tool_call_id' field. Maps directly to ATIF ToolCall.tool_call_id and observation.results[*].source_call_id."
+      "description": "Correlation ID from the LLM tool-call response — e.g., 'call_abc123' (OpenAI) or 'toolu_abc123' (Anthropic). Mirrors the ATOF event's 'profile.tool_call_id' (spec §4.4). Maps directly to ATIF ToolCall.tool_call_id and observation.results[*].source_call_id."
     },
 
     "function_name": {

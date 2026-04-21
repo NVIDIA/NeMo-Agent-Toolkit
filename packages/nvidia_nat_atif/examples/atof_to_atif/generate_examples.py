@@ -6,25 +6,26 @@ Each scenario opens with a ``StreamHeaderEvent`` (always at position 0 per
 spec §3.4) and demonstrates one of the three producer enrichment tiers:
 
 - **EXMP-01 — tier-2 semantic-tagged (basic)**: Simple calculator with a single
-  tool call. StreamHeader is a minimal manifest (empty ``codecs``). LLM events
-  carry ``model_name`` but no codec; tool events carry ``tool_call_id``.
+  tool call. StreamHeader is a minimal manifest (empty ``schemas``). LLM events
+  carry ``profile.model_name`` but no schema; tool events carry
+  ``profile.tool_call_id``.
 
 - **EXMP-02 — tier-2 with error recovery**: Same shape as EXMP-01 but the tool
   fails (``status: "error"`` + ``ErrorInfo``) and the parent agent catches it
   and reports ``status: "ok"`` with a graceful failure message. Demonstrates
   cascading-status semantics from spec §5.2-5.3.
 
-- **EXMP-03 — tier-3 codec-annotated**: Same calculator workflow as EXMP-01,
-  but the producer registers a codec (``openai/chat-completions.v1``) on each
+- **EXMP-03 — tier-3 schema-annotated**: Same calculator workflow as EXMP-01,
+  but the producer declares a schema (``openai/chat-completions.v1``) on each
   LLM event and attaches structured ``annotated_request`` /
-  ``annotated_response`` payloads. The StreamHeader declares the codec in its
+  ``annotated_response`` payloads. The StreamHeader declares the schema in its
   registry (priority-2 fallback for any consumer that doesn't have it locally).
 
 Usage:
     python generate_examples.py [--output-dir DIR]
 
 See ATOF spec §1.1 (three enrichment tiers), §3 (event kinds), §5 (status),
-and ``atof-codec-profiles.md`` §6 (codec resolution protocol).
+and ``atof-schema-profiles.md`` §6 (schema resolution protocol).
 """
 
 from __future__ import annotations
@@ -53,7 +54,7 @@ def _ts(scenario: int, second: int) -> str:
 
 
 # ---------------------------------------------------------------------------
-# EXMP-01: Simple Tool Call — tier-2 semantic-tagged (no codec)
+# EXMP-01: Simple Tool Call — tier-2 semantic-tagged (no schema)
 # ---------------------------------------------------------------------------
 
 
@@ -69,7 +70,7 @@ def generate_exmp01() -> list[Event]:
             parent_uuid=None,
             timestamp=_ts(1, 0),
             name="exmp01_header",
-            codecs={},  # tier-2: no codecs declared
+            schemas={},  # tier-2: no schemas declared
         ),
         ScopeStartEvent(
             uuid="agent-001",
@@ -87,7 +88,7 @@ def generate_exmp01() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
+            profile={"model_name": "gpt-4.1"},
             input={"messages": [{"role": "user", "content": "What is 3 + 4?"}]},
         ),
         ScopeEndEvent(
@@ -97,7 +98,7 @@ def generate_exmp01() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
+            profile={"model_name": "gpt-4.1"},
             output={
                 "content": "",
                 "tool_calls": [
@@ -111,9 +112,9 @@ def generate_exmp01() -> list[Event]:
             parent_uuid="agent-001",
             timestamp=_ts(1, 3),
             name="calculator__add",
-            attributes=["local"],
+            attributes=[],
             scope_type="tool",
-            tool_call_id="call_abc",
+            profile={"tool_call_id": "call_abc"},
             input={"a": 3, "b": 4},
         ),
         ScopeEndEvent(
@@ -121,9 +122,9 @@ def generate_exmp01() -> list[Event]:
             parent_uuid="agent-001",
             timestamp=_ts(1, 4),
             name="calculator__add",
-            attributes=["local"],
+            attributes=[],
             scope_type="tool",
-            tool_call_id="call_abc",
+            profile={"tool_call_id": "call_abc"},
             output={"result": 7},
             status="ok",
         ),
@@ -134,7 +135,7 @@ def generate_exmp01() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
+            profile={"model_name": "gpt-4.1"},
             input={
                 "messages": [
                     {"role": "user", "content": "What is 3 + 4?"},
@@ -150,7 +151,7 @@ def generate_exmp01() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
+            profile={"model_name": "gpt-4.1"},
             output={"content": "3 + 4 = 7"},
             status="ok",
         ),
@@ -185,7 +186,7 @@ def generate_exmp02() -> list[Event]:
             parent_uuid=None,
             timestamp=_ts(2, 0),
             name="exmp02_header",
-            codecs={},
+            schemas={},
         ),
         ScopeStartEvent(
             uuid="agent-002",
@@ -203,7 +204,7 @@ def generate_exmp02() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
+            profile={"model_name": "gpt-4.1"},
             input={"messages": [{"role": "user", "content": "Find recent quantum-computing news."}]},
         ),
         ScopeEndEvent(
@@ -213,7 +214,7 @@ def generate_exmp02() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
+            profile={"model_name": "gpt-4.1"},
             output={
                 "content": "",
                 "tool_calls": [
@@ -229,7 +230,7 @@ def generate_exmp02() -> list[Event]:
             name="web_search",
             attributes=[],
             scope_type="tool",
-            tool_call_id="call_xyz",
+            profile={"tool_call_id": "call_xyz"},
             input={"q": "quantum computing news"},
         ),
         # Tool fails after 5s timeout
@@ -240,7 +241,7 @@ def generate_exmp02() -> list[Event]:
             name="web_search",
             attributes=[],
             scope_type="tool",
-            tool_call_id="call_xyz",
+            profile={"tool_call_id": "call_xyz"},
             output=None,
             status="error",
             error=ErrorInfo(message="request timed out after 5s", type="TimeoutError"),
@@ -261,11 +262,11 @@ def generate_exmp02() -> list[Event]:
 
 
 # ---------------------------------------------------------------------------
-# EXMP-03: Tier-3 Codec-Annotated — same calculator workflow as EXMP-01
+# EXMP-03: Tier-3 Schema-Annotated — same calculator workflow as EXMP-01
 # ---------------------------------------------------------------------------
 
 
-_OPENAI_CODEC = {"name": "openai/chat-completions", "version": "v1"}
+_OPENAI_SCHEMA_REF = {"name": "openai/chat-completions", "version": "v1"}
 
 # Inline schema body for openai/chat-completions.v1 — minimal stub for the
 # example. A production schema would describe the full request/response shape.
@@ -278,7 +279,7 @@ _OPENAI_CHAT_SCHEMA = {
 
 
 def _annotated_request_calc_q1() -> dict:
-    """Codec-decoded request for the first LLM turn of EXMP-03."""
+    """Schema-decoded request for the first LLM turn of EXMP-03."""
     return {
         "model": "gpt-4.1",
         "messages": [{"role": "user", "content": "What is 3 + 4?"}],
@@ -299,7 +300,7 @@ def _annotated_request_calc_q1() -> dict:
 
 
 def _annotated_response_calc_q1() -> dict:
-    """Codec-decoded response for the first LLM turn (tool call decision)."""
+    """Schema-decoded response for the first LLM turn (tool call decision)."""
     return {
         "id": "chatcmpl-exmp03-001",
         "model": "gpt-4.1",
@@ -363,7 +364,7 @@ def _annotated_response_calc_q2() -> dict:
 
 
 def generate_exmp03() -> list[Event]:
-    """EXMP-01 workflow + tier-3 codec annotations on every LLM event.
+    """EXMP-01 workflow + tier-3 schema annotations on every LLM event.
 
     StreamHeader declares ``openai/chat-completions.v1`` with an inline
     ``$schema`` body — consumers can validate without bundling the schema
@@ -375,7 +376,7 @@ def generate_exmp03() -> list[Event]:
             parent_uuid=None,
             timestamp=_ts(3, 0),
             name="exmp03_header",
-            codecs={
+            schemas={
                 "openai/chat-completions.v1": {"$schema": _OPENAI_CHAT_SCHEMA},
             },
         ),
@@ -395,8 +396,8 @@ def generate_exmp03() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
-            codec=_OPENAI_CODEC,
+            profile={"model_name": "gpt-4.1"},
+            schema=_OPENAI_SCHEMA_REF,
             input=_annotated_request_calc_q1(),
             annotated_request=_annotated_request_calc_q1(),
         ),
@@ -407,8 +408,8 @@ def generate_exmp03() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
-            codec=_OPENAI_CODEC,
+            profile={"model_name": "gpt-4.1"},
+            schema=_OPENAI_SCHEMA_REF,
             output=_annotated_response_calc_q1(),
             annotated_response=_annotated_response_calc_q1(),
             status="ok",
@@ -418,9 +419,9 @@ def generate_exmp03() -> list[Event]:
             parent_uuid="agent-003",
             timestamp=_ts(3, 3),
             name="calculator__add",
-            attributes=["local"],
+            attributes=[],
             scope_type="tool",
-            tool_call_id="call_abc",
+            profile={"tool_call_id": "call_abc"},
             input={"a": 3, "b": 4},
         ),
         ScopeEndEvent(
@@ -428,9 +429,9 @@ def generate_exmp03() -> list[Event]:
             parent_uuid="agent-003",
             timestamp=_ts(3, 4),
             name="calculator__add",
-            attributes=["local"],
+            attributes=[],
             scope_type="tool",
-            tool_call_id="call_abc",
+            profile={"tool_call_id": "call_abc"},
             output={"result": 7},
             status="ok",
         ),
@@ -441,8 +442,8 @@ def generate_exmp03() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
-            codec=_OPENAI_CODEC,
+            profile={"model_name": "gpt-4.1"},
+            schema=_OPENAI_SCHEMA_REF,
             input=_annotated_request_calc_q2(),
             annotated_request=_annotated_request_calc_q2(),
         ),
@@ -453,8 +454,8 @@ def generate_exmp03() -> list[Event]:
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
-            model_name="gpt-4.1",
-            codec=_OPENAI_CODEC,
+            profile={"model_name": "gpt-4.1"},
+            schema=_OPENAI_SCHEMA_REF,
             output=_annotated_response_calc_q2(),
             annotated_response=_annotated_response_calc_q2(),
             status="ok",
@@ -491,7 +492,7 @@ def main() -> None:
     scenarios = [
         ("exmp01_atof.jsonl", "tier-2 semantic-tagged", generate_exmp01),
         ("exmp02_atof.jsonl", "tier-2 with error recovery", generate_exmp02),
-        ("exmp03_atof.jsonl", "tier-3 codec-annotated", generate_exmp03),
+        ("exmp03_atof.jsonl", "tier-3 schema-annotated", generate_exmp03),
     ]
 
     for filename, label, generator in scenarios:

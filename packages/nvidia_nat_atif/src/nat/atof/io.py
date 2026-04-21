@@ -50,5 +50,5 @@ def write_jsonl(events: list[Event], path: str | Path) -> None:
     for event in events:
         # Exclude the computed ``ts_micros`` field from wire output — it's an
         # in-memory sorting convenience, not part of the wire envelope (spec §2).
-        lines.append(json.dumps(event.model_dump(exclude_none=True, exclude={"ts_micros"}, mode="json")))
+        lines.append(json.dumps(event.model_dump(exclude_none=True, exclude={"ts_micros"}, mode="json", by_alias=True)))
     path.write_text("\n".join(lines) + "\n")

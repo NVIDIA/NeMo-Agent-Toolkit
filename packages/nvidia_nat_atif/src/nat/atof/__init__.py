@@ -6,24 +6,24 @@ ATOF is a JSON-Lines wire format for agent runtime event streams. These
 models define the four event kinds (``ScopeStartEvent``, ``ScopeEndEvent``,
 ``MarkEvent``, ``StreamHeaderEvent``), the structured error payload
 (``ErrorInfo``), the behavioral flag enum (``Flags``), the canonical
-``scope_type`` vocabulary (``ScopeType``), and the codec-annotated LLM
+``scope_type`` vocabulary (``ScopeType``), and the schema-annotated LLM
 request/response types (``AnnotatedLLMRequest``, ``AnnotatedLLMResponse``
 and their components).
 
 See ``atof-event-format.md`` for the core wire format and
-``atof-codec-profiles.md`` for the codec-annotation layer + 4-priority
-codec resolution protocol (§6).
+``atof-schema-profiles.md`` for the schema-annotation layer + 4-priority
+schema resolution protocol (§6).
 """
 
-from nat.atof.codec import AnnotatedLLMRequest
-from nat.atof.codec import AnnotatedLLMResponse
-from nat.atof.codec import ContentPart as CodecContentPart
-from nat.atof.codec import GenerationParams
-from nat.atof.codec import Message
-from nat.atof.codec import RequestToolCall
-from nat.atof.codec import ResponseToolCall
-from nat.atof.codec import ToolDefinition
-from nat.atof.codec import Usage
+from nat.atof.annotations import AnnotatedLLMRequest
+from nat.atof.annotations import AnnotatedLLMResponse
+from nat.atof.annotations import ContentPart
+from nat.atof.annotations import GenerationParams
+from nat.atof.annotations import Message
+from nat.atof.annotations import RequestToolCall
+from nat.atof.annotations import ResponseToolCall
+from nat.atof.annotations import ToolDefinition
+from nat.atof.annotations import Usage
 from nat.atof.events import ErrorInfo
 from nat.atof.events import Event
 from nat.atof.events import MarkEvent
@@ -38,7 +38,7 @@ from nat.atof.scope_type import ScopeType
 __all__ = [
     "AnnotatedLLMRequest",
     "AnnotatedLLMResponse",
-    "CodecContentPart",
+    "ContentPart",
     "ErrorInfo",
     "Event",
     "Flags",

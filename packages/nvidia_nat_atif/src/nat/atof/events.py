@@ -9,20 +9,23 @@ Four event kinds:
 - ``ScopeStartEvent``   — a scope was opened
 - ``ScopeEndEvent``     — a scope was closed (carries terminal ``status``)
 - ``MarkEvent``         — a point-in-time checkpoint
-- ``StreamHeaderEvent`` — optional stream metadata carrier (codec registry).
+- ``StreamHeaderEvent`` — optional stream metadata carrier (schema registry).
                           MUST be the first event when present (spec §3.4).
 
 What kind of work a scope represents is carried by the ``scope_type`` field
-on ``ScopeStart`` / ``ScopeEnd``. Kind-specific typed fields (``model_name``,
-``tool_call_id``, ``codec`` annotations) live directly on these events and
-are null for scope types that don't need them.
+on ``ScopeStart`` / ``ScopeEnd``. Scope-type-specific typed fields are
+packaged into a single optional ``profile`` sub-object (spec §4.4) —
+``model_name`` for ``llm``, ``tool_call_id`` for ``tool``, ``subtype`` for
+``custom``, with additional keys reserved for future scope types. The
+schema-layer fields (``schema``, ``annotated_request`` / ``annotated_response``)
+remain at the top level because they are cross-cutting across scope types.
 
 See ATOF spec:
 - §2 (common envelope), §2.1 (attributes)
 - §3 (event kinds)
 - §4 (scope_type vocabulary)
 - §5 (status and error semantics)
-- atof-codec-profiles.md §6 (codec resolution protocol)
+- atof-schema-profiles.md §6 (schema resolution protocol)
 """
 
 from __future__ import annotations
@@ -43,15 +46,15 @@ from pydantic import computed_field
 from pydantic import field_validator
 from pydantic import model_validator
 
-from nat.atof.codec import AnnotatedLLMRequest
-from nat.atof.codec import AnnotatedLLMResponse
+from nat.atof.annotations import AnnotatedLLMRequest
+from nat.atof.annotations import AnnotatedLLMResponse
 from nat.atof.flags import Flags  # noqa: F401  (re-exported for convenience)
 
 # ---------------------------------------------------------------------------
 # Module-level constants
 # ---------------------------------------------------------------------------
 
-_SCHEMA_VERSION_PATTERN = re.compile(r"^0\.\d+$")
+_ATOF_VERSION_PATTERN = re.compile(r"^0\.\d+$")
 
 _CANONICAL_SCOPE_TYPES: frozenset[str] = frozenset(
     {
@@ -115,7 +118,7 @@ class ErrorInfo(BaseModel):
 class _EventBase(BaseModel):
     """Common fields shared by all ATOF event types (spec §2)."""
 
-    schema_version: str = Field(default="0.1", description="ATOF wire-format version (spec §2, §6.6)")
+    atof_version: str = Field(default="0.1", description="ATOF wire-format version (spec §2, §6.6)")
     uuid: str = Field(description="Unique span identifier (v7 UUID recommended)")
     parent_uuid: str | None = Field(default=None, description="UUID of parent scope")
     timestamp: str | int = Field(description="Wall-clock time: RFC 3339 string OR int epoch microseconds (spec §6.1)")
@@ -125,11 +128,11 @@ class _EventBase(BaseModel):
 
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
-    @field_validator("schema_version")
+    @field_validator("atof_version")
     @classmethod
-    def _validate_schema_version(cls, v: str) -> str:
-        if not _SCHEMA_VERSION_PATTERN.match(v):
-            raise ValueError(f"schema_version must match '0.MINOR' (e.g., '0.1'), got '{v}'")
+    def _validate_atof_version(cls, v: str) -> str:
+        if not _ATOF_VERSION_PATTERN.match(v):
+            raise ValueError(f"atof_version must match '0.MINOR' (e.g., '0.1'), got '{v}'")
         return v
 
     @field_validator("uuid", "parent_uuid")
@@ -168,21 +171,22 @@ class _ScopeEventBase(_EventBase):
         description="Canonical lowercase flag array, sorted and deduplicated (spec §2.1)",
     )
     scope_type: str = Field(description="Semantic category of the scope (spec §4)")
-    subtype: str | None = Field(
+    profile: dict[str, Any] | None = Field(
         default=None,
-        description="Free-form vendor name. REQUIRED when scope_type=='custom'; SHOULD be absent otherwise (spec §4.2)",
+        description=(
+            "Scope-type-specific typed fields (spec §4.4). Keys: "
+            "'model_name' for llm, 'tool_call_id' for tool, 'subtype' for custom. "
+            "Null for tier-1 opaque events and scope types with no defined keys."
+        ),
     )
-    model_name: str | None = Field(
+    schema_: dict[str, Any] | None = Field(
         default=None,
-        description="LLM model identifier. Populated when scope_type=='llm' (spec §1.2)",
-    )
-    tool_call_id: str | None = Field(
-        default=None,
-        description="Tool-call correlation ID. Populated when scope_type=='tool' (spec §1.2, §6.5)",
-    )
-    codec: dict[str, Any] | None = Field(
-        default=None,
-        description="Codec identifier {name, version} declaring the annotated_* shape (see atof-codec-profiles.md)",
+        alias="schema",
+        description=(
+            "Schema identifier {name, version} declaring the annotated_* shape "
+            "(see atof-schema-profiles.md). Python attribute is ``schema_`` with "
+            "wire alias ``schema`` to avoid shadowing pydantic's BaseModel.schema() method."
+        ),
     )
 
     @field_validator("attributes", mode="before")
@@ -202,10 +206,17 @@ class _ScopeEventBase(_EventBase):
 
     @model_validator(mode="after")
     def _validate_scope_type_subtype_coherence(self) -> Self:
-        """Enforce §4.2 subtype rules."""
+        """Enforce §4.2 subtype rules.
+
+        When scope_type=='custom', profile MUST be present and carry a non-empty
+        'subtype' string.
+        """
         if self.scope_type == "custom":
-            if self.subtype is None or self.subtype == "":
-                raise ValueError("subtype is REQUIRED when scope_type == 'custom' (spec §4.2)")
+            subtype = (self.profile or {}).get("subtype")
+            if not isinstance(subtype, str) or not subtype:
+                raise ValueError(
+                    "profile.subtype is REQUIRED and must be a non-empty string when scope_type == 'custom' (spec §4.2)"
+                )
         return self
 
 
@@ -221,7 +232,7 @@ class ScopeStartEvent(_ScopeEventBase):
     input: Any | None = Field(default=None, description="Raw input payload (post-guardrail); opaque to ATOF")
     annotated_request: AnnotatedLLMRequest | None = Field(
         default=None,
-        description="Structured codec-decoded request (see atof-codec-profiles.md)",
+        description="Structured, decoded request (shape declared by ``schema``; see atof-schema-profiles.md)",
     )
 
 
@@ -235,7 +246,7 @@ class ScopeEndEvent(_ScopeEventBase):
     output: Any | None = Field(default=None, description="Raw output payload (post-guardrail); opaque to ATOF")
     annotated_response: AnnotatedLLMResponse | None = Field(
         default=None,
-        description="Structured codec-decoded response (see atof-codec-profiles.md)",
+        description="Structured, decoded response (shape declared by ``schema``; see atof-schema-profiles.md)",
     )
     status: Literal["ok", "error", "cancelled"] = Field(
         description="Terminal outcome of the scope (spec §5.1)",
@@ -270,22 +281,22 @@ class StreamHeaderEvent(_EventBase):
     """Stream-level metadata carrier (spec §3.4).
 
     Optional structural event. When present, MUST be the first event in the stream
-    (position 0), and exactly one per stream. Declares a codec registry used by the
-    4-priority codec resolution chain (see atof-codec-profiles.md §6).
+    (position 0), and exactly one per stream. Declares an annotation schema registry
+    used by the 4-priority schema resolution chain (see atof-schema-profiles.md §6).
 
-    Does NOT carry attributes, scope_type, subtype, status, error, input, output,
-    model_name, tool_call_id, codec, or annotated_request/annotated_response.
-    The ``codecs`` dict is keyed by the canonical ID string ``"{name}.v{version}"``
-    (e.g., ``"openai/chat-completions.v1"``). Each value is a ``CodecEntry`` dict
+    Does NOT carry attributes, scope_type, profile, status, error, input, output,
+    schema, or annotated_request/annotated_response.
+    The ``schemas`` dict is keyed by the canonical ID string ``"{name}.v{version}"``
+    (e.g., ``"openai/chat-completions.v1"``). Each value is a ``SchemaEntry`` dict
     that MAY carry an inline ``$schema`` body; entries with empty ``{}`` are
-    manifest declarations (the producer announces codec usage; consumers resolve
-    the schema via priority 3 in their local registry).
+    manifest declarations (the producer announces schema usage; consumers resolve
+    the body via priority 3 in their local registry).
     """
 
     kind: Literal["StreamHeader"] = "StreamHeader"
-    codecs: dict[str, dict[str, Any]] = Field(
+    schemas: dict[str, dict[str, Any]] = Field(
         default_factory=dict,
-        description="Codec registry keyed by canonical ID '{name}.v{version}' (spec §3.4; atof-codec-profiles.md §6)",
+        description="Schema registry keyed by canonical ID '{name}.v{version}' (spec §3.4; atof-schema-profiles.md §6)",
     )
 
 

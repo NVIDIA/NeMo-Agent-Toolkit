@@ -22,7 +22,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 
 This document specifies the canonical mapping from an ATOF event stream to an ATIF (Agent Trajectory Interchange Format) trajectory. It is the **normative reference** for any ATOF consumer that needs to produce ATIF output.
 
-ATOF is a wire format for raw runtime observations (start/end events, marks, and an optional stream header for codec metadata). ATIF is a higher-level structure: an ordered sequence of conversation turns (`source`, `message`, `tool_calls`, `observation`) with computed metadata (`step_id`, ancestry, timing). The converter is the layer that bridges the two.
+ATOF is a wire format for raw runtime observations (start/end events, marks, and an optional stream header for schema metadata). ATIF is a higher-level structure: an ordered sequence of conversation turns (`source`, `message`, `tool_calls`, `observation`) with computed metadata (`step_id`, ancestry, timing). The converter is the layer that bridges the two.
 
 The reference implementation lives at `src/nat/atof/scripts/atof_to_atif_converter.py`. Non-NAT consumers MAY implement different conversion strategies — this document specifies the convention the reference converter follows so that producers using the documented `scope_type` vocabulary will round-trip cleanly.
 
@@ -40,7 +40,7 @@ This document covers:
 This document does NOT cover:
 
 - The ATOF wire format itself — see `atof-event-format.md`
-- The codec resolution protocol — see `atof-codec-profiles.md` §6
+- The schema resolution protocol — see `atof-schema-profiles.md` §6
 - The IntermediateStep → ATIF pipeline used by NAT's evaluation tooling — see `intermediate-step-to-atif-mapping.md`
 - The ATIF schema — see Harbor's `0001-trajectory-format.md` RFC
 - ATIF `step.extra` field conventions — see `atif-step-extra-guide.md`
@@ -65,7 +65,7 @@ ATIF requires every `Step` to declare a `source ∈ {"user", "agent", "system"}`
 
 `kind` is a closed set of four values (`ScopeStart`, `ScopeEnd`, `Mark`, `StreamHeader`); `scope_type` is the closed enum from spec §4 (`agent`, `function`, `llm`, `tool`, `retriever`, `embedder`, `reranker`, `guardrail`, `evaluator`, `custom`, `unknown`). The `(kind, scope_type)` pair is the dispatch key. This separation lets producers introduce `custom` + `subtype` vendor scopes (spec §4.2) or fall through with `scope_type: "unknown"` (tier-1 pass-through, spec §4.1) without forking the wire format. The converter SKIPS unrecognized `scope_type` values rather than rejecting them, preserving forward compatibility.
 
-The three string literals `"llm"`, `"tool"`, `"agent"` are **conventions** the reference converter recognizes for materializing ATIF steps. Producers emitting these scope types and following the typed-field conventions (`model_name` on llm, `tool_call_id` on tool) will produce well-formed ATIF.
+The three string literals `"llm"`, `"tool"`, `"agent"` are **conventions** the reference converter recognizes for materializing ATIF steps. Producers emitting these scope types and following the `profile` sub-object conventions (`profile.model_name` on llm, `profile.tool_call_id` on tool — spec §4.4) will produce well-formed ATIF.
 
 ### 3.3 Producers that need different mappings
 
@@ -111,9 +111,9 @@ Per Harbor's ATIF RFC, observations belong to the agent turn that produced them 
 | `event.name`                                     | `extra.ancestry.function_name`              | Direct                                                                  |
 | `name_map[parent_uuid]`                          | `extra.ancestry.parent_name`                | Looked up via the pre-pass `uuid → name` map; `"unknown"` if unresolved |
 | `ScopeStartEvent.uuid` (`scope_type == "llm"`)   | `extra.tool_invocations[*].invocation_id`   | For tool ScopeEnds whose `parent_uuid` matches                          |
-| `event.tool_call_id` (`scope_type == "tool"`)    | `tool_calls[*].tool_call_id`                | Read directly from the typed event field                                |
-| `event.tool_call_id` (`scope_type == "tool"`)    | `observation.results[*].source_call_id`     | Same value                                                              |
-| `event.model_name` (`scope_type == "llm"`)       | `Trajectory.agent.model_name`               | Read directly from the typed event field                                |
+| `event.profile.tool_call_id` (`scope_type == "tool"`) | `tool_calls[*].tool_call_id`           | Read from the `profile` sub-object (spec §4.4)                          |
+| `event.profile.tool_call_id` (`scope_type == "tool"`) | `observation.results[*].source_call_id` | Same value                                                              |
+| `event.profile.model_name` (`scope_type == "llm"`) | `Trajectory.agent.model_name`             | Read from the `profile` sub-object (spec §4.4)                          |
 | `(none)`                                         | `step_id`                                   | Generated 1-indexed sequence after all steps are built                  |
 | `ScopeStartEvent.name` (`scope_type == "agent"`) | `Trajectory.agent.name`                     | Read from the first `agent` scope start                                 |
 
@@ -141,9 +141,9 @@ The flat shape is checked first; OpenAI shape is the fallback. Tool calls under 
 
 ### 5.2 Tool correlation
 
-`tool_call_id` is read directly from the typed `tool_call_id` field on `ScopeStartEvent`/`ScopeEndEvent` when `scope_type == "tool"`. The v0.1 wire format makes `tool_call_id` a first-class typed field on tool events, so no name-based fallback or schema-discriminator dispatch is needed.
+`tool_call_id` is read from the `profile` sub-object on `ScopeStartEvent`/`ScopeEndEvent` when `scope_type == "tool"` (spec §4.4). The v0.1 wire format defines `tool_call_id` as a canonical key inside the tool `profile`, so no name-based fallback or schema-discriminator dispatch is needed.
 
-When a tool event is missing `tool_call_id` entirely (tier-1 producer that doesn't have the correlation ID), the converter still produces an observation but with `source_call_id == None` — the tool result is preserved but not linked to a specific LLM tool-call invocation.
+When a tool event is missing `profile` or `profile.tool_call_id` entirely (tier-1 producer that doesn't have the correlation ID), the converter still produces an observation but with `source_call_id == None` — the tool result is preserved but not linked to a specific LLM tool-call invocation.
 
 ## 6. Timing Mappings
 
@@ -183,11 +183,11 @@ Tool ScopeEnd events do NOT directly produce ATIF steps (they merge into the sys
 
 ## 8. Limitations
 
-### 8.1 Tools without `tool_call_id`
+### 8.1 Tools without `profile.tool_call_id`
 
-Tool events emitted without a `tool_call_id` typed field (tier-1 producers that don't have provider-assigned correlation IDs) produce `observation.results[*].source_call_id == None`. Downstream tools that join observations to specific tool invocations by ID will not be able to correlate these — the call graph is still reconstructable via `parent_uuid` / `extra.ancestry`, but invocation-level correlation is lost.
+Tool events emitted without a `profile.tool_call_id` (tier-1 producers that don't have provider-assigned correlation IDs) produce `observation.results[*].source_call_id == None`. Downstream tools that join observations to specific tool invocations by ID will not be able to correlate these — the call graph is still reconstructable via `parent_uuid` / `extra.ancestry`, but invocation-level correlation is lost.
 
-Mitigation: producers SHOULD populate `tool_call_id` whenever the tool was dispatched via an LLM tool-use flow (the LLM provider's response carries the ID). For tools invoked outside an LLM flow (e.g., scheduled tasks), `tool_call_id` is genuinely absent and the limitation is intrinsic.
+Mitigation: producers SHOULD populate `profile.tool_call_id` whenever the tool was dispatched via an LLM tool-use flow (the LLM provider's response carries the ID). For tools invoked outside an LLM flow (e.g., scheduled tasks), `tool_call_id` is genuinely absent and the limitation is intrinsic.
 
 ### 8.2 Naive RFC 3339 timestamps (HI-01)
 
@@ -201,9 +201,9 @@ A `MarkEvent` whose `data` field is `null` is currently SKIPPED (no step emitted
 
 The reference converter SKIPS `StreamHeaderEvent`s in the main dispatch loop — they never produce ATIF steps. Their `name` is added to the pre-pass `name_map` (harmless), but no other processing occurs.
 
-`StreamHeaderEvent` is part of the optional **codec resolution layer** (companion doc `atof-codec-profiles.md` §6) — a separate concern from ATIF conversion. The reference converter does not consult the StreamHeader's `codecs` registry because it does not perform codec-driven validation. A future enhancement could:
+`StreamHeaderEvent` is part of the optional **schema resolution layer** (companion doc `atof-schema-profiles.md` §6) — a separate concern from ATIF conversion. The reference converter does not consult the StreamHeader's `schemas` registry because it does not perform schema-driven validation. A future enhancement could:
 
-- Resolve each LLM event's codec via the 4-priority chain (per-event inline → header registry → consumer-bundled → opaque).
+- Resolve each LLM event's schema via the 4-priority chain (per-event inline → header registry → consumer-bundled → opaque).
 - Use the resolved schema to validate `annotated_request` / `annotated_response` payloads at conversion time, surfacing schema violations as warnings.
 - Use `annotated_response` (when present) as a richer source for `tool_calls` extraction than `output` directly.
 
@@ -231,7 +231,7 @@ The `examples/atof_to_atif/` directory contains three end-to-end scenarios demon
 | --------- | ---- | ------ | ---------- | ------------------------------------------------------------ |
 | EXMP-01   | 2    | 9      | 5          | Calculator: agent → llm → tool → llm → agent                 |
 | EXMP-02   | 2    | 7      | 3          | Search: agent → llm → tool (timeout) → agent (recovery)      |
-| EXMP-03   | 3    | 9      | 5          | Calculator with `openai/chat-completions.v1` codec annotations |
+| EXMP-03   | 3    | 9      | 5          | Calculator with `openai/chat-completions.v1` schema annotations |
 
 Each example opens with a `StreamHeaderEvent` at position 0 (spec §3.4 — MUST be first when present).
 
@@ -239,7 +239,7 @@ EXMP-01 produces a 5-step trajectory: `user` (LLM input) → `agent` (LLM output
 
 EXMP-02 demonstrates the cascading-status semantics (spec §5.2-5.3) — tool reports `status: "error"`; parent agent catches and reports `status: "ok"`. Trajectory is shorter (3 steps) because the LLM never gets to formulate a final answer with tool results.
 
-EXMP-03 shows the same workflow as EXMP-01 but with `codec` declarations and `annotated_request` / `annotated_response` payloads on every LLM event. The converter's `_extract_tool_calls()` handles the OpenAI Chat Completions output shape (§5.1), so EXMP-03 still converts to a clean 5-step trajectory.
+EXMP-03 shows the same workflow as EXMP-01 but with `schema` declarations and `annotated_request` / `annotated_response` payloads on every LLM event. The converter's `_extract_tool_calls()` handles the OpenAI Chat Completions output shape (§5.1), so EXMP-03 still converts to a clean 5-step trajectory.
 
 Run end-to-end:
 

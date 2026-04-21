@@ -5,10 +5,11 @@
 Converts a list of ATOF events (JSON-Lines wire format from agent runtime
 subscriber callbacks) into an ATIF Trajectory using NAT's native models.
 
-Event model: 3 event kinds (ScopeStart / ScopeEnd / Mark) per spec v0.1.
-Dispatch keys on ``(kind, scope_type)``. ``tool_call_id`` lives directly on
-``ScopeStart``/``ScopeEnd`` for ``scope_type == "tool"`` events, so no
-name-based fallback map is needed.
+Event model: 4 event kinds (ScopeStart / ScopeEnd / Mark / StreamHeader) per
+spec v0.1. Dispatch keys on ``(kind, scope_type)``. Scope-type-specific typed
+fields live inside the ``profile`` sub-object (spec §4.4) — ``model_name`` for
+``llm``, ``tool_call_id`` for ``tool`` — so no name-based fallback map is
+needed.
 
 See ``atof-event-format.md`` §3 (event kinds), §4 (scope_type vocabulary),
 §5 (status semantics), §6 (stream semantics) and the companion
@@ -275,8 +276,8 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             current_agent_step_idx = len(step_dicts) - 1
 
         elif isinstance(event, ScopeEndEvent) and event.scope_type == "tool":
-            # tool_call_id is read directly from the typed field on the event (spec §1.2).
-            tool_call_id = event.tool_call_id
+            # tool_call_id lives in the profile sub-object (spec §4.4).
+            tool_call_id = (event.profile or {}).get("tool_call_id")
 
             if pending_obs_timestamp is None:
                 pending_obs_timestamp = event.timestamp
@@ -355,9 +356,10 @@ def convert(events: list[Event]) -> Trajectory:
 
     for event in events:
         if isinstance(event, ScopeEndEvent) and event.scope_type == "llm":
-            # model_name lives directly on the typed field (spec §1.2).
-            if event.model_name:
-                model_name = event.model_name
+            # model_name lives in the profile sub-object (spec §4.4).
+            profile_model = (event.profile or {}).get("model_name")
+            if profile_model:
+                model_name = profile_model
                 break
             model_name = event.name  # fallback to span name
 

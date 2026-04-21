@@ -23,6 +23,6 @@ class Flags(StrEnum):
 
     PARALLEL = "parallel"  # applies to any scope_type (default: serial)
     RELOCATABLE = "relocatable"  # applies to any scope_type (default: pinned)
-    STATELESS = "stateless"  # applies primarily to scope_type=='llm' (default: stateful)
+    STATEFUL = "stateful"  # applies primarily to scope_type=='llm' (default: stateless)
     STREAMING = "streaming"  # applies primarily to scope_type=='llm' (default: single-payload)
-    LOCAL = "local"  # applies primarily to scope_type=='tool' (default: remote)
+    REMOTE = "remote"  # applies primarily to scope_type=='tool' (default: local)

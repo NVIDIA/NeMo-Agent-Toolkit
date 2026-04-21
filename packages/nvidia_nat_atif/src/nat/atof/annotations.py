@@ -1,12 +1,12 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Codec schemas for annotated LLM request/response payloads.
+"""Annotation schemas for LLM request/response payloads.
 
 Standalone Pydantic models for structured LLM request and response data.
-These appear on ``LLMStartEvent.annotated_request`` and
-``LLMEndEvent.annotated_response``.
+These appear on ``ScopeStartEvent.annotated_request`` and
+``ScopeEndEvent.annotated_response`` when ``scope_type == "llm"``.
 
-See ATOF spec Section 5.
+See ``atof-schema-profiles.md`` §4 for the canonical shapes.
 """
 
 from __future__ import annotations
@@ -118,7 +118,7 @@ class Message(BaseModel):
 
 
 class AnnotatedLLMRequest(BaseModel):
-    """Structured, codec-decoded view of an LLM request (Section 5.1)."""
+    """Structured, decoded view of an LLM request (atof-schema-profiles.md §4.1)."""
 
     messages: list[Message]
     model: str | None = None
@@ -138,7 +138,7 @@ class ResponseToolCall(BaseModel):
     """A tool call in the response's ``tool_calls`` array (Section 5.8).
 
     Note: ``arguments`` is a parsed JSON **object** on the response side
-    (codec-normalized), NOT a string.
+    (normalized by the producer), NOT a string.
     """
 
     id: str
@@ -186,7 +186,7 @@ class ApiSpecificResponse(BaseModel):
 
 
 class AnnotatedLLMResponse(BaseModel):
-    """Structured, codec-decoded view of an LLM response (Section 5.7)."""
+    """Structured, decoded view of an LLM response (atof-schema-profiles.md §4.2)."""
 
     id: str | None = None
     model: str | None = None
