@@ -116,6 +116,46 @@ class TestStreamLLM:
         assert isinstance(result, AIMessage)
         assert result.content == ""
 
+    async def test_stream_llm_uses_runnable_config_by_default(self, base_agent):
+        """Test that _stream_llm passes self._runnable_config to astream when config=None."""
+        captured: dict = {}
+        base_agent._runnable_config = RunnableConfig(tags=["internal"])
+        mock_event = Mock()
+        mock_event.content = "hello"
+
+        async def mock_astream(inputs, **kwargs):
+            captured["config"] = kwargs.get("config")
+            yield mock_event
+
+        mock_runnable = Mock()
+        mock_runnable.astream = mock_astream
+
+        await base_agent._stream_llm(mock_runnable, {})
+
+        assert captured["config"] is base_agent._runnable_config
+
+    async def test_stream_llm_merges_external_config(self, base_agent):
+        """Test that an external config is merged with _runnable_config before passing to astream."""
+        captured: dict = {}
+        base_agent._runnable_config = RunnableConfig(tags=["internal"])
+        external_config = RunnableConfig(tags=["external"])
+        mock_event = Mock()
+        mock_event.content = "hello"
+
+        async def mock_astream(inputs, **kwargs):
+            captured["config"] = kwargs.get("config")
+            yield mock_event
+
+        mock_runnable = Mock()
+        mock_runnable.astream = mock_astream
+
+        await base_agent._stream_llm(mock_runnable, {}, config=external_config)
+
+        effective = captured["config"]
+        assert effective is not base_agent._runnable_config, "merged config should be a new object"
+        assert "internal" in effective.get("tags", [])
+        assert "external" in effective.get("tags", [])
+
 
 class TestCallLLM:
     """Test the _call_llm method."""

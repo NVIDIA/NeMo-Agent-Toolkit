@@ -25,6 +25,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.messages.ai import UsageMetadata
 from langchain_core.messages.base import BaseMessage
 from langchain_core.messages.utils import convert_to_openai_messages
+from langchain_core.runnables import RunnableConfig
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
@@ -155,7 +156,7 @@ class ToolCallAgentGraph(DualNodeAgent):
             response = response + c
         return response
 
-    async def agent_node(self, state: ToolCallAgentGraphState):
+    async def agent_node(self, state: ToolCallAgentGraphState, config: RunnableConfig | None = None):
         try:
             logger.debug("%s Starting the Tool Calling Agent Node", AGENT_LOG_PREFIX)
             if len(state.messages) == 0:
