@@ -17,7 +17,6 @@ import inspect
 import logging
 import re
 from collections.abc import Callable
-from collections.abc import Sequence
 from typing import Any
 
 import pandas as pd
@@ -148,7 +147,7 @@ def detect_llm_frameworks_in_build_fn(
 # -------------------------------------------------------------------
 # Create a single standardized DataFrame for all usage stats
 # -------------------------------------------------------------------
-def create_standardized_dataframe(requests_data: Sequence[Sequence[IntermediateStep]]) -> pd.DataFrame:
+def create_standardized_dataframe(requests_data: list[list[IntermediateStep]]) -> pd.DataFrame:
     """
     Merge usage stats for *all* requests into one DataFrame, each row representing a usage_stats entry.
     - Include a column 'example_number' to mark which request it originated from.

@@ -20,7 +20,7 @@ from langsmith.schemas import Run
 
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
-from nat.data_models.evaluator import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.langchain.eval.langsmith_evaluator_adapter import LangSmithEvaluatorAdapter
 from nat.plugins.langchain.eval.utils import _extract_field
 from nat.plugins.langchain.eval.utils import eval_input_item_to_openevals_kwargs

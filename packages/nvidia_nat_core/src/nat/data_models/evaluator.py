@@ -12,14 +12,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Evaluation input/output data models shared across core and eval."""
+"""Evaluation input data models and evaluator configs."""
 
 import typing
+from collections.abc import Sequence
+from typing import Protocol
+from typing import runtime_checkable
 
 from pydantic import BaseModel
-from pydantic import ConfigDict
 from pydantic import Field
-from pydantic import SerializeAsAny
 
 from .common import BaseModelRegistryTag
 from .common import TypedBaseModel
@@ -70,19 +71,19 @@ class EvalInput(BaseModel):
     eval_input_items: list[EvalInputItem] = Field(description="List of items to evaluate.")
 
 
-class EvalOutputItem(BaseModel):
-    """A single output item from evaluation."""
+@runtime_checkable
+class EvalOutputItemLike(Protocol):
+    """Structural contract for a single evaluation output item."""
 
-    model_config = ConfigDict(exclude_none=True)  # pyright: ignore[reportCallIssue]
-
-    id: typing.Any = Field(description="Identifier matching the corresponding EvalInputItem.")
-    score: typing.Any = Field(description="Evaluation score (typically float, may be NaN on failure).")
-    reasoning: typing.Any = Field(description="Evaluation context and LLM judge explanation.")
-    error: str | None = Field(default=None, description="Evaluation error message if this item failed.")
+    id: typing.Any
+    score: typing.Any
+    reasoning: typing.Any
+    error: str | None
 
 
-class EvalOutput(BaseModel):
-    """Container for evaluation output items."""
+@runtime_checkable
+class EvalOutputLike(Protocol):
+    """Structural contract for a collection of evaluation output items."""
 
-    average_score: typing.Any = Field(description="Average score across all evaluated items.")
-    eval_output_items: list[SerializeAsAny[EvalOutputItem]] = Field(description="List of evaluation results.")
+    average_score: typing.Any
+    eval_output_items: Sequence[EvalOutputItemLike]

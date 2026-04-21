@@ -97,3 +97,21 @@ async def streaming_constant_function(config: StreamingConstantFunctionConfig, b
             yield value
 
     yield inner
+
+
+class HeaderCaptureFunctionConfig(FunctionBaseConfig, name="test_header_capture"):
+    """Workflow function that reads a named request header from context and returns it as the response."""
+    header_name: str
+
+
+@register_function(config_type=HeaderCaptureFunctionConfig)
+async def header_capture_function(config: HeaderCaptureFunctionConfig, builder: Builder):
+    from nat.builder.context import Context
+
+    header_name = config.header_name
+
+    async def inner(message: str) -> str:
+        headers = Context.get().metadata.headers
+        return headers.get(header_name, "") if headers else ""
+
+    yield inner

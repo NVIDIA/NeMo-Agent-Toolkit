@@ -21,16 +21,14 @@ import statistics
 from pathlib import Path
 from typing import Any
 
-import pandas as pd
 from pydantic import BaseModel
 
-from nat.data_models.atif import Trajectory
 from nat.data_models.evaluate_runtime import InferenceMetricsModel
 from nat.data_models.evaluate_runtime import ProfilerResults
+from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.profiler import ProfilerConfig
-from nat.plugins.profiler.atif_dataframe import create_dataframe_from_atif
-from nat.plugins.profiler.atif_dataframe import dataframe_to_profiler_traces
 from nat.plugins.profiler.forecasting.model_trainer import ModelTrainer
+from nat.plugins.profiler.utils import create_standardized_dataframe
 from nat.utils.type_converter import TypeConverter
 
 logger = logging.getLogger(__name__)
@@ -80,44 +78,52 @@ class ProfilerRunner:
         # Holds per-request data (prompt, output, usage_stats, etc.)
         # This will be saved at the end to a big JSON file
         self.all_requests_data: list[dict] = []
-        self._df: pd.DataFrame = pd.DataFrame()
+        self.all_steps = []
 
         # Ensure output directory
         os.makedirs(output_dir, exist_ok=True)
 
-    def _get_workflow_time_window(self, df: pd.DataFrame) -> tuple[float | None, float | None]:
+    def _get_workflow_time_window(
+        self,
+        all_steps: list[list[IntermediateStep]],
+    ) -> tuple[float | None, float | None]:
         """
-        Extract the workflow time window from profiler DataFrame.
+        Extract the workflow time window from intermediate steps.
 
         Finds the earliest and latest event timestamps across all workflow executions
         to determine the time range for Prometheus queries.
+
+        Args:
+            all_steps: List of workflow executions, each containing intermediate steps
+
+        Returns:
+            Tuple of (start_timestamp, end_timestamp) in Unix seconds, or (None, None) if no data
         """
-        if df.empty or "event_timestamp" not in df.columns:
-            logger.warning("Could not determine workflow time window from DataFrame")
+        min_timestamp = float('inf')
+        max_timestamp = float('-inf')
+
+        for workflow_steps in all_steps:
+            for step in workflow_steps:
+                ts = step.event_timestamp
+                min_timestamp = min(min_timestamp, ts)
+                max_timestamp = max(max_timestamp, ts)
+                # Also check span_event_timestamp for start times of END events
+                span_ts = step.span_event_timestamp
+                if span_ts is not None:
+                    min_timestamp = min(min_timestamp, span_ts)
+
+        if min_timestamp == float('inf') or max_timestamp == float('-inf'):
+            logger.warning("Could not determine workflow time window from intermediate steps")
             return None, None
 
-        min_ts = df["event_timestamp"].min()
-        max_ts = df["event_timestamp"].max()
-        if "span_event_timestamp" in df.columns:
-            span_min = df["span_event_timestamp"].dropna().min()
-            if pd.notna(span_min):
-                min_ts = min(min_ts, span_min)
-        return float(min_ts), float(max_ts)
+        return min_timestamp, max_timestamp
 
-    async def run(
-        self,
-        all_steps: list[Trajectory],
-    ) -> ProfilerResults:
+    async def run(self, all_steps: list[list[IntermediateStep]]) -> ProfilerResults:
         """
         Main entrypoint: Works on Input DataFrame generated from eval to fit forecasting model,
         writes out combined requests JSON, then computes and saves additional metrics,
         and optionally fits a forecasting model.
-
-        Accepts list[Trajectory] and uses ATIF internally.
         """
-        merged_df = create_dataframe_from_atif(all_steps)
-        self._df = merged_df
-
         # YAPF and Ruff disagree on these long imports; keep Ruff-stable formatting.
         # yapf: disable
         from nat.plugins.profiler.inference_optimization.bottleneck_analysis.nested_stack_analysis import (
@@ -140,11 +146,19 @@ class ProfilerRunner:
 
         # yapf: enable
         from nat.plugins.profiler.inference_optimization.workflow_runtimes import compute_workflow_runtime_metrics
+        from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
 
-        traces_dict, traces_obj = dataframe_to_profiler_traces(merged_df)
-        self.all_requests_data = [{
-            "request_number": i, "intermediate_steps": trace
-        } for i, trace in enumerate(traces_dict)]
+        # Convert the incoming DataFrame to a list of dicts and store
+        all_steps = [[IntermediatePropertyAdaptor.from_intermediate_step(step) for step in steps]
+                     for steps in all_steps]  # Add adapter properties to each step
+
+        self.all_steps = all_steps
+        self.all_requests_data = []
+        for i, steps in enumerate(all_steps):
+            request_data = []
+            for step in steps:
+                request_data.append(step.model_dump())
+            self.all_requests_data.append({"request_number": i, "intermediate_steps": request_data})
 
         # Write the final big JSON (all requests)
         if self.write_output:
@@ -154,10 +168,12 @@ class ProfilerRunner:
             logger.info("Wrote combined data to: %s", final_path)
 
         # ------------------------------------------------------------
-        # DataFrame is already from create_dataframe_from_atif
+        # Generate one standardized dataframe for all usage stats
         # ------------------------------------------------------------
+        merged_df = create_standardized_dataframe(all_steps)
+
         if self.profile_config.compute_llm_metrics and not merged_df.empty:
-            merged_df = LLMMetrics.compute_profiling_metrics(merged_df)
+            merged_df = LLMMetrics.compute_profiling_metrics(all_steps)
 
         output_df = merged_df.copy()
 
@@ -192,21 +208,24 @@ class ProfilerRunner:
             # ------------------------------------------------------------
             # Compute and save common prefixes
             # ------------------------------------------------------------
-            prefixes = get_common_prefixes(merged_df, self.profile_config.prompt_caching_prefixes.min_frequency)
+
+            prefixes = get_common_prefixes(all_steps, self.profile_config.prompt_caching_prefixes.min_frequency)
             common_prefix_results = prefixes
 
         if self.profile_config.token_uniqueness_forecast:
             # ------------------------------------------------------------
             # Compute and save inter-query token uniqueness
             # ------------------------------------------------------------
-            uniqueness = compute_inter_query_token_uniqueness_by_llm(merged_df)
+
+            uniqueness = compute_inter_query_token_uniqueness_by_llm(all_steps)
             token_uniqueness_results = uniqueness
 
         if self.profile_config.workflow_runtime_forecast or self.profile_config.base_metrics:
             # ------------------------------------------------------------
             # Compute and save workflow runtime metrics
             # ------------------------------------------------------------
-            workflow_runtimes = compute_workflow_runtime_metrics(merged_df)
+
+            workflow_runtimes = compute_workflow_runtime_metrics(all_steps)
             workflow_runtimes_results = workflow_runtimes
 
         # ------------------------------------------------------------
@@ -216,7 +235,8 @@ class ProfilerRunner:
         if self.profile_config.dynamo_metrics.enable:
             from nat.plugins.profiler.inference_optimization.dynamo_metrics import collect_dynamo_metrics
             try:
-                workflow_start, workflow_end = self._get_workflow_time_window(merged_df)
+                # Calculate workflow time window from intermediate steps
+                workflow_start, workflow_end = self._get_workflow_time_window(all_steps)
                 if workflow_start is not None and workflow_end is not None:
                     # Set both start and end timestamps so Prometheus range queries
                     # are isolated to THIS eval run (not picking up data from other runs)
@@ -256,7 +276,7 @@ class ProfilerRunner:
             # Profile workflow bottlenecks
             # ------------------------------------------------------------
 
-            workflow_bottlenecks = profile_workflow_bottlenecks(merged_df)
+            workflow_bottlenecks = profile_workflow_bottlenecks(all_steps)
             workflow_bottlenecks = workflow_bottlenecks.model_dump()
             workflow_profiling_reports += "\n\n\n" + workflow_bottlenecks["summary"]
             workflow_profiling_metrics["simple_stack_analysis"] = workflow_bottlenecks["stats"]
@@ -266,7 +286,7 @@ class ProfilerRunner:
             # ------------------------------------------------------------
             # Profile workflow bottlenecks with nested stack analysis
             # ------------------------------------------------------------
-            nested_bottlenecks = multi_example_call_profiling(merged_df, output_dir=str(self.output_dir))
+            nested_bottlenecks = multi_example_call_profiling(all_steps, output_dir=str(self.output_dir))
             workflow_profiling_reports += "\n\n\n" + nested_bottlenecks.textual_report
             workflow_profiling_metrics["nested_stack_analysis"] = nested_bottlenecks.model_dump(
                 exclude=["textual_report"])
@@ -277,7 +297,7 @@ class ProfilerRunner:
             # Profile concurrency spikes
             # ------------------------------------------------------------
             concurrency_metrics = concurrency_spike_analysis(
-                merged_df, self.profile_config.concurrency_spike_analysis.spike_threshold)
+                all_steps, self.profile_config.concurrency_spike_analysis.spike_threshold)
             workflow_profiling_reports += "\n\n\n" + concurrency_metrics.textual_report
             workflow_profiling_metrics["concurrency_spike_analysis"] = concurrency_metrics.model_dump(
                 exclude=["textual_report"])
@@ -296,7 +316,7 @@ class ProfilerRunner:
                         prefix_list.append(prefix_data["prefix"])
 
             prefix_span_analysis = prefixspan_subworkflow_with_text(
-                merged_df,
+                all_steps,
                 **self.profile_config.prefix_span_analysis.model_dump(exclude=["enable", "chain_with_common_prefixes"]),
                 prefix_list=prefix_list)
 
@@ -337,7 +357,7 @@ class ProfilerRunner:
                 w_parallel=trie_config.w_parallel,
             ) if trie_config.auto_sensitivity else None
             trie_builder = PredictionTrieBuilder(sensitivity_config=sensitivity_config)
-            for trace in traces_obj:
+            for trace in all_steps:
                 trie_builder.add_trace(trace)
 
             prediction_trie = trie_builder.build()
@@ -356,7 +376,7 @@ class ProfilerRunner:
             model_trainer = ModelTrainer()
 
             try:
-                fitted_model = model_trainer.train(merged_df)
+                fitted_model = model_trainer.train(all_steps)
                 logger.info("Fitted model for forecasting.")
             except Exception as e:
                 logger.exception("Fitting model failed. %s", e)
@@ -382,14 +402,17 @@ class ProfilerRunner:
         The total workflow run time for each request is the difference between the last and first
         event timestamps in usage_stats.
         """
-        if self._df.empty or "example_number" not in self._df.columns:
-            return InferenceMetricsModel()
         run_times = []
-        for _, group in self._df.groupby("example_number"):
-            ts = group["event_timestamp"]
-            if ts.empty:
+        for req_data in self.all_steps:
+            # Find the min and max event_timestamp
+            timestamps = [u.event_timestamp for u in req_data]
+            if not timestamps:
                 continue
-            run_times.append(float(ts.max() - ts.min()))
+
+            start_time = min(timestamps)
+            end_time = max(timestamps)
+            run_times.append(end_time - start_time)
+
         return self._compute_confidence_intervals(run_times, "Workflow Run Time")
 
     def _compute_llm_latency_confidence_intervals(self) -> InferenceMetricsModel:
@@ -398,21 +421,21 @@ class ProfilerRunner:
         LLM latency is defined as the difference between an LLM_END event_timestamp and
         the immediately preceding LLM_START event_timestamp, across all usage_stats.
         """
-        if self._df.empty or "event_type" not in self._df.columns:
-            return InferenceMetricsModel()
         latencies = []
-        for _, group in self._df.groupby("example_number"):
-            grp = group.sort_values("event_timestamp")
-            prev_start = None
-            for _, row in grp.iterrows():
-                et = row["event_type"]
-                et_val = et.value if hasattr(et, "value") else str(et)
-                ts = float(row["event_timestamp"])
-                if et_val == "LLM_START":
-                    prev_start = ts
-                elif et_val == "LLM_END" and prev_start is not None:
-                    latencies.append(ts - prev_start)
-                    prev_start = None
+        for req_data in self.all_steps:
+
+            usage_stats_sorted = sorted(req_data, key=lambda x: x.event_timestamp)
+
+            previous_llm_start_time = None
+            for u in usage_stats_sorted:
+                event_type = u.event_type.value
+                ts = u.event_timestamp
+                if event_type == "LLM_START":
+                    previous_llm_start_time = ts
+                elif event_type == "LLM_END" and previous_llm_start_time is not None:
+                    latencies.append(ts - previous_llm_start_time)
+                    previous_llm_start_time = None
+
         return self._compute_confidence_intervals(latencies, "LLM Latency")
 
     def _compute_throughput_estimates(self) -> InferenceMetricsModel:
@@ -425,9 +448,12 @@ class ProfilerRunner:
         to the latest usage_stats event.
         Note: This is a simple approximate measure of overall throughput for the entire run.
         """
-        if self._df.empty or "event_timestamp" not in self._df.columns:
-            return InferenceMetricsModel()
-        all_timestamps = self._df["event_timestamp"].tolist()
+        # Gather min timestamp and max timestamp across ALL requests
+        all_timestamps = []
+        for req_data in self.all_steps:
+            for u in req_data:
+                all_timestamps.append(u.event_timestamp)
+
         if not all_timestamps:
             return InferenceMetricsModel()
 

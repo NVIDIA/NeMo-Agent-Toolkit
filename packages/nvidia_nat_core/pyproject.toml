@@ -31,7 +31,26 @@ root = "../.."
 
 [project]
 name = "nvidia-nat-core"
-dynamic = ["version", "optional-dependencies"]
+dynamic = ["version", "dependencies", "optional-dependencies"]
+requires-python = ">=3.11,<3.14"
+description = "Core library for NVIDIA NeMo Agent Toolkit"
+readme = "src/nat/meta/pypi.md"
+license = { text = "Apache-2.0" }
+keywords = ["ai", "rag", "agents"]
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+authors = [{ name = "NVIDIA Corporation" }]
+maintainers = [{ name = "NVIDIA Corporation" }]
+
+[project.urls]
+documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
+source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
+
+[tool.setuptools_dynamic_dependencies]
 dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. When using `~=`, use 2 digits
@@ -51,6 +70,7 @@ dependencies = [
   "jsonpath-ng~=1.7",
   "nest-asyncio2~=1.7",
   "networkx~=3.4",
+  "nvidia-nat-atif == {version}",
   "numpy~=2.3",
   "openinference-semantic-conventions>=0.1.14,<1.0.0",
   "optuna~=4.4",
@@ -67,31 +87,14 @@ dependencies = [
   "python-multipart>=0.0.21",
   "PyYAML~=6.0",
   "rich~=14.0",
+  "starlette >=0.51,<2.0",
   "tabulate~=0.9",
   "tzlocal~=5.3",
   "uvicorn[standard]~=0.38",
   "wikipedia~=1.4",
   # transitive dependencies
-  "starlette~=0.51",  # Added due to breaking 1.0 changes
   "urllib3>=2.6.3,<3.0.0",
 ]
-requires-python = ">=3.11,<3.14"
-description = "Core library for NVIDIA NeMo Agent Toolkit"
-readme = "src/nat/meta/pypi.md"
-license = { text = "Apache-2.0" }
-keywords = ["ai", "rag", "agents"]
-classifiers = [
-  "Programming Language :: Python",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
-]
-authors = [{ name = "NVIDIA Corporation" }]
-maintainers = [{ name = "NVIDIA Corporation" }]
-
-[project.urls]
-documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
-source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 # Optional dependencies are things that users would want to install with NAT core.
@@ -115,6 +118,7 @@ test = [
 ]
 
 [tool.uv.sources]
+nvidia-nat-atif = { path = "../nvidia_nat_atif", editable = true }
 nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
 nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
 

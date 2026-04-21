@@ -15,8 +15,8 @@
 
 from unittest.mock import MagicMock
 
-from nat.data_models.atif import ATIFAgentConfig
-from nat.data_models.atif import ATIFTrajectory
+from nat.atif import ATIFAgentConfig
+from nat.atif import ATIFTrajectory
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat_simple_web_query_eval.atif_only_evaluator_register import AtifCosineSimilarityEvaluator
 from nat_simple_web_query_eval.atif_only_evaluator_register import AtifCosineSimilarityEvaluatorConfig

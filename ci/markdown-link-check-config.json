@@ -20,6 +20,9 @@
         },
         {
             "pattern": "^https://milvus\\.io"
+        },
+        {
+            "pattern": "^https://docs\\.cursor\\.com"
         }
     ]
 }

@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: simple_calculator_tunable_rag_eval_atif
+
 function_groups:
   calculator:
     _type: calculator
@@ -27,6 +35,8 @@ llms:
     model_name: nvidia/nemotron-3-nano-30b-a3b
     temperature: 0.0
     max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
   eval_llm:
     _type: nim
     model_name: mistralai/mixtral-8x22b-instruct-v0.1

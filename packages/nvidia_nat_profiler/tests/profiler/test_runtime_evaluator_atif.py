@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import pytest
 
-from nat.data_models.atif import ATIFAgentConfig
-from nat.data_models.atif import ATIFStep
-from nat.data_models.atif import ATIFTrajectory
-from nat.data_models.atif import Metrics
+from nat.atif import ATIFAgentConfig
+from nat.atif import ATIFStep
+from nat.atif import ATIFTrajectory
+from nat.atif import Metrics
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
 from nat.plugins.profiler.runtime_evaluator.atif_evaluate import AverageLLMLatencyAtifEvaluator
 from nat.plugins.profiler.runtime_evaluator.atif_evaluate import AverageNumberOfLLMCallsAtifEvaluator
@@ -40,20 +40,6 @@ def _make_sample(
         steps=steps,
     )
     return AtifEvalSample(item_id=item_id, trajectory=trajectory, metadata={})
-
-
-def _extra_with_span(span: object) -> dict:
-    return {
-        "ancestry": {
-            "function_ancestry": {
-                "function_id": "root",
-                "function_name": "root",
-                "parent_id": "",
-                "parent_name": "",
-            },
-            "span_event_timestamp": span,
-        }
-    }
 
 
 # --- _iso_to_epoch conversion (type conversion is critical path) ---
@@ -91,7 +77,7 @@ async def test_evaluate_atif_item_single_valid_latency():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=10, completion_tokens=20),
-            extra=_extra_with_span("2024-01-01T12:00:00"),
+            extra={"span_event_timestamp": "2024-01-01T12:00:00"},
         ),
     ]
     sample = _make_sample("item-1", steps)
@@ -105,29 +91,6 @@ async def test_evaluate_atif_item_single_valid_latency():
     assert result.reasoning["latencies"] == pytest.approx([5.0], abs=1e-4)
 
 
-async def test_evaluate_atif_item_numeric_span_timestamp():
-    """span_event_timestamp as float (epoch seconds) is accepted and used for latency."""
-    # span=0.0, timestamp="1970-01-01T00:00:02Z" (2s UTC) => 2s latency
-    steps = [
-        ATIFStep(
-            step_id=1,
-            source="agent",
-            timestamp="1970-01-01T00:00:02Z",
-            metrics=Metrics(prompt_tokens=10, completion_tokens=20),
-            extra=_extra_with_span(0.0),
-        ),
-    ]
-    sample = _make_sample("item-numeric", steps)
-    evaluator = AverageLLMLatencyAtifEvaluator()
-
-    result = await evaluator.evaluate_atif_item(sample)
-
-    assert result.id == "item-numeric"
-    assert result.score == pytest.approx(2.0, abs=1e-4)
-    assert result.reasoning["num_llm_calls"] == 1
-    assert result.reasoning["latencies"] == pytest.approx([2.0], abs=1e-4)
-
-
 async def test_evaluate_atif_item_multiple_latencies_averaged():
     """Multiple agent steps with valid timestamps yield correct average."""
     steps = [
@@ -136,14 +99,14 @@ async def test_evaluate_atif_item_multiple_latencies_averaged():
             source="agent",
             timestamp="2024-01-01T12:00:02",
             metrics=Metrics(prompt_tokens=1),
-            extra=_extra_with_span("2024-01-01T12:00:00"),
+            extra={"span_event_timestamp": "2024-01-01T12:00:00"},
         ),
         ATIFStep(
             step_id=2,
             source="agent",
             timestamp="2024-01-01T12:00:08",
             metrics=Metrics(prompt_tokens=1),
-            extra=_extra_with_span("2024-01-01T12:00:04"),
+            extra={"span_event_timestamp": "2024-01-01T12:00:04"},
         ),
     ]
     sample = _make_sample("item-2", steps)
@@ -214,7 +177,7 @@ async def test_evaluate_atif_item_timestamp_none_skips_step():
             source="agent",
             timestamp=None,
             metrics=Metrics(prompt_tokens=1),
-            extra=_extra_with_span("2024-01-01T12:00:00"),
+            extra={"span_event_timestamp": "2024-01-01T12:00:00"},
         ),
     ]
     sample = _make_sample("ts-none", steps)
@@ -234,7 +197,9 @@ async def test_evaluate_atif_item_invalid_span_timestamp_skips_step():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
-            extra=_extra_with_span({"invalid": "dict"}),
+            extra={"span_event_timestamp": {
+                "invalid": "dict"
+            }},
         ),
     ]
     sample = _make_sample("bad-span", steps)
@@ -253,7 +218,7 @@ async def test_evaluate_atif_item_mixed_valid_and_invalid_steps():
             source="agent",
             timestamp="2024-01-01T12:00:05",
             metrics=Metrics(prompt_tokens=1),
-            extra=_extra_with_span("2024-01-01T12:00:00"),
+            extra={"span_event_timestamp": "2024-01-01T12:00:00"},
         ),
         ATIFStep(
             step_id=2,
@@ -285,7 +250,7 @@ async def test_evaluate_atif_fn_batch_aggregation():
                 source="agent",
                 timestamp="2024-01-01T12:00:02",
                 metrics=Metrics(prompt_tokens=1),
-                extra=_extra_with_span("2024-01-01T12:00:00"),
+                extra={"span_event_timestamp": "2024-01-01T12:00:00"},
             ),
         ],
     )
@@ -297,7 +262,7 @@ async def test_evaluate_atif_fn_batch_aggregation():
                 source="agent",
                 timestamp="2024-01-01T12:00:06",
                 metrics=Metrics(prompt_tokens=1),
-                extra=_extra_with_span("2024-01-01T12:00:00"),
+                extra={"span_event_timestamp": "2024-01-01T12:00:00"},
             ),
         ],
     )

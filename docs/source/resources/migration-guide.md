@@ -58,7 +58,7 @@ This is a breaking change:
 
 To migrate:
 - Install both packages when using these evaluators:
-  - `pip install nvidia-nat-eval nvidia-nat-langchain`
+  - `pip install "nvidia-nat-eval" nvidia-nat-langchain`
 - Install the RAGAS evaluator package when using `_type: ragas`:
   - `pip install nvidia-nat-ragas`
 - Install the profiler package when using performance evaluators or profiling workflows:
@@ -90,7 +90,8 @@ CLI command ownership is now aligned to package domains:
 
 To migrate:
 - Install command-specific packages as needed:
-  - `pip install nvidia-nat-eval`
+  - `pip install "nvidia-nat[eval]"`
+  - `pip install "nvidia-nat-eval[full]"`
   - `pip install nvidia-nat-profiler`
   - `pip install nvidia-nat-security`
 
@@ -132,19 +133,19 @@ NVIDIA NeMo Agent Toolkit 1.2 changed the name and API. Compatibility aliases an
 - All prior meta-packages have been removed.
   - `nvidia-nat-all` (no replacement, though `nvidia-nat[most]` extra does exist)
   - `nvidia-nat-ingestion` (no replacement; examples directly use dependencies)
-  - `nvidia-nat-profiling` (use `nvidia-nat[profiling]`)
+  - `nvidia-nat-profiling` (use `nvidia-nat[profiler]`)
 
 #### Evaluation Package Split
 
-Evaluation and profiling implementations moved out of core into the `nvidia-nat-eval` package.
+Evaluation and profiling implementations moved out of core into the `nvidia-nat-eval` and `nvidia-nat-profiler` packages.
 
 To migrate:
 - Install evaluation support when needed:
   - `pip install "nvidia-nat[eval]"`
   - `pip install nvidia-nat-eval`
 - Install profiling support when needed:
-  - `pip install "nvidia-nat[profiling]"`
-  - `pip install "nvidia-nat-eval[profiling]"`
+  - `pip install "nvidia-nat[profiler]"`
+  - `pip install "nvidia-nat[eval, profiler]"`
 - Treat these commands as eval-owned commands that require `nvidia-nat-eval`: `nat eval`, `nat red-team`, and `nat sizing`.
 
 #### Import Path Changes
