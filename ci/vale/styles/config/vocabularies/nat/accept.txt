@@ -65,6 +65,7 @@ Dynatrace
 [Ee]ngineerable
 etcd
 [Ee]val
+Exa
 [Ee]xfiltration
 [Ee]xplainability
 Faiss

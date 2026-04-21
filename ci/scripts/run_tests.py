@@ -21,8 +21,7 @@ import re
 import signal
 import subprocess
 import sys
-from concurrent.futures import ProcessPoolExecutor
-from concurrent.futures import as_completed
+from multiprocessing.pool import Pool
 from pathlib import Path
 
 from dotenv import dotenv_values
@@ -245,42 +244,58 @@ def main(junit_xml: str | None,
 
     failures = 0
 
-    with ProcessPoolExecutor(max_workers=jobs) as executor:
-        ex = executor
+    orig_handler = signal.getsignal(signal.SIGINT)
 
-        def shutdown_executor(_signum, _frame, wait: bool = False):
+    def _restore_handler():
+        if orig_handler is not None:
+            signal.signal(signal.SIGINT, orig_handler)
+
+    with Pool(processes=jobs) as pool:
+        ex = pool
+
+        def shutdown_pool(_signum, _frame):
             nonlocal ex
-            if ex is not None:
-                print("Shutting down executor...")
-                ex.shutdown(wait=wait, cancel_futures=True)
-            else:
-                print("Executor not found")
 
-        signal.signal(signal.SIGINT, shutdown_executor)
+            shutdown_msg = "Exiting"
+            if ex is not None:
+                print("Shutting down pool...")
+                ex.terminate()
+                ex.join()
+                if _signum is not None:
+                    shutdown_msg = f"Received signal {_signum}, exiting"
+
+            else:
+                print("Pool not found")
+
+            _restore_handler()
+            raise SystemExit(shutdown_msg)
+
+        signal.signal(signal.SIGINT, shutdown_pool)
         futs = [
-            ex.submit(run_one,
-                      p,
-                      enable_coverage=cov_xml is not None,
-                      enable_junit=junit_xml is not None,
-                      run_slow=run_slow,
-                      run_integration=run_integration,
-                      exitfirst=exitfirst,
-                      is_verbose=has_verbose_flag,
-                      extra_flags=extra_flags,
-                      no_tests=no_tests) for p in projects
+            pool.apply_async(run_one,
+                             args=(p, ),
+                             kwds=dict(enable_coverage=cov_xml is not None,
+                                       enable_junit=junit_xml is not None,
+                                       run_slow=run_slow,
+                                       run_integration=run_integration,
+                                       exitfirst=exitfirst,
+                                       is_verbose=has_verbose_flag,
+                                       extra_flags=extra_flags,
+                                       no_tests=no_tests)) for p in projects
         ]
         try:
-            for fut in as_completed(futs):
-                if fut.result() != 0:
+            for fut in futs:
+                if fut.get() != 0:
                     failures += 1
                     if exitfirst:
                         raise TestFailure("Exiting on first failure as requested.")
 
         except TestFailure:
             print("Cancelling remaining tests...")
-            shutdown_executor(None, None, wait=True)
+            shutdown_pool(None, None)
         finally:
             ex = None
+            _restore_handler()
             for p in projects:
                 sh(["rm", "-rf", str(p / ".venv")])
 
