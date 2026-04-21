@@ -2,19 +2,17 @@
 # SPDX-License-Identifier: Apache-2.0
 """Convert ATOF v0.1 JSONL examples to ATIF trajectories.
 
-Reads each example JSONL file produced by ``generate_examples.py`` (EXMP-01
-tier-1, EXMP-02 tier-2, EXMP-03 tier-3, plus the EXMP-03b tier-2 error-recovery
-variant) and writes the resulting ATIF trajectory as formatted JSON.
+Reads each example JSONL file produced by ``generate_atof_examples.py``
+(EXMP-01 tier-1, EXMP-02 tier-2) and writes the resulting ATIF trajectory
+as formatted JSON.
 
 Uses ``nat.atof.scripts.atof_to_atif_converter.convert_file`` — the v0.1
-converter dispatches on ``(kind, scope_type)`` and reads scope-type-specific
-fields from the ``profile`` sub-object (``profile.model_name``,
-``profile.tool_call_id``). ``StreamHeader`` events are skipped by the
-converter's main dispatch loop (no schema-registry pre-pass needed in v0.1;
-the optional schema layer is consumer-side opt-in).
+converter dispatches on ``(kind, scope_category, category)`` and reads
+category-specific fields from the ``category_profile`` sub-object
+(``category_profile.model_name``, ``category_profile.tool_call_id``).
 
 Usage:
-    python convert_to_atif.py [--input-dir DIR] [--output-dir DIR]
+    python convert_atof_examples_to_atif.py [--input-dir DIR] [--output-dir DIR]
 """
 
 from __future__ import annotations
@@ -30,13 +28,11 @@ OUTPUT_DIR = EXAMPLES_DIR / "output"
 EXAMPLES = [
     "exmp01_atof.jsonl",
     "exmp02_atof.jsonl",
-    "exmp03_atof.jsonl",
-    "exmp03b_atof.jsonl",
 ]
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Convert ATOF v0.2 JSONL to ATIF JSON")
+    parser = argparse.ArgumentParser(description="Convert ATOF v0.1 JSONL to ATIF JSON")
     parser.add_argument("--input-dir", type=Path, default=OUTPUT_DIR, help="Directory with JSONL files")
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR, help="Output directory for ATIF JSON")
     args = parser.parse_args()

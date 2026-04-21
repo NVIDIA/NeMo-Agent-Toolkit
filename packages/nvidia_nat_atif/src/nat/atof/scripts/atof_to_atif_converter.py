@@ -5,14 +5,13 @@
 Converts a list of ATOF events (JSON-Lines wire format from agent runtime
 subscriber callbacks) into an ATIF Trajectory using NAT's native models.
 
-Event model: 4 event kinds (ScopeStart / ScopeEnd / Mark / StreamHeader) per
-spec v0.1. Dispatch keys on ``(kind, scope_type)``. Scope-type-specific typed
-fields live inside the ``profile`` sub-object (spec §4.4) — ``model_name`` for
-``llm``, ``tool_call_id`` for ``tool`` — so no name-based fallback map is
-needed.
+Event model: 2 event kinds (``ScopeEvent`` / ``MarkEvent``) per spec v0.1.
+Dispatch keys on ``(kind, scope_category, category)``. Category-specific
+typed fields live inside the ``category_profile`` sub-object (spec §4.4) —
+``model_name`` for ``llm``, ``tool_call_id`` for ``tool``.
 
-See ``atof-event-format.md`` §3 (event kinds), §4 (scope_type vocabulary),
-§5 (status semantics), §6 (stream semantics) and the companion
+See ``atof-event-format.md`` §3 (event kinds), §4 (category vocabulary),
+§5 (event stream semantics) and the companion
 ``examples/atof_to_atif/README.md`` for the normative mapping.
 """
 
@@ -27,8 +26,7 @@ from nat.atif.step import Step
 from nat.atif.trajectory import Trajectory
 from nat.atof.events import Event
 from nat.atof.events import MarkEvent
-from nat.atof.events import ScopeEndEvent
-from nat.atof.events import ScopeStartEvent
+from nat.atof.events import ScopeEvent
 from nat.atof.io import read_jsonl
 
 logger = logging.getLogger(__name__)
@@ -65,24 +63,24 @@ def _build_invocation_info(start_micros: int | None, end_micros: int | None, inv
     return info
 
 
-def _extract_tool_calls(llm_output: dict | None) -> list[dict]:
+def _extract_tool_calls(llm_data: dict | None) -> list[dict]:
     """Extract tool call dicts from an LLM output payload.
 
-    ``llm_output`` is the raw dict from a ``ScopeEndEvent.output`` on a
-    ``scope_type == "llm"`` event. Handles the flat ``output.tool_calls`` shape;
-    OpenAI-style ``output.choices[0].message.tool_calls`` unwrapping is left to
-    a future enhancement (see the converter companion doc).
+    ``llm_data`` is the raw dict from a ``ScopeEvent.data`` on a scope-end
+    event with ``category == "llm"``. Handles the flat ``data.tool_calls``
+    shape; OpenAI-style ``data.choices[0].message.tool_calls`` unwrapping is
+    left to a future enhancement (see the converter companion doc).
     """
-    if not llm_output:
+    if not llm_data:
         return []
 
     # Try flat shape first (NAT-native producers, EXMP-01-style).
-    raw_calls = llm_output.get("tool_calls")
+    raw_calls = llm_data.get("tool_calls")
 
-    # Fall back to OpenAI Chat Completions shape (output.choices[0].message.tool_calls).
+    # Fall back to OpenAI Chat Completions shape (data.choices[0].message.tool_calls).
     if not raw_calls:
         try:
-            raw_calls = llm_output["choices"][0]["message"].get("tool_calls", [])
+            raw_calls = llm_data["choices"][0]["message"].get("tool_calls", [])
         except (KeyError, IndexError, TypeError):
             raw_calls = []
 
@@ -117,20 +115,20 @@ def _extract_tool_calls(llm_output: dict | None) -> list[dict]:
     return result
 
 
-def _unwrap_llm_messages(input_obj: dict | None) -> list[dict]:
-    """Extract messages from an LLM ScopeStart input payload.
+def _unwrap_llm_messages(data: dict | None) -> list[dict]:
+    """Extract messages from an LLM scope-start data payload.
 
     Handles both envelope format (``{"content": {"messages": [...]}}``)
     and direct format (``{"messages": [...]}``).
     """
-    if not input_obj:
+    if not data:
         return []
-    content = input_obj.get("content")
+    content = data.get("content")
     if isinstance(content, dict):
         messages = content.get("messages", [])
         if messages:
             return messages
-    messages = input_obj.get("messages", [])
+    messages = data.get("messages", [])
     if messages:
         return messages
     return []
@@ -144,6 +142,14 @@ def _tool_call_order_key(sort_id: str, order_list: list[str]) -> int:
         return len(order_list)
 
 
+def _is_scope_start(event: Event) -> bool:
+    return isinstance(event, ScopeEvent) and event.scope_category == "start"
+
+
+def _is_scope_end(event: Event) -> bool:
+    return isinstance(event, ScopeEvent) and event.scope_category == "end"
+
+
 # ---------------------------------------------------------------------------
 # Core accumulator
 # ---------------------------------------------------------------------------
@@ -153,13 +159,13 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
     """Convert typed ATOF events to step dicts using the accumulator pattern.
 
     Dispatch (spec §3 + examples/atof_to_atif/README.md Conversion reference):
-    - ScopeStart (scope_type=='llm')  → user step (messages from input)
-    - ScopeEnd   (scope_type=='llm')  → agent step (tool_calls from output)
-    - ScopeEnd   (scope_type=='tool') → buffered observation, flushed on next LLM turn
-    - ScopeStart/ScopeEnd (other scope_types) → skip (structural)
-    - Mark (with data != null) → system step
+    - scope start (category=='llm')  → user step (messages from data)
+    - scope end   (category=='llm')  → agent step (tool_calls from data)
+    - scope end   (category=='tool') → buffered observation, flushed on next LLM turn
+    - scope start/end (other categories) → skip (structural) or generic system step
+    - mark (with data != null) → system step
     """
-    # Sort by normalized microsecond timestamp (spec §6.1). Polymorphic str|int
+    # Sort by normalized microsecond timestamp (spec §5.1). Polymorphic str|int
     # timestamps would otherwise raise TypeError on mixed compare.
     sorted_events = sorted(events, key=lambda e: e.ts_micros)
 
@@ -170,7 +176,7 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
     for event in sorted_events:
         if event.uuid and event.name:
             name_map[event.uuid] = event.name
-        if isinstance(event, ScopeStartEvent):
+        if _is_scope_start(event):
             start_ts_map[event.uuid] = event.ts_micros
 
     # Accumulator state
@@ -225,12 +231,12 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
 
     # Main event loop
     for event in sorted_events:
-        if isinstance(event, ScopeStartEvent) and event.scope_type == "llm":
+        if _is_scope_start(event) and event.category == "llm":
             flush_observations()
             finalize_agent_extra()
 
-            input_obj = event.input if isinstance(event.input, dict) else {}
-            messages = _unwrap_llm_messages(input_obj)
+            data = event.data if isinstance(event.data, dict) else {}
+            messages = _unwrap_llm_messages(data)
             ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
             message_str = json.dumps(messages, separators=(",", ":")) if messages else ""
 
@@ -243,11 +249,11 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
                 }
             )
 
-        elif isinstance(event, ScopeEndEvent) and event.scope_type == "llm":
+        elif _is_scope_end(event) and event.category == "llm":
             flush_observations()
 
-            raw_output = event.output if isinstance(event.output, dict) else {}
-            tool_call_dicts = _extract_tool_calls(raw_output)
+            raw_data = event.data if isinstance(event.data, dict) else {}
+            tool_call_dicts = _extract_tool_calls(raw_data)
 
             last_tool_call_order.clear()
             for tc in tool_call_dicts:
@@ -260,9 +266,9 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             extra: dict = {"ancestry": ancestry, "invocation": invocation}
 
             try:
-                agent_msg = raw_output["choices"][0]["message"].get("content", "")
+                agent_msg = raw_data["choices"][0]["message"].get("content", "")
             except (KeyError, IndexError, TypeError):
-                agent_msg = json.dumps(raw_output, separators=(",", ":")) if raw_output else ""
+                agent_msg = json.dumps(raw_data, separators=(",", ":")) if raw_data else ""
 
             step_dict: dict = {
                 "source": "agent",
@@ -275,20 +281,20 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             step_dicts.append(step_dict)
             current_agent_step_idx = len(step_dicts) - 1
 
-        elif isinstance(event, ScopeEndEvent) and event.scope_type == "tool":
-            # tool_call_id lives in the profile sub-object (spec §4.4).
-            tool_call_id = (event.profile or {}).get("tool_call_id")
+        elif _is_scope_end(event) and event.category == "tool":
+            # tool_call_id lives in the category_profile sub-object (spec §4.4).
+            tool_call_id = (event.category_profile or {}).get("tool_call_id")
 
             if pending_obs_timestamp is None:
                 pending_obs_timestamp = event.timestamp
 
-            output = event.output
-            if isinstance(output, dict):
-                content: str | None = json.dumps(output, separators=(",", ":"))
-            elif isinstance(output, str):
-                content = output
-            elif output is not None:
-                content = str(output)
+            data = event.data
+            if isinstance(data, dict):
+                content: str | None = json.dumps(data, separators=(",", ":"))
+            elif isinstance(data, str):
+                content = data
+            elif data is not None:
+                content = str(data)
             else:
                 content = None
 
@@ -315,9 +321,9 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
                 }
             )
 
-        elif isinstance(event, ScopeEndEvent) and event.scope_type not in ("llm", "tool", "agent"):
-            # Opaque / generic scope end: emit a system step with the raw output
-            # as the message. Covers tier-1 ("unknown") plus v0.1 scope types the
+        elif _is_scope_end(event) and event.category not in ("llm", "tool", "agent"):
+            # Opaque / generic scope end: emit a system step with the raw data
+            # as the message. Covers tier-1 ("unknown") plus v0.1 categories the
             # converter does not have specialised handling for ("function",
             # "retriever", "embedder", "reranker", "guardrail", "evaluator",
             # "custom"). "agent" scopes continue to be skipped here — they only
@@ -325,13 +331,13 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
             flush_observations()
             finalize_agent_extra()
 
-            output = event.output
-            if isinstance(output, dict):
-                message = json.dumps(output, separators=(",", ":"))
-            elif isinstance(output, str):
-                message = output
-            elif output is not None:
-                message = str(output)
+            data = event.data
+            if isinstance(data, dict):
+                message = json.dumps(data, separators=(",", ":"))
+            elif isinstance(data, str):
+                message = data
+            elif data is not None:
+                message = str(data)
             else:
                 message = ""
 
@@ -350,9 +356,10 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
 
         else:
             logger.debug(
-                "Skipping %s (scope_type=%s) event: %s",
+                "Skipping %s (scope_category=%s, category=%s) event: %s",
                 event.kind,
-                getattr(event, "scope_type", None),
+                getattr(event, "scope_category", None),
+                getattr(event, "category", None),
                 event.name,
             )
 
@@ -376,22 +383,22 @@ def convert(events: list[Event]) -> Trajectory:
     """Convert a list of ATOF events to an ATIF Trajectory."""
     step_dicts = _events_to_step_dicts(events)
 
-    # Extract agent info from events. Prefer an explicit `scope_type == "agent"`
-    # ScopeStart (tier-2+). For streams that don't classify an agent scope
-    # (tier-1 opaque pass-through), fall back to the outermost root ScopeStart's
+    # Extract agent info from events. Prefer an explicit `category == "agent"`
+    # scope-start (tier-2+). For streams that don't classify an agent scope
+    # (tier-1 opaque pass-through), fall back to the outermost root scope-start's
     # name. Final fallback is the literal "unknown".
     agent_name: str | None = None
     model_name: str | None = None
     session_id = "atof-session"
 
     for event in events:
-        if isinstance(event, ScopeStartEvent) and event.scope_type == "agent":
+        if _is_scope_start(event) and event.category == "agent":
             agent_name = event.name
             break
 
     if agent_name is None:
         for event in events:
-            if isinstance(event, ScopeStartEvent) and event.parent_uuid is None:
+            if _is_scope_start(event) and event.parent_uuid is None:
                 agent_name = event.name
                 break
 
@@ -399,9 +406,9 @@ def convert(events: list[Event]) -> Trajectory:
         agent_name = "unknown"
 
     for event in events:
-        if isinstance(event, ScopeEndEvent) and event.scope_type == "llm":
-            # model_name lives in the profile sub-object (spec §4.4).
-            profile_model = (event.profile or {}).get("model_name")
+        if _is_scope_end(event) and event.category == "llm":
+            # model_name lives in the category_profile sub-object (spec §4.4).
+            profile_model = (event.category_profile or {}).get("model_name")
             if profile_model:
                 model_name = profile_model
                 break

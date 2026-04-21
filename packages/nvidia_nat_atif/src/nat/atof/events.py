@@ -1,31 +1,28 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""ATOF event models for the 4 event kinds per spec v0.1.
+"""ATOF event models for the 2 event kinds per spec v0.1.
 
 Standalone Pydantic models for each event kind. The ``Event`` type is a
 discriminated union keyed on the ``kind`` field.
 
-Four event kinds:
-- ``ScopeStartEvent``   — a scope was opened
-- ``ScopeEndEvent``     — a scope was closed (carries terminal ``status``)
-- ``MarkEvent``         — a point-in-time checkpoint
-- ``StreamHeaderEvent`` — optional stream metadata carrier (schema registry).
-                          MUST be the first event when present (spec §3.4).
+Two event kinds:
+- ``ScopeEvent`` — a scope lifecycle event (start or end, distinguished by
+                   ``scope_category``). A start/end pair shares the same
+                   ``uuid`` (spec §5.3).
+- ``MarkEvent`` — a point-in-time checkpoint, unpaired.
 
-What kind of work a scope represents is carried by the ``scope_type`` field
-on ``ScopeStart`` / ``ScopeEnd``. Scope-type-specific typed fields are
-packaged into a single optional ``profile`` sub-object (spec §4.4) —
-``model_name`` for ``llm``, ``tool_call_id`` for ``tool``, ``subtype`` for
-``custom``, with additional keys reserved for future scope types. The
-schema-layer fields (``schema``, ``annotated_request`` / ``annotated_response``)
-remain at the top level because they are cross-cutting across scope types.
+What kind of work an event represents is carried by the ``category`` field.
+Category-specific typed fields are packaged into a single optional
+``category_profile`` sub-object (spec §4.4) — ``model_name`` for ``llm``,
+``tool_call_id`` for ``tool``, ``subtype`` for ``custom``, with additional
+keys reserved for future categories. ``category`` is REQUIRED on
+``ScopeEvent`` and OPTIONAL on ``MarkEvent``.
 
 See ATOF spec:
 - §2 (common envelope), §2.1 (attributes)
 - §3 (event kinds)
-- §4 (scope_type vocabulary)
-- §5 (status and error semantics)
-- atof-schema-profiles.md §6 (schema resolution protocol)
+- §4 (category vocabulary)
+- §5 (event stream semantics)
 """
 
 from __future__ import annotations
@@ -46,8 +43,6 @@ from pydantic import computed_field
 from pydantic import field_validator
 from pydantic import model_validator
 
-from nat.atof.annotations import Request as AnnotatedRequest
-from nat.atof.annotations import Response as AnnotatedResponse
 from nat.atof.flags import Flags  # noqa: F401  (re-exported for convenience)
 
 # ---------------------------------------------------------------------------
@@ -56,7 +51,7 @@ from nat.atof.flags import Flags  # noqa: F401  (re-exported for convenience)
 
 _ATOF_VERSION_PATTERN = re.compile(r"^0\.\d+$")
 
-_CANONICAL_SCOPE_TYPES: frozenset[str] = frozenset(
+_CANONICAL_CATEGORIES: frozenset[str] = frozenset(
     {
         "agent",
         "function",
@@ -73,7 +68,7 @@ _CANONICAL_SCOPE_TYPES: frozenset[str] = frozenset(
 )
 
 # ---------------------------------------------------------------------------
-# Attributes canonicalization helper (spec §2.1)
+# Helpers
 # ---------------------------------------------------------------------------
 
 
@@ -95,19 +90,15 @@ def _canonicalize_attributes(v: Any) -> list[str]:
     return sorted(normalized)
 
 
-# ---------------------------------------------------------------------------
-# Structured error info (spec §5.1)
-# ---------------------------------------------------------------------------
-
-
-class ErrorInfo(BaseModel):
-    """Structured error payload on ScopeEndEvent when status == 'error' (spec §5.1)."""
-
-    message: str = Field(description="Human-readable error description")
-    type: str | None = Field(default=None, description="Error class or category")
-    traceback: str | None = Field(default=None, description="Optional stack trace or debug trace")
-
-    model_config = ConfigDict(extra="allow")
+def _require_subtype_when_custom(category: str | None, category_profile: dict[str, Any] | None) -> None:
+    """Enforce §4.2: when ``category == "custom"``, ``category_profile.subtype`` is REQUIRED."""
+    if category == "custom":
+        subtype = (category_profile or {}).get("subtype")
+        if not isinstance(subtype, str) or not subtype:
+            raise ValueError(
+                "category_profile.subtype is REQUIRED and must be a non-empty string "
+                "when category == 'custom' (spec §4.2)"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -118,15 +109,23 @@ class ErrorInfo(BaseModel):
 class _EventBase(BaseModel):
     """Common fields shared by all ATOF event types (spec §2)."""
 
-    atof_version: str = Field(default="0.1", description="ATOF wire-format version (spec §2, §6.6)")
+    atof_version: str = Field(default="0.1", description="ATOF wire-format version (spec §2, §5.6)")
     uuid: str = Field(description="Unique span identifier (v7 UUID recommended)")
     parent_uuid: str | None = Field(default=None, description="UUID of parent scope")
-    timestamp: str | int = Field(description="Wall-clock time: RFC 3339 string OR int epoch microseconds (spec §6.1)")
+    timestamp: str | int = Field(description="Wall-clock time: RFC 3339 string OR int epoch microseconds (spec §5.1)")
     name: str = Field(description="Human-readable label")
     data: Any | None = Field(default=None, description="Application-defined payload; opaque to ATOF")
+    data_schema: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Schema identifier {name, version} describing the shape of ``data``. "
+            "Opaque to ATOF core; validation against the named schema is the "
+            "consumer's responsibility (spec §2, §3)."
+        ),
+    )
     metadata: dict[str, Any] | None = Field(default=None, description="Tracing/correlation envelope")
 
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
+    model_config = ConfigDict(extra="allow")
 
     @field_validator("atof_version")
     @classmethod
@@ -147,7 +146,7 @@ class _EventBase(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def ts_micros(self) -> int:
-        """Timestamp normalized to int epoch microseconds (spec §6.1).
+        """Timestamp normalized to int epoch microseconds (spec §5.1).
 
         Not emitted on the wire (excluded by ``io.write_jsonl``). For
         in-memory sorting and consumer-side comparison only.
@@ -159,33 +158,34 @@ class _EventBase(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Common scope fields shared by ScopeStartEvent and ScopeEndEvent (spec §3.1, §3.2)
+# Event kinds (spec §3)
 # ---------------------------------------------------------------------------
 
 
-class _ScopeEventBase(_EventBase):
-    """Shared fields between ScopeStart and ScopeEnd (spec §3.1, §3.2)."""
+class ScopeEvent(_EventBase):
+    """Scope lifecycle event (spec §3.1).
 
+    A single scope span produces two ``ScopeEvent`` instances sharing the
+    same ``uuid``: one with ``scope_category: "start"`` when the scope is
+    pushed onto the active scope stack, and one with ``scope_category: "end"``
+    when the scope is popped.
+    """
+
+    kind: Literal["scope"] = "scope"
+    scope_category: Literal["start", "end"] = Field(
+        description="Lifecycle phase of the scope event (spec §3.1)",
+    )
     attributes: list[str] = Field(
         default_factory=list,
         description="Canonical lowercase flag array, sorted and deduplicated (spec §2.1)",
     )
-    scope_type: str = Field(description="Semantic category of the scope (spec §4)")
-    profile: dict[str, Any] | None = Field(
+    category: str = Field(description="Semantic category of the scope (spec §4)")
+    category_profile: dict[str, Any] | None = Field(
         default=None,
         description=(
-            "Scope-type-specific typed fields (spec §4.4). Keys: "
+            "Category-specific typed fields (spec §4.4). Keys: "
             "'model_name' for llm, 'tool_call_id' for tool, 'subtype' for custom. "
-            "Null for tier-1 opaque events and scope types with no defined keys."
-        ),
-    )
-    schema_: dict[str, Any] | None = Field(
-        default=None,
-        alias="schema",
-        description=(
-            "Schema identifier {name, version} declaring the annotated_* shape "
-            "(see atof-schema-profiles.md). Python attribute is ``schema_`` with "
-            "wire alias ``schema`` to avoid shadowing pydantic's BaseModel.schema() method."
+            "Null for tier-1 opaque events and categories with no defined keys."
         ),
     )
 
@@ -194,116 +194,47 @@ class _ScopeEventBase(_EventBase):
     def _canonicalize_attributes_field(cls, v: Any) -> list[str]:
         return _canonicalize_attributes(v)
 
-    @field_validator("scope_type")
+    @field_validator("category")
     @classmethod
-    def _validate_scope_type(cls, v: str) -> str:
+    def _validate_category(cls, v: str) -> str:
         if not isinstance(v, str) or not v:
-            raise ValueError("scope_type must be a non-empty string")
+            raise ValueError("category must be a non-empty string")
         # Canonical vocabulary is enforced at the spec level; consumers MUST NOT
-        # reject unknown values (spec §4.3). We warn via model_validator below
-        # instead of rejecting here.
+        # reject unknown values (spec §4.3).
         return v
 
     @model_validator(mode="after")
-    def _validate_scope_type_subtype_coherence(self) -> Self:
-        """Enforce §4.2 subtype rules.
-
-        When scope_type=='custom', profile MUST be present and carry a non-empty
-        'subtype' string.
-        """
-        if self.scope_type == "custom":
-            subtype = (self.profile or {}).get("subtype")
-            if not isinstance(subtype, str) or not subtype:
-                raise ValueError(
-                    "profile.subtype is REQUIRED and must be a non-empty string when scope_type == 'custom' (spec §4.2)"
-                )
-        return self
-
-
-# ---------------------------------------------------------------------------
-# Event kinds (spec §3)
-# ---------------------------------------------------------------------------
-
-
-class ScopeStartEvent(_ScopeEventBase):
-    """Emitted when a scope is pushed onto the active scope stack (spec §3.1)."""
-
-    kind: Literal["ScopeStart"] = "ScopeStart"
-    input: Any | None = Field(default=None, description="Raw input payload (post-guardrail); opaque to ATOF")
-    annotated_request: AnnotatedRequest | None = Field(
-        default=None,
-        description=(
-            "Structured, decoded request. Shape is declared by ``schema``, not by ATOF — "
-            "the model is a permissive pass-through container (see atof-schema-profiles.md)."
-        ),
-    )
-
-
-class ScopeEndEvent(_ScopeEventBase):
-    """Emitted when a scope is popped from the active scope stack (spec §3.2).
-
-    Paired 1:1 with ScopeStart by ``uuid``. Carries required terminal ``status``.
-    """
-
-    kind: Literal["ScopeEnd"] = "ScopeEnd"
-    output: Any | None = Field(default=None, description="Raw output payload (post-guardrail); opaque to ATOF")
-    annotated_response: AnnotatedResponse | None = Field(
-        default=None,
-        description=(
-            "Structured, decoded response. Shape is declared by ``schema``, not by ATOF — "
-            "the model is a permissive pass-through container (see atof-schema-profiles.md)."
-        ),
-    )
-    status: Literal["ok", "error", "cancelled"] = Field(
-        description="Terminal outcome of the scope (spec §5.1)",
-    )
-    error: ErrorInfo | None = Field(
-        default=None,
-        description="Structured error info when status=='error' (spec §5.1)",
-    )
-
-    @model_validator(mode="after")
-    def _validate_status_error_coherence(self) -> Self:
-        """Enforce §5.1: when status != 'error', error SHOULD be absent/null."""
-        if self.status != "error" and self.error is not None:
-            raise ValueError(
-                f"error field populated but status=='{self.status}' "
-                "(spec §5.1: error SHOULD be absent when status != 'error')"
-            )
+    def _validate_category_subtype_coherence(self) -> Self:
+        _require_subtype_when_custom(self.category, self.category_profile)
         return self
 
 
 class MarkEvent(_EventBase):
-    """Point-in-time checkpoint (spec §3.3).
+    """Point-in-time checkpoint (spec §3.2).
 
-    Unpaired (no Start/End semantics). Carries only envelope + optional data/metadata.
-    Does NOT carry attributes, scope_type, status, input, or output.
+    Unpaired (no start/end semantics). MAY carry ``category`` +
+    ``category_profile`` to indicate the kind of work the checkpoint relates
+    to; when both are absent, the mark is a generic named timestamp.
+    Does NOT carry ``scope_category`` or ``attributes``.
     """
 
-    kind: Literal["Mark"] = "Mark"
-
-
-class StreamHeaderEvent(_EventBase):
-    """Stream-level metadata carrier (spec §3.4).
-
-    Optional structural event. When present, MUST be the first event in the stream
-    (position 0), and exactly one per stream. Declares an annotation schema registry
-    used by the 4-priority schema resolution chain (see atof-schema-profiles.md §6).
-
-    Does NOT carry attributes, scope_type, profile, status, error, input, output,
-    schema, or annotated_request/annotated_response.
-    The ``schemas`` dict is keyed by the canonical ID string ``"{name}.v{version}"``
-    (e.g., ``"openai/chat-completions.v1"``). Each value is a ``SchemaEntry`` dict
-    that MAY carry an inline ``$schema`` body; entries with empty ``{}`` are
-    manifest declarations (the producer announces schema usage; consumers resolve
-    the body via priority 3 in their local registry).
-    """
-
-    kind: Literal["StreamHeader"] = "StreamHeader"
-    schemas: dict[str, dict[str, Any]] = Field(
-        default_factory=dict,
-        description="Schema registry keyed by canonical ID '{name}.v{version}' (spec §3.4; atof-schema-profiles.md §6)",
+    kind: Literal["mark"] = "mark"
+    category: str | None = Field(
+        default=None,
+        description="Semantic category (spec §4). Null or absent means the mark is a generic checkpoint.",
     )
+    category_profile: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Category-specific typed fields (spec §4.4). REQUIRED when "
+            "category == 'custom' (must carry category_profile.subtype)."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _validate_category_subtype_coherence(self) -> Self:
+        _require_subtype_when_custom(self.category, self.category_profile)
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -319,10 +250,7 @@ def _get_event_kind(v: Any) -> str:
 
 
 Event = Annotated[
-    Annotated[ScopeStartEvent, Tag("ScopeStart")]
-    | Annotated[ScopeEndEvent, Tag("ScopeEnd")]
-    | Annotated[MarkEvent, Tag("Mark")]
-    | Annotated[StreamHeaderEvent, Tag("StreamHeader")],
+    Annotated[ScopeEvent, Tag("scope")] | Annotated[MarkEvent, Tag("mark")],
     Discriminator(_get_event_kind),
 ]
-"""Discriminated union of the 4 ATOF event kinds, keyed on ``kind`` (spec §3)."""
+"""Discriminated union of the 2 ATOF event kinds, keyed on ``kind`` (spec §3)."""
