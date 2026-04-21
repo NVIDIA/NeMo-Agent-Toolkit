@@ -1,0 +1,85 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# A365 Bot (Teams / Bot Framework) + telemetry + A365 MCP tooling discovery.
+# Container / Azure: set A365_APP_ID, A365_APP_PASSWORD, A365_BEARER_TOKEN
+# and optionally A365_ALLOWED_AUDIENCES for inbound Bot JWT audience aliases.
+# Run: nat start a365 --config_file configs/config_a365_bot_with_tooling.yml
+#
+# Requires: nvidia-nat-mcp (Docker image built with: uv sync --frozen --no-dev --extra mcp).
+# Development: ENVIRONMENT=Development and ToolingManifest.json in process cwd (see deploy/Dockerfile).
+# Production: ENVIRONMENT=Production + bearer token allowed for A365 tooling gateway.
+#
+# After startup, read logs for "A365 MCP tooling: registered N total tools", then add each
+# mcp_client__… name to workflow.tool_names below (keep current_datetime as needed).
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+    tracing:
+      a365:
+        _type: a365
+        agent_id: "83d6fb2b-0af5-424a-a785-637c8c1b33c3"
+        tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
+        token_resolver: "a365_auth"
+        cluster_category: "prod"
+  front_end:
+    _type: a365
+    host: "0.0.0.0"
+    port: 3978
+    app_id: ${A365_APP_ID}
+    app_password: ${A365_APP_PASSWORD}
+    # Optional: set via YAML list or env A365_ALLOWED_AUDIENCES="aud1,aud2"
+    # when Teams / Bot Framework sends an audience different from A365_APP_ID.
+    tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
+    enable_notifications: false
+
+authentication:
+  a365_auth:
+    _type: api_key
+    raw_key: ${A365_BEARER_TOKEN}
+    auth_scheme: Bearer
+  a365_mcp_auth:
+    _type: api_key
+    raw_key: ${A365_MCP_TOKEN}
+    auth_scheme: Bearer
+
+function_groups:
+  graph_mail:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "https://graph-mail-mcp.blackocean-072fa40d.eastus.azurecontainerapps.io/mcp"
+  jira:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "https://jira-mcp.blackocean-072fa40d.eastus.azurecontainerapps.io/mcp"
+  github:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "https://github-mcp.blackocean-072fa40d.eastus.azurecontainerapps.io/mcp"
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: react_agent
+  tool_names: [current_datetime, graph_mail, jira, github]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

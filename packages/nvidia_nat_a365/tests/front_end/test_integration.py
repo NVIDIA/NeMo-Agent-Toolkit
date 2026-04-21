@@ -232,12 +232,12 @@ def patch_sdk_components(mock_agent_app=None, mock_notification=None, mock_sessi
         if mock_notification:
             patches.append(patch("microsoft_agents_a365.notifications.AgentNotification", return_value=mock_notification))
 
-        async def raise_keyboard_interrupt():
+        async def raise_keyboard_interrupt(*args, **kwargs):
             raise KeyboardInterrupt()
 
         patches.append(
             patch(
-                "nat.plugins.a365.front_end.plugin._run_until_stopped",
+                "nat.plugins.a365.front_end.plugin._start_aiohttp_site",
                 side_effect=raise_keyboard_interrupt,
             )
         )
@@ -442,6 +442,38 @@ class TestMessageHandlerSetup:
         error_msg = mock_turn_context.send_activity.call_args[0][0].lower()
         # Error messages can be: "error", "encountered", "invalid", "timed out", etc.
         assert any(keyword in error_msg for keyword in ["error", "encountered", "invalid", "timed out"])
+
+
+class TestConnectionManagerConfiguration:
+    """Test Microsoft Agents connection manager setup."""
+
+    def test_connection_manager_includes_allowed_audience_aliases(self):
+        """Test that extra inbound JWT audiences are exposed as SDK connection aliases."""
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            tenant_id="test-tenant-id",
+            allowed_audiences=["alternate-aud", "test-app-id"],
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        worker = A365FrontEndPluginWorker(full_config)
+
+        mock_service_connection = Mock()
+        mock_service_connection.CLIENT_ID = "test-app-id"
+        mock_service_connection.AUTH_TYPE = "client_secret"
+
+        with patch("microsoft_agents.authentication.msal.MsalConnectionManager") as mock_manager:
+            worker._get_connection_manager(mock_service_connection)
+
+        connections = mock_manager.call_args.kwargs["connections_configurations"]
+        assert "SERVICE_CONNECTION" in connections
+        assert connections["SERVICE_CONNECTION"] is mock_service_connection
+        assert "AUDIENCE_ALIAS_1" in connections
+        assert connections["AUDIENCE_ALIAS_1"].CLIENT_ID == "alternate-aud"
+        assert "AUDIENCE_ALIAS_2" not in connections
 
 
 class TestErrorHandler:

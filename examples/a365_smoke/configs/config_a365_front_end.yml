@@ -1,0 +1,51 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Smoke test: A365 front-end (Bot Framework adapter on port 3978 for Teams/Copilot).
+# Set A365_APP_ID, A365_APP_PASSWORD, and optionally A365_ALLOWED_AUDIENCES.
+# A365_TENANT_ID may also be used externally, or keep tenant_id below. Then run:
+#   nat start a365 --config_file configs/config_a365_front_end.yml
+# Smoke validates server startup; optional: send one Bot activity to http://localhost:3978.
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+  front_end:
+    _type: a365
+    host: "localhost"
+    port: 3978
+    app_id: ${A365_APP_ID}
+    app_password: ${A365_APP_PASSWORD}
+    # Optional: set via YAML list or env A365_ALLOWED_AUDIENCES="aud1,aud2"
+    # when inbound Bot JWT aud differs from A365_APP_ID.
+    tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
+    # Off until microsoft-agents-a365-notifications matches worker lifecycle hooks
+    enable_notifications: false
+
+authentication: {}
+
+function_groups: {}
+
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 256
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: react_agent
+  tool_names: [current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

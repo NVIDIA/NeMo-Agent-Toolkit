@@ -17,9 +17,8 @@
 """Configuration for Microsoft Agent 365 front-end."""
 
 import logging
-from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.front_end import FrontEndBaseConfig
@@ -64,6 +63,12 @@ class A365FrontEndConfig(FrontEndBaseConfig, name="a365"):
         description="Azure tenant ID (optional, defaults to 'common' for multi-tenant). "
                    "Specify your tenant ID for single-tenant apps, or leave None for multi-tenant."
     )
+    allowed_audiences: list[str] = Field(
+        default_factory=list,
+        description="Additional JWT audiences to accept for inbound Bot Framework / Teams requests. "
+                    "Use this when Microsoft issues tokens for a bot audience that differs from app_id. "
+                    "May be provided as a YAML list or a comma-separated string."
+    )
     log_level: str = Field(
         default="INFO",
         description="Log level for the server (default: INFO)"
@@ -106,3 +111,13 @@ class A365FrontEndConfig(FrontEndBaseConfig, name="a365"):
             )
         
         return self
+
+    @field_validator("allowed_audiences", mode="before")
+    @classmethod
+    def normalize_allowed_audiences(cls, value):
+        """Accept YAML lists or comma-delimited strings for audience aliases."""
+        if value is None or value == "":
+            return []
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(",") if item.strip()]
+        return value

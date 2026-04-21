@@ -77,16 +77,29 @@ def test_a365_frontend_config_optional_fields():
         app_id="test-app-id",
         app_password="test-app-password",
         tenant_id="test-tenant-id",
+        allowed_audiences=["aud-1", "aud-2"],
         host="0.0.0.0",
         port=8080,
         enable_notifications=False,
         notification_workflow="custom-workflow"
     )
     assert config.tenant_id == "test-tenant-id"
+    assert config.allowed_audiences == ["aud-1", "aud-2"]
     assert config.host == "0.0.0.0"
     assert config.port == 8080
     assert config.enable_notifications is False
     assert config.notification_workflow == "custom-workflow"
+
+
+def test_a365_frontend_config_allowed_audiences_string_normalization():
+    """Test that allowed audiences accepts comma-delimited strings."""
+    config = A365FrontEndConfig(
+        app_id="test-app-id",
+        app_password="test-app-password",
+        allowed_audiences="aud-1, aud-2 , ,aud-3",
+    )
+
+    assert config.allowed_audiences == ["aud-1", "aud-2", "aud-3"]
 
 
 def test_a365_frontend_config_port_validation():
@@ -165,6 +178,28 @@ async def test_register_a365_front_end_with_env_var():
     finally:
         # Clean up environment variable
         os.environ.pop("A365_APP_PASSWORD", None)
+
+
+@pytest.mark.asyncio
+async def test_register_a365_front_end_with_allowed_audiences_env_var():
+    """Test that allowed audiences can be loaded from environment."""
+    os.environ["A365_ALLOWED_AUDIENCES"] = "aud-1, aud-2"
+
+    try:
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+        )
+
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig()
+        )
+
+        async with a365_front_end(a365_config, full_config) as plugin:
+            assert plugin.front_end_config.allowed_audiences == ["aud-1", "aud-2"]
+    finally:
+        os.environ.pop("A365_ALLOWED_AUDIENCES", None)
 
 
 @pytest.mark.asyncio
