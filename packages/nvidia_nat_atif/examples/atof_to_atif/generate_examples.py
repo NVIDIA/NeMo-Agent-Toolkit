@@ -1,31 +1,42 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
-"""Generate ATOF v0.1 example JSONL files for EXMP-01, EXMP-02, and EXMP-03.
+"""Generate ATOF v0.1 example JSONL files for the three enrichment tiers.
 
 Each scenario opens with a ``StreamHeaderEvent`` (always at position 0 per
-spec §3.4) and demonstrates one of the three producer enrichment tiers:
+spec §3.4). The three main scenarios walk through tiers 1 → 2 → 3 in order;
+the ``3b`` variant is a tier-2 side example showing error-recovery semantics.
 
-- **EXMP-01 — tier-2 semantic-tagged (basic)**: Simple calculator with a single
-  tool call. StreamHeader is a minimal manifest (empty ``schemas``). LLM events
-  carry ``profile.model_name`` but no schema; tool events carry
-  ``profile.tool_call_id``.
+- **EXMP-01 — tier-1 raw pass-through**: A calculator-shaped workflow where the
+  producer can't classify any scope. Every scope carries ``scope_type:
+  "unknown"``, ``profile: null``, ``schema: null``, with opaque raw JSON in
+  ``input`` / ``output``. Demonstrates the floor — a valid ATOF stream carrying
+  only timing + raw payloads. Converts to a sequence of opaque ATIF system
+  steps (each ``ScopeEnd`` becomes one system step).
 
-- **EXMP-02 — tier-2 with error recovery**: Same shape as EXMP-01 but the tool
-  fails (``status: "error"`` + ``ErrorInfo``) and the parent agent catches it
-  and reports ``status: "ok"`` with a graceful failure message. Demonstrates
-  cascading-status semantics from spec §5.2-5.3.
+- **EXMP-02 — tier-2 semantic-tagged**: Same calculator workflow as EXMP-01 but
+  with every scope classified (``scope_type: "agent"/"llm"/"tool"``) and
+  ``profile`` populated (``profile.model_name`` for llm events,
+  ``profile.tool_call_id`` for tool events). ``schema`` remains null — no
+  tier-3 decoding. Converts to a 5-step rich ATIF trajectory (user → agent →
+  system → user → agent).
 
-- **EXMP-03 — tier-3 schema-annotated**: Same calculator workflow as EXMP-01,
+- **EXMP-03 — tier-3 schema-annotated**: Same calculator workflow as EXMP-02
   but the producer declares a schema (``openai/chat-completions.v1``) on each
   LLM event and attaches structured ``annotated_request`` /
   ``annotated_response`` payloads. The StreamHeader declares the schema in its
   registry (priority-2 fallback for any consumer that doesn't have it locally).
 
+- **EXMP-03b — tier-2 with error recovery**: A web-search tool times out
+  (``status: "error"`` + ``ErrorInfo``); the parent agent catches the failure
+  and reports ``status: "ok"`` with a graceful message. Demonstrates
+  cascading-status semantics from spec §5.2-5.3. Uses tier-2 shape — no
+  schema layer.
+
 Usage:
     python generate_examples.py [--output-dir DIR]
 
 See ATOF spec §1.1 (three enrichment tiers), §3 (event kinds), §5 (status),
-and ``atof-schema-profiles.md`` §6 (schema resolution protocol).
+and ``atof-schema-profiles.md`` §6.1 (schema resolution protocol).
 """
 
 from __future__ import annotations
@@ -49,16 +60,125 @@ OUTPUT_DIR = Path(__file__).parent / "output"
 
 
 def _ts(scenario: int, second: int) -> str:
-    """RFC 3339 timestamp helper — '2026-01-0{scenario}T00:00:0{second}Z'."""
-    return f"2026-01-0{scenario}T00:00:{second:02d}Z"
+    """RFC 3339 timestamp helper. Maps scenario index to a deterministic day
+    in January 2026 so each example's events are sorted and diff-able.
+    """
+    return f"2026-01-{scenario:02d}T00:00:{second:02d}Z"
 
 
 # ---------------------------------------------------------------------------
-# EXMP-01: Simple Tool Call — tier-2 semantic-tagged (no schema)
+# EXMP-01: Raw pass-through — tier-1 (all scopes opaque / scope_type=unknown)
 # ---------------------------------------------------------------------------
 
 
 def generate_exmp01() -> list[Event]:
+    """A calculator-shaped workflow where the producer can't classify any
+    scope. Every scope carries ``scope_type: "unknown"``, ``profile: None``,
+    ``schema: None``, and opaque raw JSON in ``input`` / ``output``. Eight
+    events total (4 ScopeStart/ScopeEnd pairs).
+
+    No ``StreamHeader`` is emitted — tier-1 producers have nothing to declare
+    and the header is optional per spec §3.4. Consumers that see no leading
+    header immediately know there is no stream-level schema registry; the
+    4-priority resolution chain falls straight through to priority-4 (opaque).
+
+    Demonstrates the tier-1 floor: a valid ATOF stream capturing only timing +
+    raw payloads. Converts to a 4-step ATIF trajectory of opaque system steps
+    via the reference converter's generic ScopeEnd fall-through
+    (see README → Conversion reference).
+    """
+    events: list[Event] = [
+        # Outer wrapper scope — opaque, no semantic class
+        ScopeStartEvent(
+            uuid="root-001",
+            parent_uuid=None,
+            timestamp=_ts(1, 0),
+            name="opaque_workflow",
+            attributes=[],
+            scope_type="unknown",
+            input={"raw_query": "What is 3 + 4?"},
+        ),
+        # Inner callback 1 — opaque
+        ScopeStartEvent(
+            uuid="inner-001",
+            parent_uuid="root-001",
+            timestamp=_ts(1, 1),
+            name="provider_callback_1",
+            attributes=[],
+            scope_type="unknown",
+            input={"raw_payload": "<provider request 1>"},
+        ),
+        ScopeEndEvent(
+            uuid="inner-001",
+            parent_uuid="root-001",
+            timestamp=_ts(1, 2),
+            name="provider_callback_1",
+            attributes=[],
+            scope_type="unknown",
+            output={"raw_payload": "<provider response 1: tool invocation>"},
+            status="ok",
+        ),
+        # Inner callback 2 — opaque
+        ScopeStartEvent(
+            uuid="inner-002",
+            parent_uuid="root-001",
+            timestamp=_ts(1, 3),
+            name="provider_callback_2",
+            attributes=[],
+            scope_type="unknown",
+            input={"raw_payload": "<provider request 2>"},
+        ),
+        ScopeEndEvent(
+            uuid="inner-002",
+            parent_uuid="root-001",
+            timestamp=_ts(1, 4),
+            name="provider_callback_2",
+            attributes=[],
+            scope_type="unknown",
+            output={"raw_payload": "<provider response 2: tool result>"},
+            status="ok",
+        ),
+        # Inner callback 3 — opaque
+        ScopeStartEvent(
+            uuid="inner-003",
+            parent_uuid="root-001",
+            timestamp=_ts(1, 5),
+            name="provider_callback_3",
+            attributes=[],
+            scope_type="unknown",
+            input={"raw_payload": "<provider request 3>"},
+        ),
+        ScopeEndEvent(
+            uuid="inner-003",
+            parent_uuid="root-001",
+            timestamp=_ts(1, 6),
+            name="provider_callback_3",
+            attributes=[],
+            scope_type="unknown",
+            output={"raw_payload": "<provider response 3: final answer>"},
+            status="ok",
+        ),
+        # Outer wrapper ends
+        ScopeEndEvent(
+            uuid="root-001",
+            parent_uuid=None,
+            timestamp=_ts(1, 7),
+            name="opaque_workflow",
+            attributes=[],
+            scope_type="unknown",
+            output={"raw_result": "3 + 4 = 7"},
+            status="ok",
+        ),
+    ]
+    return events
+
+
+# ---------------------------------------------------------------------------
+# EXMP-02: Simple Tool Call — tier-2 semantic-tagged (no schema)
+# ---------------------------------------------------------------------------
+
+
+def generate_exmp02() -> list[Event]:
     """A single calculator tool call. Eight events plus a StreamHeader.
 
     Workflow: agent → llm (decides to call calculator__add) → tool runs →
@@ -66,16 +186,16 @@ def generate_exmp01() -> list[Event]:
     """
     events: list[Event] = [
         StreamHeaderEvent(
-            uuid="hdr-001",
+            uuid="hdr-002",
             parent_uuid=None,
-            timestamp=_ts(1, 0),
-            name="exmp01_header",
+            timestamp=_ts(2, 0),
+            name="exmp02_header",
             schemas={},  # tier-2: no schemas declared
         ),
         ScopeStartEvent(
             uuid="agent-001",
             parent_uuid=None,
-            timestamp=_ts(1, 0),
+            timestamp=_ts(2, 0),
             name="calculator_agent",
             attributes=[],
             scope_type="agent",
@@ -84,7 +204,7 @@ def generate_exmp01() -> list[Event]:
         ScopeStartEvent(
             uuid="llm-001",
             parent_uuid="agent-001",
-            timestamp=_ts(1, 1),
+            timestamp=_ts(2, 1),
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
@@ -94,7 +214,7 @@ def generate_exmp01() -> list[Event]:
         ScopeEndEvent(
             uuid="llm-001",
             parent_uuid="agent-001",
-            timestamp=_ts(1, 2),
+            timestamp=_ts(2, 2),
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
@@ -110,7 +230,7 @@ def generate_exmp01() -> list[Event]:
         ScopeStartEvent(
             uuid="tool-001",
             parent_uuid="agent-001",
-            timestamp=_ts(1, 3),
+            timestamp=_ts(2, 3),
             name="calculator__add",
             attributes=[],
             scope_type="tool",
@@ -120,7 +240,7 @@ def generate_exmp01() -> list[Event]:
         ScopeEndEvent(
             uuid="tool-001",
             parent_uuid="agent-001",
-            timestamp=_ts(1, 4),
+            timestamp=_ts(2, 4),
             name="calculator__add",
             attributes=[],
             scope_type="tool",
@@ -131,7 +251,7 @@ def generate_exmp01() -> list[Event]:
         ScopeStartEvent(
             uuid="llm-002",
             parent_uuid="agent-001",
-            timestamp=_ts(1, 5),
+            timestamp=_ts(2, 5),
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
@@ -147,7 +267,7 @@ def generate_exmp01() -> list[Event]:
         ScopeEndEvent(
             uuid="llm-002",
             parent_uuid="agent-001",
-            timestamp=_ts(1, 6),
+            timestamp=_ts(2, 6),
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
@@ -158,7 +278,7 @@ def generate_exmp01() -> list[Event]:
         ScopeEndEvent(
             uuid="agent-001",
             parent_uuid=None,
-            timestamp=_ts(1, 7),
+            timestamp=_ts(2, 7),
             name="calculator_agent",
             attributes=[],
             scope_type="agent",
@@ -170,11 +290,11 @@ def generate_exmp01() -> list[Event]:
 
 
 # ---------------------------------------------------------------------------
-# EXMP-02: Tool Error with Parent Recovery — tier-2
+# EXMP-03b: Tool Error with Parent Recovery — tier-2 (variant of EXMP-03)
 # ---------------------------------------------------------------------------
 
 
-def generate_exmp02() -> list[Event]:
+def generate_exmp03b() -> list[Event]:
     """A web-search tool times out; the parent agent catches and reports OK.
 
     Demonstrates spec §5.2-5.3: each scope reports its own terminal status;
@@ -182,16 +302,16 @@ def generate_exmp02() -> list[Event]:
     """
     events: list[Event] = [
         StreamHeaderEvent(
-            uuid="hdr-002",
+            uuid="hdr-003b",
             parent_uuid=None,
-            timestamp=_ts(2, 0),
-            name="exmp02_header",
+            timestamp=_ts(4, 0),
+            name="exmp03b_header",
             schemas={},
         ),
         ScopeStartEvent(
             uuid="agent-002",
             parent_uuid=None,
-            timestamp=_ts(2, 0),
+            timestamp=_ts(4, 0),
             name="search_agent",
             attributes=[],
             scope_type="agent",
@@ -200,7 +320,7 @@ def generate_exmp02() -> list[Event]:
         ScopeStartEvent(
             uuid="llm-003",
             parent_uuid="agent-002",
-            timestamp=_ts(2, 1),
+            timestamp=_ts(4, 1),
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
@@ -210,7 +330,7 @@ def generate_exmp02() -> list[Event]:
         ScopeEndEvent(
             uuid="llm-003",
             parent_uuid="agent-002",
-            timestamp=_ts(2, 2),
+            timestamp=_ts(4, 2),
             name="gpt-4.1",
             attributes=[],
             scope_type="llm",
@@ -226,7 +346,7 @@ def generate_exmp02() -> list[Event]:
         ScopeStartEvent(
             uuid="tool-002",
             parent_uuid="agent-002",
-            timestamp=_ts(2, 3),
+            timestamp=_ts(4, 3),
             name="web_search",
             attributes=[],
             scope_type="tool",
@@ -237,7 +357,7 @@ def generate_exmp02() -> list[Event]:
         ScopeEndEvent(
             uuid="tool-002",
             parent_uuid="agent-002",
-            timestamp=_ts(2, 8),
+            timestamp=_ts(4, 8),
             name="web_search",
             attributes=[],
             scope_type="tool",
@@ -250,7 +370,7 @@ def generate_exmp02() -> list[Event]:
         ScopeEndEvent(
             uuid="agent-002",
             parent_uuid=None,
-            timestamp=_ts(2, 10),
+            timestamp=_ts(4, 10),
             name="search_agent",
             attributes=[],
             scope_type="agent",
@@ -262,7 +382,7 @@ def generate_exmp02() -> list[Event]:
 
 
 # ---------------------------------------------------------------------------
-# EXMP-03: Tier-3 Schema-Annotated — same calculator workflow as EXMP-01
+# EXMP-03: Tier-3 Schema-Annotated — same calculator workflow as EXMP-02
 # ---------------------------------------------------------------------------
 
 
@@ -283,7 +403,8 @@ def _annotated_request_calc_q1() -> dict:
     return {
         "model": "gpt-4.1",
         "messages": [{"role": "user", "content": "What is 3 + 4?"}],
-        "params": {"temperature": 0.7, "max_tokens": 1024},
+        "temperature": 0.7,
+        "max_tokens": 1024,
         "tools": [
             {
                 "type": "function",
@@ -343,7 +464,8 @@ def _annotated_request_calc_q2() -> dict:
             },
             {"role": "tool", "tool_call_id": "call_abc", "content": "7"},
         ],
-        "params": {"temperature": 0.7, "max_tokens": 1024},
+        "temperature": 0.7,
+        "max_tokens": 1024,
     }
 
 
@@ -364,7 +486,7 @@ def _annotated_response_calc_q2() -> dict:
 
 
 def generate_exmp03() -> list[Event]:
-    """EXMP-01 workflow + tier-3 schema annotations on every LLM event.
+    """EXMP-02 workflow + tier-3 schema annotations on every LLM event.
 
     StreamHeader declares ``openai/chat-completions.v1`` with an inline
     ``$schema`` body — consumers can validate without bundling the schema
@@ -490,9 +612,10 @@ def main() -> None:
     args = parser.parse_args()
 
     scenarios = [
-        ("exmp01_atof.jsonl", "tier-2 semantic-tagged", generate_exmp01),
-        ("exmp02_atof.jsonl", "tier-2 with error recovery", generate_exmp02),
+        ("exmp01_atof.jsonl", "tier-1 raw pass-through", generate_exmp01),
+        ("exmp02_atof.jsonl", "tier-2 semantic-tagged", generate_exmp02),
         ("exmp03_atof.jsonl", "tier-3 schema-annotated", generate_exmp03),
+        ("exmp03b_atof.jsonl", "tier-2 with error recovery", generate_exmp03b),
     ]
 
     for filename, label, generator in scenarios:

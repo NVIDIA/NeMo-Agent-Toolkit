@@ -2,10 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Convert ATOF v0.1 JSONL examples to ATIF trajectories.
 
-Reads each example JSONL file produced by ``generate_examples.py`` (the three
-three-tier demonstration scenarios: EXMP-01 tier-2 basic, EXMP-02 tier-2 with
-error recovery, EXMP-03 tier-3 schema-annotated) and writes the resulting ATIF
-trajectory as formatted JSON.
+Reads each example JSONL file produced by ``generate_examples.py`` (EXMP-01
+tier-1, EXMP-02 tier-2, EXMP-03 tier-3, plus the EXMP-03b tier-2 error-recovery
+variant) and writes the resulting ATIF trajectory as formatted JSON.
 
 Uses ``nat.atof.scripts.atof_to_atif_converter.convert_file`` — the v0.1
 converter dispatches on ``(kind, scope_type)`` and reads scope-type-specific
@@ -32,6 +31,7 @@ EXAMPLES = [
     "exmp01_atof.jsonl",
     "exmp02_atof.jsonl",
     "exmp03_atof.jsonl",
+    "exmp03b_atof.jsonl",
 ]
 
 

@@ -46,8 +46,8 @@ from pydantic import computed_field
 from pydantic import field_validator
 from pydantic import model_validator
 
-from nat.atof.annotations import AnnotatedLLMRequest
-from nat.atof.annotations import AnnotatedLLMResponse
+from nat.atof.annotations import Request as AnnotatedRequest
+from nat.atof.annotations import Response as AnnotatedResponse
 from nat.atof.flags import Flags  # noqa: F401  (re-exported for convenience)
 
 # ---------------------------------------------------------------------------
@@ -230,9 +230,12 @@ class ScopeStartEvent(_ScopeEventBase):
 
     kind: Literal["ScopeStart"] = "ScopeStart"
     input: Any | None = Field(default=None, description="Raw input payload (post-guardrail); opaque to ATOF")
-    annotated_request: AnnotatedLLMRequest | None = Field(
+    annotated_request: AnnotatedRequest | None = Field(
         default=None,
-        description="Structured, decoded request (shape declared by ``schema``; see atof-schema-profiles.md)",
+        description=(
+            "Structured, decoded request. Shape is declared by ``schema``, not by ATOF — "
+            "the model is a permissive pass-through container (see atof-schema-profiles.md)."
+        ),
     )
 
 
@@ -244,9 +247,12 @@ class ScopeEndEvent(_ScopeEventBase):
 
     kind: Literal["ScopeEnd"] = "ScopeEnd"
     output: Any | None = Field(default=None, description="Raw output payload (post-guardrail); opaque to ATOF")
-    annotated_response: AnnotatedLLMResponse | None = Field(
+    annotated_response: AnnotatedResponse | None = Field(
         default=None,
-        description="Structured, decoded response (shape declared by ``schema``; see atof-schema-profiles.md)",
+        description=(
+            "Structured, decoded response. Shape is declared by ``schema``, not by ATOF — "
+            "the model is a permissive pass-through container (see atof-schema-profiles.md)."
+        ),
     )
     status: Literal["ok", "error", "cancelled"] = Field(
         description="Terminal outcome of the scope (spec §5.1)",

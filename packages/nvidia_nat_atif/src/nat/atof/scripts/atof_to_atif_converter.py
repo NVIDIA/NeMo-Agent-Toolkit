@@ -13,7 +13,7 @@ needed.
 
 See ``atof-event-format.md`` §3 (event kinds), §4 (scope_type vocabulary),
 §5 (status semantics), §6 (stream semantics) and the companion
-``atof-to-atif-converter.md`` for the normative mapping.
+``examples/atof_to_atif/README.md`` for the normative mapping.
 """
 
 from __future__ import annotations
@@ -152,7 +152,7 @@ def _tool_call_order_key(sort_id: str, order_list: list[str]) -> int:
 def _events_to_step_dicts(events: list[Event]) -> list[dict]:
     """Convert typed ATOF events to step dicts using the accumulator pattern.
 
-    Dispatch (spec §3 + atof-to-atif-converter.md §3):
+    Dispatch (spec §3 + examples/atof_to_atif/README.md Conversion reference):
     - ScopeStart (scope_type=='llm')  → user step (messages from input)
     - ScopeEnd   (scope_type=='llm')  → agent step (tool_calls from output)
     - ScopeEnd   (scope_type=='tool') → buffered observation, flushed on next LLM turn
@@ -315,6 +315,39 @@ def _events_to_step_dicts(events: list[Event]) -> list[dict]:
                 }
             )
 
+        elif isinstance(event, ScopeEndEvent) and event.scope_type not in ("llm", "tool", "agent"):
+            # Opaque / generic scope end: emit a system step with the raw output
+            # as the message. Covers tier-1 ("unknown") plus v0.1 scope types the
+            # converter does not have specialised handling for ("function",
+            # "retriever", "embedder", "reranker", "guardrail", "evaluator",
+            # "custom"). "agent" scopes continue to be skipped here — they only
+            # contribute to Trajectory.agent.name via convert() below.
+            flush_observations()
+            finalize_agent_extra()
+
+            output = event.output
+            if isinstance(output, dict):
+                message = json.dumps(output, separators=(",", ":"))
+            elif isinstance(output, str):
+                message = output
+            elif output is not None:
+                message = str(output)
+            else:
+                message = ""
+
+            ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
+            start_micros = start_ts_map.get(event.uuid)
+            invocation = _build_invocation_info(start_micros, event.ts_micros, event.uuid)
+
+            step_dicts.append(
+                {
+                    "source": "system",
+                    "message": message,
+                    "timestamp": event.timestamp,
+                    "extra": {"ancestry": ancestry, "invocation": invocation},
+                }
+            )
+
         else:
             logger.debug(
                 "Skipping %s (scope_type=%s) event: %s",
@@ -343,9 +376,11 @@ def convert(events: list[Event]) -> Trajectory:
     """Convert a list of ATOF events to an ATIF Trajectory."""
     step_dicts = _events_to_step_dicts(events)
 
-    # Extract agent info from events. scope_type is a canonical closed enum
-    # (spec §4); dispatch on the string literal.
-    agent_name = "unknown"
+    # Extract agent info from events. Prefer an explicit `scope_type == "agent"`
+    # ScopeStart (tier-2+). For streams that don't classify an agent scope
+    # (tier-1 opaque pass-through), fall back to the outermost root ScopeStart's
+    # name. Final fallback is the literal "unknown".
+    agent_name: str | None = None
     model_name: str | None = None
     session_id = "atof-session"
 
@@ -353,6 +388,15 @@ def convert(events: list[Event]) -> Trajectory:
         if isinstance(event, ScopeStartEvent) and event.scope_type == "agent":
             agent_name = event.name
             break
+
+    if agent_name is None:
+        for event in events:
+            if isinstance(event, ScopeStartEvent) and event.parent_uuid is None:
+                agent_name = event.name
+                break
+
+    if agent_name is None:
+        agent_name = "unknown"
 
     for event in events:
         if isinstance(event, ScopeEndEvent) and event.scope_type == "llm":
