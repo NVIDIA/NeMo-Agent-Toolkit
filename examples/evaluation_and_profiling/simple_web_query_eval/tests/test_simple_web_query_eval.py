@@ -77,7 +77,7 @@ def validate_trajectory_accuracy(trajectory_output_file: Path):
 
 @pytest.mark.integration
 @pytest.mark.usefixtures("nvidia_api_key")
-async def test_eval():
+async def test_eval(tmp_path: Path, root_repo_dir: Path):
     """
     1. nat-eval writes the workflow output to workflow_output.json
     2. nat-eval creates a file with scores for each evaluation metric.
@@ -85,16 +85,36 @@ async def test_eval():
        a. the rag accuracy metric
        b. the trajectory score (if present)
     """
+    import yaml
+
     import nat_simple_web_query_eval
 
     # Get config dynamically
     config_file: Path = locate_example_config(nat_simple_web_query_eval, "eval_config_llama33.yml")
 
+    # We don't need to run the full evaluation dataset, only a single entry is needed to verify that the workflow is
+    # functioning
+    with config_file.open(encoding="utf-8") as fh:
+        config_data = yaml.safe_load(fh)
+
+    dataset_file = Path(config_data['eval']['general']['dataset']['file_path'])
+    if not dataset_file.is_absolute() and not dataset_file.exists():
+        # When these paths are relative, resolve them against the root repository directory
+        dataset_file = root_repo_dir / dataset_file
+
+    with dataset_file.open(encoding="utf-8") as fh:
+        dataset = json.load(fh)
+
+    dataset_slim_file = tmp_path / 'dataset.json'
+
+    with dataset_slim_file.open(mode="w", encoding="utf-8") as fh:
+        json.dump([dataset[0]], fh)
+
     # Create the configuration object for running the evaluation, single rep using the eval config in eval_config.yml
     # WIP: skip test if eval config is not present
     config = EvaluationRunConfig(
         config_file=config_file,
-        dataset=None,
+        dataset=dataset_slim_file.as_posix(),
         result_json_path="$",
         skip_workflow=False,
         skip_completed_entries=False,

@@ -25,7 +25,7 @@ PIP_REPORTS_DIR="${WORKSPACE_TMP}/pip_reports"
 mkdir -p "${PIP_REPORTS_DIR}"
 
 GIT_TAG=$(get_git_tag)
-rapids-logger "Git Version: ${GIT_TAG}"
+echo "Git Version: ${GIT_TAG}"
 
 create_env
 
@@ -37,12 +37,12 @@ for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
 done
 
 # Build all examples with a pyproject.toml in the first directory below examples
-for NAT_EXAMPLE in ${NAT_EXAMPLES[@]}; do
+for NAT_EXAMPLE in "${NAT_EXAMPLES[@]}"; do
     # places all wheels flat under example
     build_wheel ${NAT_EXAMPLE} "examples"
 done
 
-rapids-logger "Removing built examples wheels"
+echo "Removing built examples wheels"
 rm -rf "${WHEELS_BASE_DIR}/examples"
 
 # Flatten out the wheels into a single directory for upload
@@ -74,12 +74,12 @@ trap create_package_report_tarball EXIT
 for whl in "${MOVED_WHEELS[@]}"; do
 
     for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
-        rapids-logger "Testing wheel: ${whl} with Python ${pyver}"
+        echo "Testing wheel: ${whl} with Python ${pyver}"
         UV_VENV_OUT=$(uv venv -q -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}" 2>&1)
         UV_VENV_RESULT=$?
 
         if [[ ${UV_VENV_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to create uv venv with Python ${pyver} for wheel ${whl}"
+            echo "Error, failed to create uv venv with Python ${pyver} for wheel ${whl}"
             echo "${UV_VENV_OUT}"
             exit ${UV_VENV_RESULT}
         fi
@@ -91,11 +91,11 @@ for whl in "${MOVED_WHEELS[@]}"; do
         INSTALL_RESULT=$?
 
         # Report the packages in the environment regardless of install success
-        rapids-logger "Installed wheel ${whl} with Python ${pyver}, pip install exit code ${INSTALL_RESULT}"
+        echo "Installed wheel ${whl} with Python ${pyver}, pip install exit code ${INSTALL_RESULT}"
         uv pip list --format json > "${PIP_REPORTS_DIR}/$(basename "${whl}" .whl)_py${pyver}_packages.json"
 
         if [[ ${INSTALL_RESULT} -ne 0 ]]; then
-            rapids-logger "Error, failed to install wheel ${whl} with Python ${pyver}"
+            echo "Error, failed to install wheel ${whl} with Python ${pyver}"
             echo "${UV_PIP_OUT}"
             exit ${INSTALL_RESULT}
         fi
@@ -106,9 +106,9 @@ for whl in "${MOVED_WHEELS[@]}"; do
             IMPORT_TEST_RESULT=$?
 
             if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
-                rapids-logger "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
-                rapids-logger "This may indicate missing dependencies, Python version incompatibility, or build issues"
-                rapids-logger "Check if the wheel includes all necessary binary extensions for this Python version"
+                echo "Error, failed to import nat from wheel ${whl} with Python ${pyver}"
+                echo "This may indicate missing dependencies, Python version incompatibility, or build issues"
+                echo "Check if the wheel includes all necessary binary extensions for this Python version"
                 echo "${PYTHON_IMPORT_OUT}"
                 exit ${IMPORT_TEST_RESULT}
             fi
@@ -118,19 +118,19 @@ for whl in "${MOVED_WHEELS[@]}"; do
                 NAT_CMD_EXIT_CODE=$?
 
                 if [[ ${NAT_CMD_EXIT_CODE} -ne 0 ]]; then
-                    rapids-logger "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
+                    echo "Error 'nat --version' command failed exit code ${NAT_CMD_EXIT_CODE} from wheel ${whl} with Python ${pyver}"
                     echo "${REPORTED_VERSION}"
                     exit ${NAT_CMD_EXIT_CODE}
                 fi
             else
-                rapids-logger "Skipping nat CLI test; 'nat' command not installed by wheel ${whl}"
+                echo "Skipping nat CLI test; 'nat' command not installed by wheel ${whl}"
             fi
         else
-            rapids-logger "Skipping nat CLI test for nvidia_nat_app (framework-agnostic package); verifying nat_app import"
+            echo "Skipping nat CLI test for nvidia_nat_app (framework-agnostic package); verifying nat_app import"
             PYTHON_IMPORT_OUT=$(python -c "import nat_app" 2>&1)
             IMPORT_TEST_RESULT=$?
             if [[ ${IMPORT_TEST_RESULT} -ne 0 ]]; then
-                rapids-logger "Error, failed to import nat_app from wheel ${whl} with Python ${pyver}"
+                echo "Error, failed to import nat_app from wheel ${whl} with Python ${pyver}"
                 echo "${PYTHON_IMPORT_OUT}"
                 exit ${IMPORT_TEST_RESULT}
             fi

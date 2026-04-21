@@ -27,12 +27,12 @@ git reset --hard
 
 export PRE_COMMIT_HOME=${CI_PROJECT_DIR}/.cache/pre-commit
 
-rapids-logger "Running checks"
+echo "Running checks"
 ${SCRIPT_DIR}/checks.sh
 
-rapids-logger "Checking copyright headers"
+echo "Checking copyright headers"
 python ${SCRIPT_DIR}/copyright.py --verify-apache-v2
 
 
-rapids-logger "Runing Documentation checks"
+echo "Runing Documentation checks"
 ${SCRIPT_DIR}/documentation_checks.sh

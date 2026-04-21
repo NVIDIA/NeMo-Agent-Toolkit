@@ -1433,7 +1433,7 @@ requires-dist = [
     { name = "pyyaml", specifier = "~=6.0" },
     { name = "rich", specifier = "~=14.0" },
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'async-endpoints'", specifier = "~=2.0" },
-    { name = "starlette", specifier = "~=0.51" },
+    { name = "starlette", specifier = ">=0.51,<2.0" },
     { name = "tabulate", specifier = "~=0.9" },
     { name = "tzlocal", specifier = "~=5.3" },
     { name = "urllib3", specifier = ">=2.6.3,<3.0.0" },

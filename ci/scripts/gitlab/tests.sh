@@ -22,16 +22,16 @@ source ${GITLAB_SCRIPT_DIR}/common.sh
 
 create_env
 
-rapids-logger "Git Version: $(git describe)"
+echo "Git Version: $(git describe)"
 
-rapids-logger "Running tests"
+echo "Running tests"
 set +e
 
 PYTEST_ARGS=""
 REPORT_NAME="${CI_PROJECT_DIR}/pytest_junit_report.xml"
 COV_REPORT_NAME="${CI_PROJECT_DIR}/pytest_coverage_report.xml"
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
-       rapids-logger "Installing jq (needed for notebook tests)"
+       echo "Installing jq (needed for notebook tests)"
        apt update
        apt install --no-install-recommends -y jq
 
@@ -49,11 +49,11 @@ PYTEST_RESULTS=$?
 if [ "${CI_CRON_NIGHTLY}" == "1" ]; then
        install_slack_sdk
 
-       rapids-logger "Reporting test results"
+       echo "Reporting test results"
        ${GITLAB_SCRIPT_DIR}/report_test_results.py ${REPORT_NAME} ${COV_REPORT_NAME}
        REPORT_RESULT=$?
        if [ ${REPORT_RESULT} -ne 0 ]; then
-              rapids-logger "Failed to report test results to Slack"
+              echo "Failed to report test results to Slack"
               exit ${REPORT_RESULT}
        fi
 fi
