@@ -31,6 +31,7 @@ from nat.atif.atif_step_extra import AtifStepExtra
 from nat.atif.content import ContentPart
 from nat.atif.content import ImageSource
 from nat.atif.final_metrics import FinalMetrics
+from nat.atif.function_ancestry import FunctionAncestry
 from nat.atif.metrics import Metrics
 from nat.atif.observation import Observation
 from nat.atif.observation_result import ObservationResult
@@ -72,6 +73,7 @@ __all__ = [
     "Agent",
     "ContentPart",
     "FinalMetrics",
+    "FunctionAncestry",
     "ImageSource",
     "Metrics",
     "Observation",
