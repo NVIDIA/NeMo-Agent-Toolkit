@@ -1,0 +1,13 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64"]
+
+[project]
+name = "jira-mcp"
+version = "0.1.0"
+description = "MCP server exposing Atlassian JIRA Cloud REST API as tools for NAT agents"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.6.0",
+    "aiohttp>=3.9",
+]

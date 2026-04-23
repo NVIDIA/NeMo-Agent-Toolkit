@@ -1,0 +1,13 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64"]
+
+[project]
+name = "transcript-ingest-service"
+version = "0.1.0"
+description = "Prototype Microsoft Graph transcript notification receiver with Azure Blob persistence"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9",
+    "azure-storage-blob>=12.23.0",
+]

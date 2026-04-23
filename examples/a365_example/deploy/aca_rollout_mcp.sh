@@ -8,9 +8,9 @@
 # Prerequisites: az login; value for A365_BEARER_TOKEN (client-credentials JWT for A365 tooling+telemetry).
 #
 # Usage (use separate lines in zsh; avoid inline comments containing AZURE_*):
-#   cd examples/a365_smoke && set -a && source .env && set +a
+#   cd examples/a365_example && set -a && source .env && set +a
 #   export A365_BEARER_TOKEN="$(uv run python scripts/get_a365_token.py)"
-#   cd ../.. && ./examples/a365_smoke/deploy/aca_rollout_mcp.sh
+#   cd ../.. && ./examples/a365_example/deploy/aca_rollout_mcp.sh
 #
 # Or:
 #   ./aca_rollout_mcp.sh '<paste-jwt>'

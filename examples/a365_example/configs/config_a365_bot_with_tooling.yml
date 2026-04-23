@@ -64,6 +64,11 @@ function_groups:
     server:
       transport: streamable-http
       url: "https://github-mcp.blackocean-072fa40d.eastus.azurecontainerapps.io/mcp"
+  transcripts:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "https://transcript-mcp.blackocean-072fa40d.eastus.azurecontainerapps.io/mcp"
 functions:
   current_datetime:
     _type: current_datetime
@@ -79,7 +84,7 @@ llms:
 
 workflow:
   _type: react_agent
-  tool_names: [current_datetime, graph_mail, jira, github]
+  tool_names: [current_datetime, graph_mail, jira, github, transcripts]
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3

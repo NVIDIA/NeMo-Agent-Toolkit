@@ -1,0 +1,41 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Minimal NAT app for Agent 365 smoke test. Install: uv pip install -e .  (from repo root or this dir)
+# Run: nat serve --config_file configs/config_local_telemetry_only.yml  (from this directory)
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+
+[tool.setuptools_scm]
+git_describe_command = "git describe --long --first-parent"
+root = "../.."
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["nat_a365_example*"]
+
+[project]
+name = "nat_a365_example"
+version = "0.1.0"
+description = "Minimal NAT app for Agent 365 smoke test"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "nvidia-nat[test]",
+  "nvidia-nat-a365",
+  "nvidia-nat-langchain",
+  "msal>=1.35.1",
+]
+
+[project.optional-dependencies]
+# Enables config_telemetry_and_tooling.yml (A365 MCP tooling). Install: uv sync --extra mcp
+mcp = ["nvidia-nat-mcp"]
+
+[tool.uv.sources]
+nvidia-nat = { path = "../..", editable = true }
+nvidia-nat-a365 = { path = "../../packages/nvidia_nat_a365", editable = true }
+nvidia-nat-langchain = { path = "../../packages/nvidia_nat_langchain", editable = true }
+nvidia-nat-mcp = { path = "../../packages/nvidia_nat_mcp", editable = true }
