@@ -558,6 +558,80 @@ async def my_function(config: MyFunctionConfig, builder: Builder):
 
 Every function has its own set of converters and are independent of the converters used by other functions. This allows for functions to convert between common types such as `str` -> `dict` or `int` -> `float` without breaking the type safety of other functions.
 
+## Customizing Thought Process Display
+
+Agent responses in the NeMo Agent Toolkit UI include a thought process display that shows a step-by-step view of what the workflow is doing. You can customize what appears in this display at two levels:
+
+* **Function-level customization** - Set a custom label for the entire function using `thought_description` in the configuration
+* **Runtime customization** - Emit custom thoughts from within your function code for fine-grained progress updates
+
+### Function-Level Customization
+
+The simplest way to customize the thought process display is by setting `thought_description` in your function's YAML configuration. Refer to the [Workflow Configuration](../../../build-workflows/workflow-configuration.md#thought-process-description) documentation for details.
+
+### Runtime Customization with Custom Thoughts
+
+For fine-grained control during function execution, you can emit custom thoughts that appear as steps in the thought process display. NeMo Agent Toolkit provides helper functions in {py:mod}`nat.builder.thought` for emitting thoughts:
+
+* {py:func}`~nat.builder.thought.emit_thought` - Emit a complete thought (appears immediately)
+* {py:func}`~nat.builder.thought.emit_thought_start` - Start a streaming thought
+* {py:func}`~nat.builder.thought.emit_thought_chunk` - Update a streaming thought
+* {py:func}`~nat.builder.thought.emit_thought_end` - Complete a streaming thought
+
+#### Emitting Complete Thoughts
+Each call to {py:func}`~nat.builder.thought.emit_thought` in the example below appears as a completed step in the thought process display.
+
+```python
+from nat.builder.context import Context
+from nat.builder.thought import emit_thought
+
+async def process_data(dataset_name: str) -> dict:
+    ctx = Context.get()
+    
+    emit_thought(ctx, f"Loading dataset: {dataset_name}")
+    data = await load_dataset(dataset_name)
+    
+    emit_thought(ctx, "Validating data schema")
+    validate_data(data)
+    
+    emit_thought(ctx, "Applying transformations")
+    result = transform_data(data)
+    
+    emit_thought(ctx, f"Successfully processed {len(result)} records")
+    
+    return {"records_processed": len(result), "status": "complete"}
+```
+
+#### Emitting Streaming Thoughts
+The streaming thought lifecycle consists of three steps:
+1. {py:func}`~nat.builder.thought.emit_thought_start` - Creates the thought and returns a UUID
+2. {py:func}`~nat.builder.thought.emit_thought_chunk` - Updates the thought text (call multiple times)
+3. {py:func}`~nat.builder.thought.emit_thought_end` - Marks the thought as complete
+
+```python
+from nat.builder.thought import emit_thought_start, emit_thought_chunk, emit_thought_end
+
+async def process_batch(items: list[str]) -> dict:
+    ctx = Context.get()
+    
+    thought_id = emit_thought_start(ctx, "Processing batch: 0%")
+    
+    processed = 0
+    total = len(items)
+    
+    for item in items:
+        await process_item(item)
+        processed += 1
+        
+        progress = int((processed / total) * 100)
+        emit_thought_chunk(ctx, thought_id, f"Processing batch: {progress}%")
+    
+    emit_thought_end(ctx, thought_id, f"Batch processing complete: {total} items")
+    
+    return {"items_processed": total}
+```
+
+
 ## Related Documentation
 
 - [Writing Custom Function Groups](./function-groups.md) - Learn how to bundle related functions that can share configuration, resources, and runtime context.

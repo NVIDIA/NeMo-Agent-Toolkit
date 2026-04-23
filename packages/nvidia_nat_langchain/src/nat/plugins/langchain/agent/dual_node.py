@@ -15,6 +15,7 @@
 
 import logging
 from abc import abstractmethod
+from collections.abc import Callable
 
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
@@ -34,7 +35,7 @@ class DualNodeAgent(BaseAgent):
     def __init__(self,
                  llm: BaseChatModel,
                  tools: list[BaseTool],
-                 callbacks: list[AsyncCallbackHandler] | None = None,
+                 callbacks: list[Callable[[], AsyncCallbackHandler]] | None = None,
                  detailed_logs: bool = False,
                  log_response_max_chars: int = 1000):
         super().__init__(llm=llm,
