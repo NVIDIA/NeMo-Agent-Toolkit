@@ -130,13 +130,132 @@ A flush happens at three triggers:
 
 ### Producers that need different mappings
 
-If your runtime emits a `category` not in the specialised list (`llm`/`tool`/`agent`) and you want richer ATIF output than the generic system-step fallback provides, you have three options:
+If your runtime emits payloads the built-in extractors don't recognize — a non-OpenAI LLM shape, a vendor-specific tool-result wrapper, or a custom `mark` convention — you have four options, ordered from cleanest to most invasive:
 
-1. **Wrap a known category** — emit your custom scope as `category == "llm"` or `category == "tool"` and use `attributes` + `data` fields to carry the distinguishing semantics.
-2. **Implement a custom converter** — fork the reference converter's dispatch loop and add your `category` arm.
-3. **Use a `mark` event with structured `data`** — for non-lifecycle observations, a `mark` with non-null `data` produces a `system` step with the data serialized into `message`.
+1. **Register a custom extractor** (recommended). Declare a `data_schema` on your events and plug a matching extractor into `nat.atof.extractors`. No core converter change is required. See [Extending the converter](#extending-the-converter) below.
+2. **Wrap a known category**. Emit your custom scope as `category == "llm"` or `category == "tool"` and use `attributes` + `data` fields to carry the distinguishing semantics.
+3. **Use a `mark` event with structured `data`**. For non-lifecycle observations, a `mark` with non-null `data` produces a `system` step with the data serialized into `message`. Fastest path for one-off events.
+4. **Fork the reference converter**. Only needed when your category needs entirely new ATIF structural rules (new step sources, new observation shapes, and so on).
 
-Option 3 is the fastest path for one-off events. Option 2 is correct when your category has lifecycle semantics (paired start + end).
+Option 1 is the right default. It keeps producer-specific parsing out of the core dispatch and composes cleanly with the JSON Schema validator.
+
+### Extending the converter
+
+The converter maintains two registries that producers plug into, both keyed on the event-level `data_schema = {name, version}` identifier.
+
+| Registry | Purpose | Public API |
+|----------|---------|------------|
+| `SCHEMA_REGISTRY` | JSON Schema validators that run in a pre-pass; raise `DataSchemaViolationError` on mismatch. | `nat.atof.register_schema(name, version, schema)` |
+| `LLM_EXTRACTOR_REGISTRY` / `TOOL_EXTRACTOR_REGISTRY` / `MARK_EXTRACTOR_REGISTRY` | Extractor objects that pull ATIF-relevant content out of `event.data` during conversion. | `nat.atof.register_llm_extractor(name, version, extractor)` (and `register_tool_extractor`, `register_mark_extractor`) |
+
+Built-in defaults:
+
+- `openai/chat-completions@1` ships with both a permissive JSON Schema and the `OpenAiChatCompletionsLlmExtractor`. Events without a `data_schema` fall back to this extractor.
+- `GenericToolResultExtractor` unwraps single-key `{result}` or `{output}` wrappers and JSON-serializes the rest. Used for every `tool` scope unless overridden.
+- `NatRoleMarkExtractor` lifts `mark` events whose payload carries `{"role": "user" | "system" | "agent", "content": ...}` as that-sourced ATIF steps.
+
+#### Step 1: Declare the `data_schema` on every event you emit
+
+The `data_schema` field is optional (spec §2), but declaring it is what activates validation and custom extractor dispatch.
+
+```python
+from nat.atof import ScopeEvent
+
+ScopeEvent(
+    scope_category="end",
+    uuid="llm-001",
+    parent_uuid="root-001",
+    timestamp="2026-01-01T00:00:02Z",
+    name="claude-sonnet",
+    category="llm",
+    category_profile={"model_name": "claude-sonnet"},
+    data={"output_blocks": [{"type": "text", "text": "hello"}]},
+    data_schema={"name": "anthropic/messages", "version": "1"},
+)
+```
+
+#### Step 2: Register a JSON Schema
+
+Register the schema before calling `convert()`. The pre-pass validates every event carrying `data_schema = (name, version)` against the registered schema.
+
+```python
+from nat.atof import register_schema
+
+register_schema(
+    "anthropic/messages",
+    "1",
+    {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "anyOf": [
+            {"required": ["input"]},
+            {"required": ["output_blocks"]},
+        ],
+    },
+)
+```
+
+A validation failure raises `DataSchemaViolationError` with the offending event UUID, the declared schema, the JSON-pointer path to the failure, and the underlying validator message.
+
+Unregistered `data_schema` values log a `WARNING` and skip validation — the converter cannot validate what it doesn't know about.
+
+#### Step 3: Register extractors for the matching schema
+
+Extractors are duck-typed against the protocols in `nat.atof.extractors`:
+
+```python
+from nat.atof import register_llm_extractor
+
+class AnthropicMessagesV1Extractor:
+    def extract_input_messages(self, data):
+        return [
+            {"role": item["role"], "content": "".join(p.get("text", "") for p in item["parts"])}
+            for item in (data or {}).get("input", [])
+        ]
+
+    def extract_output_text(self, data):
+        blocks = (data or {}).get("output_blocks", [])
+        return "".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+
+    def extract_tool_calls(self, data):
+        return []  # Add Anthropic tool-use parsing here when needed.
+
+register_llm_extractor("anthropic/messages", "1", AnthropicMessagesV1Extractor())
+```
+
+`register_tool_extractor` and `register_mark_extractor` work the same way for `tool` scope-ends and `mark` events. The full protocol signatures are in `nat.atof.extractors`:
+
+```python
+class LlmPayloadExtractor(Protocol):
+    def extract_input_messages(self, data) -> list[dict]: ...
+    def extract_output_text(self, data) -> str: ...
+    def extract_tool_calls(self, data) -> list[dict]: ...
+
+class ToolPayloadExtractor(Protocol):
+    def extract_tool_result(self, data) -> str | None: ...
+
+class MarkPayloadExtractor(Protocol):
+    def extract_role_and_content(self, data) -> tuple[str, Any] | None: ...
+```
+
+#### Step 4: Convert
+
+With the schema and extractor registered, the usual `convert()` / `convert_file()` calls handle your producer's payloads end-to-end:
+
+```python
+from nat.atof.scripts.atof_to_atif_converter import convert_file
+
+trajectory = convert_file("my_anthropic_run.jsonl", "my_anthropic_run.atif.json")
+```
+
+#### Fail-fast guarantees
+
+The converter raises on two kinds of producer-conformance failure, in this order:
+
+1. `DataSchemaViolationError` — `event.data` doesn't conform to its declared, registered `data_schema`. Fires in the pre-pass with JSON-pointer context.
+2. `ShapeMismatchError` — the resolved extractor returned nothing usable from a non-empty `event.data`. Fires during dispatch with the observed top-level keys.
+
+Both exceptions carry the offending event's UUID so producers can locate the failing event quickly. Events without a `data_schema` skip validation entirely and still benefit from shape-mismatch detection against the fallback extractor.
 
 ### Known limitations
 
@@ -165,4 +284,9 @@ Both return a Pydantic-validated `nat.atif.trajectory.Trajectory` (the NAT-side 
 
 - [`../../atof-event-format.md`](../../atof-event-format.md) — canonical ATOF v0.1 spec (wire format, categories, event kinds)
 - [`../../src/nat/atof/scripts/atof_to_atif_converter.py`](../../src/nat/atof/scripts/atof_to_atif_converter.py) — reference converter implementation
-- [`../../tests/test_tier1_conversion.py`](../../tests/test_tier1_conversion.py) — unit tests for tier-1 conversion behaviour
+- [`../../src/nat/atof/schemas.py`](../../src/nat/atof/schemas.py) — JSON Schema registry and `register_schema` helper
+- [`../../src/nat/atof/extractors.py`](../../src/nat/atof/extractors.py) — pluggable extractor protocols and registries
+- [`../../tests/test_tier1_conversion.py`](../../tests/test_tier1_conversion.py) — tier-1 opaque-stream tests
+- [`../../tests/test_data_schema_validation.py`](../../tests/test_data_schema_validation.py) — schema registration + validation tests
+- [`../../tests/test_extractors.py`](../../tests/test_extractors.py) — extractor protocols, defaults, and custom-producer integration tests
+- [`../../tests/test_shape_mismatch.py`](../../tests/test_shape_mismatch.py) — `ShapeMismatchError` fail-fast tests

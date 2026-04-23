@@ -77,7 +77,7 @@ Beyond the base envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`, `a
 - `category` — semantic category of the work. Closed enum (see §4). Required on `scope`, optional on `mark`.
 - `category_profile` — category-specific typed fields packaged as a sub-object. Keys vary by `category` — `subtype` for `custom`, `model_name` for `llm`, `tool_call_id` for `tool`, additional keys reserved for future categories (see §4.4). Null for tier-1 opaque events and for categories with no kind-specific fields.
 - `data` — application-defined payload. Opaque to ATOF. On `scope` events, typically carries the scope's input on `scope_category: "start"` and the scope's output on `scope_category: "end"`. Consumers MUST NOT dispatch on `data` contents.
-- `data_schema` — optional identifier `{name: string, version: string}` describing the shape of `data`. Opaque to ATOF core; the producer declares it, and validation of `data` against the named schema is the consumer's responsibility.
+- `data_schema` — optional identifier `{name: string, version: string}` describing the shape of `data`. Opaque to ATOF core; the producer declares it, and validation of `data` against the named schema is the consumer's responsibility. The reference ATOF→ATIF converter provides two registries keyed on this identifier: `nat.atof.schemas` for JSON Schema validators and `nat.atof.extractors` for payload parsers. See [examples/atof_to_atif/README.md](examples/atof_to_atif/README.md#extending-the-converter) for registration guidance.
 - `metadata` — tracing/correlation envelope (`trace_id`, `span_id`, etc.).
 
 ---
