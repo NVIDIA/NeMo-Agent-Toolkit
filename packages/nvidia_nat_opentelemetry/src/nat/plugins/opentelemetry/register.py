@@ -58,13 +58,15 @@ async def langfuse_telemetry_exporter(config: LangfuseTelemetryExporter, builder
     auth_header = base64.b64encode(credentials).decode("utf-8")
     headers = {"Authorization": f"Basic {auth_header}"}
 
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
-                                  headers=headers,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
 
 
 class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="langsmith"):
@@ -76,9 +78,8 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
     )
     api_key: SerializableSecretStr = Field(description="The Langsmith API key",
                                            default_factory=lambda: SerializableSecretStr(""))
-    workspace_id: str = Field(default="",
-                              description="The Langsmith workspace ID. "
-                              "Falls back to LANGSMITH_WORKSPACE_ID env var if not set.")
+    workspace_id: str = Field(
+        default="", description="The Langsmith workspace ID. Falls back to LANGSMITH_WORKSPACE_ID env var if not set.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -94,17 +95,19 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
         raise ValueError("API key is required for langsmith")
 
     headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
-    workspace_id = config.workspace_id or os.environ.get("LANGSMITH_WORKSPACE_ID") or os.environ.get(
-        "LANGCHAIN_WORKSPACE_ID")
+    workspace_id = (config.workspace_id or os.environ.get("LANGSMITH_WORKSPACE_ID")
+                    or os.environ.get("LANGCHAIN_WORKSPACE_ID"))
     if workspace_id:
         headers["X-Tenant-Id"] = workspace_id
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
-                                  headers=headers,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
 
 
 class OtelCollectorTelemetryExporter(BatchConfigMixin,
@@ -135,13 +138,15 @@ async def otel_telemetry_exporter(config: OtelCollectorTelemetryExporter, builde
     # Merge defaults with config, giving precedence to config
     merged_resource_attributes = {**default_resource_attributes, **config.resource_attributes}
 
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
-                                  resource_attributes=merged_resource_attributes,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout)
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        resource_attributes=merged_resource_attributes,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
 
 
 class PatronusTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="patronus"):
@@ -167,21 +172,25 @@ async def patronus_telemetry_exporter(config: PatronusTelemetryExporter, builder
         "x-api-key": api_key,
         "pat-project-name": config.project,
     }
-    yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
-                                  headers=headers,
-                                  batch_size=config.batch_size,
-                                  flush_interval=config.flush_interval,
-                                  max_queue_size=config.max_queue_size,
-                                  drop_on_overflow=config.drop_on_overflow,
-                                  shutdown_timeout=config.shutdown_timeout,
-                                  protocol="grpc")
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+        protocol="grpc",
+    )
 
 
 class GalileoTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="galileo"):
     """A telemetry exporter to transmit traces to externally hosted galileo service."""
 
-    endpoint: str = Field(description="The galileo endpoint to export telemetry traces.",
-                          default="https://app.galileo.ai/api/galileo/otel/traces")
+    endpoint: str = Field(
+        description="The galileo endpoint to export telemetry traces.",
+        default="https://app.galileo.ai/api/galileo/otel/traces",
+    )
     logstream: str = Field(description="The logstream name to group the telemetry traces.")
     api_key: SerializableSecretStr = Field(description="The api key to authenticate with the galileo service.")
 
@@ -201,6 +210,47 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
         headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
+
+
+class WeaveOtelTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="weave_otel"):
+    """A telemetry exporter to transmit traces to Weights & Biases Weave via OTel."""
+
+    endpoint: str = Field(
+        description="The W&B Weave OTel endpoint",
+        default="https://trace.wandb.ai/otel/v1/traces",
+    )
+    api_key: SerializableSecretStr = Field(description="The W&B API key",
+                                           default_factory=lambda: SerializableSecretStr(""))
+    project: str = Field(description="The W&B project name.")
+    entity: str = Field(description="The W&B username or team name.")
+
+
+@register_telemetry_exporter(config_type=WeaveOtelTelemetryExporter)
+async def weave_otel_telemetry_exporter(config: WeaveOtelTelemetryExporter, builder: Builder):
+    """Create a Weave OTel telemetry exporter."""
+
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+
+    api_key = get_secret_value(config.api_key) if config.api_key else os.environ.get("WANDB_API_KEY")
+    if not api_key:
+        raise ValueError("API key is required for Weave (set api_key or WANDB_API_KEY env var)")
+
+    headers = {"wandb-api-key": api_key}
+    resource_attributes = {
+        "wandb.project": config.project,
+        "wandb.entity": config.entity,
+    }
+
+    yield OTLPSpanAdapterExporter(
+        endpoint=config.endpoint,
+        headers=headers,
+        resource_attributes=resource_attributes,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
         max_queue_size=config.max_queue_size,

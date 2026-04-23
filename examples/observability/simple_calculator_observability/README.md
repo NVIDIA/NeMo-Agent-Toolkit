@@ -204,6 +204,22 @@ For simple local development and debugging, you can export traces directly to a 
 
 For detailed Weave setup instructions, refer to the [Fine-grained Tracing with Weave](../../../docs/source/run-workflows/observe/observe-workflow-with-weave.md) guide.
 
+### Weave OTel Integration
+
+Weave also supports an [OTel-based integration](https://weave-docs.wandb.ai/guides/tracking/otel) that sends traces via OpenTelemetry. This approach uses the `opentelemetry` plugin instead of the `weave` plugin, which means it does not require installing `weave` as a dependency.
+
+1. Set your Weights & Biases API key:
+
+    ```bash
+    export WANDB_API_KEY=<your_api_key>
+    ```
+
+2. Run the workflow:
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-weave-otel.yml --input "What's the sum of 7 and 8?"
+    ```
+
 ### AI Safety Monitoring with Patronus
 
 [Patronus](https://patronus.ai/) enables AI safety monitoring and compliance tracking.
@@ -333,6 +349,7 @@ The example includes multiple configuration files for different observability pl
 | `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |
 | `config-weave.yml` | Weave | Workflow-focused tracking |
+| `config-weave-otel.yml` | Weave (OTel) | W&B Weave OTel tracing and monitoring integration |
 | `config-patronus.yml` | Patronus | AI safety and compliance monitoring |
 | `config-catalyst.yml` | Catalyst | RagaAI Catalyst integration |
 | `config-galileo.yml` | Galileo | Galileo integration |
