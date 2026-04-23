@@ -17,13 +17,19 @@ from nat.atof.events import ScopeEvent
 from nat.atof.flags import Flags
 from nat.atof.io import read_jsonl
 from nat.atof.io import write_jsonl
+from nat.atof.schemas import SCHEMA_REGISTRY
+from nat.atof.schemas import lookup_schema
+from nat.atof.schemas import register_schema
 
 __all__ = [
+    "SCHEMA_REGISTRY",
     "Category",
     "Event",
     "Flags",
     "MarkEvent",
     "ScopeEvent",
+    "lookup_schema",
     "read_jsonl",
+    "register_schema",
     "write_jsonl",
 ]

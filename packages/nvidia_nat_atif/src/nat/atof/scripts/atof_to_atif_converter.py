@@ -15,10 +15,14 @@ Output conforms to ATIF v1.7. See the conversion rules in
 referenced inline map to that document.
 
 Producer conformance: the reference extractors assume an OpenAI
-chat-completions shape inside ``event.data``. When a non-empty payload yields
-empty extraction (i.e., content would be silently dropped), the converter
-raises :class:`ShapeMismatchError` with the offending event's UUID,
-declared ``data_schema``, and observed top-level keys.
+chat-completions shape inside ``event.data``. Two fail-fast guardrails
+catch producers that would otherwise silently lose content:
+
+- :class:`DataSchemaViolationError` — when the producer declares a
+  ``data_schema`` registered in :mod:`nat.atof.schemas` and ``event.data``
+  fails JSON-Schema validation against it. Fires in the pre-pass.
+- :class:`ShapeMismatchError` — when ``event.data`` is non-empty but the
+  reference extractors yield nothing usable (payload would drop).
 """
 
 from __future__ import annotations
@@ -27,6 +31,8 @@ import json
 import logging
 from pathlib import Path
 from typing import Any
+
+import jsonschema
 
 from nat.atif.agent import Agent
 from nat.atif.function_ancestry import FunctionAncestry
@@ -37,6 +43,7 @@ from nat.atof.events import Event
 from nat.atof.events import MarkEvent
 from nat.atof.events import ScopeEvent
 from nat.atof.io import read_jsonl
+from nat.atof.schemas import lookup_schema
 
 logger = logging.getLogger(__name__)
 
@@ -81,6 +88,90 @@ class ShapeMismatchError(ValueError):
             "the payload did not match the converter's extraction assumptions. "
             f"data_schema={data_schema}, data_keys={data_keys}"
         )
+
+
+class DataSchemaViolationError(ValueError):
+    """Raised when an event declares a registered ``data_schema`` but its
+    ``data`` fails JSON-Schema validation against it.
+
+    Producers declaring a schema enter a contract: their payload MUST
+    conform. A violation here either reveals a producer bug or signals
+    that the declared schema is wrong. Either way, downstream extraction
+    would likely drop content, so the converter fails fast with actionable
+    context — the offending event UUID, the declared schema identifier,
+    the JSON-pointer path to the validation failure, and the underlying
+    validator message.
+
+    Events whose ``data_schema`` is NOT in the registry skip validation
+    entirely (a ``WARNING`` is logged instead).
+
+    Attributes:
+        uuid: UUID of the offending event.
+        data_schema: The producer-declared ``{name, version}`` identifier.
+        path: JSON-pointer segments to the offending value.
+        message: The underlying ``jsonschema`` validator message.
+    """
+
+    def __init__(
+        self,
+        *,
+        uuid: str,
+        data_schema: dict[str, Any],
+        path: list[Any],
+        message: str,
+    ):
+        self.uuid = uuid
+        self.data_schema = data_schema
+        self.path = path
+        self.message = message
+        super().__init__(
+            f"ATOF event (uuid={uuid}) data violates its declared "
+            f"data_schema {data_schema}: {message} "
+            f"(at {path or '<root>'})"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Schema validation
+# ---------------------------------------------------------------------------
+
+
+def _validate_event_data_schema(event: Event) -> None:
+    """Validate ``event.data`` against its declared, registered ``data_schema``.
+
+    - Events without a ``data_schema`` pass through untouched (the schema
+      field is optional per spec §2).
+    - Events with a ``data_schema`` not in :data:`nat.atof.schemas.SCHEMA_REGISTRY`
+      emit a ``WARNING`` and pass through; producers can register custom
+      schemas via :func:`nat.atof.schemas.register_schema`.
+    - Events with a registered schema raise :class:`DataSchemaViolationError`
+      on validation failure.
+    """
+    ds = event.data_schema
+    if not ds:
+        return
+    name = ds.get("name") if isinstance(ds, dict) else None
+    version = ds.get("version") if isinstance(ds, dict) else None
+    if not isinstance(name, str) or not isinstance(version, str):
+        return
+    schema = lookup_schema(name, version)
+    if schema is None:
+        logger.warning(
+            "ATOF event %s declares unregistered data_schema %s@%s; "
+            "validation skipped. Register the schema via "
+            "nat.atof.schemas.register_schema() to enable validation.",
+            event.uuid, name, version,
+        )
+        return
+    try:
+        jsonschema.validate(instance=event.data, schema=schema)
+    except jsonschema.ValidationError as exc:
+        raise DataSchemaViolationError(
+            uuid=event.uuid,
+            data_schema=ds,
+            path=list(exc.absolute_path),
+            message=exc.message,
+        ) from exc
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -313,6 +404,8 @@ def _events_to_step_dicts(
     e.g. a compaction subagent). Either map MAY be empty.
 
     Raises:
+        DataSchemaViolationError: if an event declares a registered
+            ``data_schema`` and its ``data`` fails validation.
         ShapeMismatchError: if an ``llm`` scope event's non-empty ``data``
             yields no extractable content (would drop payload silently).
     """
@@ -326,6 +419,8 @@ def _events_to_step_dicts(
     start_ts_map: dict[str, int] = {}
     tool_start_args_by_tc_id: dict[str, dict] = {}
     for event in sorted_events:
+        _validate_event_data_schema(event)
+
         if event.uuid and event.name:
             name_map[event.uuid] = event.name
         if _is_scope_start(event):
@@ -734,6 +829,9 @@ def convert(events: list[Event]) -> Trajectory:
     """Convert a list of ATOF events to an ATIF v1.7 Trajectory.
 
     Raises:
+        DataSchemaViolationError: if an event declares a registered
+            ``data_schema`` (see :mod:`nat.atof.schemas`) and its ``data``
+            fails JSON-Schema validation.
         ShapeMismatchError: if an ``llm`` scope event carries non-empty
             ``data`` that the reference extractors cannot parse. Silently
             dropping such a payload would lose producer content, so the
