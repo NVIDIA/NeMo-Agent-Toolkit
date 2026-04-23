@@ -1,5 +1,19 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 """Tier-1 ATOF → ATIF conversion tests.
 
 Verifies that a strict tier-1 ATOF stream (all ``category: "unknown"``)
@@ -140,8 +154,7 @@ def test_tier1_agent_name_falls_back_to_root_scope() -> None:
     trajectory = convert(events)
 
     assert trajectory.agent.name == "calculator_agent", (
-        f"expected root-scope fallback 'calculator_agent', got {trajectory.agent.name!r}"
-    )
+        f"expected root-scope fallback 'calculator_agent', got {trajectory.agent.name!r}")
     # No LLM scope exists → no model_name resolvable.
     assert trajectory.agent.model_name is None
 

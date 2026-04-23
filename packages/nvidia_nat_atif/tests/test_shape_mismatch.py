@@ -1,5 +1,19 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 """ShapeMismatchError tests for the ATOF→ATIF converter.
 
 The reference extractors assume an OpenAI chat-completions shape inside
@@ -18,7 +32,6 @@ import pytest
 from nat.atof import ScopeEvent
 from nat.atof.scripts.atof_to_atif_converter import ShapeMismatchError
 from nat.atof.scripts.atof_to_atif_converter import convert
-
 
 # ---------------------------------------------------------------------------
 # Stream builders
@@ -45,8 +58,12 @@ def _openai_shaped_stream() -> list:
             name="gpt-4.1",
             category="llm",
             category_profile={"model_name": "gpt-4.1"},
-            data={"messages": [{"role": "user", "content": "3 + 4?"}]},
-            data_schema={"name": "openai/chat-completions", "version": "1"},
+            data={"messages": [{
+                "role": "user", "content": "3 + 4?"
+            }]},
+            data_schema={
+                "name": "openai/chat-completions", "version": "1"
+            },
         ),
         ScopeEvent(
             scope_category="end",
@@ -57,7 +74,9 @@ def _openai_shaped_stream() -> list:
             category="llm",
             category_profile={"model_name": "gpt-4.1"},
             data={"content": "The answer is 7."},
-            data_schema={"name": "openai/chat-completions", "version": "1"},
+            data_schema={
+                "name": "openai/chat-completions", "version": "1"
+            },
         ),
         ScopeEvent(
             scope_category="end",
@@ -94,8 +113,14 @@ def _anthropic_input_stream() -> list:
             name="claude",
             category="llm",
             category_profile={"model_name": "claude"},
-            data={"system": "be helpful", "input": [{"role": "user", "parts": []}]},
-            data_schema={"name": "anthropic/messages", "version": "1"},
+            data={
+                "system": "be helpful", "input": [{
+                    "role": "user", "parts": []
+                }]
+            },
+            data_schema={
+                "name": "anthropic/messages", "version": "1"
+            },
         ),
         ScopeEvent(
             scope_category="end",
@@ -142,8 +167,12 @@ def _anthropic_output_stream() -> list:
             name="claude",
             category="llm",
             category_profile={"model_name": "claude"},
-            data={"messages": [{"role": "user", "content": "go"}]},
-            data_schema={"name": "openai/chat-completions", "version": "1"},
+            data={"messages": [{
+                "role": "user", "content": "go"
+            }]},
+            data_schema={
+                "name": "openai/chat-completions", "version": "1"
+            },
         ),
         ScopeEvent(
             scope_category="end",
@@ -153,8 +182,14 @@ def _anthropic_output_stream() -> list:
             name="claude",
             category="llm",
             category_profile={"model_name": "claude"},
-            data={"stop_reason": "end_turn", "output_blocks": [{"type": "text", "text": "done"}]},
-            data_schema={"name": "anthropic/messages", "version": "1"},
+            data={
+                "stop_reason": "end_turn", "output_blocks": [{
+                    "type": "text", "text": "done"
+                }]
+            },
+            data_schema={
+                "name": "anthropic/messages", "version": "1"
+            },
         ),
         ScopeEvent(
             scope_category="end",
@@ -191,7 +226,9 @@ def _tool_calls_only_stream() -> list:
             name="gpt",
             category="llm",
             category_profile={"model_name": "gpt"},
-            data={"messages": [{"role": "user", "content": "3 + 4?"}]},
+            data={"messages": [{
+                "role": "user", "content": "3 + 4?"
+            }]},
         ),
         ScopeEvent(
             scope_category="end",
@@ -202,7 +239,11 @@ def _tool_calls_only_stream() -> list:
             category="llm",
             category_profile={"model_name": "gpt"},
             # No ``content`` key at all; only tool_calls.
-            data={"tool_calls": [{"id": "call_1", "name": "add", "arguments": {"a": 3, "b": 4}}]},
+            data={"tool_calls": [{
+                "id": "call_1", "name": "add", "arguments": {
+                    "a": 3, "b": 4
+                }
+            }]},
         ),
         ScopeEvent(
             scope_category="end",
@@ -282,8 +323,8 @@ def test_tool_calls_only_response_does_not_raise() -> None:
 
 def test_tool_missing_call_id_does_not_raise() -> None:
     """Tool events are not subject to shape-mismatch detection — their
-    ``data`` is handled by the generic ``_serialize_tool_result`` path,
-    which never returns empty on a non-empty dict."""
+    ``data`` is handled by the generic tool-result extractor, which never
+    returns empty on a non-empty dict."""
     trajectory = convert(_tool_missing_call_id_stream())
     assert trajectory.steps
 
@@ -330,7 +371,6 @@ def test_error_message_mentions_uuid_and_keys() -> None:
 # ---------------------------------------------------------------------------
 # Script entry point
 # ---------------------------------------------------------------------------
-
 
 if __name__ == "__main__":
     import sys

@@ -1,5 +1,19 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 """Tests for ``data_schema`` validation in the ATOF→ATIF converter.
 
 When an event declares a ``data_schema`` registered in
@@ -24,7 +38,6 @@ from nat.atof.schemas import SCHEMA_REGISTRY
 from nat.atof.schemas import register_schema
 from nat.atof.scripts.atof_to_atif_converter import DataSchemaViolationError
 from nat.atof.scripts.atof_to_atif_converter import convert
-
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -93,7 +106,9 @@ def _llm_end(*, data: dict, data_schema: dict | None = OPENAI_DS) -> ScopeEvent:
 def test_openai_input_messages_passes_validation() -> None:
     events = [
         _root_agent_start(),
-        _llm_start(data={"messages": [{"role": "user", "content": "hi"}]}),
+        _llm_start(data={"messages": [{
+            "role": "user", "content": "hi"
+        }]}),
         _llm_end(data={"content": "hello"}),
         _root_agent_end(),
     ]
@@ -103,10 +118,14 @@ def test_openai_input_messages_passes_validation() -> None:
 
 def test_openai_nested_content_messages_passes() -> None:
     """Input payload with ``content.messages`` nesting (the alternative shape
-    ``_unwrap_llm_messages`` accepts)."""
+    the OpenAI chat-completions extractor accepts)."""
     events = [
         _root_agent_start(),
-        _llm_start(data={"content": {"messages": [{"role": "user", "content": "hi"}]}}),
+        _llm_start(data={"content": {
+            "messages": [{
+                "role": "user", "content": "hi"
+            }]
+        }}),
         _llm_end(data={"content": "hello"}),
         _root_agent_end(),
     ]
@@ -118,10 +137,14 @@ def test_openai_tool_calls_only_output_passes() -> None:
     valid OpenAI response."""
     events = [
         _root_agent_start(),
-        _llm_start(data={"messages": [{"role": "user", "content": "add 3 and 4"}]}),
-        _llm_end(
-            data={"tool_calls": [{"id": "c1", "name": "add", "arguments": {"a": 3, "b": 4}}]},
-        ),
+        _llm_start(data={"messages": [{
+            "role": "user", "content": "add 3 and 4"
+        }]}),
+        _llm_end(data={"tool_calls": [{
+            "id": "c1", "name": "add", "arguments": {
+                "a": 3, "b": 4
+            }
+        }]}, ),
         _root_agent_end(),
     ]
     convert(events)
@@ -131,10 +154,14 @@ def test_openai_choices_output_passes() -> None:
     """Nested ``choices[0].message`` output shape passes validation."""
     events = [
         _root_agent_start(),
-        _llm_start(data={"messages": [{"role": "user", "content": "hi"}]}),
-        _llm_end(
-            data={"choices": [{"message": {"content": "hello", "role": "assistant"}}]},
-        ),
+        _llm_start(data={"messages": [{
+            "role": "user", "content": "hi"
+        }]}),
+        _llm_end(data={"choices": [{
+            "message": {
+                "content": "hello", "role": "assistant"
+            }
+        }]}, ),
         _root_agent_end(),
     ]
     convert(events)
@@ -151,7 +178,9 @@ def test_missing_data_schema_skips_validation() -> None:
     still dies at the shape-mismatch guardrail, but not at this one."""
     events = [
         _root_agent_start(),
-        _llm_start(data={"messages": [{"role": "user", "content": "hi"}]}, data_schema=None),
+        _llm_start(data={"messages": [{
+            "role": "user", "content": "hi"
+        }]}, data_schema=None),
         _llm_end(data={"content": "hello"}, data_schema=None),
         _root_agent_end(),
     ]
@@ -164,9 +193,7 @@ def test_missing_data_schema_skips_validation() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_unknown_data_schema_logs_warning_and_skips(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_unknown_data_schema_logs_warning_and_skips(caplog: pytest.LogCaptureFixture, ) -> None:
     """If the producer declares a ``data_schema`` we haven't registered,
     validation is skipped with a warning — we cannot validate what we
     don't know about."""
@@ -174,12 +201,18 @@ def test_unknown_data_schema_logs_warning_and_skips(
     events = [
         _root_agent_start(),
         _llm_start(
-            data={"messages": [{"role": "user", "content": "hi"}]},
-            data_schema={"name": "acme/made-up", "version": "99"},
+            data={"messages": [{
+                "role": "user", "content": "hi"
+            }]},
+            data_schema={
+                "name": "acme/made-up", "version": "99"
+            },
         ),
         _llm_end(
             data={"content": "hi"},
-            data_schema={"name": "acme/made-up", "version": "99"},
+            data_schema={
+                "name": "acme/made-up", "version": "99"
+            },
         ),
         _root_agent_end(),
     ]
@@ -216,9 +249,11 @@ def test_anthropic_shaped_payload_declaring_openai_schema_raises() -> None:
     at top level)."""
     events = [
         _root_agent_start(),
-        _llm_start(
-            data={"system": "be helpful", "input": [{"role": "user", "parts": []}]},
-        ),
+        _llm_start(data={
+            "system": "be helpful", "input": [{
+                "role": "user", "parts": []
+            }]
+        }, ),
         _llm_end(data={"content": "hi"}),
         _root_agent_end(),
     ]
@@ -231,9 +266,7 @@ def test_data_schema_violation_error_carries_context() -> None:
     for debugging without re-running the converter."""
     events = [
         _root_agent_start(),
-        _llm_start(
-            data={"foo": "bar"},
-        ),
+        _llm_start(data={"foo": "bar"}, ),
         _llm_end(data={"content": "hi"}),
         _root_agent_end(),
     ]
@@ -271,8 +304,14 @@ def test_register_custom_schema_enables_validation() -> None:
         events = [
             _root_agent_start(),
             _llm_start(
-                data={"messages": [{"role": "user", "content": "hi"}], "myco_field": "x"},
-                data_schema={"name": "test/myco-payload", "version": "1"},
+                data={
+                    "messages": [{
+                        "role": "user", "content": "hi"
+                    }], "myco_field": "x"
+                },
+                data_schema={
+                    "name": "test/myco-payload", "version": "1"
+                },
             ),
             _llm_end(data={"content": "hi"}),
             _root_agent_end(),
@@ -283,8 +322,12 @@ def test_register_custom_schema_enables_validation() -> None:
         bad_events = [
             _root_agent_start(),
             _llm_start(
-                data={"messages": [{"role": "user", "content": "hi"}]},
-                data_schema={"name": "test/myco-payload", "version": "1"},
+                data={"messages": [{
+                    "role": "user", "content": "hi"
+                }]},
+                data_schema={
+                    "name": "test/myco-payload", "version": "1"
+                },
             ),
             _llm_end(data={"content": "hi"}),
             _root_agent_end(),
@@ -307,7 +350,6 @@ def test_register_schema_rejects_invalid_arguments() -> None:
 # ---------------------------------------------------------------------------
 # Script entry point
 # ---------------------------------------------------------------------------
-
 
 if __name__ == "__main__":
     import sys

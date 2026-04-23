@@ -1,5 +1,19 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 """Spec-compliance tests for the ATOF Pydantic models.
 
 Every test pins a specific behavior claimed by ``atof-event-format.md`` so
@@ -19,10 +33,10 @@ Runnable either via pytest or as a standalone script:
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
-from typing import Iterator
 
 from pydantic import TypeAdapter
 from pydantic import ValidationError
@@ -319,9 +333,14 @@ def test_scope_no_deprecated_v0_0_fields() -> None:
     reappear on ScopeEvent.
     """
     removed = {
-        "status", "error", "input", "output",
-        "scope_type", "profile",
-        "annotated_request", "annotated_response",
+        "status",
+        "error",
+        "input",
+        "output",
+        "scope_type",
+        "profile",
+        "annotated_request",
+        "annotated_response",
         "schemas",
     }
     for field in removed:
@@ -331,13 +350,22 @@ def test_scope_no_deprecated_v0_0_fields() -> None:
 def test_scope_has_all_required_v0_1_fields() -> None:
     """Regression guard: every v0.1 ScopeEvent field is present."""
     expected = {
-        "kind", "scope_category", "atof_version", "uuid", "parent_uuid",
-        "timestamp", "name", "attributes", "category", "category_profile",
-        "data", "data_schema", "metadata",
+        "kind",
+        "scope_category",
+        "atof_version",
+        "uuid",
+        "parent_uuid",
+        "timestamp",
+        "name",
+        "attributes",
+        "category",
+        "category_profile",
+        "data",
+        "data_schema",
+        "metadata",
     }
-    assert expected.issubset(set(ScopeEvent.model_fields)), (
-        f"missing fields on ScopeEvent: {expected - set(ScopeEvent.model_fields)}"
-    )
+    assert expected.issubset(set(
+        ScopeEvent.model_fields)), (f"missing fields on ScopeEvent: {expected - set(ScopeEvent.model_fields)}")
 
 
 # ===========================================================================
@@ -355,11 +383,16 @@ def test_mark_does_not_carry_scope_fields() -> None:
     """§3.2: mark does NOT carry scope_category, attributes, or v0.0 fields."""
     forbidden = {
         "scope_category",  # §3.2 explicit
-        "attributes",       # §3.2 explicit
+        "attributes",  # §3.2 explicit
         # v0.0 removed:
-        "status", "error", "input", "output",
-        "scope_type", "profile",
-        "annotated_request", "annotated_response",
+        "status",
+        "error",
+        "input",
+        "output",
+        "scope_type",
+        "profile",
+        "annotated_request",
+        "annotated_response",
         "schemas",
     }
     for field in forbidden:
@@ -387,13 +420,13 @@ def test_mark_category_profile_defaults_to_none() -> None:
 
 def test_mark_preserves_data_schema_and_data() -> None:
     """§3.2 + §2: mark carries data, data_schema, metadata like scope events do."""
-    e = MarkEvent(
-        **_mark_kwargs(
-            data={"session_id": "s1"},
-            data_schema={"name": "myco/session", "version": "1"},
-            metadata={"trace_id": "t-1"},
-        )
-    )
+    e = MarkEvent(**_mark_kwargs(
+        data={"session_id": "s1"},
+        data_schema={
+            "name": "myco/session", "version": "1"
+        },
+        metadata={"trace_id": "t-1"},
+    ))
     assert e.data == {"session_id": "s1"}
     assert e.data_schema == {"name": "myco/session", "version": "1"}
     assert e.metadata == {"trace_id": "t-1"}
@@ -407,8 +440,16 @@ def test_mark_preserves_data_schema_and_data() -> None:
 def test_canonical_categories_all_accepted() -> None:
     """§4: every canonical category value constructs successfully."""
     canonical = (
-        "agent", "function", "llm", "tool", "retriever",
-        "embedder", "reranker", "guardrail", "evaluator", "unknown",
+        "agent",
+        "function",
+        "llm",
+        "tool",
+        "retriever",
+        "embedder",
+        "reranker",
+        "guardrail",
+        "evaluator",
+        "unknown",
     )
     for cat in canonical:
         e = ScopeEvent(**_scope_kwargs(category=cat))
@@ -438,9 +479,7 @@ def test_custom_on_scope_requires_subtype() -> None:
 
 def test_custom_on_scope_with_subtype_succeeds() -> None:
     """§4.2: 'custom' + non-empty subtype constructs successfully."""
-    e = ScopeEvent(
-        **_scope_kwargs(category="custom", category_profile={"subtype": "nvidia.speculative_decode"})
-    )
+    e = ScopeEvent(**_scope_kwargs(category="custom", category_profile={"subtype": "nvidia.speculative_decode"}))
     assert e.category_profile == {"subtype": "nvidia.speculative_decode"}
 
 
@@ -452,9 +491,7 @@ def test_custom_on_mark_requires_subtype() -> None:
 
 def test_custom_on_mark_with_subtype_succeeds() -> None:
     """§4.2: mark with 'custom' + subtype is valid."""
-    e = MarkEvent(
-        **_mark_kwargs(category="custom", category_profile={"subtype": "vendor.custom_checkpoint"})
-    )
+    e = MarkEvent(**_mark_kwargs(category="custom", category_profile={"subtype": "vendor.custom_checkpoint"}))
     assert e.category == "custom"
     assert e.category_profile == {"subtype": "vendor.custom_checkpoint"}
 
@@ -494,12 +531,12 @@ def test_tool_category_profile_carries_tool_call_id() -> None:
 
 def test_category_profile_preserves_extra_keys() -> None:
     """§4.4: unknown profile keys MUST be preserved verbatim."""
-    e = ScopeEvent(
-        **_scope_kwargs(
-            category="llm",
-            category_profile={"model_name": "gpt-4.1", "future_key": "future_value"},
-        )
-    )
+    e = ScopeEvent(**_scope_kwargs(
+        category="llm",
+        category_profile={
+            "model_name": "gpt-4.1", "future_key": "future_value"
+        },
+    ))
     assert e.category_profile["future_key"] == "future_value"
 
 
@@ -583,8 +620,14 @@ def test_wire_round_trip_scope_event_rfc3339() -> None:
         attributes=["remote", "streaming"],
         category="tool",
         category_profile={"tool_call_id": "call_xyz"},
-        data={"a": 1, "nested": {"b": 2}},
-        data_schema={"name": "myco/tool", "version": "1"},
+        data={
+            "a": 1, "nested": {
+                "b": 2
+            }
+        },
+        data_schema={
+            "name": "myco/tool", "version": "1"
+        },
         metadata={"trace_id": "t-rt"},
     )
     with tempfile.TemporaryDirectory() as td:
@@ -594,9 +637,17 @@ def test_wire_round_trip_scope_event_rfc3339() -> None:
     assert len(restored) == 1
     r = restored[0]
     assert isinstance(r, ScopeEvent)
-    for field in ("scope_category", "uuid", "parent_uuid", "timestamp", "name",
-                  "attributes", "category", "category_profile", "data",
-                  "data_schema", "metadata"):
+    for field in ("scope_category",
+                  "uuid",
+                  "parent_uuid",
+                  "timestamp",
+                  "name",
+                  "attributes",
+                  "category",
+                  "category_profile",
+                  "data",
+                  "data_schema",
+                  "metadata"):
         assert getattr(r, field) == getattr(original, field), f"field {field} diverged on round-trip"
 
 
@@ -620,7 +671,9 @@ def test_wire_round_trip_mark_event() -> None:
         category="llm",
         category_profile={"model_name": "gpt-4.1"},
         data={"tokens_used": 42},
-        data_schema={"name": "myco/session_mark", "version": "1"},
+        data_schema={
+            "name": "myco/session_mark", "version": "1"
+        },
         metadata={"trace_id": "t-m"},
     )
     with tempfile.TemporaryDirectory() as td:
@@ -643,16 +696,18 @@ def test_wire_emits_explicit_null_for_optional_none_fields() -> None:
         uuid="u-null",
         timestamp="2026-01-01T00:00:00Z",
         name="test",
-        category="unknown",
-        # parent_uuid, data, data_schema, metadata, category_profile all default None
+        category="unknown",  # parent_uuid, data, data_schema, metadata, category_profile all default None
     )
     with tempfile.TemporaryDirectory() as td:
         path = Path(td) / "nulls.jsonl"
         write_jsonl([event], path)
         content = path.read_text()
     # Explicit nulls in the serialized JSON, not dropped keys
-    for expected in ('"parent_uuid": null', '"data": null', '"data_schema": null',
-                     '"metadata": null', '"category_profile": null'):
+    for expected in ('"parent_uuid": null',
+                     '"data": null',
+                     '"data_schema": null',
+                     '"metadata": null',
+                     '"category_profile": null'):
         assert expected in content, f"expected {expected!r} literally on the wire; got: {content}"
 
 
@@ -682,13 +737,17 @@ def test_wire_preserves_unknown_fields_lossless() -> None:
         "data": None,
         "data_schema": None,
         "metadata": None,
-        "vendor_extension": {"nested": "value"},
+        "vendor_extension": {
+            "nested": "value"
+        },
         "producer_trace_id": "pt-1",
     }
     adapter = TypeAdapter(Event)
     evt = adapter.validate_python(raw)
     assert evt.model_extra == {
-        "vendor_extension": {"nested": "value"},
+        "vendor_extension": {
+            "nested": "value"
+        },
         "producer_trace_id": "pt-1",
     }
     dumped = evt.model_dump(exclude={"ts_micros"}, mode="json", by_alias=True)
@@ -730,7 +789,6 @@ def test_read_jsonl_handles_mixed_timestamp_forms() -> None:
 # ===========================================================================
 # Main runner (standalone mode)
 # ===========================================================================
-
 
 if __name__ == "__main__":
     import sys

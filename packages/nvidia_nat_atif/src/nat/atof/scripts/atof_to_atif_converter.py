@@ -1,5 +1,19 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 """ATOF-to-ATIF converter.
 
 Converts a list of ATOF events (JSON-Lines wire format from agent runtime
@@ -14,15 +28,17 @@ Output conforms to ATIF v1.7. See the conversion rules in
 ``atif-alignment/docs/atof-to-atif-mapping.md``; rule identifiers (R1-R12)
 referenced inline map to that document.
 
-Producer conformance: the reference extractors assume an OpenAI
-chat-completions shape inside ``event.data``. Two fail-fast guardrails
+Producer-specific payload parsing is delegated to pluggable extractors
+(:mod:`nat.atof.extractors`) keyed on the event's declared ``data_schema``.
+Events without a matching registered extractor fall back to built-in
+OpenAI-chat-completions / generic extractors. Two fail-fast guardrails
 catch producers that would otherwise silently lose content:
 
 - :class:`DataSchemaViolationError` — when the producer declares a
   ``data_schema`` registered in :mod:`nat.atof.schemas` and ``event.data``
   fails JSON-Schema validation against it. Fires in the pre-pass.
 - :class:`ShapeMismatchError` — when ``event.data`` is non-empty but the
-  reference extractors yield nothing usable (payload would drop).
+  resolved extractor yields nothing usable (payload would drop).
 """
 
 from __future__ import annotations
@@ -42,11 +58,13 @@ from nat.atif.trajectory import Trajectory
 from nat.atof.events import Event
 from nat.atof.events import MarkEvent
 from nat.atof.events import ScopeEvent
+from nat.atof.extractors import resolve_llm_extractor
+from nat.atof.extractors import resolve_mark_extractor
+from nat.atof.extractors import resolve_tool_extractor
 from nat.atof.io import read_jsonl
 from nat.atof.schemas import lookup_schema
 
 logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # Errors
@@ -56,13 +74,14 @@ logger = logging.getLogger(__name__)
 class ShapeMismatchError(ValueError):
     """Raised when an event's non-empty ``data`` produced empty extraction.
 
-    The reference extractors (``_unwrap_llm_messages``, ``_extract_agent_message``)
-    assume an OpenAI chat-completions shape. When a payload doesn't match,
-    the would-be-emitted content is silently dropped — this exception
-    surfaces that case as a hard failure so callers can either (a) fix the
-    producer to emit the expected shape, (b) declare a matching
-    ``data_schema`` and register a profile-specific extractor, or (c)
-    wrap the call and handle the drop explicitly.
+    The resolved :class:`~nat.atof.extractors.LlmPayloadExtractor` for an
+    event's ``data_schema`` could not pull any usable content out of a
+    non-empty payload. The would-be-emitted content is silently dropped —
+    this exception surfaces that case as a hard failure so callers can
+    either (a) fix the producer to emit the expected shape, (b) declare a
+    matching ``data_schema`` and register a profile-specific extractor
+    via :func:`~nat.atof.extractors.register_llm_extractor`, or (c) wrap
+    the call and handle the drop explicitly.
 
     Attributes:
         kind: ``"llm_input"`` or ``"llm_output"`` — which extraction missed.
@@ -83,11 +102,9 @@ class ShapeMismatchError(ValueError):
         self.uuid = uuid
         self.data_schema = data_schema
         self.data_keys = data_keys
-        super().__init__(
-            f"ATOF→ATIF would drop data on {kind} event (uuid={uuid}): "
-            "the payload did not match the converter's extraction assumptions. "
-            f"data_schema={data_schema}, data_keys={data_keys}"
-        )
+        super().__init__(f"ATOF→ATIF would drop data on {kind} event (uuid={uuid}): "
+                         "the payload did not match the converter's extraction assumptions. "
+                         f"data_schema={data_schema}, data_keys={data_keys}")
 
 
 class DataSchemaViolationError(ValueError):
@@ -124,11 +141,9 @@ class DataSchemaViolationError(ValueError):
         self.data_schema = data_schema
         self.path = path
         self.message = message
-        super().__init__(
-            f"ATOF event (uuid={uuid}) data violates its declared "
-            f"data_schema {data_schema}: {message} "
-            f"(at {path or '<root>'})"
-        )
+        super().__init__(f"ATOF event (uuid={uuid}) data violates its declared "
+                         f"data_schema {data_schema}: {message} "
+                         f"(at {path or '<root>'})")
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +175,9 @@ def _validate_event_data_schema(event: Event) -> None:
             "ATOF event %s declares unregistered data_schema %s@%s; "
             "validation skipped. Register the schema via "
             "nat.atof.schemas.register_schema() to enable validation.",
-            event.uuid, name, version,
+            event.uuid,
+            name,
+            version,
         )
         return
     try:
@@ -172,6 +189,7 @@ def _validate_event_data_schema(event: Event) -> None:
             path=list(exc.absolute_path),
             message=exc.message,
         ) from exc
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -201,121 +219,6 @@ def _build_invocation_info(start_micros: int | None, end_micros: int | None, inv
     if end_micros is not None:
         info["end_timestamp"] = round(end_micros / 1_000_000, 3)
     return info
-
-
-def _extract_tool_calls(llm_data: dict | None) -> list[dict]:
-    """Extract tool call dicts from an LLM scope-end data payload."""
-    if not llm_data:
-        return []
-
-    raw_calls = llm_data.get("tool_calls")
-    if not raw_calls:
-        try:
-            raw_calls = llm_data["choices"][0]["message"].get("tool_calls", [])
-        except (KeyError, IndexError, TypeError):
-            raw_calls = []
-
-    result = []
-    for tc in raw_calls or []:
-        if "function" in tc and isinstance(tc["function"], dict):
-            inner = tc["function"]
-            tool_id = tc["id"]
-            name = inner.get("name", "")
-            args = inner.get("arguments", {})
-        else:
-            tool_id = tc["id"]
-            name = tc.get("name", "")
-            args = tc.get("arguments", {})
-
-        if isinstance(args, str):
-            try:
-                args = json.loads(args)
-            except json.JSONDecodeError:
-                args = {"raw": args}
-
-        result.append(
-            {
-                "tool_call_id": tool_id,
-                "function_name": name,
-                "arguments": args,
-            }
-        )
-    return result
-
-
-def _unwrap_llm_messages(data: dict | None) -> list[dict]:
-    """Extract messages from an LLM scope-start data payload.
-
-    Returns an empty list when ``data`` is empty or doesn't match the
-    OpenAI chat-completions shape. The caller in the dispatch loop
-    distinguishes "legitimately empty" from "shape mismatch" and raises
-    :class:`ShapeMismatchError` for the latter.
-    """
-    if not data:
-        return []
-    content = data.get("content")
-    if isinstance(content, dict):
-        messages = content.get("messages", [])
-        if messages:
-            return messages
-    messages = data.get("messages", [])
-    if messages:
-        return messages
-    return []
-
-
-def _extract_initial_user_message(data: dict | None) -> str | None:
-    """Return the first role=user message content from an LLM-start payload (R2)."""
-    messages = _unwrap_llm_messages(data)
-    for m in messages:
-        if m.get("role") == "user":
-            content = m.get("content")
-            if isinstance(content, str):
-                return content
-            if isinstance(content, list):
-                return content  # type: ignore[return-value]
-            break
-    return None
-
-
-def _extract_agent_message(data: dict | None) -> str:
-    """Return the assistant-turn content string from an LLM-end payload (R4).
-
-    Returns ``""`` when no content path matches. The caller in the dispatch
-    loop combines this with the tool-call extraction result and raises
-    :class:`ShapeMismatchError` only when BOTH are empty on non-empty data
-    (a payload with only tool_calls or only content is legitimate).
-    """
-    if not isinstance(data, dict):
-        return ""
-    content = data.get("content")
-    if isinstance(content, str):
-        return content
-    try:
-        choice_content = data["choices"][0]["message"].get("content", "")
-        if isinstance(choice_content, str):
-            return choice_content
-    except (KeyError, IndexError, TypeError):
-        pass
-    return ""
-
-
-def _serialize_tool_result(data: Any) -> str | None:
-    """Serialize a tool scope-end data payload (R5 — single-key result unwrap)."""
-    if data is None:
-        return None
-    if isinstance(data, dict):
-        if len(data) == 1:
-            key = next(iter(data))
-            if key in ("result", "output"):
-                val = data[key]
-                if isinstance(val, (str, int, float, bool)):
-                    return str(val)
-                return json.dumps(val, separators=(",", ":"))
-        return json.dumps(data, separators=(",", ":"))
-    if isinstance(data, str):
-        return data
-    return str(data)
 
 
 def _is_scope_start(event: Event) -> bool:
@@ -353,20 +256,13 @@ def _find_subagent_roots(events: list[Event], category_map: dict[str, str]) -> l
     """
     roots: list[ScopeEvent] = []
     for e in events:
-        if (
-            _is_scope_start(e)
-            and isinstance(e, ScopeEvent)
-            and e.category == "agent"
-            and e.parent_uuid is not None
-            and category_map.get(e.parent_uuid) in ("tool", "context")
-        ):
+        if (_is_scope_start(e) and isinstance(e, ScopeEvent) and e.category == "agent" and e.parent_uuid is not None
+                and category_map.get(e.parent_uuid) in ("tool", "context")):
             roots.append(e)
     return roots
 
 
-def _collect_descendants(
-    root_uuid: str, events: list[Event], parent_map: dict[str, str | None]
-) -> list[Event]:
+def _collect_descendants(root_uuid: str, events: list[Event], parent_map: dict[str, str | None]) -> list[Event]:
     """Events whose ancestry chain reaches root_uuid (inclusive of events with uuid == root_uuid).
 
     ``events`` preserves the caller's order; the returned list preserves it too.
@@ -430,9 +326,7 @@ def _events_to_step_dicts(
             if isinstance(event, ScopeEvent) and event.category == "tool":
                 tc_id = (event.category_profile or {}).get("tool_call_id")
                 if tc_id:
-                    tool_start_args_by_tc_id[tc_id] = (
-                        event.data if isinstance(event.data, dict) else {}
-                    )
+                    tool_start_args_by_tc_id[tc_id] = (event.data if isinstance(event.data, dict) else {})
 
     # Streaming state
     step_dicts: list[dict] = []
@@ -482,16 +376,15 @@ def _events_to_step_dicts(
                 extra = dict(agent_step.get("extra") or {})
                 extra["tool_invocations"] = pending_tool_invocations
                 agent_step["extra"] = extra
-        else:
-            if pending_observations:
-                step_dicts.append(
-                    {
-                        "source": "system",
-                        "message": "",
-                        "timestamp": pending_obs_timestamp,
-                        "observation": {"results": _build_results(pending_observations)},
-                    }
-                )
+        elif pending_observations:
+            step_dicts.append({
+                "source": "system",
+                "message": "",
+                "timestamp": pending_obs_timestamp,
+                "observation": {
+                    "results": _build_results(pending_observations)
+                },
+            })
 
         pending_observations = []
         pending_tool_ancestry_by_id = {}
@@ -510,7 +403,8 @@ def _events_to_step_dicts(
             # content) emits one. System prompts surface as source=system
             # steps the first time they appear.
             data = event.data if isinstance(event.data, dict) else {}
-            messages = _unwrap_llm_messages(data)
+            llm_extractor = resolve_llm_extractor(event.data_schema)
+            messages = llm_extractor.extract_input_messages(data)
             if data and not messages:
                 raise ShapeMismatchError(
                     kind="llm_input",
@@ -538,13 +432,11 @@ def _events_to_step_dicts(
                 key = (event.parent_uuid, role)
                 seen = seen_input_messages.setdefault(key, set())
                 if dedup_key not in seen:
-                    step_dicts.append(
-                        {
-                            "source": role,
-                            "message": emit_content,
-                            "timestamp": event.timestamp,
-                        }
-                    )
+                    step_dicts.append({
+                        "source": role,
+                        "message": emit_content,
+                        "timestamp": event.timestamp,
+                    })
                     seen.add(dedup_key)
                     # A new user/system step breaks any active agent
                     # observation window (it's a fresh turn, not a
@@ -555,8 +447,9 @@ def _events_to_step_dicts(
             flush_observations()
 
             raw_data = event.data if isinstance(event.data, dict) else {}
-            tool_call_dicts = _extract_tool_calls(raw_data)
-            agent_msg = _extract_agent_message(raw_data)
+            llm_extractor = resolve_llm_extractor(event.data_schema)
+            tool_call_dicts = llm_extractor.extract_tool_calls(raw_data)
+            agent_msg = llm_extractor.extract_output_text(raw_data)
             # A payload that yields NEITHER assistant content NOR tool_calls
             # would drop the producer's response entirely. A payload with
             # only tool_calls (no content) or only content (no tool_calls)
@@ -598,35 +491,35 @@ def _events_to_step_dicts(
             if pending_obs_timestamp is None:
                 pending_obs_timestamp = event.timestamp
 
-            content = _serialize_tool_result(event.data)
+            tool_extractor = resolve_tool_extractor(event.data_schema)
+            content = tool_extractor.extract_tool_result(event.data)
             obs_entry: dict = {"source_call_id": tool_call_id, "content": content}
             if tool_call_id and tool_call_id in subagent_ref_by_tc_id:
                 obs_entry["subagent_trajectory_ref"] = [subagent_ref_by_tc_id[tool_call_id]]
             pending_observations.append(obs_entry)
 
             if tool_call_id:
-                pending_tool_ancestry_by_id[tool_call_id] = _build_ancestry(
-                    event.uuid, event.name, event.parent_uuid, name_map
-                )
+                pending_tool_ancestry_by_id[tool_call_id] = _build_ancestry(event.uuid,
+                                                                            event.name,
+                                                                            event.parent_uuid,
+                                                                            name_map)
 
             start_micros = start_ts_map.get(event.uuid)
             pending_tool_invocations.append(
-                _build_invocation_info(start_micros, event.ts_micros, tool_call_id or event.uuid)
-            )
+                _build_invocation_info(start_micros, event.ts_micros, tool_call_id or event.uuid))
 
         elif isinstance(event, MarkEvent) and event.data is not None:
             flush_observations()
             current_agent_step_idx = None
 
-            # R9 extension (producer convention): a mark whose ``data.role``
-            # names a ATIF step source emits that step directly, with
-            # ``data.content`` (or ``data.message``) as the step message.
-            # This lets no-LLM producers surface user turns and clean system
-            # messages without an LLM scope to carry them.
             data = event.data
-            if isinstance(data, dict) and isinstance(data.get("role"), str) and data.get("role") in ("user", "system", "agent"):
-                source = data["role"]
-                content = data.get("content") or data.get("message") or ""
+            mark_extractor = resolve_mark_extractor(event.data_schema)
+            role_and_content = mark_extractor.extract_role_and_content(data)
+            if role_and_content is not None:
+                # R9 extension: a mark whose payload names an ATIF step source
+                # emits that step directly. This lets no-LLM producers surface
+                # user turns and clean system messages without an LLM scope.
+                source, content = role_and_content
                 step_dict = {
                     "source": source,
                     "message": content if isinstance(content, str) else json.dumps(content, separators=(",", ":")),
@@ -638,15 +531,11 @@ def _events_to_step_dicts(
                     seen_input_messages.setdefault((event.parent_uuid, source), set()).add(content)
                 step_dicts.append(step_dict)
             else:
-                step_dicts.append(
-                    {
-                        "source": "system",
-                        "message": json.dumps(data, separators=(",", ":"))
-                        if isinstance(data, dict)
-                        else str(data),
-                        "timestamp": event.timestamp,
-                    }
-                )
+                step_dicts.append({
+                    "source": "system",
+                    "message": json.dumps(data, separators=(",", ":")) if isinstance(data, dict) else str(data),
+                    "timestamp": event.timestamp,
+                })
 
         elif _is_scope_end(event) and event.category == "context":
             # R10: context-window transformation boundary. Emit a system step
@@ -700,11 +589,7 @@ def _events_to_step_dicts(
             # the summary as a role="system" message on the next LLM's input.
             # Mark it as already-seen so the multi-turn input scanner doesn't
             # re-emit it as a standalone system step.
-            if (
-                content is not None
-                and profile.get("boundary") == "replace"
-                and event.parent_uuid is not None
-            ):
+            if (content is not None and profile.get("boundary") == "replace" and event.parent_uuid is not None):
                 seen_input_messages.setdefault((event.parent_uuid, "system"), set()).add(content)
 
         elif _is_scope_end(event) and event.category == "function" and pending_observations:
@@ -719,13 +604,11 @@ def _events_to_step_dicts(
                 if not tc_id:
                     continue
                 anc = pending_tool_ancestry_by_id.get(tc_id, {})
-                synthetic_tcs.append(
-                    {
-                        "tool_call_id": tc_id,
-                        "function_name": anc.get("function_name", "unknown"),
-                        "arguments": tool_start_args_by_tc_id.get(tc_id, {}),
-                    }
-                )
+                synthetic_tcs.append({
+                    "tool_call_id": tc_id,
+                    "function_name": anc.get("function_name", "unknown"),
+                    "arguments": tool_start_args_by_tc_id.get(tc_id, {}),
+                })
 
             function_ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
             start_micros = start_ts_map.get(event.uuid)
@@ -770,15 +653,13 @@ def _events_to_step_dicts(
             r8_extra: dict = {"invocation": invocation}
             if event.data_schema:
                 r8_extra["data_schema"] = event.data_schema
-            step_dicts.append(
-                {
-                    "source": "system",
-                    "message": message,
-                    "timestamp": event.timestamp,
-                    "function_ancestry": function_ancestry,
-                    "extra": r8_extra,
-                }
-            )
+            step_dicts.append({
+                "source": "system",
+                "message": message,
+                "timestamp": event.timestamp,
+                "function_ancestry": function_ancestry,
+                "extra": r8_extra,
+            })
 
         else:
             logger.debug(
@@ -875,11 +756,7 @@ def _convert_impl(events: list[Event], explicit_root_uuid: str | None) -> Trajec
         wrapping_tc_id = None
         if wrapping_uuid is not None:
             for e in events:
-                if (
-                    _is_scope_start(e)
-                    and isinstance(e, ScopeEvent)
-                    and e.uuid == wrapping_uuid
-                ):
+                if (_is_scope_start(e) and isinstance(e, ScopeEvent) and e.uuid == wrapping_uuid):
                     wrapping_category = e.category
                     if e.category == "tool":
                         wrapping_tc_id = (e.category_profile or {}).get("tool_call_id")
