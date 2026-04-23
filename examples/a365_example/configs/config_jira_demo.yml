@@ -1,0 +1,63 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Demo: NAT agent with JIRA MCP tooling — sprint standup, issue triage, project Q&A.
+# Requires: JIRA MCP server running locally (mcp_servers/jira/server.py on port 8101).
+#
+# Start JIRA MCP server first:
+#   cd mcp_servers/jira && JIRA_EMAIL=${JIRA_EMAIL} JIRA_API_TOKEN=${JIRA_API_TOKEN} \
+#     JIRA_SITE=${JIRA_SITE} uv run python server.py
+#
+# Then run this config:
+#   nat serve --config_file configs/config_jira_demo.yml
+#
+# Example prompts:
+#   "What's in my active sprint?"
+#   "Give me a sprint summary for project DEMO"
+#   "What are my open issues?"
+#   "Create a bug for the login page crash with high priority"
+#   "Get the details of DEMO-1"
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+  front_end:
+    _type: console
+
+authentication: {}
+
+function_groups:
+  jira:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "https://jira-mcp.blackocean-072fa40d.eastus.azurecontainerapps.io/mcp"
+  github:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "https://github-mcp.blackocean-072fa40d.eastus.azurecontainerapps.io/mcp"
+
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/llama-3.3-nemotron-super-49b-v1
+    temperature: 0.0
+    max_tokens: 2048
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: react_agent
+  tool_names: [current_datetime, jira, github]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

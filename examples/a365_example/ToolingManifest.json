@@ -1,0 +1,18 @@
+{
+  "mcpServers": [
+    {
+      "mcpServerName": "mcp_TaskPersonalizationServer",
+      "mcpServerUniqueName": "mcp_TaskPersonalizationServer",
+      "url": "https://agent365.svc.cloud.microsoft/agents/servers/mcp_TaskPersonalizationServer",
+      "scope": "McpServers.TaskPersonalization.All",
+      "audience": "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
+    },
+    {
+      "mcpServerName": "mcp_PlannerServer",
+      "mcpServerUniqueName": "mcp_PlannerServer",
+      "url": "https://agent365.svc.cloud.microsoft/agents/servers/mcp_PlannerServer",
+      "scope": "McpServers.Planner.All",
+      "audience": "ea9ffc3e-8a23-4a7d-836d-234d7c7565c1"
+    }
+  ]
+}

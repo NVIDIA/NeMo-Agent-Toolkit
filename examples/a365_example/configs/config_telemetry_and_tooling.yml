@@ -1,0 +1,64 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Smoke test: A365 telemetry + A365 MCP tooling (discovers MCP servers via A365).
+# Requires: nvidia-nat-mcp (or nvidia-nat[mcp]). Set A365_BEARER_TOKEN for auth.
+# Discovery may return 401 until observability/tooling scope is granted; smoke still
+# validates startup and that tooling config is loaded.
+#
+# Development (default ENVIRONMENT=Development): place ToolingManifest.json next to this
+# file (see examples/a365_example/ToolingManifest.json). The Microsoft SDK builds MCP URLs
+# from each mcpServerUniqueName. Production: set ENVIRONMENT=Production and use the
+# tooling gateway with a valid bearer token.
+#
+# After discovery registers MCP tools, add their function names to workflow.tool_names
+# (logs show "A365 MCP tooling: registered N total tools"); until then only current_datetime runs.
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+    tracing:
+      a365:
+        _type: a365
+        agent_id: "83d6fb2b-0af5-424a-a785-637c8c1b33c3"
+        tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
+        token_resolver: "a365_auth"
+        cluster_category: "prod"
+  front_end:
+    _type: console
+
+authentication:
+  a365_auth:
+    _type: api_key
+    raw_key: ${A365_BEARER_TOKEN}
+    auth_scheme: Bearer
+
+function_groups:
+  a365_tools:
+    _type: a365_mcp_tooling
+    agentic_app_id: "a185cf21-03c8-4bf1-919a-ec8f0782118d"
+    auth_token: "a365_auth"
+
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 256
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: react_agent
+  tool_names: [current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3
