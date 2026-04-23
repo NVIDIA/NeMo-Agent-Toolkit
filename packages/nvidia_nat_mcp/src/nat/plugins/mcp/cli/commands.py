@@ -559,6 +559,9 @@ def mcp_client_tool_group():
 @click.option('--user-id',
               default='nat_mcp_cli_user_id',
               help='User ID for per-user workflows (defaults to nat_mcp_cli_user_id)')
+@click.option('--client-id', help='Optional pre-registered client ID for authentication')
+@click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
+              help='Optional pre-registered client secret for authentication')
 @click.pass_context
 def mcp_client_tool_list(ctx,
                          direct,
@@ -575,7 +578,9 @@ def mcp_client_tool_list(ctx,
                          auth_user_id,
                          auth_scopes,
                          per_user,
-                         user_id):
+                         user_id,
+                         client_id: str| None,
+                         client_secret: str| None):
     """List MCP tool names (default) or show detailed tool information.
 
     Use --detail for full output including descriptions and input schemas.
@@ -584,6 +589,10 @@ def mcp_client_tool_list(ctx,
     Use --json-output to get structured JSON data instead of formatted text.
     Use --auth to enable auth with default settings (streamable-http only, not with --direct).
     Use --auth-redirect-uri to enable auth for protected MCP servers (streamable-http only, not with --direct).
+    Use --per-user to access tools from a per-user function group instead of the shared group.
+    Use --user-id to specify the user ID for per-user function group access (defaults to nat_mcp_cli_user_id).
+    Use --client-id to provide pre-registered client ID for authentication.
+    Use --client-secret or NAT_MCP_CLIENT_SECRET env var to provide pre-registered client secret for authentication.
 
     Args:
         ctx (click.Context): Click context object for command invocation
@@ -596,6 +605,10 @@ def mcp_client_tool_list(ctx,
         auth_redirect_uri (str | None): redirect URI for auth (streamable-http only, not with --direct)
         auth_user_id (str | None): User ID for authentication (streamable-http only, not with --direct)
         auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
+        per_user (bool): Whether to use a per-user function group instead of the shared group
+        user_id (str): User ID to use for per-user function group (default: nat_mcp_cli_user_id)
+        client_id (str | None): Optional pre-registered client ID for authentication
+        client_secret (str | None): Optional pre-registered client secret for authentication
 
     Examples:
         nat mcp client tool list                           # List tool names only
@@ -678,6 +691,9 @@ def mcp_client_tool_list(ctx,
               help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
 @click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only, not with --direct)')
+@click.option('--client-id', help='Optional pre-registered client ID for authentication')
+@click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
+              help='Optional pre-registered client secret for authentication')
 def mcp_client_ping(url: str,
                     transport: str,
                     command: str | None,
