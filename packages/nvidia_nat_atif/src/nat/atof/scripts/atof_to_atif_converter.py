@@ -13,6 +13,12 @@ typed fields live inside the ``category_profile`` sub-object (spec §4.4) —
 Output conforms to ATIF v1.7. See the conversion rules in
 ``atif-alignment/docs/atof-to-atif-mapping.md``; rule identifiers (R1-R12)
 referenced inline map to that document.
+
+Producer conformance: the reference extractors assume an OpenAI
+chat-completions shape inside ``event.data``. When a non-empty payload yields
+empty extraction (i.e., content would be silently dropped), the converter
+raises :class:`ShapeMismatchError` with the offending event's UUID,
+declared ``data_schema``, and observed top-level keys.
 """
 
 from __future__ import annotations
@@ -33,6 +39,48 @@ from nat.atof.events import ScopeEvent
 from nat.atof.io import read_jsonl
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Errors
+# ---------------------------------------------------------------------------
+
+
+class ShapeMismatchError(ValueError):
+    """Raised when an event's non-empty ``data`` produced empty extraction.
+
+    The reference extractors (``_unwrap_llm_messages``, ``_extract_agent_message``)
+    assume an OpenAI chat-completions shape. When a payload doesn't match,
+    the would-be-emitted content is silently dropped — this exception
+    surfaces that case as a hard failure so callers can either (a) fix the
+    producer to emit the expected shape, (b) declare a matching
+    ``data_schema`` and register a profile-specific extractor, or (c)
+    wrap the call and handle the drop explicitly.
+
+    Attributes:
+        kind: ``"llm_input"`` or ``"llm_output"`` — which extraction missed.
+        uuid: UUID of the offending event.
+        data_schema: The producer-declared ``data_schema``, if any.
+        data_keys: Sorted top-level keys observed in ``data``.
+    """
+
+    def __init__(
+        self,
+        *,
+        kind: str,
+        uuid: str,
+        data_schema: dict[str, Any] | None,
+        data_keys: list[str],
+    ):
+        self.kind = kind
+        self.uuid = uuid
+        self.data_schema = data_schema
+        self.data_keys = data_keys
+        super().__init__(
+            f"ATOF→ATIF would drop data on {kind} event (uuid={uuid}): "
+            "the payload did not match the converter's extraction assumptions. "
+            f"data_schema={data_schema}, data_keys={data_keys}"
+        )
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -105,7 +153,13 @@ def _extract_tool_calls(llm_data: dict | None) -> list[dict]:
 
 
 def _unwrap_llm_messages(data: dict | None) -> list[dict]:
-    """Extract messages from an LLM scope-start data payload."""
+    """Extract messages from an LLM scope-start data payload.
+
+    Returns an empty list when ``data`` is empty or doesn't match the
+    OpenAI chat-completions shape. The caller in the dispatch loop
+    distinguishes "legitimately empty" from "shape mismatch" and raises
+    :class:`ShapeMismatchError` for the latter.
+    """
     if not data:
         return []
     content = data.get("content")
@@ -134,7 +188,13 @@ def _extract_initial_user_message(data: dict | None) -> str | None:
 
 
 def _extract_agent_message(data: dict | None) -> str:
-    """Return the assistant-turn content string from an LLM-end payload (R4)."""
+    """Return the assistant-turn content string from an LLM-end payload (R4).
+
+    Returns ``""`` when no content path matches. The caller in the dispatch
+    loop combines this with the tool-call extraction result and raises
+    :class:`ShapeMismatchError` only when BOTH are empty on non-empty data
+    (a payload with only tool_calls or only content is legitimate).
+    """
     if not isinstance(data, dict):
         return ""
     content = data.get("content")
@@ -251,6 +311,10 @@ def _events_to_step_dicts(
     ``subagent_ref_by_context_uuid`` maps a ``context``-scope UUID to a
     ``SubagentTrajectoryRef``-shaped dict (R10 context-wrapped subagent,
     e.g. a compaction subagent). Either map MAY be empty.
+
+    Raises:
+        ShapeMismatchError: if an ``llm`` scope event's non-empty ``data``
+            yields no extractable content (would drop payload silently).
     """
     subagent_ref_by_tc_id = subagent_ref_by_tc_id or {}
     subagent_ref_by_context_uuid = subagent_ref_by_context_uuid or {}
@@ -352,6 +416,13 @@ def _events_to_step_dicts(
             # steps the first time they appear.
             data = event.data if isinstance(event.data, dict) else {}
             messages = _unwrap_llm_messages(data)
+            if data and not messages:
+                raise ShapeMismatchError(
+                    kind="llm_input",
+                    uuid=event.uuid,
+                    data_schema=event.data_schema,
+                    data_keys=sorted(data.keys()),
+                )
             for m in messages:
                 role = m.get("role")
                 content = m.get("content")
@@ -391,6 +462,17 @@ def _events_to_step_dicts(
             raw_data = event.data if isinstance(event.data, dict) else {}
             tool_call_dicts = _extract_tool_calls(raw_data)
             agent_msg = _extract_agent_message(raw_data)
+            # A payload that yields NEITHER assistant content NOR tool_calls
+            # would drop the producer's response entirely. A payload with
+            # only tool_calls (no content) or only content (no tool_calls)
+            # is legitimate and not an error.
+            if raw_data and not agent_msg and not tool_call_dicts:
+                raise ShapeMismatchError(
+                    kind="llm_output",
+                    uuid=event.uuid,
+                    data_schema=event.data_schema,
+                    data_keys=sorted(raw_data.keys()),
+                )
             function_ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
 
             start_micros = start_ts_map.get(event.uuid)
@@ -649,7 +731,14 @@ def _materialize_steps(step_dicts: list[dict]) -> list[Step]:
 
 
 def convert(events: list[Event]) -> Trajectory:
-    """Convert a list of ATOF events to an ATIF v1.7 Trajectory."""
+    """Convert a list of ATOF events to an ATIF v1.7 Trajectory.
+
+    Raises:
+        ShapeMismatchError: if an ``llm`` scope event carries non-empty
+            ``data`` that the reference extractors cannot parse. Silently
+            dropping such a payload would lose producer content, so the
+            converter fails fast instead.
+    """
     return _convert_impl(events, explicit_root_uuid=None)
 
 
@@ -781,7 +870,11 @@ def _convert_impl(events: list[Event], explicit_root_uuid: str | None) -> Trajec
 
 
 def convert_file(input_path: str | Path, output_path: str | Path | None = None) -> Trajectory:
-    """Read an ATOF JSON-Lines file and convert to an ATIF Trajectory."""
+    """Read an ATOF JSON-Lines file and convert to an ATIF Trajectory.
+
+    Raises:
+        ShapeMismatchError: see :func:`convert`.
+    """
     events = read_jsonl(input_path)
     trajectory = convert(events)
 
