@@ -69,6 +69,7 @@ class DiscoverOAuth2Endpoints:
     def __init__(self, config: MCPOAuth2ProviderConfig):
         self.config = config
         self._cached_endpoints: OAuth2Endpoints | None = None
+        self._resource_from_metadata: str | None = None
 
         self._flow_handler: MCPAuthenticationFlowHandler = MCPAuthenticationFlowHandler()
 
@@ -155,6 +156,8 @@ class DiscoverOAuth2Endpoints:
         except Exception as e:
             logger.debug("Invalid ProtectedResourceMetadata at %s: %s", url, e)
             return None
+        self._resource_from_metadata = str(pr.resource)
+        logger.debug("Resource identifier from protected resource metadata: %s", self._resource_from_metadata)
         if pr.authorization_servers:
             return str(pr.authorization_servers[0])
         return None
@@ -489,6 +492,9 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
             scopes = self._effective_scopes
+            resource = self._discoverer._resource_from_metadata or str(self.config.server_url)
+            logger.debug("Using resource for authorization request: %s (from_metadata=%s)",
+                         resource, self._discoverer._resource_from_metadata is not None)
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                 client_id=credentials.client_id,
                 client_secret=credentials.client_secret or "",
@@ -498,7 +504,7 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
                 redirect_uri=str(self.config.redirect_uri) if self.config.redirect_uri else "",
                 scopes=scopes,
                 use_pkce=bool(self.config.use_pkce),
-                authorization_kwargs={"resource": str(self.config.server_url)})
+                authorization_kwargs={"resource": resource})
             logger.info(
                 "MCP OAuth authorize request inputs: authorization_url=%s client_id=%s redirect_uri=%s "
                 "resource=%s scopes=%s",
