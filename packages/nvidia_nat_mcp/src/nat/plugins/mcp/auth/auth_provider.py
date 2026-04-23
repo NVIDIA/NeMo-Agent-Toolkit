@@ -492,9 +492,12 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
         # Build the OAuth2 provider if not already built
         if self._auth_code_provider is None:
             scopes = self._effective_scopes
-            resource = self._discoverer._resource_from_metadata or str(self.config.server_url)
-            logger.debug("Using resource for authorization request: %s (from_metadata=%s)",
-                         resource, self._discoverer._resource_from_metadata is not None)
+            resource = (self.config.auth_resource
+                        or self._discoverer._resource_from_metadata
+                        or str(self.config.server_url))
+            logger.debug("Using resource for authorization request: %s (override=%s, from_metadata=%s)",
+                         resource, self.config.auth_resource is not None,
+                         self._discoverer._resource_from_metadata is not None)
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                 client_id=credentials.client_id,
                 client_secret=credentials.client_secret or "",

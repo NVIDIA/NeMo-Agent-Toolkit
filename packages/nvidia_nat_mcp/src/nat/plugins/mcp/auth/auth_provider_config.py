@@ -56,6 +56,11 @@ class MCPOAuth2ProviderConfig(AuthProviderBaseConfig, name="mcp_oauth2"):
                               description="OAuth2 scopes, discovered from MCP server if not provided")
     # Advanced options
     use_pkce: bool = Field(default=True, description="Use PKCE for authorization code flow")
+    auth_resource: str | None = Field(
+        default=None,
+        description="Override the resource URI sent in the OAuth2 authorization request (RFC 8707). "
+        "When set, takes precedence over the resource discovered from protected resource metadata."
+    )
 
     # These fields are only used for shared workflow (not per-user workflows)
     default_user_id: str | None = Field(default=None, description="Default user ID for authentication")

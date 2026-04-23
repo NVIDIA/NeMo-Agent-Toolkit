@@ -198,6 +198,7 @@ async def _create_mcp_client_config(
     per_user: bool = False,
     client_id: str | None = None,
     client_secret: str | None = None,
+    auth_resource: str | None = None,
 ) -> tuple[str, MCPClientBaseConfig]:
     from nat.plugins.mcp.client.client_config import MCPClientConfig
     from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
@@ -214,6 +215,7 @@ async def _create_mcp_client_config(
                 scopes=auth_scopes or [],
                 client_id=client_id,
                 client_secret=SecretStr(client_secret) if client_secret else None,
+                auth_resource=auth_resource,
             )
             auth_provider_name = "mcp_oauth2_cli"
             await builder.add_auth_provider(auth_provider_name, auth_config)
@@ -282,6 +284,7 @@ async def list_tools_via_function_group(
     user_id: str | None = None,
     client_id: str | None = None,
     client_secret: str | None = None,
+    auth_resource: str | None = None,
 ) -> list[dict[str, str | None]]:
     """List tools by constructing the mcp_client function group and introspecting functions.
 
@@ -330,7 +333,8 @@ async def list_tools_via_function_group(
                                                                auth_scopes,
                                                                per_user,
                                                                client_id,
-                                                               client_secret)
+                                                               client_secret,
+                                                               auth_resource)
         group = await builder.add_function_group(group_name, group_cfg)
 
         # Access functions exposed by the group
@@ -466,7 +470,8 @@ async def ping_mcp_server(url: str,
                           auth_user_id: str | None = None,
                           auth_scopes: list[str] | None = None,
                           client_id: str | None = None,
-                          client_secret: str | None = None) -> MCPPingResult:
+                          client_secret: str | None = None,
+                          auth_resource: str | None = None) -> MCPPingResult:
     """Ping an MCP server to check if it's responsive.
 
     When ``auth_redirect_uri`` is provided the ping routes through
@@ -511,7 +516,8 @@ async def ping_mcp_server(url: str,
                                                                          auth_scopes,
                                                                          False,
                                                                          client_id,
-                                                                         client_secret)
+                                                                         client_secret,
+                                                                         auth_resource)
                 group = await builder.add_function_group(group_name, group_cfg)
                 start_time = time.time()
                 await group.get_accessible_functions()
@@ -621,6 +627,8 @@ def mcp_client_tool_group():
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
 @click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
               help='Optional pre-registered client secret for authentication')
+@click.option('--auth-resource',
+              help='Override resource URI in the OAuth2 authorization request (RFC 8707)')
 @click.pass_context
 def mcp_client_tool_list(ctx,
                          direct,
@@ -638,8 +646,9 @@ def mcp_client_tool_list(ctx,
                          auth_scopes,
                          per_user,
                          user_id,
-                         client_id: str| None,
-                         client_secret: str| None):
+                         client_id: str | None,
+                         client_secret: str | None,
+                         auth_resource: str | None):
     """List MCP tool names (default) or show detailed tool information.
 
     Use --detail for full output including descriptions and input schemas.
@@ -717,7 +726,8 @@ def mcp_client_tool_list(ctx,
                                           per_user=per_user,
                                           user_id=user_id,
                                           client_id=client_id,
-                                          client_secret=client_secret))
+                                          client_secret=client_secret,
+                                          auth_resource=auth_resource))
 
     if json_output:
         click.echo(json.dumps(tools, indent=2))
@@ -757,6 +767,8 @@ def mcp_client_tool_list(ctx,
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
 @click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
               help='Optional pre-registered client secret for authentication')
+@click.option('--auth-resource',
+              help='Override resource URI in the OAuth2 authorization request (RFC 8707)')
 def mcp_client_ping(url: str,
                     transport: str,
                     command: str | None,
@@ -769,7 +781,8 @@ def mcp_client_ping(url: str,
                     auth_user_id: str | None,
                     auth_scopes: str | None,
                     client_id: str | None,
-                    client_secret: str | None) -> None:
+                    client_secret: str | None,
+                    auth_resource: str | None) -> None:
     """Ping an MCP server to check if it's responsive.
 
     This command sends a ping request to the MCP server and measures the response time.
@@ -818,7 +831,8 @@ def mcp_client_ping(url: str,
                         auth_user_id,
                         auth_scopes_list,
                         client_id,
-                        client_secret))
+                        client_secret,
+                        auth_resource))
 
     if json_output:
         click.echo(result.model_dump_json(indent=2))
@@ -950,7 +964,8 @@ async def call_tool_and_print(command: str | None,
                               per_user: bool = False,
                               user_id: str | None = None,
                               client_id: str | None = None,
-                              client_secret: str | None = None) -> str:
+                              client_secret: str | None = None,
+                              auth_resource: str | None = None) -> str:
     """Call an MCP tool either directly or via the function group and return output.
 
     When ``direct`` is True, uses the raw MCP protocol client (bypassing the
@@ -1029,7 +1044,8 @@ async def call_tool_and_print(command: str | None,
                                                          auth_scopes,
                                                          per_user,
                                                          client_id,
-                                                         client_secret)
+                                                         client_secret,
+                                                         auth_resource)
 
         group = await builder.add_function_group(group_name, group_cfg)
         fns = await group.get_accessible_functions()
@@ -1077,6 +1093,8 @@ async def call_tool_and_print(command: str | None,
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
 @click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
               help='Optional pre-registered client secret for authentication')
+@click.option('--auth-resource',
+              help='Override resource URI in the OAuth2 authorization request (RFC 8707)')
 def mcp_client_tool_call(tool_name: str,
                          direct: bool,
                          url: str | None,
@@ -1094,7 +1112,8 @@ def mcp_client_tool_call(tool_name: str,
                          per_user: bool,
                          user_id: str | None,
                          client_id: str | None,
-                         client_secret: str | None) -> None:
+                         client_secret: str | None,
+                         auth_resource: str | None) -> None:
     """Call an MCP tool by name with optional JSON arguments.
 
     Validates transport parameters, parses ``--json-args`` into a dictionary,
@@ -1182,6 +1201,7 @@ def mcp_client_tool_call(tool_name: str,
                 user_id=user_id,
                 client_id=client_id,
                 client_secret=client_secret,
+                auth_resource=auth_resource,
             ))
         if output:
             click.echo(output)
