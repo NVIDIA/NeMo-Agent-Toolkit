@@ -469,6 +469,11 @@ async def ping_mcp_server(url: str,
                           client_secret: str | None = None) -> MCPPingResult:
     """Ping an MCP server to check if it's responsive.
 
+    When ``auth_redirect_uri`` is provided the ping routes through
+    ``WorkflowBuilder`` to negotiate OAuth2, then measures the time taken for
+    the server to respond to ``initialize`` + ``list_tools``.  Without auth the
+    raw MCP ``send_ping`` primitive is used.
+
     Args:
         url (str): MCP server URL to ping
         timeout (int): Timeout in seconds for the ping request
@@ -476,14 +481,54 @@ async def ping_mcp_server(url: str,
     Returns:
         MCPPingResult: Structured result with status, response_time, and any error info
     """
-    from mcp.client.session import ClientSession
-    from mcp.client.sse import sse_client
-    from mcp.client.stdio import StdioServerParameters
-    from mcp.client.stdio import stdio_client
-    from mcp.client.streamable_http import streamablehttp_client
 
     async def _ping_operation():
-        # Select transport
+        if auth_redirect_uri:
+            # Auth-enabled path: use WorkflowBuilder so OAuth2 is negotiated
+            try:
+                from nat.builder.workflow_builder import WorkflowBuilder
+                from nat.plugins.mcp.client.client_config import MCPServerConfig
+            except ImportError:
+                raise RuntimeError(
+                    "MCP client functionality requires nvidia-nat-mcp package. "
+                    "Install with: uv pip install nvidia-nat-mcp")
+
+            server_cfg = MCPServerConfig(
+                transport=cast(Literal["stdio", "sse", "streamable-http"], transport),
+                url=cast(Any, url) if transport in ('sse', 'streamable-http') else None,
+                command=command if transport == 'stdio' else None,
+                args=args if transport == 'stdio' else None,
+                env=env if transport == 'stdio' else None,
+            )
+
+            async with WorkflowBuilder() as builder:  # type: ignore
+                group_name, group_cfg = await _create_mcp_client_config(builder,
+                                                                         server_cfg,
+                                                                         url,
+                                                                         transport,
+                                                                         auth_redirect_uri,
+                                                                         auth_user_id,
+                                                                         auth_scopes,
+                                                                         False,
+                                                                         client_id,
+                                                                         client_secret)
+                group = await builder.add_function_group(group_name, group_cfg)
+                start_time = time.time()
+                await group.get_accessible_functions()
+                end_time = time.time()
+
+            return MCPPingResult(url=url,
+                                 status="healthy",
+                                 response_time_ms=round((end_time - start_time) * 1000, 2),
+                                 error=None)
+
+        # Direct path (no auth): raw MCP ping
+        from mcp.client.session import ClientSession
+        from mcp.client.sse import sse_client
+        from mcp.client.stdio import StdioServerParameters
+        from mcp.client.stdio import stdio_client
+        from mcp.client.streamable_http import streamablehttp_client
+
         if transport == 'stdio':
             stdio_args_local: list[str] = args or []
             if not command:
@@ -502,9 +547,11 @@ async def ping_mcp_server(url: str,
                 start_time = time.time()
                 await session.send_ping()
                 end_time = time.time()
-                response_time_ms = round((end_time - start_time) * 1000, 2)
 
-                return MCPPingResult(url=url, status="healthy", response_time_ms=response_time_ms, error=None)
+                return MCPPingResult(url=url,
+                                     status="healthy",
+                                     response_time_ms=round((end_time - start_time) * 1000, 2),
+                                     error=None)
 
     try:
         # Apply timeout to the entire ping operation
@@ -701,10 +748,12 @@ def mcp_client_tool_list(ctx,
 @click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
 @click.option('--timeout', default=60, show_default=True, help='Timeout in seconds for ping request')
 @click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
-@click.option('--auth-redirect-uri',
-              help='OAuth2 redirect URI for authentication (streamable-http only, not with --direct)')
-@click.option('--auth-user-id', help='User ID for authentication (streamable-http only, not with --direct)')
-@click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only, not with --direct)')
+@click.option('--auth',
+              is_flag=True,
+              help='Enable OAuth2 authentication with default settings (streamable-http only)')
+@click.option('--auth-redirect-uri', help='OAuth2 redirect URI for authentication (streamable-http only)')
+@click.option('--auth-user-id', help='User ID for authentication (streamable-http only)')
+@click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only)')
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
 @click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
               help='Optional pre-registered client secret for authentication')
@@ -715,6 +764,7 @@ def mcp_client_ping(url: str,
                     env: str | None,
                     timeout: int,
                     json_output: bool,
+                    auth: bool,
                     auth_redirect_uri: str | None,
                     auth_user_id: str | None,
                     auth_scopes: str | None,
@@ -747,13 +797,15 @@ def mcp_client_ping(url: str,
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
 
+    # Set auth defaults if --auth flag is used
+    auth_redirect_uri, auth_user_id, auth_scopes_list = _set_auth_defaults(
+        auth, url, auth_redirect_uri, auth_user_id, auth_scopes
+    )
+
     # Auth validation: if user_id or scopes provided, require redirect_uri
-    if (auth_user_id or auth_scopes) and not auth_redirect_uri:
+    if (auth_user_id or auth_scopes_list) and not auth_redirect_uri:
         click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
         return
-
-    # Parse auth scopes, stripping whitespace
-    auth_scopes_list = [scope.strip() for scope in auth_scopes.split(',')] if auth_scopes else None
 
     result = asyncio.run(
         ping_mcp_server(url,
