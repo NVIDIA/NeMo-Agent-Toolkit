@@ -244,8 +244,6 @@ Options:
 
 The `nat mcp` command group provides utilities for both serving workflows as MCP servers and interacting with MCP servers as a client.
 
-**Note:** This command group is only present if the `nvidia-nat-mcp` package is installed. Install with `uv pip install "nvidia-nat[mcp]"` or `uv pip install nvidia-nat-mcp`.
-
 ### Client
 
 The `nat mcp client` command group provides utilities for interacting with MCP servers directly from the command line. These commands are useful for discovering available tools and testing MCP server connectivity before configuring your workflow.
@@ -291,20 +289,16 @@ Options:
   --timeout INTEGER               Timeout in seconds for ping request
                                   [default: 60]
   --json-output                   Output ping result in JSON format
-  --auth                          Enable OAuth2 authentication with default
-                                  settings (streamable-http only)
   --auth-redirect-uri TEXT        OAuth2 redirect URI for authentication
-                                  (streamable-http only)
+                                  (streamable-http only, not with --direct)
   --auth-user-id TEXT             User ID for authentication (streamable-http
-                                  only)
+                                  only, not with --direct)
   --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
                                   http only)
   --client-id TEXT                Optional pre-registered client ID for
                                   authentication
   --client-secret TEXT            Optional pre-registered client secret for
                                   authentication
-  --auth-resource TEXT            Override resource URI in the OAuth2
-                                  authorization request
   --help                          Show this message and exit.
 ```
 
@@ -370,8 +364,6 @@ Options:
                                   authentication
   --client-secret TEXT            Optional pre-registered client secret for
                                   authentication
-  --auth-resource TEXT            Override resource URI in the OAuth2
-                                  authorization request
   --help                          Show this message and exit.
 ```
 
@@ -423,8 +415,6 @@ Options:
                                   authentication
   --client-secret TEXT            Optional pre-registered client secret for
                                   authentication
-  --auth-resource TEXT            Override resource URI in the OAuth2
-                                  authorization request
   --help                          Show this message and exit.
 ```
 
