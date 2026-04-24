@@ -20,6 +20,7 @@ from unittest.mock import patch
 
 import pytest
 from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -65,14 +66,10 @@ class TestStreamLLM:
     async def test_successful_streaming(self, base_agent):
         """Test successful streaming without retries."""
         mock_runnable = Mock()
-        mock_event1 = Mock()
-        mock_event1.content = "Hello "
-        mock_event2 = Mock()
-        mock_event2.content = "world!"
 
         async def mock_astream(inputs, **kwargs):
-            for event in [mock_event1, mock_event2]:
-                yield event
+            yield AIMessageChunk(content="Hello ")
+            yield AIMessageChunk(content="world!")
 
         mock_runnable.astream = mock_astream
 
@@ -101,16 +98,56 @@ class TestStreamLLM:
     async def test_streaming_empty_content(self, base_agent):
         """Test streaming with empty content."""
         mock_runnable = Mock()
-        mock_event = Mock()
-        mock_event.content = ""
 
         async def mock_astream(inputs, **kwargs):
-            yield mock_event
+            yield AIMessageChunk(content="")
 
         mock_runnable.astream = mock_astream
 
         inputs = {"messages": [HumanMessage(content="test")]}
 
+        result = await base_agent._stream_llm(mock_runnable, inputs)
+
+        assert isinstance(result, AIMessage)
+        assert result.content == ""
+
+    async def test_streaming_preserves_tool_calls(self, base_agent):
+        """Test that tool_calls from native tool calling are preserved."""
+        mock_runnable = Mock()
+
+        async def mock_astream(inputs, **kwargs):
+            yield AIMessageChunk(
+                content="I'll check the time.",
+                tool_call_chunks=[{
+                    "name": "get_time",
+                    "args": '{"tz": "UTC"}',
+                    "id": "call_123",
+                    "index": 0,
+                    "type": "tool_call_chunk",
+                }],
+            )
+
+        mock_runnable.astream = mock_astream
+
+        inputs = {"messages": [HumanMessage(content="test")]}
+        result = await base_agent._stream_llm(mock_runnable, inputs)
+
+        assert isinstance(result, AIMessage)
+        assert result.content == "I'll check the time."
+        assert len(result.tool_calls) == 1
+        assert result.tool_calls[0]["name"] == "get_time"
+
+    async def test_streaming_no_chunks_returns_empty(self, base_agent):
+        """Test that empty stream returns empty AIMessage."""
+        mock_runnable = Mock()
+
+        async def mock_astream(inputs, **kwargs):
+            return
+            yield  # makes this an async generator
+
+        mock_runnable.astream = mock_astream
+
+        inputs = {"messages": [HumanMessage(content="test")]}
         result = await base_agent._stream_llm(mock_runnable, inputs)
 
         assert isinstance(result, AIMessage)
