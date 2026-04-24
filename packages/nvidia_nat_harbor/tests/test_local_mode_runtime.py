@@ -18,15 +18,14 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 
 from nat_harbor.agents.installed.local_install_policy import is_local_install_allowed
 from nat_harbor.agents.installed.local_install_policy import resolve_local_install_policy
 from nat_harbor.agents.installed.nemo_agent_run_wrapper import normalize_result_text
-from nat_harbor.environments.local_mode_policy import LocalWritePolicy
-from nat_harbor.environments.local_mode_policy import is_shell_profile_write
+from nat_harbor.environments.local import LocalEnvironment
+from nat_harbor.environments.local import is_shell_profile_write
 
 
 def test_shell_profile_write_detection() -> None:
@@ -35,16 +34,8 @@ def test_shell_profile_write_detection() -> None:
     assert not is_shell_profile_write("echo hello > /tmp/output.txt")
 
 
-def test_local_write_policy_allows_inside_root(tmp_path: Path) -> None:
-    policy = LocalWritePolicy(allowed_write_roots=(tmp_path,))
-    policy.assert_allowed_write_path(tmp_path / "a" / "b.txt", "test-op")
-
-
-def test_local_write_policy_blocks_outside_root(tmp_path: Path) -> None:
-    outside = Path("/tmp/forbidden-path")
-    policy = LocalWritePolicy(allowed_write_roots=(tmp_path,))
-    with pytest.raises(PermissionError, match="outside allowed roots"):
-        policy.assert_allowed_write_path(outside, "test-op")
+def test_local_environment_type() -> None:
+    assert LocalEnvironment.type() == "local"
 
 
 @pytest.mark.parametrize(

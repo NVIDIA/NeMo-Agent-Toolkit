@@ -15,11 +15,11 @@
 
 """Environment helpers aligned with Harbor structure."""
 
-from .local_mode_policy import LocalWritePolicy
-from .local_mode_policy import is_shell_profile_write
+from .local import LocalEnvironment
+from .local import is_shell_profile_write
 
 __all__ = [
-    "LocalWritePolicy",
+    "LocalEnvironment",
     "is_shell_profile_write",
 ]
 

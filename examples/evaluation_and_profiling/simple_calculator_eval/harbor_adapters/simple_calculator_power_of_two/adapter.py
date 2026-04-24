@@ -119,6 +119,7 @@ class SimpleCalculatorPowerOfTwoAdapter:
         )
         (output_dir / "solution" / "solve.sh").write_text(solution_script, encoding="utf-8")
         (output_dir / "solution" / "solve.sh").chmod(0o755)
+        (output_dir / "tests" / "test.sh").chmod(0o755)
 
         ground_truth = {
             "id": task["source_id"],
