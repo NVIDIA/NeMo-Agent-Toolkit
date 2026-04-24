@@ -791,9 +791,9 @@ def mcp_client_ping(url: str,
         url (str): MCP server URL to ping (default: http://localhost:9901/mcp)
         timeout (int): Timeout in seconds for the ping request (default: 60)
         json_output (bool): Whether to output the result in JSON format
-        auth_redirect_uri (str | None): redirect URI for auth (streamable-http only, not with --direct)
-        auth_user_id (str | None): User ID for auth (streamable-http only, not with --direct)
-        auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only, not with --direct)
+        auth_redirect_uri (str | None): redirect URI for auth (streamable-http only)
+        auth_user_id (str | None): User ID for auth (streamable-http only)
+        auth_scopes (str | None): OAuth2 scopes (comma-separated, streamable-http only)
 
     Examples:
         nat mcp client ping                                    # Ping default server
