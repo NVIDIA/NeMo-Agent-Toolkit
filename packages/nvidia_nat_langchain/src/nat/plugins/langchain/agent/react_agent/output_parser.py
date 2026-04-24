@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import json
 import re
 
 from langchain_classic.agents.agent import AgentOutputParser
@@ -25,7 +24,6 @@ from .prompt import SYSTEM_PROMPT
 
 FINAL_ANSWER_ACTION = "Final Answer:"
 FINAL_ANSWER_PATTERN = re.compile(r"final\s+answer\s*:", re.IGNORECASE)
-FINAL_ANSWER_PATTERN_OPTIONAL_COLON = re.compile(r"final\s+answer\s*:?", re.IGNORECASE)
 MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE = "Invalid Format: Missing 'Action:' after 'Thought:'"
 MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE = "Invalid Format: Missing 'Action Input:' after 'Action:'"
 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = ("Parsing LLM output produced both a final answer and a parse-able "
@@ -113,42 +111,7 @@ class ReActOutputParser(AgentOutputParser):
     def get_format_instructions(self) -> str:
         return SYSTEM_PROMPT
 
-    def _try_parse_json_action(self, text: str) -> AgentAction | AgentFinish | None:
-        """Detect models that emit tool calls as JSON {"action": ..., "action_input": ...}."""
-        stripped = text.strip()
-        # Unwrap markdown code fences if present
-        if stripped.startswith("```"):
-            stripped = re.sub(r"^```(?:json)?\s*", "", stripped, flags=re.IGNORECASE)
-            stripped = re.sub(r"\s*```$", "", stripped)
-            stripped = stripped.strip()
-
-        try:
-            data = json.loads(stripped)
-        except (json.JSONDecodeError, ValueError):
-            return None
-
-        if not isinstance(data, dict) or "action" not in data or "action_input" not in data:
-            return None
-
-        action = str(data["action"]).strip()
-        action_input = data["action_input"]
-
-        if FINAL_ANSWER_PATTERN_OPTIONAL_COLON.search(action):
-            return AgentFinish({"output": str(action_input)}, text)
-
-        # AgentAction.tool_input only accepts str or dict; serialize other types
-        if not isinstance(action_input, (str, dict)):
-            action_input = json.dumps(action_input)
-
-        return AgentAction(action, action_input, text)
-
     def parse(self, text: str) -> AgentAction | AgentFinish:
-        # Some models emit tool calls as JSON {"action": ..., "action_input": ...} instead
-        # of the text ReAct format. Detect this before the regex-based path.
-        json_result = self._try_parse_json_action(text)
-        if json_result is not None:
-            return json_result
-
         includes_answer = bool(FINAL_ANSWER_PATTERN.search(text))
 
         # More lenient regex patterns (case-insensitive):
