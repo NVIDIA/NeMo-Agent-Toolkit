@@ -13,15 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Installed-agent helpers aligned with Harbor structure."""
+"""Backward-compatible shim for NAT Harbor NemoAgent bridge."""
 
-from .local_install_policy import is_local_install_allowed
-from .local_install_policy import resolve_local_install_policy
-from .nemo_agent import NemoAgent
+from nat_harbor.agents.installed.nemo_agent import NemoAgent
 
-__all__ = [
-    "is_local_install_allowed",
-    "NemoAgent",
-    "resolve_local_install_policy",
-]
+__all__ = ["NemoAgent"]
 

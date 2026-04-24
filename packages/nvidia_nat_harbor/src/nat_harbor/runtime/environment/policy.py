@@ -13,21 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Local-mode write and shell-profile safety checks."""
+"""Backward-compatible local mode policy helpers."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 
+from nat_harbor.environments.local import LocalEnvironment
+
 
 def is_shell_profile_write(command: str) -> bool:
     """Detect writes targeting shell profile files."""
-    profile_tokens = (".bashrc", ".zshrc", ".profile")
-    write_tokens = (">", ">>", "tee", "sed -i")
-    return any(token in command for token in profile_tokens) and any(
-        token in command for token in write_tokens
-    )
+    return LocalEnvironment.is_shell_profile_write(command)
 
 
 @dataclass(frozen=True)
@@ -55,4 +53,7 @@ class LocalWritePolicy:
             f"Local mode policy violation during {operation}: write path '{resolved}' "
             f"is outside allowed roots [{roots}]"
         )
+
+
+__all__ = ["LocalWritePolicy", "is_shell_profile_write"]
 

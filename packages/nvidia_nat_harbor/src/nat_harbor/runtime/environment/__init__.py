@@ -13,13 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Local environment safety policy helpers."""
+"""Backward-compatible runtime environment imports."""
 
-from .policy import LocalWritePolicy
-from .policy import is_shell_profile_write
+from nat_harbor.environments.local import LocalEnvironment
+from nat_harbor.runtime.environment.policy import LocalWritePolicy
+from nat_harbor.runtime.environment.policy import is_shell_profile_write
 
-__all__ = [
-    "LocalWritePolicy",
-    "is_shell_profile_write",
-]
+__all__ = ["LocalEnvironment", "LocalWritePolicy", "is_shell_profile_write"]
 

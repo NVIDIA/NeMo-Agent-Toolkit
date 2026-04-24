@@ -13,13 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""NAT Harbor runtime helpers for installed agents."""
+"""Backward-compatible runtime agent imports."""
 
-from .policy import is_local_install_allowed
-from .policy import resolve_local_install_policy
+from nat_harbor.agents.installed.local_install_policy import is_local_install_allowed
+from nat_harbor.agents.installed.nemo_agent import NemoAgent
+from nat_harbor.agents.installed.local_install_policy import resolve_local_install_policy
+from nat_harbor.agents.installed.nemo_agent_run_wrapper import maybe_enable_debugpy
+from nat_harbor.agents.installed.nemo_agent_run_wrapper import normalize_result_text
+from nat_harbor.agents.installed.nemo_agent_run_wrapper import to_bool
 
 __all__ = [
     "is_local_install_allowed",
+    "NemoAgent",
+    "maybe_enable_debugpy",
+    "normalize_result_text",
     "resolve_local_install_policy",
+    "to_bool",
 ]
 

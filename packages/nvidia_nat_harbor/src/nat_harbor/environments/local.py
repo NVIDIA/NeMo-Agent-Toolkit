@@ -268,3 +268,8 @@ class LocalEnvironment(BaseEnvironment):
             stderr=stderr_bytes.decode("utf-8", errors="replace"),
         )
 
+
+def is_shell_profile_write(command: str) -> bool:
+    """Module-level helper retained for compatibility with older imports."""
+    return LocalEnvironment.is_shell_profile_write(command)
+
