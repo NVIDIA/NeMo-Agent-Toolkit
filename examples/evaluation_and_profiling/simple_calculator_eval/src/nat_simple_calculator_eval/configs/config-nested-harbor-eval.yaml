@@ -39,7 +39,7 @@ llms:
 
 workflow:
   _type: react_agent
-  tool_names: [power_of_two]
+  tool_names: [power_of_two, calculator__multiply]
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3
