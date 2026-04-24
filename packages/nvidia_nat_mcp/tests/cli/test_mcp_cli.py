@@ -114,8 +114,6 @@ def test_mcp_client_tool_list_specific_tool(mock_fetcher, mock_tools):
                                "my_client_id",
                                "--client-secret",
                                "my_client_secret",
-                               "--auth-resource",
-                               "https://resource.example.com",
                            ])
     assert result.exit_code == 0
     assert "Tool: tool_b" in result.output
@@ -124,7 +122,6 @@ def test_mcp_client_tool_list_specific_tool(mock_fetcher, mock_tools):
     _, kwargs = mock_fetcher.await_args
     assert kwargs.get("client_id") == "my_client_id"
     assert kwargs.get("client_secret") == "my_client_secret"
-    assert kwargs.get("auth_resource") == "https://resource.example.com"
 
 
 @pytest.mark.parametrize("json_flag", [False, True])
@@ -217,8 +214,6 @@ def test_mcp_client_tool_call_args_env_parsing(mock_call):
                                "my_client_id",
                                "--client-secret",
                                "my_client_secret",
-                               "--auth-resource",
-                               "https://resource.example.com",
                            ])
     assert result.exit_code == 0
     assert "OK" in result.output
@@ -231,7 +226,6 @@ def test_mcp_client_tool_call_args_env_parsing(mock_call):
     assert kwargs.get("direct") is False
     assert kwargs.get("client_id") == "my_client_id"
     assert kwargs.get("client_secret") == "my_client_secret"
-    assert kwargs.get("auth_resource") == "https://resource.example.com"
 
 
 @patch("nat.plugins.mcp.cli.commands.ping_mcp_server", new_callable=AsyncMock)
@@ -247,20 +241,17 @@ def test_mcp_client_ping_unreachable(mock_ping):
                                "my_client_id",
                                "--client-secret",
                                "my_client_secret",
-                               "--auth-resource",
-                               "https://resource.example.com",
                            ])
     assert result.exit_code == 0
     assert "unhealthy" in result.output
     assert "Timeout" in result.output
-    # ping_mcp_server is called with positional args; client_id/secret/auth_resource are
-    # at positions 9/10/11 in the call (url, timeout, transport, command, args, env,
-    # auth_redirect_uri, auth_user_id, auth_scopes, client_id, client_secret, auth_resource)
+    # ping_mcp_server is called with positional args; client_id/secret are
+    # at positions 9/10 in the call (url, timeout, transport, command, args, env,
+    # auth_redirect_uri, auth_user_id, auth_scopes, client_id, client_secret)
     assert mock_ping.await_args is not None
     call_args, _ = mock_ping.await_args
     assert call_args[9] == "my_client_id"
     assert call_args[10] == "my_client_secret"
-    assert call_args[11] == "https://resource.example.com"
 
 
 @patch("nat.plugins.mcp.cli.commands.call_tool_and_print", new_callable=AsyncMock)
