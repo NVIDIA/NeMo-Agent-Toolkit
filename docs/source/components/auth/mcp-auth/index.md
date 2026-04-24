@@ -50,15 +50,6 @@ Configuration options:
 - `server_url`: The URL of the MCP server that requires authentication.
 - `redirect_uri`: The redirect URI for the OAuth2 flow. This must match the address where your server is accessible from your browser.
 - `oauth_client_ttl`: Amount of time, in seconds, to cache OAuth client credentials obtained via Dynamic Client Registration. Some MCP servers will invalidate client credentials after a certain period, requiring this value to match the timeout setting of the server minus a small safety buffer (for example, 30 seconds). After this period elapses, the client re-registers with the authorization server and obtains a new `client_id`. Defaults to `270` seconds. Set to `0` to disable caching (re-register on every authentication attempt).
-- `auth_resource` Override the resource URI sent in the OAuth2 authorization request. When set, this value takes precedence over the resource identifier discovered from the server's protected resource metadata. Most users do not need to set this. It is only required when the MCP server's backend performs an internal token exchange and the expected `aud` claim in the exchanged token differs from the MCP server URL. Example:
-  ```yaml
-  authentication:
-    mcp_oauth2_outlook:
-      _type: mcp_oauth2
-      server_url: ${MCP_SERVER_URL}
-      redirect_uri: ${NAT_REDIRECT_URI:-http://localhost:8000/auth/redirect}
-      auth_resource: "https://auth.example.com"
-  ```
 
 To view all configuration options for the `mcp_oauth2` authentication provider, run the following command:
 ```bash
