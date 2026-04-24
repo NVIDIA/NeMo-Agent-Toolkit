@@ -289,10 +289,12 @@ Options:
   --timeout INTEGER               Timeout in seconds for ping request
                                   [default: 60]
   --json-output                   Output ping result in JSON format
+  --auth                          Enable OAuth2 authentication with default
+                                  settings (streamable-http only)
   --auth-redirect-uri TEXT        OAuth2 redirect URI for authentication
-                                  (streamable-http only, not with --direct)
+                                  (streamable-http only)
   --auth-user-id TEXT             User ID for authentication (streamable-http
-                                  only, not with --direct)
+                                  only)
   --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
                                   http only)
   --client-id TEXT                Optional pre-registered client ID for
