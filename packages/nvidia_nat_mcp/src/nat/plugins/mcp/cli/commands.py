@@ -798,6 +798,12 @@ def mcp_client_ping(url: str,
         auth, url, auth_redirect_uri, auth_user_id, auth_scopes
     )
 
+    if ((auth or auth_redirect_uri or auth_user_id or auth_scopes or client_id or client_secret)
+        and transport != "streamable-http"):
+        click.echo("[ERROR] Auth options are only supported with --transport streamable-http", err=True)
+        return
+
+
     # Auth validation: if user_id or scopes provided, require redirect_uri
     if (auth_user_id or auth_scopes_list) and not auth_redirect_uri:
         click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
