@@ -188,8 +188,8 @@ def test_mcp_client_tool_call_invalid_json_args():
             "--json-args",
             "{",  # invalid JSON
         ])
-    assert result.exit_code == 0
-    assert "[ERROR] Failed to parse --json-args" in result.output
+    assert result.exit_code == 1
+    assert "Error: Failed to parse --json-args" in result.output
 
 
 @patch("nat.plugins.mcp.cli.commands.call_tool_and_print", new_callable=AsyncMock)
@@ -209,12 +209,8 @@ def test_mcp_client_tool_call_args_env_parsing(mock_call):
                                "A=1 B=2",
                                "--json-args",
                                "{}",
-                               "--client-id",
-                               "my_client_id",
-                               "--client-secret",
-                               "my_client_secret",
                            ])
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output
     assert "OK" in result.output
     assert mock_call.await_args is not None
     _, kwargs = mock_call.await_args
@@ -223,8 +219,6 @@ def test_mcp_client_tool_call_args_env_parsing(mock_call):
     assert kwargs.get("args") == ["-v", "--port", "1"]
     assert kwargs.get("env") == {"A": "1", "B": "2"}
     assert kwargs.get("direct") is False
-    assert kwargs.get("client_id") == "my_client_id"
-    assert kwargs.get("client_secret") == "my_client_secret"
 
 
 @patch("nat.plugins.mcp.cli.commands.ping_mcp_server", new_callable=AsyncMock)
@@ -685,15 +679,14 @@ def test_call_tool_direct_missing_required_config(monkeypatch, transport, url, c
         ("stdio", None, None, None, False, "--command is required when using stdio client type"),
     ],
 )
-def test_validate_transport_cli_args(capsys, transport, command, args, env, expected_ok, expected_err):
-    ok = validate_transport_cli_args(transport, command, args, env)
-    assert ok is expected_ok
-    err = capsys.readouterr().err
-    if expected_err:
-        assert expected_err in err
-    else:
-        assert err == ""
+def test_validate_transport_cli_args(transport, command, args, env, expected_ok, expected_err):
 
+    if expected_ok:
+        validate_transport_cli_args(transport, command, args, env)
+    else:
+        with pytest.raises(click.ClickException) as excinfo:
+            validate_transport_cli_args(transport, command, args, env)
+        assert expected_err in str(excinfo.value)
 
 def test_call_tool_and_print_group_success(monkeypatch):
 
@@ -853,7 +846,7 @@ def test_mcp_client_tool_call_bearer_token_with_oauth_error(cli_runner):
         "--json-args",
         "{}",
     ])
-    assert result.exit_code == 0
+    assert result.exit_code == 1
     assert "Cannot use both OAuth2 (--auth) and bearer token authentication" in result.output
 
 
@@ -867,5 +860,5 @@ def test_mcp_client_tool_call_bearer_token_with_direct_error(cli_runner):
         "--json-args",
         "{}",
     ])
-    assert result.exit_code == 0
+    assert result.exit_code == 1
     assert "--bearer-token and --bearer-token-env are not supported with --direct mode" in result.output
