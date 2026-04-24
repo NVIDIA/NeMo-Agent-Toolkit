@@ -62,6 +62,7 @@ crewai = ["nvidia-nat-crewai == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
 eval = ["nvidia-nat-eval[full] == {version}"]
 fastmcp = ["nvidia-nat-fastmcp == {version}"]
+harbor = ["nvidia-nat-harbor == {version}; python_version >= '3.12'"]
 langchain = ["nvidia-nat-langchain == {version}"]
 llama-index = ["nvidia-nat-llama-index == {version}"]
 mcp = ["nvidia-nat-mcp == {version}"]
@@ -241,6 +242,7 @@ nvidia-nat-crewai = { path = "packages/nvidia_nat_crewai", editable = true }
 nvidia-nat-data-flywheel = { path = "packages/nvidia_nat_data_flywheel", editable = true }
 nvidia-nat-eval = { path = "packages/nvidia_nat_eval", editable = true }
 nvidia-nat-fastmcp = { path = "packages/nvidia_nat_fastmcp", editable = true }
+nvidia-nat-harbor = { path = "packages/nvidia_nat_harbor", editable = true }
 nvidia-nat-langchain = { path = "packages/nvidia_nat_langchain", editable = true }
 nvidia-nat-llama-index = { path = "packages/nvidia_nat_llama_index", editable = true }
 nvidia-nat-mcp = { path = "packages/nvidia_nat_mcp", editable = true }
