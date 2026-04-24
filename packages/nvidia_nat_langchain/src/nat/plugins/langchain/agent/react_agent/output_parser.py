@@ -24,7 +24,7 @@ from langchain_core.exceptions import LangChainException
 from .prompt import SYSTEM_PROMPT
 
 FINAL_ANSWER_ACTION = "Final Answer:"
-FINAL_ANSWER_PATTERN = re.compile(r"final\s+answer\s*:", re.IGNORECASE)
+FINAL_ANSWER_PATTERN = re.compile(r"final\s+answer\s*:?", re.IGNORECASE)
 MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE = "Invalid Format: Missing 'Action:' after 'Thought:'"
 MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE = "Invalid Format: Missing 'Action Input:' after 'Action:'"
 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = ("Parsing LLM output produced both a final answer and a parse-able "
@@ -120,16 +120,25 @@ class ReActOutputParser(AgentOutputParser):
             stripped = re.sub(r"^```(?:json)?\s*", "", stripped, flags=re.IGNORECASE)
             stripped = re.sub(r"\s*```$", "", stripped)
             stripped = stripped.strip()
+
         try:
             data = json.loads(stripped)
         except (json.JSONDecodeError, ValueError):
             return None
+
         if not isinstance(data, dict) or "action" not in data or "action_input" not in data:
             return None
+
         action = str(data["action"]).strip()
         action_input = data["action_input"]
+
         if FINAL_ANSWER_PATTERN.search(action):
             return AgentFinish({"output": str(action_input)}, text)
+
+        # AgentAction.tool_input only accepts str or dict; serialize other types
+        if not isinstance(action_input, (str, dict)):
+            action_input = json.dumps(action_input)
+
         return AgentAction(action, action_input, text)
 
     def parse(self, text: str) -> AgentAction | AgentFinish:
