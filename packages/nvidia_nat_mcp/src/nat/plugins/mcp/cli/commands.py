@@ -485,12 +485,9 @@ async def ping_mcp_server(url: str,
     async def _ping_operation():
         if auth_redirect_uri:
             # Auth-enabled path: use WorkflowBuilder so OAuth2 is negotiated
-            try:
-                from nat.builder.workflow_builder import WorkflowBuilder
-                from nat.plugins.mcp.client.client_config import MCPServerConfig
-            except ImportError:
-                raise RuntimeError("MCP client functionality requires nvidia-nat-mcp package. "
-                                   "Install with: uv pip install nvidia-nat-mcp")
+            from nat.builder.workflow_builder import WorkflowBuilder
+            from nat.plugins.mcp.client.client_config import MCPServerConfig
+
 
             server_cfg = MCPServerConfig(
                 transport=cast(Literal["stdio", "sse", "streamable-http"], transport),
