@@ -24,7 +24,8 @@ from langchain_core.exceptions import LangChainException
 from .prompt import SYSTEM_PROMPT
 
 FINAL_ANSWER_ACTION = "Final Answer:"
-FINAL_ANSWER_PATTERN = re.compile(r"final\s+answer\s*:?", re.IGNORECASE)
+FINAL_ANSWER_PATTERN = re.compile(r"final\s+answer\s*:", re.IGNORECASE)
+FINAL_ANSWER_PATTERN_OPTIONAL_COLON = re.compile(r"final\s+answer\s*:?", re.IGNORECASE)
 MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE = "Invalid Format: Missing 'Action:' after 'Thought:'"
 MISSING_ACTION_INPUT_AFTER_ACTION_ERROR_MESSAGE = "Invalid Format: Missing 'Action Input:' after 'Action:'"
 FINAL_ANSWER_AND_PARSABLE_ACTION_ERROR_MESSAGE = ("Parsing LLM output produced both a final answer and a parse-able "
@@ -132,7 +133,7 @@ class ReActOutputParser(AgentOutputParser):
         action = str(data["action"]).strip()
         action_input = data["action_input"]
 
-        if FINAL_ANSWER_PATTERN.search(action):
+        if FINAL_ANSWER_PATTERN_OPTIONAL_COLON.search(action):
             return AgentFinish({"output": str(action_input)}, text)
 
         # AgentAction.tool_input only accepts str or dict; serialize other types
