@@ -84,6 +84,8 @@ class DiscoverOAuth2Endpoints:
         Returns:
             A tuple of OAuth2Endpoints and a boolean indicating if the endpoints have changed.
         """
+        previous_resource = self._resource_from_metadata
+        self._resource_from_metadata = None
         is_401_retry = response is not None and response.status_code == 401
         # Fast path: reuse cache when not a 401 retry
         if not is_401_retry and self._cached_endpoints is not None:
@@ -119,7 +121,10 @@ class DiscoverOAuth2Endpoints:
         if endpoints is None:
             raise RuntimeError("Could not discover OAuth2 endpoints from MCP server")
 
-        changed = (self._cached_endpoints is None or endpoints.model_dump() != self._cached_endpoints.model_dump())
+        changed = (self._cached_endpoints is None
+                   or endpoints.model_dump() != self._cached_endpoints.model_dump()
+                   or previous_resource != self._resource_from_metadata)
+
         self._cached_endpoints = endpoints
         logger.info("OAuth2 endpoints selected: %s", self._cached_endpoints)
         return self._cached_endpoints, changed
