@@ -494,9 +494,8 @@ async def ping_mcp_server(url: str,
                 from nat.builder.workflow_builder import WorkflowBuilder
                 from nat.plugins.mcp.client.client_config import MCPServerConfig
             except ImportError:
-                raise RuntimeError(
-                    "MCP client functionality requires nvidia-nat-mcp package. "
-                    "Install with: uv pip install nvidia-nat-mcp")
+                raise RuntimeError("MCP client functionality requires nvidia-nat-mcp package. "
+                                   "Install with: uv pip install nvidia-nat-mcp")
 
             server_cfg = MCPServerConfig(
                 transport=cast(Literal["stdio", "sse", "streamable-http"], transport),
@@ -625,10 +624,10 @@ def mcp_client_tool_group():
               default='nat_mcp_cli_user_id',
               help='User ID for per-user workflows (defaults to nat_mcp_cli_user_id)')
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
-@click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
+@click.option('--client-secret',
+              envvar='NAT_MCP_CLIENT_SECRET',
               help='Optional pre-registered client secret for authentication')
-@click.option('--auth-resource',
-              help='Override resource URI in the OAuth2 authorization request (RFC 8707)')
+@click.option('--auth-resource', help='Override resource URI in the OAuth2 authorization request')
 @click.pass_context
 def mcp_client_tool_list(ctx,
                          direct,
@@ -758,17 +757,15 @@ def mcp_client_tool_list(ctx,
 @click.option('--env', help='For stdio: Environment variables in KEY=VALUE format (space-separated)')
 @click.option('--timeout', default=60, show_default=True, help='Timeout in seconds for ping request')
 @click.option('--json-output', is_flag=True, help='Output ping result in JSON format')
-@click.option('--auth',
-              is_flag=True,
-              help='Enable OAuth2 authentication with default settings (streamable-http only)')
+@click.option('--auth', is_flag=True, help='Enable OAuth2 authentication with default settings (streamable-http only)')
 @click.option('--auth-redirect-uri', help='OAuth2 redirect URI for authentication (streamable-http only)')
 @click.option('--auth-user-id', help='User ID for authentication (streamable-http only)')
 @click.option('--auth-scopes', help='OAuth2 scopes (comma-separated, streamable-http only)')
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
-@click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
+@click.option('--client-secret',
+              envvar='NAT_MCP_CLIENT_SECRET',
               help='Optional pre-registered client secret for authentication')
-@click.option('--auth-resource',
-              help='Override resource URI in the OAuth2 authorization request (RFC 8707)')
+@click.option('--auth-resource', help='Override resource URI in the OAuth2 authorization request')
 def mcp_client_ping(url: str,
                     transport: str,
                     command: str | None,
@@ -1091,10 +1088,10 @@ async def call_tool_and_print(command: str | None,
               default='nat_mcp_cli_user_id',
               help='User ID for per-user workflows (defaults to nat_mcp_cli_user_id)')
 @click.option('--client-id', help='Optional pre-registered client ID for authentication')
-@click.option('--client-secret', envvar='NAT_MCP_CLIENT_SECRET',
+@click.option('--client-secret',
+              envvar='NAT_MCP_CLIENT_SECRET',
               help='Optional pre-registered client secret for authentication')
-@click.option('--auth-resource',
-              help='Override resource URI in the OAuth2 authorization request (RFC 8707)')
+@click.option('--auth-resource', help='Override resource URI in the OAuth2 authorization request')
 def mcp_client_tool_call(tool_name: str,
                          direct: bool,
                          url: str | None,

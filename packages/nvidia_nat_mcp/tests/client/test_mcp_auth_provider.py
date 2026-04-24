@@ -855,7 +855,6 @@ class TestMCPOAuth2Provider:
                 assert provider._credentials_cache_time == first_cache_time
                 assert mock_register.call_count == 1
 
-
     async def test_auth_resource_used_in_authorization_request(self, mock_endpoints, mock_credentials):
         """auth_resource takes precedence over _resource_from_metadata when both are set."""
         import time

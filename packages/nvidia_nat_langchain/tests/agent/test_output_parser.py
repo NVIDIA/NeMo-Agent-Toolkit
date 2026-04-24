@@ -188,7 +188,7 @@ class TestParseJsonFormat:
         """Plain text without Action: still raises the expected error."""
         from nat.plugins.langchain.agent.react_agent.output_parser import MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE
         from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParserException
-        
+
         with pytest.raises(ReActOutputParserException) as exc_info:
             parser.parse("I don't know what to do")
         assert exc_info.value.missing_action is True

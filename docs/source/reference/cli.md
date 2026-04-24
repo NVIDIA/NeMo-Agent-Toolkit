@@ -304,7 +304,7 @@ Options:
   --client-secret TEXT            Optional pre-registered client secret for
                                   authentication
   --auth-resource TEXT            Override resource URI in the OAuth2
-                                  authorization request (RFC 8707)
+                                  authorization request
   --help                          Show this message and exit.
 ```
 
@@ -371,7 +371,7 @@ Options:
   --client-secret TEXT            Optional pre-registered client secret for
                                   authentication
   --auth-resource TEXT            Override resource URI in the OAuth2
-                                  authorization request (RFC 8707)
+                                  authorization request
   --help                          Show this message and exit.
 ```
 
@@ -424,7 +424,7 @@ Options:
   --client-secret TEXT            Optional pre-registered client secret for
                                   authentication
   --auth-resource TEXT            Override resource URI in the OAuth2
-                                  authorization request (RFC 8707)
+                                  authorization request
   --help                          Show this message and exit.
 ```
 
