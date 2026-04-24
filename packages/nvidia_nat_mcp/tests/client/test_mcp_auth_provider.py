@@ -854,3 +854,31 @@ class TestMCPOAuth2Provider:
                 assert provider._cached_credentials.client_id == "first_client_id"
                 assert provider._credentials_cache_time == first_cache_time
                 assert mock_register.call_count == 1
+
+
+    async def test_auth_resource_used_in_authorization_request(self, mock_endpoints, mock_credentials):
+        """auth_resource takes precedence over _resource_from_metadata when both are set."""
+        import time
+
+        config = MCPOAuth2ProviderConfig(
+            server_url="https://example.com/mcp",  # type: ignore
+            redirect_uri="https://example.com/callback",  # type: ignore
+            client_id="test_client",
+            enable_dynamic_registration=False,
+            auth_resource="https://override.example.com",
+        )
+        provider = MCPOAuth2Provider(config)
+        provider._cached_endpoints = mock_endpoints
+        provider._cached_credentials = mock_credentials
+        provider._credentials_cache_time = time.monotonic()
+        provider._discoverer._resource_from_metadata = "https://metadata.example.com"
+
+        with patch("nat.authentication.oauth2.oauth2_auth_code_flow_provider.OAuth2AuthCodeFlowProvider") as mock_cls:
+            mock_instance = AsyncMock()
+            mock_instance.authenticate.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
+            mock_cls.return_value = mock_instance
+
+            await provider._nat_oauth2_authenticate(user_id="test_user")
+
+            built_config = mock_cls.call_args[0][0]
+            assert built_config.authorization_kwargs["resource"] == "https://override.example.com"
