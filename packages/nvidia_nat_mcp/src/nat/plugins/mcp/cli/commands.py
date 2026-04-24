@@ -72,7 +72,8 @@ def validate_transport_cli_args(transport: str, command: str | None, args: str |
             raise click.ClickException("--command is required when using stdio client type")
     elif transport in ['sse', 'streamable-http']:
         if command or args or env:
-            raise click.ClickException("--command, --args, and --env are not allowed when using sse or streamable-http client type")
+            raise click.ClickException(
+                "--command, --args, and --env are not allowed when using sse or streamable-http client type")
 
 
 def _validate_oauth_cli_options(
@@ -102,6 +103,7 @@ def _validate_oauth_cli_options(
 
     if oauth_requested and transport != "streamable-http":
         raise click.ClickException("[ERROR] Auth options are only supported with --transport streamable-http")
+
 
 class MCPPingResult(BaseModel):
     """Result of an MCP server ping request.
@@ -690,15 +692,14 @@ def mcp_client_tool_list(ctx,
 
     validate_transport_cli_args(transport, command, args, env)
 
-    _validate_oauth_cli_options(
-            direct=direct,
-            transport=transport,
-            auth=auth,
-            auth_redirect_uri=auth_redirect_uri,
-            auth_user_id=auth_user_id,
-            auth_scopes=auth_scopes,
-            client_id=client_id,
-            client_secret=client_secret)
+    _validate_oauth_cli_options(direct=direct,
+                                transport=transport,
+                                auth=auth,
+                                auth_redirect_uri=auth_redirect_uri,
+                                auth_user_id=auth_user_id,
+                                auth_scopes=auth_scopes,
+                                client_id=client_id,
+                                client_secret=client_secret)
 
     if transport in ['sse', 'streamable-http']:
         if not url:
@@ -805,14 +806,14 @@ def mcp_client_ping(url: str,
     validate_transport_cli_args(transport, command, args, env)
 
     _validate_oauth_cli_options(
-            direct=False,  # Ping command does not support --direct, so always False here
-            transport=transport,
-            auth=auth,
-            auth_redirect_uri=auth_redirect_uri,
-            auth_user_id=auth_user_id,
-            auth_scopes=auth_scopes,
-            client_id=client_id,
-            client_secret=client_secret)
+        direct=False,  # Ping command does not support --direct, so always False here
+        transport=transport,
+        auth=auth,
+        auth_redirect_uri=auth_redirect_uri,
+        auth_user_id=auth_user_id,
+        auth_scopes=auth_scopes,
+        client_id=client_id,
+        client_secret=client_secret)
 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
@@ -824,13 +825,11 @@ def mcp_client_ping(url: str,
 
     if ((auth or auth_redirect_uri or auth_user_id or auth_scopes or client_id or client_secret)
             and transport != "streamable-http"):
-        raise click.ClickException(
-            "Auth options are only supported with --transport streamable-http")
+        raise click.ClickException("Auth options are only supported with --transport streamable-http")
 
     # Auth validation: if user_id or scopes provided, require redirect_uri
     if (auth_user_id or auth_scopes_list) and not auth_redirect_uri:
-        raise click.ClickException(
-            "--auth-redirect-uri is required when using --auth-user-id or --auth-scopes")
+        raise click.ClickException("--auth-redirect-uri is required when using --auth-user-id or --auth-scopes")
 
     result = asyncio.run(
         ping_mcp_server(url,
@@ -1152,15 +1151,14 @@ def mcp_client_tool_call(tool_name: str,
     # Validate transport args
     validate_transport_cli_args(transport, command, args, env)
 
-    _validate_oauth_cli_options(
-            direct=direct,
-            transport=transport,
-            auth=auth,
-            auth_redirect_uri=auth_redirect_uri,
-            auth_user_id=auth_user_id,
-            auth_scopes=auth_scopes,
-            client_id=client_id,
-            client_secret=client_secret)
+    _validate_oauth_cli_options(direct=direct,
+                                transport=transport,
+                                auth=auth,
+                                auth_redirect_uri=auth_redirect_uri,
+                                auth_user_id=auth_user_id,
+                                auth_scopes=auth_scopes,
+                                client_id=client_id,
+                                client_secret=client_secret)
 
     # Parse stdio params
     stdio_args = args.split() if args else []
@@ -1177,8 +1175,7 @@ def mcp_client_tool_call(tool_name: str,
 
     # Bearer token not supported with --direct
     if direct and (bearer_token or bearer_token_env):
-        raise click.ClickException(
-            "--bearer-token and --bearer-token-env are not supported with --direct mode")
+        raise click.ClickException("--bearer-token and --bearer-token-env are not supported with --direct mode")
 
     # Parse tool args
     arg_obj: dict[str, Any] = {}
