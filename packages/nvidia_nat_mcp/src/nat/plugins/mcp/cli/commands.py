@@ -57,30 +57,51 @@ except ImportError:
         click.echo(f"Error: {error}", err=True)
 
 
-def validate_transport_cli_args(transport: str, command: str | None, args: str | None, env: str | None) -> bool:
+def validate_transport_cli_args(transport: str, command: str | None, args: str | None, env: str | None):
     """
-    Validate transport and parameter combinations, returning False if invalid.
+    Validate transport and parameter combinations, raising ClickException if invalid.
 
     Args:
         transport: The transport type ('sse', 'stdio', or 'streamable-http')
         command: Command for stdio transport
         args: Arguments for stdio transport
         env: Environment variables for stdio transport
-
-    Returns:
-        bool: True if valid, False if invalid (error message already displayed)
     """
     if transport == 'stdio':
         if not command:
-            click.echo("--command is required when using stdio client type", err=True)
-            return False
+            raise click.ClickException("--command is required when using stdio client type")
     elif transport in ['sse', 'streamable-http']:
         if command or args or env:
-            click.echo("--command, --args, and --env are not allowed when using sse or streamable-http client type",
-                       err=True)
-            return False
-    return True
+            raise click.ClickException("--command, --args, and --env are not allowed when using sse or streamable-http client type")
 
+
+def _validate_oauth_cli_options(
+    *,
+    direct: bool,
+    transport: str,
+    auth: bool,
+    auth_redirect_uri: str | None,
+    auth_user_id: str | None,
+    auth_scopes: str | None,
+    client_id: str | None,
+    client_secret: str | None,
+):
+    oauth_requested = any((
+        auth,
+        auth_redirect_uri,
+        auth_user_id,
+        auth_scopes,
+        client_id,
+        client_secret,
+    ))
+    if client_secret and not client_id:
+        raise click.ClickException("[ERROR] --client-secret requires --client-id")
+
+    if direct and oauth_requested:
+        raise click.ClickException("[ERROR] Auth options are not supported with --direct mode")
+
+    if oauth_requested and transport != "streamable-http":
+        raise click.ClickException("[ERROR] Auth options are only supported with --transport streamable-http")
 
 class MCPPingResult(BaseModel):
     """Result of an MCP server ping request.
@@ -218,11 +239,8 @@ async def _create_mcp_client_config(
             auth_provider_name = "mcp_oauth2_cli"
             await builder.add_auth_provider(auth_provider_name, auth_config)
             server_cfg.auth_provider = auth_provider_name
-        except ImportError:
-            click.echo(
-                "[WARNING] MCP OAuth2 authentication requires nvidia-nat-mcp package.",
-                err=True,
-            )
+        except ImportError as e:
+            raise click.ClickException("MCP OAuth2 authentication requires nvidia-nat-mcp package.") from e
     if per_user:
         group_cfg = PerUserMCPClientConfig(server=server_cfg)
         group_name = "per_user_mcp_client"
@@ -288,15 +306,9 @@ async def list_tools_via_function_group(
     Mirrors the behavior of list_mcp.py but routes through the registered function group to ensure
     parity with workflow configuration.
     """
-    try:
-        # Ensure the registration side-effects are loaded
-        from nat.builder.workflow_builder import WorkflowBuilder
-        from nat.plugins.mcp.client.client_config import MCPServerConfig
-    except ImportError:
-        click.echo(
-            "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
-            err=True)
-        return []
+    # Ensure the registration side-effects are loaded
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.plugins.mcp.client.client_config import MCPServerConfig
 
     if args is None:
         args = []
@@ -567,13 +579,9 @@ def mcp_client_command():
     """
     MCP client commands.
     """
-    try:
-        from nat.runtime.loader import PluginTypes
-        from nat.runtime.loader import discover_and_register_plugins
-        discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
-    except ImportError:
-        click.echo("[WARNING] MCP client functionality requires nvidia-nat-mcp package.", err=True)
-        pass
+    from nat.runtime.loader import PluginTypes
+    from nat.runtime.loader import discover_and_register_plugins
+    discover_and_register_plugins(PluginTypes.CONFIG_OBJECT)
 
 
 @mcp_client_command.group(name="tool", invoke_without_command=False, help="Inspect and call MCP tools.")
@@ -680,13 +688,21 @@ def mcp_client_tool_list(ctx,
     if ctx.invoked_subcommand is not None:
         return
 
-    if not validate_transport_cli_args(transport, command, args, env):
-        return
+    validate_transport_cli_args(transport, command, args, env)
+
+    _validate_oauth_cli_options(
+            direct=direct,
+            transport=transport,
+            auth=auth,
+            auth_redirect_uri=auth_redirect_uri,
+            auth_user_id=auth_user_id,
+            auth_scopes=auth_scopes,
+            client_id=client_id,
+            client_secret=client_secret)
 
     if transport in ['sse', 'streamable-http']:
         if not url:
-            click.echo("[ERROR] --url is required when using sse or streamable-http client type", err=True)
-            return
+            raise click.ClickException("--url is required when using sse or streamable-http client type")
 
     # Set auth defaults if --auth flag is used
     auth_redirect_uri, auth_user_id, auth_scopes_list = _set_auth_defaults(
@@ -786,8 +802,17 @@ def mcp_client_ping(url: str,
         nat mcp client ping --url https://example.com/mcp/ --transport streamable-http --auth # With auth
     """
     # Validate combinations similar to list command
-    if not validate_transport_cli_args(transport, command, args, env):
-        return
+    validate_transport_cli_args(transport, command, args, env)
+
+    _validate_oauth_cli_options(
+            direct=False,  # Ping command does not support --direct, so always False here
+            transport=transport,
+            auth=auth,
+            auth_redirect_uri=auth_redirect_uri,
+            auth_user_id=auth_user_id,
+            auth_scopes=auth_scopes,
+            client_id=client_id,
+            client_secret=client_secret)
 
     stdio_args = args.split() if args else []
     stdio_env = dict(var.split('=', 1) for var in env.split()) if env else None
@@ -799,13 +824,13 @@ def mcp_client_ping(url: str,
 
     if ((auth or auth_redirect_uri or auth_user_id or auth_scopes or client_id or client_secret)
             and transport != "streamable-http"):
-        click.echo("[ERROR] Auth options are only supported with --transport streamable-http", err=True)
-        return
+        raise click.ClickException(
+            "Auth options are only supported with --transport streamable-http")
 
     # Auth validation: if user_id or scopes provided, require redirect_uri
     if (auth_user_id or auth_scopes_list) and not auth_redirect_uri:
-        click.echo("[ERROR] --auth-redirect-uri is required when using --auth-user-id or --auth-scopes", err=True)
-        return
+        raise click.ClickException(
+            "--auth-redirect-uri is required when using --auth-user-id or --auth-scopes")
 
     result = asyncio.run(
         ping_mcp_server(url,
@@ -985,10 +1010,8 @@ async def call_tool_and_print(command: str | None,
         from nat.plugins.mcp.client.client_config import MCPServerConfig
         from nat.plugins.mcp.client.client_config import PerUserMCPClientConfig
     except ImportError:
-        click.echo(
-            "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp",
-            err=True)
-        return ""
+        raise click.ClickException(
+            "MCP client functionality requires nvidia-nat-mcp package. Install with: uv pip install nvidia-nat-mcp")
 
     server_cfg = MCPServerConfig(
         transport=cast(Literal["stdio", "sse", "streamable-http"], transport),
@@ -1017,8 +1040,7 @@ async def call_tool_and_print(command: str | None,
                     group_cfg = MCPClientConfig(server=server_cfg)
                     group_name = "mcp_client"
             except Exception as e:
-                click.echo(f"[ERROR] Failed to configure bearer token authentication: {e}", err=True)
-                return ""
+                raise click.ClickException(f"Failed to configure bearer token authentication: {e}") from e
         else:
             group_name, group_cfg = await _create_mcp_client_config(builder,
                                                          server_cfg,
@@ -1128,8 +1150,17 @@ def mcp_client_tool_call(tool_name: str,
             --transport streamable-http --json-args '{"query": "test"}' --auth
     """
     # Validate transport args
-    if not validate_transport_cli_args(transport, command, args, env):
-        return
+    validate_transport_cli_args(transport, command, args, env)
+
+    _validate_oauth_cli_options(
+            direct=direct,
+            transport=transport,
+            auth=auth,
+            auth_redirect_uri=auth_redirect_uri,
+            auth_user_id=auth_user_id,
+            auth_scopes=auth_scopes,
+            client_id=client_id,
+            client_secret=client_secret)
 
     # Parse stdio params
     stdio_args = args.split() if args else []
@@ -1142,13 +1173,12 @@ def mcp_client_tool_call(tool_name: str,
 
     # Validate: only one auth method at a time
     if (auth or auth_redirect_uri) and (bearer_token or bearer_token_env):
-        click.echo("[ERROR] Cannot use both OAuth2 (--auth) and bearer token authentication", err=True)
-        return
+        raise click.ClickException("Cannot use both OAuth2 (--auth) and bearer token authentication")
 
     # Bearer token not supported with --direct
     if direct and (bearer_token or bearer_token_env):
-        click.echo("[ERROR] --bearer-token and --bearer-token-env are not supported with --direct mode", err=True)
-        return
+        raise click.ClickException(
+            "--bearer-token and --bearer-token-env are not supported with --direct mode")
 
     # Parse tool args
     arg_obj: dict[str, Any] = {}
@@ -1156,12 +1186,10 @@ def mcp_client_tool_call(tool_name: str,
         try:
             parsed = json.loads(json_args)
             if not isinstance(parsed, dict):
-                click.echo("[ERROR] --json-args must be a JSON object", err=True)
-                return
+                raise click.ClickException("--json-args must be a JSON object")
             arg_obj.update(parsed)
         except json.JSONDecodeError as e:
-            click.echo(f"[ERROR] Failed to parse --json-args: {e}", err=True)
-            return
+            raise click.ClickException(f"Failed to parse --json-args: {e}") from e
 
     try:
         output = asyncio.run(
@@ -1189,4 +1217,4 @@ def mcp_client_tool_call(tool_name: str,
     except MCPError as e:
         format_mcp_error(e, include_traceback=False)
     except Exception as e:
-        click.echo(f"[ERROR] {e}", err=True)
+        raise click.ClickException(str(e)) from e
