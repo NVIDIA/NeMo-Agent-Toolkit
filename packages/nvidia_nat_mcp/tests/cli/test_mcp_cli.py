@@ -688,6 +688,7 @@ def test_validate_transport_cli_args(transport, command, args, env, expected_ok,
             validate_transport_cli_args(transport, command, args, env)
         assert expected_err in str(excinfo.value)
 
+
 def test_call_tool_and_print_group_success(monkeypatch):
 
     class _Fn:
