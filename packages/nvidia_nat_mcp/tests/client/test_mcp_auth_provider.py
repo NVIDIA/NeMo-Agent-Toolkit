@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import time
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -856,15 +857,15 @@ class TestMCPOAuth2Provider:
                 assert mock_register.call_count == 1
 
     async def test_auth_resource_used_in_authorization_request(self, mock_endpoints, mock_credentials):
-        """Test to ensure that the protected resource from metadata is included in the authorization request if available."""
-        import time
+        """
+        Test to ensure that the protected resource from metadata is included in the authorization request if available.
+        """
 
         config = MCPOAuth2ProviderConfig(
             server_url="https://example.com/mcp",  # type: ignore
             redirect_uri="https://example.com/callback",  # type: ignore
             client_id="test_client",
-            enable_dynamic_registration=False
-        )
+            enable_dynamic_registration=False)
         provider = MCPOAuth2Provider(config)
         provider._cached_endpoints = mock_endpoints
         provider._cached_credentials = mock_credentials

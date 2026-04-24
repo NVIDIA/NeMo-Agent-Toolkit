@@ -106,15 +106,14 @@ def test_mcp_client_tool_list_variants(
 def test_mcp_client_tool_list_specific_tool(mock_fetcher, mock_tools):
     mock_fetcher.return_value = [mock_tools[1]]
     runner = CliRunner()
-    result = runner.invoke(mcp_client_tool_list,
-                           [
-                               "--tool",
-                               "tool_b",
-                               "--client-id",
-                               "my_client_id",
-                               "--client-secret",
-                               "my_client_secret",
-                           ])
+    result = runner.invoke(mcp_client_tool_list, [
+        "--tool",
+        "tool_b",
+        "--client-id",
+        "my_client_id",
+        "--client-secret",
+        "my_client_secret",
+    ])
     assert result.exit_code == 0
     assert "Tool: tool_b" in result.output
     assert "Description: Tool B description" in result.output
@@ -235,13 +234,12 @@ def test_mcp_client_ping_unreachable(mock_ping):
                                            response_time_ms=None,
                                            error="Timeout after 1 seconds")
     runner = CliRunner()
-    result = runner.invoke(mcp_client_ping,
-                           [
-                               "--client-id",
-                               "my_client_id",
-                               "--client-secret",
-                               "my_client_secret",
-                           ])
+    result = runner.invoke(mcp_client_ping, [
+        "--client-id",
+        "my_client_id",
+        "--client-secret",
+        "my_client_secret",
+    ])
     assert result.exit_code == 0
     assert "unhealthy" in result.output
     assert "Timeout" in result.output

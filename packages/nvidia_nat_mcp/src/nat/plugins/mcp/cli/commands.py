@@ -638,8 +638,8 @@ def mcp_client_tool_list(ctx,
                          auth_scopes,
                          per_user,
                          user_id,
-                         client_id: str| None,
-                         client_secret: str| None):
+                         client_id: str | None,
+                         client_secret: str | None):
     """List MCP tool names (default) or show detailed tool information.
 
     Use --detail for full output including descriptions and input schemas.

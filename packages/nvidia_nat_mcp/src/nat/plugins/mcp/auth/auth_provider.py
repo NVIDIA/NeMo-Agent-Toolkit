@@ -494,7 +494,8 @@ class MCPOAuth2Provider(AuthProviderBase[MCPOAuth2ProviderConfig]):
             scopes = self._effective_scopes
             resource = self._discoverer._resource_from_metadata or str(self.config.server_url)
             logger.debug("Using resource for authorization request: %s (from_metadata=%s)",
-                         resource, self._discoverer._resource_from_metadata is not None)
+                         resource,
+                         self._discoverer._resource_from_metadata is not None)
             oauth2_config = OAuth2AuthCodeFlowProviderConfig(
                 client_id=credentials.client_id,
                 client_secret=credentials.client_secret or "",
