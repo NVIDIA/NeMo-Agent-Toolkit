@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import OrderedDict
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -42,6 +43,14 @@ from nat.middleware.function_middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 
 logger = logging.getLogger(__name__)
+
+
+# Default bound on cache size. The previous implementation used an unbounded
+# dict which, under sustained unique input, grew without limit — a memory-
+# exhaustion DoS and, combined with fuzzy matching, a long-lived surface for
+# cross-request confusion. OrderedDict-backed LRU evicts the oldest entry
+# when the cache exceeds this bound.
+_DEFAULT_MAX_CACHE_ENTRIES = 1024
 
 
 class CacheMiddleware(FunctionMiddleware):
@@ -67,19 +76,36 @@ class CacheMiddleware(FunctionMiddleware):
             computation.
     """
 
-    def __init__(self, *, enabled_mode: str, similarity_threshold: float) -> None:
+    def __init__(
+        self,
+        *,
+        enabled_mode: str,
+        similarity_threshold: float,
+        max_entries: int = _DEFAULT_MAX_CACHE_ENTRIES,
+    ) -> None:
         """Initialize the cache middleware.
 
         Args:
             enabled_mode: Either "always" or "eval". If "eval", only caches
                 when Context.is_evaluating is True.
-            similarity_threshold: Similarity threshold between 0 and 1.
-                If 1.0, performs exact matching. Otherwise uses fuzzy matching.
+            similarity_threshold: Similarity threshold in [0, 1.0]. If 1.0,
+                performs exact matching. Lower values enable difflib-based
+                fuzzy matching; note that difflib is quadratic in the worst
+                case, so large caches with low thresholds may have a
+                performance cost. Values near 0 increase the risk of cache
+                collisions where different inputs return the same cached
+                response.
+            max_entries: Maximum number of cache entries. When exceeded, the
+                oldest entry is evicted (LRU). Defaults to
+                _DEFAULT_MAX_CACHE_ENTRIES.
         """
         super().__init__(is_final=True)
         self._enabled_mode = enabled_mode
         self._similarity_threshold = similarity_threshold
-        self._cache: dict[str, Any] = {}
+        # OrderedDict gives O(1) LRU: move_to_end() on hit, popitem(last=False)
+        # to evict the oldest when we exceed max_entries.
+        self._cache: OrderedDict[str, Any] = OrderedDict()
+        self._max_entries = max_entries
 
     # ==================== Abstract Method Implementations ====================
 
@@ -142,22 +168,13 @@ class CacheMiddleware(FunctionMiddleware):
             # Exact matching - fast path
             return input_str if input_str in self._cache else None
 
-        # Fuzzy matching using difflib
         import difflib
 
-        best_match = None
-        best_ratio = 0.0
-
-        for cached_key in self._cache:
-            # Use SequenceMatcher for similarity computation
-            matcher = difflib.SequenceMatcher(None, input_str, cached_key)
-            ratio = matcher.ratio()
-
-            if ratio >= self._similarity_threshold and ratio > best_ratio:
-                best_ratio = ratio
-                best_match = cached_key
-
-        return best_match
+        best_matches = difflib.get_close_matches(
+            input_str, self._cache.keys(), n=1, cutoff=self._similarity_threshold)
+        if best_matches:
+            return best_matches[0]
+        return None
 
     async def function_middleware_invoke(self,
                                          *args: Any,
@@ -199,10 +216,13 @@ class CacheMiddleware(FunctionMiddleware):
         # Phase 1: Preprocess - look for a similar cached input
         similar_key = self._find_similar_key(input_str)
         if similar_key is not None:
-            # Cache hit - short-circuit and return cached output
+            # Cache hit - short-circuit and return cached output.
+            # Move the hit entry to the MRU end so LRU eviction prefers truly
+            # old entries, not just recently-useful ones.
             logger.debug("Cache hit for function %s with similarity %.2f",
                          context.name,
                          1.0 if similar_key == input_str else self._similarity_threshold)
+            self._cache.move_to_end(similar_key)
             # Phase 4: Continue - return cached result
             return self._cache[similar_key]
 
@@ -210,9 +230,17 @@ class CacheMiddleware(FunctionMiddleware):
         logger.debug("Cache miss for function %s", context.name)
         result = await call_next(*args, **kwargs)
 
-        # Phase 3: Postprocess - cache the result for future use
+        # Phase 3: Postprocess - cache the result for future use. Enforce the
+        # LRU bound BEFORE insert so the new entry always lands in a cache of
+        # size <= max_entries, preventing unbounded memory growth (DoS).
         self._cache[input_str] = result
-        logger.debug("Cached result for function %s", context.name)
+        self._cache.move_to_end(input_str)
+        while len(self._cache) > self._max_entries:
+            self._cache.popitem(last=False)
+        logger.debug("Cached result for function %s (size=%d/%d)",
+                     context.name,
+                     len(self._cache),
+                     self._max_entries)
 
         # Phase 4: Continue - return the fresh result
         return result
