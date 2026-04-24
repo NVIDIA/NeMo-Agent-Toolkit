@@ -488,7 +488,6 @@ async def ping_mcp_server(url: str,
             from nat.builder.workflow_builder import WorkflowBuilder
             from nat.plugins.mcp.client.client_config import MCPServerConfig
 
-
             server_cfg = MCPServerConfig(
                 transport=cast(Literal["stdio", "sse", "streamable-http"], transport),
                 url=cast(Any, url) if transport in ('sse', 'streamable-http') else None,
@@ -799,10 +798,9 @@ def mcp_client_ping(url: str,
     )
 
     if ((auth or auth_redirect_uri or auth_user_id or auth_scopes or client_id or client_secret)
-        and transport != "streamable-http"):
+            and transport != "streamable-http"):
         click.echo("[ERROR] Auth options are only supported with --transport streamable-http", err=True)
         return
-
 
     # Auth validation: if user_id or scopes provided, require redirect_uri
     if (auth_user_id or auth_scopes_list) and not auth_redirect_uri:

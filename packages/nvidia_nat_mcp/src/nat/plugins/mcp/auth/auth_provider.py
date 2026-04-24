@@ -121,8 +121,7 @@ class DiscoverOAuth2Endpoints:
         if endpoints is None:
             raise RuntimeError("Could not discover OAuth2 endpoints from MCP server")
 
-        changed = (self._cached_endpoints is None
-                   or endpoints.model_dump() != self._cached_endpoints.model_dump()
+        changed = (self._cached_endpoints is None or endpoints.model_dump() != self._cached_endpoints.model_dump()
                    or previous_resource != self._resource_from_metadata)
 
         self._cached_endpoints = endpoints
