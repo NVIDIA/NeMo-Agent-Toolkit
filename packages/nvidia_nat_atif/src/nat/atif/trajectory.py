@@ -30,7 +30,7 @@ from nat.atif.agent import Agent
 from nat.atif.final_metrics import FinalMetrics
 from nat.atif.step import Step
 
-ATIF_VERSION = "ATIF-v1.6"
+ATIF_VERSION = "ATIF-v1.7"
 
 
 class Trajectory(BaseModel):
@@ -44,6 +44,7 @@ class Trajectory(BaseModel):
         "ATIF-v1.4",
         "ATIF-v1.5",
         "ATIF-v1.6",
+        "ATIF-v1.7",
     ] = Field(
         default=ATIF_VERSION,
         description="String defining ATIF compatibility",
@@ -79,6 +80,14 @@ class Trajectory(BaseModel):
     extra: dict[str, Any] | None = Field(
         default=None,
         description="Custom root-level metadata",
+    )
+    subagent_trajectories: list[Trajectory] | None = Field(
+        default=None,
+        description=("Array of embedded subagent trajectories (ATIF v1.7). Each element "
+                     "is a complete, independently-valid ATIF Trajectory with its own "
+                     "step_id sequence starting at 1. Consumers resolve SubagentTrajectoryRef "
+                     "entries with null trajectory_path by matching session_id against "
+                     "entries in this array."),
     )
 
     model_config = ConfigDict(extra="forbid")

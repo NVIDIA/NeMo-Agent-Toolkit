@@ -28,6 +28,7 @@ from pydantic import field_validator
 from pydantic import model_validator
 
 from nat.atif.content import ContentPart
+from nat.atif.function_ancestry import FunctionAncestry
 from nat.atif.metrics import Metrics
 from nat.atif.observation import Observation
 from nat.atif.tool_call import ToolCall
@@ -90,6 +91,18 @@ class Step(BaseModel):
     extra: dict[str, Any] | None = Field(
         default=None,
         description="Custom step-level metadata",
+    )
+    function_ancestry: FunctionAncestry | None = Field(
+        default=None,
+        description=("Typed ancestry for this step's callable node in the workflow call graph "
+                     "(ATIF v1.7). Records callable identity and parent."),
+    )
+    llm_call_count: int | None = Field(
+        default=None,
+        ge=0,
+        description=("Number of LLM inferences this step represents (ATIF v1.7). "
+                     "0 = deterministic/non-LLM dispatch (v1.7-alignment-proposal); "
+                     "1 = single inference; >1 = aggregated metrics; null = not tracked."),
     )
 
     model_config = ConfigDict(extra="forbid")
