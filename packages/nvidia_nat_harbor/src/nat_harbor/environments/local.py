@@ -30,7 +30,14 @@ from harbor.models.trial.paths import TrialPaths
 
 
 class LocalEnvironment(BaseEnvironment):
-    """Host-local environment for fast development/debug iteration."""
+    """Host-local environment for fast development/debug iteration.
+
+    Path model:
+      - Most container-like paths (``/app``, ``/workspace``, ``/tests``, etc.)
+        are mapped under ``<trial_dir>/.local-env``.
+      - Canonical Harbor log/artifact paths (``/logs/agent``, ``/logs/verifier``,
+        ``/logs/artifacts``) are mapped to ``trial_paths`` directories.
+    """
 
     def __init__(
         self,
@@ -94,12 +101,14 @@ class LocalEnvironment(BaseEnvironment):
 
     @property
     def can_disable_internet(self) -> bool:
-        return True
+        # Local mode runs on the host and cannot reliably enforce egress blocking.
+        return False
 
     def _validate_definition(self):
         return
 
     def _translate_path(self, raw_path: str) -> str:
+        """Translate a container-style path to its host-mapped local-mode path."""
         raw = PurePosixPath(raw_path).as_posix()
         for src, dst in sorted(self._path_map, key=lambda item: len(item[0]), reverse=True):
             if raw == src:
@@ -110,6 +119,7 @@ class LocalEnvironment(BaseEnvironment):
         return raw_path
 
     def _translate_command(self, command: str) -> str:
+        """Translate mapped paths in a shell command and neutralize chown operations."""
         translated = command
         for src, dst in sorted(self._path_map, key=lambda item: len(item[0]), reverse=True):
             translated = translated.replace(src, str(dst))
@@ -219,6 +229,14 @@ class LocalEnvironment(BaseEnvironment):
         timeout_sec: int | None = None,
         user: str | int | None = None,
     ) -> ExecResult:
+        """Execute a host shell command with local-mode path/policy enforcement.
+
+        Behavior:
+          - Translates container-style paths in `command` and `cwd` to host paths.
+          - Blocks shell profile writes and out-of-scope working directories.
+          - Executes via bash, captures stdout/stderr, and enforces timeout.
+          - Ignores `user` (local mode runs as host user).
+        """
         del user
         translated_command = self._translate_command(command)
         if self.is_shell_profile_write(translated_command):

@@ -19,12 +19,11 @@ from __future__ import annotations
 
 import pytest
 
-from nat_harbor.adapters import BaseTaskAdapter
 from nat_harbor.cli import load_adapter_class
 from nat_harbor.cli import parse_source_ids
 
 
-class _TestAdapter(BaseTaskAdapter):
+class _TestAdapter:
     adapter_name = "test"
 
     def list_available_tasks(self) -> list[str]:
@@ -49,12 +48,23 @@ def test_load_adapter_class_invalid_format() -> None:
 
 
 def test_load_adapter_class_wrong_type() -> None:
-    with pytest.raises(ValueError, match="BaseTaskAdapter subclass"):
+    with pytest.raises(ValueError, match="must resolve to a class"):
         load_adapter_class("nat_harbor.cli:build_parser")
 
 
 def test_load_adapter_class_success(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("nat_harbor.cli.importlib.import_module", lambda _: __import__(__name__))
     cls = load_adapter_class(f"{__name__}:_TestAdapter")
-    assert issubclass(cls, BaseTaskAdapter)
+    assert cls is _TestAdapter
+
+
+def test_load_adapter_class_missing_methods(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _IncompleteAdapter:
+        pass
+
+    monkeypatch.setattr("nat_harbor.cli.importlib.import_module", lambda _: __import__(__name__))
+    globals()["_IncompleteAdapter"] = _IncompleteAdapter
+    with pytest.raises(ValueError, match="missing required adapter method"):
+        load_adapter_class(f"{__name__}:_IncompleteAdapter")
+    del globals()["_IncompleteAdapter"]
 

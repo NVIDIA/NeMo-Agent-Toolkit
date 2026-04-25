@@ -30,15 +30,32 @@ python examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/
 ## 2) Remove previous job directory
 
 ```bash
-rm -rf .tmp/harbor/jobs-local/simple-calculator-nested-local-full-fixed-wrapper-tools
+rm -rf .tmp/harbor/jobs-local/sc-nested-local .tmp/harbor/jobs-local/sc-nested-local-smoke
 ```
 
-## 3) Run Harbor local-mode job (NAT bridge)
+## 3) Run a single task (smoke check)
 
 ```bash
-PYTHONPATH="packages/nvidia_nat_harbor/src" harbor run \
+harbor run \
   --path .tmp/harbor/datasets/simple-calculator-nested \
-  --job-name simple-calculator-nested-local-full-fixed-wrapper-tools \
+  -l 1 \
+  --job-name sc-nested-local-smoke \
+  --jobs-dir .tmp/harbor/jobs-local \
+  --yes -n 1 --max-retries 2 \
+  --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
+  --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --env docker \
+  --model nvidia/meta/llama-3.3-70b-instruct \
+  --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
+  --ak local_install_policy=skip
+```
+
+## 4) Run the full local-mode job
+
+```bash
+harbor run \
+  --path .tmp/harbor/datasets/simple-calculator-nested \
+  --job-name sc-nested-local \
   --jobs-dir .tmp/harbor/jobs-local \
   --yes -n 1 --max-retries 2 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \

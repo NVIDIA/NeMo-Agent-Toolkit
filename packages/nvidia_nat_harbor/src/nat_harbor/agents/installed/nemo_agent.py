@@ -13,7 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""NAT bridge for Harbor's NemoAgent behavior gaps."""
+"""NAT bridge for Harbor's NemoAgent behavior gaps.
+
+Upstreaming note:
+    This class subclasses Harbor's upstream `NemoAgent` and intentionally keeps
+    only minimal local deltas (local install policy, python_bin override, and
+    workflow package setup behavior) so changes can be upstreamed cleanly.
+"""
 
 from __future__ import annotations
 
@@ -26,8 +32,8 @@ from harbor.agents.installed.base import CliFlag
 from harbor.agents.installed.nemo_agent import NemoAgent as HarborNemoAgent
 from harbor.environments.base import BaseEnvironment
 
-from nat_harbor.agents.installed.local_install_policy import is_local_install_allowed
-from nat_harbor.agents.installed.local_install_policy import resolve_local_install_policy
+from nat_harbor.agents.installed.policy import is_local_install_allowed
+from nat_harbor.agents.installed.policy import resolve_local_install_policy
 
 
 class NemoAgent(HarborNemoAgent):

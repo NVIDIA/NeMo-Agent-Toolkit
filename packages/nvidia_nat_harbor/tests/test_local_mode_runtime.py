@@ -21,8 +21,8 @@ import json
 
 import pytest
 
-from nat_harbor.agents.installed.local_install_policy import is_local_install_allowed
-from nat_harbor.agents.installed.local_install_policy import resolve_local_install_policy
+from nat_harbor.agents.installed.policy import is_local_install_allowed
+from nat_harbor.agents.installed.policy import resolve_local_install_policy
 from nat_harbor.agents.installed.nemo_agent_run_wrapper import normalize_result_text
 from nat_harbor.environments.local import LocalEnvironment
 from nat_harbor.environments.local import is_shell_profile_write

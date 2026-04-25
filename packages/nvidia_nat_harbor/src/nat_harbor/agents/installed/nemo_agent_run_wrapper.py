@@ -14,7 +14,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Wrapper to run a NAT workflow and emit plain text output."""
+"""Wrapper to run a NAT workflow and emit plain text output.
+
+Upstreaming note:
+    This file intentionally tracks Harbor's wrapper implementation as a near-copy
+    so `nvidia-nat-harbor` can provide a stable integration surface when running
+    against released Harbor versions.
+
+    Upstream baseline:
+        `harbor/src/harbor/agents/installed/nemo_agent_run_wrapper.py`
+        https://github.com/harbor-framework/harbor/blob/main/src/harbor/agents/installed/nemo_agent_run_wrapper.py
+
+    Current local deltas vs upstream baseline:
+      1. Optional debugpy bootstrap (`maybe_enable_debugpy`) via
+         `NVIDIA_NAT_DEBUGPY_*` environment variables.
+      2. Output normalization (`normalize_result_text`) that extracts JSON payloads
+         from command-style responses such as:
+         `echo '[{{...}}]' > /app/result.json`
+         This avoids verifier parse failures when the model emits shell-style output.
+
+    Why this duplication exists:
+      - Harbor 0.5.0 does not include all NAT-focused local-mode behavior we need.
+      - Keeping this wrapper in `nvidia-nat-harbor` allows us to patch/ship those
+        deltas independently and then upstream cleanly later.
+"""
 
 from __future__ import annotations
 

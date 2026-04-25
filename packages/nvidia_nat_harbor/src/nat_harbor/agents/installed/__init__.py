@@ -15,8 +15,8 @@
 
 """Installed-agent helpers aligned with Harbor structure."""
 
-from .local_install_policy import is_local_install_allowed
-from .local_install_policy import resolve_local_install_policy
+from .policy import is_local_install_allowed
+from .policy import resolve_local_install_policy
 from .nemo_agent import NemoAgent
 
 __all__ = [
