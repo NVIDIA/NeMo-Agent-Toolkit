@@ -51,6 +51,7 @@ dependencies = [
 # Optional dependencies are things that users would want to install with NAT. i.e. `uv pip install "nvidia-nat[langchain]"`
 # Keep sorted!!!
 a2a = ["nvidia-nat-a2a == {version}"]
+a365 = ["nvidia-nat-a365 == {version}"]
 adk = ["nvidia-nat-adk == {version}"]
 agno = ["nvidia-nat-agno == {version}"]
 app = ["nvidia-nat-app == {version}"]
@@ -93,6 +94,7 @@ pii-defense = [ "nvidia-nat-core[pii-defense] == {version}" ]
 
 most = [
   "nvidia-nat-a2a == {version}",
+  "nvidia-nat-a365 == {version}",
   "nvidia-nat-adk == {version}",
   "nvidia-nat-agno == {version}",
   "nvidia-nat-app == {version}",
@@ -231,6 +233,7 @@ managed = true
 [tool.uv.sources]
 # Packages
 nvidia-nat-a2a = { path = "packages/nvidia_nat_a2a", editable = true }
+nvidia-nat-a365 = { path = "packages/nvidia_nat_a365", editable = true }
 nvidia-nat-adk = { path = "packages/nvidia_nat_adk", editable = true }
 nvidia-nat-agno = { path = "packages/nvidia_nat_agno", editable = true }
 nvidia-nat-app = { path = "packages/nvidia_nat_app", editable = true }

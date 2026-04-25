@@ -1,0 +1,13 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=64"]
+
+[project]
+name = "transcript-mcp"
+version = "0.1.0"
+description = "MCP server exposing Azure Blob-backed Teams transcript artifacts"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.6.0",
+    "azure-storage-blob>=12.23.0",
+]
