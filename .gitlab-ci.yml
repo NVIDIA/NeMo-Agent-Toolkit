@@ -130,7 +130,7 @@ test:python_tests:
       alias: mysql
       pull_policy: if-not-present
 
-    - name: arizephoenix/phoenix:latest
+    - name: arizephoenix/phoenix:13.22
       alias: phoenix
       pull_policy: if-not-present
 
