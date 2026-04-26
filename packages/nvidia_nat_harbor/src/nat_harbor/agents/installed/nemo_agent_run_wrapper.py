@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Wrapper to run a NAT workflow and emit plain text output.
 
 Upstreaming note:
@@ -154,9 +153,7 @@ def normalize_result_text(raw_text: str) -> str:
     return text
 
 
-async def main(
-    config_path: str, instruction: str, trajectory_path: str | None = None
-) -> None:
+async def main(config_path: str, instruction: str, trajectory_path: str | None = None) -> None:
     """Run the NAT workflow and print normalized result text."""
     maybe_enable_debugpy()
 
@@ -213,7 +210,7 @@ if __name__ == "__main__":
         idx = args.index("--trajectory-output")
         if idx + 1 < len(args):
             trajectory_path = args[idx + 1]
-            args = args[:idx] + args[idx + 2 :]
+            args = args[:idx] + args[idx + 2:]
         else:
             print("--trajectory-output requires a path argument", file=sys.stderr)
             sys.exit(1)
@@ -228,4 +225,3 @@ if __name__ == "__main__":
     config_path = args[0]
     instruction = " ".join(args[1:])
     asyncio.run(main(config_path, instruction, trajectory_path))
-

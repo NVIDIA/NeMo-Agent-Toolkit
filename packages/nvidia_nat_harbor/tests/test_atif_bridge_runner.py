@@ -100,8 +100,7 @@ def test_missing_artifact_fallback_raw_output(tmp_path: Path, monkeypatch: pytes
         lambda: {
             "raw_output_path": "/logs/agent/nemo-agent-output.txt",
             "raw_output_exists": True,
-            "raw_output_prefix": "stub",
-        },
+            "raw_output_prefix": "stub", },
     )
     code = bridge_runner.run_bridge(
         artifact_path="still-missing.json",

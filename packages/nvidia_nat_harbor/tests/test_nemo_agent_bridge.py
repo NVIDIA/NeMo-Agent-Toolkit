@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Unit tests for NAT Harbor NemoAgent bridge behavior."""
 
 from __future__ import annotations
@@ -74,15 +73,13 @@ async def test_install_allows_local_mode_with_opt_in(tmp_path: Path) -> None:
     mock_env.type = Mock(return_value="local")
 
     with patch(
-        "nat_harbor.agents.installed.nemo_agent.HarborNemoAgent.install",
-        new=AsyncMock(),
+            "nat_harbor.agents.installed.nemo_agent.HarborNemoAgent.install",
+            new=AsyncMock(),
     ) as install_mock:
         await agent.install(mock_env)
 
     install_mock.assert_awaited_once_with(mock_env)
-    policy = json.loads(
-        (agent.logs_dir / "setup" / "install-policy.json").read_text(encoding="utf-8")
-    )
+    policy = json.loads((agent.logs_dir / "setup" / "install-policy.json").read_text(encoding="utf-8"))
     assert policy["install_executed"] is True
     assert policy["local_install_allowed"] is True
 
@@ -101,8 +98,8 @@ async def test_setup_installs_multiple_local_packages_in_order(tmp_path: Path) -
     mock_env.exec.return_value = AsyncMock(return_code=0, stdout="", stderr="")
 
     with patch(
-        "nat_harbor.agents.installed.nemo_agent.BaseInstalledAgent.setup",
-        new=AsyncMock(),
+            "nat_harbor.agents.installed.nemo_agent.BaseInstalledAgent.setup",
+            new=AsyncMock(),
     ):
         await agent.setup(mock_env)
 
@@ -111,11 +108,9 @@ async def test_setup_installs_multiple_local_packages_in_order(tmp_path: Path) -
     assert "/installed-agent/workflow-package-1" in upload_targets
 
     install_commands = [
-        call.kwargs["command"]
-        for call in mock_env.exec.call_args_list
+        call.kwargs["command"] for call in mock_env.exec.call_args_list
         if "pip install --no-deps /installed-agent/workflow-package-" in call.kwargs.get("command", "")
     ]
     assert len(install_commands) == 2
     assert "/installed-agent/workflow-package-0" in install_commands[0]
     assert "/installed-agent/workflow-package-1" in install_commands[1]
-

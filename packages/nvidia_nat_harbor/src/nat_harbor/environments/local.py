@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Host-local Harbor environment implementation for NAT workflows."""
 
 from __future__ import annotations
@@ -21,7 +20,8 @@ import asyncio
 import os
 import re
 import shutil
-from pathlib import Path, PurePosixPath
+from pathlib import Path
+from pathlib import PurePosixPath
 
 from harbor.environments.base import BaseEnvironment
 from harbor.environments.base import ExecResult
@@ -114,7 +114,7 @@ class LocalEnvironment(BaseEnvironment):
             if raw == src:
                 return str(dst)
             if raw.startswith(src + "/"):
-                suffix = raw[len(src) + 1 :]
+                suffix = raw[len(src) + 1:]
                 return str(dst / suffix)
         return raw_path
 
@@ -130,9 +130,7 @@ class LocalEnvironment(BaseEnvironment):
     def is_shell_profile_write(command: str) -> bool:
         profile_tokens = (".bashrc", ".zshrc", ".profile")
         write_tokens = (">", ">>", "tee", "sed -i")
-        return any(token in command for token in profile_tokens) and any(
-            token in command for token in write_tokens
-        )
+        return any(token in command for token in profile_tokens) and any(token in command for token in write_tokens)
 
     def _rewrite_local_paths_in_file(self, file_path: Path) -> None:
         if not file_path.is_file():
@@ -170,10 +168,8 @@ class LocalEnvironment(BaseEnvironment):
         if any(self._is_within(resolved, root) for root in self._allowed_write_roots):
             return
         roots = ", ".join(str(root) for root in self._allowed_write_roots)
-        raise PermissionError(
-            f"Local mode policy violation during {operation}: write path '{resolved}' "
-            f"is outside allowed roots [{roots}]"
-        )
+        raise PermissionError(f"Local mode policy violation during {operation}: write path '{resolved}' "
+                              f"is outside allowed roots [{roots}]")
 
     async def start(self, force_build: bool) -> None:
         del force_build
@@ -243,10 +239,8 @@ class LocalEnvironment(BaseEnvironment):
             return ExecResult(
                 return_code=1,
                 stdout="",
-                stderr=(
-                    "Local mode policy violation: writes to shell profile files "
-                    "(.bashrc/.zshrc/.profile) are blocked."
-                ),
+                stderr=("Local mode policy violation: writes to shell profile files "
+                        "(.bashrc/.zshrc/.profile) are blocked."),
             )
 
         translated_cwd = self._translate_path(cwd) if cwd else None
@@ -290,4 +284,3 @@ class LocalEnvironment(BaseEnvironment):
 def is_shell_profile_write(command: str) -> bool:
     """Module-level helper retained for compatibility with older imports."""
     return LocalEnvironment.is_shell_profile_write(command)
-

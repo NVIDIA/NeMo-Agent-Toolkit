@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Adapter for converting nested calculator examples to Harbor tasks."""
 
 from __future__ import annotations
@@ -22,22 +21,22 @@ import shutil
 import sys
 from pathlib import Path
 
-PARENT_DIR = Path(__file__).resolve().parents[1]
-if str(PARENT_DIR) not in sys.path:
-    sys.path.insert(0, str(PARENT_DIR))
+try:
+    from common import copy_template
+    from common import number_to_string
+    from common import parse_basic_arithmetic
+    from common import write_ground_truth
+except ModuleNotFoundError:
+    PARENT_DIR = Path(__file__).resolve().parents[1]
+    if str(PARENT_DIR) not in sys.path:
+        sys.path.insert(0, str(PARENT_DIR))
+    from common import copy_template
+    from common import number_to_string
+    from common import parse_basic_arithmetic
+    from common import write_ground_truth
 
-from common import copy_template
-from common import number_to_string
-from common import parse_basic_arithmetic
-from common import write_ground_truth
-
-DEFAULT_SOURCE_DATA = (
-    Path(__file__).resolve().parents[2]
-    / "src"
-    / "nat_simple_calculator_eval"
-    / "data"
-    / "simple_calculator_nested.json"
-)
+DEFAULT_SOURCE_DATA = (Path(__file__).resolve().parents[2] / "src" / "nat_simple_calculator_eval" / "data" /
+                       "simple_calculator_nested.json")
 
 
 class SimpleCalculatorNestedAdapter:
@@ -103,14 +102,12 @@ class SimpleCalculatorNestedAdapter:
         return generated, len(source_ids)
 
     def _customize_task(self, output_dir: Path, task: dict, local_task_id: str) -> None:
-        instruction = (
-            "Solve the calculator question and write your final answer to /workspace/answer.txt.\n\n"
-            "Guidelines:\n"
-            "- Include the computed arithmetic value in your answer.\n"
-            "- Include any comparison requested by the question.\n"
-            "- You can include additional explanation, but the numeric result must be explicit.\n\n"
-            f"Question:\n{task['question']}\n"
-        )
+        instruction = ("Solve the calculator question and write your final answer to /workspace/answer.txt.\n\n"
+                       "Guidelines:\n"
+                       "- Include the computed arithmetic value in your answer.\n"
+                       "- Include any comparison requested by the question.\n"
+                       "- You can include additional explanation, but the numeric result must be explicit.\n\n"
+                       f"Question:\n{task['question']}\n")
         (output_dir / "instruction.md").write_text(instruction, encoding="utf-8")
 
         task_toml = (output_dir / "task.toml").read_text(encoding="utf-8")
@@ -121,9 +118,7 @@ class SimpleCalculatorNestedAdapter:
         (output_dir / "task.toml").write_text(task_toml, encoding="utf-8")
 
         solution_script = (output_dir / "solution" / "solve.sh").read_text(encoding="utf-8")
-        solution_script = solution_script.replace(
-            "__EXPECTED_VALUE__", number_to_string(task["expected_value"])
-        )
+        solution_script = solution_script.replace("__EXPECTED_VALUE__", number_to_string(task["expected_value"]))
         (output_dir / "solution" / "solve.sh").write_text(solution_script, encoding="utf-8")
         (output_dir / "solution" / "solve.sh").chmod(0o755)
         (output_dir / "tests" / "test.sh").chmod(0o755)
@@ -141,4 +136,3 @@ class SimpleCalculatorNestedAdapter:
             "tolerance": 1e-4,
         }
         write_ground_truth(output_dir / "tests" / "ground_truth.json", ground_truth)
-

@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Shared helpers for simple calculator Harbor adapters."""
 
 from __future__ import annotations
@@ -90,4 +89,3 @@ def write_ground_truth(path: Path, payload: dict) -> None:
 def number_to_string(value: float) -> str:
     """Format numbers for textual template replacement."""
     return str(int(value)) if value.is_integer() else str(value)
-

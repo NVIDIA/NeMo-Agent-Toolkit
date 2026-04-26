@@ -12,16 +12,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Installed-agent helpers aligned with Harbor structure."""
 
+from .nemo_agent import NemoAgent
 from .policy import is_local_install_allowed
 from .policy import resolve_local_install_policy
-from .nemo_agent import NemoAgent
 
 __all__ = [
     "is_local_install_allowed",
     "NemoAgent",
     "resolve_local_install_policy",
 ]
-

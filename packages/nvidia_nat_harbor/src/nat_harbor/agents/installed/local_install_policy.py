@@ -12,11 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Backward-compatible shim for installed-agent policy helpers."""
 
 from nat_harbor.agents.installed.policy import is_local_install_allowed
 from nat_harbor.agents.installed.policy import resolve_local_install_policy
 
 __all__ = ["is_local_install_allowed", "resolve_local_install_policy"]
-

@@ -141,9 +141,7 @@ async def _run_builtin_evaluator(
         evaluator = builder.get_evaluator(configured_name)
         evaluate_atif_fn = getattr(evaluator, "evaluate_atif_fn", None)
         if not callable(evaluate_atif_fn):
-            raise BridgeEvaluatorError(
-                f"Configured evaluator '{configured_name}' does not expose `evaluate_atif_fn`."
-            )
+            raise BridgeEvaluatorError(f"Configured evaluator '{configured_name}' does not expose `evaluate_atif_fn`.")
         eval_output = evaluate_atif_fn(atif_samples)
         if isinstance(eval_output, Awaitable):
             eval_output = await eval_output
@@ -184,9 +182,7 @@ async def evaluate_artifact(
         return reward, details
 
     if not config_file:
-        raise BridgeEvaluatorError(
-            f"`--config-file` is required for builtin evaluator kind '{evaluator_kind}'."
-        )
+        raise BridgeEvaluatorError(f"`--config-file` is required for builtin evaluator kind '{evaluator_kind}'.")
     return await _run_builtin_evaluator(
         evaluator_kind=evaluator_kind,
         atif_samples=atif_samples,
@@ -211,5 +207,4 @@ def evaluate_artifact_sync(
             evaluator_ref=evaluator_ref,
             config_file=config_file,
             evaluator_name=evaluator_name,
-        )
-    )
+        ))

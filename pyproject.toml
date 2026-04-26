@@ -62,7 +62,6 @@ crewai = ["nvidia-nat-crewai == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
 eval = ["nvidia-nat-eval[full] == {version}"]
 fastmcp = ["nvidia-nat-fastmcp == {version}"]
-harbor = ["nvidia-nat-harbor == {version}; python_version >= '3.12'"]
 langchain = ["nvidia-nat-langchain == {version}"]
 llama-index = ["nvidia-nat-llama-index == {version}"]
 mcp = ["nvidia-nat-mcp == {version}"]
@@ -219,12 +218,8 @@ conflicts = [
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
     [{ extra = "most" }, { extra = "openpipe-art" }],
-    # harbor<>crewai have incompatible litellm versions
-    [{ extra = "crewai" }, { extra = "harbor" }],
-    [{ extra = "most" }, { extra = "harbor" }],
     # (strands|adk)<>ragaai have incompatible tenacity versions
     [{ extra = "adk" }, { extra = "ragaai" }],
-    [{ extra = "harbor" }, { extra = "ragaai" }],
     [{ extra = "strands" }, { extra = "ragaai" }],
     [{ extra = "most" }, { extra = "ragaai" }],
     # rag<>autogen have incompatible protobuf versions
@@ -246,7 +241,6 @@ nvidia-nat-crewai = { path = "packages/nvidia_nat_crewai", editable = true }
 nvidia-nat-data-flywheel = { path = "packages/nvidia_nat_data_flywheel", editable = true }
 nvidia-nat-eval = { path = "packages/nvidia_nat_eval", editable = true }
 nvidia-nat-fastmcp = { path = "packages/nvidia_nat_fastmcp", editable = true }
-nvidia-nat-harbor = { path = "packages/nvidia_nat_harbor", editable = true }
 nvidia-nat-langchain = { path = "packages/nvidia_nat_langchain", editable = true }
 nvidia-nat-llama-index = { path = "packages/nvidia_nat_llama_index", editable = true }
 nvidia-nat-mcp = { path = "packages/nvidia_nat_mcp", editable = true }

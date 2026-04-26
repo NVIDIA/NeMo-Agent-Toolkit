@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for NAT Harbor local-mode runtime helpers."""
 
 from __future__ import annotations
@@ -21,9 +20,9 @@ import json
 
 import pytest
 
+from nat_harbor.agents.installed.nemo_agent_run_wrapper import normalize_result_text
 from nat_harbor.agents.installed.policy import is_local_install_allowed
 from nat_harbor.agents.installed.policy import resolve_local_install_policy
-from nat_harbor.agents.installed.nemo_agent_run_wrapper import normalize_result_text
 from nat_harbor.environments.local import LocalEnvironment
 from nat_harbor.environments.local import is_shell_profile_write
 
@@ -66,4 +65,3 @@ def test_normalize_result_text_extracts_command_style_json() -> None:
     cmd = """echo '[{"fn":{"name":"multiply"}}]' > /app/result.json"""
     extracted = normalize_result_text(cmd)
     assert extracted == '[{"fn":{"name":"multiply"}}]'
-

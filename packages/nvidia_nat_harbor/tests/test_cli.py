@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for generic nat-harbor adapter CLI utilities."""
 
 from __future__ import annotations
@@ -59,6 +58,7 @@ def test_load_adapter_class_success(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_load_adapter_class_missing_methods(monkeypatch: pytest.MonkeyPatch) -> None:
+
     class _IncompleteAdapter:
         pass
 
@@ -67,4 +67,3 @@ def test_load_adapter_class_missing_methods(monkeypatch: pytest.MonkeyPatch) -> 
     with pytest.raises(ValueError, match="missing required adapter method"):
         load_adapter_class(f"{__name__}:_IncompleteAdapter")
     del globals()["_IncompleteAdapter"]
-

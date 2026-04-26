@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """NAT bridge for Harbor's NemoAgent behavior gaps.
 
 Upstreaming note:
@@ -99,9 +98,7 @@ class NemoAgent(HarborNemoAgent):
         """Apply local install policy before delegating to Harbor install logic."""
         env_type_obj = environment.type()
         env_type = getattr(env_type_obj, "value", str(env_type_obj))
-        local_install_policy = resolve_local_install_policy(
-            self._resolved_flags.get("local_install_policy", "skip")
-        )
+        local_install_policy = resolve_local_install_policy(self._resolved_flags.get("local_install_policy", "skip"))
         allow_host_install_raw = self._resolved_flags.get("allow_host_install")
 
         should_run_install = True
@@ -125,17 +122,13 @@ class NemoAgent(HarborNemoAgent):
         )
 
         if not should_run_install:
-            self.logger.warning(
-                "Skipping agent install in local mode (safe default). "
-                "Assuming dependencies are pre-provisioned."
-            )
+            self.logger.warning("Skipping agent install in local mode (safe default). "
+                                "Assuming dependencies are pre-provisioned.")
             return
 
         if env_type == "local":
-            self.logger.warning(
-                "Local mode host install is enabled for this run. "
-                "Agent setup may mutate host packages/files."
-            )
+            self.logger.warning("Local mode host install is enabled for this run. "
+                                "Agent setup may mutate host packages/files.")
         await super().install(environment)
 
     async def setup(self, environment: BaseEnvironment) -> None:
@@ -157,35 +150,27 @@ class NemoAgent(HarborNemoAgent):
                     target_dir=container_pkg_dir,
                 )
                 result = await environment.exec(
-                    command=(
-                        'export PATH="/opt/nvidia-nat-venv/bin:$HOME/.local/bin:$PATH"; '
-                        "SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 "
-                        f"pip install --no-deps {shlex.quote(container_pkg_dir)}"
-                    ),
+                    command=('export PATH="/opt/nvidia-nat-venv/bin:$HOME/.local/bin:$PATH"; '
+                             "SETUPTOOLS_SCM_PRETEND_VERSION=0.0.0 "
+                             f"pip install --no-deps {shlex.quote(container_pkg_dir)}"),
                     env={"DEBIAN_FRONTEND": "noninteractive"},
                 )
             else:
                 result = await environment.exec(
-                    command=(
-                        'export PATH="/opt/nvidia-nat-venv/bin:$HOME/.local/bin:$PATH"; '
-                        "uv pip install --python /opt/nvidia-nat-venv/bin/python "
-                        f"{shlex.quote(workflow_package)}"
-                    ),
+                    command=('export PATH="/opt/nvidia-nat-venv/bin:$HOME/.local/bin:$PATH"; '
+                             "uv pip install --python /opt/nvidia-nat-venv/bin/python "
+                             f"{shlex.quote(workflow_package)}"),
                     env={"DEBIAN_FRONTEND": "noninteractive"},
                 )
             if result.return_code != 0:
-                raise RuntimeError(
-                    f"Failed to install workflow package '{workflow_package}': "
-                    f"{result.stderr or result.stdout}"
-                )
+                raise RuntimeError(f"Failed to install workflow package '{workflow_package}': "
+                                   f"{result.stderr or result.stdout}")
 
         config_file = self._resolved_flags.get("config_file")
         if config_file:
             host_config_path = Path(config_file)
             if not host_config_path.exists():
-                raise FileNotFoundError(
-                    f"NeMo Agent Toolkit config file not found: {config_file}"
-                )
+                raise FileNotFoundError(f"NeMo Agent Toolkit config file not found: {config_file}")
             await environment.upload_file(
                 source_path=host_config_path,
                 target_path=self._CONTAINER_CONFIG_PATH,
@@ -200,4 +185,3 @@ class NemoAgent(HarborNemoAgent):
             f"{python_bin} {self._CONTAINER_WRAPPER_PATH}",
             1,
         )
-

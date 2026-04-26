@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Utilities for installed-agent policy handling."""
 
 from __future__ import annotations
@@ -38,9 +37,7 @@ def resolve_local_install_policy(raw_policy: Any) -> str:
         return "allow" if raw_policy else "skip"
     policy = str(raw_policy).strip().lower()
     if policy not in {"skip", "allow"}:
-        raise ValueError(
-            f"Invalid local_install_policy={raw_policy!r}. Expected one of: skip, allow."
-        )
+        raise ValueError(f"Invalid local_install_policy={raw_policy!r}. Expected one of: skip, allow.")
     return policy
 
 
@@ -51,4 +48,3 @@ def is_local_install_allowed(policy: str, explicit_allow: Any | None) -> bool:
     if explicit_allow is None:
         return False
     return _coerce_bool_like(explicit_allow)
-
