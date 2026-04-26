@@ -219,8 +219,12 @@ conflicts = [
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
     [{ extra = "most" }, { extra = "openpipe-art" }],
+    # harbor<>crewai have incompatible litellm versions
+    [{ extra = "crewai" }, { extra = "harbor" }],
+    [{ extra = "most" }, { extra = "harbor" }],
     # (strands|adk)<>ragaai have incompatible tenacity versions
     [{ extra = "adk" }, { extra = "ragaai" }],
+    [{ extra = "harbor" }, { extra = "ragaai" }],
     [{ extra = "strands" }, { extra = "ragaai" }],
     [{ extra = "most" }, { extra = "ragaai" }],
     # rag<>autogen have incompatible protobuf versions

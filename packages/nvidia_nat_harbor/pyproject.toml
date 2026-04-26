@@ -70,3 +70,4 @@ config-settings = { editable_mode = "compat" }
 
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
+nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
