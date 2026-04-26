@@ -19,6 +19,8 @@ limitations under the License.
 
 Run these commands from the repository root.
 
+In these `NemoAgent` examples, `--model` primarily satisfies Harbor CLI inputs; the effective workflow model comes from `--ak config_file=...` when that config defines `llms`.
+
 ## 1) Generate Harbor dataset via adapter
 
 ```bash
@@ -45,7 +47,7 @@ harbor run \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
   --env docker \
-  --model nvidia/meta/llama-3.3-70b-instruct \
+  --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
   --ak local_install_policy=skip
 ```
@@ -61,8 +63,77 @@ harbor run \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
   --env docker \
-  --model nvidia/meta/llama-3.3-70b-instruct \
+  --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
   --ak local_install_policy=skip
+```
+
+## 5) ATIF bridge evaluator lanes
+
+Set these verifier env flags on `harbor run` to enable ATIF bridge scoring in `tests/test.sh`.
+You can use any evaluator registered as a NAT evaluator, as long as it exposes an ATIF lane (`evaluate_atif_fn`), and you can also use simple Python evaluator callables via `NAT_HARBOR_ATIF_EVALUATOR_REF=module:function`.
+
+### Builtin trajectory lane
+
+```bash
+harbor run \
+  --path .tmp/harbor/datasets/simple-calculator-nested \
+  -l 1 \
+  --job-name sc-nested-atif-trajectory \
+  --jobs-dir .tmp/harbor/jobs-local \
+  --yes -n 1 --max-retries 1 \
+  --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
+  --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --env docker \
+  --model nvidia/nemotron-3-nano-30b-a3b \
+  --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
+  --ak local_install_policy=skip \
+  --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1 \
+  --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory \
+  --ve NAT_HARBOR_ATIF_CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/configs/config-nested-trajectory-eval.yml \
+  --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=trajectory_eval
+```
+
+### Builtin tunable-rag lane
+
+```bash
+harbor run \
+  --path .tmp/harbor/datasets/simple-calculator-nested \
+  -l 1 \
+  --job-name sc-nested-atif-tunable-rag \
+  --jobs-dir .tmp/harbor/jobs-local \
+  --yes -n 1 --max-retries 1 \
+  --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
+  --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --env docker \
+  --model nvidia/nemotron-3-nano-30b-a3b \
+  --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
+  --ak local_install_policy=skip \
+  --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1 \
+  --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=tunable_rag \
+  --ve NAT_HARBOR_ATIF_CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/configs/config-tunable-rag-eval-atif.yml \
+  --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=tuneable_eval
+```
+
+The tunable-rag lane requires valid judge-model credentials from the selected evaluator config.
+
+### Custom evaluator ref lane
+
+```bash
+harbor run \
+  --path .tmp/harbor/datasets/simple-calculator-nested \
+  -l 1 \
+  --job-name sc-nested-atif-custom \
+  --jobs-dir .tmp/harbor/jobs-local \
+  --yes -n 1 --max-retries 1 \
+  --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
+  --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --env docker \
+  --model nvidia/nemotron-3-nano-30b-a3b \
+  --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
+  --ak local_install_policy=skip \
+  --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1 \
+  --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=custom \
+  --ve NAT_HARBOR_ATIF_EVALUATOR_REF=nat_simple_calculator_eval.scripts.harbor_sample_evaluators:artifact_presence_evaluator
 ```
 

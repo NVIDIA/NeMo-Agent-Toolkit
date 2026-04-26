@@ -50,8 +50,9 @@ nat-harbor-adapt = "nat_harbor.cli:main"
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "harbor>=0.5.0",
   "nvidia-nat-core == {version}",
+  "nvidia-nat-eval == {version}",
+  "harbor>=0.5.0",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
