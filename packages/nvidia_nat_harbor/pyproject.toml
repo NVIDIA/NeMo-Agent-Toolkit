@@ -45,9 +45,6 @@ classifiers = [
 documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
 source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
-[project.scripts]
-nat-harbor-adapt = "nat_harbor.cli:main"
-
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
   "nvidia-nat-core == {version}",
