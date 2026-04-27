@@ -38,7 +38,7 @@ CONFIGS=(
 "examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-llama-3.3-70b-instruct.yml"
 "examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-mixtral-8x22b-instruct-v0.1.yml"
 "examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-phi-3-medium-4k-instruct.yml"
-"examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-phi-3-mini-4k-instruct.yml"
+"examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-phi-4-mini-instruct.yml"
 )
 
 # Create temp files for exit codes and store process IDs
