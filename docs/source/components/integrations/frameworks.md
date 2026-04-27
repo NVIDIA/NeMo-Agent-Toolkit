@@ -24,6 +24,7 @@ NVIDIA NeMo Agent Toolkit provides comprehensive support for multiple agentic fr
 NeMo Agent Toolkit integrates with the following frameworks:
 
 - **ADK**: Google Agent Development Kit for building AI agents
+- **AG2**: The community-maintained successor to Microsoft AutoGen with multi-agent orchestration and native MCP integration
 - **Agno**: A lightweight framework for building AI agents
 - **AutoGen**: A framework for building AI agents and applications
 - **CrewAI**: A framework for orchestrating role-playing AI agents
@@ -58,6 +59,7 @@ The following table summarizes the current support level for each framework:
 | Framework        | LLM Providers        | Embedder Providers     | Retriever Providers      | Tool Calling          | Profiling             |
 |------------------|----------------------|------------------------|--------------------------|-----------------------|-----------------------|
 | ADK              | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
+| AG2              | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | Agno             | ⚠️ Limited           | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | AutoGen          | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
 | CrewAI           | ✅ Yes               | ❌ No                  | ❌ No                    | ✅ Yes                 | ✅ Yes                |
@@ -85,6 +87,25 @@ For more information, visit the [ADK website](https://google.github.io/adk-docs/
 **Installation:**
 ```bash
 uv pip install "nvidia-nat[adk]"
+```
+
+### AG2 (formerly AutoGen)
+
+AG2 is the community-maintained successor to Microsoft AutoGen with support for multi-agent orchestration, intelligent handoffs, and native MCP integration. AG2 provides a modern API for building collaborative agent systems with features like GroupChat patterns, tool integration, and flexible LLM configuration.
+
+For more information, visit the [AG2 documentation](https://docs.ag2.ai).
+
+| Capability              | Providers / Details                                                                 |
+|-------------------------|-------------------------------------------------------------------------------------|
+| **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI                                                    |
+| **Embedder Providers**  | None (use framework-agnostic embedders if needed)                                   |
+| **Retriever Providers** | None (use AG2 native tools)                                                         |
+| **Tool Calling**        | Fully supported through the `Tool` interface of AG2                                 |
+| **Profiling**           | Comprehensive profiling support with instrumentation                                |
+
+**Installation:**
+```bash
+uv pip install "nvidia-nat[ag2]"
 ```
 
 ### Agno
