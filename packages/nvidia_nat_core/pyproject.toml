@@ -63,7 +63,6 @@ dependencies = [
   "colorama>=0.4.6,<1.0.0",
   "expandvars~=1.0",
   "fastapi~=0.119",
-  "flask>=3.0.0",
   "httpx~=0.27",
   "huggingface_hub>=0.33.4,<1.0.0",
   "jinja2~=3.1",
