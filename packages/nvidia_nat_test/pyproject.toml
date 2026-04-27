@@ -51,6 +51,10 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
+  # Imported by tests/nat/tools/test_code_execution.py to mock the sandbox HTTP handler.
+  # Outside the test suite, flask only runs inside the sandbox Docker image, where it
+  # comes from sandbox.requirements.txt — not from this package.
+  "flask>=3.0.0",
   "langchain-community~=0.3",
   "pytest~=8.3",
   "pytest-asyncio==0.24.*",
