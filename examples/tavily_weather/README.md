@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Tavily Weather (LangChain ReAct + Anthropic)
 
-Smoke-test workflow for the `nvidia-nat-tavily` package. A LangChain ReAct agent runs against Claude Sonnet 4.6 (via LiteLLM) with a single Tavily web-search tool.
+Smoke-test workflow for the `nvidia-nat-tavily` package. A LangChain ReAct agent runs against Claude Sonnet 4.6 (via LiteLLM) with the full Tavily tool group (`search`, `extract`, `crawl`, `map`).
 
 ## Run
 
@@ -22,4 +22,4 @@ uv run nat run \
 
 ## What to expect
 
-The agent should make a single `tavily_search` tool call with a query like `"current weather San Francisco"`, receive structured search results, and produce a natural-language answer with the temperature/conditions.
+The agent should make a single `tavily__search` tool call with a query like `"current weather San Francisco"`, receive structured search results, and produce a natural-language answer with the temperature/conditions.

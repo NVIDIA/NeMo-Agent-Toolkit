@@ -1,26 +1,22 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-functions:
-  tavily_search:
-    _type: tavily_search
-    # Per-call args from the agent override these defaults.
-    search_depth: basic
-    topic: general
-    max_results: 5
-    include_answer: advanced
+function_groups:
+  tavily:
+    _type: tavily
+    exclude: [crawl, map]
 
 llms:
   anthropic_llm:
     _type: litellm
     # Routed via litellm; uses ANTHROPIC_API_KEY from env.
     model_name: anthropic/claude-sonnet-4-6
-    temperature: 0.0
 
 workflow:
   _type: react_agent
   llm_name: anthropic_llm
   tool_names:
-    - tavily_search
+    # Group reference auto-expands to selected tools
+    - tavily
   verbose: true
   parse_agent_response_max_retries: 3
