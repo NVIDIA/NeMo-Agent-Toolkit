@@ -23,6 +23,9 @@
         },
         {
             "pattern": "^https://docs\\.cursor\\.com"
+        },
+        {
+            "pattern": "^https://docs\\.docker\\.com"
         }
     ]
 }
