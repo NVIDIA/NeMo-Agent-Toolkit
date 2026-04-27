@@ -59,7 +59,6 @@ llms:
 
 
 workflow:
-  #_type: react_agent
   _type: tool_calling_agent
   tool_names:
     - email_phishing_analyzer
