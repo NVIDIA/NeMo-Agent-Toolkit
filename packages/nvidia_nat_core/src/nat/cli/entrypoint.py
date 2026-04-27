@@ -35,6 +35,7 @@ from nat.utils.log_levels import LOG_LEVELS
 from nat.utils.log_utils import setup_logging as log_utils_setup_logging
 
 from .plugin_loader import discover_and_load_cli_plugins
+from .telemetry_hook import record_invocation_start
 
 # Load environment variables from .env file, if it exists
 load_dotenv()
@@ -89,6 +90,10 @@ def cli(ctx: click.Context, log_level: str):
 
     ctx_dict["start_time"] = time.time()
     ctx_dict["log_level"] = log_level
+
+    # Telemetry: capture identifiers for the post-invocation event. Safe no-op
+    # when telemetry is disabled.
+    record_invocation_start(ctx)
 
 
 # Discover and load ALL CLI commands (core + plugins) via entry points

@@ -165,6 +165,61 @@ Before getting started, it's possible to run this simple workflow and many other
 - [ ] MCP authentication improvements.
 - [ ] Improved memory interface to support self-improving agents.
 
+## 📊 Telemetry
+
+The NeMo Agent Toolkit includes opt-out runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation.
+
+> **Note**: An ingest endpoint has not been provisioned yet, so by default no telemetry is sent over the network. The collection path is exercised locally and can be inspected through the debug modes below. A future release will set a default endpoint; you can opt out at that time using the environment variable described in this section.
+
+### What is collected
+
+For each `nat` command invocation, a single event is sent at exit containing:
+
+- The top-level command name, such as `run`, `serve`, or `evaluate`.
+- The second-level command name when applicable, such as `list-components` for `nat info list-components`.
+- The outcome: `success`, `failure`, or `interrupted`.
+- The wall-clock duration in milliseconds.
+- The process exit code.
+- The Python class name of the raised exception on failure (the message is not collected).
+- The Python runtime version, such as `3.11.7`.
+
+### What is not collected
+
+The following are never collected:
+
+- Command arguments or option values.
+- Workflow names, function names, model names, or any contents of configuration files.
+- File paths, hostnames, usernames, IP addresses, or any other identifying information.
+- The output of any command.
+
+### How to disable telemetry
+
+To opt out for a single invocation:
+
+```bash
+NAT_TELEMETRY_ENABLED=false nat run --config_file my_config.yml
+```
+
+To opt out for an entire shell session:
+
+```bash
+export NAT_TELEMETRY_ENABLED=false
+```
+
+### Local debugging
+
+To inspect what would be sent without making any network requests, set the endpoint to the literal value `stdout`. Payloads are written as JSON lines to stderr:
+
+```bash
+NAT_TELEMETRY_ENDPOINT=stdout nat info list-components
+```
+
+To skip the network call without printing payloads:
+
+```bash
+NAT_TELEMETRY_DRY_RUN=true nat run --config_file my_config.yml
+```
+
 ## 💬 Feedback
 
 We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) if you have any feedback or feature requests.
