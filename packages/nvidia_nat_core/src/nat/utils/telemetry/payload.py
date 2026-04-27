@@ -21,8 +21,8 @@ string, CPU architecture, and the events themselves.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from typing import Any
 
 from nat.utils.telemetry.config import CLIENT_ID
@@ -42,7 +42,7 @@ class QueuedEvent:
 
 def _iso_timestamp(dt: datetime | None = None) -> str:
     if dt is None:
-        dt = datetime.now(timezone.utc)
+        dt = datetime.now(UTC)
     return dt.strftime("%Y-%m-%dT%H:%M:%S.") + f"{dt.microsecond // 1000:03d}Z"
 
 
@@ -62,41 +62,67 @@ def build_payload(
         raise ValueError("build_payload requires at least one event")
 
     return {
-        "browserType": "undefined",
-        "clientId": CLIENT_ID,
-        "clientType": "Native",
-        "clientVariant": "Release",
-        "clientVer": source_client_version,
-        "cpuArchitecture": CPU_ARCHITECTURE,
-        "deviceGdprBehOptIn": "None",
-        "deviceGdprFuncOptIn": "None",
-        "deviceGdprTechOptIn": "None",
-        "deviceId": "undefined",
-        "deviceMake": "undefined",
-        "deviceModel": "undefined",
-        "deviceOS": "undefined",
-        "deviceOSVersion": "undefined",
-        "deviceType": "undefined",
-        "eventProtocol": "1.6",
-        "eventSchemaVer": events[0].event._schema_version,
-        "eventSysVer": NAT_TELEMETRY_VERSION,
-        "externalUserId": "undefined",
-        "gdprBehOptIn": "None",
-        "gdprFuncOptIn": "None",
-        "gdprTechOptIn": "None",
-        "idpId": "undefined",
-        "integrationId": "undefined",
-        "productName": "undefined",
-        "productVersion": "undefined",
-        "sentTs": _iso_timestamp(),
-        "sessionId": session_id,
-        "userId": "undefined",
-        "events": [
-            {
-                "ts": _iso_timestamp(queued.timestamp),
-                "parameters": queued.event.model_dump(by_alias=True),
-                "name": queued.event._event_name,
-            }
-            for queued in events
-        ],
+        "browserType":
+            "undefined",
+        "clientId":
+            CLIENT_ID,
+        "clientType":
+            "Native",
+        "clientVariant":
+            "Release",
+        "clientVer":
+            source_client_version,
+        "cpuArchitecture":
+            CPU_ARCHITECTURE,
+        "deviceGdprBehOptIn":
+            "None",
+        "deviceGdprFuncOptIn":
+            "None",
+        "deviceGdprTechOptIn":
+            "None",
+        "deviceId":
+            "undefined",
+        "deviceMake":
+            "undefined",
+        "deviceModel":
+            "undefined",
+        "deviceOS":
+            "undefined",
+        "deviceOSVersion":
+            "undefined",
+        "deviceType":
+            "undefined",
+        "eventProtocol":
+            "1.6",
+        "eventSchemaVer":
+            events[0].event._schema_version,
+        "eventSysVer":
+            NAT_TELEMETRY_VERSION,
+        "externalUserId":
+            "undefined",
+        "gdprBehOptIn":
+            "None",
+        "gdprFuncOptIn":
+            "None",
+        "gdprTechOptIn":
+            "None",
+        "idpId":
+            "undefined",
+        "integrationId":
+            "undefined",
+        "productName":
+            "undefined",
+        "productVersion":
+            "undefined",
+        "sentTs":
+            _iso_timestamp(),
+        "sessionId":
+            session_id,
+        "userId":
+            "undefined",
+        "events": [{
+            "ts": _iso_timestamp(queued.timestamp),
+            "parameters": queued.event.model_dump(by_alias=True),
+            "name": queued.event._event_name,
+        } for queued in events],
     }

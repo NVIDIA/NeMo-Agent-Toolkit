@@ -21,7 +21,7 @@ wire aliases while keeping snake_case Python attribute names.
 """
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from typing import ClassVar
 
@@ -32,7 +32,7 @@ from nat.utils.telemetry.config import DEPLOYMENT_TYPE
 from nat.utils.telemetry.config import DeploymentTypeEnum
 
 
-class TaskStatusEnum(str, Enum):
+class TaskStatusEnum(StrEnum):
     SUCCESS = "success"
     FAILURE = "failure"
     INTERRUPTED = "interrupted"
@@ -73,7 +73,8 @@ class CliCommandEvent(TelemetryEvent):
     )
     subcommand: str | None = Field(
         default=None,
-        description="Second-level command name when applicable (e.g. 'list-components' for 'nat info list-components').",
+        description=("Second-level command name when applicable, "
+                     "such as 'list-components' for 'nat info list-components'."),
     )
     task_status: TaskStatusEnum = Field(
         ...,

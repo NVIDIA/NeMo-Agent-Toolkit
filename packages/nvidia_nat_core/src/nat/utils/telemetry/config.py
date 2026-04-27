@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import os
 import platform
-from enum import Enum
+from enum import StrEnum
 
 NAT_TELEMETRY_VERSION = "nat-telemetry/1.0"
 """Identifier embedded in every event envelope as ``eventSysVer``."""
@@ -85,7 +85,7 @@ NAT_TELEMETRY_DRY_RUN: bool = _is_truthy(os.getenv("NAT_TELEMETRY_DRY_RUN"), def
 SESSION_PREFIX: str | None = os.getenv("NAT_SESSION_PREFIX") or None
 
 
-class DeploymentTypeEnum(str, Enum):
+class DeploymentTypeEnum(StrEnum):
     LIBRARY = "library"
     API = "api"
     UNDEFINED = "undefined"
@@ -96,6 +96,4 @@ try:
     DEPLOYMENT_TYPE: DeploymentTypeEnum = DeploymentTypeEnum(_deployment_type_raw)
 except ValueError:
     _valid = [e.value for e in DeploymentTypeEnum]
-    raise ValueError(
-        f"Invalid NAT_DEPLOYMENT_TYPE: {_deployment_type_raw!r}. Must be one of: {_valid}"
-    ) from None
+    raise ValueError(f"Invalid NAT_DEPLOYMENT_TYPE: {_deployment_type_raw!r}. Must be one of: {_valid}") from None

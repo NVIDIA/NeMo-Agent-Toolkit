@@ -117,6 +117,7 @@ def test_emit_command_event_swallows_handler_errors():
     """A bug or exception inside telemetry must never propagate."""
 
     class Boom:
+
         def __enter__(self):
             raise RuntimeError("internal telemetry bug")
 

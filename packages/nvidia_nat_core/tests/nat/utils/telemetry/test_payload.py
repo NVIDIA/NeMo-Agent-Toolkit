@@ -14,8 +14,8 @@
 # limitations under the License.
 from __future__ import annotations
 
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 
 import pytest
 
@@ -33,7 +33,7 @@ def _sample_queued_event() -> QueuedEvent:
         exit_code=0,
         python_version="3.11.7",
     )
-    return QueuedEvent(event=event, timestamp=datetime.now(timezone.utc))
+    return QueuedEvent(event=event, timestamp=datetime.now(UTC))
 
 
 def test_build_payload_has_no_pii_fields_populated():
@@ -57,8 +57,12 @@ def test_build_payload_has_no_pii_fields_populated():
     for field in pii_fields:
         assert payload[field] == "undefined", f"{field} must be 'undefined' but got {payload[field]!r}"
 
-    for gdpr_field in ("deviceGdprBehOptIn", "deviceGdprFuncOptIn", "deviceGdprTechOptIn",
-                       "gdprBehOptIn", "gdprFuncOptIn", "gdprTechOptIn"):
+    for gdpr_field in ("deviceGdprBehOptIn",
+                       "deviceGdprFuncOptIn",
+                       "deviceGdprTechOptIn",
+                       "gdprBehOptIn",
+                       "gdprFuncOptIn",
+                       "gdprTechOptIn"):
         assert payload[gdpr_field] == "None"
 
 

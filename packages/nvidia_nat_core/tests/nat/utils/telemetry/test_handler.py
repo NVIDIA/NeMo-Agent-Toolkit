@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -259,5 +260,4 @@ def test_context_manager_lifecycle():
 
 def _now():
     from datetime import datetime
-    from datetime import timezone
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)

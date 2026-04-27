@@ -35,9 +35,9 @@ import time
 import uuid
 from typing import TYPE_CHECKING
 
+from nat.utils.telemetry import TELEMETRY_ENABLED
 from nat.utils.telemetry import CliCommandEvent
 from nat.utils.telemetry import NATTelemetryHandler
-from nat.utils.telemetry import TELEMETRY_ENABLED
 from nat.utils.telemetry import TaskStatusEnum
 
 if TYPE_CHECKING:

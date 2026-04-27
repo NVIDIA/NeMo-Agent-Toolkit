@@ -25,8 +25,8 @@ import asyncio
 import json
 import logging
 import sys
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from importlib import metadata as importlib_metadata
 from typing import TYPE_CHECKING
 from typing import Any
@@ -123,7 +123,7 @@ class NATTelemetryHandler:
         if not isinstance(event, TelemetryEvent):
             # Best-effort: never disrupt the caller because of a bad event.
             return
-        queued = QueuedEvent(event=event, timestamp=datetime.now(timezone.utc))
+        queued = QueuedEvent(event=event, timestamp=datetime.now(UTC))
         self._events.append(queued)
         if len(self._events) >= self._max_queue_size:
             self._flush_signal.set()
@@ -194,7 +194,7 @@ class NATTelemetryHandler:
         while self._running:
             try:
                 await asyncio.wait_for(self._flush_signal.wait(), timeout=self._flush_interval)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             self._flush_signal.clear()
             await self._flush_events()
