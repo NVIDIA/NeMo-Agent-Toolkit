@@ -84,6 +84,7 @@ To run the examples, install the NeMo Agent Toolkit from source, if you haven't 
 - **[`GPU Cluster Sizing`](notebooks/launchables/README.md)**: GPU Cluster Sizing with NeMo Agent Toolkit **[🛑 Advanced]**
 
 ## Getting Started
+- **[`demo_workflow`](demo_workflow/README.md)**: Minimal ReAct agent that uses only built-in datetime tools, useful as a template for new example projects **[🟢 Beginner]**
 - **[`scaffolding`](getting_started/scaffolding/README.md)**: Workflow scaffolding and project generation using automated commands and intelligent code generation **[🟢 Beginner]**
 - **[`simple_web_query`](getting_started/simple_web_query/README.md)**: Basic LangSmith documentation agent that searches the internet to answer questions about LangSmith. **[🟢 Beginner]**
 - **[`simple_calculator`](getting_started/simple_calculator/README.md)**: Mathematical agent with tools for arithmetic operations, time comparison, and complex calculations **[🟢 Beginner]**

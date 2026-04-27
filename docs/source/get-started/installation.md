@@ -48,7 +48,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[mysql]` or `nvidia-nat-mysql` - [MySQL](https://www.mysql.com/)
 - `nvidia-nat[config-optimizer]` or `nvidia-nat-config-optimizer` - Parameter and prompt optimizer (required for `nat optimize`)
 - `nvidia-nat[openpipe-art]` or `nvidia-nat-openpipe-art` - [Agent Reinforcement Trainer](https://art.openpipe.ai/getting-started/about) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[crewai]`.
-- `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/)
+- `nvidia-nat[opentelemetry]` or `nvidia-nat-opentelemetry` - [OpenTelemetry](https://opentelemetry.io/) (includes the `arize_ax` exporter for [Arize AX](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel))
 - `nvidia-nat[phoenix]` or `nvidia-nat-phoenix` - [Arize Phoenix](https://arize.com/docs/phoenix)
 - `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[strands]`.
 - `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)

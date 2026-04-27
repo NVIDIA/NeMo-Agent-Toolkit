@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# ReAct (Reasoning and Acting) agent: `workflow._type: react_agent` is provided by
+# `nvidia-nat-langchain` (LangGraph). It interleaves reasoning and tool calls.
+#
+# Arize AX: set ARIZE_SPACE_ID, ARIZE_API_KEY, and optionally ARIZE_PROJECT_NAME
+# (or set space_id, api_key, project under arize_ax below).
+
+general:
+  telemetry:
+    tracing:
+      arize_ax:
+        _type: arize_ax
+        project: ${ARIZE_PROJECT_NAME:-demo_workflow}
+        space_id: ${ARIZE_SPACE_ID}
+        api_key: ${ARIZE_API_KEY}
+        protocol: grpc
+        use_eu_region: false
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
+
+functions:
+  current_datetime:
+    _type: current_datetime
+  current_timezone:
+    _type: current_timezone
+  wikipedia_search:
+    _type: wiki_search
+    max_results: 2
+
+workflow:
+  _type: react_agent
+  description: "ReAct agent for time, timezone, and short Wikipedia lookups."
+  tool_names: [current_datetime, current_timezone, wikipedia_search]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3
+  max_tool_calls: 15
+  pass_tool_call_errors_to_agent: true
+  additional_instructions: "Use wikipedia_search for facts about places, people, or topics. For time questions, prefer current_timezone before current_datetime when the user means local or user-specific time."
