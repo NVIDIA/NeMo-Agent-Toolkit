@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Observing a Workflow with Arize AX
+# NVIDIA NeMo Agent Toolkit: Observing a Workflow with Arize AX
 
 This guide shows how to send **OpenTelemetry** traces from NeMo Agent Toolkit to [Arize AX](https://arize.com/docs/ax/) using the built-in `arize_ax` exporter (`nvidia-nat[opentelemetry]`). For field reference and custom OTLP endpoints, see [Adding Telemetry Exporters — Arize AX](../../extend/custom-components/telemetry-exporters.md).
 

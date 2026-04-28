@@ -49,6 +49,7 @@ def _arize_ax_auth_headers(*, space_id: str, api_key: str) -> dict[str, str]:
 
 
 def _arize_ax_default_endpoint(*, protocol: Literal['http', 'grpc'], use_eu_region: bool) -> str:
+    """Return the default Arize AX OTLP collector URL for the given protocol and region."""
     if use_eu_region:
         return _ARIZE_EU_OTLP_HTTP if protocol == "http" else _ARIZE_EU_OTLP_GRPC
     return _ARIZE_US_OTLP_HTTP if protocol == "http" else _ARIZE_US_OTLP_GRPC
@@ -240,6 +241,10 @@ class ArizeAxTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemetry
     with default US or EU collectors when ``endpoint`` is unset.
     """
 
+    project: str = Field(
+        default="",
+        description="Arize project name. If empty, uses the ARIZE_PROJECT_NAME environment variable.",
+    )
     space_id: str = Field(
         default="",
         description="Arize space ID. If empty, uses the ARIZE_SPACE_ID environment variable.",
