@@ -79,6 +79,35 @@ def mock_credentials() -> OAuth2Credentials:
 
 
 # --------------------------------------------------------------------------- #
+# MCPOAuth2ProviderConfig Tests
+# --------------------------------------------------------------------------- #
+
+
+class TestMCPOAuth2ProviderConfig:
+    """Test MCP OAuth2 provider config validation."""
+
+    def test_validate_allows_public_client_without_secret(self):
+        """Manual mode should allow a pre-registered public client without client_secret."""
+        config = MCPOAuth2ProviderConfig(
+            server_url="https://example.com/mcp",  # type: ignore
+            redirect_uri="https://example.com/callback",  # type: ignore
+            client_id="public_client_id",
+            enable_dynamic_registration=False,
+        )
+
+        assert config.client_id == "public_client_id"
+
+    def test_validate_rejects_no_client_id_when_dynamic_registration_disabled(self):
+        """Validation should fail when DCR is disabled and no client_id is provided."""
+        with pytest.raises(ValueError, match="enable_dynamic_registration=True without client_id"):
+            MCPOAuth2ProviderConfig(
+                server_url="https://example.com/mcp",  # type: ignore
+                redirect_uri="https://example.com/callback",  # type: ignore
+                enable_dynamic_registration=False,
+            )
+
+
+# --------------------------------------------------------------------------- #
 # DiscoverOAuth2Endpoints Tests
 # --------------------------------------------------------------------------- #
 

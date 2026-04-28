@@ -825,6 +825,14 @@ class TestMCPServerConfigCustomHeaders:
 
         assert config.custom_headers is None
 
+    def test_transport_defaults_to_streamable_http(self):
+        """Test that transport defaults to streamable-http when omitted."""
+        from nat.plugins.mcp.client.client_config import MCPServerConfig
+
+        config = MCPServerConfig(url="http://localhost:8080/mcp")
+
+        assert config.transport == "streamable-http"
+
 
 if __name__ == "__main__":
 

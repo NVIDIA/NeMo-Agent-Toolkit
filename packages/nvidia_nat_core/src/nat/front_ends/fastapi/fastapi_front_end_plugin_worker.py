@@ -112,6 +112,16 @@ class FastApiFrontEndPluginWorkerBase(ABC):
 
                 yield
 
+                # The cleanup_session_managers and cleanup_evaluators methods only exist in the
+                # FastApiFrontEndPluginWorker subclass, hence the hasattr checks
+                # Ensure session manager resources are cleaned up when the app shuts down
+                if hasattr(self, "cleanup_session_managers"):
+                    await self.cleanup_session_managers()
+
+                # Ensure evaluator resources are cleaned up when the app shuts down
+                if hasattr(self, "cleanup_evaluators"):
+                    await self.cleanup_evaluators()
+
             logger.debug("Closing NAT server from process %s", os.getpid())
 
         nat_app = FastAPI(lifespan=lifespan)
@@ -316,12 +326,6 @@ class FastApiFrontEndPluginWorker(FastApiFrontEndPluginWorkerBase):
         # Initialize evaluators for single-item evaluation
         # TODO: we need config control over this as it's not always needed
         await self.initialize_evaluators(self._config)
-
-        # Ensure session manager resources are cleaned up when the app shuts down
-        app.add_event_handler("shutdown", self.cleanup_session_managers)
-
-        # Ensure evaluator resources are cleaned up when the app shuts down
-        app.add_event_handler("shutdown", self.cleanup_evaluators)
 
         await self.add_routes(app, builder)
 
