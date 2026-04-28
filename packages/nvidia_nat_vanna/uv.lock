@@ -2070,15 +2070,12 @@ requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 name = "nvidia-nat-core"
 source = { editable = "../nvidia_nat_core" }
 dependencies = [
-    { name = "aioboto3" },
     { name = "authlib" },
     { name = "click" },
     { name = "colorama" },
     { name = "expandvars" },
     { name = "fastapi" },
-    { name = "flask" },
     { name = "httpx" },
-    { name = "huggingface-hub" },
     { name = "jinja2" },
     { name = "jsonpath-ng" },
     { name = "nest-asyncio2" },
@@ -2092,7 +2089,6 @@ dependencies = [
     { name = "pkce" },
     { name = "pkginfo" },
     { name = "platformdirs" },
-    { name = "plotly" },
     { name = "pydantic" },
     { name = "pyjwt" },
     { name = "pymilvus" },
@@ -2105,12 +2101,10 @@ dependencies = [
     { name = "tzlocal" },
     { name = "urllib3" },
     { name = "uvicorn", extra = ["standard"] },
-    { name = "wikipedia" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "aiosqlite", marker = "extra == 'async-endpoints'", specifier = "~=0.21" },
     { name = "authlib", specifier = ">=1.6.5,<2.0.0" },
     { name = "click", specifier = "~=8.1" },
@@ -2119,10 +2113,8 @@ requires-dist = [
     { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "~=2026.1" },
     { name = "expandvars", specifier = "~=1.0" },
     { name = "fastapi", specifier = "~=0.119" },
-    { name = "flask", specifier = ">=3.0.0" },
     { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
     { name = "httpx", specifier = "~=0.27" },
-    { name = "huggingface-hub", specifier = ">=0.33.4,<1.0.0" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
     { name = "nest-asyncio2", specifier = "~=1.7" },
@@ -2138,7 +2130,6 @@ requires-dist = [
     { name = "pkce", specifier = "==1.0.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
-    { name = "plotly", specifier = "~=6.0" },
     { name = "presidio-analyzer", marker = "extra == 'pii-defense'" },
     { name = "presidio-anonymizer", marker = "extra == 'pii-defense'" },
     { name = "pydantic", specifier = "~=2.11" },
@@ -2154,7 +2145,6 @@ requires-dist = [
     { name = "tzlocal", specifier = "~=5.3" },
     { name = "urllib3", specifier = ">=2.6.3,<3.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
-    { name = "wikipedia", specifier = "~=1.4" },
 ]
 provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
 
@@ -2162,11 +2152,13 @@ provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
 name = "nvidia-nat-eval"
 source = { editable = "../nvidia_nat_eval" }
 dependencies = [
+    { name = "aioboto3" },
     { name = "nvidia-nat-atif" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "datasets", marker = "extra == 'full'", specifier = "~=4.4" },
     { name = "datasets", marker = "extra == 'test'", specifier = "~=4.4" },
     { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
@@ -2199,6 +2191,7 @@ dependencies = [
     { name = "nvidia-nat-eval" },
     { name = "nvidia-nat-opentelemetry" },
     { name = "openevals" },
+    { name = "wikipedia" },
 ]
 
 [package.metadata]
@@ -2222,6 +2215,7 @@ requires-dist = [
     { name = "nvidia-nat-opentelemetry", editable = "../nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openevals", specifier = ">=0.1.3,<1.0.0" },
+    { name = "wikipedia", specifier = "~=1.4" },
 ]
 provides-extras = ["test"]
 
@@ -2250,6 +2244,7 @@ name = "nvidia-nat-test"
 source = { editable = "../nvidia_nat_test" }
 dependencies = [
     { name = "asgi-lifespan" },
+    { name = "flask" },
     { name = "langchain-community" },
     { name = "nvidia-nat-core" },
     { name = "pytest" },
@@ -2262,6 +2257,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "asgi-lifespan", specifier = "~=2.1" },
+    { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-community", specifier = "~=0.3" },
     { name = "nvidia-nat-core", editable = "../nvidia_nat_core" },
     { name = "pytest", specifier = "~=8.3" },

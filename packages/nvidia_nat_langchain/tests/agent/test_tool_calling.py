@@ -367,6 +367,43 @@ async def test_graph_astream_yields_message_chunks(mock_tool_graph):
     assert len(combined_content) > 0, "Expected non-empty content from streamed agent messages"
 
 
+async def test_stream_fn_no_duplicate_content(mock_tool_graph):
+    """Regression: streaming must not duplicate the previous assistant message as a final chunk.
+
+    When stream=true, _stream_fn uses graph.astream(stream_mode="messages") which emits
+    both AIMessageChunk (incremental tokens) and AIMessage (state update). Accepting
+    AIMessage causes the accumulated response to appear twice in the output. The fix
+    filters to AIMessageChunk only. This test exercises the same graph.astream path and
+    asserts that the filtering logic in _stream_fn would prevent duplicates.
+    """
+    from langchain_core.messages import AIMessageChunk
+
+    prior_reply = "Hi there!"
+    mock_state = ToolCallAgentGraphState(messages=[
+        HumanMessage(content="hello"),
+        AIMessage(content=prior_reply),
+        HumanMessage(content="what can you do?"),
+    ])
+
+    chunk_contents = []
+    full_contents = []
+    async for msg, metadata in mock_tool_graph.astream(
+            mock_state, config={"recursion_limit": 5}, stream_mode="messages"):
+        if metadata.get("langgraph_node") != "agent":
+            continue
+        if isinstance(msg, AIMessageChunk) and isinstance(msg.content, str) and msg.content:
+            chunk_contents.append(msg.content)
+        if hasattr(msg, "content") and isinstance(msg.content, str) and msg.content:
+            full_contents.append(msg.content)
+
+    chunk_response = "".join(chunk_contents)
+    full_response = "".join(full_contents)
+
+    assert prior_reply in full_response, ("AIMessage state update with prior reply should appear in unfiltered stream")
+    assert prior_reply not in chunk_response, (
+        f"AIMessageChunk-only stream must not contain prior assistant reply: {chunk_response!r}")
+
+
 def test_tool_call_chunk_serialization():
     """Test that ChatResponseChunk with tool_calls in ChoiceDelta serializes to OpenAI-compatible SSE format."""
     chunk = ChatResponseChunk(

@@ -1745,15 +1745,6 @@ wheels = [
 ]
 
 [[package]]
-name = "narwhals"
-version = "2.16.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/fc/6f/713be67779028d482c6e0f2dde5bc430021b2578a4808c1c9f6d7ad48257/narwhals-2.16.0.tar.gz", hash = "sha256:155bb45132b370941ba0396d123cf9ed192bf25f39c4cea726f2da422ca4e145", size = 618268, upload-time = "2026-02-02T10:31:00.545Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/03/cc/7cb74758e6df95e0c4e1253f203b6dd7f348bf2f29cf89e9210a2416d535/narwhals-2.16.0-py3-none-any.whl", hash = "sha256:846f1fd7093ac69d63526e50732033e86c30ea0026a44d9b23991010c7d1485d", size = 443951, upload-time = "2026-02-02T10:30:58.635Z" },
-]
-
-[[package]]
 name = "nat-math-assistant-a2a"
 source = { editable = "../math_assistant_a2a" }
 dependencies = [
@@ -2072,15 +2063,12 @@ requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 name = "nvidia-nat-core"
 source = { editable = "../../../packages/nvidia_nat_core" }
 dependencies = [
-    { name = "aioboto3" },
     { name = "authlib" },
     { name = "click" },
     { name = "colorama" },
     { name = "expandvars" },
     { name = "fastapi" },
-    { name = "flask" },
     { name = "httpx" },
-    { name = "huggingface-hub" },
     { name = "jinja2" },
     { name = "jsonpath-ng" },
     { name = "nest-asyncio2" },
@@ -2094,7 +2082,6 @@ dependencies = [
     { name = "pkce" },
     { name = "pkginfo" },
     { name = "platformdirs" },
-    { name = "plotly" },
     { name = "pydantic" },
     { name = "pyjwt" },
     { name = "pymilvus" },
@@ -2107,12 +2094,10 @@ dependencies = [
     { name = "tzlocal" },
     { name = "urllib3" },
     { name = "uvicorn", extra = ["standard"] },
-    { name = "wikipedia" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "aiosqlite", marker = "extra == 'async-endpoints'", specifier = "~=0.21" },
     { name = "authlib", specifier = ">=1.6.5,<2.0.0" },
     { name = "click", specifier = "~=8.1" },
@@ -2121,10 +2106,8 @@ requires-dist = [
     { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "~=2026.1" },
     { name = "expandvars", specifier = "~=1.0" },
     { name = "fastapi", specifier = "~=0.119" },
-    { name = "flask", specifier = ">=3.0.0" },
     { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
     { name = "httpx", specifier = "~=0.27" },
-    { name = "huggingface-hub", specifier = ">=0.33.4,<1.0.0" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
     { name = "nest-asyncio2", specifier = "~=1.7" },
@@ -2140,7 +2123,6 @@ requires-dist = [
     { name = "pkce", specifier = "==1.0.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
-    { name = "plotly", specifier = "~=6.0" },
     { name = "presidio-analyzer", marker = "extra == 'pii-defense'" },
     { name = "presidio-anonymizer", marker = "extra == 'pii-defense'" },
     { name = "pydantic", specifier = "~=2.11" },
@@ -2156,7 +2138,6 @@ requires-dist = [
     { name = "tzlocal", specifier = "~=5.3" },
     { name = "urllib3", specifier = ">=2.6.3,<3.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
-    { name = "wikipedia", specifier = "~=1.4" },
 ]
 provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
 
@@ -2164,11 +2145,13 @@ provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
 name = "nvidia-nat-eval"
 source = { editable = "../../../packages/nvidia_nat_eval" }
 dependencies = [
+    { name = "aioboto3" },
     { name = "nvidia-nat-atif" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "datasets", marker = "extra == 'full'", specifier = "~=4.4" },
     { name = "datasets", marker = "extra == 'test'", specifier = "~=4.4" },
     { name = "nvidia-nat-atif", editable = "../../../packages/nvidia_nat_atif" },
@@ -2201,6 +2184,7 @@ dependencies = [
     { name = "nvidia-nat-eval" },
     { name = "nvidia-nat-opentelemetry" },
     { name = "openevals" },
+    { name = "wikipedia" },
 ]
 
 [package.metadata]
@@ -2224,6 +2208,7 @@ requires-dist = [
     { name = "nvidia-nat-opentelemetry", editable = "../../../packages/nvidia_nat_opentelemetry" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
     { name = "openevals", specifier = ">=0.1.3,<1.0.0" },
+    { name = "wikipedia", specifier = "~=1.4" },
 ]
 provides-extras = ["test"]
 
@@ -2271,6 +2256,7 @@ name = "nvidia-nat-test"
 source = { editable = "../../../packages/nvidia_nat_test" }
 dependencies = [
     { name = "asgi-lifespan" },
+    { name = "flask" },
     { name = "langchain-community" },
     { name = "nvidia-nat-core" },
     { name = "pytest" },
@@ -2283,6 +2269,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "asgi-lifespan", specifier = "~=2.1" },
+    { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-community", specifier = "~=0.3" },
     { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
     { name = "pytest", specifier = "~=8.3" },
@@ -2638,19 +2625,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/1b/04/fea538adf7dbbd6d186f551d595961e564a3b6715bdf276b477460858672/platformdirs-4.9.2.tar.gz", hash = "sha256:9a33809944b9db043ad67ca0db94b14bf452cc6aeaac46a88ea55b26e2e9d291", size = 28394, upload-time = "2026-02-16T03:56:10.574Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/31/05e764397056194206169869b50cf2fee4dbbbc71b344705b9c0d878d4d8/platformdirs-4.9.2-py3-none-any.whl", hash = "sha256:9170634f126f8efdae22fb58ae8a0eaa86f38365bc57897a6c4f781d1f5875bd", size = 21168, upload-time = "2026-02-16T03:56:08.891Z" },
-]
-
-[[package]]
-name = "plotly"
-version = "6.5.2"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "narwhals" },
-    { name = "packaging" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/4f/8a10a9b9f5192cb6fdef62f1d77fa7d834190b2c50c0cd256bd62879212b/plotly-6.5.2.tar.gz", hash = "sha256:7478555be0198562d1435dee4c308268187553cc15516a2f4dd034453699e393", size = 7015695, upload-time = "2026-01-14T21:26:51.222Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8a/67/f95b5460f127840310d2187f916cf0023b5875c0717fdf893f71e1325e87/plotly-6.5.2-py3-none-any.whl", hash = "sha256:91757653bd9c550eeea2fa2404dba6b85d1e366d54804c340b2c874e5a7eb4a4", size = 9895973, upload-time = "2026-01-14T21:26:47.135Z" },
 ]
 
 [[package]]

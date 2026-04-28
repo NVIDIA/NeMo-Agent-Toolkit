@@ -246,19 +246,6 @@ wheels = [
 ]
 
 [[package]]
-name = "beautifulsoup4"
-version = "4.14.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "soupsieve" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/b0/1c6a16426d389813b48d95e26898aff79abbde42ad353958ad95cc8c9b21/beautifulsoup4-4.14.3.tar.gz", hash = "sha256:6292b1c5186d356bba669ef9f7f051757099565ad9ada5dd630bd9de5fa7fb86", size = 627737, upload-time = "2025-11-30T15:08:26.084Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1a/39/47f9197bdd44df24d67ac8893641e16f386c984a0619ef2ee4c51fbbc019/beautifulsoup4-4.14.3-py3-none-any.whl", hash = "sha256:0918bfe44902e6ad8d57732ba310582e98da931428d231a5ecb9e7c703a735bb", size = 107721, upload-time = "2025-11-30T15:08:24.087Z" },
-]
-
-[[package]]
 name = "blinker"
 version = "1.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1518,15 +1505,6 @@ wheels = [
 ]
 
 [[package]]
-name = "narwhals"
-version = "2.17.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/75/59/81d0f4cad21484083466f278e6b392addd9f4205b48d45b5c8771670ebf8/narwhals-2.17.0.tar.gz", hash = "sha256:ebd5bc95bcfa2f8e89a8ac09e2765a63055162837208e67b42d6eeb6651d5e67", size = 620306, upload-time = "2026-02-23T09:44:34.142Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4b/27/20770bd6bf8fbe1e16f848ba21da9df061f38d2e6483952c29d2bb5d1d8b/narwhals-2.17.0-py3-none-any.whl", hash = "sha256:2ac5307b7c2b275a7d66eeda906b8605e3d7a760951e188dcfff86e8ebe083dd", size = 444897, upload-time = "2026-02-23T09:44:32.006Z" },
-]
-
-[[package]]
 name = "nest-asyncio"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1625,15 +1603,12 @@ requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
 name = "nvidia-nat-core"
 source = { editable = "../nvidia_nat_core" }
 dependencies = [
-    { name = "aioboto3" },
     { name = "authlib" },
     { name = "click" },
     { name = "colorama" },
     { name = "expandvars" },
     { name = "fastapi" },
-    { name = "flask" },
     { name = "httpx" },
-    { name = "huggingface-hub" },
     { name = "jinja2" },
     { name = "jsonpath-ng" },
     { name = "nest-asyncio2" },
@@ -1647,7 +1622,6 @@ dependencies = [
     { name = "pkce" },
     { name = "pkginfo" },
     { name = "platformdirs" },
-    { name = "plotly" },
     { name = "pydantic" },
     { name = "pyjwt" },
     { name = "pymilvus" },
@@ -1660,12 +1634,10 @@ dependencies = [
     { name = "tzlocal" },
     { name = "urllib3" },
     { name = "uvicorn", extra = ["standard"] },
-    { name = "wikipedia" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "aiosqlite", marker = "extra == 'async-endpoints'", specifier = "~=0.21" },
     { name = "authlib", specifier = ">=1.6.5,<2.0.0" },
     { name = "click", specifier = "~=8.1" },
@@ -1674,10 +1646,8 @@ requires-dist = [
     { name = "distributed", marker = "extra == 'async-endpoints'", specifier = "~=2026.1" },
     { name = "expandvars", specifier = "~=1.0" },
     { name = "fastapi", specifier = "~=0.119" },
-    { name = "flask", specifier = ">=3.0.0" },
     { name = "gunicorn", marker = "extra == 'gunicorn'", specifier = "~=23.0" },
     { name = "httpx", specifier = "~=0.27" },
-    { name = "huggingface-hub", specifier = ">=0.33.4,<1.0.0" },
     { name = "jinja2", specifier = "~=3.1" },
     { name = "jsonpath-ng", specifier = "~=1.7" },
     { name = "nest-asyncio2", specifier = "~=1.7" },
@@ -1693,7 +1663,6 @@ requires-dist = [
     { name = "pkce", specifier = "==1.0.3" },
     { name = "pkginfo", specifier = "~=1.12" },
     { name = "platformdirs", specifier = "~=4.3" },
-    { name = "plotly", specifier = "~=6.0" },
     { name = "presidio-analyzer", marker = "extra == 'pii-defense'" },
     { name = "presidio-anonymizer", marker = "extra == 'pii-defense'" },
     { name = "pydantic", specifier = "~=2.11" },
@@ -1709,7 +1678,6 @@ requires-dist = [
     { name = "tzlocal", specifier = "~=5.3" },
     { name = "urllib3", specifier = ">=2.6.3,<3.0.0" },
     { name = "uvicorn", extras = ["standard"], specifier = "~=0.38" },
-    { name = "wikipedia", specifier = "~=1.4" },
 ]
 provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
 
@@ -1717,11 +1685,13 @@ provides-extras = ["async-endpoints", "gunicorn", "pii-defense", "test"]
 name = "nvidia-nat-eval"
 source = { editable = "../nvidia_nat_eval" }
 dependencies = [
+    { name = "aioboto3" },
     { name = "nvidia-nat-atif" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "aioboto3", specifier = ">=11.0.0" },
     { name = "datasets", marker = "extra == 'full'", specifier = "~=4.4" },
     { name = "datasets", marker = "extra == 'test'", specifier = "~=4.4" },
     { name = "nvidia-nat-atif", editable = "../nvidia_nat_atif" },
@@ -1761,6 +1731,7 @@ name = "nvidia-nat-test"
 source = { editable = "../nvidia_nat_test" }
 dependencies = [
     { name = "asgi-lifespan" },
+    { name = "flask" },
     { name = "langchain-community" },
     { name = "nvidia-nat-core" },
     { name = "pytest" },
@@ -1773,6 +1744,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "asgi-lifespan", specifier = "~=2.1" },
+    { name = "flask", specifier = ">=3.0.0" },
     { name = "langchain-community", specifier = "~=0.3" },
     { name = "nvidia-nat-core", editable = "../nvidia_nat_core" },
     { name = "pytest", specifier = "~=8.3" },
@@ -2062,19 +2034,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/1b/04/fea538adf7dbbd6d186f551d595961e564a3b6715bdf276b477460858672/platformdirs-4.9.2.tar.gz", hash = "sha256:9a33809944b9db043ad67ca0db94b14bf452cc6aeaac46a88ea55b26e2e9d291", size = 28394, upload-time = "2026-02-16T03:56:10.574Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/31/05e764397056194206169869b50cf2fee4dbbbc71b344705b9c0d878d4d8/platformdirs-4.9.2-py3-none-any.whl", hash = "sha256:9170634f126f8efdae22fb58ae8a0eaa86f38365bc57897a6c4f781d1f5875bd", size = 21168, upload-time = "2026-02-16T03:56:08.891Z" },
-]
-
-[[package]]
-name = "plotly"
-version = "6.6.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "narwhals" },
-    { name = "packaging" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/24/fb/41efe84970cfddefd4ccf025e2cbfafe780004555f583e93dba3dac2cdef/plotly-6.6.0.tar.gz", hash = "sha256:b897f15f3b02028d69f755f236be890ba950d0a42d7dfc619b44e2d8cea8748c", size = 7027956, upload-time = "2026-03-02T21:10:25.321Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/52/d2/c6e44dba74f17c6216ce1b56044a9b93a929f1c2d5bdaff892512b260f5e/plotly-6.6.0-py3-none-any.whl", hash = "sha256:8d6daf0f87412e0c0bfe72e809d615217ab57cc715899a1e5145135a7800d1d0", size = 9910315, upload-time = "2026-03-02T21:10:18.131Z" },
 ]
 
 [[package]]
@@ -2760,15 +2719,6 @@ wheels = [
 ]
 
 [[package]]
-name = "soupsieve"
-version = "2.8.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7b/ae/2d9c981590ed9999a0d91755b47fc74f74de286b0f5cee14c9269041e6c4/soupsieve-2.8.3.tar.gz", hash = "sha256:3267f1eeea4251fb42728b6dfb746edc9acaffc4a45b27e19450b676586e8349", size = 118627, upload-time = "2026-01-20T04:27:02.457Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/2c/1462b1d0a634697ae9e55b3cecdcb64788e8b7d63f54d923fcd0bb140aed/soupsieve-2.8.3-py3-none-any.whl", hash = "sha256:ed64f2ba4eebeab06cc4962affce381647455978ffc1e36bb79a545b91f45a95", size = 37016, upload-time = "2026-01-20T04:27:01.012Z" },
-]
-
-[[package]]
 name = "sqlalchemy"
 version = "2.0.48"
 source = { registry = "https://pypi.org/simple" }
@@ -3201,16 +3151,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/61/f1/ee81806690a87dab5
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/ec/d58832f89ede95652fd01f4f24236af7d32b70cab2196dfcc2d2fd13c5c2/werkzeug-3.1.6-py3-none-any.whl", hash = "sha256:7ddf3357bb9564e407607f988f683d72038551200c704012bb9a4c523d42f131", size = 225166, upload-time = "2026-02-19T15:17:17.475Z" },
 ]
-
-[[package]]
-name = "wikipedia"
-version = "1.4.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "beautifulsoup4" },
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/67/35/25e68fbc99e672127cc6fbb14b8ec1ba3dfef035bf1e4c90f78f24a80b7d/wikipedia-1.4.0.tar.gz", hash = "sha256:db0fad1829fdd441b1852306e9856398204dc0786d2996dd2e0c8bb8e26133b2", size = 27748, upload-time = "2014-11-15T15:59:49.808Z" }
 
 [[package]]
 name = "wrapt"

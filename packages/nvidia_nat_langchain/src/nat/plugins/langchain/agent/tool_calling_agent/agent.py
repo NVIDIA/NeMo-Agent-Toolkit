@@ -24,7 +24,6 @@ from langchain_core.messages import SystemMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.messages.ai import UsageMetadata
 from langchain_core.messages.base import BaseMessage
-from langchain_core.messages.utils import convert_to_openai_messages
 from langchain_core.runnables import RunnableLambda
 from langchain_core.tools import BaseTool
 from langgraph.graph import StateGraph
@@ -37,35 +36,13 @@ from nat.llm.utils.constants import LLMFinishReason
 from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.base import _chunk_to_message
 from nat.plugins.langchain.agent.dual_node import DualNodeAgent
 
 if typing.TYPE_CHECKING:
     from nat.plugins.langchain.agent.tool_calling_agent.register import ToolCallAgentWorkflowConfig
 
 logger = logging.getLogger(__name__)
-
-
-def _chunk_to_message(chunk: "AIMessageChunk") -> AIMessage:
-    """Convert an accumulated AIMessageChunk into an AIMessage.
-
-    When streaming chunks are accumulated via ``+``, the result has ``tool_calls``
-    but ``additional_kwargs["tool_calls"]`` (the OpenAI wire format) is left empty.
-    LLM providers read the wire format when the message is sent back in conversation
-    history, so we reconstruct it here using ``convert_to_openai_messages``.
-    """
-    additional_kwargs = dict(chunk.additional_kwargs)
-    if chunk.tool_calls and not additional_kwargs.get("tool_calls"):
-        openai_msg = convert_to_openai_messages([chunk])[0]
-        if "tool_calls" in openai_msg:
-            additional_kwargs["tool_calls"] = openai_msg["tool_calls"]
-
-    return AIMessage(
-        content=chunk.content,
-        additional_kwargs=additional_kwargs,
-        response_metadata=chunk.response_metadata,
-        id=chunk.id,
-        usage_metadata=chunk.usage_metadata,
-    )
 
 
 class ToolCallAgentGraphState(BaseModel):
