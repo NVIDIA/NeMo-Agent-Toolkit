@@ -435,22 +435,24 @@ df = pd.read_csv("standardized_data_all.csv")
 df_llm_end = df[df["event_type"] == "LLM_END"]
 
 # Plot scatter plot
-plt.figure(figsize=(10, 6))
+fig, ax = plt.subplots(figsize=(14, 6))
 sns.scatterplot(
     data=df_llm_end,
     x="prompt_tokens",
     y="completion_tokens",
     hue="llm_name",
     style="function_name",
-    s=100  # Marker size
+    s=100,  # Marker size
+    ax=ax
 )
 
 # Customize the plot
-plt.xlabel("Prompt Tokens", fontsize=12)
-plt.ylabel("Completion Tokens", fontsize=12)
-plt.title("Prompt Tokens vs Completion Tokens by LLM and Function", fontsize=14)
-plt.legend(title="LLM / Function", bbox_to_anchor=(1.05, 1), loc="upper left")
-plt.grid(True)
+ax.set_xlabel("Prompt Tokens", fontsize=12)
+ax.set_ylabel("Completion Tokens", fontsize=12)
+ax.set_title("Prompt Tokens vs Completion Tokens by LLM and Function", fontsize=14)
+ax.legend(title="LLM / Function", bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
+ax.grid(True)
+fig.subplots_adjust(right=0.65)
 plt.show()
 ```
 
