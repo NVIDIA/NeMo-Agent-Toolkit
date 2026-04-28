@@ -18,6 +18,6 @@ limitations under the License.
 ![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Subpackage
-This is a subpackage for Tavily integration in NeMo Agent Toolkit. It provides framework-neutral NAT functions that wrap the [Tavily Python SDK](https://github.com/tavily-ai/tavily-python).
+This is a subpackage for Tavily integration in NeMo Agent Toolkit. It provides framework-neutral NeMo Agent Toolkit functions that wrap the [Tavily Python SDK](https://github.com/tavily-ai/tavily-python).
 
 For more information about the NVIDIA NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

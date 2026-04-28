@@ -22,9 +22,21 @@ from tavily import AsyncTavilyClient
 
 def build_async_client(api_key: SerializableSecretStr | None) -> AsyncTavilyClient:
     """Construct an AsyncTavilyClient, resolving the API key from config or TAVILY_API_KEY env."""
-    resolved = get_secret_value(api_key) if api_key else None
+    resolved = None
+    if api_key:
+        api_key_value = get_secret_value(api_key)
+        if api_key_value:
+            api_key_value = api_key_value.strip()
+            if api_key_value:
+                resolved = api_key_value
+
     if not resolved:
-        resolved = os.environ.get("TAVILY_API_KEY")
+        env_api_key = os.environ.get("TAVILY_API_KEY")
+        if env_api_key:
+            env_api_key = env_api_key.strip()
+            if env_api_key:
+                resolved = env_api_key
+
     if not resolved:
         raise ValueError(
             "Tavily API key not provided. Set the `api_key` config field or the TAVILY_API_KEY env var.")

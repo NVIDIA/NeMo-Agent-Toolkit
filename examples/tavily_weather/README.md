@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # Tavily Weather (LangChain ReAct + Anthropic)
 
-Smoke-test workflow for the `nvidia-nat-tavily` package. A LangChain ReAct agent runs against Claude Sonnet 4.6 (via LiteLLM) with the full Tavily tool group (`search`, `extract`, `crawl`, `map`).
+Smoke-test workflow for the `nvidia-nat-tavily` package. A LangChain ReAct agent runs against Claude Sonnet 4.6 (via LiteLLM) with the Tavily tools (`search`, `extract`).
 
 ## Run
 

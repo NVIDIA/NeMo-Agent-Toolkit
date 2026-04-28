@@ -9,6 +9,8 @@ import pytest
 from tavily import AsyncTavilyClient
 
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.data_models.common import SerializableSecretStr
+from nat.plugins.tavily._client import build_async_client
 from nat.plugins.tavily.tools import _HIDDEN_PARAMS
 from nat.plugins.tavily.tools import TavilyCrawlInput
 from nat.plugins.tavily.tools import TavilyExtractInput
@@ -18,6 +20,11 @@ from nat.plugins.tavily.tools import TavilySearchInput
 from nat.plugins.tavily.tools import TavilyToolsGroupConfig
 from nat.plugins.tavily.tools import _accumulate_research_stream
 from nat.plugins.tavily.tools import _build_input_schema
+
+
+async def _stream_chunks(chunks: list[bytes]) -> AsyncIterator[bytes]:
+    for chunk in chunks:
+        yield chunk
 
 
 def _expected_fields(method) -> set[str]:
@@ -66,7 +73,19 @@ def test_build_input_schema_skips_var_kwargs():
     assert "self" not in schema.model_fields
 
 
-@pytest.mark.asyncio
+def test_build_input_schema_coerces_json_list_for_pep604_union():
+    """PEP 604 list unions should get the same JSON-list pre-validation."""
+
+    def method(urls: list[str] | str):
+        pass
+
+    schema = _build_input_schema(method, "S")
+
+    value = schema(urls='["https://example.com"]')
+
+    assert value.urls == ["https://example.com"]
+
+
 @pytest.mark.parametrize("tool, method_name, payload, required_kwargs", [
     ("search", "search", {"query": "weather sf"}, {"query": "weather sf"}),
     ("extract", "extract", {"urls": ["https://example.com"]}, {"urls": ["https://example.com"]}),
@@ -99,7 +118,6 @@ async def test_each_tool_routes_to_correct_sdk_method(monkeypatch, tool, method_
     assert result == {"ok": True, "tool": method_name}
 
 
-@pytest.mark.asyncio
 async def test_group_raises_without_api_key(monkeypatch):
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)
 
@@ -108,7 +126,20 @@ async def test_group_raises_without_api_key(monkeypatch):
             await builder.add_function_group(name="tavily", config=TavilyToolsGroupConfig())
 
 
-@pytest.mark.asyncio
+def test_build_async_client_rejects_whitespace_config_api_key(monkeypatch):
+    monkeypatch.delenv("TAVILY_API_KEY", raising=False)
+
+    with pytest.raises(ValueError, match="Tavily API key"):
+        build_async_client(SerializableSecretStr("   "))
+
+
+def test_build_async_client_rejects_whitespace_env_api_key(monkeypatch):
+    monkeypatch.setenv("TAVILY_API_KEY", "   ")
+
+    with pytest.raises(ValueError, match="Tavily API key"):
+        build_async_client(None)
+
+
 async def test_group_exposes_all_five_tools(monkeypatch):
     monkeypatch.setenv("TAVILY_API_KEY", "test-key")
 
@@ -124,4 +155,59 @@ async def test_group_exposes_all_five_tools(monkeypatch):
         "tavily__crawl",
         "tavily__map",
         "tavily__research",
+    }
+
+
+async def test_research_stream_consumes_final_sse_block_without_trailing_separator():
+    payloads = [
+        {
+            "model": "tavily-research",
+            "choices": [{
+                "delta": {
+                    "tool_calls": [{
+                        "type": "Planning",
+                        "content": "Plan the query",
+                    }]
+                }
+            }],
+        },
+        {
+            "model": "tavily-research",
+            "choices": [{
+                "delta": {
+                    "content": "final report",
+                }
+            }],
+        },
+        {
+            "model": "tavily-research",
+            "choices": [{
+                "delta": {
+                    "sources": [{
+                        "title": "Example",
+                        "url": "https://example.com",
+                    }]
+                }
+            }],
+        },
+    ]
+    chunks = [
+        f"data: {json.dumps(payloads[0])}\n\n".encode(),
+        f"data: {json.dumps(payloads[1])}\n\n".encode(),
+        f"data: {json.dumps(payloads[2])}".encode(),
+    ]
+
+    result = await _accumulate_research_stream(_stream_chunks(chunks), include_trace=True)
+
+    assert result == {
+        "content": "final report",
+        "sources": [{
+            "title": "Example",
+            "url": "https://example.com",
+        }],
+        "model": "tavily-research",
+        "trace": [[{
+            "type": "Planning",
+            "content": "Plan the query",
+        }]],
     }

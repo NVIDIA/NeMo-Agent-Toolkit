@@ -1,3 +1,18 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import json
 import logging
 from typing import AsyncIterator
@@ -64,38 +79,51 @@ async def _accumulate_research_stream(
     trace: list[dict] = []
     model: str | None = None
 
+    def handle_sse_block(block: bytes) -> dict | None:
+        nonlocal model, sources, structured_content
+
+        event_type, payload = _parse_sse_block(block)
+        if event_type == "done":
+            return _finalize_research(
+                content_parts=content_parts,
+                structured_content=structured_content,
+                sources=sources,
+                model=model,
+                trace=trace,
+                include_trace=include_trace,
+            )
+        if payload is None:
+            return None
+        if payload.get("object") == "error":
+            raise RuntimeError(payload.get("error") or "tavily research stream error")
+        if model is None:
+            model = payload.get("model")
+        delta = (payload.get("choices") or [{}])[0].get("delta") or {}
+        content = delta.get("content")
+        if isinstance(content, str):
+            content_parts.append(content)
+        elif isinstance(content, dict):
+            structured_content = content
+        if "sources" in delta and "tool_calls" not in delta:
+            sources = delta["sources"] or []
+        if include_trace and "tool_calls" in delta:
+            trace.append(delta["tool_calls"])
+        return None
+
     async for chunk in chunks:
         if not chunk:
             continue
         buffer += chunk
         while b"\n\n" in buffer:
             block, buffer = buffer.split(b"\n\n", 1)
-            event_type, payload = _parse_sse_block(block)
-            if event_type == "done":
-                return _finalize_research(
-                    content_parts=content_parts,
-                    structured_content=structured_content,
-                    sources=sources,
-                    model=model,
-                    trace=trace,
-                    include_trace=include_trace,
-                )
-            if payload is None:
-                continue
-            if payload.get("object") == "error":
-                raise RuntimeError(payload.get("error") or "tavily research stream error")
-            if model is None:
-                model = payload.get("model")
-            delta = (payload.get("choices") or [{}])[0].get("delta") or {}
-            content = delta.get("content")
-            if isinstance(content, str):
-                content_parts.append(content)
-            elif isinstance(content, dict):
-                structured_content = content
-            if "sources" in delta and "tool_calls" not in delta:
-                sources = delta["sources"] or []
-            if include_trace and "tool_calls" in delta:
-                trace.append(delta["tool_calls"])
+            result = handle_sse_block(block)
+            if result is not None:
+                return result
+
+    if buffer:
+        result = handle_sse_block(buffer)
+        if result is not None:
+            return result
 
     return _finalize_research(
         content_parts=content_parts,

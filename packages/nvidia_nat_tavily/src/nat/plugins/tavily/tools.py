@@ -16,6 +16,7 @@
 import inspect
 import json
 import logging
+import types
 import typing
 from collections.abc import Sequence as AbcSequence
 from typing import Annotated
@@ -55,7 +56,7 @@ def _annotation_accepts_list(annotation: Any) -> bool:
     origin = typing.get_origin(annotation)
     if origin in _LIST_ORIGINS:
         return True
-    if origin is Union:
+    if origin in (Union, types.UnionType):
         return any(_annotation_accepts_list(a) for a in typing.get_args(annotation))
     return False
 
@@ -172,7 +173,7 @@ class TavilyToolsGroupConfig(FunctionGroupBaseConfig, name="tavily"):
 
 
 @register_function_group(config_type=TavilyToolsGroupConfig)
-async def tavily_tools(config: TavilyToolsGroupConfig, _builder: Builder):
+async def tavily_tools(config: TavilyToolsGroupConfig, _builder: Builder) -> AsyncIterator[FunctionGroup]:
     """Register the `tavily` function group."""
     client = build_async_client(config.api_key)
 
