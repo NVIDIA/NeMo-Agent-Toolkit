@@ -2,18 +2,22 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import inspect
+import json
+from typing import AsyncIterator
 
 import pytest
 from tavily import AsyncTavilyClient
 
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.plugins.tavily.tools import _HIDDEN_PARAMS
 from nat.plugins.tavily.tools import TavilyCrawlInput
 from nat.plugins.tavily.tools import TavilyExtractInput
 from nat.plugins.tavily.tools import TavilyMapInput
+from nat.plugins.tavily.tools import TavilyResearchInput
 from nat.plugins.tavily.tools import TavilySearchInput
 from nat.plugins.tavily.tools import TavilyToolsGroupConfig
+from nat.plugins.tavily.tools import _accumulate_research_stream
 from nat.plugins.tavily.tools import _build_input_schema
-from nat.plugins.tavily.tools import _HIDDEN_PARAMS
 
 
 def _expected_fields(method) -> set[str]:
@@ -30,6 +34,7 @@ def _expected_fields(method) -> set[str]:
     (TavilyExtractInput, AsyncTavilyClient.extract, "urls"),
     (TavilyCrawlInput, AsyncTavilyClient.crawl, "url"),
     (TavilyMapInput, AsyncTavilyClient.map, "url"),
+    (TavilyResearchInput, AsyncTavilyClient.research, "input"),
 ])
 def test_schema_mirrors_sdk_signature(schema, method, required_field):
     assert set(schema.model_fields) == _expected_fields(method)
@@ -40,10 +45,17 @@ def test_schema_mirrors_sdk_signature(schema, method, required_field):
         assert not field.is_required(), f"{schema.__name__}.{name} should default"
 
 
+def test_research_schema_hides_stream_and_timeout():
+    """`stream` is locked to True by the wrapper; `timeout` is wrapper-config-only."""
+    assert "stream" not in TavilyResearchInput.model_fields
+    assert "timeout" not in TavilyResearchInput.model_fields
+    assert "self" not in TavilyResearchInput.model_fields
+
+
 def test_schemas_are_independent():
     """Each tool's schema is its own class; they don't collide."""
-    classes = {TavilySearchInput, TavilyExtractInput, TavilyCrawlInput, TavilyMapInput}
-    assert len(classes) == 4
+    classes = {TavilySearchInput, TavilyExtractInput, TavilyCrawlInput, TavilyMapInput, TavilyResearchInput}
+    assert len(classes) == 5
 
 
 def test_build_input_schema_skips_var_kwargs():
@@ -97,7 +109,7 @@ async def test_group_raises_without_api_key(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_group_exposes_all_four_tools(monkeypatch):
+async def test_group_exposes_all_five_tools(monkeypatch):
     monkeypatch.setenv("TAVILY_API_KEY", "test-key")
 
     async with WorkflowBuilder() as builder:
@@ -106,4 +118,10 @@ async def test_group_exposes_all_four_tools(monkeypatch):
         functions = await group.get_all_functions()
         names = set(functions.keys())
 
-    assert names == {"tavily__search", "tavily__extract", "tavily__crawl", "tavily__map"}
+    assert names == {
+        "tavily__search",
+        "tavily__extract",
+        "tavily__crawl",
+        "tavily__map",
+        "tavily__research",
+    }
