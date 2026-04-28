@@ -37,26 +37,30 @@ _SENTINEL = "UNIQUE-LEAK-SENTINEL-8c3b9fba"
 
 
 async def _get_registered_callable(failing_llm: AsyncMock):
-    """Drive the async generator register_chat_completion returns and pull
-    the registered callable out of the yielded FunctionInfo.
+    """Enter the async context manager that register_chat_completion returns and
+    pull the registered callable out of the yielded FunctionInfo.
 
-    If the callable cannot be located, close the async generator before
-    raising so the fixture doesn't leak an open generator.
+    register_function wraps the build coroutine with asynccontextmanager, so
+    calling register_chat_completion(config, builder) returns an async context
+    manager (with __aenter__/__aexit__), not a raw async generator.  Using
+    __anext__ on it raises AttributeError.
+
+    Returns (inner_fn, ctx) where ctx must be exited by the caller on teardown.
     """
     config = ChatCompletionConfig(llm_name="test_llm")  # type: ignore[arg-type]
 
     builder = MagicMock()
     builder.get_llm = AsyncMock(return_value=failing_llm)
 
-    gen = register_chat_completion(config, builder)
-    fn_info = await gen.__anext__()
+    ctx = register_chat_completion(config, builder)
+    fn_info = await ctx.__aenter__()
     # FunctionInfo wraps the inner function; pull it back out regardless of
     # which attribute name the current implementation uses.
     for attr in ("single_fn", "fn", "func", "_fn"):
         inner = getattr(fn_info, attr, None)
         if inner is not None and callable(inner):
-            return inner, gen
-    await gen.aclose()
+            return inner, ctx
+    await ctx.__aexit__(None, None, None)
     raise RuntimeError("could not locate the registered callable on FunctionInfo")
 
 
@@ -65,16 +69,15 @@ async def fixture_failing_llm_runtime_error():
     """Mocked chat completion wired to an LLM that raises RuntimeError.
 
     Yields (fn, llm) where `fn` is the registered callable and `llm` is the
-    mocked failing LLM. Closes the underlying async generator on teardown so
-    there's no resource leak across tests.
+    mocked failing LLM. Exits the async context manager on teardown.
     """
     llm = AsyncMock()
     llm.ainvoke.side_effect = RuntimeError(_SENTINEL)
-    fn, gen = await _get_registered_callable(llm)
+    fn, ctx = await _get_registered_callable(llm)
     try:
         yield fn, llm
     finally:
-        await gen.aclose()
+        await ctx.__aexit__(None, None, None)
 
 
 @pytest.fixture(name="failing_llm_value_error")
@@ -82,11 +85,11 @@ async def fixture_failing_llm_value_error():
     """Same as above but the LLM raises ValueError with an embedded sentinel."""
     llm = AsyncMock()
     llm.ainvoke.side_effect = ValueError(f"boom {_SENTINEL}")
-    fn, gen = await _get_registered_callable(llm)
+    fn, ctx = await _get_registered_callable(llm)
     try:
         yield fn, llm
     finally:
-        await gen.aclose()
+        await ctx.__aexit__(None, None, None)
 
 
 class TestChatCompletionErrorSanitization:
