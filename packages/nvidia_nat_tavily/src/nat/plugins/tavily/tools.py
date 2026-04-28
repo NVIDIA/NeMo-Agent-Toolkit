@@ -16,12 +16,16 @@
 import inspect
 import json
 import logging
+import typing
+from collections.abc import Sequence as AbcSequence
+from typing import Annotated
 from typing import Any
 from typing import AsyncIterator
 from typing import Callable
 from typing import Union
 
 from pydantic import BaseModel
+from pydantic import BeforeValidator
 from pydantic import ConfigDict
 from pydantic import Field
 from pydantic import create_model
@@ -43,9 +47,46 @@ logger = logging.getLogger(__name__)
 # is locked to True internally for `research` (the wrapper consumes the SSE stream).
 _HIDDEN_PARAMS: frozenset[str] = frozenset({"self", "kwargs", "timeout", "stream"})
 
+_LIST_ORIGINS: tuple[Any, ...] = (list, tuple, set, frozenset, AbcSequence)
+
+
+def _annotation_accepts_list(annotation: Any) -> bool:
+    """True if `annotation` is (or contains, in a Union) a list/sequence type."""
+    origin = typing.get_origin(annotation)
+    if origin in _LIST_ORIGINS:
+        return True
+    if origin is Union:
+        return any(_annotation_accepts_list(a) for a in typing.get_args(annotation))
+    return False
+
+
+def _coerce_json_list(value: Any) -> Any:
+    """Decode a JSON-encoded list string into a Python list.
+
+    LLMs (and some framework tool wrappers) sometimes emit array-typed args as JSON
+    strings — e.g. `urls='["https://a", "https://b"]'`. This pre-validator unwraps
+    them before pydantic dispatches Union arms; without it, pydantic accepts the
+    string under the `str` arm of `Union[List[str], str]` and the SDK then fails
+    URL validation downstream.
+    """
+    if isinstance(value, str):
+        s = value.strip()
+        if s.startswith("[") and s.endswith("]"):
+            try:
+                parsed = json.loads(s)
+            except json.JSONDecodeError:
+                return value
+            if isinstance(parsed, list):
+                return parsed
+    return value
+
 
 def _build_input_schema(method: Callable, name: str) -> type[BaseModel]:
-    """Generate a pydantic input model from a live SDK method signature."""
+    """Generate a pydantic input model from a live SDK method signature.
+
+    List-typed fields are wrapped in a BeforeValidator that JSON-decodes
+    string-encoded lists from the LLM.
+    """
     sig = inspect.signature(method)
     fields: dict[str, tuple[Any, Any]] = {}
     for param_name, param in sig.parameters.items():
@@ -64,6 +105,9 @@ def _build_input_schema(method: Callable, name: str) -> type[BaseModel]:
                 # SDK uses `T = None` as "use server default" — make Optional so pydantic
                 # accepts the None default against a non-Optional Literal/scalar annotation.
                 annotation = Union[annotation, None]
+
+        if _annotation_accepts_list(annotation):
+            annotation = Annotated[annotation, BeforeValidator(_coerce_json_list)]
 
         fields[param_name] = (annotation, Field(default=default))
 
