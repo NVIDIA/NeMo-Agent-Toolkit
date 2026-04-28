@@ -17,10 +17,10 @@ from collections.abc import Sequence
 from typing import Any
 from typing import Generic
 from typing import Literal
+from typing import Protocol
 from typing import TypeVar
 
 import numpy as np
-from optuna import Trial
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -28,6 +28,18 @@ from pydantic import model_validator
 from pydantic_core import PydanticUndefined
 
 T = TypeVar("T", int, float, bool, str)
+
+
+class _TrialLike(Protocol):
+
+    def suggest_categorical(self, name: str, choices: Sequence[Any]) -> Any:
+        ...
+
+    def suggest_int(self, name: str, low: int, high: int, *, log: bool = False, step: Any = None) -> int:
+        ...
+
+    def suggest_float(self, name: str, low: float, high: float, *, log: bool = False, step: Any = None) -> float:
+        ...
 
 
 # --------------------------------------------------------------------- #
@@ -78,8 +90,8 @@ class SearchSpace(BaseModel, Generic[T]):
 
         return self
 
-    # Helper for Optuna Trials
-    def suggest(self, trial: Trial, name: str):
+    # Helper for Optuna-compatible trial objects
+    def suggest(self, trial: _TrialLike, name: str):
         if self.is_prompt:
             raise ValueError("Prompt optimization not currently supported using Optuna. "
                              "Use the genetic algorithm implementation instead.")

@@ -50,7 +50,7 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
   "nvidia-nat-core == {version}",
-  "nvidia-nat-eval == {version}",
+  "nvidia-nat-eval[full] == {version}",
   "numpy~=2.3",
   "optuna~=4.4.0",
   "pandas~=2.2",

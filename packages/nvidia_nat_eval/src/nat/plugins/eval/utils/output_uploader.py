@@ -20,14 +20,25 @@ import subprocess
 import sys
 from pathlib import Path
 
-import aioboto3
-from botocore.exceptions import NoCredentialsError
 from tqdm import tqdm
 
 from nat.data_models.common import get_secret_value
 from nat.data_models.evaluate_config import EvalOutputConfig
 
 logger = logging.getLogger(__name__)
+
+S3_UPLOAD_INSTALL_HINT = ("S3 output upload requires optional dependencies that are not installed. "
+                          "Install with: pip install \"nvidia-nat-eval[full]\"")
+
+
+def _load_s3_upload_dependencies():
+    try:
+        import aioboto3
+        from botocore.exceptions import NoCredentialsError
+    except ImportError as import_error:  # pragma: no cover - guarded optional dependency path
+        raise ModuleNotFoundError(S3_UPLOAD_INSTALL_HINT) from import_error
+
+    return aioboto3, NoCredentialsError
 
 
 class OutputUploader:
@@ -61,6 +72,8 @@ class OutputUploader:
         if not self.output_config.s3:
             logger.info("No S3 config provided; skipping upload.")
             return
+
+        aioboto3, NoCredentialsError = _load_s3_upload_dependencies()
 
         local_dir = self.output_config.dir
         bucket = self.s3_config.bucket
