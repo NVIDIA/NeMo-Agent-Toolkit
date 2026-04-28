@@ -328,7 +328,7 @@ We will begin by creating a workflow to profile, explore some of the configurati
 
 ### Defining a Workflow
 For this guide, we will use a simple, but useful, workflow that analyzes the body of a given email to determine if it is a Phishing email. We will define a single tool that takes an email body as input and returns a response on
-whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the NeMo Agent Toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/evaluation_and_profiling/email_phishing_analyzer/`.
+whether the email is a Phishing email or not. We will then add that tool as the only tool available to the agent pre-built in the NeMo Agent Toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/evaluation_and_profiling/email_phishing_analyzer/`.
 
 ### Configuring the Workflow
 The configuration file for the workflow is as follows. Here, pay close attention to how the `profiler` and `eval` sections are configured.
@@ -406,32 +406,31 @@ To run the profiler, simply run the `nat eval` command with the workflow configu
 nat eval --config_file examples/evaluation_and_profiling/email_phishing_analyzer/configs/<config_file>.yml
 ```
 
-Among other files, this will produce a `standardized_results_all.csv` file in the `output_dir` specified in the configuration file. This file will contain the profiling results of the workflow that we will use for the rest of the analysis.
+Among other files, this will produce a `standardized_data_all.csv` file in the `output_dir` specified in the configuration file. This file will contain the profiling results of the workflow that we will use for the rest of the analysis.
 
 ### Analyzing the Profiling Results
-The remainder of this guide will demonstrate how to perform a simple analysis of the profiling results using the `standardized_results_all.csv` file to compare the performance of various LLMs and evaluate the workflow's efficiency.
+The remainder of this guide will demonstrate how to perform a simple analysis of the profiling results using the `standardized_data_all.csv` file to compare the performance of various LLMs and evaluate the workflow's efficiency.
 Ultimately, we will use the collected telemetry data to identify which LLM we think is the best fit for our workflow.
 
 Particularly, we evaluate the following models:
 - `meta-llama-3.1-8b-instruct`
-- `meta-llama-3.1-70b-instruct`
+- `meta-llama-3.3-70b-instruct`
 - `mixtral-8x22b-instruct`
-- `phi-3-medium-4k-instruct`
 - `phi-4-mini-instruct`
 
-We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_results_all.csv` file to compare the performance of the LLMs.
+We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_data_all.csv` file to compare the performance of the LLMs.
 
-Henceforth, we assume that you have run the `nat eval` command and have the `standardized_results_all.csv` file in the `output_dir` specified in the configuration file. Please also take a moment to create a CSV file containing the concatenated results of the LLMs you wish to compare.
+Henceforth, we assume that you have run the `nat eval` command and have the `standardized_data_all.csv` file in the `output_dir` specified in the configuration file. Please also take a moment to create a CSV file containing the concatenated results of the LLMs you wish to compare.
 
 ### Plotting Prompt vs Completion Tokens for LLMs
-One of the first things we can do is to plot the prompt vs completion tokens for each LLM. This will give us an idea of how the LLMs are performing in terms of token usage. We can use the `standardized_results_all.csv` file to plot this data.
+One of the first things we can do is to plot the prompt vs completion tokens for each LLM. This will give us an idea of how the LLMs are performing in terms of token usage. We can use the `standardized_data_all.csv` file to plot this data.
 
 ```python
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-df = pd.read_csv("standardized_results_all.csv")
+df = pd.read_csv("standardized_data_all.csv")
 # Filter LLM_END events
 df_llm_end = df[df["event_type"] == "LLM_END"]
 
@@ -464,7 +463,7 @@ We see from the image above that the `meta-llama-3.1-8b-instruct` LLM has the hi
 `email_phishing_analyzer` function. This could be due to the fact that the `phi-3-*` models are not well-suited for the task at hand.
 
 ### Analyzing Workflow Runtimes
-Another important metric to analyze is the workflow runtime. We can use the `standardized_results_all.csv` file to plot the workflow runtime for each LLM. This will give us an idea of how long each LLM takes to complete the workflow and compare if some LLMs are more efficient than others.
+Another important metric to analyze is the workflow runtime. We can use the `standardized_data_all.csv` file to plot the workflow runtime for each LLM. This will give us an idea of how long each LLM takes to complete the workflow and compare if some LLMs are more efficient than others.
 
 ```python
 df["event_timestamp"] = pd.to_numeric(df["event_timestamp"])
@@ -507,7 +506,7 @@ From the image above, we see that the `mixtral-8x22b-instruct` LLM has the highe
 At the log scale, the `mixtral-8x22b-instruct` model take more than 10x longer than most other models.
 
 ### Analyzing Token Efficiency
-Let us collect one more piece of information from the `standardized_results_all.csv` file to compare the performance of the LLMs. We will look at the total prompt and completion tokens generated by each LLM to determine which LLM is the most efficient in terms of token usage.
+Let us collect one more piece of information from the `standardized_data_all.csv` file to compare the performance of the LLMs. We will look at the total prompt and completion tokens generated by each LLM to determine which LLM is the most efficient in terms of token usage.
 
 ```python
 # Aggregate total prompt and completion tokens per example and LLM
