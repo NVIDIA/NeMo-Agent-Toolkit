@@ -163,6 +163,7 @@ class TavilyToolsGroupConfig(FunctionGroupBaseConfig, name="tavily"):
 
     research_timeout_seconds: float | None = Field(
         default=900.0,
+        gt=0,
         description="HTTP timeout for the research SSE stream. None disables the client-side cap.",
     )
     research_include_trace: bool = Field(
