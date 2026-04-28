@@ -459,6 +459,7 @@ Below is an example of what the plot might look like:
 
 ![Prompt vs Completion Tokens](../_static/profiler_token_scatter.png)
 
+<!-- TODO: Update results based on new models -->
 We see from the image above that the `meta-llama-3.1-8b-instruct` LLM has the highest prompt token usage and takes many more turns than any other model, perhaps indicating that it fails at tool calling. We also note that none of the `phi-3-*` models succeed at any tool calling, as they have no completion tokens in the
 `email_phishing_analyzer` function. This could be due to the fact that the `phi-3-*` models are not well-suited for the task at hand.
 
