@@ -21,7 +21,6 @@ class _BlockAioboto3:
     def find_spec(self, fullname, path=None, target=None):  # noqa: ANN001
         if fullname == "aioboto3" or fullname.startswith("aioboto3."):
             raise ModuleNotFoundError("No module named 'aioboto3'")
-        return None
 
 
 def test_runtime_full_dependency_error_includes_install_hint():
