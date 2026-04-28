@@ -51,9 +51,8 @@ def test_resolve_local_install_policy(raw, normalized: str) -> None:
 
 
 def test_is_local_install_allowed() -> None:
-    assert is_local_install_allowed("allow", None) is True
-    assert is_local_install_allowed("skip", None) is False
-    assert is_local_install_allowed("skip", "true") is True
+    assert is_local_install_allowed("allow") is True
+    assert is_local_install_allowed("skip") is False
 
 
 def test_normalize_result_text_keeps_valid_json() -> None:

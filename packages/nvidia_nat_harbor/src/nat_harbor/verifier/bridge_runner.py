@@ -17,43 +17,11 @@
 from __future__ import annotations
 
 import argparse
-import json
-import traceback
 from pathlib import Path
-from typing import Any
 
-from nat_harbor.verifier.evaluator_adapter import evaluate_artifact_sync
-
-
-def _resolve_artifact_path(raw_path: str) -> Path:
-    path = Path(raw_path)
-    if path.is_absolute():
-        return path
-    return Path("/logs/agent") / path
-
-
-def _write_reward(output_dir: Path, reward: float) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    reward_json = output_dir / "reward.json"
-    reward_txt = output_dir / "reward.txt"
-    payload = {"reward": float(reward)}
-    reward_json.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    reward_txt.write_text(f"{float(reward)}\n", encoding="utf-8")
-
-
-def _write_details(output_dir: Path, details: dict[str, Any]) -> None:
-    output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "details.json").write_text(json.dumps(details, indent=2), encoding="utf-8")
-
-
-def _raw_output_details() -> dict[str, Any]:
-    raw_path = Path("/logs/agent/nemo-agent-output.txt")
-    raw_text = raw_path.read_text(encoding="utf-8").strip() if raw_path.exists() else ""
-    return {
-        "raw_output_path": str(raw_path),
-        "raw_output_exists": raw_path.exists(),
-        "raw_output_prefix": raw_text[:120] if raw_text else "",
-    }
+from nat_harbor.verifier.library_mode import InlineVerifierError
+from nat_harbor.verifier.library_mode import InlineVerifierRequest
+from nat_harbor.verifier.library_mode import verify_inline_sync
 
 
 def run_bridge(
@@ -67,53 +35,19 @@ def run_bridge(
     evaluator_name: str | None,
 ) -> int:
     """Run bridge evaluation and emit Harbor verifier artifacts."""
-    artifact = _resolve_artifact_path(artifact_path)
-    out_dir = Path(output_dir)
-    details: dict[str, Any] = {
-        "artifact_path": str(artifact),
-        "artifact_exists": artifact.exists(),
-        "evaluator_kind": evaluator_kind,
-        "evaluator_ref": evaluator_ref,
-        "fallback_mode": fallback_mode,
-    }
-    if not artifact.exists():
-        if fallback_mode == "raw_output":
-            details["result"] = "raw_fallback_missing_artifact"
-            details.update(_raw_output_details())
-            _write_reward(out_dir, 0.0)
-            _write_details(out_dir, details)
-            return 0
-        details["result"] = "missing_artifact_fail"
-        _write_details(out_dir, details)
-        return 1
-
+    request = InlineVerifierRequest(
+        trajectory_path=Path(artifact_path),
+        evaluator_kind=evaluator_kind,
+        evaluator_ref=evaluator_ref,
+        config_file=config_file,
+        evaluator_name=evaluator_name,
+        verifier_output_dir=Path(output_dir),
+        fallback_mode=fallback_mode,
+    )
     try:
-        reward, evaluator_details = evaluate_artifact_sync(
-            artifact_path=artifact,
-            evaluator_kind=evaluator_kind,
-            evaluator_ref=evaluator_ref,
-            config_file=config_file,
-            evaluator_name=evaluator_name,
-        )
-    except Exception as exc:
-        details["error"] = str(exc)
-        details["error_type"] = type(exc).__name__
-        details["traceback"] = traceback.format_exc()
-        if fallback_mode == "raw_output":
-            details["result"] = "raw_fallback_evaluator_error"
-            details.update(_raw_output_details())
-            _write_reward(out_dir, 0.0)
-            _write_details(out_dir, details)
-            return 0
-        details["result"] = "evaluator_error_fail"
-        _write_details(out_dir, details)
+        verify_inline_sync(request)
+    except InlineVerifierError:
         return 1
-
-    details["result"] = "evaluated"
-    details["reward"] = float(reward)
-    details["evaluator_details"] = evaluator_details
-    _write_reward(out_dir, reward)
-    _write_details(out_dir, details)
     return 0
 
 

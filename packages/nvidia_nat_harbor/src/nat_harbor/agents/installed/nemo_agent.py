@@ -24,13 +24,19 @@ from __future__ import annotations
 
 import json
 import shlex
+import traceback
 from pathlib import Path
 
 from harbor.agents.installed.base import BaseInstalledAgent
 from harbor.agents.installed.base import CliFlag
+from harbor.agents.installed.base import with_prompt_template
 from harbor.agents.installed.nemo_agent import NemoAgent as HarborNemoAgent
 from harbor.environments.base import BaseEnvironment
+from harbor.models.agent.context import AgentContext
 
+from nat_harbor.agents.installed.inline_runner import DefaultNemoInlineRunner
+from nat_harbor.agents.installed.library_mode import NemoInlineRunner
+from nat_harbor.agents.installed.library_mode import NemoInlineRunnerInput
 from nat_harbor.agents.installed.policy import is_local_install_allowed
 from nat_harbor.agents.installed.policy import resolve_local_install_policy
 
@@ -40,26 +46,14 @@ class NemoAgent(HarborNemoAgent):
 
     CLI_FLAGS = [
         *HarborNemoAgent.CLI_FLAGS,
+        # Comma-separated extra workflow packages to install before execution.
         CliFlag(
             "workflow_packages",
             cli="--workflow-packages",
             type="str",
             env_fallback="NVIDIA_NAT_WORKFLOW_PACKAGES",
         ),
-        CliFlag(
-            "python_bin",
-            cli="--python-bin",
-            type="str",
-            default="python3",
-            env_fallback="NVIDIA_NAT_PYTHON_BIN",
-        ),
-        CliFlag(
-            "allow_host_install",
-            cli="--allow-host-install",
-            type="bool",
-            default=False,
-            env_fallback="HARBOR_ALLOW_HOST_INSTALL",
-        ),
+        # Policy for whether host-local install is allowed in local mode.
         CliFlag(
             "local_install_policy",
             cli="--local-install-policy",
@@ -68,7 +62,27 @@ class NemoAgent(HarborNemoAgent):
             default="skip",
             env_fallback="HARBOR_LOCAL_INSTALL_POLICY",
         ),
+        # Python executable used to invoke the NAT wrapper in shell mode.
+        CliFlag(
+            "python_bin",
+            cli="--python-bin",
+            type="str",
+            default="python3",
+            env_fallback="NVIDIA_NAT_PYTHON_BIN",
+        ),
+        # Enables inline (in-process) NAT execution instead of shell wrapper.
+        CliFlag(
+            "library_mode",
+            cli="--library-mode",
+            type="bool",
+            default=False,
+            env_fallback="NAT_HARBOR_LIBRARY_MODE",
+        ),
     ]
+
+    def __init__(self, *args, inline_runner: NemoInlineRunner | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._inline_runner = inline_runner or DefaultNemoInlineRunner()
 
     def _resolve_workflow_packages(self) -> list[str]:
         """Resolve workflow package install list from single + multi-package flags."""
@@ -99,14 +113,10 @@ class NemoAgent(HarborNemoAgent):
         env_type_obj = environment.type()
         env_type = getattr(env_type_obj, "value", str(env_type_obj))
         local_install_policy = resolve_local_install_policy(self._resolved_flags.get("local_install_policy", "skip"))
-        allow_host_install_raw = self._resolved_flags.get("allow_host_install")
 
         should_run_install = True
         if env_type == "local":
-            should_run_install = is_local_install_allowed(
-                local_install_policy,
-                allow_host_install_raw,
-            )
+            should_run_install = is_local_install_allowed(local_install_policy)
 
         install_metadata = {
             "environment_type": env_type,
@@ -185,3 +195,89 @@ class NemoAgent(HarborNemoAgent):
             f"{python_bin} {self._CONTAINER_WRAPPER_PATH}",
             1,
         )
+
+    def _resolve_inline_config_path(self) -> str:
+        """Resolve or generate the config path used by inline workflow execution."""
+        config_file = self._resolved_flags.get("config_file")
+        if config_file:
+            return str(config_file)
+
+        api_key = self._resolve_api_key()
+        model_name = self._resolve_model_name()
+        config_yaml = self._generate_config_yaml(model_name, api_key)
+        config_path = self.logs_dir / "nemo-agent-inline-config.yml"
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(config_yaml, encoding="utf-8")
+        return str(config_path)
+
+    async def _sync_inline_outputs_to_environment(self,
+                                                  environment: BaseEnvironment,
+                                                  output_path: Path,
+                                                  trajectory_path: Path,
+                                                  stderr_path: Path) -> None:
+        """Copy inline outputs to canonical Harbor paths used by existing verifiers."""
+        target_files = [
+            (output_path, "/app/answer.txt"),
+            (output_path, "/app/result.json"),
+            (output_path, "/workspace/answer.txt"),
+            (output_path, "/workspace/solution.txt"),
+            (output_path, "/app/response.txt"),
+            (output_path, "/logs/agent/nemo-agent-output.txt"),
+            (stderr_path, "/logs/agent/nemo-agent-stderr.txt"),
+        ]
+        if trajectory_path.exists():
+            target_files.append((trajectory_path, "/logs/agent/trajectory.json"))
+
+        for source_path, target_path in target_files:
+            translated_target = target_path
+            if hasattr(environment, "_translate_path"):
+                translated_target = environment._translate_path(target_path)  # type: ignore[attr-defined]
+            source_resolved = source_path.resolve()
+            target_resolved = Path(translated_target).resolve()
+            if source_resolved == target_resolved:
+                continue
+            await environment.upload_file(source_path=source_path, target_path=target_path)
+
+    async def _run_library_mode(self, instruction: str, environment: BaseEnvironment) -> None:
+        """Execute the Nemo workflow inline and write compatibility artifacts."""
+        env_type_obj = environment.type()
+        env_type = getattr(env_type_obj, "value", str(env_type_obj))
+        if env_type != "local":
+            raise RuntimeError("library_mode is currently supported only with local environment execution.")
+
+        self.logs_dir.mkdir(parents=True, exist_ok=True)
+        config_path = self._resolve_inline_config_path()
+        runner_result = await self._inline_runner.run(
+            NemoInlineRunnerInput(
+                instruction=instruction,
+                config_file=config_path,
+                artifact_dir=self.logs_dir,
+                env=self._build_env(),
+            ))
+
+        output_path = self.logs_dir / "nemo-agent-output.txt"
+        output_path.write_text(runner_result.output_text, encoding="utf-8")
+        stderr_path = self.logs_dir / "nemo-agent-stderr.txt"
+        stderr_path.write_text("", encoding="utf-8")
+
+        await self._sync_inline_outputs_to_environment(
+            environment=environment,
+            output_path=output_path,
+            trajectory_path=runner_result.trajectory_path,
+            stderr_path=stderr_path,
+        )
+
+    @with_prompt_template
+    async def run(self, instruction: str, environment: BaseEnvironment, context: AgentContext) -> None:
+        """Run Nemo agent using shell mode (default) or inline library mode."""
+        if self._resolved_flags.get("library_mode"):
+            try:
+                await self._run_library_mode(instruction, environment)
+            except Exception as exc:
+                stderr_path = self.logs_dir / "nemo-agent-stderr.txt"
+                stderr_path.parent.mkdir(parents=True, exist_ok=True)
+                stderr_path.write_text(traceback.format_exc(), encoding="utf-8")
+                raise RuntimeError(f"Inline library mode execution failed: {exc}") from exc
+            return
+
+        await super().run(instruction, environment, context)

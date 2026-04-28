@@ -50,6 +50,11 @@ def test_build_run_command_honors_python_bin(tmp_path: Path) -> None:
     assert "/opt/harbor-venv/bin/python /installed-agent/nemo_agent_run_wrapper.py" in command
 
 
+def test_library_mode_flag_resolves_in_agent(tmp_path: Path) -> None:
+    agent = _make_agent(tmp_path, library_mode=True)
+    assert agent._resolved_flags["library_mode"] is True
+
+
 @pytest.mark.asyncio
 async def test_install_skips_local_mode_by_default(tmp_path: Path) -> None:
     agent = _make_agent(tmp_path)
@@ -68,7 +73,7 @@ async def test_install_skips_local_mode_by_default(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_install_allows_local_mode_with_opt_in(tmp_path: Path) -> None:
-    agent = _make_agent(tmp_path, allow_host_install=True)
+    agent = _make_agent(tmp_path, local_install_policy="allow")
     mock_env = AsyncMock()
     mock_env.type = Mock(return_value="local")
 

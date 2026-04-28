@@ -95,13 +95,6 @@ def test_missing_artifact_fallback_fail(tmp_path: Path) -> None:
 
 def test_missing_artifact_fallback_raw_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     output_dir = tmp_path / "verifier"
-    monkeypatch.setattr(
-        "nat_harbor.verifier.bridge_runner._raw_output_details",
-        lambda: {
-            "raw_output_path": "/logs/agent/nemo-agent-output.txt",
-            "raw_output_exists": True,
-            "raw_output_prefix": "stub", },
-    )
     code = bridge_runner.run_bridge(
         artifact_path="still-missing.json",
         evaluator_kind="trajectory",
@@ -134,11 +127,11 @@ def test_reward_details_output_schema(tmp_path: Path, monkeypatch: pytest.Monkey
     output_dir = tmp_path / "verifier"
     _write_minimal_atif(artifact_path)
 
-    def _eval_stub(**kwargs):
+    async def _eval_stub(**kwargs):
         del kwargs
         return 0.42, {"items": 1}
 
-    monkeypatch.setattr("nat_harbor.verifier.bridge_runner.evaluate_artifact_sync", _eval_stub)
+    monkeypatch.setattr("nat_harbor.verifier.library_mode.evaluate_artifact", _eval_stub)
     code = bridge_runner.run_bridge(
         artifact_path=str(artifact_path),
         evaluator_kind="trajectory",
