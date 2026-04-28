@@ -16,11 +16,14 @@
 import pytest
 
 
-class _BlockAioboto3:
+class _BlockModules:
+
+    def __init__(self, module_roots: set[str]):
+        self._module_roots = module_roots
 
     def find_spec(self, fullname, path=None, target=None):  # noqa: ANN001
-        if fullname == "aioboto3" or fullname.startswith("aioboto3."):
-            raise ModuleNotFoundError("No module named 'aioboto3'")
+        if any(fullname == root or fullname.startswith(f"{root}.") for root in self._module_roots):
+            raise ModuleNotFoundError(f"No module named '{fullname}'")
 
 
 def test_runtime_full_dependency_error_includes_install_hint():
@@ -37,26 +40,44 @@ def test_cli_full_dependency_error_includes_install_hint():
         cli_evaluate._raise_full_eval_dependency_error(ImportError("mock missing dependency"))
 
 
-def test_runtime_evaluate_import_does_not_require_aioboto3(monkeypatch):
+def test_runtime_evaluate_import_does_not_require_full_eval_dependencies(monkeypatch):
     import importlib
     import sys
 
     module_names = (
         "aioboto3",
+        "boto3",
+        "botocore",
+        "requests",
+        "nat.plugins.eval.dataset_handler.dataset_downloader",
+        "nat.plugins.eval.dataset_handler.dataset_handler",
         "nat.plugins.eval.runtime.evaluate",
         "nat.plugins.eval.utils.output_uploader",
     )
     original_modules = {name: sys.modules.get(name) for name in module_names}
+    dataset_handler_pkg = sys.modules.get("nat.plugins.eval.dataset_handler")
     runtime_pkg = sys.modules.get("nat.plugins.eval.runtime")
     utils_pkg = sys.modules.get("nat.plugins.eval.utils")
+    had_dataset_downloader = (
+        hasattr(dataset_handler_pkg, "dataset_downloader") if dataset_handler_pkg is not None else False)
+    had_dataset_handler = (
+        hasattr(dataset_handler_pkg, "dataset_handler") if dataset_handler_pkg is not None else False)
     had_runtime_evaluate = hasattr(runtime_pkg, "evaluate") if runtime_pkg is not None else False
     had_utils_output_uploader = hasattr(utils_pkg, "output_uploader") if utils_pkg is not None else False
+    original_dataset_downloader = getattr(dataset_handler_pkg,
+                                          "dataset_downloader",
+                                          None) if dataset_handler_pkg is not None else None
+    original_dataset_handler = getattr(dataset_handler_pkg,
+                                       "dataset_handler",
+                                       None) if dataset_handler_pkg is not None else None
     original_runtime_evaluate = getattr(runtime_pkg, "evaluate", None) if runtime_pkg is not None else None
     original_utils_output_uploader = getattr(utils_pkg, "output_uploader", None) if utils_pkg is not None else None
     for name in module_names:
         sys.modules.pop(name, None)
 
-    monkeypatch.setattr(sys, "meta_path", [_BlockAioboto3(), *sys.meta_path])
+    monkeypatch.setattr(sys,
+                        "meta_path",
+                        [_BlockModules({"aioboto3", "boto3", "botocore", "requests"}), *sys.meta_path])
     try:
         runtime_evaluate = importlib.import_module("nat.plugins.eval.runtime.evaluate")
         assert runtime_evaluate.EvaluationRun.__name__ == "EvaluationRun"
@@ -66,6 +87,15 @@ def test_runtime_evaluate_import_does_not_require_aioboto3(monkeypatch):
         for name, module in original_modules.items():
             if module is not None:
                 sys.modules[name] = module
+        if dataset_handler_pkg is not None:
+            if had_dataset_downloader:
+                dataset_handler_pkg.dataset_downloader = original_dataset_downloader
+            elif hasattr(dataset_handler_pkg, "dataset_downloader"):
+                del dataset_handler_pkg.dataset_downloader
+            if had_dataset_handler:
+                dataset_handler_pkg.dataset_handler = original_dataset_handler
+            elif hasattr(dataset_handler_pkg, "dataset_handler"):
+                del dataset_handler_pkg.dataset_handler
         if runtime_pkg is not None:
             if had_runtime_evaluate:
                 runtime_pkg.evaluate = original_runtime_evaluate

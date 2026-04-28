@@ -15,14 +15,35 @@
 import logging
 from pathlib import Path
 
-import boto3
-import requests
-from botocore.exceptions import NoCredentialsError
-
 from nat.data_models.common import get_secret_value
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 
 logger = logging.getLogger(__name__)
+
+REMOTE_DATASET_INSTALL_HINT = (
+    "Install full evaluation runtime dependencies with `pip install 'nvidia-nat-eval[full]'` "
+    "or `uv pip install 'nvidia-nat[eval]'`.")
+
+
+def _load_signed_url_dependencies():
+    try:
+        import requests
+        return requests
+    except ImportError as exc:
+        raise ModuleNotFoundError(
+            "`requests` is required to download eval datasets from signed URLs. "
+            f"{REMOTE_DATASET_INSTALL_HINT}") from exc
+
+
+def _load_s3_download_dependencies():
+    try:
+        import boto3
+        from botocore.exceptions import NoCredentialsError
+        return boto3, NoCredentialsError
+    except ImportError as exc:
+        raise ModuleNotFoundError(
+            "`boto3` and `botocore` are required to download eval datasets from S3. "
+            f"{REMOTE_DATASET_INSTALL_HINT}") from exc
 
 
 class DatasetDownloader:
@@ -44,6 +65,7 @@ class DatasetDownloader:
     def s3_client(self):
         """Lazy init the S3 client."""
         if not self._s3_client:
+            boto3, NoCredentialsError = _load_s3_download_dependencies()
             try:
                 self._s3_client = boto3.client("s3",
                                                endpoint_url=self.s3_config.endpoint_url,
@@ -64,6 +86,7 @@ class DatasetDownloader:
 
     def download_with_signed_url(self, remote_file_path: str, local_file_path: str, timeout: int = 300):
         """Download a file using a signed URL."""
+        requests = _load_signed_url_dependencies()
         try:
             response = requests.get(remote_file_path, stream=True, timeout=timeout)
             response.raise_for_status()
