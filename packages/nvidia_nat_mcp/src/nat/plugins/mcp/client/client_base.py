@@ -33,6 +33,9 @@ from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.shared._httpx_utils import MCP_DEFAULT_SSE_READ_TIMEOUT
+from mcp.shared._httpx_utils import MCP_DEFAULT_TIMEOUT
+from mcp.shared._httpx_utils import create_mcp_http_client
 from mcp.types import TextContent
 from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
@@ -604,10 +607,29 @@ class MCPStreamableHTTPClient(MCPBaseClient):
         """
         Establish a session with an MCP server via streamable-http within an async context
         """
-        # Create httpx client with custom headers and auth
-        # streamable_http_client expects a pre-configured httpx.AsyncClient for headers/auth
-        http_client = httpx.AsyncClient(headers=self._custom_headers if self._custom_headers else None,
-                                        auth=self._httpx_auth)
+        # Create httpx client with custom headers and auth.
+        # streamable_http_client expects a pre-configured httpx.AsyncClient for headers/auth;
+        # when one is supplied, the SDK skips creating its own default client, so we must
+        # match its recommended timeouts here. Otherwise httpx falls back to its 5-second
+        # default read timeout and long-running MCP tool calls will hang / fail with
+        # ReadTimeout before producing a result.
+        #
+        # Use the SDK's own factory so we inherit follow_redirects + any future defaults,
+        # and extend the SSE read timeout to cover user-configured tool/auth timeouts so
+        # the httpx layer never cuts off before MCP-level timeouts do.
+        configured_timeouts_s = [
+            MCP_DEFAULT_SSE_READ_TIMEOUT,
+            self._tool_call_timeout.total_seconds(),
+            self._auth_flow_timeout.total_seconds(),
+        ]
+        sse_read_timeout_s = max(configured_timeouts_s)
+        timeout = httpx.Timeout(MCP_DEFAULT_TIMEOUT, read=sse_read_timeout_s)
+
+        http_client = create_mcp_http_client(
+            headers=self._custom_headers if self._custom_headers else None,
+            timeout=timeout,
+            auth=self._httpx_auth,
+        )
 
         try:
             async with http_client:

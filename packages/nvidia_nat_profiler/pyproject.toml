@@ -60,6 +60,7 @@ dependencies = [
   "matplotlib~=3.9",
   "prefixspan~=0.5.2",
   "scikit-learn~=1.6",
+  "tqdm~=4.67",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]

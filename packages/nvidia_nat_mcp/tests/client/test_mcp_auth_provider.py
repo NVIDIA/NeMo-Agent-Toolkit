@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import time
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -76,6 +77,35 @@ def mock_credentials() -> OAuth2Credentials:
         client_id="test_client_id",
         client_secret="test_client_secret",
     )
+
+
+# --------------------------------------------------------------------------- #
+# MCPOAuth2ProviderConfig Tests
+# --------------------------------------------------------------------------- #
+
+
+class TestMCPOAuth2ProviderConfig:
+    """Test MCP OAuth2 provider config validation."""
+
+    def test_validate_allows_public_client_without_secret(self):
+        """Manual mode should allow a pre-registered public client without client_secret."""
+        config = MCPOAuth2ProviderConfig(
+            server_url="https://example.com/mcp",  # type: ignore
+            redirect_uri="https://example.com/callback",  # type: ignore
+            client_id="public_client_id",
+            enable_dynamic_registration=False,
+        )
+
+        assert config.client_id == "public_client_id"
+
+    def test_validate_rejects_no_client_id_when_dynamic_registration_disabled(self):
+        """Validation should fail when DCR is disabled and no client_id is provided."""
+        with pytest.raises(ValueError, match="enable_dynamic_registration=True without client_id"):
+            MCPOAuth2ProviderConfig(
+                server_url="https://example.com/mcp",  # type: ignore
+                redirect_uri="https://example.com/callback",  # type: ignore
+                enable_dynamic_registration=False,
+            )
 
 
 # --------------------------------------------------------------------------- #
@@ -825,3 +855,29 @@ class TestMCPOAuth2Provider:
                 assert provider._cached_credentials.client_id == "first_client_id"
                 assert provider._credentials_cache_time == first_cache_time
                 assert mock_register.call_count == 1
+
+    async def test_auth_resource_used_in_authorization_request(self, mock_endpoints, mock_credentials):
+        """
+        Test to ensure that the protected resource from metadata is included in the authorization request if available.
+        """
+
+        config = MCPOAuth2ProviderConfig(
+            server_url="https://example.com/mcp",  # type: ignore
+            redirect_uri="https://example.com/callback",  # type: ignore
+            client_id="test_client",
+            enable_dynamic_registration=False)
+        provider = MCPOAuth2Provider(config)
+        provider._cached_endpoints = mock_endpoints
+        provider._cached_credentials = mock_credentials
+        provider._credentials_cache_time = time.monotonic()
+        provider._discoverer._resource_from_metadata = "https://metadata.example.com"
+
+        with patch("nat.authentication.oauth2.oauth2_auth_code_flow_provider.OAuth2AuthCodeFlowProvider") as mock_cls:
+            mock_instance = AsyncMock()
+            mock_instance.authenticate.return_value = AuthResult(credentials=[], token_expires_at=None, raw={})
+            mock_cls.return_value = mock_instance
+
+            await provider._nat_oauth2_authenticate(user_id="test_user")
+
+            built_config = mock_cls.call_args[0][0]
+            assert built_config.authorization_kwargs["resource"] == "https://metadata.example.com"

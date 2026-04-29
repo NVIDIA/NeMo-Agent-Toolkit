@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import subprocess
+import sys
 from unittest import mock
 
 import pytest
@@ -82,6 +83,22 @@ async def test_upload_directory_upload_failure(output_config):
     with mock.patch("aioboto3.Session.client", return_value=mock_session):
         with pytest.raises(Exception, match="failed"):
             await uploader.upload_directory()
+
+
+async def test_upload_directory_missing_aioboto3_has_install_hint(monkeypatch, output_config):
+    """S3 upload should fail with install guidance when optional S3 dependencies are missing."""
+
+    class BlockAioboto3:
+
+        def find_spec(self, fullname, path=None, target=None):  # noqa: ANN001
+            if fullname == "aioboto3" or fullname.startswith("aioboto3."):
+                raise ModuleNotFoundError("No module named 'aioboto3'")
+
+    monkeypatch.setitem(sys.modules, "aioboto3", None)
+    monkeypatch.setattr(sys, "meta_path", [BlockAioboto3(), *sys.meta_path])
+
+    with pytest.raises(ModuleNotFoundError, match=r'nvidia-nat-eval\[full\]'):
+        await OutputUploader(output_config).upload_directory()
 
 
 def test_run_custom_scripts_success(tmp_path):
