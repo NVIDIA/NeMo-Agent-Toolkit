@@ -23,7 +23,9 @@ from pathlib import Path
 try:
     from adapter import DEFAULT_SOURCE_DATA
     from adapter import SimpleCalculatorPowerOfTwoAdapter
-except ModuleNotFoundError:
+except ModuleNotFoundError as exc:
+    if exc.name != "adapter":
+        raise
     SCRIPT_DIR = Path(__file__).resolve().parent
     if str(SCRIPT_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPT_DIR))

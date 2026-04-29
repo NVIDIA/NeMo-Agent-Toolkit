@@ -19,12 +19,14 @@ from __future__ import annotations
 import json
 import shutil
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 try:
     from common import copy_template
     from common import number_to_string
     from common import parse_power_of_two
+    from common import resolve_safe_task_dir
     from common import write_ground_truth
 except ModuleNotFoundError:
     PARENT_DIR = Path(__file__).resolve().parents[1]
@@ -33,6 +35,7 @@ except ModuleNotFoundError:
     from common import copy_template
     from common import number_to_string
     from common import parse_power_of_two
+    from common import resolve_safe_task_dir
     from common import write_ground_truth
 
 DEFAULT_SOURCE_DATA = (Path(__file__).resolve().parents[2] / "src" / "nat_simple_calculator_eval" / "data" /
@@ -44,7 +47,7 @@ class SimpleCalculatorPowerOfTwoAdapter:
 
     NAME = "simple-calculator-power-of-two"
 
-    def __init__(self, task_dir: Path, source_file: Path | None = None):
+    def __init__(self, task_dir: Path, source_file: Path | None = None) -> None:
         self.task_dir = Path(task_dir)
         self.source_file = source_file or DEFAULT_SOURCE_DATA
         self.tasks = self._load_benchmark_data()
@@ -77,7 +80,7 @@ class SimpleCalculatorPowerOfTwoAdapter:
         if source_id not in self.tasks:
             raise KeyError(f"Unknown source_id: {source_id}")
 
-        output_dir = self.task_dir / local_task_id
+        output_dir = resolve_safe_task_dir(self.task_dir, local_task_id)
         if output_dir.exists():
             if not overwrite:
                 return False
@@ -88,7 +91,7 @@ class SimpleCalculatorPowerOfTwoAdapter:
         self._customize_task(output_dir, self.tasks[source_id], local_task_id)
         return True
 
-    def generate_many(self, source_ids: list[str], *, overwrite: bool = True) -> tuple[int, int]:
+    def generate_many(self, source_ids: Sequence[str], *, overwrite: bool = True) -> tuple[int, int]:
         generated = 0
         for source_id in source_ids:
             local_task_id = self.make_local_task_id(source_id)

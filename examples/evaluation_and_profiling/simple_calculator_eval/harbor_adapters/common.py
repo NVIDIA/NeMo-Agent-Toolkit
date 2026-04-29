@@ -74,6 +74,8 @@ def parse_basic_arithmetic(question: str) -> tuple[str, float, float, float]:
         elif operation == "difference":
             expected = lhs - rhs
         else:
+            if rhs == 0:
+                raise ValueError(f"Division by zero is not supported in question: {question}")
             expected = lhs / rhs
         return operation, lhs, rhs, expected
     raise ValueError(f"Unsupported question format: {question}")
@@ -98,6 +100,21 @@ def parse_power_of_two(question: str) -> float:
 def write_ground_truth(path: Path, payload: dict) -> None:
     """Write formatted ground truth JSON payload."""
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def resolve_safe_task_dir(task_dir: Path, local_task_id: str) -> Path:
+    """Resolve a task output directory without allowing path traversal."""
+    local_path = Path(local_task_id)
+    if local_path.is_absolute() or ".." in local_path.parts:
+        raise ValueError(f"Invalid local_task_id: {local_task_id}")
+
+    root = task_dir.resolve()
+    output_dir = (root / local_path).resolve()
+    try:
+        output_dir.relative_to(root)
+    except ValueError as exc:
+        raise ValueError(f"Invalid local_task_id: {local_task_id}") from exc
+    return output_dir
 
 
 def number_to_string(value: float) -> str:
