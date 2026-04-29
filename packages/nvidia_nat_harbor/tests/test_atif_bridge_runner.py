@@ -131,7 +131,7 @@ def test_reward_details_output_schema(tmp_path: Path, monkeypatch: pytest.Monkey
         del kwargs
         return 0.42, {"items": 1}
 
-    monkeypatch.setattr("nat_harbor.verifier.library_mode.evaluate_artifact", _eval_stub)
+    monkeypatch.setattr("nat_harbor.verifier.inline_verifier.evaluate_artifact", _eval_stub)
     code = bridge_runner.run_bridge(
         artifact_path=str(artifact_path),
         evaluator_kind="trajectory",

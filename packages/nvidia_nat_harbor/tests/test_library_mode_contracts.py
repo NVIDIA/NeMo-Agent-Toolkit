@@ -20,9 +20,9 @@ from pathlib import Path
 
 from nat_harbor.agents.installed.library_mode import NemoInlineRunnerInput
 from nat_harbor.agents.installed.library_mode import NemoInlineRunnerResult
-from nat_harbor.verifier.library_mode import InlineVerifierRequest
-from nat_harbor.verifier.library_mode import InlineVerifierResult
-from nat_harbor.verifier.library_mode import build_library_mode_metadata
+from nat_harbor.verifier.inline_verifier import InlineVerifierRequest
+from nat_harbor.verifier.inline_verifier import InlineVerifierResult
+from nat_harbor.verifier.inline_verifier import build_inline_verifier_metadata
 
 
 def test_nemo_inline_runner_contracts_roundtrip(tmp_path: Path) -> None:
@@ -67,13 +67,13 @@ def test_inline_verifier_contracts_roundtrip(tmp_path: Path) -> None:
     assert result.rewards["reward"] == 1.0
 
 
-def test_build_library_mode_metadata_has_phase1_defaults(tmp_path: Path) -> None:
-    metadata = build_library_mode_metadata(
+def test_build_inline_verifier_metadata_has_phase1_defaults(tmp_path: Path) -> None:
+    metadata = build_inline_verifier_metadata(
         evaluator_mode="builtin",
         trajectory_path=tmp_path / "agent" / "trajectory.json",
         reward_json_path=tmp_path / "verifier" / "reward.json",
         details_json_path=tmp_path / "verifier" / "details.json",
     )
-    assert metadata["library_mode"] is True
+    assert metadata["inline_mode"] is True
     assert metadata["evaluator_mode"] == "builtin"
     assert metadata["trajectory_path"].endswith("trajectory.json")

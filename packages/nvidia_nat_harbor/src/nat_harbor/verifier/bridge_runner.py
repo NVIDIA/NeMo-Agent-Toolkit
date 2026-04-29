@@ -19,9 +19,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from nat_harbor.verifier.library_mode import InlineVerifierError
-from nat_harbor.verifier.library_mode import InlineVerifierRequest
-from nat_harbor.verifier.library_mode import verify_inline_sync
+from nat_harbor.verifier.inline_verifier import InlineVerifierError
+from nat_harbor.verifier.inline_verifier import InlineVerifierRequest
+from nat_harbor.verifier.inline_verifier import verify_inline_sync
 
 
 def run_bridge(

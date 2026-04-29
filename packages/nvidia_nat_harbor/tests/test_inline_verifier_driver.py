@@ -22,9 +22,9 @@ from pathlib import Path
 
 import pytest
 
-from nat_harbor.verifier.library_mode import DefaultInlineVerifierDriver
-from nat_harbor.verifier.library_mode import InlineVerifierError
-from nat_harbor.verifier.library_mode import InlineVerifierRequest
+from nat_harbor.verifier.inline_verifier import DefaultInlineVerifierDriver
+from nat_harbor.verifier.inline_verifier import InlineVerifierError
+from nat_harbor.verifier.inline_verifier import InlineVerifierRequest
 
 
 def _write_minimal_atif(path: Path) -> None:
@@ -52,7 +52,7 @@ def test_inline_verifier_success_writes_harbor_compatible_artifacts(
         assert kwargs["evaluator_kind"] == "trajectory"
         return 0.75, {"evaluator_mode": "builtin", "items": 1}
 
-    monkeypatch.setattr("nat_harbor.verifier.library_mode.evaluate_artifact", _eval_stub)
+    monkeypatch.setattr("nat_harbor.verifier.inline_verifier.evaluate_artifact", _eval_stub)
     request = InlineVerifierRequest(
         trajectory_path=artifact_path,
         evaluator_kind="trajectory",
@@ -67,7 +67,7 @@ def test_inline_verifier_success_writes_harbor_compatible_artifacts(
     details = json.loads(result.details_json_path.read_text(encoding="utf-8"))
     assert details["result"] == "evaluated"
     assert details["evaluator_details"]["items"] == 1
-    assert details["library_mode_metadata"]["library_mode"] is True
+    assert details["inline_metadata"]["inline_mode"] is True
     reward_payload = json.loads(result.reward_json_path.read_text(encoding="utf-8"))
     assert reward_payload == {"reward": pytest.approx(0.75)}
 
@@ -103,7 +103,7 @@ def test_inline_verifier_raw_output_fallback_on_evaluator_error(
         del kwargs
         raise RuntimeError("stub evaluator failure")
 
-    monkeypatch.setattr("nat_harbor.verifier.library_mode.evaluate_artifact", _eval_error)
+    monkeypatch.setattr("nat_harbor.verifier.inline_verifier.evaluate_artifact", _eval_error)
     request = InlineVerifierRequest(
         trajectory_path=artifact_path,
         evaluator_kind="trajectory",
@@ -119,4 +119,4 @@ def test_inline_verifier_raw_output_fallback_on_evaluator_error(
     details = json.loads(result.details_json_path.read_text(encoding="utf-8"))
     assert details["result"] == "raw_fallback_evaluator_error"
     assert details["raw_output_exists"] is True
-    assert details["library_mode_metadata"]["evaluator_mode"] == "raw_output_fallback"
+    assert details["inline_metadata"]["evaluator_mode"] == "raw_output_fallback"

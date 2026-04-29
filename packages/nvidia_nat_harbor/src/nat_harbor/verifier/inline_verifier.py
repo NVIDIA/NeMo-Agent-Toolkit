@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Inline library-mode contracts for ATIF verifier execution."""
+"""Inline verifier contracts and drivers for ATIF evaluation."""
 
 from __future__ import annotations
 
@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Any
 from typing import Protocol
 
+from harbor.models.verifier.result import VerifierResult
+from harbor.utils.env import resolve_env_vars
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -57,10 +59,11 @@ class InlineVerifierResult(BaseModel):
 
 
 class InlineVerifierDriver(Protocol):
-    """Protocol for library-mode verifier implementations."""
+    """Protocol for inline verifier implementations."""
 
     async def verify(self, request: InlineVerifierRequest) -> InlineVerifierResult:
         """Run inline verifier logic and return Harbor-compatible reward outputs."""
+        ...
 
 
 class InlineVerifierError(RuntimeError):
@@ -118,7 +121,7 @@ class DefaultInlineVerifierDriver:
         reward_json_path: Path,
         details_json_path: Path,
     ) -> dict[str, Any]:
-        return build_library_mode_metadata(
+        return build_inline_verifier_metadata(
             evaluator_mode=evaluator_mode,
             trajectory_path=request.trajectory_path,
             reward_json_path=reward_json_path,
@@ -147,7 +150,7 @@ class DefaultInlineVerifierDriver:
                 details.update(self._raw_output_details(request.raw_output_path))
                 reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, 0.0)
                 details_json_path = self._write_details(request.verifier_output_dir, details)
-                details["library_mode_metadata"] = self._metadata(
+                details["inline_metadata"] = self._metadata(
                     evaluator_mode="raw_output_fallback",
                     request=request,
                     reward_json_path=reward_json_path,
@@ -183,7 +186,7 @@ class DefaultInlineVerifierDriver:
                 details.update(self._raw_output_details(request.raw_output_path))
                 reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, 0.0)
                 details_json_path = self._write_details(request.verifier_output_dir, details)
-                details["library_mode_metadata"] = self._metadata(
+                details["inline_metadata"] = self._metadata(
                     evaluator_mode="raw_output_fallback",
                     request=request,
                     reward_json_path=reward_json_path,
@@ -207,7 +210,7 @@ class DefaultInlineVerifierDriver:
         details["evaluator_details"] = evaluator_details
         reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, reward)
         details_json_path = self._write_details(request.verifier_output_dir, details)
-        details["library_mode_metadata"] = self._metadata(
+        details["inline_metadata"] = self._metadata(
             evaluator_mode=str(evaluator_details.get("evaluator_mode", "unknown")),
             request=request,
             reward_json_path=reward_json_path,
@@ -224,6 +227,66 @@ class DefaultInlineVerifierDriver:
         )
 
 
+class ATIFInlineVerifier:
+    """Harbor verifier class that executes NAT ATIF evaluation inline."""
+
+    def __init__(
+        self,
+        task: Any,
+        trial_paths: Any,
+        environment: Any,
+        override_env: dict[str, str] | None = None,
+        logger: Any | None = None,
+        verifier_env: dict[str, str] | None = None,
+        step_name: str | None = None,
+        driver: InlineVerifierDriver | None = None,
+        **_: Any,
+    ) -> None:
+        del environment
+        del step_name
+        self._task = task
+        self._trial_paths = trial_paths
+        self._override_env = override_env or {}
+        self._verifier_env = verifier_env or {}
+        self._logger = logger
+        self._driver: InlineVerifierDriver = driver or DefaultInlineVerifierDriver()
+
+    def _resolve_runtime_env(self) -> dict[str, str]:
+        task_verifier_env = getattr(self._task.config.verifier, "env", {}) or {}
+        merged_env = {
+            **task_verifier_env,
+            **self._verifier_env,
+            **self._override_env,
+        }
+        if not merged_env:
+            return {}
+        return resolve_env_vars(merged_env)
+
+    @staticmethod
+    def _none_if_empty(value: str | None) -> str | None:
+        if value is None or value == "":
+            return None
+        return value
+
+    async def verify(self) -> VerifierResult:
+        runtime_env = self._resolve_runtime_env()
+        request = InlineVerifierRequest(
+            trajectory_path=Path(runtime_env.get("NAT_HARBOR_ATIF_ARTIFACT_PATH", "trajectory.json")),
+            evaluator_kind=runtime_env.get("NAT_HARBOR_ATIF_EVALUATOR_KIND", "custom"),
+            evaluator_ref=self._none_if_empty(runtime_env.get("NAT_HARBOR_ATIF_EVALUATOR_REF")),
+            config_file=self._none_if_empty(runtime_env.get("NAT_HARBOR_ATIF_CONFIG_FILE")),
+            evaluator_name=self._none_if_empty(runtime_env.get("NAT_HARBOR_ATIF_EVALUATOR_NAME")),
+            verifier_output_dir=self._trial_paths.verifier_dir,
+            fallback_mode=runtime_env.get("NAT_HARBOR_ATIF_FALLBACK_MODE", "fail"),
+            raw_output_path=Path(runtime_env.get("NAT_HARBOR_ATIF_RAW_OUTPUT_PATH",
+                                                 "/logs/agent/nemo-agent-output.txt")),
+        )
+        result = await self._driver.verify(request)
+        if self._logger:
+            self._logger.debug("ATIF inline verifier completed with reward=%s", result.reward)
+        return VerifierResult(rewards=result.rewards)
+
+
 def verify_inline_sync(request: InlineVerifierRequest,
                        driver: InlineVerifierDriver | None = None) -> InlineVerifierResult:
     """Synchronously run an inline verifier request for CLI callers."""
@@ -231,16 +294,16 @@ def verify_inline_sync(request: InlineVerifierRequest,
     return asyncio.run(active_driver.verify(request))
 
 
-def build_library_mode_metadata(
+def build_inline_verifier_metadata(
     *,
     evaluator_mode: str,
     trajectory_path: Path,
     reward_json_path: Path,
     details_json_path: Path,
 ) -> dict[str, Any]:
-    """Build baseline metadata for phase-1 library mode traceability."""
+    """Build baseline metadata for phase-1 inline verifier traceability."""
     return {
-        "library_mode": True,
+        "inline_mode": True,
         "evaluator_mode": evaluator_mode,
         "trajectory_path": str(trajectory_path),
         "reward_json_path": str(reward_json_path),

@@ -23,7 +23,8 @@ This package provides:
 
 - A NAT-backed Harbor agent (`NemoAgent`)
 - A host-local Harbor environment implementation (`LocalEnvironment`)
-- ATIF verifier bridge utilities for NAT evaluators (`nat_harbor.verifier.bridge_runner`)
+- An inline ATIF verifier class for Harbor verifier import hooks (`ATIFInlineVerifier`)
+- ATIF verifier bridge utilities for script-based compatibility (`nat_harbor.verifier.bridge_runner`)
 - Library-mode contracts and implementations for inline agent/verifier execution
 
 ## Python and dependencies
@@ -60,6 +61,8 @@ Use this supported workaround:
 
 This keeps execution host-local through the imported environment class while satisfying Harbor CLI validation.
 
+This is a temporary compatibility path. Once first-class local environment support is upstreamed in Harbor, this workaround can be dropped in favor of direct `--env local` usage. See [`upstream-plan.md`](./upstream-plan.md).
+
 ## Library mode
 
 Library mode enables an inline execution path for NAT agent and verifier logic.
@@ -70,7 +73,13 @@ Enable it with:
 --ak library_mode=true
 ```
 
-When using ATIF bridge scoring, also pass verifier env flags, for example:
+When using inline ATIF scoring with Harbor verifier import hooks, set:
+
+```bash
+--verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier
+```
+
+And pass verifier env flags, for example:
 
 ```bash
 --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1
@@ -102,25 +111,23 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  A["Task tests/test.sh"] --> B{"NAT_HARBOR_ATIF_BRIDGE_ENABLED=1?"}
-  B -- "No" --> C["python /tests/evaluate.py"]
-  B -- "Yes" --> D["python -m nat_harbor.verifier.bridge_runner"]
-  D --> E["InlineVerifierRequest(...)"]
-  E --> F["verify_inline_sync(...)"]
-  F --> G["DefaultInlineVerifierDriver.verify(...)"]
-  G --> H["Resolve trajectory path (local/container layouts)"]
-  H --> I{"Artifact exists?"}
-  I -- "No + raw_output fallback" --> J["Write fallback reward/details"]
-  I -- "No + fail" --> K["InlineVerifierError"]
-  I -- "Yes" --> L["evaluate_artifact(...)"]
-  L --> M{"Dispatch mode"}
-  M -- "builtin evaluator" --> N["evaluate_atif_fn via NAT evaluator"]
-  M -- "custom evaluator_ref" --> O["module:function callable"]
-  N --> P["Normalize EvalOutput/reward"]
-  O --> P
-  P --> Q["Write /logs/verifier/reward.txt"]
-  P --> R["Write /logs/verifier/reward.json"]
-  P --> S["Write /logs/verifier/details.json"]
+  A["harbor trial verification"] --> B["VerifierFactory.create_verifier_from_config(...)"]
+  B --> C["ATIFInlineVerifier.verify(...)"]
+  C --> D["InlineVerifierRequest(...)"]
+  D --> E["DefaultInlineVerifierDriver.verify(...)"]
+  E --> F["Resolve trajectory path (local/container layouts)"]
+  F --> G{"Artifact exists?"}
+  G -- "No + raw_output fallback" --> H["Write fallback reward/details"]
+  G -- "No + fail" --> I["InlineVerifierError"]
+  G -- "Yes" --> J["evaluate_artifact(...)"]
+  J --> K{"Dispatch mode"}
+  K -- "builtin evaluator" --> L["evaluate_atif_fn via NAT evaluator"]
+  K -- "custom evaluator_ref" --> M["module:function callable"]
+  L --> N["Normalize EvalOutput/reward"]
+  M --> N
+  N --> O["Write /logs/verifier/reward.txt"]
+  N --> P["Write /logs/verifier/reward.json"]
+  N --> Q["Write /logs/verifier/details.json"]
 ```
 
 ## How to run (simple calculator examples)
@@ -151,12 +158,12 @@ harbor run \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
   --env docker \
   --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
   --ak local_install_policy=skip \
   --ak library_mode=true \
-  --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1 \
   --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory \
   --ve NAT_HARBOR_ATIF_CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/configs/config-nested-trajectory-eval.yml \
   --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=trajectory_eval
@@ -174,12 +181,12 @@ harbor run \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
   --env docker \
   --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
   --ak local_install_policy=skip \
   --ak library_mode=true \
-  --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1 \
   --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory \
   --ve NAT_HARBOR_ATIF_CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/configs/config-nested-trajectory-eval.yml \
   --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=trajectory_eval
@@ -190,8 +197,8 @@ harbor run \
 - `src/nat_harbor/agents/installed/nemo_agent.py`: NAT Harbor agent subclass
 - `src/nat_harbor/agents/installed/inline_runner.py`: default inline NAT workflow runner
 - `src/nat_harbor/environments/local.py`: host-local environment implementation
-- `src/nat_harbor/verifier/bridge_runner.py`: CLI entrypoint used by Harbor verifier scripts
-- `src/nat_harbor/verifier/library_mode.py`: inline verifier driver and contracts
+- `src/nat_harbor/verifier/inline_verifier.py`: Harbor inline verifier class, driver, and contracts
+- `src/nat_harbor/verifier/bridge_runner.py`: legacy CLI entrypoint for script-based verifier bridge
 
 ## Additional example docs
 

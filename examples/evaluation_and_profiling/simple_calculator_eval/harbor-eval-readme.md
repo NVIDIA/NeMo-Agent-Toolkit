@@ -70,7 +70,12 @@ harbor run \
 
 ## 5) ATIF bridge evaluator lanes
 
-Set these verifier env flags on `harbor run` to enable ATIF bridge scoring in `tests/test.sh`.
+Use Harbor's verifier import hook for inline ATIF scoring:
+
+```bash
+--verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier
+```
+
 You can use any evaluator registered as a NAT evaluator, as long as it exposes an ATIF lane (`evaluate_atif_fn`), and you can also use simple Python evaluator callables via `NAT_HARBOR_ATIF_EVALUATOR_REF=module:function`.
 
 ### Builtin trajectory lane
@@ -84,11 +89,11 @@ harbor run \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
   --env docker \
   --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
   --ak local_install_policy=skip \
-  --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1 \
   --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory \
   --ve NAT_HARBOR_ATIF_CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/configs/config-nested-trajectory-eval.yml \
   --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=trajectory_eval
@@ -105,11 +110,11 @@ harbor run \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
   --env docker \
   --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
   --ak local_install_policy=skip \
-  --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1 \
   --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=tunable_rag \
   --ve NAT_HARBOR_ATIF_CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/configs/config-tunable-rag-eval-atif.yml \
   --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=tuneable_eval
@@ -128,11 +133,11 @@ harbor run \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
+  --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
   --env docker \
   --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
   --ak local_install_policy=skip \
-  --ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1 \
   --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=custom \
   --ve NAT_HARBOR_ATIF_EVALUATOR_REF=nat_simple_calculator_eval.scripts.harbor_sample_evaluators:artifact_presence_evaluator
 ```
