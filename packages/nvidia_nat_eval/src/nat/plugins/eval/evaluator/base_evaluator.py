@@ -14,16 +14,41 @@
 # limitations under the License.
 
 import asyncio
+import logging
 from abc import ABC
 from abc import abstractmethod
+from typing import Any
 
-from tqdm import tqdm
+try:
+    from tqdm import tqdm as _tqdm
+except ModuleNotFoundError:  # pragma: no cover - exercised in downstream minimal installs
+    _tqdm = None
 
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.plugins.eval.data_models.evaluator_io import EvalOutput
 from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.utils.tqdm_position_registry import TqdmPositionRegistry
+
+logger = logging.getLogger(__name__)
+
+
+class _NoOpProgressBar:
+
+    def update(self, _: int) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+def _make_progress_bar(total: int, desc: str) -> tuple[Any, int | None]:
+    if _tqdm is None:
+        logger.info("Skipping evaluator progress bar because `tqdm` is not installed.")
+        return _NoOpProgressBar(), None
+
+    tqdm_position = TqdmPositionRegistry.claim()
+    return _tqdm(total=total, desc=desc, position=tqdm_position), tqdm_position
 
 
 class BaseEvaluator(ABC):
@@ -49,10 +74,8 @@ class BaseEvaluator(ABC):
         pass
 
     async def evaluate(self, eval_input: EvalInput) -> EvalOutput:
-        pbar = None
+        pbar, tqdm_position = _make_progress_bar(total=len(eval_input.eval_input_items), desc=self.tqdm_desc)
         try:
-            tqdm_position = TqdmPositionRegistry.claim()
-            pbar = tqdm(total=len(eval_input.eval_input_items), desc=self.tqdm_desc, position=tqdm_position)
 
             async def wrapped(item):
                 async with self.semaphore:
@@ -68,7 +91,8 @@ class BaseEvaluator(ABC):
             output_items = await asyncio.gather(*[wrapped(item) for item in eval_input.eval_input_items])
         finally:
             pbar.close()
-            TqdmPositionRegistry.release(tqdm_position)
+            if tqdm_position is not None:
+                TqdmPositionRegistry.release(tqdm_position)
 
         # Compute average if possible
         numeric_scores = [item.score for item in output_items if isinstance(item.score, int | float)]
