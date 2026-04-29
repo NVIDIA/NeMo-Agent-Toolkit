@@ -740,6 +740,15 @@ def _convert_impl(events: list[Event], explicit_root_uuid: str | None) -> Trajec
     subagent_ref_by_context_uuid: dict[str, dict] = {}
 
     for root in subagent_roots:
+        # When subagents nest (an agent inside a tool inside another subagent),
+        # _find_subagent_roots returns both the outer and inner agent. The
+        # outer iteration's recursive _convert_impl already attaches the inner
+        # agent as a nested subagent_trajectory; processing the inner root
+        # again here would double-emit it (top-level sibling AND nested) and
+        # spend wasted work. Iteration is in event-time order so the outer
+        # root is always seen first, making this skip safe.
+        if id(root) in excluded_ids:
+            continue
         descendants = _collect_descendants(root.uuid, events, parent_map)
         for e in descendants:
             excluded_ids.add(id(e))

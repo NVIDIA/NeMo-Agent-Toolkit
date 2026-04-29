@@ -20,6 +20,7 @@ from __future__ import annotations
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
+from pydantic import model_validator
 
 
 class FunctionAncestry(BaseModel):
@@ -48,3 +49,12 @@ class FunctionAncestry(BaseModel):
     )
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def _validate_parent_pair(self) -> FunctionAncestry:
+        # Enforce the invariant declared on parent_name above. The inverse
+        # state (parent_id set, parent_name None) is intentionally allowed —
+        # the converter emits it when a parent uuid isn't in name_map.
+        if self.parent_id is None and self.parent_name is not None:
+            raise ValueError("parent_name may only be set when parent_id is present")
+        return self

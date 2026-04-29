@@ -151,6 +151,33 @@ class _EventBase(BaseModel):
             raise ValueError("uuid / parent_uuid must be a non-empty string when set")
         return v
 
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def _validate_timestamp(cls, v: Any) -> str | int:
+        # Spec §5.1: timestamp is either an RFC 3339 string ending with 'Z' or
+        # an explicit UTC offset, or a non-negative int of epoch microseconds.
+        # The original value is returned (no normalization) so wire round-trip
+        # preserves the emitter's chosen form — ts_micros handles unification.
+        # ``mode="before"`` runs ahead of Pydantic's union coercion, which
+        # otherwise silently maps ``True``/``False`` to ``1``/``0`` (bool is an
+        # int subclass) and would defeat the bool rejection below.
+        if isinstance(v, bool):
+            raise ValueError("timestamp must be RFC 3339 string or int epoch microseconds, not bool")
+        if isinstance(v, int):
+            if v < 0:
+                raise ValueError(f"timestamp int (epoch microseconds) must be >= 0, got {v}")
+            return v
+        if isinstance(v, str):
+            try:
+                parsed = datetime.fromisoformat(v.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ValueError(f"timestamp string must be RFC 3339 (spec §5.1), got {v!r}") from exc
+            if parsed.tzinfo is None:
+                raise ValueError(
+                    f"timestamp string must end with 'Z' or an explicit UTC offset (spec §5.1), got {v!r}")
+            return v
+        raise ValueError(f"timestamp must be RFC 3339 string or int epoch microseconds, got {type(v).__name__}")
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def ts_micros(self) -> int:
@@ -236,6 +263,27 @@ class MarkEvent(_EventBase):
     @model_validator(mode="after")
     def _validate_category_subtype_coherence(self) -> Self:
         _require_subtype_when_custom(self.category, self.category_profile)
+        # Spec §3.2 + §4: mark.category is either null (generic checkpoint) or
+        # a value from the closed vocabulary; empty string is not in §4 and
+        # must be rejected to keep parity with ScopeEvent (which rejects ""
+        # via _validate_category).
+        if self.category is not None and not self.category:
+            raise ValueError(
+                "category must be a non-empty string when set; use None for an uncategorized mark (spec §3.2, §4)")
+        return self
+
+    @model_validator(mode="after")
+    def _reject_scope_only_fields(self) -> Self:
+        # Spec §3.2 line 177: "mark does NOT carry scope_category or attributes."
+        # _EventBase sets extra="allow" (load-bearing for §2.1 unknown-flag and
+        # §4.4 unknown-profile-key preservation) — without this surgical reject,
+        # those two specifically forbidden names would be silently stashed in
+        # __pydantic_extra__ and round-tripped back out, violating the spec.
+        extras = self.__pydantic_extra__ or {}
+        forbidden = {"scope_category", "attributes"} & extras.keys()
+        if forbidden:
+            raise ValueError(f"mark event must not carry {sorted(forbidden)} "
+                             "(spec §3.2: 'mark does NOT carry scope_category or attributes')")
         return self
 
 

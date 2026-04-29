@@ -97,12 +97,13 @@ def read_jsonl(path: str | Path) -> list[Event]:
     """
     path = Path(path)
     events: list[Event] = []
-    for line in path.read_text().splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        raw = json.loads(line)
-        events.append(_event_adapter.validate_python(raw))
+    with path.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            raw = json.loads(line)
+            events.append(_event_adapter.validate_python(raw))
     events.sort(key=lambda e: e.ts_micros)
     return events
 
@@ -117,13 +118,12 @@ def write_jsonl(events: list[Event], path: str | Path) -> None:
     """
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    lines = []
-    for event in events:
-        # Exclude the computed ``ts_micros`` field from wire output — it's an
-        # in-memory sorting convenience, not part of the wire envelope (spec §2).
-        dumped = event.model_dump(exclude={"ts_micros"}, mode="json", by_alias=True)
-        # Reorder to match the spec field tables (§3.1 scope, §3.2 mark) so
-        # ``kind`` and ``scope_category`` lead the envelope.
-        ordered = _reorder_for_wire(dumped)
-        lines.append(json.dumps(ordered))
-    path.write_text("\n".join(lines) + "\n")
+    with path.open("w", encoding="utf-8") as f:
+        for event in events:
+            # Exclude the computed ``ts_micros`` field from wire output — it's an
+            # in-memory sorting convenience, not part of the wire envelope (spec §2).
+            dumped = event.model_dump(exclude={"ts_micros"}, mode="json", by_alias=True)
+            # Reorder to match the spec field tables (§3.1 scope, §3.2 mark) so
+            # ``kind`` and ``scope_category`` lead the envelope.
+            ordered = _reorder_for_wire(dumped)
+            f.write(json.dumps(ordered) + "\n")

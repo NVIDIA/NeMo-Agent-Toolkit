@@ -16,8 +16,9 @@
 """Convert ATOF v0.1 JSONL examples to ATIF trajectories.
 
 Reads each example JSONL file produced by ``generate_atof_examples.py``
-(EXMP-01 tier-1, EXMP-02 tier-2) and writes the resulting ATIF trajectory
-as formatted JSON.
+(EXMP-01 tier-1 raw pass-through, EXMP-02 tier-2 semantic-tagged,
+EXMP-03 mark events) and writes the resulting ATIF trajectory as
+formatted JSON.
 
 Uses ``nat.atof.scripts.atof_to_atif_converter.convert_file`` — the v0.1
 converter dispatches on ``(kind, scope_category, category)`` and reads
