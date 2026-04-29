@@ -37,6 +37,16 @@ def test_local_environment_type() -> None:
     assert LocalEnvironment.type() == "local"
 
 
+def test_local_environment_command_translation_preserves_longer_paths(tmp_path) -> None:
+    env = object.__new__(LocalEnvironment)
+    env._path_map = [("/app", tmp_path / "app")]
+
+    translated = env._translate_command("cp /app/result.json /application/result.json")
+
+    assert str(tmp_path / "app" / "result.json") in translated
+    assert "/application/result.json" in translated
+
+
 @pytest.mark.parametrize(
     ("raw", "normalized"),
     [

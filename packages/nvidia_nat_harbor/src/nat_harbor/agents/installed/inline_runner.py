@@ -17,16 +17,21 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
+from uuid import uuid4
 
 from nat_harbor.agents.installed.library_mode import NemoInlineRunner
 from nat_harbor.agents.installed.library_mode import NemoInlineRunnerInput
 from nat_harbor.agents.installed.library_mode import NemoInlineRunnerResult
 from nat_harbor.agents.installed.nemo_agent_run_wrapper import _write_trajectory
 from nat_harbor.agents.installed.nemo_agent_run_wrapper import normalize_result_text
+
+
+_ENVIRONMENT_OVERLAY_LOCK = asyncio.Lock()
 
 
 @contextmanager
@@ -44,6 +49,20 @@ def _temporary_environment(env: dict[str, str]) -> Generator[None, None, None]:
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = old_value
+
+
+def _write_minimal_trajectory(output_path: Path) -> None:
+    """Write a valid empty ATIF trajectory when no intermediate steps were captured."""
+    payload = {
+        "schema_version": "ATIF-v1.6",
+        "session_id": str(uuid4()),
+        "agent": {
+            "name": "nemo-agent",
+            "version": "unknown",
+        },
+        "steps": [],
+    }
+    output_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 class DefaultNemoInlineRunner(NemoInlineRunner):
@@ -69,29 +88,32 @@ class DefaultNemoInlineRunner(NemoInlineRunner):
         result_text = ""
         intermediate_steps_dicts: list[dict[str, Any]] = []
 
-        with _temporary_environment(request.env):
-            async with WorkflowBuilder.from_config(config) as builder:
-                session_manager = await SessionManager.create(config=config, shared_builder=builder)
-                try:
-                    async with session_manager.session(user_id="harbor") as session:
-                        async with session.run(request.instruction) as runner:
-                            intermediate_task = None
-                            try:
-                                from nat.builder.runtime_event_subscriber import pull_intermediate
-                                intermediate_task = asyncio.ensure_future(pull_intermediate())
-                            except Exception:
+        async with _ENVIRONMENT_OVERLAY_LOCK:
+            with _temporary_environment(request.env):
+                async with WorkflowBuilder.from_config(config) as builder:
+                    session_manager = await SessionManager.create(config=config, shared_builder=builder)
+                    try:
+                        async with session_manager.session(user_id="harbor") as session:
+                            async with session.run(request.instruction) as runner:
                                 intermediate_task = None
+                                try:
+                                    from nat.builder.runtime_event_subscriber import pull_intermediate
+                                    intermediate_task = asyncio.ensure_future(pull_intermediate())
+                                except Exception:
+                                    intermediate_task = None
 
-                            result = await runner.result()
-                            result_text = normalize_result_text(str(result))
-                            if intermediate_task is not None:
-                                intermediate_steps_dicts = await intermediate_task
-                finally:
-                    await session_manager.shutdown()
+                                result = await runner.result()
+                                result_text = normalize_result_text(str(result))
+                                if intermediate_task is not None:
+                                    intermediate_steps_dicts = await intermediate_task
+                    finally:
+                        await session_manager.shutdown()
 
         output_path.write_text(result_text, encoding="utf-8")
         if intermediate_steps_dicts:
             _write_trajectory(intermediate_steps_dicts, str(trajectory_path))
+        else:
+            _write_minimal_trajectory(trajectory_path)
 
         return NemoInlineRunnerResult(
             output_text=result_text,

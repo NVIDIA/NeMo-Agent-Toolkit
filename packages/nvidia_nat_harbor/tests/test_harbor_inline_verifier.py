@@ -86,9 +86,7 @@ def test_atif_library_mode_verifier_builds_request_from_env_layers(
     assert driver.request.trajectory_path == Path("atif-output.json")
 
 
-def test_atif_library_mode_verifier_supports_custom_evaluator_ref(
-    tmp_path: Path,
-) -> None:
+def test_atif_library_mode_verifier_supports_custom_evaluator_ref(tmp_path: Path, ) -> None:
     driver = StubInlineDriver()
     verifier = ATIFInlineVerifier(
         task=_build_task({}),

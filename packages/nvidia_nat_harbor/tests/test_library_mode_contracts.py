@@ -16,8 +16,10 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
+from nat_harbor.agents.installed.inline_runner import _write_minimal_trajectory
 from nat_harbor.agents.installed.library_mode import NemoInlineRunnerInput
 from nat_harbor.agents.installed.library_mode import NemoInlineRunnerResult
 from nat_harbor.verifier.inline_verifier import InlineVerifierRequest
@@ -77,3 +79,14 @@ def test_build_inline_verifier_metadata_has_phase1_defaults(tmp_path: Path) -> N
     assert metadata["inline_mode"] is True
     assert metadata["evaluator_mode"] == "builtin"
     assert metadata["trajectory_path"].endswith("trajectory.json")
+
+
+def test_write_minimal_trajectory_creates_empty_atif_artifact(tmp_path: Path) -> None:
+    trajectory_path = tmp_path / "trajectory.json"
+
+    _write_minimal_trajectory(trajectory_path)
+
+    payload = json.loads(trajectory_path.read_text(encoding="utf-8"))
+    assert payload["schema_version"] == "ATIF-v1.6"
+    assert payload["agent"]["name"] == "nemo-agent"
+    assert payload["steps"] == []

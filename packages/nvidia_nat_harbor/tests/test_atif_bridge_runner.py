@@ -76,6 +76,47 @@ def test_custom_evaluator_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Pat
     assert details["evaluator_mode"] == "custom"
 
 
+def test_custom_evaluator_internal_type_error_is_not_retried(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "trajectory.json"
+    _write_minimal_atif(artifact_path)
+
+    def _buggy_custom_fn(*, atif_samples, artifact_path):
+        del atif_samples
+        del artifact_path
+        raise TypeError("internal evaluator bug")
+
+    monkeypatch.setattr("nat_harbor.verifier.evaluator_adapter._load_callable", lambda _: _buggy_custom_fn)
+    with pytest.raises(TypeError, match="internal evaluator bug"):
+        evaluate_artifact_sync(
+            artifact_path=artifact_path,
+            evaluator_kind="custom",
+            evaluator_ref="dummy.module:fn",
+        )
+
+
+def test_custom_evaluator_supports_legacy_positional_signature(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "trajectory.json"
+    _write_minimal_atif(artifact_path)
+
+    def _legacy_custom_fn(samples):
+        return {"reward": 0.5, "details": {"items": len(samples)}}
+
+    monkeypatch.setattr("nat_harbor.verifier.evaluator_adapter._load_callable", lambda _: _legacy_custom_fn)
+    reward, details = evaluate_artifact_sync(
+        artifact_path=artifact_path,
+        evaluator_kind="custom",
+        evaluator_ref="dummy.module:fn",
+    )
+    assert reward == pytest.approx(0.5)
+    assert details["items"] == 1
+
+
 def test_missing_artifact_fallback_fail(tmp_path: Path) -> None:
     output_dir = tmp_path / "verifier"
     code = bridge_runner.run_bridge(

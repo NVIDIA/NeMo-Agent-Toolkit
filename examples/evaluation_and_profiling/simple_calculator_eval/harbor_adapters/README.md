@@ -21,3 +21,9 @@ By default, adapter scripts write tasks under:
 
 Each script supports overriding source and output paths via CLI flags.
 
+## Future direction
+
+The current adapters are concrete reference implementations. A follow-up should
+extract the repeated task-generation flow into shared `nat_harbor.adapters`
+helpers so future NAT examples only define source-row loading, instruction
+rendering, and ground-truth mapping.

@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 set -uo pipefail
 
+PYTHON_BIN="${NAT_HARBOR_PYTHON_BIN:-python}"
+
 if [ "${NAT_HARBOR_ATIF_BRIDGE_ENABLED:-0}" = "1" ]; then
-  python -m nat_harbor.verifier.bridge_runner \
+  "$PYTHON_BIN" -m nat_harbor.verifier.bridge_runner \
     --artifact-path "${NAT_HARBOR_ATIF_ARTIFACT_PATH:-trajectory.json}" \
     --evaluator-kind "${NAT_HARBOR_ATIF_EVALUATOR_KIND:-custom}" \
     --evaluator-ref "${NAT_HARBOR_ATIF_EVALUATOR_REF:-}" \
@@ -14,7 +16,7 @@ if [ "${NAT_HARBOR_ATIF_BRIDGE_ENABLED:-0}" = "1" ]; then
     --fallback-mode "${NAT_HARBOR_ATIF_FALLBACK_MODE:-fail}"
   status=$?
 else
-  python /tests/evaluate.py
+  "$PYTHON_BIN" /tests/evaluate.py
   status=$?
 
   if [ "$status" -eq 0 ]; then
@@ -25,4 +27,3 @@ else
 fi
 
 exit "$status"
-

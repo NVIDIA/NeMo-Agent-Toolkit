@@ -63,6 +63,35 @@ This keeps execution host-local through the imported environment class while sat
 
 This is a temporary compatibility path. Once first-class local environment support is upstreamed in Harbor, this workaround can be dropped in favor of direct `--env local` usage. See [`upstream-plan.md`](./upstream-plan.md).
 
+## Execution modes
+
+The examples use three related but separate concepts:
+
+| Term | How it is selected | What runs on the host |
+|---|---|---|
+| Local environment | `--environment-import-path nat_harbor.environments.local:LocalEnvironment` with the temporary `--env docker` workaround | Harbor environment operations and shell commands |
+| Shell compatibility mode | Default `NemoAgent` behavior when `library_mode` is not set | The NAT wrapper subprocess and task `tests/test.sh` |
+| Library mode | `--ak library_mode=true` | NAT workflow execution in-process through the active Harbor Python |
+| Inline verifier | `--verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier` | ATIF evaluator dispatch in-process through the active Harbor Python |
+
+For new local development, prefer **local environment + library mode + inline verifier**. Shell compatibility mode is useful for parity checks against script-based Harbor tasks, but it needs explicit host Python wiring because the agent wrapper and `tests/test.sh` are subprocesses.
+
+The local environment backend is for developer iteration, not benchmark
+isolation. It uses best-effort path translation to keep expected Harbor
+artifacts under the trial directory, but it still executes host processes.
+
+For shell compatibility runs, point both the agent wrapper and verifier script at the repo virtual environment:
+
+```bash
+HOST_PYTHON="$(pwd)/.venv/bin/python"
+
+PATH="$(dirname "$HOST_PYTHON"):$PATH" \
+harbor run \
+  ... \
+  --ak python_bin="$HOST_PYTHON" \
+  --ve NAT_HARBOR_PYTHON_BIN="$HOST_PYTHON"
+```
+
 ## Inline execution mode
 
 `library_mode=true` enables inline agent execution for `NemoAgent`.
@@ -77,6 +106,27 @@ Inline verifier execution is configured through Harbor's verifier import hook:
 
 ```bash
 --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier
+```
+
+This requires Harbor verifier import-hook support (`harbor.verifier.factory`,
+`VerifierConfig.import_path`, and the `--verifier-import-path` CLI flag).
+Until that hook is available in a released Harbor version, use the Harbor side
+branch as an editable source checkout:
+
+```bash
+git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
+git -C external/harbor checkout ak-harbor-libary-mode
+uv pip install -e external/harbor
+```
+
+If `external/harbor` already exists, update it to the side branch instead of
+cloning again. Do not patch the Harbor files inside `.venv` or
+`site-packages`; `uv sync` or a reinstall can overwrite those changes.
+
+You can confirm the active Harbor CLI has the hook with:
+
+```bash
+harbor run --help | rg "verifier-import|verifier-kwarg"
 ```
 
 Then pass evaluator selection via verifier env flags, for example:
@@ -135,7 +185,8 @@ flowchart TD
 
 ## How to run (simple calculator examples)
 
-Run all commands from repository root.
+Run all commands from the repository root with the repo virtual environment
+active, or call `.venv/bin/harbor` explicitly.
 
 ### 1) Run adapter to set up the Harbor dataset
 
@@ -208,4 +259,3 @@ harbor run \
 For end-to-end Harbor example commands and evaluator lane variants, see:
 
 - `examples/evaluation_and_profiling/simple_calculator_eval/harbor-eval-readme.md`
-

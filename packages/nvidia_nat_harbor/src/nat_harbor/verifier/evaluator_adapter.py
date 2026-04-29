@@ -106,6 +106,46 @@ def load_atif_samples(artifact_path: Path) -> list[AtifEvalSample]:
     return [_coerce_sample(payload, fallback_item_id="item-1")]
 
 
+def _call_custom_evaluator(
+    evaluator_callable: Callable[..., Any],
+    *,
+    atif_samples: list[AtifEvalSample],
+    artifact_path: Path,
+) -> Any:
+    """Invoke custom evaluator once, selecting legacy/new signatures up front."""
+    try:
+        signature = inspect.signature(evaluator_callable)
+    except (TypeError, ValueError):
+        return evaluator_callable(atif_samples=atif_samples, artifact_path=str(artifact_path))
+
+    parameters = signature.parameters.values()
+    accepts_var_kwargs = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in parameters)
+    parameters_by_name = signature.parameters
+
+    kwargs: dict[str, Any] = {}
+    if accepts_var_kwargs or "atif_samples" in parameters_by_name:
+        kwargs["atif_samples"] = atif_samples
+    if accepts_var_kwargs or "artifact_path" in parameters_by_name:
+        kwargs["artifact_path"] = str(artifact_path)
+    if kwargs:
+        return evaluator_callable(**kwargs)
+
+    positional_parameters = [
+        parameter for parameter in signature.parameters.values()
+        if parameter.kind in {
+            inspect.Parameter.POSITIONAL_ONLY,
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+        }
+    ]
+    if len(positional_parameters) == 1:
+        return evaluator_callable(atif_samples)
+    if len(positional_parameters) >= 2:
+        return evaluator_callable(atif_samples, str(artifact_path))
+
+    raise BridgeEvaluatorError(
+        "Custom evaluator must accept `atif_samples`, `artifact_path`, or a legacy positional sample argument.")
+
+
 async def _run_custom_evaluator(
     *,
     evaluator_ref: str,
@@ -113,11 +153,11 @@ async def _run_custom_evaluator(
     artifact_path: Path,
 ) -> tuple[float, dict[str, Any]]:
     evaluator_callable = _load_callable(evaluator_ref)
-    try:
-        raw_result = evaluator_callable(atif_samples=atif_samples, artifact_path=str(artifact_path))
-    except TypeError:
-        # Support legacy custom signatures that only accept atif samples.
-        raw_result = evaluator_callable(atif_samples)
+    raw_result = _call_custom_evaluator(
+        evaluator_callable,
+        atif_samples=atif_samples,
+        artifact_path=artifact_path,
+    )
     if inspect.isawaitable(raw_result):
         raw_result = await raw_result
     reward, details = _normalize_eval_output(raw_result)

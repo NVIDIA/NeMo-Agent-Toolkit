@@ -37,6 +37,7 @@ class LocalEnvironment(BaseEnvironment):
         are mapped under ``<trial_dir>/.local-env``.
       - Canonical Harbor log/artifact paths (``/logs/agent``, ``/logs/verifier``,
         ``/logs/artifacts``) are mapped to ``trial_paths`` directories.
+      - This is a developer convenience backend, not a security isolation layer.
     """
 
     def __init__(
@@ -122,7 +123,8 @@ class LocalEnvironment(BaseEnvironment):
         """Translate mapped paths in a shell command and neutralize chown operations."""
         translated = command
         for src, dst in sorted(self._path_map, key=lambda item: len(item[0]), reverse=True):
-            translated = translated.replace(src, str(dst))
+            pattern = re.compile(rf"(?<![A-Za-z0-9_.-]){re.escape(src)}(?=$|/|[^A-Za-z0-9_.-])")
+            translated = pattern.sub(str(dst), translated)
         translated = re.sub(r"(^|&&)\s*chown\s+\S+\s+\S+", r"\1 true", translated)
         return translated
 
