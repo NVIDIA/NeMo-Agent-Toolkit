@@ -20,17 +20,13 @@ import logging
 import sys
 from pathlib import Path
 
-try:
-    from adapter import DEFAULT_SOURCE_DATA
-    from adapter import SimpleCalculatorAdapter
-except ModuleNotFoundError as exc:
-    if exc.name != "adapter":
-        raise
-    SCRIPT_DIR = Path(__file__).resolve().parent
-    if str(SCRIPT_DIR) not in sys.path:
-        sys.path.insert(0, str(SCRIPT_DIR))
-    from adapter import DEFAULT_SOURCE_DATA
-    from adapter import SimpleCalculatorAdapter
+SCRIPT_DIR = Path(__file__).resolve().parent
+ADAPTERS_DIR = SCRIPT_DIR.parent
+for import_path in (ADAPTERS_DIR, SCRIPT_DIR):
+    if str(import_path) not in sys.path:
+        sys.path.insert(0, str(import_path))
+
+from adapter import SimpleCalculatorAdapter  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[5]
 
@@ -44,7 +40,7 @@ def _default_output_dir() -> Path:
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate Harbor tasks for Simple Calculator benchmark", )
-    parser.add_argument("--source-file", type=Path, default=DEFAULT_SOURCE_DATA)
+    parser.add_argument("--source-file", type=Path, default=SimpleCalculatorAdapter.DEFAULT_SOURCE_DATA)
     parser.add_argument("--output-dir", type=Path, default=_default_output_dir())
     parser.add_argument("--ids", nargs="*", default=None)
     parser.add_argument("--limit", type=int, default=None)

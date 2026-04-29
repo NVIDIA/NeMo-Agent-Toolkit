@@ -19,6 +19,10 @@ limitations under the License.
 
 `nvidia-nat-harbor` integrates [Harbor](https://github.com/harbor-framework/harbor) evaluation runs with NVIDIA NeMo Agent Toolkit workflows and evaluators.
 
+Use this README for package setup, execution-mode concepts, and a short
+library-mode smoke path. The simple calculator example cookbook and
+adapter guide are linked at the end.
+
 This package provides:
 
 - A NeMo Agent Toolkit-backed Harbor agent (`NemoAgent`)
@@ -40,14 +44,46 @@ This package provides:
 From repo root:
 
 ```bash
-uv sync --active
+uv venv --python 3.13 --seed .venv
+source .venv/bin/activate
 ```
+
+Then install the Harbor integration package:
+
+```bash
+uv pip install -e packages/nvidia_nat_harbor
+```
+
+Install the Harbor side branch used by the inline verifier examples:
+
+```bash
+git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
+git -C external/harbor checkout ak-harbor-libary-mode
+uv pip install -e external/harbor
+```
+
+If `external/harbor` already exists, update it to the side branch instead of
+cloning again. Do not patch the Harbor files inside `.venv` or
+`site-packages`; `uv sync` or a reinstall can overwrite those changes.
 
 Install sample workflow packages used by the simple calculator Harbor examples:
 
 ```bash
 uv pip install -e examples/getting_started/simple_calculator
 uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
+```
+
+## Phoenix tracing
+
+The simple calculator configuration files used below enable Phoenix tracing at
+`http://localhost:6006/v1/traces`. Start Phoenix in a separate terminal before
+running those examples:
+
+```bash
+uv venv --python 3.13 --seed .venv-phoenix
+source .venv-phoenix/bin/activate
+uv pip install arize-phoenix
+phoenix serve
 ```
 
 ## Current environment mode behavior
@@ -83,13 +119,13 @@ artifacts under the trial directory, but it still executes host processes.
 For shell compatibility runs, point both the agent wrapper and verifier script at the repo virtual environment:
 
 ```bash
-HOST_PYTHON="$(pwd)/.venv/bin/python"
+NAT_HARBOR_HOST_PYTHON="$(pwd)/.venv/bin/python"
 
-PATH="$(dirname "$HOST_PYTHON"):$PATH" \
+PATH="$(dirname "$NAT_HARBOR_HOST_PYTHON"):$PATH" \
 harbor run \
   ... \
-  --ak python_bin="$HOST_PYTHON" \
-  --ve NAT_HARBOR_PYTHON_BIN="$HOST_PYTHON"
+  --ak python_bin="$NAT_HARBOR_HOST_PYTHON" \
+  --ve NAT_HARBOR_PYTHON_BIN="$NAT_HARBOR_HOST_PYTHON"
 ```
 
 ## Inline execution mode
@@ -114,14 +150,10 @@ Until that hook is available in a released Harbor version, use the Harbor side
 branch as an editable source checkout:
 
 ```bash
-git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
-git -C external/harbor checkout ak-harbor-libary-mode
 uv pip install -e external/harbor
 ```
 
-If `external/harbor` already exists, update it to the side branch instead of
-cloning again. Do not patch the Harbor files inside `.venv` or
-`site-packages`; `uv sync` or a reinstall can overwrite those changes.
+See the install section for the full checkout command.
 
 You can confirm the active Harbor CLI has the hook with:
 
@@ -193,76 +225,76 @@ flowchart TD
 ## How to run (simple calculator examples)
 
 Run all commands from the repository root with the repo virtual environment
-active, or call `.venv/bin/harbor` explicitly.
+active, or call `.venv/bin/harbor` explicitly. This section shows the shortest
+power-of-two trajectory path for checking the integration. For shell compatibility,
+tunable-rag, and custom-evaluator variants, use the detailed command README
+linked below.
+
+Set the shared paths once:
+
+```bash
+NAT_HARBOR_POWER_OF_TWO_ADAPTER=examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/simple_calculator_power_of_two/run_adapter.py
+NAT_HARBOR_POWER_OF_TWO_DATASET_DIR=.tmp/harbor/datasets/simple-calculator-power-of-two
+NAT_HARBOR_JOBS_DIR=.tmp/harbor/jobs-local
+NAT_HARBOR_TRAJECTORY_CONFIG=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml
+```
 
 ### 1) Run adapter to set up the Harbor dataset
 
 ```bash
-python examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/simple_calculator_nested/run_adapter.py \
-  --output-dir .tmp/harbor/datasets/simple-calculator-nested \
+python "$NAT_HARBOR_POWER_OF_TWO_ADAPTER" \
+  --output-dir "$NAT_HARBOR_POWER_OF_TWO_DATASET_DIR" \
   --overwrite
 ```
 
 ### 2) Run a single task in library mode using NeMo Agent Toolkit workflow config
 
-This uses NeMo Agent Toolkit workflow config:
-`examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml`
-
 ```bash
-rm -rf .tmp/harbor/jobs-local/sc-nested-library-inline-smoke
+rm -rf "$NAT_HARBOR_JOBS_DIR/sc-power-of-two-library-inline-smoke"
 
 harbor run \
-  --path .tmp/harbor/datasets/simple-calculator-nested \
+  --path "$NAT_HARBOR_POWER_OF_TWO_DATASET_DIR" \
   -l 1 \
-  --job-name sc-nested-library-inline-smoke \
-  --jobs-dir .tmp/harbor/jobs-local \
+  --job-name sc-power-of-two-library-inline-smoke \
+  --jobs-dir "$NAT_HARBOR_JOBS_DIR" \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
   --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
   --env docker \
   --model nvidia/nemotron-3-nano-30b-a3b \
-  --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
+  --ak config_file="$NAT_HARBOR_TRAJECTORY_CONFIG" \
   --ak local_install_policy=skip \
   --ak library_mode=true \
   --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory \
-  --ve NAT_HARBOR_ATIF_CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/configs/config-nested-trajectory-eval.yml \
+  --ve NAT_HARBOR_ATIF_CONFIG_FILE="$NAT_HARBOR_TRAJECTORY_CONFIG" \
   --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=trajectory_eval
 ```
 
 ### 3) Run all tasks in library mode
 
 ```bash
-rm -rf .tmp/harbor/jobs-local/sc-nested-library-inline
+rm -rf "$NAT_HARBOR_JOBS_DIR/sc-power-of-two-library-inline"
 
 harbor run \
-  --path .tmp/harbor/datasets/simple-calculator-nested \
-  --job-name sc-nested-library-inline \
-  --jobs-dir .tmp/harbor/jobs-local \
+  --path "$NAT_HARBOR_POWER_OF_TWO_DATASET_DIR" \
+  --job-name sc-power-of-two-library-inline \
+  --jobs-dir "$NAT_HARBOR_JOBS_DIR" \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
   --environment-import-path nat_harbor.environments.local:LocalEnvironment \
   --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
   --env docker \
   --model nvidia/nemotron-3-nano-30b-a3b \
-  --ak config_file=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml \
+  --ak config_file="$NAT_HARBOR_TRAJECTORY_CONFIG" \
   --ak local_install_policy=skip \
   --ak library_mode=true \
   --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory \
-  --ve NAT_HARBOR_ATIF_CONFIG_FILE=examples/evaluation_and_profiling/simple_calculator_eval/src/nat_simple_calculator_eval/configs/config-nested-trajectory-eval.yml \
+  --ve NAT_HARBOR_ATIF_CONFIG_FILE="$NAT_HARBOR_TRAJECTORY_CONFIG" \
   --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=trajectory_eval
 ```
 
-## Package layout
+## Related docs
 
-- `src/nat_harbor/agents/installed/nemo_agent.py`: NeMo Agent Toolkit Harbor agent subclass
-- `src/nat_harbor/agents/installed/inline_runner.py`: default inline NeMo Agent Toolkit workflow runner
-- `src/nat_harbor/environments/local.py`: host-local environment implementation
-- `src/nat_harbor/verifier/inline_verifier.py`: Harbor inline verifier class, driver, and contracts
-- `src/nat_harbor/verifier/bridge_runner.py`: legacy CLI entrypoint for script-based verifier bridge
-
-## Additional example docs
-
-For end-to-end Harbor example commands and evaluator lane variants, see:
-
-- `examples/evaluation_and_profiling/simple_calculator_eval/harbor-eval-readme.md`
+- [Simple calculator example cookbook](../../examples/evaluation_and_profiling/simple_calculator_eval/harbor-eval-readme.md)
+- [Simple calculator Harbor adapter guide](../../examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/README.md)

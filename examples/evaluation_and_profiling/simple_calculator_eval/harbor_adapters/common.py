@@ -19,10 +19,17 @@ from __future__ import annotations
 import json
 import re
 import shutil
+from abc import ABC
+from abc import abstractmethod
+from collections.abc import Mapping
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
+from typing import ClassVar
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "template"
 _TEMPLATE_IGNORE_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".pytest_cache")
+TaskData = dict[str, Any]
 
 
 def _is_ignored_template_item(path: Path) -> bool:
@@ -46,6 +53,85 @@ def copy_template(output_dir: Path) -> None:
             )
         else:
             shutil.copy2(item, destination)
+
+
+class HarborTaskAdapter(ABC):
+    """Shared generation flow for simple calculator Harbor task adapters."""
+
+    NAME: ClassVar[str]
+    DEFAULT_SOURCE_DATA: ClassVar[Path]
+
+    def __init__(self, task_dir: Path, source_file: Path | None = None) -> None:
+        self.task_dir = Path(task_dir)
+        self.source_file = source_file or self.DEFAULT_SOURCE_DATA
+        self.tasks = self._load_benchmark_data()
+
+    @classmethod
+    def make_local_task_id(cls, source_id: str) -> str:
+        normalized = str(source_id).strip().lower().replace("_", "-")
+        return f"{cls.NAME}-{normalized}"
+
+    @abstractmethod
+    def _load_benchmark_data(self) -> dict[str, TaskData]:
+        """Load source benchmark data keyed by source ID."""
+
+    def list_available_tasks(self) -> list[str]:
+        return sorted(self.tasks.keys(), key=lambda item: int(item))
+
+    def generate_task(self, source_id: str, local_task_id: str, *, overwrite: bool = True) -> bool:
+        if source_id not in self.tasks:
+            raise KeyError(f"Unknown source_id: {source_id}")
+
+        output_dir = resolve_safe_task_dir(self.task_dir, local_task_id)
+        if output_dir.exists():
+            if not overwrite:
+                return False
+            shutil.rmtree(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        copy_template(output_dir)
+        self._customize_task(output_dir, self.tasks[source_id], local_task_id)
+        return True
+
+    def generate_many(self, source_ids: Sequence[str], *, overwrite: bool = True) -> tuple[int, int]:
+        generated = 0
+        for source_id in source_ids:
+            local_task_id = self.make_local_task_id(source_id)
+            if self.generate_task(source_id, local_task_id, overwrite=overwrite):
+                generated += 1
+        return generated, len(source_ids)
+
+    @abstractmethod
+    def _customize_task(self, output_dir: Path, task: TaskData, local_task_id: str) -> None:
+        """Write task-specific prompt, metadata, solution, and ground truth."""
+
+    def _write_task_files(
+        self,
+        output_dir: Path,
+        *,
+        local_task_id: str,
+        source_id: str,
+        instruction: str,
+        expected_value: float,
+        ground_truth: TaskData,
+        task_toml_replacements: Mapping[str, str] | None = None,
+    ) -> None:
+        (output_dir / "instruction.md").write_text(instruction, encoding="utf-8")
+
+        task_toml = (output_dir / "task.toml").read_text(encoding="utf-8")
+        task_toml = task_toml.replace("__TASK_NAME__", f"nvidia/{local_task_id}")
+        task_toml = task_toml.replace("__TASK_ID__", source_id)
+        for old, new in (task_toml_replacements or {}).items():
+            task_toml = task_toml.replace(old, new)
+        (output_dir / "task.toml").write_text(task_toml, encoding="utf-8")
+
+        solution_script = (output_dir / "solution" / "solve.sh").read_text(encoding="utf-8")
+        solution_script = solution_script.replace("__EXPECTED_VALUE__", number_to_string(expected_value))
+        (output_dir / "solution" / "solve.sh").write_text(solution_script, encoding="utf-8")
+        (output_dir / "solution" / "solve.sh").chmod(0o755)
+        (output_dir / "tests" / "test.sh").chmod(0o755)
+
+        write_ground_truth(output_dir / "tests" / "ground_truth.json", ground_truth)
 
 
 def parse_basic_arithmetic(question: str) -> tuple[str, float, float, float]:

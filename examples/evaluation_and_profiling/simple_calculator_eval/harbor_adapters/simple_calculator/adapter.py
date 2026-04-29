@@ -17,49 +17,23 @@
 from __future__ import annotations
 
 import json
-import shutil
-import sys
-from collections.abc import Sequence
 from pathlib import Path
 
-try:
-    from common import copy_template
-    from common import number_to_string
-    from common import parse_basic_arithmetic
-    from common import resolve_safe_task_dir
-    from common import write_ground_truth
-except ModuleNotFoundError:
-    PARENT_DIR = Path(__file__).resolve().parents[1]
-    if str(PARENT_DIR) not in sys.path:
-        sys.path.insert(0, str(PARENT_DIR))
-    from common import copy_template
-    from common import number_to_string
-    from common import parse_basic_arithmetic
-    from common import resolve_safe_task_dir
-    from common import write_ground_truth
-
-DEFAULT_SOURCE_DATA = (Path(__file__).resolve().parents[2] / "src" / "nat_simple_calculator_eval" / "data" /
-                       "simple_calculator_power_branch.json")
+from common import HarborTaskAdapter
+from common import TaskData
+from common import parse_basic_arithmetic
 
 
-class SimpleCalculatorAdapter:
+class SimpleCalculatorAdapter(HarborTaskAdapter):
     """Convert base simple calculator JSON rows to Harbor task directories."""
 
     NAME = "simple-calculator"
+    DEFAULT_SOURCE_DATA = (Path(__file__).resolve().parents[2] / "src" / "nat_simple_calculator_eval" / "data" /
+                           "simple_calculator_power_branch.json")
 
-    def __init__(self, task_dir: Path, source_file: Path | None = None) -> None:
-        self.task_dir = Path(task_dir)
-        self.source_file = source_file or DEFAULT_SOURCE_DATA
-        self.tasks = self._load_benchmark_data()
-
-    @staticmethod
-    def make_local_task_id(source_id: str) -> str:
-        normalized = str(source_id).strip().lower().replace("_", "-")
-        return f"simple-calculator-{normalized}"
-
-    def _load_benchmark_data(self) -> dict[str, dict]:
+    def _load_benchmark_data(self) -> dict[str, TaskData]:
         records = json.loads(self.source_file.read_text(encoding="utf-8"))
-        tasks: dict[str, dict] = {}
+        tasks: dict[str, TaskData] = {}
         for row in records:
             source_id = str(row["id"])
             question = str(row["question"])
@@ -75,59 +49,26 @@ class SimpleCalculatorAdapter:
             }
         return tasks
 
-    def list_available_tasks(self) -> list[str]:
-        return sorted(self.tasks.keys(), key=lambda item: int(item))
-
-    def generate_task(self, source_id: str, local_task_id: str, *, overwrite: bool = True) -> bool:
-        if source_id not in self.tasks:
-            raise KeyError(f"Unknown source_id: {source_id}")
-
-        output_dir = resolve_safe_task_dir(self.task_dir, local_task_id)
-        if output_dir.exists():
-            if not overwrite:
-                return False
-            shutil.rmtree(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        copy_template(output_dir)
-        self._customize_task(output_dir, self.tasks[source_id], local_task_id)
-        return True
-
-    def generate_many(self, source_ids: Sequence[str], *, overwrite: bool = True) -> tuple[int, int]:
-        generated = 0
-        for source_id in source_ids:
-            local_task_id = self.make_local_task_id(source_id)
-            if self.generate_task(source_id, local_task_id, overwrite=overwrite):
-                generated += 1
-        return generated, len(source_ids)
-
-    def _customize_task(self, output_dir: Path, task: dict, local_task_id: str) -> None:
+    def _customize_task(self, output_dir: Path, task: TaskData, local_task_id: str) -> None:
         instruction = ("Solve the calculator question and write your final answer to /workspace/answer.txt.\n\n"
                        "Guidelines:\n"
                        "- Include the computed arithmetic value in your answer.\n"
                        "- You can include additional explanation, but the numeric result must be explicit.\n\n"
                        f"Question:\n{task['question']}\n")
-        (output_dir / "instruction.md").write_text(instruction, encoding="utf-8")
-
-        task_toml = (output_dir / "task.toml").read_text(encoding="utf-8")
-        task_toml = task_toml.replace("__TASK_NAME__", f"nvidia/{local_task_id}")
-        task_toml = task_toml.replace("__TASK_ID__", task["source_id"])
-        (output_dir / "task.toml").write_text(task_toml, encoding="utf-8")
-
-        solution_script = (output_dir / "solution" / "solve.sh").read_text(encoding="utf-8")
-        solution_script = solution_script.replace("__EXPECTED_VALUE__", number_to_string(task["expected_value"]))
-        (output_dir / "solution" / "solve.sh").write_text(solution_script, encoding="utf-8")
-        (output_dir / "solution" / "solve.sh").chmod(0o755)
-        (output_dir / "tests" / "test.sh").chmod(0o755)
-
-        ground_truth = {
-            "id": task["source_id"],
-            "question": task["question"],
-            "rubric": task["rubric"],
-            "operation": task["operation"],
-            "lhs": task["lhs"],
-            "rhs": task["rhs"],
-            "expected_value": task["expected_value"],
-            "tolerance": 1e-4,
-        }
-        write_ground_truth(output_dir / "tests" / "ground_truth.json", ground_truth)
+        self._write_task_files(
+            output_dir,
+            local_task_id=local_task_id,
+            source_id=str(task["source_id"]),
+            instruction=instruction,
+            expected_value=float(task["expected_value"]),
+            ground_truth={
+                "id": task["source_id"],
+                "question": task["question"],
+                "rubric": task["rubric"],
+                "operation": task["operation"],
+                "lhs": task["lhs"],
+                "rhs": task["rhs"],
+                "expected_value": task["expected_value"],
+                "tolerance": 1e-4,
+            },
+        )

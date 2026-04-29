@@ -17,7 +17,7 @@ limitations under the License.
 
 # Harbor Upstream Plan for `nvidia-nat-harbor`
 
-Reference: [nvidia-nat-harbor README](README.md).
+Reference: [`README.md`](README.md).
 
 This plan separates generic Harbor framework improvements from NeMo Agent Toolkit-specific
 runtime and evaluator integration. The goal is to avoid long-lived Harbor fork
