@@ -646,7 +646,7 @@ Below is plot visualizing the accuracy, relevance, and groundedness of the respo
 <!-- TODO replace conclusion with actual analysis -->
 Clearly, the `phi-3-*` models are not good fits given their `groundedness` and `relevance` are both 0, so we will not use them for this workflow. The `llama-3.3-70b-instruct` model has the highest `accuracy` also did not have high `groundedness` and `relevance`, so we will not use it either.
 
-The `mixtral-8x22b-instruct` model has a much higher runtime than the `llama-3.1-8b-instruct` model, so we will not use it either. The `llama-3.1-8b-instruct` model has the highest `groundedness` and `relevance`, so we will use it for our workflow.
+The `mistral-large-3-675b-instruct-2512` model has a much higher runtime than the `llama-3.1-8b-instruct` model, so we will not use it either. The `llama-3.1-8b-instruct` model has the highest `groundedness` and `relevance`, so we will use it for our workflow.
 
 ### Conclusion
 In this guide, we walked through an end-to-end example of how to profile a NeMo Agent Toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
