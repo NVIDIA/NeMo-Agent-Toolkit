@@ -7379,6 +7379,7 @@ dependencies = [
     { name = "nvidia-nat-core" },
     { name = "nvidia-nat-eval" },
     { name = "plotly" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -7387,6 +7388,7 @@ requires-dist = [
     { name = "nvidia-nat-eval", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "plotly", specifier = "~=6.0" },
+    { name = "tqdm", specifier = "~=4.67" },
 ]
 provides-extras = ["test"]
 
