@@ -417,6 +417,7 @@ Particularly, we evaluate the following models:
 - `meta-llama-3.3-70b-instruct`
 - `mistral-large-3-675b-instruct-2512`
 - `mistral-small-4-119b-2603`
+- `nemotron-3-nano-30b-a3b`
 
 We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_data_all.csv` file to compare the performance of the LLMs.
 
