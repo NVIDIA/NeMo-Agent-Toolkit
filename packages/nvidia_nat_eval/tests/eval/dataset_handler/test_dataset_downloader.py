@@ -13,7 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import importlib.machinery
 import sys
+from collections.abc import Sequence
+from pathlib import Path
+from types import ModuleType
 
 import pytest
 
@@ -27,12 +31,17 @@ class _BlockModules:
     def __init__(self, module_roots: set[str]):
         self._module_roots = module_roots
 
-    def find_spec(self, fullname, path=None, target=None):  # noqa: ANN001
+    def find_spec(self,
+                  fullname: str,
+                  path: Sequence[str] | None = None,
+                  target: ModuleType | None = None) -> importlib.machinery.ModuleSpec | None:
         if any(fullname == root or fullname.startswith(f"{root}.") for root in self._module_roots):
             raise ModuleNotFoundError(f"No module named '{fullname}'")
 
+        return None
 
-def test_signed_url_download_missing_requests_has_install_hint(monkeypatch, tmp_path):
+
+def test_signed_url_download_missing_requests_has_install_hint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setitem(sys.modules, "requests", None)
     monkeypatch.setattr(sys, "meta_path", [_BlockModules({"requests"}), *sys.meta_path])
 
@@ -42,7 +51,7 @@ def test_signed_url_download_missing_requests_has_install_hint(monkeypatch, tmp_
         downloader.download_with_signed_url("https://example.com/dataset.json", str(tmp_path / "dataset.json"))
 
 
-def test_s3_download_missing_boto3_has_install_hint(monkeypatch, tmp_path):
+def test_s3_download_missing_boto3_has_install_hint(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setitem(sys.modules, "boto3", None)
     monkeypatch.setitem(sys.modules, "botocore", None)
     monkeypatch.setattr(sys, "meta_path", [_BlockModules({"boto3", "botocore"}), *sys.meta_path])

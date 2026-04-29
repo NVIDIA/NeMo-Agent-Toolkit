@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import types
 from pathlib import Path
 
 from nat.data_models.common import get_secret_value
@@ -29,7 +30,7 @@ REMOTE_DATASET_INSTALL_HINT = (
     "or `uv pip install 'nvidia-nat[eval]'`.")
 
 
-def _load_signed_url_dependencies():
+def _load_signed_url_dependencies() -> types.ModuleType:
     try:
         import requests
         return requests
@@ -38,7 +39,7 @@ def _load_signed_url_dependencies():
                                   f"{REMOTE_DATASET_INSTALL_HINT}") from exc
 
 
-def _load_s3_download_dependencies():
+def _load_s3_download_dependencies() -> tuple[types.ModuleType, type[Exception]]:
     try:
         import boto3
         from botocore.exceptions import NoCredentialsError
@@ -66,7 +67,7 @@ class DatasetDownloader:
     @property
     def s3_client(self):
         """Lazy init the S3 client."""
-        if not self._s3_client:
+        if self._s3_client is None:
             boto3, NoCredentialsError = _load_s3_download_dependencies()
             try:
                 self._s3_client = boto3.client("s3",
