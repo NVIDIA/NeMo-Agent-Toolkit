@@ -16,7 +16,7 @@
 # Harbor-ready nested workflow config:
 #   react_agent -> power_of_two -> calculator__multiply
 #
-# This config intentionally omits NAT eval/telemetry sections so Harbor can run
+# This config intentionally omits NeMo Agent Toolkit eval and telemetry sections so Harbor can run
 # the workflow directly via nemo-agent wrapper.
 
 function_groups:

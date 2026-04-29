@@ -15,17 +15,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# nvidia-nat-harbor
+# `nvidia-nat-harbor`
 
-`nvidia-nat-harbor` integrates [Harbor](https://github.com/NVIDIA/harbor) evaluation runs with NVIDIA NeMo Agent Toolkit (NAT) workflows and evaluators.
+`nvidia-nat-harbor` integrates [Harbor](https://github.com/harbor-framework/harbor) evaluation runs with NVIDIA NeMo Agent Toolkit workflows and evaluators.
 
 This package provides:
 
-- A NAT-backed Harbor agent (`NemoAgent`)
+- A NeMo Agent Toolkit-backed Harbor agent (`NemoAgent`)
 - A host-local Harbor environment implementation (`LocalEnvironment`)
 - An inline ATIF verifier class for Harbor verifier import hooks (`ATIFInlineVerifier`)
 - ATIF verifier bridge utilities for script-based compatibility (`nat_harbor.verifier.bridge_runner`)
-- Library-mode contracts and implementations for inline agent/verifier execution
+- Library-mode contracts and implementations for inline agent and verifier execution
 
 ## Python and dependencies
 
@@ -35,7 +35,7 @@ This package provides:
   - `nvidia-nat-eval`
   - `harbor>=0.5.0`
 
-## Install (editable, monorepo workflow)
+## Install (Editable Repository Workflow)
 
 From repo root:
 
@@ -52,7 +52,7 @@ uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
 
 ## Current environment mode behavior
 
-`harbor run --env local` is not accepted by current Harbor CLI enum validation.
+`harbor run --env local` is not accepted by current Harbor CLI enumeration validation.
 
 Use this supported workaround:
 
@@ -61,7 +61,7 @@ Use this supported workaround:
 
 This keeps execution host-local through the imported environment class while satisfying Harbor CLI validation.
 
-This is a temporary compatibility path. Once first-class local environment support is upstreamed in Harbor, this workaround can be dropped in favor of direct `--env local` usage. See [`upstream-plan.md`](./upstream-plan.md).
+This is a temporary compatibility path. Once first-class local environment support is accepted upstream in Harbor, this workaround can be dropped in favor of direct `--env local` usage. See [`upstream-plan.md`](./upstream-plan.md).
 
 ## Execution modes
 
@@ -70,11 +70,11 @@ The examples use three related but separate concepts:
 | Term | How it is selected | What runs on the host |
 |---|---|---|
 | Local environment | `--environment-import-path nat_harbor.environments.local:LocalEnvironment` with the temporary `--env docker` workaround | Harbor environment operations and shell commands |
-| Shell compatibility mode | Default `NemoAgent` behavior when `library_mode` is not set | The NAT wrapper subprocess and task `tests/test.sh` |
-| Library mode | `--ak library_mode=true` | NAT workflow execution in-process through the active Harbor Python |
+| Shell compatibility mode | Default `NemoAgent` behavior when `library_mode` is not set | The NeMo Agent Toolkit wrapper process and task verifier script |
+| Library mode | `--ak library_mode=true` | NeMo Agent Toolkit workflow execution in-process through the active Harbor Python |
 | Inline verifier | `--verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier` | ATIF evaluator dispatch in-process through the active Harbor Python |
 
-For new local development, prefer **local environment + library mode + inline verifier**. Shell compatibility mode is useful for parity checks against script-based Harbor tasks, but it needs explicit host Python wiring because the agent wrapper and `tests/test.sh` are subprocesses.
+For new local development, prefer **local environment + library mode + inline verifier**. Shell compatibility mode is useful for parity checks against script-based Harbor tasks, but it needs explicit host Python wiring because the agent wrapper and task verifier script run as child processes.
 
 The local environment backend is for developer iteration, not benchmark
 isolation. It uses best-effort path translation to keep expected Harbor
@@ -129,7 +129,7 @@ You can confirm the active Harbor CLI has the hook with:
 harbor run --help | rg "verifier-import|verifier-kwarg"
 ```
 
-Then pass evaluator selection via verifier env flags, for example:
+Then pass evaluator selection via verifier environment flags, for example:
 
 ```bash
 --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory
@@ -140,7 +140,7 @@ Then pass evaluator selection via verifier env flags, for example:
 Use `nat_harbor.verifier.bridge_runner` only for script-based compatibility paths.
 
 Inline library-mode execution temporarily overlays per-trial environment
-variables while invoking the NAT workflow in-process. Because `os.environ` is
+variables while invoking the NeMo Agent Toolkit workflow in-process. Because `os.environ` is
 process-global, `DefaultNemoInlineRunner` serializes that environment overlay
 with an async lock. This keeps concurrent inline trials from reading another
 trial's verifier or agent environment settings while still preserving Harbor's
@@ -175,17 +175,17 @@ flowchart TD
   D --> E["DefaultInlineVerifierDriver.verify(...)"]
   E --> F["Resolve trajectory path (local/container layouts)"]
   F --> G{"Artifact exists?"}
-  G -- "No + raw_output fallback" --> H["Write fallback reward/details"]
+  G -- "No + raw_output fallback" --> H["Write fallback reward and details"]
   G -- "No + fail" --> I["InlineVerifierError"]
   G -- "Yes" --> J["evaluate_artifact(...)"]
   J --> K{"Dispatch mode"}
-  K -- "builtin evaluator" --> L["evaluate_atif_fn via NAT evaluator"]
+  K -- "builtin evaluator" --> L["evaluate_atif_fn via NeMo Agent Toolkit evaluator"]
   K -- "custom evaluator_ref" --> M["module:function callable"]
-  L --> N["Normalize EvalOutput/reward"]
+  L --> N["Normalize EvalOutput and reward"]
   M --> N
-  N --> O["Write verifier output dir/reward.txt"]
-  N --> P["Write verifier output dir/reward.json"]
-  N --> Q["Write verifier output dir/details.json"]
+  N --> O["Write reward.txt in verifier output directory"]
+  N --> P["Write reward.json in verifier output directory"]
+  N --> Q["Write details.json in verifier output directory"]
 ```
 
 `nat_harbor.verifier.bridge_runner` remains available for script-based compatibility flows and is intentionally not shown in this primary inline diagram.
@@ -203,9 +203,9 @@ python examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/
   --overwrite
 ```
 
-### 2) Run a single task in library mode using NAT workflow config
+### 2) Run a single task in library mode using NeMo Agent Toolkit workflow config
 
-This uses NAT workflow config:
+This uses NeMo Agent Toolkit workflow config:
 `examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-harbor-eval.yaml`
 
 ```bash
@@ -255,8 +255,8 @@ harbor run \
 
 ## Package layout
 
-- `src/nat_harbor/agents/installed/nemo_agent.py`: NAT Harbor agent subclass
-- `src/nat_harbor/agents/installed/inline_runner.py`: default inline NAT workflow runner
+- `src/nat_harbor/agents/installed/nemo_agent.py`: NeMo Agent Toolkit Harbor agent subclass
+- `src/nat_harbor/agents/installed/inline_runner.py`: default inline NeMo Agent Toolkit workflow runner
 - `src/nat_harbor/environments/local.py`: host-local environment implementation
 - `src/nat_harbor/verifier/inline_verifier.py`: Harbor inline verifier class, driver, and contracts
 - `src/nat_harbor/verifier/bridge_runner.py`: legacy CLI entrypoint for script-based verifier bridge

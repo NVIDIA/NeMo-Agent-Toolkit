@@ -26,9 +26,9 @@ In these `NemoAgent` examples, `--model` primarily satisfies Harbor CLI inputs; 
 
 | Term | Meaning in these examples |
 |---|---|
-| Local environment | Host-local Harbor execution via `nat_harbor.environments.local:LocalEnvironment`; `--env docker` is only a temporary CLI enum workaround. |
-| Shell mode | Default `NemoAgent` path; the agent runs through a wrapper subprocess and verifier logic runs through `tests/test.sh`. |
-| Library mode | `--ak library_mode=true`; the NAT workflow runs in-process through the active Harbor Python. |
+| Local environment | Host-local Harbor execution via `nat_harbor.environments.local:LocalEnvironment`; `--env docker` is only a temporary CLI enumeration workaround. |
+| Shell mode | Default `NemoAgent` path; the agent runs through a wrapper process and verifier logic runs through the task verifier script. |
+| Library mode | `--ak library_mode=true`; the NeMo Agent Toolkit workflow runs in-process through the active Harbor Python. |
 | Inline verifier | `--verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier`; ATIF evaluator dispatch runs in-process. |
 
 Prefer library mode plus inline verifier for local development. Use shell mode for compatibility checks against script-based Harbor task behavior.
@@ -36,7 +36,9 @@ Prefer library mode plus inline verifier for local development. Use shell mode f
 ## 1) Generate Harbor dataset via adapter
 
 ```bash
-python examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/simple_calculator_nested/run_adapter.py \
+# path-check-skip-next-line
+ADAPTER=examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/simple_calculator_nested/run_adapter.py
+python "$ADAPTER" \
   --output-dir .tmp/harbor/datasets/simple-calculator-nested \
   --overwrite
 ```
@@ -49,7 +51,7 @@ rm -rf .tmp/harbor/jobs-local/sc-nested-local .tmp/harbor/jobs-local/sc-nested-l
 
 ## 3) Run a single task (shell-mode smoke check)
 
-Shell mode uses subprocesses, so point both the agent wrapper and verifier
+Shell mode uses child processes, so point both the agent wrapper and verifier
 script at the repo virtual environment.
 
 ```bash
@@ -96,7 +98,7 @@ harbor run \
 ## 5) Library mode with ATIF inline verifier lanes
 
 Use Harbor's verifier import hook for inline ATIF scoring, and enable
-`library_mode=true` so NAT workflow execution is in-process too:
+`library_mode=true` so NeMo Agent Toolkit workflow execution is in-process too:
 
 ```bash
 --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier
@@ -116,7 +118,7 @@ uv pip install -e external/harbor
 If `external/harbor` already exists, update it to the side branch instead of
 cloning again.
 
-You can use any evaluator registered as a NAT evaluator, as long as it exposes an ATIF lane (`evaluate_atif_fn`), and you can also use simple Python evaluator callables via `NAT_HARBOR_ATIF_EVALUATOR_REF=module:function`.
+You can use any evaluator registered as a NeMo Agent Toolkit evaluator, as long as it exposes an ATIF lane (`evaluate_atif_fn`), and you can also use simple Python evaluator callables via `NAT_HARBOR_ATIF_EVALUATOR_REF=module:function`.
 
 ### Builtin trajectory lane
 
