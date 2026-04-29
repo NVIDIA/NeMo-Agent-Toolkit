@@ -28,7 +28,7 @@ from nat.data_models.evaluate_config import EvalOutputConfig
 logger = logging.getLogger(__name__)
 
 S3_UPLOAD_INSTALL_HINT = ("S3 output upload requires optional dependencies that are not installed. "
-                          "Install with: pip install \"nvidia-nat-eval[full]\"")
+                          "Install with: uv pip install \"nvidia-nat-eval[full]\"")
 
 
 def _load_s3_upload_dependencies():
