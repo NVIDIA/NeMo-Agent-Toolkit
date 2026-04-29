@@ -17,133 +17,213 @@ limitations under the License.
 
 # Harbor Upstream Plan for `nvidia-nat-harbor`
 
-This document separates generic Harbor improvements from NAT-specific integration code.
+This plan separates generic Harbor framework improvements from NAT-specific
+runtime and evaluator integration. The goal is to avoid long-lived Harbor fork
+drift while keeping NAT behavior inside `nvidia-nat-harbor` unless Harbor
+already owns the abstraction.
 
-## Scope and principles
+## Principles
 
-- Upstream framework-agnostic improvements to Harbor core.
-- Keep NAT runtime/evaluator-specific behavior in `nvidia-nat-harbor`.
-- Avoid long-lived Harbor fork drift.
+- Upstream behavior that is useful for any Harbor agent, verifier, or benchmark.
+- Keep NAT runtime contracts, evaluator dispatch, and sample coercion in
+  `nvidia-nat-harbor`.
+- Make local execution easy to use, but describe it as developer convenience,
+  not benchmark isolation.
+- Preserve shell-mode Harbor workflows while adding inline/library-mode paths.
 
-If a change is useful for any Harbor agent/benchmark, upstream it.
-If a change depends on NAT runtime contracts, keep it in NAT.
+## Terms
 
----
+| Term | Meaning |
+|---|---|
+| Local environment | Host-local Harbor environment backend selected by `--env local` once upstreamed. |
+| Shell compatibility mode | Existing Harbor `nemo-agent` subprocess/wrapper path plus task `tests/test.sh`. |
+| Library mode | NAT workflow execution in-process through the active Harbor Python. |
+| Inline verifier | Harbor verifier object that scores in-process through a verifier import hook. |
+| Script bridge | Compatibility path where task `tests/test.sh` invokes `nat_harbor.verifier.bridge_runner`. |
 
-## 1) Local env
+## Upstream Priority Table
 
-### Upstream to Harbor
+| Priority | Upstream item | Why it matters | NAT impact while missing |
+|---|---|---|---|
+| P0 | Generic verifier extension hook (`VerifierFactory`, `VerifierConfig.import_path`, `VerifierConfig.kwargs`, `--verifier-import-path`, `--verifier-kwarg`) | Allows NAT to provide `ATIFInlineVerifier` without modifying Harbor verifier internals. | We must carry a Harbor side branch or patch Harbor installs to run inline verifier examples. |
+| P1 | First-class `--env local` and generic local environment behavior | Removes the temporary `--env docker` enum workaround and makes host-local Harbor execution explicit. | README commands need `--env docker` plus `--environment-import-path ...LocalEnvironment`, which is confusing and easy to misread as Docker isolation. |
+| P1 | Local install policy primitive for installed agents | Gives local runs a safe default that skips host mutation unless explicitly allowed. | NAT has to carry local install policy handling in its Harbor agent wrapper. |
+| P2 | Generic agent run-mode extension point for installed agents | Lets Harbor support library/in-process execution without baking NAT evaluator details into core. | NAT keeps overriding `nemo-agent` behavior to select shell mode vs library mode. |
+| P2 | Harbor-owned `nemo-agent` library mode, if maintainers accept NAT runtime ownership | Could make library mode a first-class Harbor `nemo-agent` feature instead of a package-local extension. | `DefaultNemoInlineRunner` remains in `nvidia-nat-harbor`, and Harbor `nemo-agent` stays shell-first. |
+| P3 | Shared docs/examples for local env and imported verifiers | Helps non-NAT integrations use the same extension points. | NAT docs have to explain generic Harbor concepts alongside NAT-specific setup. |
+
+## Upstream Area 1: Local Environment
+
+### Upstream To Harbor
 
 - Add first-class `--env local` support in Harbor CLI/type validation.
-- Ensure local env behavior is aligned with Harbor environment abstractions (paths, lifecycle, preflight).
-- Add a generic local install policy primitive (`skip`/`allow`) usable by installed agents.
-- Optionally standardize policy metadata emission hooks.
+- Provide a generic local environment backend aligned with Harbor environment
+  abstractions:
+  - path mapping for `/app`, `/workspace`, `/logs`, and `/tests`
+  - lifecycle setup/cleanup
+  - upload/download behavior
+  - preflight checks
+  - clear non-sandbox semantics
+- Add a generic local install policy primitive usable by installed agents:
+  - `skip`: assume dependencies are already available on the host
+  - `allow`: permit local installation during agent setup
+- Optionally standardize policy metadata emission so integrations can record
+  whether setup was skipped or executed.
 
-### Why
+### Keep In `nvidia-nat-harbor`
 
-- Local mode is generic Harbor capability, not NAT-specific.
-- Improves usability and avoids custom env workarounds in integrations.
+- NAT-specific local run examples and README commands.
+- Any temporary path-translation workaround needed before Harbor owns local env.
 
----
+### Acceptance Criteria
 
-## 2) ATIF verifier mode
+- `harbor run --env local` works without enum workarounds.
+- Local env artifacts land under the trial directory with the same logical
+  layout expected by existing agents and verifiers.
+- Local env docs state that host processes are executed directly and are not
+  sandboxed.
+- Existing shell-mode Harbor runs still work.
 
-### Upstream to Harbor (generic parts)
+## Upstream Area 2: Verifier Extension Hook
 
-- Add verifier extension hooks for external verifier implementations.
-- Expose verifier config/CLI surface for extension wiring.
-- Keep Harbor reward/result contract stable for inline or script verifiers.
+### Upstream To Harbor
 
-### Landed minimal hook (Harbor side)
+- Keep verifier creation behind a generic factory.
+- Expose verifier extension wiring in config and CLI:
+  - `VerifierConfig.import_path`
+  - `VerifierConfig.kwargs`
+  - `--verifier-import-path`
+  - `--verifier-kwarg`
+- Preserve the Harbor verifier contract for all verifier implementations:
+  - verifier output directory is provided consistently
+  - `reward.txt` is consumed consistently
+  - structured reward/details files are allowed but optional
+  - errors propagate as trial verifier failures
+  - single-step and multi-step verification use the same factory path
+
+### Landed Minimal Harbor Hook
 
 - `VerifierFactory` in Harbor verifier runtime.
 - `VerifierConfig.import_path` and `VerifierConfig.kwargs`.
 - CLI flags:
   - `--verifier-import-path`
   - `--verifier-kwarg`
-- Trial verification now constructs verifier via `VerifierFactory` in both:
-  - single-step verification
-  - multi-step verification
+- Trial verification constructs verifiers through `VerifierFactory` in both
+  single-step and multi-step paths.
 
-### Keep out of Harbor core
+### Keep In `nvidia-nat-harbor`
 
-- NAT evaluator dispatch implementation itself (`evaluate_atif_fn`, NAT config loading, NAT evaluator selection logic).
+- `ATIFInlineVerifier`.
+- NAT evaluator dispatch:
+  - `evaluate_atif_fn` resolution
+  - NAT config loading
+  - evaluator-name selection
+  - custom callable evaluator lane
+  - ATIF sample coercion conventions
 
-### Why
+### Acceptance Criteria
 
-- Harbor should provide bridge-friendly primitives.
-- NAT-specific evaluator logic should stay in NAT package boundaries.
+- A non-Harbor verifier class can be loaded by import path and receive kwargs.
+- Imported verifiers can write the same reward artifacts as script verifiers.
+- Harbor result aggregation is identical for built-in, script, and imported
+  verifiers.
+- NAT inline verifier examples do not require patching Harbor inside `.venv` or
+  `site-packages`.
 
----
+## Upstream Area 3: Agent Run Modes
 
-## 3) NAT agent runner updates
+The concrete NAT inline runner is the boundary that needs the most care. Harbor
+already owns `nemo-agent`, but in-process NAT workflow execution depends on NAT
+runtime contracts. There are two acceptable upstream shapes:
 
-### Candidate Harbor upstreams
+1. Harbor owns a generic run-mode extension point, while `nvidia-nat-harbor`
+   provides the concrete NAT library-mode runner.
+2. Harbor's `nemo-agent` owns library mode directly, if Harbor maintainers accept
+   the NAT runtime dependency and maintenance burden.
 
-- Upstream inline runner support directly into Harbor `nemo-agent`.
-- Default to library-mode execution for `nemo-agent` when `env=local`.
-- Keep shell mode available behind explicit opt-out (`library_mode=false`) during migration.
-- Generic `NemoAgent` quality-of-life improvements (policy wiring, run ergonomics, wrapper/runtime polish).
+### Candidate Harbor Upstreams
 
-### Keep in NAT package
+- Generic agent run-mode selection and kwargs plumbing.
+- Local-env defaults for installed agents.
+- Shell-mode fallback behavior for parity debugging.
+- Quality-of-life improvements in Harbor `nemo-agent` that are not NAT
+  evaluator-specific:
+  - local install policy wiring
+  - clearer setup metadata
+  - wrapper/runtime error reporting
 
-- NAT evaluator and bridge-specific behavior.
-- NAT-specific docs/examples and integration tests outside Harbor core scope.
+### Keep In `nvidia-nat-harbor`
 
-### Why
+- `DefaultNemoInlineRunner` unless Harbor accepts direct ownership.
+- NAT workflow loading and invocation details.
+- ATIF trajectory construction from NAT intermediate steps.
+- Inline environment overlay serialization for process-global `os.environ`.
+- NAT-specific integration tests and examples.
 
-- `nemo-agent` is already Harbor-owned; local default behavior should live with that agent.
-- Local-only default minimizes behavior changes in non-local environments.
-- Temporary shell fallback reduces migration risk and supports parity debugging.
+### Acceptance Criteria
 
----
+- Shell mode remains available and backward compatible.
+- Library mode works for local Harbor runs without invoking the wrapper
+  subprocess.
+- Concurrent inline trials cannot read another trial's temporary environment
+  overlay.
+- Missing trajectory/intermediate-step output still produces a verifier-readable
+  artifact or an explicit failure.
 
-## 4) Parts that will remain in NAT
+## What Remains In `nvidia-nat-harbor`
 
-- ATIF bridge evaluator dispatch tied to NAT evaluator stack:
-  - `evaluate_atif_fn` dispatch
-  - NAT config/evaluator-name resolution
-  - NAT sample coercion conventions
-- NAT-specific adapters, examples, and runbooks.
+- NAT-backed Harbor agent wrapper and optional library-mode runner.
+- Host-local NAT examples and runbooks.
+- ATIF inline verifier and script bridge compatibility path.
+- NAT evaluator dispatch and custom evaluator callable support.
+- Simple calculator Harbor adapters and example E2E coverage.
 
-These remain in `nvidia-nat-harbor` to preserve clear ownership and avoid Harbor core coupling to NAT internals.
+These pieces stay out of Harbor core to preserve ownership boundaries and avoid
+coupling Harbor to NAT evaluator internals.
 
----
+## PR Sequence
 
-## Execution plan (PR sequence)
+### Phase A: Harbor Core
 
-### Phase A: Harbor
-
-1. `--env local` support and local env polish.
-2. Generic local install policy primitives.
-3. Generic verifier extension hooks. (done: `VerifierFactory` + import-path wiring)
-4. Optional ATIF helper utilities/docs for non-NAT integrations.
+1. Add first-class `--env local` and local environment implementation.
+2. Add generic local install policy primitives and setup metadata.
+3. Land generic verifier extension hooks. Current side-branch status:
+   `VerifierFactory`, import-path wiring, and verifier kwargs are implemented.
+4. Decide agent run-mode ownership:
+   - generic run-mode extension point, or
+   - direct Harbor `nemo-agent` library-mode support.
 
 ### Phase B: `nvidia-nat-harbor`
 
-1. Consume Harbor verifier import hook with `ATIFInlineVerifier`.
-2. Keep NAT-specific evaluator dispatch in `inline_verifier.py`.
-3. Keep `bridge_runner` as script compatibility path only.
+1. Consume Harbor local env directly once `--env local` lands.
+2. Consume Harbor verifier import hook with `ATIFInlineVerifier`.
+3. Keep `bridge_runner` as a script compatibility path only.
+4. Keep NAT evaluator dispatch and custom evaluator support in the package.
+5. Document local env, shell mode, library mode, inline verifier, and script
+   bridge as distinct modes.
 
-### Phase C: stabilization
+### Phase C: Stabilization
 
-1. Validate matrix:
-   - shell mode
-   - local mode
-   - library mode
-   - ATIF bridge lanes
-2. Lock contract boundaries in docs.
+Validate the full matrix before removing temporary workarounds:
 
----
-
-## Acceptance criteria
-
-- Harbor supports `--env local` natively.
-- Harbor `nemo-agent` defaults to library mode when `env=local`.
-- Harbor exposes generic verifier utilities/hooks for ATIF-style adapters.
-- NAT package no longer carries generic Harbor workarounds.
-- NAT package still supports:
-  - ATIF bridge evaluator dispatch
-  - custom callable evaluator lane
+- Shell compatibility mode with host Python wiring.
+- Local env path mapping and artifact layout.
+- Library-mode inline agent execution.
+- Inline verifier with builtin trajectory evaluator.
+- Inline verifier with builtin tunable-rag evaluator.
+- Inline verifier with custom callable evaluator.
+- Script bridge compatibility through task `tests/test.sh`.
+- Concurrent inline trials with serialized environment overlays.
 - No regression in existing Harbor shell-mode workflows.
 
+## Final Acceptance Criteria
+
+- Harbor supports `--env local` natively.
+- Harbor exposes generic verifier import hooks and stable verifier contracts.
+- Harbor has either a generic agent run-mode extension point or direct
+  `nemo-agent` library-mode ownership.
+- `nvidia-nat-harbor` no longer carries generic Harbor workarounds.
+- `nvidia-nat-harbor` still owns NAT evaluator dispatch, ATIF sample coercion,
+  custom callable evaluator support, and NAT-specific examples.
+- All stabilization matrix lanes pass without patching installed packages inside
+  `.venv` or `site-packages`.
