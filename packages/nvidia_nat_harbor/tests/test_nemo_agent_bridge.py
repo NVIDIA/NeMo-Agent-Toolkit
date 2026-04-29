@@ -50,6 +50,17 @@ def test_build_run_command_honors_python_bin(tmp_path: Path) -> None:
     assert "/opt/harbor-venv/bin/python /installed-agent/nemo_agent_run_wrapper.py" in command
 
 
+def test_build_run_command_fails_if_upstream_wrapper_shape_changes(tmp_path: Path) -> None:
+    agent = _make_agent(tmp_path, python_bin="/opt/harbor-venv/bin/python")
+
+    with patch(
+            "nat_harbor.agents.installed.nemo_agent.HarborNemoAgent._build_run_command",
+            return_value="python3 /installed-agent/renamed_wrapper.py",
+    ):
+        with pytest.raises(RuntimeError, match="python_bin override"):
+            agent._build_run_command("hello")
+
+
 def test_library_mode_flag_resolves_in_agent(tmp_path: Path) -> None:
     agent = _make_agent(tmp_path, library_mode=True)
     assert agent._resolved_flags["library_mode"] is True

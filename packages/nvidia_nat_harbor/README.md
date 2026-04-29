@@ -139,6 +139,13 @@ Then pass evaluator selection via verifier env flags, for example:
 
 Use `nat_harbor.verifier.bridge_runner` only for script-based compatibility paths.
 
+Inline library-mode execution temporarily overlays per-trial environment
+variables while invoking the NAT workflow in-process. Because `os.environ` is
+process-global, `DefaultNemoInlineRunner` serializes that environment overlay
+with an async lock. This keeps concurrent inline trials from reading another
+trial's verifier or agent environment settings while still preserving Harbor's
+normal artifact layout.
+
 ### Trial runner flow
 
 ```mermaid

@@ -190,11 +190,12 @@ class NemoAgent(HarborNemoAgent):
         """Honor python_bin override while keeping Harbor command behavior."""
         run_command = super()._build_run_command(instruction)
         python_bin = shlex.quote(self._resolved_flags.get("python_bin", "python3"))
-        return run_command.replace(
-            f"python3 {self._CONTAINER_WRAPPER_PATH}",
-            f"{python_bin} {self._CONTAINER_WRAPPER_PATH}",
-            1,
-        )
+        wrapper_invocation = f"python3 {self._CONTAINER_WRAPPER_PATH}"
+        if wrapper_invocation not in run_command:
+            raise RuntimeError("Unable to apply python_bin override because the Harbor NemoAgent command "
+                               f"does not contain the expected wrapper invocation: {wrapper_invocation}")
+
+        return run_command.replace(wrapper_invocation, f"{python_bin} {self._CONTAINER_WRAPPER_PATH}", 1)
 
     def _resolve_inline_config_path(self) -> str:
         """Resolve or generate the config path used by inline workflow execution."""

@@ -22,14 +22,28 @@ import shutil
 from pathlib import Path
 
 TEMPLATE_DIR = Path(__file__).resolve().parent / "template"
+_TEMPLATE_IGNORE_PATTERNS = ("__pycache__", "*.pyc", "*.pyo", ".pytest_cache")
+
+
+def _is_ignored_template_item(path: Path) -> bool:
+    """Return whether a top-level template item is generated/cache output."""
+    return path.name in {"__pycache__", ".pytest_cache"} or path.suffix in {".pyc", ".pyo"}
 
 
 def copy_template(output_dir: Path) -> None:
     """Copy shared adapter template into task output directory."""
     for item in TEMPLATE_DIR.iterdir():
+        if _is_ignored_template_item(item):
+            continue
+
         destination = output_dir / item.name
         if item.is_dir():
-            shutil.copytree(item, destination, dirs_exist_ok=True)
+            shutil.copytree(
+                item,
+                destination,
+                dirs_exist_ok=True,
+                ignore=shutil.ignore_patterns(*_TEMPLATE_IGNORE_PATTERNS),
+            )
         else:
             shutil.copy2(item, destination)
 
