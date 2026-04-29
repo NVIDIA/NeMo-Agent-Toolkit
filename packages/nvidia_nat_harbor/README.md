@@ -126,10 +126,12 @@ flowchart TD
   K -- "custom evaluator_ref" --> M["module:function callable"]
   L --> N["Normalize EvalOutput/reward"]
   M --> N
-  N --> O["Write /logs/verifier/reward.txt"]
-  N --> P["Write /logs/verifier/reward.json"]
-  N --> Q["Write /logs/verifier/details.json"]
+  N --> O["Write verifier output dir/reward.txt"]
+  N --> P["Write verifier output dir/reward.json"]
+  N --> Q["Write verifier output dir/details.json"]
 ```
+
+`nat_harbor.verifier.bridge_runner` remains available for script-based compatibility flows and is intentionally not shown in this primary inline diagram.
 
 ## How to run (simple calculator examples)
 
