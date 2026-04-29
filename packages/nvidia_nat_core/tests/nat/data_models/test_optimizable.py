@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import typing
 from unittest import mock
 
 import pytest
@@ -61,6 +62,11 @@ class TestSearchSpaceSuggest:
 
         assert result == 0.4
         trial.suggest_float.assert_called_once_with("float_param", 0.1, 1.0, log=False, step=0.1)
+
+    def test_suggest_type_hints_resolve_without_optuna(self):
+        hints = typing.get_type_hints(SearchSpace.suggest)
+
+        assert "trial" in hints
 
 
 class TestOptimizableField:

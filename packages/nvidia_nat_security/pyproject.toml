@@ -58,6 +58,7 @@ dependencies = [
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",
   "plotly~=6.0",
+  "tqdm~=4.67",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
