@@ -32,7 +32,7 @@ def test_nemo_inline_runner_contracts_roundtrip(tmp_path: Path) -> None:
     result_path = artifact_dir / "trajectory.json"
     request = NemoInlineRunnerInput(
         instruction="hello",
-        config_file="/tmp/config.yml",
+        config_file=str(tmp_path / "config.yml"),
         artifact_dir=artifact_dir,
         env={"NVIDIA_API_KEY": "stub"},
     )
@@ -53,7 +53,7 @@ def test_inline_verifier_contracts_roundtrip(tmp_path: Path) -> None:
         trajectory_path=tmp_path / "agent" / "trajectory.json",
         evaluator_kind="trajectory",
         evaluator_ref=None,
-        config_file="/tmp/config.yml",
+        config_file=str(tmp_path / "config.yml"),
         evaluator_name="trajectory_eval",
         verifier_output_dir=verifier_dir,
     )

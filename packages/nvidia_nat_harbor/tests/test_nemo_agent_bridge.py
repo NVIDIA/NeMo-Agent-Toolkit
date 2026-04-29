@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from unittest.mock import AsyncMock
@@ -66,13 +67,23 @@ def test_library_mode_flag_resolves_in_agent(tmp_path: Path) -> None:
     assert agent._resolved_flags["library_mode"] is True
 
 
-@pytest.mark.asyncio
-async def test_install_skips_local_mode_by_default(tmp_path: Path) -> None:
+def test_inline_generated_config_omits_api_key_from_logs(tmp_path: Path) -> None:
+    api_key = "nvapi-secret-for-test"
+    agent = _make_agent(tmp_path, extra_env={"NVIDIA_API_KEY": api_key})
+
+    config_path = Path(agent._resolve_inline_config_path())
+
+    assert config_path.exists()
+    assert api_key not in config_path.read_text(encoding="utf-8")
+    assert agent._build_env()["NVIDIA_API_KEY"] == api_key
+
+
+def test_install_skips_local_mode_by_default(tmp_path: Path) -> None:
     agent = _make_agent(tmp_path)
     mock_env = AsyncMock()
     mock_env.type = Mock(return_value="local")
 
-    await agent.install(mock_env)
+    asyncio.run(agent.install(mock_env))
 
     mock_env.exec.assert_not_called()
     policy_file = agent.logs_dir / "setup" / "install-policy.json"
@@ -82,8 +93,7 @@ async def test_install_skips_local_mode_by_default(tmp_path: Path) -> None:
     assert policy["install_executed"] is False
 
 
-@pytest.mark.asyncio
-async def test_install_allows_local_mode_with_opt_in(tmp_path: Path) -> None:
+def test_install_allows_local_mode_with_opt_in(tmp_path: Path) -> None:
     agent = _make_agent(tmp_path, local_install_policy="allow")
     mock_env = AsyncMock()
     mock_env.type = Mock(return_value="local")
@@ -92,7 +102,7 @@ async def test_install_allows_local_mode_with_opt_in(tmp_path: Path) -> None:
             "nat_harbor.agents.installed.nemo_agent.HarborNemoAgent.install",
             new=AsyncMock(),
     ) as install_mock:
-        await agent.install(mock_env)
+        asyncio.run(agent.install(mock_env))
 
     install_mock.assert_awaited_once_with(mock_env)
     policy = json.loads((agent.logs_dir / "setup" / "install-policy.json").read_text(encoding="utf-8"))
@@ -100,8 +110,7 @@ async def test_install_allows_local_mode_with_opt_in(tmp_path: Path) -> None:
     assert policy["local_install_allowed"] is True
 
 
-@pytest.mark.asyncio
-async def test_setup_installs_multiple_local_packages_in_order(tmp_path: Path) -> None:
+def test_setup_installs_multiple_local_packages_in_order(tmp_path: Path) -> None:
     pkg_a = tmp_path / "pkg_a"
     pkg_b = tmp_path / "pkg_b"
     pkg_a.mkdir(parents=True)
@@ -117,7 +126,7 @@ async def test_setup_installs_multiple_local_packages_in_order(tmp_path: Path) -
             "nat_harbor.agents.installed.nemo_agent.BaseInstalledAgent.setup",
             new=AsyncMock(),
     ):
-        await agent.setup(mock_env)
+        asyncio.run(agent.setup(mock_env))
 
     upload_targets = [call.kwargs["target_dir"] for call in mock_env.upload_dir.call_args_list]
     assert "/installed-agent/workflow-package-0" in upload_targets

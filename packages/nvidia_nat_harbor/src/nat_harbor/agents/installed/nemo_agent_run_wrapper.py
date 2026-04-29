@@ -13,7 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Wrapper to run a NAT workflow and emit plain text output.
+"""Wrapper to run a NeMo Agent Toolkit workflow and emit plain text output.
 
 Upstreaming note:
     This file intentionally tracks Harbor's wrapper implementation as a near-copy
@@ -26,20 +26,22 @@ Upstreaming note:
 
     Current local deltas vs upstream baseline:
       1. Optional debugpy bootstrap (`maybe_enable_debugpy`) via
-         `NVIDIA_NAT_DEBUGPY_*` environment variables.
+         `NAT_DEBUGPY_*` environment variables.
       2. Output normalization (`normalize_result_text`) that extracts JSON payloads
          from command-style responses such as:
          `echo '[{{...}}]' > /app/result.json`
          This avoids verifier parse failures when the model emits shell-style output.
 
     Why this duplication exists:
-      - Harbor 0.5.0 does not include all NAT-focused local-mode behavior we need.
+      - Harbor 0.5.0 does not include all NeMo Agent Toolkit-focused local-mode
+        behavior we need.
       - Keeping this wrapper in `nvidia-nat-harbor` allows us to patch/ship those
         deltas independently and then upstream cleanly later.
 """
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import importlib
 import json
@@ -50,7 +52,13 @@ import sys
 import traceback
 from uuid import uuid4
 
-_log_level_str = os.environ.get("NVIDIA_NAT_LOG_LEVEL", "WARNING").upper()
+
+def _env_with_legacy(name: str, legacy_name: str, default: str | None = None) -> str | None:
+    """Read a preferred env var while keeping older names as a fallback."""
+    return os.environ.get(name) or os.environ.get(legacy_name) or default
+
+
+_log_level_str = str(_env_with_legacy("NAT_LOG_LEVEL", "NVIDIA_NAT_LOG_LEVEL", "WARNING")).upper()
 logging.basicConfig(level=getattr(logging, _log_level_str, logging.WARNING))
 os.environ.setdefault("NAT_LOG_LEVEL", _log_level_str)
 
@@ -62,7 +70,7 @@ def to_bool(value: str | None) -> bool:
 
 def maybe_enable_debugpy() -> None:
     """Optionally enable debugpy attach for breakpoint debugging."""
-    port_str = os.environ.get("NVIDIA_NAT_DEBUGPY_PORT")
+    port_str = _env_with_legacy("NAT_DEBUGPY_PORT", "NVIDIA_NAT_DEBUGPY_PORT")
     if not port_str:
         return
 
@@ -70,13 +78,13 @@ def maybe_enable_debugpy() -> None:
         port = int(port_str)
     except ValueError:
         print(
-            f"[nemo-agent-wrapper] Ignoring invalid NVIDIA_NAT_DEBUGPY_PORT={port_str!r}",
+            f"[nemo-agent-wrapper] Ignoring invalid NAT_DEBUGPY_PORT={port_str!r}",
             file=sys.stderr,
         )
         return
 
-    host = os.environ.get("NVIDIA_NAT_DEBUGPY_HOST", "127.0.0.1")
-    wait_for_client = to_bool(os.environ.get("NVIDIA_NAT_DEBUGPY_WAIT_FOR_CLIENT"))
+    host = _env_with_legacy("NAT_DEBUGPY_HOST", "NVIDIA_NAT_DEBUGPY_HOST", "127.0.0.1")
+    wait_for_client = to_bool(_env_with_legacy("NAT_DEBUGPY_WAIT_FOR_CLIENT", "NVIDIA_NAT_DEBUGPY_WAIT_FOR_CLIENT"))
 
     try:
         debugpy = importlib.import_module("debugpy")
@@ -123,7 +131,7 @@ def _write_trajectory(intermediate_steps_dicts: list[dict], output_path: str) ->
 
 
 def normalize_result_text(raw_text: str) -> str:
-    """Normalize NAT output for text-only benchmark verifiers."""
+    """Normalize NeMo Agent Toolkit output for text-only benchmark verifiers."""
     text = raw_text.strip()
     if not text:
         return text
@@ -154,7 +162,7 @@ def normalize_result_text(raw_text: str) -> str:
 
 
 async def main(config_path: str, instruction: str, trajectory_path: str | None = None) -> None:
-    """Run the NAT workflow and print normalized result text."""
+    """Run the NeMo Agent Toolkit workflow and print normalized result text."""
     maybe_enable_debugpy()
 
     from nat.builder.workflow_builder import WorkflowBuilder
@@ -171,57 +179,49 @@ async def main(config_path: str, instruction: str, trajectory_path: str | None =
 
     async with WorkflowBuilder.from_config(config) as builder:
         session_manager = await SessionManager.create(config=config, shared_builder=builder)
-        async with session_manager.session(user_id="harbor") as session:
-            async with session.run(instruction) as runner:
-                intermediate_task = None
-                if trajectory_path:
-                    try:
-                        from nat.builder.runtime_event_subscriber import pull_intermediate
+        try:
+            async with session_manager.session(user_id="harbor") as session:
+                async with session.run(instruction) as runner:
+                    intermediate_task = None
+                    if trajectory_path:
+                        try:
+                            from nat.builder.runtime_event_subscriber import pull_intermediate
 
-                        intermediate_task = asyncio.ensure_future(pull_intermediate())
-                    except Exception:
-                        print(
-                            "[nemo-agent-wrapper] Failed to start trajectory collection:",
-                            file=sys.stderr,
-                        )
-                        traceback.print_exc(file=sys.stderr)
+                            intermediate_task = asyncio.ensure_future(pull_intermediate())
+                        except Exception:
+                            print(
+                                "[nemo-agent-wrapper] Failed to start trajectory collection:",
+                                file=sys.stderr,
+                            )
+                            traceback.print_exc(file=sys.stderr)
 
-                result = await runner.result()
-                print(normalize_result_text(str(result)))
+                    result = await runner.result()
+                    print(normalize_result_text(str(result)))
 
-                if intermediate_task is not None and trajectory_path is not None:
-                    try:
-                        intermediate_steps_dicts = await intermediate_task
-                        _write_trajectory(intermediate_steps_dicts, trajectory_path)
-                    except Exception:
-                        print(
-                            "[nemo-agent-wrapper] Failed to write trajectory:",
-                            file=sys.stderr,
-                        )
-                        traceback.print_exc(file=sys.stderr)
+                    if intermediate_task is not None and trajectory_path is not None:
+                        try:
+                            intermediate_steps_dicts = await intermediate_task
+                            _write_trajectory(intermediate_steps_dicts, trajectory_path)
+                        except Exception:
+                            print(
+                                "[nemo-agent-wrapper] Failed to write trajectory:",
+                                file=sys.stderr,
+                            )
+                            traceback.print_exc(file=sys.stderr)
+        finally:
+            await session_manager.shutdown()
 
-        await session_manager.shutdown()
+
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    """Parse wrapper arguments while allowing multi-token instructions."""
+    parser = argparse.ArgumentParser(description="Run a NeMo Agent Toolkit workflow.")
+    parser.add_argument("config_path")
+    parser.add_argument("instruction", nargs="+")
+    parser.add_argument("--trajectory-output", dest="trajectory_path")
+    parser.add_argument("--trajectory_output", dest="trajectory_path")
+    return parser.parse_args(argv)
 
 
 if __name__ == "__main__":
-    trajectory_path = None
-    args = sys.argv[1:]
-    if "--trajectory-output" in args:
-        idx = args.index("--trajectory-output")
-        if idx + 1 < len(args):
-            trajectory_path = args[idx + 1]
-            args = args[:idx] + args[idx + 2:]
-        else:
-            print("--trajectory-output requires a path argument", file=sys.stderr)
-            sys.exit(1)
-
-    if len(args) < 2:
-        print(
-            f"Usage: {sys.argv[0]} <config_file> <instruction> [--trajectory-output <path>]",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    config_path = args[0]
-    instruction = " ".join(args[1:])
-    asyncio.run(main(config_path, instruction, trajectory_path))
+    parsed_args = _parse_args(sys.argv[1:])
+    asyncio.run(main(parsed_args.config_path, " ".join(parsed_args.instruction), parsed_args.trajectory_path))

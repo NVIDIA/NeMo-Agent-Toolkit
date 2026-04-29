@@ -19,6 +19,8 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 
 def _load_adapter_common_module():
     repo_root = Path(__file__).resolve().parents[3]
@@ -51,3 +53,19 @@ def test_copy_template_ignores_cache_artifacts(tmp_path, monkeypatch) -> None:
     assert not (output_dir / "tests" / "__pycache__").exists()
     assert not (output_dir / ".pytest_cache").exists()
     assert not (output_dir / "top_level.pyc").exists()
+
+
+def test_parse_basic_arithmetic_rejects_division_by_zero() -> None:
+    common = _load_adapter_common_module()
+
+    with pytest.raises(ValueError, match="Division by zero"):
+        common.parse_basic_arithmetic("What is 4 divided by 0?")
+
+
+def test_resolve_safe_task_dir_rejects_path_traversal(tmp_path: Path) -> None:
+    common = _load_adapter_common_module()
+
+    assert common.resolve_safe_task_dir(tmp_path, "task-1") == tmp_path.resolve() / "task-1"
+    for invalid_task_id in ("../escape", "/tmp/escape", "nested/../../escape"):
+        with pytest.raises(ValueError, match="Invalid local_task_id"):
+            common.resolve_safe_task_dir(tmp_path, invalid_task_id)

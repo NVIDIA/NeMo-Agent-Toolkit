@@ -16,10 +16,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 
-def artifact_presence_evaluator(atif_samples, artifact_path: str | None = None) -> dict[str, Any]:
+def artifact_presence_evaluator(atif_samples: Sequence[Any], artifact_path: str | None = None) -> dict[str, Any]:
     """Return reward `1.0` when at least one ATIF sample is present."""
     sample_count = len(atif_samples)
     reward = 1.0 if sample_count > 0 else 0.0

@@ -44,14 +44,14 @@ from nat_harbor.agents.installed.policy import resolve_local_install_policy
 class NemoAgent(HarborNemoAgent):
     """Bridge agent that layers local-mode and setup parity over Harbor 0.5.0."""
 
-    CLI_FLAGS = [
+    CLI_FLAGS = (
         *HarborNemoAgent.CLI_FLAGS,
         # Comma-separated extra workflow packages to install before execution.
         CliFlag(
             "workflow_packages",
             cli="--workflow-packages",
             type="str",
-            env_fallback="NVIDIA_NAT_WORKFLOW_PACKAGES",
+            env_fallback="NAT_HARBOR_WORKFLOW_PACKAGES",
         ),
         # Policy for whether host-local install is allowed in local mode.
         CliFlag(
@@ -60,7 +60,7 @@ class NemoAgent(HarborNemoAgent):
             type="enum",
             choices=["skip", "allow"],
             default="skip",
-            env_fallback="HARBOR_LOCAL_INSTALL_POLICY",
+            env_fallback="NAT_HARBOR_LOCAL_INSTALL_POLICY",
         ),
         # Python executable used to invoke the NAT wrapper in shell mode.
         CliFlag(
@@ -68,7 +68,7 @@ class NemoAgent(HarborNemoAgent):
             cli="--python-bin",
             type="str",
             default="python3",
-            env_fallback="NVIDIA_NAT_PYTHON_BIN",
+            env_fallback="NAT_HARBOR_PYTHON_BIN",
         ),
         # Enables inline (in-process) NAT execution instead of shell wrapper.
         CliFlag(
@@ -78,7 +78,7 @@ class NemoAgent(HarborNemoAgent):
             default=False,
             env_fallback="NAT_HARBOR_LIBRARY_MODE",
         ),
-    ]
+    )
 
     def __init__(self, *args, inline_runner: NemoInlineRunner | None = None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -203,9 +203,8 @@ class NemoAgent(HarborNemoAgent):
         if config_file:
             return str(config_file)
 
-        api_key = self._resolve_api_key()
         model_name = self._resolve_model_name()
-        config_yaml = self._generate_config_yaml(model_name, api_key)
+        config_yaml = self._generate_config_yaml(model_name, "")
         config_path = self.logs_dir / "nemo-agent-inline-config.yml"
         config_path.parent.mkdir(parents=True, exist_ok=True)
         config_path.write_text(config_yaml, encoding="utf-8")

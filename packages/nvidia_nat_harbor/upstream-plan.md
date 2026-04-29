@@ -138,8 +138,8 @@ runtime contracts. There are two acceptable upstream shapes:
 
 1. Harbor owns a generic run-mode extension point, while `nvidia-nat-harbor`
    provides the concrete NeMo Agent Toolkit library-mode runner.
-2. Harbor's `nemo-agent` owns library mode directly, if Harbor maintainers accept
-   the NeMo Agent Toolkit runtime dependency and maintenance burden.
+2. The Harbor `nemo-agent` implementation owns library mode directly, if maintainers
+   accept the NeMo Agent Toolkit runtime dependency and maintenance burden.
 
 ### Candidate Harbor Changes
 

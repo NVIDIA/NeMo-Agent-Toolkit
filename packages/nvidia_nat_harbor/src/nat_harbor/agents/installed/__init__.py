@@ -19,7 +19,7 @@ from .policy import is_local_install_allowed
 from .policy import resolve_local_install_policy
 
 __all__ = [
-    "is_local_install_allowed",
     "NemoAgent",
+    "is_local_install_allowed",
     "resolve_local_install_policy",
 ]

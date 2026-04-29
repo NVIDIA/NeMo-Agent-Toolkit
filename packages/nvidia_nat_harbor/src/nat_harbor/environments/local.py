@@ -49,14 +49,14 @@ class LocalEnvironment(BaseEnvironment):
         task_env_config: EnvironmentConfig,
         *args,
         **kwargs,
-    ):
+    ) -> None:
         super().__init__(
+            *args,
             environment_dir=environment_dir,
             environment_name=environment_name,
             session_id=session_id,
             trial_paths=trial_paths,
             task_env_config=task_env_config,
-            *args,
             **kwargs,
         )
         self._local_root = (self.trial_paths.trial_dir / ".local-env").resolve()
@@ -105,7 +105,7 @@ class LocalEnvironment(BaseEnvironment):
         # Local mode runs on the host and cannot reliably enforce egress blocking.
         return False
 
-    def _validate_definition(self):
+    def _validate_definition(self) -> None:
         return
 
     def _translate_path(self, raw_path: str) -> str:
@@ -187,11 +187,11 @@ class LocalEnvironment(BaseEnvironment):
         self.trial_paths.verifier_dir.mkdir(parents=True, exist_ok=True)
         self.trial_paths.artifacts_dir.mkdir(parents=True, exist_ok=True)
 
-    async def stop(self, delete: bool):
+    async def stop(self, delete: bool) -> None:
         if delete and self._local_root.exists():
             shutil.rmtree(self._local_root, ignore_errors=True)
 
-    async def upload_file(self, source_path: Path | str, target_path: str):
+    async def upload_file(self, source_path: Path | str, target_path: str) -> None:
         source = Path(source_path)
         target = Path(self._translate_path(target_path))
         self._assert_allowed_write_path(target, "upload_file")
@@ -199,21 +199,21 @@ class LocalEnvironment(BaseEnvironment):
         shutil.copy2(source, target)
         self._rewrite_local_paths_in_file(target)
 
-    async def upload_dir(self, source_dir: Path | str, target_dir: str):
+    async def upload_dir(self, source_dir: Path | str, target_dir: str) -> None:
         source = Path(source_dir)
         target = Path(self._translate_path(target_dir))
         self._assert_allowed_write_path(target, "upload_dir")
         shutil.copytree(source, target, dirs_exist_ok=True)
         self._rewrite_local_paths_in_tree(target)
 
-    async def download_file(self, source_path: str, target_path: Path | str):
+    async def download_file(self, source_path: str, target_path: Path | str) -> None:
         source = Path(self._translate_path(source_path))
         target = Path(target_path)
         self._assert_allowed_write_path(target, "download_file")
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
 
-    async def download_dir(self, source_dir: str, target_dir: Path | str):
+    async def download_dir(self, source_dir: str, target_dir: Path | str) -> None:
         source = Path(self._translate_path(source_dir))
         target = Path(target_dir)
         self._assert_allowed_write_path(target, "download_dir")

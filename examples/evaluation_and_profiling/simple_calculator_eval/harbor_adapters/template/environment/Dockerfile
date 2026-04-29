@@ -15,10 +15,14 @@
 
 FROM python:3.11-slim
 
-WORKDIR /workspace
-
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 10001 harbor \
+    && mkdir -p /workspace \
+    && chown -R harbor:harbor /workspace
+
+WORKDIR /workspace
+USER harbor
 
 CMD ["/bin/bash"]

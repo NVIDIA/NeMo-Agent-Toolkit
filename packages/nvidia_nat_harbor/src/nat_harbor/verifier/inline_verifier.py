@@ -102,7 +102,7 @@ class DefaultInlineVerifierDriver:
     def _write_details(self, output_dir: Path, details: dict[str, Any]) -> Path:
         output_dir.mkdir(parents=True, exist_ok=True)
         details_path = output_dir / "details.json"
-        details_path.write_text(json.dumps(details, indent=2), encoding="utf-8")
+        details_path.write_text(json.dumps(details, indent=2, default=str), encoding="utf-8")
         return details_path
 
     def _raw_output_details(self, raw_output_path: Path) -> dict[str, Any]:
