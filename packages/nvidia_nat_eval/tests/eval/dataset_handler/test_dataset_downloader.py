@@ -59,7 +59,7 @@ def test_s3_download_missing_boto3_has_install_hint(monkeypatch: pytest.MonkeyPa
     config = EvalDatasetJsonConfig(
         file_path=tmp_path / "dataset.json",
         remote_file_path="dataset.json",
-        s3=EvalS3Config(bucket="bucket", access_key="access-key", secret_key="secret-key"),
+        s3=EvalS3Config(bucket="bucket", access_key="access-key", secret_key="secret-key"),  # noqa: S106
     )
     downloader = DatasetDownloader(config)
 
