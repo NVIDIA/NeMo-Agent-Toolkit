@@ -20,6 +20,10 @@ from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 
 logger = logging.getLogger(__name__)
 
+# Breaking change: `aioboto3` (which transitively provides `boto3`/`botocore`) was previously a
+# base dependency of `nvidia-nat-eval` and has moved to the `[full]` extra. Users on a bare
+# `pip install nvidia-nat-eval` who configure `dataset.s3.*` will now hit ModuleNotFoundError
+# at download time instead of silently working. Install `nvidia-nat-eval[full]` to restore.
 REMOTE_DATASET_INSTALL_HINT = (
     "Install full evaluation runtime dependencies with `pip install 'nvidia-nat-eval[full]'` "
     "or `uv pip install 'nvidia-nat[eval]'`.")
@@ -30,9 +34,8 @@ def _load_signed_url_dependencies():
         import requests
         return requests
     except ImportError as exc:
-        raise ModuleNotFoundError(
-            "`requests` is required to download eval datasets from signed URLs. "
-            f"{REMOTE_DATASET_INSTALL_HINT}") from exc
+        raise ModuleNotFoundError("`requests` is required to download eval datasets from signed URLs. "
+                                  f"{REMOTE_DATASET_INSTALL_HINT}") from exc
 
 
 def _load_s3_download_dependencies():
@@ -41,9 +44,8 @@ def _load_s3_download_dependencies():
         from botocore.exceptions import NoCredentialsError
         return boto3, NoCredentialsError
     except ImportError as exc:
-        raise ModuleNotFoundError(
-            "`boto3` and `botocore` are required to download eval datasets from S3. "
-            f"{REMOTE_DATASET_INSTALL_HINT}") from exc
+        raise ModuleNotFoundError("`boto3` and `botocore` are required to download eval datasets from S3. "
+                                  f"{REMOTE_DATASET_INSTALL_HINT}") from exc
 
 
 class DatasetDownloader:

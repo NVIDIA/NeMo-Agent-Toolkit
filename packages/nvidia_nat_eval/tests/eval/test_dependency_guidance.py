@@ -58,17 +58,15 @@ def test_runtime_evaluate_import_does_not_require_full_eval_dependencies(monkeyp
     dataset_handler_pkg = sys.modules.get("nat.plugins.eval.dataset_handler")
     runtime_pkg = sys.modules.get("nat.plugins.eval.runtime")
     utils_pkg = sys.modules.get("nat.plugins.eval.utils")
-    had_dataset_downloader = (
-        hasattr(dataset_handler_pkg, "dataset_downloader") if dataset_handler_pkg is not None else False)
-    had_dataset_handler = (
-        hasattr(dataset_handler_pkg, "dataset_handler") if dataset_handler_pkg is not None else False)
+    had_dataset_downloader = (hasattr(dataset_handler_pkg, "dataset_downloader")
+                              if dataset_handler_pkg is not None else False)
+    had_dataset_handler = (hasattr(dataset_handler_pkg, "dataset_handler")
+                           if dataset_handler_pkg is not None else False)
     had_runtime_evaluate = hasattr(runtime_pkg, "evaluate") if runtime_pkg is not None else False
     had_utils_output_uploader = hasattr(utils_pkg, "output_uploader") if utils_pkg is not None else False
-    original_dataset_downloader = getattr(dataset_handler_pkg,
-                                          "dataset_downloader",
+    original_dataset_downloader = getattr(dataset_handler_pkg, "dataset_downloader",
                                           None) if dataset_handler_pkg is not None else None
-    original_dataset_handler = getattr(dataset_handler_pkg,
-                                       "dataset_handler",
+    original_dataset_handler = getattr(dataset_handler_pkg, "dataset_handler",
                                        None) if dataset_handler_pkg is not None else None
     original_runtime_evaluate = getattr(runtime_pkg, "evaluate", None) if runtime_pkg is not None else None
     original_utils_output_uploader = getattr(utils_pkg, "output_uploader", None) if utils_pkg is not None else None
@@ -76,8 +74,7 @@ def test_runtime_evaluate_import_does_not_require_full_eval_dependencies(monkeyp
         sys.modules.pop(name, None)
 
     monkeypatch.setattr(sys,
-                        "meta_path",
-                        [_BlockModules({"aioboto3", "boto3", "botocore", "requests"}), *sys.meta_path])
+                        "meta_path", [_BlockModules({"aioboto3", "boto3", "botocore", "requests"}), *sys.meta_path])
     try:
         runtime_evaluate = importlib.import_module("nat.plugins.eval.runtime.evaluate")
         assert runtime_evaluate.EvaluationRun.__name__ == "EvaluationRun"
