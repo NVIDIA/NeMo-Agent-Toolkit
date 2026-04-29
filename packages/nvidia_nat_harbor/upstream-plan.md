@@ -50,15 +50,20 @@ If a change depends on NAT runtime contracts, keep it in NAT.
 
 ### Upstream to Harbor (generic parts)
 
-- Define/document an optional ATIF-style verifier mode contract:
-  - consume trajectory artifact
-  - emit `reward.txt` / `reward.json` / `details.json`
-- Provide reusable verifier utilities for:
-  - reward/details writing
-  - fallback handling
-  - artifact path resolution across local/container layouts
-- Add extension hooks for external verifier bridges/adapters.
-- Add Harbor docs/template verifier script for ATIF-style integrations.
+- Add verifier extension hooks for external verifier implementations.
+- Expose verifier config/CLI surface for extension wiring.
+- Keep Harbor reward/result contract stable for inline or script verifiers.
+
+### Landed minimal hook (Harbor side)
+
+- `VerifierFactory` in Harbor verifier runtime.
+- `VerifierConfig.import_path` and `VerifierConfig.kwargs`.
+- CLI flags:
+  - `--verifier-import-path`
+  - `--verifier-kwarg`
+- Trial verification now constructs verifier via `VerifierFactory` in both:
+  - single-step verification
+  - multi-step verification
 
 ### Keep out of Harbor core
 
@@ -111,14 +116,14 @@ These remain in `nvidia-nat-harbor` to preserve clear ownership and avoid Harbor
 
 1. `--env local` support and local env polish.
 2. Generic local install policy primitives.
-3. Generic ATIF verifier-mode utilities and hooks.
-4. Docs/template for ATIF-style verifier integrations.
+3. Generic verifier extension hooks. (done: `VerifierFactory` + import-path wiring)
+4. Optional ATIF helper utilities/docs for non-NAT integrations.
 
 ### Phase B: `nvidia-nat-harbor`
 
-1. Rebase NAT integration onto new Harbor primitives.
-2. Remove duplicated generic glue now provided by Harbor.
-3. Keep NAT-specific ATIF bridge logic in package.
+1. Consume Harbor verifier import hook with `ATIFInlineVerifier`.
+2. Keep NAT-specific evaluator dispatch in `inline_verifier.py`.
+3. Keep `bridge_runner` as script compatibility path only.
 
 ### Phase C: stabilization
 

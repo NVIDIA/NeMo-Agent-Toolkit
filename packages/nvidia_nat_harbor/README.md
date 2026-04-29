@@ -63,9 +63,9 @@ This keeps execution host-local through the imported environment class while sat
 
 This is a temporary compatibility path. Once first-class local environment support is upstreamed in Harbor, this workaround can be dropped in favor of direct `--env local` usage. See [`upstream-plan.md`](./upstream-plan.md).
 
-## Library mode
+## Inline execution mode
 
-Library mode enables an inline execution path for NAT agent and verifier logic.
+`library_mode=true` enables inline agent execution for `NemoAgent`.
 
 Enable it with:
 
@@ -73,20 +73,21 @@ Enable it with:
 --ak library_mode=true
 ```
 
-When using inline ATIF scoring with Harbor verifier import hooks, set:
+Inline verifier execution is configured through Harbor's verifier import hook:
 
 ```bash
 --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier
 ```
 
-And pass verifier env flags, for example:
+Then pass evaluator selection via verifier env flags, for example:
 
 ```bash
---ve NAT_HARBOR_ATIF_BRIDGE_ENABLED=1
 --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory
 --ve NAT_HARBOR_ATIF_CONFIG_FILE=<path-to-eval-config>
 --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=<registered-evaluator-name>
 ```
+
+Use `nat_harbor.verifier.bridge_runner` only for script-based compatibility paths.
 
 ### Trial runner flow
 
@@ -107,7 +108,7 @@ flowchart TD
   L --> M["Verifier reads artifacts and scores"]
 ```
 
-### Verifier library-mode flow
+### Verifier inline flow
 
 ```mermaid
 flowchart TD
