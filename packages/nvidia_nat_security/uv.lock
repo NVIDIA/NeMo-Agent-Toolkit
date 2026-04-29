@@ -1242,7 +1242,6 @@ name = "nvidia-nat-eval"
 source = { editable = "../nvidia_nat_eval" }
 dependencies = [
     { name = "nvidia-nat-atif" },
-    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -1257,7 +1256,8 @@ requires-dist = [
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openpyxl", marker = "extra == 'full'", specifier = "~=3.1" },
     { name = "openpyxl", marker = "extra == 'test'", specifier = "~=3.1" },
-    { name = "tqdm", specifier = "~=4.67" },
+    { name = "tqdm", marker = "extra == 'full'", specifier = "~=4.67" },
+    { name = "tqdm", marker = "extra == 'test'", specifier = "~=4.67" },
 ]
 provides-extras = ["full", "test"]
 
@@ -2014,18 +2014,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/af/ca18c134b5d75de7e8dc551c5234eaba2e8e951f6b30139599b53de9c187/tomli-2.4.0-cp313-cp313-win_amd64.whl", hash = "sha256:3cf226acb51d8f1c394c1b310e0e0e61fecdd7adcb78d01e294ac297dd2e7f87", size = 108227, upload-time = "2026-01-11T11:22:15.224Z" },
     { url = "https://files.pythonhosted.org/packages/22/c3/b386b832f209fee8073c8138ec50f27b4460db2fdae9ffe022df89a57f9b/tomli-2.4.0-cp313-cp313-win_arm64.whl", hash = "sha256:d20b797a5c1ad80c516e41bc1fb0443ddb5006e9aaa7bda2d71978346aeb9132", size = 94748, upload-time = "2026-01-11T11:22:16.009Z" },
     { url = "https://files.pythonhosted.org/packages/23/d1/136eb2cb77520a31e1f64cbae9d33ec6df0d78bdf4160398e86eec8a8754/tomli-2.4.0-py3-none-any.whl", hash = "sha256:1f776e7d669ebceb01dee46484485f43a4048746235e683bcdffacdf1fb4785a", size = 14477, upload-time = "2026-01-11T11:22:37.446Z" },
-]
-
-[[package]]
-name = "tqdm"
-version = "4.67.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/09/a9/6ba95a270c6f1fbcd8dac228323f2777d886cb206987444e4bce66338dd4/tqdm-4.67.3.tar.gz", hash = "sha256:7d825f03f89244ef73f1d4ce193cb1774a8179fd96f31d7e1dcde62092b960bb", size = 169598, upload-time = "2026-02-03T17:35:53.048Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/16/e1/3079a9ff9b8e11b846c6ac5c8b5bfb7ff225eee721825310c91b3b50304f/tqdm-4.67.3-py3-none-any.whl", hash = "sha256:ee1e4c0e59148062281c49d80b25b67771a127c85fc9676d3be5f243206826bf", size = 78374, upload-time = "2026-02-03T17:35:50.982Z" },
 ]
 
 [[package]]

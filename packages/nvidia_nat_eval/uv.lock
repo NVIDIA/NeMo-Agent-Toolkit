@@ -1575,7 +1575,6 @@ name = "nvidia-nat-eval"
 source = { editable = "." }
 dependencies = [
     { name = "nvidia-nat-atif" },
-    { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
@@ -1584,6 +1583,7 @@ full = [
     { name = "datasets" },
     { name = "nvidia-nat-core" },
     { name = "openpyxl" },
+    { name = "tqdm" },
 ]
 test = [
     { name = "aioboto3" },
@@ -1591,6 +1591,7 @@ test = [
     { name = "nvidia-nat-core", extra = ["async-endpoints"] },
     { name = "nvidia-nat-test" },
     { name = "openpyxl" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -1605,7 +1606,8 @@ requires-dist = [
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../nvidia_nat_test" },
     { name = "openpyxl", marker = "extra == 'full'", specifier = "~=3.1" },
     { name = "openpyxl", marker = "extra == 'test'", specifier = "~=3.1" },
-    { name = "tqdm", specifier = "~=4.67" },
+    { name = "tqdm", marker = "extra == 'full'", specifier = "~=4.67" },
+    { name = "tqdm", marker = "extra == 'test'", specifier = "~=4.67" },
 ]
 provides-extras = ["full", "test"]
 

@@ -14,11 +14,12 @@
 # limitations under the License.
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Generic
 from typing import Literal
+from typing import Protocol
 from typing import TypeVar
+from typing import cast
 
 import numpy as np
 from pydantic import BaseModel
@@ -29,8 +30,17 @@ from pydantic_core import PydanticUndefined
 
 T = TypeVar("T", int, float, bool, str)
 
-if TYPE_CHECKING:
-    from optuna import Trial
+
+class _TrialLike(Protocol):
+
+    def suggest_categorical(self, name: str, choices: Sequence[Any]) -> Any:
+        ...
+
+    def suggest_int(self, name: str, low: int, high: int, *, log: bool = False, step: Any = None) -> int:
+        ...
+
+    def suggest_float(self, name: str, low: float, high: float, *, log: bool = False, step: Any = None) -> float:
+        ...
 
 
 # --------------------------------------------------------------------- #
@@ -81,16 +91,16 @@ class SearchSpace(BaseModel, Generic[T]):
 
         return self
 
-    # Helper for Optuna Trials
-    def suggest(self, trial: "Trial", name: str):
+    # Helper for Optuna-compatible trial objects
+    def suggest(self, trial: _TrialLike, name: str):
         if self.is_prompt:
             raise ValueError("Prompt optimization not currently supported using Optuna. "
                              "Use the genetic algorithm implementation instead.")
         if self.values is not None:
             return trial.suggest_categorical(name, self.values)
         if isinstance(self.low, int):
-            return trial.suggest_int(name, self.low, self.high, log=self.log, step=self.step)
-        return trial.suggest_float(name, self.low, self.high, log=self.log, step=self.step)
+            return trial.suggest_int(name, self.low, cast(int, self.high), log=self.log, step=self.step)
+        return trial.suggest_float(name, cast(float, self.low), cast(float, self.high), log=self.log, step=self.step)
 
     def to_grid_values(self) -> list[Any]:
         """
