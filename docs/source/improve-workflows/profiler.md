@@ -415,8 +415,8 @@ Ultimately, we will use the collected telemetry data to identify which LLM we th
 Particularly, we evaluate the following models:
 - `meta-llama-3.1-8b-instruct`
 - `meta-llama-3.3-70b-instruct`
-- `mixtral-8x22b-instruct`
-- `phi-4-mini-instruct`
+- `mistral-large-3-675b-instruct-2512`
+- `mistral-small-4-119b-2603`
 
 We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_data_all.csv` file to compare the performance of the LLMs.
 
@@ -461,9 +461,7 @@ Below is an example of what the plot might look like:
 
 ![Prompt vs Completion Tokens](../_static/profiler_token_scatter.png)
 
-<!-- TODO: Update results based on new models -->
-We see from the image above that the `meta-llama-3.1-8b-instruct` LLM has the highest prompt token usage and takes many more turns than any other model, perhaps indicating that it fails at tool calling. We also note that none of the `phi-3-*` models succeed at any tool calling, as they have no completion tokens in the
-`email_phishing_analyzer` function. This could be due to the fact that the `phi-3-*` models are not well-suited for the task at hand.
+We see from the image above that the `meta-llama-3.1-8b-instruct` LLM has the highest prompt token usage and takes many more turns than any other model, perhaps indicating that it fails at tool calling.
 
 ### Analyzing Workflow Runtimes
 Another important metric to analyze is the workflow runtime. We can use the `standardized_data_all.csv` file to plot the workflow runtime for each LLM. This will give us an idea of how long each LLM takes to complete the workflow and compare if some LLMs are more efficient than others.
@@ -483,11 +481,12 @@ df_runtime = df_llm.groupby(["example_number", "llm_name"]).agg(
 # Compute runtime
 df_runtime["runtime_seconds"] = df_runtime["end_time"] - df_runtime["start_time"]
 
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 8))
 sns.boxplot(
     data=df_runtime,
     x="llm_name",
-    y="runtime_seconds"
+    y="runtime_seconds",
+    hue="llm_name"
 )
 
 # Set log scale for y-axis
@@ -499,6 +498,7 @@ plt.ylabel("Runtime (log10 scale, seconds)", fontsize=12)
 plt.title("Example Runtime per LLM Model (Log Scale)", fontsize=14)
 plt.xticks(rotation=45)
 plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+plt.tight_layout()
 plt.show()
 ```
 
