@@ -131,11 +131,9 @@ def _call_custom_evaluator(
         return evaluator_callable(**kwargs)
 
     positional_parameters = [
-        parameter for parameter in signature.parameters.values()
-        if parameter.kind in {
+        parameter for parameter in signature.parameters.values() if parameter.kind in {
             inspect.Parameter.POSITIONAL_ONLY,
-            inspect.Parameter.POSITIONAL_OR_KEYWORD,
-        }
+            inspect.Parameter.POSITIONAL_OR_KEYWORD, }
     ]
     if len(positional_parameters) == 1:
         return evaluator_callable(atif_samples)

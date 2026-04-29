@@ -21,6 +21,7 @@ import json
 import os
 from collections.abc import Generator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -29,7 +30,6 @@ from nat_harbor.agents.installed.library_mode import NemoInlineRunnerInput
 from nat_harbor.agents.installed.library_mode import NemoInlineRunnerResult
 from nat_harbor.agents.installed.nemo_agent_run_wrapper import _write_trajectory
 from nat_harbor.agents.installed.nemo_agent_run_wrapper import normalize_result_text
-
 
 _ENVIRONMENT_OVERLAY_LOCK = asyncio.Lock()
 
