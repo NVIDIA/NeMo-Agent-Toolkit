@@ -51,7 +51,7 @@ class NemoAgent(HarborNemoAgent):
             "workflow_packages",
             cli="--workflow-packages",
             type="str",
-            env_fallback="NAT_HARBOR_WORKFLOW_PACKAGES",
+            env_fallback="NVIDIA_NAT_WORKFLOW_PACKAGES",
         ),
         # Policy for whether host-local install is allowed in local mode.
         CliFlag(
@@ -68,7 +68,7 @@ class NemoAgent(HarborNemoAgent):
             cli="--python-bin",
             type="str",
             default="python3",
-            env_fallback="NAT_HARBOR_PYTHON_BIN",
+            env_fallback="NVIDIA_NAT_PYTHON_BIN",
         ),
         # Enables inline (in-process) NAT execution instead of shell wrapper.
         CliFlag(

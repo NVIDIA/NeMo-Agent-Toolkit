@@ -17,6 +17,8 @@ limitations under the License.
 
 # Harbor Upstream Plan for `nvidia-nat-harbor`
 
+Reference: [nvidia-nat-harbor README](README.md).
+
 This plan separates generic Harbor framework improvements from NeMo Agent Toolkit-specific
 runtime and evaluator integration. The goal is to avoid long-lived Harbor fork
 drift while keeping NeMo Agent Toolkit behavior inside `nvidia-nat-harbor` unless Harbor
