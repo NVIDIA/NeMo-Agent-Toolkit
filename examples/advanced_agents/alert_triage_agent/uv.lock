@@ -2474,6 +2474,7 @@ dependencies = [
     { name = "nvidia-nat-eval" },
     { name = "prefixspan" },
     { name = "scikit-learn" },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
@@ -2484,6 +2485,7 @@ requires-dist = [
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
     { name = "prefixspan", specifier = "~=0.5.2" },
     { name = "scikit-learn", specifier = "~=1.6" },
+    { name = "tqdm", specifier = "~=4.67" },
 ]
 provides-extras = ["test"]
 
