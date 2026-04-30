@@ -20,6 +20,7 @@ import asyncio
 import os
 import re
 import shutil
+import signal
 from pathlib import Path
 from pathlib import PurePosixPath
 
@@ -173,6 +174,24 @@ class LocalEnvironment(BaseEnvironment):
         raise PermissionError(f"Local mode policy violation during {operation}: write path '{resolved}' "
                               f"is outside allowed roots [{roots}]")
 
+    @staticmethod
+    async def _terminate_process_group(process: asyncio.subprocess.Process) -> None:
+        if process.returncode is not None:
+            return
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+
+        try:
+            await asyncio.wait_for(process.wait(), timeout=2.0)
+        except TimeoutError:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                return
+            await process.wait()
+
     async def start(self, force_build: bool) -> None:
         del force_build
         self._local_root.mkdir(parents=True, exist_ok=True)
@@ -265,6 +284,7 @@ class LocalEnvironment(BaseEnvironment):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             executable="/bin/bash",
+            start_new_session=True,
         )
         try:
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
@@ -272,8 +292,7 @@ class LocalEnvironment(BaseEnvironment):
                 timeout=timeout_sec,
             )
         except TimeoutError:
-            process.kill()
-            await process.wait()
+            await self._terminate_process_group(process)
             return ExecResult(return_code=124, stdout="", stderr="Command timed out")
 
         return ExecResult(

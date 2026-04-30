@@ -16,15 +16,30 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+from pathlib import Path
 
 import pytest
+from harbor.models.task.config import EnvironmentConfig
+from harbor.models.trial.paths import TrialPaths
 
 from nat_harbor.agents.installed.nemo_agent_run_wrapper import normalize_result_text
 from nat_harbor.agents.installed.policy import is_local_install_allowed
 from nat_harbor.agents.installed.policy import resolve_local_install_policy
 from nat_harbor.environments.local import LocalEnvironment
 from nat_harbor.environments.local import is_shell_profile_write
+
+
+def _make_local_environment(tmp_path: Path) -> LocalEnvironment:
+    trial_paths = TrialPaths(tmp_path / "trial")
+    return LocalEnvironment(
+        environment_dir=tmp_path / "environment",
+        environment_name="test-env",
+        session_id="test-session",
+        trial_paths=trial_paths,
+        task_env_config=EnvironmentConfig(),
+    )
 
 
 def test_shell_profile_write_detection() -> None:
@@ -45,6 +60,26 @@ def test_local_environment_command_translation_preserves_longer_paths(tmp_path) 
 
     assert str(tmp_path / "app" / "result.json") in translated
     assert "/application/result.json" in translated
+
+
+def test_local_environment_timeout_kills_child_processes(tmp_path: Path) -> None:
+    env = _make_local_environment(tmp_path)
+    marker_path = tmp_path / "child-survived"
+
+    async def run_timeout() -> None:
+        result = await env.exec(
+            "bash -c 'sleep 0.5; touch \"$MARKER_PATH\"' & wait",
+            env={"MARKER_PATH": str(marker_path)},
+            timeout_sec=0.1,
+        )
+
+        assert result.return_code == 124
+        assert result.stderr == "Command timed out"
+
+        await asyncio.sleep(0.8)
+        assert not marker_path.exists()
+
+    asyncio.run(run_timeout())
 
 
 @pytest.mark.parametrize(
