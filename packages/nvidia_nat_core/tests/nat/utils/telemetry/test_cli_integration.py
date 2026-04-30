@@ -17,6 +17,8 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import click
+
 from nat.cli import telemetry_hook
 from nat.utils.telemetry import config as config_module
 from nat.utils.telemetry.events import CliCommandEvent
@@ -136,7 +138,7 @@ def test_emit_command_event_swallows_handler_errors():
         )
 
 
-def _make_root() -> "click.Group":
+def _make_root() -> click.Group:
     """Build a minimal Click command tree mirroring the real ``nat`` CLI."""
     import click
 
