@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from uuid import uuid4
 
+import pandas as pd
 import yaml
 from pydantic import BaseModel
 from pydantic import SecretStr
@@ -305,7 +306,11 @@ class EvaluationRun:
 
         # if self.config.skip_complete is set skip eval_input_items with a non-empty output_obj
         if self.config.skip_completed_entries:
-            eval_input_items = [item for item in self.eval_input.eval_input_items if not item.output_obj]
+            eval_input_items = []
+            for item in self.eval_input.eval_input_items:
+                if not item.output_obj or pd.isnull(item.output_obj):
+                    eval_input_items.append(item)
+
             if not eval_input_items:
                 logger.warning("All items have a non-empty output. Skipping workflow pass altogether.")
                 return
