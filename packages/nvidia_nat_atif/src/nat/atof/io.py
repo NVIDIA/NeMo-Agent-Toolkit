@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """ATOF JSON-Lines I/O utilities.
 
 Read and write ATOF event streams as JSON-Lines files (one JSON object per line).

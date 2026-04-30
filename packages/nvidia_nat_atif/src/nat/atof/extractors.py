@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Pluggable payload extractors for the ATOF→ATIF converter.
 
 The ATOF wire envelope is producer-agnostic, but the *contents* of
@@ -59,7 +58,6 @@ import json
 from typing import Any
 from typing import Protocol
 from typing import runtime_checkable
-
 
 # ---------------------------------------------------------------------------
 # Protocol interfaces
@@ -205,13 +203,11 @@ class OpenAiChatCompletionsLlmExtractor:
                 except json.JSONDecodeError:
                     args = {"raw": args}
 
-            result.append(
-                {
-                    "tool_call_id": tool_id,
-                    "function_name": name,
-                    "arguments": args,
-                }
-            )
+            result.append({
+                "tool_call_id": tool_id,
+                "function_name": name,
+                "arguments": args,
+            })
         return result
 
 
@@ -272,11 +268,9 @@ class NatRoleMarkExtractor:
 # Registries and resolvers
 # ---------------------------------------------------------------------------
 
-
 DEFAULT_LLM_EXTRACTOR: LlmPayloadExtractor = OpenAiChatCompletionsLlmExtractor()
 DEFAULT_TOOL_EXTRACTOR: ToolPayloadExtractor = GenericToolResultExtractor()
 DEFAULT_MARK_EXTRACTOR: MarkPayloadExtractor = NatRoleMarkExtractor()
-
 
 LLM_EXTRACTOR_REGISTRY: dict[tuple[str, str], LlmPayloadExtractor] = {
     ("openai/chat-completions", "1"): DEFAULT_LLM_EXTRACTOR,

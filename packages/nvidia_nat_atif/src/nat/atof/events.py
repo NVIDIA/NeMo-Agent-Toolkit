@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """ATOF event models for the 2 event kinds per spec v0.1.
 
 Standalone Pydantic models for each event kind. The ``Event`` type is a
@@ -173,8 +171,7 @@ class _EventBase(BaseModel):
             except ValueError as exc:
                 raise ValueError(f"timestamp string must be RFC 3339 (spec §5.1), got {v!r}") from exc
             if parsed.tzinfo is None:
-                raise ValueError(
-                    f"timestamp string must end with 'Z' or an explicit UTC offset (spec §5.1), got {v!r}")
+                raise ValueError(f"timestamp string must end with 'Z' or an explicit UTC offset (spec §5.1), got {v!r}")
             return v
         raise ValueError(f"timestamp must be RFC 3339 string or int epoch microseconds, got {type(v).__name__}")
 

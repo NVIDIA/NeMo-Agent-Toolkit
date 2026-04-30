@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Pydantic models for the Agentic Trajectory Observability Format (ATOF).
 
 ATOF is a JSON-Lines wire format for agent runtime event streams. These

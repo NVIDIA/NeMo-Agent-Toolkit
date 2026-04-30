@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """ShapeMismatchError tests for the ATOF→ATIF converter.
 
 The reference extractors assume an OpenAI chat-completions shape inside

@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for the pluggable payload extractor system.
 
 The converter delegates ``event.data`` parsing to extractors registered in
@@ -36,14 +35,14 @@ from nat.atof import ScopeEvent
 from nat.atof.extractors import DEFAULT_LLM_EXTRACTOR
 from nat.atof.extractors import DEFAULT_MARK_EXTRACTOR
 from nat.atof.extractors import DEFAULT_TOOL_EXTRACTOR
-from nat.atof.extractors import GenericToolResultExtractor
 from nat.atof.extractors import LLM_EXTRACTOR_REGISTRY
-from nat.atof.extractors import LlmPayloadExtractor
 from nat.atof.extractors import MARK_EXTRACTOR_REGISTRY
+from nat.atof.extractors import TOOL_EXTRACTOR_REGISTRY
+from nat.atof.extractors import GenericToolResultExtractor
+from nat.atof.extractors import LlmPayloadExtractor
 from nat.atof.extractors import MarkPayloadExtractor
 from nat.atof.extractors import NatRoleMarkExtractor
 from nat.atof.extractors import OpenAiChatCompletionsLlmExtractor
-from nat.atof.extractors import TOOL_EXTRACTOR_REGISTRY
 from nat.atof.extractors import ToolPayloadExtractor
 from nat.atof.extractors import register_llm_extractor
 from nat.atof.extractors import register_mark_extractor
@@ -52,7 +51,6 @@ from nat.atof.extractors import resolve_llm_extractor
 from nat.atof.extractors import resolve_mark_extractor
 from nat.atof.extractors import resolve_tool_extractor
 from nat.atof.scripts.atof_to_atif_converter import convert
-
 
 # ---------------------------------------------------------------------------
 # Protocol conformance
@@ -80,16 +78,17 @@ def test_default_mark_extractor_satisfies_protocol() -> None:
 
 
 def test_openai_extract_input_messages_flat() -> None:
-    messages = DEFAULT_LLM_EXTRACTOR.extract_input_messages(
-        {"messages": [{"role": "user", "content": "hi"}]},
-    )
+    messages = DEFAULT_LLM_EXTRACTOR.extract_input_messages({"messages": [{"role": "user", "content": "hi"}]}, )
     assert messages == [{"role": "user", "content": "hi"}]
 
 
 def test_openai_extract_input_messages_nested_content() -> None:
     messages = DEFAULT_LLM_EXTRACTOR.extract_input_messages(
-        {"content": {"messages": [{"role": "user", "content": "hi"}]}},
-    )
+        {"content": {
+            "messages": [{
+                "role": "user", "content": "hi"
+            }]
+        }}, )
     assert messages == [{"role": "user", "content": "hi"}]
 
 
@@ -103,12 +102,12 @@ def test_openai_extract_output_text_direct() -> None:
 
 
 def test_openai_extract_output_text_choices() -> None:
-    assert (
-        DEFAULT_LLM_EXTRACTOR.extract_output_text(
-            {"choices": [{"message": {"content": "hello", "role": "assistant"}}]},
-        )
-        == "hello"
-    )
+    assert (DEFAULT_LLM_EXTRACTOR.extract_output_text(
+        {"choices": [{
+            "message": {
+                "content": "hello", "role": "assistant"
+            }
+        }]}, ) == "hello")
 
 
 def test_openai_extract_output_text_missing_returns_empty() -> None:
@@ -118,10 +117,17 @@ def test_openai_extract_output_text_missing_returns_empty() -> None:
 
 def test_openai_extract_tool_calls_flat_form() -> None:
     tool_calls = DEFAULT_LLM_EXTRACTOR.extract_tool_calls(
-        {"tool_calls": [{"id": "c1", "name": "add", "arguments": {"a": 1}}]},
-    )
+        {"tool_calls": [{
+            "id": "c1", "name": "add", "arguments": {
+                "a": 1
+            }
+        }]}, )
     assert tool_calls == [
-        {"tool_call_id": "c1", "function_name": "add", "arguments": {"a": 1}},
+        {
+            "tool_call_id": "c1", "function_name": "add", "arguments": {
+                "a": 1
+            }
+        },
     ]
 
 
@@ -129,22 +135,32 @@ def test_openai_extract_tool_calls_nested_function_form() -> None:
     """OpenAI's actual API uses ``{id, function: {name, arguments}}``."""
     tool_calls = DEFAULT_LLM_EXTRACTOR.extract_tool_calls(
         {
-            "tool_calls": [
-                {"id": "c1", "function": {"name": "add", "arguments": '{"a": 1}'}},
-            ],
-        },
-    )
+            "tool_calls": [{
+                "id": "c1", "function": {
+                    "name": "add", "arguments": '{"a": 1}'
+                }
+            }, ],
+        }, )
     assert tool_calls == [
-        {"tool_call_id": "c1", "function_name": "add", "arguments": {"a": 1}},
+        {
+            "tool_call_id": "c1", "function_name": "add", "arguments": {
+                "a": 1
+            }
+        },
     ]
 
 
 def test_openai_extract_tool_calls_handles_unparseable_string_arguments() -> None:
     tool_calls = DEFAULT_LLM_EXTRACTOR.extract_tool_calls(
-        {"tool_calls": [{"id": "c1", "name": "foo", "arguments": "not-json"}]},
-    )
+        {"tool_calls": [{
+            "id": "c1", "name": "foo", "arguments": "not-json"
+        }]}, )
     assert tool_calls == [
-        {"tool_call_id": "c1", "function_name": "foo", "arguments": {"raw": "not-json"}},
+        {
+            "tool_call_id": "c1", "function_name": "foo", "arguments": {
+                "raw": "not-json"
+            }
+        },
     ]
 
 
@@ -176,27 +192,22 @@ def test_tool_extractor_passes_through_string() -> None:
 
 
 def test_mark_extractor_lifts_valid_role() -> None:
-    assert DEFAULT_MARK_EXTRACTOR.extract_role_and_content(
-        {"role": "user", "content": "hi"},
-    ) == ("user", "hi")
+    assert DEFAULT_MARK_EXTRACTOR.extract_role_and_content({"role": "user", "content": "hi"}, ) == ("user", "hi")
 
 
 def test_mark_extractor_prefers_content_over_message() -> None:
     assert DEFAULT_MARK_EXTRACTOR.extract_role_and_content(
-        {"role": "system", "content": "from content", "message": "from message"},
-    ) == ("system", "from content")
+        {
+            "role": "system", "content": "from content", "message": "from message"
+        }, ) == ("system", "from content")
 
 
 def test_mark_extractor_falls_back_to_message_when_no_content() -> None:
-    assert DEFAULT_MARK_EXTRACTOR.extract_role_and_content(
-        {"role": "agent", "message": "hi"},
-    ) == ("agent", "hi")
+    assert DEFAULT_MARK_EXTRACTOR.extract_role_and_content({"role": "agent", "message": "hi"}, ) == ("agent", "hi")
 
 
 def test_mark_extractor_rejects_invalid_role() -> None:
-    assert DEFAULT_MARK_EXTRACTOR.extract_role_and_content(
-        {"role": "foo", "content": "x"},
-    ) is None
+    assert DEFAULT_MARK_EXTRACTOR.extract_role_and_content({"role": "foo", "content": "x"}, ) is None
 
 
 def test_mark_extractor_rejects_non_dict() -> None:
@@ -218,10 +229,7 @@ def test_resolve_llm_extractor_returns_default_for_unregistered_schema() -> None
 
 
 def test_resolve_llm_extractor_returns_registered_extractor() -> None:
-    assert (
-        resolve_llm_extractor({"name": "openai/chat-completions", "version": "1"})
-        is DEFAULT_LLM_EXTRACTOR
-    )
+    assert (resolve_llm_extractor({"name": "openai/chat-completions", "version": "1"}) is DEFAULT_LLM_EXTRACTOR)
 
 
 def test_resolve_tool_extractor_always_returns_default_without_registration() -> None:
@@ -240,6 +248,7 @@ def test_resolve_mark_extractor_always_returns_default_without_registration() ->
 
 
 class _FakeLlmExtractor:
+
     def extract_input_messages(self, data: Any) -> list[dict[str, Any]]:
         return []
 
@@ -331,7 +340,11 @@ def test_registering_anthropic_extractor_enables_conversion() -> None:
                 name="claude",
                 category="llm",
                 category_profile={"model_name": "claude"},
-                data={"input": [{"role": "user", "parts": [{"text": "3 + 4?"}]}]},
+                data={"input": [{
+                    "role": "user", "parts": [{
+                        "text": "3 + 4?"
+                    }]
+                }]},
                 data_schema=ds,
             ),
             ScopeEvent(
@@ -342,7 +355,9 @@ def test_registering_anthropic_extractor_enables_conversion() -> None:
                 name="claude",
                 category="llm",
                 category_profile={"model_name": "claude"},
-                data={"output_blocks": [{"type": "text", "text": "The answer is 7."}]},
+                data={"output_blocks": [{
+                    "type": "text", "text": "The answer is 7."
+                }]},
                 data_schema=ds,
             ),
             ScopeEvent(
@@ -360,8 +375,7 @@ def test_registering_anthropic_extractor_enables_conversion() -> None:
         assert "user" in sources, f"expected user turn lifted from extractor, got {sources}"
         agent_steps = [s for s in trajectory.steps if s.source == "agent"]
         assert any(s.message == "The answer is 7." for s in agent_steps), (
-            f"expected Anthropic output extracted into agent step; got {[s.message for s in agent_steps]}"
-        )
+            f"expected Anthropic output extracted into agent step; got {[s.message for s in agent_steps]}")
     finally:
         LLM_EXTRACTOR_REGISTRY.pop(("anthropic/messages", "1"), None)
 
@@ -386,9 +400,9 @@ def test_registering_tool_extractor_overrides_default() -> None:
     ds = {"name": "myco/tool-result", "version": "1"}
     register_tool_extractor("myco/tool-result", "1", _MycoToolExtractor())
     try:
-        assert resolve_tool_extractor(ds).extract_tool_result(
-            {"data": {"payload": "wrapped-answer"}},
-        ) == "wrapped-answer"
+        assert resolve_tool_extractor(ds).extract_tool_result({"data": {
+            "payload": "wrapped-answer"
+        }}, ) == "wrapped-answer"
         # Non-myco events still fall through to the default extractor.
         assert resolve_tool_extractor(None).extract_tool_result({"result": 7}) == "7"
     finally:
@@ -428,7 +442,9 @@ def test_registering_mark_extractor_enables_custom_role_lift() -> None:
                 parent_uuid="root-001",
                 timestamp="2026-01-01T00:00:01Z",
                 name="note",
-                data={"kind": "user-notify", "text": "please summarize"},
+                data={
+                    "kind": "user-notify", "text": "please summarize"
+                },
                 data_schema=ds,
             ),
             ScopeEvent(
@@ -444,8 +460,7 @@ def test_registering_mark_extractor_enables_custom_role_lift() -> None:
         trajectory = convert(events)
         user_steps = [s for s in trajectory.steps if s.source == "user"]
         assert any(s.message == "please summarize" for s in user_steps), (
-            f"expected custom mark lifted to user step; got {[(s.source, s.message) for s in trajectory.steps]}"
-        )
+            f"expected custom mark lifted to user step; got {[(s.source, s.message) for s in trajectory.steps]}")
     finally:
         MARK_EXTRACTOR_REGISTRY.pop(("acme/notify", "1"), None)
 
@@ -453,7 +468,6 @@ def test_registering_mark_extractor_enables_custom_role_lift() -> None:
 # ---------------------------------------------------------------------------
 # Script entry point
 # ---------------------------------------------------------------------------
-
 
 if __name__ == "__main__":
     import sys

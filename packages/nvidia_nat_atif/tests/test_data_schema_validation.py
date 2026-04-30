@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """Tests for ``data_schema`` validation in the ATOF→ATIF converter.
 
 When an event declares a ``data_schema`` registered in

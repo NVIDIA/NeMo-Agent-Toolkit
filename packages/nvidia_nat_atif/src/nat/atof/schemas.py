@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """Registered JSON Schemas for validating ATOF ``event.data`` payloads.
 
 The ATOF envelope carries an optional ``data_schema = {name, version}``

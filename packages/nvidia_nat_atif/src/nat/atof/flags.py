@@ -12,8 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 """Canonical attribute flags for ATOF scope events (spec §2.1).
 
 Serializes as a canonical (sorted, deduplicated) lowercase string array. The
