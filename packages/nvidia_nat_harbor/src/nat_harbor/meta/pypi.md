@@ -15,10 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
+![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
+
 # NVIDIA NeMo Agent Toolkit Harbor Utilities
 
 `nvidia-nat-harbor` provides Harbor-focused agent and environment integrations and
 ATIF verifier bridge utilities.
 
-This package intentionally avoids direct references to `examples/` paths and
-expects explicit input and output paths via CLI arguments or API calls.
+Use this package to run NeMo Agent Toolkit workflows through Harbor tasks, iterate
+locally with host-side execution, and score generated artifacts with inline ATIF
+verifiers backed by NeMo Agent Toolkit evaluators.
