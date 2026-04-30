@@ -23,4 +23,5 @@ limitations under the License.
 ./frameworks.md
 ./a2a.md
 AWS Bedrock <./integrating-aws-bedrock-models.md>
+OCI Generative AI <./integrating-oci-generative-ai-models.md>
 ```
