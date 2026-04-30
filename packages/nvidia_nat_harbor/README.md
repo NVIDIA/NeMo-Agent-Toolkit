@@ -21,7 +21,8 @@ limitations under the License.
 
 Use this README for package setup, execution-mode concepts, and a short
 library-mode smoke path. The simple calculator example cookbook and
-adapter guide are linked at the end.
+adapter guide are linked at the end. For a short discussion-oriented overview,
+see [`harbor-library-mode.md`](./harbor-library-mode.md).
 
 This package provides:
 
@@ -296,5 +297,6 @@ harbor run \
 
 ## Related docs
 
+- [Harbor library mode discussion guide](./harbor-library-mode.md)
 - [Simple calculator example cookbook](../../examples/evaluation_and_profiling/simple_calculator_eval/harbor-eval-readme.md)
 - [Simple calculator Harbor adapter guide](../../examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/README.md)
