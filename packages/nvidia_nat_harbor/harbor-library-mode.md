@@ -273,3 +273,50 @@ For NeMo Agent:
 - Use `nvidia-nat-harbor` as the reference consumer.
 - Keep NeMo Agent-specific workflow loading, evaluator dispatch, and artifact
   shaping outside Harbor core.
+
+## 5. Related PRs
+
+The following Harbor PRs are listed in order of relevance to this development
+plan.
+
+### Most relevant: alternate `local` environment proposal
+
+- **[Harbor PR #1560](https://github.com/harbor-framework/harbor/pull/1560) —
+  draft `local` environment**: Draft based on the `LocalEnvironment` shipped in
+  the NAT PR. Things to reconcile before
+  upstreaming:
+  - **Path handling**: Sets `mounted=False` so verifier output can be merged
+    back into the trail directory. Does not rewrite path names the way the NAT
+    implementation does.
+  - **`exec` return type**: Returns `bytes` instead of the `str` returned by
+    the NAT implementation.
+  - **Network policy**: `allow_internet` defaults to `True` in
+    `harbor-local-env`, compared to the more restrictive default in the NAT
+    version.
+
+### Related: alternative container runtimes (Podman)
+
+These PRs add a second container backend alongside Docker. They overlap with
+this plan only indirectly — local/library mode targets host execution, but any
+selection plumbing for `--env` should compose cleanly with a future Podman
+backend.
+
+- **[Harbor PR #1518](https://github.com/harbor-framework/harbor/pull/1518) —
+  add Podman as an alternative container runtime**: Broader proposal for
+  Podman support across Harbor environments.
+- **[Harbor PR #1432](https://github.com/harbor-framework/harbor/pull/1432) —
+  built-in Podman environment**: Adds a built-in Podman environment as a
+  first-class option.
+
+### Related: host-side agent execution and runtime abstraction
+
+This PR is the closest in spirit to library mode, since it addresses the
+"local install" concerns from a runtime-abstraction angle rather than from
+the environment angle.
+
+- **[Harbor PR #1450](https://github.com/harbor-framework/harbor/pull/1450) —
+  runtime abstraction for installed agents to run locally**: Introduces a
+  runtime abstraction so installed agents can execute on the host. Useful
+  prior art for the agent-side half of library mode (in-process execution,
+  install-policy handling, and how Harbor selects between containerized and
+  host runtimes).
