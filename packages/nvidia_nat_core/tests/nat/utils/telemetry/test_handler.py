@@ -22,6 +22,7 @@ from unittest.mock import patch
 
 import pytest
 
+from nat.utils.telemetry import config as config_module
 from nat.utils.telemetry import handler as handler_module
 from nat.utils.telemetry.events import CliCommandEvent
 from nat.utils.telemetry.events import TaskStatusEnum
@@ -44,21 +45,21 @@ def _make_event(command: str = "run") -> CliCommandEvent:
 
 def test_enqueue_is_no_op_when_telemetry_disabled():
     h = NATTelemetryHandler()
-    with patch.object(handler_module, "TELEMETRY_ENABLED", False):
+    with patch.object(config_module, "TELEMETRY_ENABLED", False):
         h.enqueue(_make_event())
     assert h._events == []
 
 
 def test_enqueue_is_no_op_for_non_event():
     h = NATTelemetryHandler()
-    with patch.object(handler_module, "TELEMETRY_ENABLED", True):
+    with patch.object(config_module, "TELEMETRY_ENABLED", True):
         h.enqueue("not an event")  # type: ignore[arg-type]
     assert h._events == []
 
 
 def test_enqueue_appends_when_enabled():
     h = NATTelemetryHandler()
-    with patch.object(handler_module, "TELEMETRY_ENABLED", True):
+    with patch.object(config_module, "TELEMETRY_ENABLED", True):
         h.enqueue(_make_event())
     assert len(h._events) == 1
 
@@ -68,7 +69,7 @@ def test_enqueue_appends_when_enabled():
 
 def test_max_queue_size_triggers_flush_signal():
     h = NATTelemetryHandler(max_queue_size=2)
-    with patch.object(handler_module, "TELEMETRY_ENABLED", True):
+    with patch.object(config_module, "TELEMETRY_ENABLED", True):
         h.enqueue(_make_event())
         assert not h._flush_signal.is_set()
         h.enqueue(_make_event())
@@ -248,7 +249,7 @@ def test_send_events_blank_endpoint_skips_post(capsys):
 
 def test_context_manager_lifecycle():
     h = NATTelemetryHandler()
-    with patch.object(handler_module, "TELEMETRY_ENABLED", True), \
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
          patch.object(h, "_send_events", new=AsyncMock()) as mock_send:
         with h:
             h.enqueue(_make_event())

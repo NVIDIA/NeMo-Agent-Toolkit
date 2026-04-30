@@ -12,26 +12,37 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Environment-driven configuration for NAT CLI telemetry.
+"""Configuration for NAT CLI telemetry.
 
-All values are evaluated once at import time. Changing an environment variable
-after `nat.utils.telemetry` has been imported has no effect on the current
-process.
+Most values are evaluated once at import time. The ``TELEMETRY_ENABLED``
+flag is module-level mutable: it starts at the value derived from the
+environment / persisted consent, and the CLI entrypoint may flip it after
+the first-run consent prompt resolves.
+
+Resolution order for ``TELEMETRY_ENABLED`` (lazy: import-time + prompt):
+    1. ``NAT_TELEMETRY_ENABLED`` env var, if set.
+    2. Persisted consent at ``~/.config/nat/telemetry.toml``.
+    3. ``False`` — until the CLI's first-run prompt resolves to either
+       ENABLED (TTY user said yes) or DISABLED (TTY user said no, or
+       non-interactive session).
 
 Environment variables
 ---------------------
-- ``NAT_TELEMETRY_ENABLED`` (default: ``true``): master opt-out switch.
-  Accepts ``1``/``true``/``yes`` (case-insensitive); anything else disables.
+- ``NAT_TELEMETRY_ENABLED`` (no default — first-run prompt or persisted
+  consent decides): master opt-out switch. Accepts ``1``/``true``/``yes``
+  (case-insensitive); anything else disables.
 - ``NAT_TELEMETRY_ENDPOINT`` (default: empty): destination for telemetry
-  payloads. When empty, no HTTP request is issued; events are still built and
-  validated, which keeps the path exercised during local development. The
-  literal value ``stdout`` is treated as a debug sink that writes JSON-line
-  payloads to stderr instead of issuing HTTP POSTs.
+  payloads. When empty, no HTTP request is issued; events are still built
+  and validated, which keeps the path exercised during local development.
+  The literal value ``stdout`` writes JSON-line payloads to stderr
+  instead of issuing HTTP POSTs.
 - ``NAT_SESSION_PREFIX`` (default: unset): optional prefix prepended to
   every session ID. Useful for tagging dev/CI runs.
-- ``NAT_TELEMETRY_DRY_RUN`` (default: ``false``): when truthy, payloads are
-  built and logged but no HTTP request is issued. Independent of the endpoint
-  override.
+- ``NAT_TELEMETRY_DRY_RUN`` (default: ``false``): when truthy, payloads
+  are built and logged but no HTTP request is issued.
+- ``NAT_TELEMETRY_CONSENT_FILE`` (default:
+  ``~/.config/nat/telemetry.toml``): override for the persisted consent
+  file location. Primarily a testing hook.
 """
 from __future__ import annotations
 
@@ -73,8 +84,23 @@ def _is_truthy(value: str | None, *, default: bool) -> bool:
     return value.strip().lower() in _TRUTHY
 
 
-TELEMETRY_ENABLED: bool = _is_truthy(os.getenv("NAT_TELEMETRY_ENABLED"), default=True)
-"""Master opt-out flag. Read at import time; the only source of truth."""
+def _resolve_initial_telemetry_enabled() -> bool:
+    """Resolve the initial value at import time.
+
+    Defers persisted-consent reading to ``consent.resolve_initial_consent``
+    so all the policy rules live in one place. The CLI entrypoint may
+    later flip this flag via the consent prompt; consumers (handler,
+    telemetry_hook) re-read the live value rather than caching it.
+    """
+    from nat.utils.telemetry.consent import resolve_initial_consent
+    return resolve_initial_consent()
+
+
+TELEMETRY_ENABLED: bool = _resolve_initial_telemetry_enabled()
+"""Master opt-out flag. Initialized at import; may be flipped by the
+first-run consent prompt during a CLI invocation. Consumers should access
+this attribute on the module rather than ``from … import TELEMETRY_ENABLED``
+so the live value is honored."""
 
 NAT_TELEMETRY_ENDPOINT: str = os.getenv("NAT_TELEMETRY_ENDPOINT", DEFAULT_NAT_TELEMETRY_ENDPOINT)
 """Resolved telemetry endpoint. May be a URL or :data:`STDOUT_ENDPOINT_SENTINEL`."""

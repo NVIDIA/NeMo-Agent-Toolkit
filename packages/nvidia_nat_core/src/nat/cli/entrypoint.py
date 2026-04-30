@@ -33,6 +33,7 @@ from dotenv import load_dotenv
 
 from nat.utils.log_levels import LOG_LEVELS
 from nat.utils.log_utils import setup_logging as log_utils_setup_logging
+from nat.utils.telemetry import maybe_prompt_for_consent
 
 from .plugin_loader import discover_and_load_cli_plugins
 from .telemetry_hook import record_invocation_start
@@ -91,8 +92,11 @@ def cli(ctx: click.Context, log_level: str):
     ctx_dict["start_time"] = time.time()
     ctx_dict["log_level"] = log_level
 
-    # Telemetry: capture identifiers for the post-invocation event. Safe no-op
-    # when telemetry is disabled.
+    # Telemetry: prompt for first-run consent (TTY only, no persisted decision,
+    # no env-var override) and capture identifiers for the post-invocation
+    # event. Both are safe no-ops when telemetry is disabled or already
+    # decided.
+    maybe_prompt_for_consent()
     record_invocation_start(ctx)
 
 

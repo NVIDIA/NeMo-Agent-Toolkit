@@ -26,15 +26,25 @@ To inspect events locally without making network calls:
 from __future__ import annotations
 
 from nat.utils.telemetry.config import TELEMETRY_ENABLED
+from nat.utils.telemetry.consent import ConsentState
+from nat.utils.telemetry.consent import maybe_prompt_for_consent
+from nat.utils.telemetry.consent import read_persisted_consent
+from nat.utils.telemetry.consent import write_persisted_consent
 from nat.utils.telemetry.events import CliCommandEvent
+from nat.utils.telemetry.events import NemoSourceEnum
 from nat.utils.telemetry.events import TaskStatusEnum
 from nat.utils.telemetry.events import TelemetryEvent
 from nat.utils.telemetry.handler import NATTelemetryHandler
 
 __all__ = [
     "CliCommandEvent",
+    "ConsentState",
     "NATTelemetryHandler",
+    "NemoSourceEnum",
     "TELEMETRY_ENABLED",
     "TaskStatusEnum",
     "TelemetryEvent",
+    "maybe_prompt_for_consent",
+    "read_persisted_consent",
+    "write_persisted_consent",
 ]

@@ -31,11 +31,11 @@ from importlib import metadata as importlib_metadata
 from typing import TYPE_CHECKING
 from typing import Any
 
+from nat.utils.telemetry import config as _config
 from nat.utils.telemetry.config import NAT_TELEMETRY_DRY_RUN
 from nat.utils.telemetry.config import NAT_TELEMETRY_ENDPOINT
 from nat.utils.telemetry.config import SESSION_PREFIX
 from nat.utils.telemetry.config import STDOUT_ENDPOINT_SENTINEL
-from nat.utils.telemetry.config import TELEMETRY_ENABLED
 from nat.utils.telemetry.events import TelemetryEvent
 from nat.utils.telemetry.payload import QueuedEvent
 from nat.utils.telemetry.payload import build_payload
@@ -117,8 +117,12 @@ class NATTelemetryHandler:
     # ------------------------------------------------------------------ public
 
     def enqueue(self, event: TelemetryEvent) -> None:
-        """Queue an event for the next flush. Silently no-ops when disabled."""
-        if not TELEMETRY_ENABLED:
+        """Queue an event for the next flush. Silently no-ops when disabled.
+
+        Reads ``config.TELEMETRY_ENABLED`` live (not via cached import) so
+        the first-run consent prompt's late update to the flag is honored.
+        """
+        if not _config.TELEMETRY_ENABLED:
             return
         if not isinstance(event, TelemetryEvent):
             # Best-effort: never disrupt the caller because of a bad event.

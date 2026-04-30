@@ -35,10 +35,10 @@ import time
 import uuid
 from typing import TYPE_CHECKING
 
-from nat.utils.telemetry import TELEMETRY_ENABLED
 from nat.utils.telemetry import CliCommandEvent
 from nat.utils.telemetry import NATTelemetryHandler
 from nat.utils.telemetry import TaskStatusEnum
+from nat.utils.telemetry import config as _telemetry_config
 
 if TYPE_CHECKING:
     import click
@@ -90,7 +90,7 @@ def emit_command_event(
     error_class:
         Exception class name on failure (no message). ``None`` otherwise.
     """
-    if not TELEMETRY_ENABLED:
+    if not _telemetry_config.TELEMETRY_ENABLED:
         return
 
     try:

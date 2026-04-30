@@ -18,6 +18,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 from nat.cli import telemetry_hook
+from nat.utils.telemetry import config as config_module
 from nat.utils.telemetry.events import CliCommandEvent
 from nat.utils.telemetry.events import TaskStatusEnum
 
@@ -35,7 +36,7 @@ def test_emit_command_event_constructs_expected_event():
     handler_instance.__exit__ = MagicMock(return_value=False)
     handler_instance.enqueue.side_effect = lambda ev: captured.append(ev)
 
-    with patch.object(telemetry_hook, "TELEMETRY_ENABLED", True), \
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
          patch.object(telemetry_hook, "NATTelemetryHandler", return_value=handler_instance) as mock_cls, \
          patch("time.monotonic", return_value=2.5):
         telemetry_hook.emit_command_event(
@@ -58,7 +59,7 @@ def test_emit_command_event_constructs_expected_event():
 
 
 def test_emit_command_event_skipped_when_telemetry_disabled():
-    with patch.object(telemetry_hook, "TELEMETRY_ENABLED", False), \
+    with patch.object(config_module, "TELEMETRY_ENABLED", False), \
          patch.object(telemetry_hook, "NATTelemetryHandler") as mock_cls:
         telemetry_hook.emit_command_event(
             {},
@@ -81,7 +82,7 @@ def test_emit_command_event_failure_includes_error_class():
         "telemetry_command": "evaluate",
     }
 
-    with patch.object(telemetry_hook, "TELEMETRY_ENABLED", True), \
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
          patch.object(telemetry_hook, "NATTelemetryHandler", return_value=handler_instance):
         telemetry_hook.emit_command_event(
             ctx_obj,
@@ -102,7 +103,7 @@ def test_emit_command_event_handles_missing_ctx_obj():
     captured: list[CliCommandEvent] = []
     handler_instance.enqueue.side_effect = lambda ev: captured.append(ev)
 
-    with patch.object(telemetry_hook, "TELEMETRY_ENABLED", True), \
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
          patch.object(telemetry_hook, "NATTelemetryHandler", return_value=handler_instance):
         telemetry_hook.emit_command_event(
             None,
@@ -125,7 +126,7 @@ def test_emit_command_event_swallows_handler_errors():
         def __exit__(self, *a):
             return False
 
-    with patch.object(telemetry_hook, "TELEMETRY_ENABLED", True), \
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
          patch.object(telemetry_hook, "NATTelemetryHandler", return_value=Boom()):
         # Should not raise.
         telemetry_hook.emit_command_event(

@@ -167,9 +167,32 @@ Before getting started, it's possible to run this simple workflow and many other
 
 ## 📊 Telemetry
 
-The NeMo Agent Toolkit includes opt-out runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation.
+The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation.
 
-> **Note**: An ingest endpoint has not been provisioned yet, so by default no telemetry is sent over the network. The collection path is exercised locally and can be inspected through the debug modes below. A future release will set a default endpoint; you can opt out at that time using the environment variable described in this section.
+> **Note**: An ingest endpoint has not been provisioned yet, so by default no telemetry is sent over the network. The collection path is exercised locally and can be inspected through the debug modes below. A future release will set a default endpoint.
+
+### How consent works
+
+NAT does not send any telemetry until you have explicitly opted in. The first time you run an interactive `nat` command, you'll see a one-time consent prompt explaining what is collected and asking whether to allow it. Your decision is persisted to `~/.config/nat/telemetry.toml` and respected on every subsequent invocation.
+
+In **non-interactive contexts** (CI, cron, piped scripts, daemons), telemetry is **always off** unless you explicitly enable it via the environment variable below. We never send data when there's no opportunity to ask.
+
+You can change your decision anytime:
+
+```bash
+nat configure telemetry --enable     # opt in
+nat configure telemetry --disable    # opt out
+nat configure telemetry --status     # show the current effective state
+```
+
+Or override the persisted decision (and skip the prompt) via environment variable:
+
+```bash
+export NAT_TELEMETRY_ENABLED=false   # disable for this shell session
+export NAT_TELEMETRY_ENABLED=true    # enable for this shell session
+```
+
+The environment variable takes precedence over the persisted file. If both disagree, `nat configure telemetry --status` will tell you which one is winning.
 
 ### What is collected
 
@@ -192,26 +215,12 @@ The following are never collected:
 - File paths, hostnames, usernames, IP addresses, or any other identifying information.
 - The output of any command.
 
-### How to disable telemetry
-
-To opt out for a single invocation:
-
-```bash
-NAT_TELEMETRY_ENABLED=false nat run --config_file my_config.yml
-```
-
-To opt out for an entire shell session:
-
-```bash
-export NAT_TELEMETRY_ENABLED=false
-```
-
 ### Local debugging
 
 To inspect what would be sent without making any network requests, set the endpoint to the literal value `stdout`. Payloads are written as JSON lines to stderr:
 
 ```bash
-NAT_TELEMETRY_ENDPOINT=stdout nat info list-components
+NAT_TELEMETRY_ENABLED=true NAT_TELEMETRY_ENDPOINT=stdout nat info list-components
 ```
 
 To skip the network call without printing payloads:
