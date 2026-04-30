@@ -31,8 +31,8 @@ from __future__ import annotations
 import logging
 import os
 import sys
+from datetime import UTC
 from datetime import datetime
-from datetime import timezone
 from enum import StrEnum
 from pathlib import Path
 
@@ -100,16 +100,14 @@ def write_persisted_consent(state: ConsentState) -> None:
     path = _consent_file_path()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
-        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-        content = (
-            "# NeMo Agent Toolkit telemetry consent.\n"
-            "# To change, run `nat configure telemetry --enable | --disable`,\n"
-            "# or set the NAT_TELEMETRY_ENABLED environment variable.\n"
-            "[telemetry]\n"
-            f'consent = "{state.value}"\n'
-            f'consented_at = "{timestamp}"\n'
-            f'prompt_version = "{PROMPT_VERSION}"\n'
-        )
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        content = ("# NeMo Agent Toolkit telemetry consent.\n"
+                   "# To change, run `nat configure telemetry --enable | --disable`,\n"
+                   "# or set the NAT_TELEMETRY_ENABLED environment variable.\n"
+                   "[telemetry]\n"
+                   f'consent = "{state.value}"\n'
+                   f'consented_at = "{timestamp}"\n'
+                   f'prompt_version = "{PROMPT_VERSION}"\n')
         path.write_text(content)
     except Exception:  # noqa: BLE001 - defensive; never let consent writing break the CLI
         logger.debug("Failed to write consent file at %s", path, exc_info=True)
@@ -134,31 +132,29 @@ def render_prompt() -> str:
     Kept inline (not in a separate file) so tests can assert on its
     contents and reviewers see any wording change in PR diffs.
     """
-    return (
-        "\n"
-        "===========================================================\n"
-        "  NeMo Agent Toolkit — anonymous telemetry\n"
-        "===========================================================\n"
-        "  We collect aggregate, anonymous CLI usage data to help us\n"
-        "  prioritize features and fix bugs.\n"
-        "\n"
-        "  We collect:\n"
-        "    - Command name (e.g. 'run', 'serve', 'evaluate')\n"
-        "    - Outcome (success / failure / interrupted) and duration\n"
-        "    - Exception class name on failure (no message)\n"
-        "    - Python version, NAT version, CPU architecture\n"
-        "\n"
-        "  We do NOT collect:\n"
-        "    - Command arguments, file paths, or config contents\n"
-        "    - Workflow / function / tool / model names\n"
-        "    - Hostnames, usernames, IP addresses, or any user input\n"
-        "\n"
-        "  Change anytime:\n"
-        "    nat configure telemetry --enable | --disable | --status\n"
-        "    or set NAT_TELEMETRY_ENABLED=true|false in your environment.\n"
-        "===========================================================\n"
-        "Allow anonymous telemetry? [y/N]: "
-    )
+    return ("\n"
+            "===========================================================\n"
+            "  NeMo Agent Toolkit — anonymous telemetry\n"
+            "===========================================================\n"
+            "  We collect aggregate, anonymous CLI usage data to help us\n"
+            "  prioritize features and fix bugs.\n"
+            "\n"
+            "  We collect:\n"
+            "    - Command name (e.g. 'run', 'serve', 'evaluate')\n"
+            "    - Outcome (success / failure / interrupted) and duration\n"
+            "    - Exception class name on failure (no message)\n"
+            "    - Python version, NAT version, CPU architecture\n"
+            "\n"
+            "  We do NOT collect:\n"
+            "    - Command arguments, file paths, or config contents\n"
+            "    - Workflow / function / tool / model names\n"
+            "    - Hostnames, usernames, IP addresses, or any user input\n"
+            "\n"
+            "  Change anytime:\n"
+            "    nat configure telemetry --enable | --disable | --status\n"
+            "    or set NAT_TELEMETRY_ENABLED=true|false in your environment.\n"
+            "===========================================================\n"
+            "Allow anonymous telemetry? [y/N]: ")
 
 
 def prompt_user() -> ConsentState:

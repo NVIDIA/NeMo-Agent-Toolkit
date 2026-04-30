@@ -153,9 +153,7 @@ def test_maybe_prompt_short_circuits_on_non_interactive(consent_file: Path, monk
         mock_prompt.assert_not_called()
 
 
-def test_maybe_prompt_runs_prompt_when_interactive_and_undecided(
-    consent_file: Path, monkeypatch: pytest.MonkeyPatch
-):
+def test_maybe_prompt_runs_prompt_when_interactive_and_undecided(consent_file: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.delenv("NAT_TELEMETRY_ENABLED", raising=False)
     with patch.object(consent, "is_interactive_session", return_value=True), \
          patch.object(consent, "prompt_user", return_value=ConsentState.ENABLED) as mock_prompt:
@@ -165,9 +163,7 @@ def test_maybe_prompt_runs_prompt_when_interactive_and_undecided(
     assert consent.read_persisted_consent() == ConsentState.ENABLED
 
 
-def test_maybe_prompt_updates_live_telemetry_enabled_flag(
-    consent_file: Path, monkeypatch: pytest.MonkeyPatch
-):
+def test_maybe_prompt_updates_live_telemetry_enabled_flag(consent_file: Path, monkeypatch: pytest.MonkeyPatch):
     """Critical: after the prompt, the rest of this same invocation must
     honor the user's decision without a process restart."""
     from nat.utils.telemetry import config as telemetry_config
@@ -189,16 +185,18 @@ def test_maybe_prompt_updates_live_telemetry_enabled_flag(
 # -------------------------------------------------------------- prompt_user
 
 
-@pytest.mark.parametrize("answer,expected", [
-    ("y", ConsentState.ENABLED),
-    ("Y", ConsentState.ENABLED),
-    ("yes", ConsentState.ENABLED),
-    ("YES", ConsentState.ENABLED),
-    ("n", ConsentState.DISABLED),
-    ("no", ConsentState.DISABLED),
-    ("", ConsentState.DISABLED),  # default no on enter
-    ("garbage", ConsentState.DISABLED),
-])
+@pytest.mark.parametrize(
+    "answer,expected",
+    [
+        ("y", ConsentState.ENABLED),
+        ("Y", ConsentState.ENABLED),
+        ("yes", ConsentState.ENABLED),
+        ("YES", ConsentState.ENABLED),
+        ("n", ConsentState.DISABLED),
+        ("no", ConsentState.DISABLED),
+        ("", ConsentState.DISABLED),  # default no on enter
+        ("garbage", ConsentState.DISABLED),
+    ])
 def test_prompt_user_interprets_answers(answer: str, expected: ConsentState):
     with patch("builtins.input", return_value=answer), \
          patch("sys.stderr", new_callable=StringIO):

@@ -173,7 +173,7 @@ The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-li
 
 ### How consent works
 
-NAT does not send any telemetry until you have explicitly opted in. The first time you run an interactive `nat` command, you'll see a one-time consent prompt explaining what is collected and asking whether to allow it. Your decision is persisted to `~/.config/nat/telemetry.toml` and respected on every subsequent invocation.
+The NeMo Agent Toolkit does not send any telemetry until you have explicitly opted in. The first time you run an interactive `nat` command, you'll see a one-time consent prompt explaining what is collected and asking whether to allow it. Your decision is persisted to `~/.config/nat/telemetry.toml` and respected on every subsequent invocation.
 
 In **non-interactive contexts** (CI, cron, piped scripts, daemons), telemetry is **always off** unless you explicitly enable it via the environment variable below. We never send data when there's no opportunity to ask.
 

@@ -40,6 +40,7 @@ config
 [Cc]onfigurability
 [Cc]oroutine(s?)
 CPython
+cron
 [Cc]ryptocurrenc[y|ies]
 cuDF
 cuML
@@ -84,6 +85,7 @@ Grafana
 [Gg]uardrail(s|ed|ing)?
 [Hh]ashable
 [Hh]ardcode(s|d)?
+[Hh]ostname(s?)
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
@@ -176,6 +178,7 @@ SGLang
 spaCy
 SQLAlchemy
 SSE
+stderr
 [Ss]treamable
 [Ss]ubcard(s?)
 [Ss]ubclassing
