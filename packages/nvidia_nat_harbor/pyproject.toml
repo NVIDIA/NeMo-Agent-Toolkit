@@ -54,6 +54,7 @@ dependencies = [
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 test = [
+  "nvidia-nat-langchain == {version}",
   "pytest>=8.0.0,<9.0.0",
 ]
 
@@ -68,3 +69,4 @@ config-settings = { editable_mode = "compat" }
 [tool.uv.sources]
 nvidia-nat-core = { path = "../nvidia_nat_core", editable = true }
 nvidia-nat-eval = { path = "../nvidia_nat_eval", editable = true }
+nvidia-nat-langchain = { path = "../nvidia_nat_langchain", editable = true }

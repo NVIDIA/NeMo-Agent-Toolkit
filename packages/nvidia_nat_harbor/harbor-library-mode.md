@@ -283,30 +283,29 @@ plan.
 
 - **[Harbor PR #1560](https://github.com/harbor-framework/harbor/pull/1560) —
   draft `local` environment**: Draft based on the `LocalEnvironment` shipped in
-  the NAT PR. Things to reconcile before
-  upstreaming:
+  the NeMo Agent Toolkit PR. Things to reconcile before merging upstream:
   - **Path handling**: Sets `mounted=False` so verifier output can be merged
-    back into the trail directory. Does not rewrite path names the way the NAT
-    implementation does.
+    back into the trial directory. Does not rewrite path names the way the
+    NeMo Agent Toolkit implementation does.
   - **`exec` return type**: Returns `bytes` instead of the `str` returned by
-    the NAT implementation.
+    the NeMo Agent Toolkit implementation.
   - **Network policy**: `allow_internet` defaults to `True` in
-    `harbor-local-env`, compared to the more restrictive default in the NAT
-    version.
+    `harbor-local-env`, compared to the more restrictive default in the
+    NeMo Agent Toolkit version.
 
-### Related: alternative container runtimes (Podman)
+### Related: alternative container runtimes
 
 These PRs add a second container backend alongside Docker. They overlap with
-this plan only indirectly — local/library mode targets host execution, but any
-selection plumbing for `--env` should compose cleanly with a future Podman
+this plan only indirectly: local library mode targets host execution, but any
+selection plumbing for `--env` should compose cleanly with a future container
 backend.
 
 - **[Harbor PR #1518](https://github.com/harbor-framework/harbor/pull/1518) —
-  add Podman as an alternative container runtime**: Broader proposal for
-  Podman support across Harbor environments.
+  add an alternative container runtime**: Broader proposal for support across
+  Harbor environments.
 - **[Harbor PR #1432](https://github.com/harbor-framework/harbor/pull/1432) —
-  built-in Podman environment**: Adds a built-in Podman environment as a
-  first-class option.
+  built-in alternative container environment**: Adds a built-in environment as
+  a first-class option.
 
 ### Related: host-side agent execution and runtime abstraction
 
@@ -317,6 +316,6 @@ the environment angle.
 - **[Harbor PR #1450](https://github.com/harbor-framework/harbor/pull/1450) —
   runtime abstraction for installed agents to run locally**: Introduces a
   runtime abstraction so installed agents can execute on the host. Useful
-  prior art for the agent-side half of library mode (in-process execution,
-  install-policy handling, and how Harbor selects between containerized and
+  reference point for the agent-side half of library mode (in-process
+  execution, install-policy handling, and how Harbor selects between containerized and
   host runtimes).
