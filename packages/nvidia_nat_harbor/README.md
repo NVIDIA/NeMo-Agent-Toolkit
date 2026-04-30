@@ -225,8 +225,7 @@ flowchart TD
 
 ## How to run (simple calculator examples)
 
-Run all commands from the repository root with the repo virtual environment
-active, or call `.venv/bin/harbor` explicitly. This section shows the shortest
+Run all commands from the repository root. This section shows the shortest
 power-of-two trajectory path for checking the integration. For shell compatibility,
 tunable-rag, and custom-evaluator variants, use the detailed command README
 linked below.
@@ -238,6 +237,7 @@ NAT_HARBOR_POWER_OF_TWO_ADAPTER=examples/evaluation_and_profiling/simple_calcula
 NAT_HARBOR_POWER_OF_TWO_DATASET_DIR=.tmp/harbor/datasets/simple-calculator-power-of-two
 NAT_HARBOR_JOBS_DIR=.tmp/harbor/jobs-local
 NAT_HARBOR_TRAJECTORY_CONFIG=examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml
+export NVIDIA_API_KEY=<your-api-key>
 ```
 
 ### 1) Run adapter to set up the Harbor dataset
@@ -253,7 +253,7 @@ python "$NAT_HARBOR_POWER_OF_TWO_ADAPTER" \
 ```bash
 rm -rf "$NAT_HARBOR_JOBS_DIR/sc-power-of-two-library-inline-smoke"
 
-harbor run \
+.venv/bin/harbor run \
   --path "$NAT_HARBOR_POWER_OF_TWO_DATASET_DIR" \
   -l 1 \
   --job-name sc-power-of-two-library-inline-smoke \
@@ -277,7 +277,7 @@ harbor run \
 ```bash
 rm -rf "$NAT_HARBOR_JOBS_DIR/sc-power-of-two-library-inline"
 
-harbor run \
+.venv/bin/harbor run \
   --path "$NAT_HARBOR_POWER_OF_TWO_DATASET_DIR" \
   --job-name sc-power-of-two-library-inline \
   --jobs-dir "$NAT_HARBOR_JOBS_DIR" \
