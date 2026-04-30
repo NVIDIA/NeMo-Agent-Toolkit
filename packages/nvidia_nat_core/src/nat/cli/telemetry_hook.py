@@ -35,19 +35,22 @@ import time
 import uuid
 from typing import TYPE_CHECKING
 
+import click
+
 from nat.utils.telemetry import CliCommandEvent
 from nat.utils.telemetry import NATTelemetryHandler
 from nat.utils.telemetry import TaskStatusEnum
 from nat.utils.telemetry import config as _telemetry_config
 
 if TYPE_CHECKING:
-    import click
+    pass
 
 logger = logging.getLogger(__name__)
 
 _CTX_SESSION_ID = "telemetry_session_id"
 _CTX_START_TIME = "telemetry_start_time"
 _CTX_COMMAND = "telemetry_command"
+_CTX_ROOT_COMMAND = "telemetry_root_command"
 
 
 def record_invocation_start(ctx: click.Context) -> None:
@@ -56,12 +59,19 @@ def record_invocation_start(ctx: click.Context) -> None:
     Safe to call unconditionally; does nothing meaningful when telemetry is
     disabled, but keeping the bookkeeping unconditional makes the call sites
     simpler.
+
+    Also stashes the root Click group so that :func:`_resolve_subcommand` can
+    validate any second-level token against the set of *actually registered*
+    subcommand names. This is the privacy boundary that prevents user-supplied
+    positional arguments (file paths, workflow names, queries) from leaking
+    into the telemetry payload.
     """
     try:
         ctx_dict = ctx.ensure_object(dict)
         ctx_dict[_CTX_SESSION_ID] = uuid.uuid4().hex
         ctx_dict[_CTX_START_TIME] = time.monotonic()
         ctx_dict[_CTX_COMMAND] = ctx.invoked_subcommand
+        ctx_dict[_CTX_ROOT_COMMAND] = ctx.find_root().command
     except Exception:  # noqa: BLE001
         logger.debug("record_invocation_start failed", exc_info=True)
 
@@ -98,7 +108,8 @@ def emit_command_event(
         session_id: str = ctx_obj.get(_CTX_SESSION_ID) or uuid.uuid4().hex
         start_time: float | None = ctx_obj.get(_CTX_START_TIME)
         command: str = ctx_obj.get(_CTX_COMMAND) or "unknown"
-        subcommand = _resolve_subcommand()
+        root_command = ctx_obj.get(_CTX_ROOT_COMMAND)
+        subcommand = _resolve_subcommand(root_command, command)
 
         if start_time is not None:
             duration_ms = int((time.monotonic() - start_time) * 1000)
@@ -123,36 +134,35 @@ def emit_command_event(
         logger.debug("emit_command_event failed", exc_info=True)
 
 
-def _resolve_subcommand() -> str | None:
-    """Best-effort recovery of the second-level command from ``sys.argv``.
+def _resolve_subcommand(root_command: object | None, top_level: str) -> str | None:
+    """Recover the second-level command name, validated against the registered
+    Click command tree.
 
-    Click does not expose nested ``invoked_subcommand`` from the root context.
-    We look at the post-program tokens and pick the first non-flag token after
-    the top-level command, which is good enough for usage analytics. Returns
-    ``None`` if we can't identify one.
+    Click does not expose nested ``invoked_subcommand`` from the root context,
+    so we scan ``sys.argv`` for a candidate token. Crucially, we only return a
+    token if it matches the name of an *actually registered* subcommand of the
+    top-level group. This is the privacy boundary: positional arguments
+    (file paths, workflow names, free-form queries) cannot match a registered
+    subcommand name and therefore cannot leak.
+
+    Returns ``None`` when:
+
+    - The root command isn't a Click group (callable from non-CLI contexts).
+    - ``top_level`` isn't a registered subcommand of the root group.
+    - The resolved top-level command is itself a leaf (not a group), so no
+      second level is possible.
+    - No argv token matches a registered subcommand of that group.
     """
     try:
-        argv = sys.argv[1:]
-        # Skip top-level flags like --log-level INFO before the first command.
-        i = 0
-        while i < len(argv) and argv[i].startswith("-"):
-            # Skip the option's value if present and non-flag.
-            if "=" in argv[i] or i + 1 >= len(argv) or argv[i + 1].startswith("-"):
-                i += 1
-            else:
-                i += 2
-        # First non-flag token is the top-level command; the next non-flag is
-        # the subcommand if any.
-        if i >= len(argv):
+        if not isinstance(root_command, click.Group):
             return None
-        i += 1  # skip top-level command
-        while i < len(argv) and argv[i].startswith("-"):
-            if "=" in argv[i] or i + 1 >= len(argv) or argv[i + 1].startswith("-"):
-                i += 1
-            else:
-                i += 2
-        if i < len(argv) and not argv[i].startswith("-"):
-            return argv[i]
+        sub = root_command.commands.get(top_level)
+        if not isinstance(sub, click.Group):
+            return None
+        registered: set[str] = set(sub.commands.keys())
+        for token in sys.argv[1:]:
+            if token in registered:
+                return token
         return None
     except Exception:  # noqa: BLE001
         return None

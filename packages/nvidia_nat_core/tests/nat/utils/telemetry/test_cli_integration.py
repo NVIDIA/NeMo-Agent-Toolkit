@@ -136,16 +136,76 @@ def test_emit_command_event_swallows_handler_errors():
         )
 
 
-def test_resolve_subcommand_picks_first_non_flag_after_command(monkeypatch):
+def _make_root() -> "click.Group":
+    """Build a minimal Click command tree mirroring the real ``nat`` CLI."""
+    import click
+
+    @click.group()
+    def root():
+        pass
+
+    @root.group()
+    def info():
+        pass
+
+    @info.command(name="list-components")
+    def list_components():
+        pass
+
+    @info.command(name="list-channels")
+    def list_channels():
+        pass
+
+    @root.command()
+    @click.argument("config_file", required=False)
+    def run(config_file):
+        pass
+
+    return root
+
+
+def test_resolve_subcommand_picks_registered_subcommand(monkeypatch):
     monkeypatch.setattr("sys.argv", ["nat", "info", "list-components"])
-    assert telemetry_hook._resolve_subcommand() == "list-components"
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") == "list-components"
 
 
 def test_resolve_subcommand_skips_top_level_flags(monkeypatch):
-    monkeypatch.setattr("sys.argv", ["nat", "--log-level", "DEBUG", "info", "list-components", "--filter", "x"])
-    assert telemetry_hook._resolve_subcommand() == "list-components"
+    monkeypatch.setattr(
+        "sys.argv",
+        ["nat", "--log-level", "DEBUG", "info", "list-components", "--filter", "x"],
+    )
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") == "list-components"
 
 
-def test_resolve_subcommand_returns_none_when_only_top_level(monkeypatch):
+def test_resolve_subcommand_returns_none_when_top_level_is_leaf(monkeypatch):
+    """Top-level commands that aren't groups have no second level."""
     monkeypatch.setattr("sys.argv", ["nat", "run"])
-    assert telemetry_hook._resolve_subcommand() is None
+    assert telemetry_hook._resolve_subcommand(_make_root(), "run") is None
+
+
+def test_resolve_subcommand_rejects_positional_argument(monkeypatch):
+    """A positional argument that isn't a registered subcommand must not leak.
+
+    This is the core privacy guarantee: file paths, workflow names, queries,
+    and any other user-supplied positional text passed to a leaf command
+    must never appear in the telemetry payload.
+    """
+    monkeypatch.setattr("sys.argv", ["nat", "run", "/home/user/my-secret-config.yml"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "run") is None
+
+
+def test_resolve_subcommand_rejects_unknown_token_under_group(monkeypatch):
+    """Even under a known group, only registered subcommand names are returned."""
+    monkeypatch.setattr("sys.argv", ["nat", "info", "my-private-workflow-name"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") is None
+
+
+def test_resolve_subcommand_handles_no_root_command():
+    """Called from non-CLI contexts (root_command is None), returns None."""
+    assert telemetry_hook._resolve_subcommand(None, "anything") is None
+
+
+def test_resolve_subcommand_handles_unknown_top_level(monkeypatch):
+    """Top-level token that isn't actually registered (e.g. 'unknown' fallback)."""
+    monkeypatch.setattr("sys.argv", ["nat", "info", "list-components"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "unknown") is None
