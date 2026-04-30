@@ -413,11 +413,12 @@ The remainder of this guide will demonstrate how to perform a simple analysis of
 Ultimately, we will use the collected telemetry data to identify which LLM we think is the best fit for our workflow.
 
 Particularly, we evaluate the following models:
-- `meta-llama-3.1-8b-instruct`
-- `meta-llama-3.3-70b-instruct`
-- `mistral-large-3-675b-instruct-2512`
-- `mistral-small-4-119b-2603`
-- `nemotron-3-nano-30b-a3b`
+- `meta/llama-3.1-8b-instruct`
+- `meta/llama-3.3-70b-instruct`
+- `mistral/large-3-675b-instruct-2512`
+- `mistral/small-4-119b-2603`
+- `nvidia/nemotron-3-nano-30b-a3b`
+- `nvidia/nemotron-3-super-120b-a12b`
 
 We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_data_all.csv` file to compare the performance of the LLMs.
 
@@ -462,7 +463,7 @@ Below is an example of what the plot might look like:
 
 ![Prompt vs Completion Tokens](../_static/profiler_token_scatter.png)
 
-We see from the image above that the `meta-llama-3.1-8b-instruct` LLM has the highest prompt token usage and takes many more turns than any other model, perhaps indicating that it fails at tool calling.
+We see from the image above that the `llama-3.3-70b-instruct` and `llama-3.1-8b-instruct` LLMs have the highest prompt token usage, perhaps indicating that it fails at tool calling.
 
 ### Analyzing Workflow Runtimes
 Another important metric to analyze is the workflow runtime. We can use the `standardized_data_all.csv` file to plot the workflow runtime for each LLM. This will give us an idea of how long each LLM takes to complete the workflow and compare if some LLMs are more efficient than others.
@@ -578,13 +579,12 @@ import seaborn as sns
 
 CUR_DIR = Path(os.getcwd())
 
-MODELS = (
-    "llama-3.1-8b-instruct",
-    "llama-3.3-70b-instruct",
-    "mistral-large-3-675b-instruct-2512",
-    "mistral-small-4-119b-2603",
-    "nemotron-3-nano-30b-a3b",
-)
+MODELS = ("llama-3.1-8b-instruct",
+          "llama-3.3-70b-instruct",
+          "mistral-large-3-675b-instruct-2512",
+          "mistral-small-4-119b-2603",
+          "nemotron-3-nano-30b-a3b",
+          "nemotron-3-super-120b-a12b")
 
 METRICS_FILE_NAMES = OrderedDict(Accuracy="accuracy_output.json",
                                  Relevance="relevance_output.json",
@@ -594,7 +594,7 @@ METRICS_FILE_NAMES = OrderedDict(Accuracy="accuracy_output.json",
 def gather_model_metrics(model_dir: Path) -> dict:
     metrics = {}
     for metric_name, file_name in METRICS_FILE_NAMES.items():
-        with open(model_dir / file_name, "r", encoding="utf-8") as f:
+        with open(model_dir / file_name, encoding="utf-8") as f:
             json_data = json.load(f)
 
         metrics[metric_name] = json_data["average_score"]
@@ -606,9 +606,12 @@ def gather_metrics() -> dict:
     all_metrics = {metric: {} for metric in METRICS_FILE_NAMES}
     for model_name in MODELS:
         model_dir_path = CUR_DIR / "test_models" / model_name
-        model_metrics = gather_model_metrics(model_dir_path)
-        for metric_name, score in model_metrics.items():
-            all_metrics[metric_name][model_name] = score
+        try:
+            model_metrics = gather_model_metrics(model_dir_path)
+            for metric_name, score in model_metrics.items():
+                all_metrics[metric_name][model_name] = score
+        except Exception as e:
+            print(f"Problem gathering metrics for {model_name}: {e}. Skipping.")
 
     return all_metrics
 
@@ -618,20 +621,22 @@ def plot_metrics(all_metrics: dict):
     df.reset_index(inplace=True)
     df.rename(columns={"index": "model"}, inplace=True)
 
-    plt.figure(figsize=(12, 8))
+    fig, ax = plt.subplots(figsize=(14, 8))
     sns.barplot(data=df.melt(id_vars="model", var_name="metric", value_name="score"),
                 x="model",
                 y="score",
                 hue="metric",
-                errorbar=None)
+                errorbar=None,
+                ax=ax)
 
     plt.xlabel("LLM Model", fontsize=12)
-    plt.ylabel("Average Score", fontsize=12)
+    plt.ylabel("Metric Score", fontsize=12)
     plt.title("Accuracy, Relevance, and Groundedness per Model", fontsize=14)
     plt.xticks(rotation=45)
-    plt.legend(title="Metric")
+    plt.legend(title="Metric", loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
     plt.grid(axis="y", linestyle="--", linewidth=0.5, which="both")
-    plt.tight_layout()
+    fig.tight_layout(rect=(0, 0, 0.84, 1))
+    plt.savefig('profiler_ragas_metrics.png', dpi=300, bbox_inches="tight")
     plt.show()
 
 
