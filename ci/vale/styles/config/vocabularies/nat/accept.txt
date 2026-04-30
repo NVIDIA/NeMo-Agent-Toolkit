@@ -146,6 +146,7 @@ Pareto
 Patronus
 PCIe
 PDF(s?)
+Perplexity
 [Pp]luggable
 [Pp]ostprocess
 [Pp]ostprocessing

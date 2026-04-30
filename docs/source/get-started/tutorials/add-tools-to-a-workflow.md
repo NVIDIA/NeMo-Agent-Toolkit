@@ -109,7 +109,7 @@ Workflow Result:
 ```
 
 ## Alternate Method Using a Web Search Tool
-Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. NeMo Agent Toolkit provides two web search tools: `tavily_internet_search` which utilizes the [Tavily Search API](https://tavily.com/), and `exa_internet_search` which utilizes the [Exa Search API](https://exa.ai/).
+Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. NeMo Agent Toolkit provides web search tools including: `tavily_internet_search` which utilizes the [Tavily Search API](https://tavily.com/), `exa_internet_search` which utilizes the [Exa Search API](https://exa.ai/), and `perplexity_internet_search` which utilizes the [Perplexity Search API](https://docs.perplexity.ai/api-reference/search-post).
 
 ### Using Tavily Search
 
@@ -188,6 +188,48 @@ functions:
     max_query_length: 2000  # queries longer than this are truncated
     highlights: true  # include highlights in results
     max_content_length: 10000  # max chars of text per result; set to None to disable
+```
+
+Then ensure the tool is included in the workflow tool list:
+```yaml
+workflow:
+  _type: react_agent
+  tool_names: [internet_search, current_datetime]
+```
+
+### Using Perplexity Search
+
+The `perplexity_internet_search` tool is also part of the `nvidia-nat[langchain]` package. If you haven't already installed it:
+```bash
+# local package install from source
+uv pip install -e ".[langchain]"
+```
+
+Prior to using the `perplexity_internet_search` tool, create a Perplexity account and obtain an API key from the [API key page](https://www.perplexity.ai/account/api/keys). Once obtained, set the `PERPLEXITY_API_KEY` environment variable to the API key:
+```bash
+export PERPLEXITY_API_KEY=<YOUR_PERPLEXITY_API_KEY>
+```
+
+You can use the `perplexity_internet_search` tool in the same way as the other web search tools by updating the `functions` section of the configuration file:
+```yaml
+functions:
+  internet_search:
+    _type: perplexity_internet_search
+  current_datetime:
+    _type: current_datetime
+```
+
+The `perplexity_internet_search` tool supports additional configuration options:
+```yaml
+functions:
+  internet_search:
+    _type: perplexity_internet_search
+    max_results: 5
+    max_retries: 3
+    max_query_length: 2000  # queries longer than this are truncated
+    search_recency_filter: week  # 'hour', 'day', 'week', 'month', or 'year'
+    country: US  # ISO 3166-1 alpha-2 country code
+    max_tokens_per_page: 4096
 ```
 
 Then ensure the tool is included in the workflow tool list:
