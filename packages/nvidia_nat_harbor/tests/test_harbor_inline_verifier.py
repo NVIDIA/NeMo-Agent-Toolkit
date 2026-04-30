@@ -71,6 +71,7 @@ def test_atif_library_mode_verifier_builds_request_from_env_layers(
         override_env={
             "NAT_HARBOR_ATIF_ARTIFACT_PATH": "atif-output.json",
             "NAT_HARBOR_ATIF_FALLBACK_MODE": "raw_output",
+            "NAT_HARBOR_ATIF_EVALUATOR_TIMEOUT_SEC": "12.5",
         },
         driver=driver,
     )
@@ -84,6 +85,23 @@ def test_atif_library_mode_verifier_builds_request_from_env_layers(
     assert driver.request.evaluator_name == "eval-from-step"
     assert driver.request.fallback_mode == "raw_output"
     assert driver.request.trajectory_path == Path("atif-output.json")
+    assert driver.request.evaluator_timeout_sec == pytest.approx(12.5)
+
+
+def test_atif_library_mode_verifier_can_disable_evaluator_timeout(tmp_path: Path) -> None:
+    driver = StubInlineDriver()
+    verifier = ATIFInlineVerifier(
+        task=_build_task({}),
+        trial_paths=_build_trial_paths(tmp_path),
+        environment=SimpleNamespace(),
+        override_env={"NAT_HARBOR_ATIF_EVALUATOR_TIMEOUT_SEC": "0"},
+        driver=driver,
+    )
+
+    asyncio.run(verifier.verify())
+
+    assert driver.request is not None
+    assert driver.request.evaluator_timeout_sec is None
 
 
 def test_atif_library_mode_verifier_supports_custom_evaluator_ref(tmp_path: Path, ) -> None:

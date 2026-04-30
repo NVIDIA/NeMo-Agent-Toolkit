@@ -168,6 +168,7 @@ Then pass evaluator selection via verifier environment flags, for example:
 --ve NAT_HARBOR_ATIF_EVALUATOR_KIND=trajectory
 --ve NAT_HARBOR_ATIF_CONFIG_FILE=<path-to-eval-config>
 --ve NAT_HARBOR_ATIF_EVALUATOR_NAME=<registered-evaluator-name>
+--ve NAT_HARBOR_ATIF_EVALUATOR_TIMEOUT_SEC=600
 ```
 
 Use `nat_harbor.verifier.bridge_runner` only for script-based compatibility paths.

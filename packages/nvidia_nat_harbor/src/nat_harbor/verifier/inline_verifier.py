@@ -31,6 +31,8 @@ from pydantic import Field
 
 from nat_harbor.verifier.evaluator_adapter import evaluate_artifact
 
+DEFAULT_EVALUATOR_TIMEOUT_SEC = 600.0
+
 
 class InlineVerifierRequest(BaseModel):
     """Request contract for phase-1 inline verifier execution."""
@@ -44,6 +46,7 @@ class InlineVerifierRequest(BaseModel):
     verifier_output_dir: Path
     fallback_mode: str = "fail"
     raw_output_path: Path = Field(default_factory=lambda: Path("/logs/agent/nemo-agent-output.txt"))
+    evaluator_timeout_sec: float | None = DEFAULT_EVALUATOR_TIMEOUT_SEC
 
 
 class InlineVerifierResult(BaseModel):
@@ -131,6 +134,50 @@ class DefaultInlineVerifierDriver:
             details_json_path=details_json_path,
         )
 
+    async def _evaluate_artifact_with_timeout(
+        self,
+        *,
+        request: InlineVerifierRequest,
+        resolved_trajectory_path: Path,
+    ) -> tuple[float, dict[str, Any]]:
+        evaluator_task = evaluate_artifact(
+            artifact_path=resolved_trajectory_path,
+            evaluator_kind=request.evaluator_kind,
+            evaluator_ref=request.evaluator_ref,
+            config_file=request.config_file,
+            evaluator_name=request.evaluator_name,
+        )
+        if request.evaluator_timeout_sec is None:
+            return await evaluator_task
+        return await asyncio.wait_for(evaluator_task, timeout=request.evaluator_timeout_sec)
+
+    def _raw_output_fallback_result(
+        self,
+        *,
+        request: InlineVerifierRequest,
+        details: dict[str, Any],
+        result: str,
+    ) -> InlineVerifierResult:
+        details["result"] = result
+        details.update(self._raw_output_details(request.raw_output_path))
+        reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, 0.0)
+        details_json_path = self._details_path(request.verifier_output_dir)
+        details["inline_metadata"] = self._metadata(
+            evaluator_mode="raw_output_fallback",
+            request=request,
+            reward_json_path=reward_json_path,
+            details_json_path=details_json_path,
+        )
+        details_json_path = self._write_details(request.verifier_output_dir, details)
+        return InlineVerifierResult(
+            reward=0.0,
+            rewards={"reward": 0.0},
+            details=details,
+            reward_json_path=reward_json_path,
+            reward_txt_path=reward_txt_path,
+            details_json_path=details_json_path,
+        )
+
     async def verify(self, request: InlineVerifierRequest) -> InlineVerifierResult:
         """Run evaluator dispatch inline and emit Harbor-compatible reward artifacts."""
         resolved_trajectory_path = self._resolve_trajectory_path(request.trajectory_path, request.verifier_output_dir)
@@ -141,6 +188,7 @@ class DefaultInlineVerifierDriver:
             "evaluator_kind": request.evaluator_kind,
             "evaluator_ref": request.evaluator_ref,
             "fallback_mode": request.fallback_mode,
+            "evaluator_timeout_sec": request.evaluator_timeout_sec,
         }
 
         if request.fallback_mode not in {"fail", "raw_output"}:
@@ -149,60 +197,42 @@ class DefaultInlineVerifierDriver:
 
         if not resolved_trajectory_path.exists():
             if request.fallback_mode == "raw_output":
-                details["result"] = "raw_fallback_missing_artifact"
-                details.update(self._raw_output_details(request.raw_output_path))
-                reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, 0.0)
-                details_json_path = self._details_path(request.verifier_output_dir)
-                details["inline_metadata"] = self._metadata(
-                    evaluator_mode="raw_output_fallback",
+                return self._raw_output_fallback_result(
                     request=request,
-                    reward_json_path=reward_json_path,
-                    details_json_path=details_json_path,
-                )
-                details_json_path = self._write_details(request.verifier_output_dir, details)
-                return InlineVerifierResult(
-                    reward=0.0,
-                    rewards={"reward": 0.0},
                     details=details,
-                    reward_json_path=reward_json_path,
-                    reward_txt_path=reward_txt_path,
-                    details_json_path=details_json_path,
+                    result="raw_fallback_missing_artifact",
                 )
             details["result"] = "missing_artifact_fail"
             self._write_details(request.verifier_output_dir, details)
             raise InlineVerifierError("ATIF artifact file is missing for inline verifier execution.")
 
         try:
-            reward, evaluator_details = await evaluate_artifact(
-                artifact_path=resolved_trajectory_path,
-                evaluator_kind=request.evaluator_kind,
-                evaluator_ref=request.evaluator_ref,
-                config_file=request.config_file,
-                evaluator_name=request.evaluator_name,
+            reward, evaluator_details = await self._evaluate_artifact_with_timeout(
+                request=request,
+                resolved_trajectory_path=resolved_trajectory_path,
             )
+        except TimeoutError as exc:
+            details["error"] = f"Inline verifier evaluator timed out after {request.evaluator_timeout_sec} seconds."
+            details["error_type"] = type(exc).__name__
+            details["traceback"] = traceback.format_exc()
+            if request.fallback_mode == "raw_output":
+                return self._raw_output_fallback_result(
+                    request=request,
+                    details=details,
+                    result="raw_fallback_evaluator_timeout",
+                )
+            details["result"] = "evaluator_timeout_fail"
+            self._write_details(request.verifier_output_dir, details)
+            raise InlineVerifierError("Inline verifier evaluator timed out.") from exc
         except Exception as exc:
             details["error"] = str(exc)
             details["error_type"] = type(exc).__name__
             details["traceback"] = traceback.format_exc()
             if request.fallback_mode == "raw_output":
-                details["result"] = "raw_fallback_evaluator_error"
-                details.update(self._raw_output_details(request.raw_output_path))
-                reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, 0.0)
-                details_json_path = self._details_path(request.verifier_output_dir)
-                details["inline_metadata"] = self._metadata(
-                    evaluator_mode="raw_output_fallback",
+                return self._raw_output_fallback_result(
                     request=request,
-                    reward_json_path=reward_json_path,
-                    details_json_path=details_json_path,
-                )
-                details_json_path = self._write_details(request.verifier_output_dir, details)
-                return InlineVerifierResult(
-                    reward=0.0,
-                    rewards={"reward": 0.0},
                     details=details,
-                    reward_json_path=reward_json_path,
-                    reward_txt_path=reward_txt_path,
-                    details_json_path=details_json_path,
+                    result="raw_fallback_evaluator_error",
                 )
             details["result"] = "evaluator_error_fail"
             self._write_details(request.verifier_output_dir, details)
@@ -271,6 +301,17 @@ class ATIFInlineVerifier:
             return None
         return value
 
+    @staticmethod
+    def _evaluator_timeout_sec(value: str | None) -> float | None:
+        if value is None:
+            return DEFAULT_EVALUATOR_TIMEOUT_SEC
+        if value == "":
+            return None
+        timeout_sec = float(value)
+        if timeout_sec <= 0:
+            return None
+        return timeout_sec
+
     async def verify(self) -> VerifierResult:
         runtime_env = self._resolve_runtime_env()
         request = InlineVerifierRequest(
@@ -283,6 +324,8 @@ class ATIFInlineVerifier:
             fallback_mode=runtime_env.get("NAT_HARBOR_ATIF_FALLBACK_MODE", "fail"),
             raw_output_path=Path(runtime_env.get("NAT_HARBOR_ATIF_RAW_OUTPUT_PATH",
                                                  "/logs/agent/nemo-agent-output.txt")),
+            evaluator_timeout_sec=self._evaluator_timeout_sec(
+                runtime_env.get("NAT_HARBOR_ATIF_EVALUATOR_TIMEOUT_SEC")),
         )
         result = await self._driver.verify(request)
         if self._logger:

@@ -158,3 +158,74 @@ def test_inline_verifier_raw_output_fallback_on_evaluator_error(
     assert details["result"] == "raw_fallback_evaluator_error"
     assert details["raw_output_exists"] is True
     assert details["inline_metadata"]["evaluator_mode"] == "raw_output_fallback"
+
+
+def test_inline_verifier_evaluator_timeout_fail_raises(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifact_path = tmp_path / "trajectory.json"
+    verifier_dir = tmp_path / "verifier"
+    _write_minimal_atif(artifact_path)
+
+    async def _slow_eval(**kwargs):
+        del kwargs
+        await asyncio.sleep(1.0)
+        return 1.0, {"evaluator_mode": "builtin"}
+
+    monkeypatch.setattr("nat_harbor.verifier.inline_verifier.evaluate_artifact", _slow_eval)
+    request = InlineVerifierRequest(
+        trajectory_path=artifact_path,
+        evaluator_kind="trajectory",
+        evaluator_ref=None,
+        config_file=str(tmp_path / "config.yml"),
+        evaluator_name="trajectory",
+        verifier_output_dir=verifier_dir,
+        evaluator_timeout_sec=0.01,
+    )
+
+    with pytest.raises(InlineVerifierError, match="timed out"):
+        asyncio.run(DefaultInlineVerifierDriver().verify(request))
+
+    details = json.loads((verifier_dir / "details.json").read_text(encoding="utf-8"))
+    assert details["result"] == "evaluator_timeout_fail"
+    assert details["error_type"] == "TimeoutError"
+    assert details["evaluator_timeout_sec"] == pytest.approx(0.01)
+
+
+def test_inline_verifier_evaluator_timeout_raw_output_fallback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifact_path = tmp_path / "trajectory.json"
+    verifier_dir = tmp_path / "verifier"
+    raw_output_path = tmp_path / "nemo-agent-output.txt"
+    _write_minimal_atif(artifact_path)
+    raw_output_path.write_text("agent output", encoding="utf-8")
+
+    async def _slow_eval(**kwargs):
+        del kwargs
+        await asyncio.sleep(1.0)
+        return 1.0, {"evaluator_mode": "builtin"}
+
+    monkeypatch.setattr("nat_harbor.verifier.inline_verifier.evaluate_artifact", _slow_eval)
+    request = InlineVerifierRequest(
+        trajectory_path=artifact_path,
+        evaluator_kind="trajectory",
+        evaluator_ref=None,
+        config_file=str(tmp_path / "config.yml"),
+        evaluator_name="trajectory",
+        verifier_output_dir=verifier_dir,
+        fallback_mode="raw_output",
+        raw_output_path=raw_output_path,
+        evaluator_timeout_sec=0.01,
+    )
+
+    result = asyncio.run(DefaultInlineVerifierDriver().verify(request))
+
+    assert result.reward == pytest.approx(0.0)
+    details = json.loads(result.details_json_path.read_text(encoding="utf-8"))
+    assert details["result"] == "raw_fallback_evaluator_timeout"
+    assert details["error_type"] == "TimeoutError"
+    assert details["raw_output_exists"] is True
+    assert details["inline_metadata"]["evaluator_mode"] == "raw_output_fallback"

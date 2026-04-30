@@ -98,7 +98,7 @@ rm -rf \
 | `--ak local_install_policy=skip` | Skips per-run package installs when the local environment is already prepared. |
 | `--ak library_mode=true` | Runs the workflow in the active Harbor Python process. |
 | `--ak python_bin=...` | Points shell-mode agent execution at the repo virtual environment Python. |
-| `--ve NAT_HARBOR_ATIF_*` | Passes evaluator selection and config to the inline verifier. |
+| `--ve NAT_HARBOR_ATIF_*` | Passes evaluator selection, config, and optional timeout settings to the inline verifier. |
 | `--ve NAT_HARBOR_PYTHON_BIN=...` | Points shell-mode verifier scripts at the repo virtual environment Python. |
 | `-l 1` | Runs one generated Harbor task for a quick smoke check. |
 
