@@ -18,6 +18,11 @@ The base :class:`TelemetryEvent` enforces that every concrete subclass declares
 an ``_event_name`` ClassVar (validated at subclass-creation time so mistakes
 fail before the first instance is built). All event payloads use camelCase
 wire aliases while keeping snake_case Python attribute names.
+
+The wire shape mirrors the NeMo Usage Telemetry project schema (clientId
+``184482118588404``). Fields use sentinel values for unknowns (``-1`` for ints,
+``"undefined"`` for strings) rather than nullable types, matching the schema's
+``additionalProperties: false`` + all-required-fields convention.
 """
 from __future__ import annotations
 
@@ -28,8 +33,18 @@ from typing import ClassVar
 from pydantic import BaseModel
 from pydantic import Field
 
-from nat.utils.telemetry.config import DEPLOYMENT_TYPE
-from nat.utils.telemetry.config import DeploymentTypeEnum
+
+class NemoSourceEnum(StrEnum):
+    """The NeMo product that emitted the event. Discriminator across NeMo products
+    sharing the NeMo Usage Telemetry schema."""
+
+    INFERENCE = "inference"
+    AUDITOR = "auditor"
+    DATADESIGNER = "datadesigner"
+    EVALUATOR = "evaluator"
+    GUARDRAILS = "guardrails"
+    AGENT_TOOLKIT = "agent_toolkit"
+    UNDEFINED = "undefined"
 
 
 class TaskStatusEnum(StrEnum):
@@ -47,7 +62,7 @@ class TelemetryEvent(BaseModel):
     """
 
     _event_name: ClassVar[str]
-    _schema_version: ClassVar[str] = "1.0"
+    _schema_version: ClassVar[str] = "1.4"
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
@@ -67,24 +82,25 @@ class CliCommandEvent(TelemetryEvent):
 
     _event_name: ClassVar[str] = "nat_cli_command"
 
+    nemo_source: NemoSourceEnum = Field(
+        default=NemoSourceEnum.AGENT_TOOLKIT,
+        alias="nemoSource",
+        description="The NeMo product that created the event. Always 'agent_toolkit' for this event type.",
+    )
     command: str = Field(
         ...,
         description="Top-level CLI command name (e.g. 'run', 'serve', 'evaluate').",
     )
-    subcommand: str | None = Field(
-        default=None,
+    subcommand: str = Field(
+        default="undefined",
         description=("Second-level command name when applicable, "
-                     "such as 'list-components' for 'nat info list-components'."),
+                     "such as 'list-components' for 'nat info list-components'. "
+                     "'undefined' when no subcommand was invoked."),
     )
     task_status: TaskStatusEnum = Field(
         ...,
         alias="taskStatus",
-        description="Outcome of the invocation.",
-    )
-    deployment_type: DeploymentTypeEnum = Field(
-        default=DEPLOYMENT_TYPE,
-        alias="deploymentType",
-        description="Deployment context the event came from.",
+        description="Outcome of the invocation: 'success', 'failure', or 'interrupted' (Ctrl-C / KeyboardInterrupt).",
     )
     duration_ms: int = Field(
         default=-1,
@@ -97,10 +113,10 @@ class CliCommandEvent(TelemetryEvent):
         alias="exitCode",
         description="Process exit code (0 on success, 130 on interrupt, non-zero on failure). -1 if unknown.",
     )
-    error_class: str | None = Field(
-        default=None,
+    error_class: str = Field(
+        default="undefined",
         alias="errorClass",
-        description="Exception class name on failure (no message). Null on success or interrupt.",
+        description="Exception class name on failure (no message). 'undefined' on success or interrupt.",
     )
     python_version: str = Field(
         ...,

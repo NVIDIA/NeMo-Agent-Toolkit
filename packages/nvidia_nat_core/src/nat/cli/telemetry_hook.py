@@ -105,13 +105,15 @@ def emit_command_event(
         else:
             duration_ms = -1
 
+        # The schema requires non-nullable strings; fall back to "undefined"
+        # (the schema-wide sentinel) when we don't have a concrete value.
         event = CliCommandEvent(
             command=command,
-            subcommand=subcommand,
+            subcommand=subcommand or "undefined",
             task_status=task_status,
             duration_ms=duration_ms,
             exit_code=exit_code,
-            error_class=error_class,
+            error_class=error_class or "undefined",
             python_version=platform.python_version(),
         )
 

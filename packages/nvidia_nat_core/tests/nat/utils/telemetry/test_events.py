@@ -19,6 +19,7 @@ from typing import ClassVar
 import pytest
 
 from nat.utils.telemetry.events import CliCommandEvent
+from nat.utils.telemetry.events import NemoSourceEnum
 from nat.utils.telemetry.events import TaskStatusEnum
 from nat.utils.telemetry.events import TelemetryEvent
 
@@ -36,29 +37,61 @@ def test_telemetry_event_subclass_with_event_name_succeeds():
         _event_name: ClassVar[str] = "good_event"
 
     assert GoodEvent._event_name == "good_event"
-    assert GoodEvent._schema_version == "1.0"
+    assert GoodEvent._schema_version == "1.4"
 
 
 def test_cli_command_event_serializes_with_camel_case_aliases():
     event = CliCommandEvent(
         command="run",
-        subcommand=None,
         task_status=TaskStatusEnum.SUCCESS,
         duration_ms=1234,
         exit_code=0,
-        error_class=None,
         python_version="3.11.7",
     )
     dumped = event.model_dump(by_alias=True)
 
+    assert dumped["nemoSource"] == "agent_toolkit"
     assert dumped["command"] == "run"
+    assert dumped["subcommand"] == "undefined"
     assert dumped["taskStatus"] == "success"
-    assert dumped["deploymentType"] in ("library", "api", "undefined")
+    assert "deploymentType" not in dumped
     assert dumped["durationMs"] == 1234
     assert dumped["exitCode"] == 0
-    assert dumped["errorClass"] is None
+    assert dumped["errorClass"] == "undefined"
     assert dumped["pythonVersion"] == "3.11.7"
     assert event._event_name == "nat_cli_command"
+
+
+def test_cli_command_event_defaults_match_schema_sentinels():
+    """Per D-19, all fields are required strings/ints with sentinel values for
+    unknowns. None / null should never appear on the wire."""
+    event = CliCommandEvent(
+        command="info",
+        task_status=TaskStatusEnum.SUCCESS,
+        python_version="3.11.7",
+    )
+    dumped = event.model_dump(by_alias=True)
+
+    # No null/None values anywhere in the payload.
+    for key, value in dumped.items():
+        assert value is not None, f"{key} must not be None"
+
+    assert dumped["subcommand"] == "undefined"
+    assert dumped["errorClass"] == "undefined"
+    assert dumped["durationMs"] == -1
+    assert dumped["exitCode"] == -1
+
+
+def test_cli_command_event_nemo_source_can_be_overridden():
+    """A test could in principle emit on behalf of another product. Default is
+    AGENT_TOOLKIT, but the field accepts the full enum."""
+    event = CliCommandEvent(
+        command="run",
+        task_status=TaskStatusEnum.SUCCESS,
+        python_version="3.11.7",
+        nemo_source=NemoSourceEnum.UNDEFINED,
+    )
+    assert event.model_dump(by_alias=True)["nemoSource"] == "undefined"
 
 
 def test_cli_command_event_supports_failure_with_error_class():
@@ -72,6 +105,17 @@ def test_cli_command_event_supports_failure_with_error_class():
     dumped = event.model_dump(by_alias=True)
     assert dumped["taskStatus"] == "failure"
     assert dumped["errorClass"] == "ValueError"
+
+
+def test_cli_command_event_supports_interrupted_status():
+    """`interrupted` is the third value in TaskStatusEnum, added for KeyboardInterrupt."""
+    event = CliCommandEvent(
+        command="serve",
+        task_status=TaskStatusEnum.INTERRUPTED,
+        exit_code=130,
+        python_version="3.11.7",
+    )
+    assert event.model_dump(by_alias=True)["taskStatus"] == "interrupted"
 
 
 def test_cli_command_event_rejects_negative_duration_below_minus_one():

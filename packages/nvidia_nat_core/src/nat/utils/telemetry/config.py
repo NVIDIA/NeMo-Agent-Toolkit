@@ -27,9 +27,6 @@ Environment variables
   validated, which keeps the path exercised during local development. The
   literal value ``stdout`` is treated as a debug sink that writes JSON-line
   payloads to stderr instead of issuing HTTP POSTs.
-- ``NAT_DEPLOYMENT_TYPE`` (default: ``library``): tagged into events.
-  Validated against :class:`DeploymentTypeEnum` at import; an invalid value
-  raises ``ValueError``.
 - ``NAT_SESSION_PREFIX`` (default: unset): optional prefix prepended to
   every session ID. Useful for tagging dev/CI runs.
 - ``NAT_TELEMETRY_DRY_RUN`` (default: ``false``): when truthy, payloads are
@@ -40,13 +37,16 @@ from __future__ import annotations
 
 import os
 import platform
-from enum import StrEnum
 
 NAT_TELEMETRY_VERSION = "nat-telemetry/1.0"
 """Identifier embedded in every event envelope as ``eventSysVer``."""
 
-CLIENT_ID = "nvidia-nat-cli"
-"""Stable identifier for the NAT CLI client. Sent as ``clientId``."""
+CLIENT_ID = "184482118588404"
+"""Stable identifier for the NAT CLI client. Sent as ``clientId``.
+
+Shared with the NeMo Usage Telemetry project — NAT events are tagged by
+``nemoSource = "agent_toolkit"`` to distinguish them from sibling NeMo
+products' events at query time."""
 
 CPU_ARCHITECTURE = platform.uname().machine
 """Captured once at import; reported as ``cpuArchitecture`` in payloads."""
@@ -83,17 +83,3 @@ NAT_TELEMETRY_DRY_RUN: bool = _is_truthy(os.getenv("NAT_TELEMETRY_DRY_RUN"), def
 """When true, payloads are logged but no HTTP request is made."""
 
 SESSION_PREFIX: str | None = os.getenv("NAT_SESSION_PREFIX") or None
-
-
-class DeploymentTypeEnum(StrEnum):
-    LIBRARY = "library"
-    API = "api"
-    UNDEFINED = "undefined"
-
-
-_deployment_type_raw = os.getenv("NAT_DEPLOYMENT_TYPE", DeploymentTypeEnum.LIBRARY.value).strip().lower()
-try:
-    DEPLOYMENT_TYPE: DeploymentTypeEnum = DeploymentTypeEnum(_deployment_type_raw)
-except ValueError:
-    _valid = [e.value for e in DeploymentTypeEnum]
-    raise ValueError(f"Invalid NAT_DEPLOYMENT_TYPE: {_deployment_type_raw!r}. Must be one of: {_valid}") from None

@@ -70,8 +70,10 @@ def test_build_payload_carries_session_and_version():
     payload = build_payload([_sample_queued_event()], source_client_version="9.9.9", session_id="my-session")
     assert payload["sessionId"] == "my-session"
     assert payload["clientVer"] == "9.9.9"
-    assert payload["clientId"] == "nvidia-nat-cli"
-    assert payload["eventSchemaVer"] == "1.0"
+    # clientId is shared with the NeMo Usage Telemetry project (D-18); NAT events
+    # are distinguished by nemoSource = "agent_toolkit" rather than a separate clientId.
+    assert payload["clientId"] == "184482118588404"
+    assert payload["eventSchemaVer"] == "1.4"
 
 
 def test_build_payload_contains_one_event_per_queued():

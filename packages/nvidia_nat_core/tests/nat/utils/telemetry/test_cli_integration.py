@@ -53,7 +53,8 @@ def test_emit_command_event_constructs_expected_event():
     assert event.task_status == TaskStatusEnum.SUCCESS
     assert event.exit_code == 0
     assert event.duration_ms == 2500  # (2.5 - 0.0) * 1000
-    assert event.error_class is None
+    # Per D-19 the schema requires strings; emit_command_event coerces None -> "undefined".
+    assert event.error_class == "undefined"
 
 
 def test_emit_command_event_skipped_when_telemetry_disabled():

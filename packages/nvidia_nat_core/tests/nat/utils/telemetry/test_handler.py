@@ -217,7 +217,7 @@ def test_send_events_writes_to_stderr_when_endpoint_is_stdout(capsys):
         asyncio.run(h._send_events([queued]))
     captured = capsys.readouterr()
     assert captured.err.strip().startswith("{")
-    assert '"clientId": "nvidia-nat-cli"' in captured.err
+    assert '"clientId": "184482118588404"' in captured.err
 
 
 def test_send_events_dry_run_skips_post():
