@@ -99,9 +99,12 @@ class DefaultInlineVerifierDriver:
         reward_txt_path.write_text(f"{float(reward)}\n", encoding="utf-8")
         return reward_json_path, reward_txt_path
 
+    def _details_path(self, output_dir: Path) -> Path:
+        return output_dir / "details.json"
+
     def _write_details(self, output_dir: Path, details: dict[str, Any]) -> Path:
         output_dir.mkdir(parents=True, exist_ok=True)
-        details_path = output_dir / "details.json"
+        details_path = self._details_path(output_dir)
         details_path.write_text(json.dumps(details, indent=2, default=str), encoding="utf-8")
         return details_path
 
@@ -149,7 +152,7 @@ class DefaultInlineVerifierDriver:
                 details["result"] = "raw_fallback_missing_artifact"
                 details.update(self._raw_output_details(request.raw_output_path))
                 reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, 0.0)
-                details_json_path = self._write_details(request.verifier_output_dir, details)
+                details_json_path = self._details_path(request.verifier_output_dir)
                 details["inline_metadata"] = self._metadata(
                     evaluator_mode="raw_output_fallback",
                     request=request,
@@ -185,7 +188,7 @@ class DefaultInlineVerifierDriver:
                 details["result"] = "raw_fallback_evaluator_error"
                 details.update(self._raw_output_details(request.raw_output_path))
                 reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, 0.0)
-                details_json_path = self._write_details(request.verifier_output_dir, details)
+                details_json_path = self._details_path(request.verifier_output_dir)
                 details["inline_metadata"] = self._metadata(
                     evaluator_mode="raw_output_fallback",
                     request=request,
@@ -209,7 +212,7 @@ class DefaultInlineVerifierDriver:
         details["reward"] = float(reward)
         details["evaluator_details"] = evaluator_details
         reward_json_path, reward_txt_path = self._write_reward(request.verifier_output_dir, reward)
-        details_json_path = self._write_details(request.verifier_output_dir, details)
+        details_json_path = self._details_path(request.verifier_output_dir)
         details["inline_metadata"] = self._metadata(
             evaluator_mode=str(evaluator_details.get("evaluator_mode", "unknown")),
             request=request,

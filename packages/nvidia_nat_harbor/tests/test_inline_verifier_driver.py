@@ -89,6 +89,44 @@ def test_inline_verifier_missing_artifact_fail_raises(tmp_path: Path) -> None:
     assert (request.verifier_output_dir / "reward.json").exists() is False
 
 
+def test_inline_verifier_missing_artifact_raw_fallback_writes_details_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    verifier_dir = tmp_path / "verifier"
+    raw_output_path = tmp_path / "nemo-agent-output.txt"
+    raw_output_path.write_text("agent output", encoding="utf-8")
+    driver = DefaultInlineVerifierDriver()
+    write_calls = 0
+    write_details = driver._write_details
+
+    def _write_details_once(output_dir: Path, details: dict[str, object]) -> Path:
+        nonlocal write_calls
+        write_calls += 1
+        return write_details(output_dir, details)
+
+    monkeypatch.setattr(driver, "_write_details", _write_details_once)
+    request = InlineVerifierRequest(
+        trajectory_path=tmp_path / "missing.json",
+        evaluator_kind="trajectory",
+        evaluator_ref=None,
+        config_file=str(tmp_path / "config.yml"),
+        evaluator_name="trajectory",
+        verifier_output_dir=verifier_dir,
+        fallback_mode="raw_output",
+        raw_output_path=raw_output_path,
+    )
+
+    result = asyncio.run(driver.verify(request))
+
+    assert write_calls == 1
+    assert result.reward == pytest.approx(0.0)
+    details = json.loads(result.details_json_path.read_text(encoding="utf-8"))
+    assert details["result"] == "raw_fallback_missing_artifact"
+    assert details["raw_output_exists"] is True
+    assert details["inline_metadata"]["evaluator_mode"] == "raw_output_fallback"
+
+
 def test_inline_verifier_raw_output_fallback_on_evaluator_error(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
