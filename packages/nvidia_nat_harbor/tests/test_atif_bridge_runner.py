@@ -17,13 +17,21 @@
 from __future__ import annotations
 
 import json
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pytest
 
+from nat.data_models.config import Config
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
+from nat.plugins.langchain.eval.trajectory_evaluator import TrajectoryEvaluator
+from nat.plugins.langchain.eval.tunable_rag_evaluator import TunableRagEvaluator
+from nat_harbor.agents.installed.inline_runner import _write_minimal_trajectory
 from nat_harbor.verifier import bridge_runner
 from nat_harbor.verifier.evaluator_adapter import BridgeEvaluatorError
 from nat_harbor.verifier.evaluator_adapter import evaluate_artifact_sync
+from nat_harbor.verifier.evaluator_adapter import load_atif_samples
 
 
 def _write_minimal_atif(path: Path) -> None:
@@ -55,6 +63,77 @@ def test_artifact_found_builtin_evaluator_success(monkeypatch: pytest.MonkeyPatc
     )
     assert reward == pytest.approx(0.8)
     assert details["lane"] == "trajectory"
+
+
+def test_load_atif_samples_reads_minimal_inline_runner_trajectory(tmp_path: Path) -> None:
+    artifact_path = tmp_path / "trajectory.json"
+    _write_minimal_trajectory(artifact_path)
+
+    samples = load_atif_samples(artifact_path)
+
+    assert len(samples) == 1
+    assert samples[0].item_id == "item-1"
+    assert samples[0].trajectory.agent.name == "nemo-agent"
+    assert samples[0].trajectory.steps == []
+
+
+def test_builtin_evaluator_loads_config_and_normalizes_eval_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    artifact_path = tmp_path / "trajectory.json"
+    config_path = tmp_path / "config.yml"
+    _write_minimal_atif(artifact_path)
+    config_path.write_text("{}\n", encoding="utf-8")
+
+    class FakeEvaluator:
+        async def evaluate_atif_fn(self, atif_samples):
+            assert len(atif_samples) == 1
+            return EvalOutput(
+                average_score=None,
+                eval_output_items=[
+                    EvalOutputItem(id="item-1", score=1.0, reasoning={"score": 1.0}),
+                    EvalOutputItem(id="item-2", score=0.5, reasoning={"score": 0.5}),
+                ],
+            )
+
+    class FakeWorkflowEvalBuilder:
+        def __init__(self, config: Config) -> None:
+            self.config = config
+
+        def get_evaluator(self, evaluator_name: str) -> FakeEvaluator:
+            assert evaluator_name == "trajectory_eval"
+            assert isinstance(self.config, Config)
+            return FakeEvaluator()
+
+    @asynccontextmanager
+    async def _fake_from_config(config: Config):
+        yield FakeWorkflowEvalBuilder(config)
+
+    from nat.plugins.eval.runtime.builder import WorkflowEvalBuilder
+
+    monkeypatch.setattr(WorkflowEvalBuilder, "from_config", _fake_from_config)
+
+    reward, details = evaluate_artifact_sync(
+        artifact_path=artifact_path,
+        evaluator_kind="trajectory",
+        config_file=str(config_path),
+        evaluator_name="trajectory_eval",
+    )
+
+    assert reward == pytest.approx(0.75)
+    assert details["evaluator_name"] == "trajectory_eval"
+    assert details["evaluator_mode"] == "builtin"
+    assert details["evaluator_kind"] == "trajectory"
+    assert details["eval_output"]["eval_output_items"][0]["id"] == "item-1"
+
+
+def test_reference_evaluator_classes_expose_atif_lane() -> None:
+    trajectory_evaluator = object.__new__(TrajectoryEvaluator)
+    tunable_rag_evaluator = object.__new__(TunableRagEvaluator)
+
+    assert callable(getattr(trajectory_evaluator, "evaluate_atif_fn", None))
+    assert callable(getattr(tunable_rag_evaluator, "evaluate_atif_fn", None))
 
 
 def test_custom_evaluator_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
