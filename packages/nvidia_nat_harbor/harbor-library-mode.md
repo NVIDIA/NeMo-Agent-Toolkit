@@ -59,14 +59,14 @@ Agent, OpenHands-style harnesses, or any other agent harness that can read
 Harbor task directories and write Harbor trial artifacts.
 
 ```mermaid
-flowchart LR
+flowchart TD
   A["Benchmark data"] --> B["Harbor task adapter"]
   B --> C["Harbor task directories"]
   C --> D["Local library-mode run"]
   D --> E["Agent artifacts and trajectories"]
   E --> F["Verifier"]
   F --> G["Reward and details"]
-  G --> H["Agent / verifier / adapter changes"]
+  G --> H["Agent, verifier, or adapter changes"]
   H --> D
   C --> I["Scaled isolated Harbor run"]
 ```
