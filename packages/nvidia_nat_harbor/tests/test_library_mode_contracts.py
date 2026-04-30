@@ -29,10 +29,11 @@ from nat_harbor.verifier.inline_verifier import build_inline_verifier_metadata
 
 def test_nemo_inline_runner_contracts_roundtrip(tmp_path: Path) -> None:
     artifact_dir = tmp_path / "agent"
+    config_path = tmp_path / "config.yml"
     result_path = artifact_dir / "trajectory.json"
     request = NemoInlineRunnerInput(
         instruction="hello",
-        config_file=str(tmp_path / "config.yml"),
+        config_file=config_path,
         artifact_dir=artifact_dir,
         env={"NVIDIA_API_KEY": "stub"},
     )
@@ -42,6 +43,7 @@ def test_nemo_inline_runner_contracts_roundtrip(tmp_path: Path) -> None:
         steps_count=3,
         runner_details={"lane": "inline"},
     )
+    assert request.config_file == config_path
     assert request.artifact_dir == artifact_dir
     assert result.trajectory_path == result_path
     assert result.steps_count == 3

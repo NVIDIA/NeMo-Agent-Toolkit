@@ -197,18 +197,18 @@ class NemoAgent(HarborNemoAgent):
 
         return run_command.replace(wrapper_invocation, f"{python_bin} {self._CONTAINER_WRAPPER_PATH}", 1)
 
-    def _resolve_inline_config_path(self) -> str:
+    def _resolve_inline_config_path(self) -> Path:
         """Resolve or generate the config path used by inline workflow execution."""
         config_file = self._resolved_flags.get("config_file")
         if config_file:
-            return str(config_file)
+            return Path(config_file)
 
         model_name = self._resolve_model_name()
         config_yaml = self._generate_config_yaml(model_name, "")
         config_path = self.logs_dir / "nemo-agent-inline-config.yml"
         config_path.parent.mkdir(parents=True, exist_ok=True)
         config_path.write_text(config_yaml, encoding="utf-8")
-        return str(config_path)
+        return config_path
 
     async def _sync_inline_outputs_to_environment(self,
                                                   environment: BaseEnvironment,

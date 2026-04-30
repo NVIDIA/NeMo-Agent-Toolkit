@@ -29,7 +29,7 @@ class NemoInlineRunnerInput(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     instruction: str
-    config_file: str
+    config_file: Path
     artifact_dir: Path
     env: dict[str, str]
 
