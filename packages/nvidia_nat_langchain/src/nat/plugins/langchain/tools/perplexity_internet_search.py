@@ -63,6 +63,12 @@ class PerplexityInternetSearchToolConfig(FunctionBaseConfig, name="perplexity_in
 
 
 def _get_integration_header() -> str:
+    """Build the ``X-Pplx-Integration`` header value for outbound Perplexity requests.
+
+    Returns:
+        str: A ``"nemo-agent-toolkit/<version>"`` slug. Falls back to ``"unknown"``
+        when the ``nvidia-nat-langchain`` package metadata cannot be resolved.
+    """
     from importlib import metadata
 
     try:
@@ -74,6 +80,23 @@ def _get_integration_header() -> str:
 
 @register_function(config_type=PerplexityInternetSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def perplexity_internet_search(tool_config: PerplexityInternetSearchToolConfig, builder: Builder):
+    """Register the Perplexity internet search tool with the NAT runtime.
+
+    Resolves the Perplexity API key from the tool config or the
+    ``PERPLEXITY_API_KEY`` environment variable, then yields a ``FunctionInfo``
+    wrapping an async coroutine that calls Perplexity's Search API
+    (``POST https://api.perplexity.ai/search``) with retry/backoff and formats
+    results as ``<Document>`` blocks suitable for LLM consumption.
+
+    Args:
+        tool_config: ``PerplexityInternetSearchToolConfig`` carrying API key,
+            result/retry caps, recency/country filters, and per-page token cap.
+        builder: NAT ``Builder`` instance (unused by this tool but required by
+            the ``@register_function`` contract).
+
+    Yields:
+        FunctionInfo: The registered async search function.
+    """
     import os
 
     api_key = get_secret_value(tool_config.api_key) if tool_config.api_key else ""
