@@ -39,7 +39,6 @@ from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import LegacyEvaluator
 from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
-from nat.plugins.eval.utils.output_uploader import OutputUploader
 
 FULL_EVAL_INSTALL_HINT = ("Full workflow evaluation requires optional dependencies that are not installed. "
                           "Install with: pip install \"nvidia-nat[eval]\" "
@@ -48,6 +47,11 @@ FULL_EVAL_INSTALL_HINT = ("Full workflow evaluation requires optional dependenci
 
 def _raise_full_eval_dependency_error(error: Exception):
     raise ModuleNotFoundError(FULL_EVAL_INSTALL_HINT) from error
+
+
+def _get_output_uploader_cls():
+    from nat.plugins.eval.utils.output_uploader import OutputUploader
+    return OutputUploader
 
 
 try:
@@ -895,7 +899,8 @@ class EvaluationRun:
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
-            output_uploader = OutputUploader(self.eval_config.general.output, job_id=job_id)
+            output_uploader_cls = _get_output_uploader_cls()
+            output_uploader = output_uploader_cls(self.eval_config.general.output, job_id=job_id)
             output_uploader.run_custom_scripts()
             await output_uploader.upload_directory()
 
