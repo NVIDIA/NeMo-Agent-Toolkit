@@ -650,7 +650,7 @@ The Ragas metrics confirm that the `llama-3*` models are weak candidates for thi
 
 
 ### Conclusion
-In this guide, we walked through an end-to-end example of how to profile a NeMo Agent Toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
+In this guide, we walked through an end-to-end example of how to profile a NeMo Agent Toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the efficiency of the workflow. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
 
 If you'd like to optimize further, we recommend exploring the `workflow_profiling_report.txt` file that was also created by the profiler. That has detailed information about workflow bottlenecks, and latency at various `concurrencies`, which can be helpful metrics when identifying performance issues in your workflow.
 
