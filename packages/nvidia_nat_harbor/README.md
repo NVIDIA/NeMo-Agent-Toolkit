@@ -139,7 +139,7 @@ Enable it with:
 --ak library_mode=true
 ```
 
-Inline verifier execution is configured through Harbor's verifier import hook:
+Inline verifier execution is configured through the Harbor verifier import hook:
 
 ```bash
 --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier
@@ -176,9 +176,9 @@ Use `nat_harbor.verifier.bridge_runner` only for script-based compatibility path
 Inline library-mode execution temporarily overlays per-trial environment
 variables while invoking the NeMo Agent Toolkit workflow in-process. Because `os.environ` is
 process-global, `DefaultNemoInlineRunner` serializes that environment overlay
-with an async lock. This keeps concurrent inline trials from reading another
-trial's verifier or agent environment settings while still preserving Harbor's
-normal artifact layout.
+with an async lock. This keeps concurrent inline trials from reading verifier
+or agent environment settings from another trial while still preserving the
+normal Harbor artifact layout.
 
 ### Trial runner flow
 

@@ -59,7 +59,7 @@ def test_artifact_found_builtin_evaluator_success(monkeypatch: pytest.MonkeyPatc
     reward, details = evaluate_artifact_sync(
         artifact_path=artifact_path,
         evaluator_kind="trajectory",
-        config_file="/tmp/fake-config.yml",
+        config_file=str(tmp_path / "fake-config.yml"),
     )
     assert reward == pytest.approx(0.8)
     assert details["lane"] == "trajectory"
@@ -87,6 +87,7 @@ def test_builtin_evaluator_loads_config_and_normalizes_eval_output(
     config_path.write_text("{}\n", encoding="utf-8")
 
     class FakeEvaluator:
+
         async def evaluate_atif_fn(self, atif_samples):
             assert len(atif_samples) == 1
             return EvalOutput(
@@ -98,6 +99,7 @@ def test_builtin_evaluator_loads_config_and_normalizes_eval_output(
             )
 
     class FakeWorkflowEvalBuilder:
+
         def __init__(self, config: Config) -> None:
             self.config = config
 
@@ -258,7 +260,7 @@ def test_reward_details_output_schema(tmp_path: Path, monkeypatch: pytest.Monkey
         evaluator_ref=None,
         output_dir=str(output_dir),
         fallback_mode="fail",
-        config_file="/tmp/fake-config.yml",
+        config_file=str(tmp_path / "fake-config.yml"),
         evaluator_name="trajectory",
     )
     assert code == 0
@@ -282,7 +284,7 @@ def test_builtin_arbitrary_kind_dispatches_via_config(monkeypatch: pytest.Monkey
     reward, details = evaluate_artifact_sync(
         artifact_path=artifact_path,
         evaluator_kind="ragas",
-        config_file="/tmp/fake-config.yml",
+        config_file=str(tmp_path / "fake-config.yml"),
     )
     assert reward == pytest.approx(0.6)
     assert details["lane"] == "ragas"

@@ -324,8 +324,7 @@ class ATIFInlineVerifier:
             fallback_mode=runtime_env.get("NAT_HARBOR_ATIF_FALLBACK_MODE", "fail"),
             raw_output_path=Path(runtime_env.get("NAT_HARBOR_ATIF_RAW_OUTPUT_PATH",
                                                  "/logs/agent/nemo-agent-output.txt")),
-            evaluator_timeout_sec=self._evaluator_timeout_sec(
-                runtime_env.get("NAT_HARBOR_ATIF_EVALUATOR_TIMEOUT_SEC")),
+            evaluator_timeout_sec=self._evaluator_timeout_sec(runtime_env.get("NAT_HARBOR_ATIF_EVALUATOR_TIMEOUT_SEC")),
         )
         result = await self._driver.verify(request)
         if self._logger:

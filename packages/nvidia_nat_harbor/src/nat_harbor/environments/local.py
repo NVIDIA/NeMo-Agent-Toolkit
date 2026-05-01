@@ -107,6 +107,7 @@ class LocalEnvironment(BaseEnvironment):
         return False
 
     def _validate_definition(self) -> None:
+        """Accept Harbor task environment definitions because local mode maps paths at runtime."""
         return
 
     def _translate_path(self, raw_path: str) -> str:

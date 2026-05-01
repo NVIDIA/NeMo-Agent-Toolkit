@@ -167,8 +167,8 @@ runtime contracts. There are two acceptable upstream shapes:
 - Shell mode remains available and backward compatible.
 - Library mode works for local Harbor runs without invoking the wrapper
   child process.
-- Concurrent inline trials cannot read another trial's temporary environment
-  overlay.
+- Concurrent inline trials cannot read the temporary environment overlay of
+  another trial.
 - Missing trajectory or intermediate-step output still produces a verifier-readable
   artifact or an explicit failure.
 

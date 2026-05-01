@@ -38,21 +38,38 @@ def _default_output_dir() -> Path:
     return REPO_ROOT / "external" / "harbor" / "datasets" / "simple-calculator"
 
 
-def _parse_args() -> argparse.Namespace:
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Generate Harbor tasks for Simple Calculator benchmark", )
     parser.add_argument("--source-file", type=Path, default=SimpleCalculatorAdapter.DEFAULT_SOURCE_DATA)
     parser.add_argument("--output-dir", type=Path, default=_default_output_dir())
     parser.add_argument("--ids", nargs="*", default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--overwrite", action="store_true")
-    return parser.parse_args()
+    return parser
 
 
 def main() -> None:
-    args = _parse_args()
+    """Generate Harbor tasks from the simple calculator benchmark.
+
+    Args:
+        None.
+
+    Returns:
+        None.
+    """
+    parser = _build_parser()
+    args = parser.parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     adapter = SimpleCalculatorAdapter(task_dir=args.output_dir, source_file=args.source_file)
-    task_ids = list(args.ids) if args.ids else adapter.list_available_tasks()
+    available_task_ids = adapter.list_available_tasks()
+    if args.ids:
+        requested_task_ids = list(args.ids)
+        unknown_task_ids = sorted(set(requested_task_ids) - set(available_task_ids), key=requested_task_ids.index)
+        if unknown_task_ids:
+            parser.error(f"Unknown task ID(s): {', '.join(unknown_task_ids)}")
+        task_ids = requested_task_ids
+    else:
+        task_ids = available_task_ids
     if args.limit is not None:
         task_ids = task_ids[:max(0, args.limit)]
     generated, requested = adapter.generate_many(task_ids, overwrite=args.overwrite)

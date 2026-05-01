@@ -33,14 +33,14 @@ Harbor agent adapter and, optionally, an in-process runner.
 ## Purpose
 
 Harbor library mode is a development path for building agents, verifiers, and
-benchmark adapters against Harbor's task and artifact model in a local
+benchmark adapters against the Harbor task and artifact model in a local
 environment before running at scale.
 
 It addresses four related needs:
 
 | Need | Why it matters |
 |---|---|
-| Run Harbor tasks in a local environment | Developers can use the host Python environment, local source checkout, debugger, and credentials while preserving Harbor's task and artifact layout. |
+| Run Harbor tasks in a local environment | Developers can use the host Python environment, local source checkout, debugger, and credentials while preserving the Harbor task and artifact layout. |
 | Run agent harnesses and verifiers inline | Developers can use normal Python debugging, structured logging, and direct runtime APIs instead of debugging only through shell wrappers. |
 | Shorten the edit-evaluate loop | Local execution plus in-process agent and verifier paths avoid repeated container setup and extra wrapper processes during development. |
 | Preserve Harbor task shape during local iteration | The same task directories, artifacts, and reward outputs can be used for local development and later isolated or scaled execution. |
@@ -84,7 +84,7 @@ Local library-mode evaluation combines two ideas:
 
 | Layer | Role |
 |---|---|
-| Local environment | Runs the Harbor trial against the developer's host environment while preserving Harbor task and artifact conventions. |
+| Local environment | Runs the Harbor trial against the host environment of the developer while preserving Harbor task and artifact conventions. |
 | Library mode | Lets the selected agent harness and verifier run in-process instead of only through shell wrappers. |
 
 Library mode is a Harbor extension pattern, not a NeMo Agent-only contract. The
@@ -127,7 +127,7 @@ A library-mode verifier needs to provide:
 
 | Requirement | Description |
 |---|---|
-| Importable verifier class | A verifier class loaded through Harbor's verifier import hook. |
+| Importable verifier class | A verifier class loaded through the Harbor verifier import hook. |
 | Artifact reader | Logic that reads the agent output and any required artifact files from the trial layout. |
 | Scoring function | A direct in-process scorer, evaluator, or adapter into an external scoring library. |
 | Reward writer | `reward.txt` for Harbor aggregation, with optional structured files such as `reward.json` and `details.json`. |
@@ -182,8 +182,8 @@ flowchart TD
 Local library-mode runs should keep trial artifacts isolated by job and trial
 directory. Any process-global state used by inline execution also needs care.
 For example, the NeMo Agent reference runner serializes temporary environment
-variable overlays so concurrent inline trials do not read another trial's
-agent or verifier settings.
+variable overlays so concurrent inline trials do not read agent or verifier
+settings from another trial.
 
 ## 2. NeMo Agent Reference Implementation
 
@@ -221,7 +221,7 @@ verifier implementation without adopting ATIF.
 ## 3. What Harbor Needs To Enable
 
 The Harbor framework does not need to own every agent harness runtime or
-evaluator implementation. The durable change should be in Harbor's extension
+evaluator implementation. The durable change should be in the Harbor extension
 surface. NeMo Agent support is the reference consumer, but the Harbor pieces
 should stay useful for other agent harnesses and verifier implementations.
 

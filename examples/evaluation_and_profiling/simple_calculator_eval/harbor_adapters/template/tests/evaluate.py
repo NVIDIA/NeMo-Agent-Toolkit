@@ -31,7 +31,7 @@ def _load_ground_truth() -> dict:
 
 
 def _extract_numbers(answer_text: str) -> list[float]:
-    matches = re.findall(r"-?\d+(?:\.\d+)?", answer_text)
+    matches = re.findall(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?", answer_text)
     return [float(match) for match in matches]
 
 
@@ -41,9 +41,31 @@ def _write_details(details: dict[str, object]) -> None:
 
 
 def main() -> int:
-    ground_truth = _load_ground_truth()
-    expected_value = float(ground_truth["expected_value"])
-    tolerance = float(ground_truth.get("tolerance", 1e-4))
+    """Verify a simple calculator answer and emit Harbor verifier details.
+
+    Args:
+        None.
+
+    Returns:
+        Process exit code where 0 means the answer passed verification.
+
+    Raises:
+        OSError: If verifier artifact files cannot be written.
+    """
+    try:
+        ground_truth = _load_ground_truth()
+        expected_value = float(ground_truth["expected_value"])
+        tolerance = float(ground_truth.get("tolerance", 1e-4))
+    except Exception as exc:
+        _write_details({
+            "passed": False,
+            "status": "ground_truth_error",
+            "error": str(exc),
+            "error_type": type(exc).__name__,
+        })
+        print(f"Failed to load ground truth: {exc}")
+        return 1
+
     details: dict[str, object] = {
         "expected_value": expected_value,
         "tolerance": tolerance,
@@ -73,7 +95,7 @@ def main() -> int:
         _write_details(details)
         return 1
 
-    passed = any(math.isclose(value, expected_value, abs_tol=tolerance) for value in candidate_values)
+    passed = any(math.isclose(value, expected_value, rel_tol=0.0, abs_tol=tolerance) for value in candidate_values)
     details["passed"] = passed
     _write_details(details)
     return 0 if passed else 1

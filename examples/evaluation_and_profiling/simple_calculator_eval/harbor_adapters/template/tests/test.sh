@@ -31,6 +31,7 @@ else
   "$PYTHON_BIN" /tests/evaluate.py
   status=$?
 
+  mkdir -p /logs/verifier
   if [ "$status" -eq 0 ]; then
     echo 1 > /logs/verifier/reward.txt
   else
