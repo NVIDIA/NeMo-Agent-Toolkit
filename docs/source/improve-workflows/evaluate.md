@@ -93,7 +93,12 @@ To evaluate a workflow, you can use the `nat eval` command. The `nat eval` comma
 
 Note: If you would like to set up visualization dashboards for this initial evaluation, please refer to the **Visualizing Evaluation Results** section below.
 
-To run and evaluate the simple example workflow, use the following command:
+To run and evaluate the simple web query example workflow, first install the example with:
+```bash
+uv pip install -e examples/evaluation_and_profiling/simple_web_query_eval
+```
+
+Then, use the following command:
 ```bash
 nat eval --config_file=examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config.yml
 ```
