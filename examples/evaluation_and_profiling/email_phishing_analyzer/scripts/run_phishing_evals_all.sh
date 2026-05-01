@@ -36,8 +36,10 @@ fi
 CONFIGS=(
   "examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-llama-3.1-8b-instruct.yml"
 "examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-llama-3.3-70b-instruct.yml"
-"examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-mixtral-8x22b-instruct-v0.1.yml"
-"examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-phi-4-mini-instruct.yml"
+"examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-mistral-large-3-675b-instruct-2512.yml"
+"examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-mistral-small-4-119b-2603.yml"
+"examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-nemotron-3-nano-30b-a3b.yml"
+"examples/evaluation_and_profiling/email_phishing_analyzer/configs/config-nemotron-3-super-120b-a12b.yml"
 )
 
 # Create temp files for exit codes and store process IDs
