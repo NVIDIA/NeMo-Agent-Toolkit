@@ -16,7 +16,7 @@
 from pathlib import Path
 
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
-from nat.eval.eval_callbacks import EvalCallbackManager
+from nat.plugins.eval.eval_callbacks import EvalCallbackManager
 from nat.plugins.eval.runtime.evaluate import EvaluationRun
 
 
