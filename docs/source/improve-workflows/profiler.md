@@ -420,7 +420,7 @@ Particularly, we evaluate the following models:
 - `nvidia/nemotron-3-nano-30b-a3b`
 - `nvidia/nemotron-3-super-120b-a12b`
 
-Each of the above models have an associated workflow in the `examples/evaluation_and_profiling/email_phishing_analyzer/configs` directory. We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_data_all.csv` file to compare the performance of the LLMs.
+Each of the above models has an associated workflow in the `examples/evaluation_and_profiling/email_phishing_analyzer/configs` directory. We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_data_all.csv` file to compare the performance of the LLMs.
 
 Henceforth, we assume that you have run the `nat eval` command and have the `standardized_data_all.csv` file in the `output_dir` specified in the configuration file. Please also take a moment to create a CSV file containing the concatenated results of the LLMs you wish to compare.
 
