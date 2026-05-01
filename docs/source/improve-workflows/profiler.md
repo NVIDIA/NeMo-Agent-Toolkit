@@ -556,7 +556,7 @@ Let's look at one below:
 
 It is interesting here that most of the latency comes from the initial invocation of the agent, wherein it reasons and decides on whether to call a tool. Subsequent steps take much less time in seconds, which is the axis of the `Gantt` chart.
 
-On the other hand, the `nemotron-3-nano-30b-a3b` model has a much more balanced distribution of time across the workflow, indicating that it is more efficient in terms of time usage for a model of roughly equivalent size.
+On the other hand, the `nemotron-3-nano-30b-a3b` model has a more balanced distribution of time across the workflow, indicating that it is more time usage efficient for a model of roughly equivalent size.
 
 ![ time chart two ](../_static/nemotron-3-nano-30b-a3b_gantt_chart.png)
 
