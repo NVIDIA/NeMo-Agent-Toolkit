@@ -17,7 +17,7 @@ limitations under the License.
 
 # ATOF-to-ATIF Examples
 
-End-to-end examples exercising the ATOF v0.1 reference implementation. EXMP-01 is tier-1 (raw pass-through), EXMP-02 is tier-2 (semantic-tagged), and EXMP-03 demonstrates `mark` events. See spec §1.1 in [`../../atof-event-format.md`](../../atof-event-format.md) for tier definitions and §3 for event kinds.
+End-to-end examples exercising the ATOF v0.1 reference implementation. Six scenarios cover the two enrichment tiers, the `mark` event kind, and three real-world LLM payload shapes (OpenAI chat-completions, Anthropic Messages, Gemini `generateContent`) plus a heterogeneous orchestrator that mixes all three in a single stream. See spec §1.1 in [`../../atof-event-format.md`](../../atof-event-format.md) for tier definitions and §3 for event kinds.
 
 This README doubles as the ATOF → ATIF conversion reference: the mapping table, dispatch conventions, and known limitations live in the [Conversion reference](#conversion-reference) section at the bottom.
 
@@ -28,29 +28,67 @@ This README doubles as the ATOF → ATIF conversion reference: the mapping table
 
 ## The scenarios
 
+Each subsection below ends with a Phoenix span tree screenshot taken after exporting the converted ATIF JSON to a local Arize Phoenix instance. See [Verifying in Phoenix](#verifying-in-phoenix) for the export command.
+
 ### EXMP-01 — tier-1 raw pass-through
 
 A calculator-shaped workflow where the producer can't classify any scope. Every `scope` event carries `category: "unknown"`, `category_profile: null`, and opaque raw JSON in `data`. Demonstrates the floor: a valid ATOF stream capturing only timing + raw payloads, with no semantic tagging.
 
-Converts to a 4-step ATIF trajectory of opaque `system` steps via the reference converter's generic scope-end fall-through. `Trajectory.agent.name` uses the outermost root scope's `name` since no `category: "agent"` event is present.
+Converts to an ATIF trajectory of opaque `system` steps through the generic scope-end fall-through of the reference converter. `Trajectory.agent.name` uses the outermost root scope's `name` since no `category: "agent"` event is present.
 
 **When to use:** a runtime wrapping a third-party framework whose callback fires a raw blob the wrapper can't classify.
 
+![EXMP-01 Phoenix span tree](screenshot/atif_phoenix_export/exmp01-tier1-raw-passthrough.png)
+
 ### EXMP-02 — tier-2 semantic-tagged
 
-Same calculator workflow as EXMP-01 but with every scope classified (`category: "agent"` / `"llm"` / `"tool"`) and `category_profile` populated (`category_profile.model_name` for LLM events, `category_profile.tool_call_id` for tool events — see spec §4.4). Additionally demonstrates `attributes: ["remote"]` on the tool scope (the tool is dispatched out-of-process, spec §2.1) and `data_schema` on the llm scopes pointing at `openai/chat-completions.v1` (spec §2).
+Same calculator workflow as EXMP-01 but with every scope classified (`category: "agent"` / `"llm"` / `"tool"`) and `category_profile` populated (`category_profile.model_name` for LLM events, `category_profile.tool_call_id` for tool events — see spec §4.4). Additionally demonstrates `attributes: ["remote"]` on the tool scope (the tool is dispatched out-of-process, spec §2.1) and `data_schema` on the LLM scopes pointing at `openai/chat-completions@1` (spec §2).
 
-Converts to a 5-step rich ATIF trajectory (user → agent → system → user → agent) with `Trajectory.agent.name` derived from the `category: "agent"` scope's `name`.
+Converts to a rich ATIF trajectory with user / agent / observation steps, with `Trajectory.agent.name` derived from the `category: "agent"` scope's `name`. The Phoenix view shows the LLM span with a child TOOL span carrying the calculator invocation.
 
 **When to use:** native producers that classify events at the hook site.
 
+![EXMP-02 Phoenix span tree](screenshot/atif_phoenix_export/exmp02-tier2-semantic-tagged.png)
+
 ### EXMP-03 — mark events
 
-A short chat agent bracketed by two `mark` events — a `session_start` mark before the agent opens and a `session_end` mark after it closes. Both marks are generic checkpoints (`category` absent, `category_profile` absent), carrying `data` that records session-level metadata (session/user IDs, message count).
+A short chat agent bracketed by two `mark` events — a `session_start` mark before the agent opens and a `session_end` mark after it closes. Both marks are generic checkpoints (`category` absent, `category_profile` absent), carrying `data` that records session-level metadata (session and user IDs, message count).
 
-Converts to a 4-step ATIF trajectory (system → user → agent → system): each mark with non-null `data` materialises as a `source: "system"` step whose `message` is the serialized `data`; the single LLM turn produces the user/agent pair.
+Each mark with non-null `data` materializes as a `source: "system"` step whose `message` is the serialized `data`; the single LLM turn produces the user / agent pair. The Phoenix view shows the workflow span flanked by the two FUNCTION spans corresponding to the marks.
 
 **When to use:** demonstrating the `mark` event kind — point-in-time checkpoints that sit outside the start/end scope-pairing semantics.
+
+![EXMP-03 Phoenix span tree](screenshot/atif_phoenix_export/exmp03-mark-events.png)
+
+### EXMP-04 — Anthropic Messages
+
+A document-summarization workflow where Claude calls a `read_file` tool and then formulates a summary. LLM payloads use Anthropic's Messages API shape — `messages[].content` is polymorphic string-or-block-list on input; `content[]` is a typed-block list on output, mixing `text` and `tool_use` blocks. Every LLM scope declares `data_schema = {"name": "anthropic/messages", "version": "1"}`, dispatching to a registered Anthropic-specific extractor.
+
+Demonstrates that the converter handles polymorphic content shapes through the registered extractor's normalization hooks. Tool calls extracted from `content[].tool_use` blocks resolve correctly into ATIF `tool_calls[]` with the matching observation results.
+
+**When to use:** any producer emitting Claude or other Anthropic-shape payloads. Mirror this scenario when registering a new LLM-payload extractor.
+
+![EXMP-04 Phoenix span tree](screenshot/atif_phoenix_export/exmp04-anthropic-messages.png)
+
+### EXMP-05 — Gemini `generateContent`
+
+A timezone lookup workflow where Gemini calls a `get_current_time` function and then answers. LLM payloads use Gemini's `contents[].parts[]` request shape and `candidates[0].content.parts[]` response shape. Every LLM scope declares `data_schema = {"name": "gemini/generate-content", "version": "1"}`.
+
+Demonstrates two Gemini-specific quirks the registered extractor smooths over: role aliasing (Gemini's `"model"` role maps to `"assistant"`) and tool-call-id synthesis (Gemini omits IDs, so the extractor synthesizes `<function-name>__<index>` to keep ATIF observation-result correlation intact).
+
+**When to use:** any producer emitting Gemini or Vertex AI `generateContent` payloads. Reference for extractors that need to synthesize provider-missing identifiers.
+
+![EXMP-05 Phoenix span tree](screenshot/atif_phoenix_export/exmp05-gemini-generate-content.png)
+
+### EXMP-06 — Heterogeneous router
+
+A multi-provider orchestrator that receives a single user request, routes pieces to three specialist LLMs from different providers (OpenAI, Anthropic, Gemini), and combines their responses. The single ATOF stream carries three LLM scope events, each declaring a different `data_schema` — `openai/chat-completions@1`, `anthropic/messages@1`, and `gemini/generate-content@1` in turn.
+
+This is the strongest end-to-end evidence that the converter dispatches **per event** by schema, not per stream. Each LLM span in the Phoenix tree below was parsed by a different registered extractor, yet they coexist under a single trajectory and trace.
+
+**When to use:** any orchestrator pattern where one workflow fans out to multiple providers. Demonstrates that no schema-switching ceremony is needed at the producer side beyond declaring `data_schema` on each event.
+
+![EXMP-06 Phoenix span tree](screenshot/atif_phoenix_export/exmp06-heterogeneous-router.png)
 
 ## Running
 
@@ -61,15 +99,34 @@ python convert_atof_examples_to_atif.py
 # Outputs in output/
 ```
 
+## Verifying in Phoenix
+
+The screenshots above were captured by exporting the generated ATIF JSON files to a local Arize Phoenix instance through the [`export_atif_trajectory_to_phoenix`](../../../nvidia_nat_phoenix/src/nat/plugins/phoenix/scripts/export_trajectory_to_phoenix/README.md) script.
+
+```bash
+docker run -d --rm -p 4317:4317 -p 6006:6006 --name phoenix arizephoenix/phoenix:13.22
+
+uv pip install -e packages/nvidia_nat_phoenix
+
+uv run python -m nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix \
+    packages/nvidia_nat_atif/examples/atof_to_atif/output/exmp0{1,2,3,4,5,6}_atif.json \
+    --project atof-pr-1890-examples
+```
+
+Open the Phoenix UI at `http://localhost:6006`, select the `atof-pr-1890-examples` project, and the six traces appear with the span trees shown above.
+
 ## Event counts
 
-| Scenario | Events | ATIF steps | Tier | Workflow                                         |
-| -------- | ------ | ---------- | ---- | ------------------------------------------------ |
-| EXMP-01  | 8      | 4          | 1    | Opaque wrapper: 3 unclassified inner callbacks   |
-| EXMP-02  | 8      | 5          | 2    | Calculator: agent → LLM → tool → LLM → agent     |
-| EXMP-03  | 6      | 4          | 2    | Chat agent bracketed by session-boundary marks   |
+| Scenario | Events | Tier | Workflow                                                           |
+| -------- | ------ | ---- | ------------------------------------------------------------------ |
+| EXMP-01  | 8      | 1    | Opaque wrapper: three unclassified inner callbacks                 |
+| EXMP-02  | 8      | 2    | Calculator: agent → LLM → tool → LLM → agent                       |
+| EXMP-03  | 6      | 2    | Chat agent bracketed by session-boundary marks                     |
+| EXMP-04  | 8      | 2    | Claude document summarizer with `read_file` tool (Anthropic shape) |
+| EXMP-05  | 8      | 2    | Gemini timezone lookup with `get_current_time` function            |
+| EXMP-06  | 8      | 2    | Multi-provider router: OpenAI + Anthropic + Gemini in one stream   |
 
-EXMP-01 and EXMP-02 each consist of 4 paired `scope` events (4 start + 4 end). EXMP-03 consists of 2 paired `scope` events plus 2 `mark` events. The ATOF v0.1 spec has no stream-level metadata event.
+EXMP-01, EXMP-02, EXMP-04, EXMP-05, and EXMP-06 each consist of paired `scope` events. EXMP-03 consists of two paired `scope` events plus two `mark` events. The ATOF v0.1 spec has no stream-level metadata event.
 
 ---
 
