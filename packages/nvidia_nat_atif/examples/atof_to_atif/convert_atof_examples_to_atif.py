@@ -15,14 +15,27 @@
 """Convert ATOF v0.1 JSONL examples to ATIF trajectories.
 
 Reads each example JSONL file produced by ``generate_atof_examples.py``
-(EXMP-01 tier-1 raw pass-through, EXMP-02 tier-2 semantic-tagged,
-EXMP-03 mark events) and writes the resulting ATIF trajectory as
-formatted JSON.
+and writes the resulting ATIF trajectory as formatted JSON:
+
+- EXMP-01: tier-1 raw pass-through
+- EXMP-02: tier-2 semantic-tagged (OpenAI chat-completions)
+- EXMP-03: mark events
+- EXMP-04: Anthropic Messages with tool_use
+- EXMP-05: Gemini generateContent with functionCall
+- EXMP-06: heterogeneous router — three providers in one trajectory
+
+Examples 04-06 require opt-in registration of the Anthropic and Gemini
+schema maps (``register_anthropic_messages_v1()``,
+``register_gemini_generate_content_v1()``). Without registration their
+LLM events fall back to the OpenAI extractor and raise
+:class:`ShapeMismatchError` because the payloads use foreign shapes.
 
 Uses ``nat.atof.scripts.atof_to_atif_converter.convert_file`` — the v0.1
 converter dispatches on ``(kind, scope_category, category)`` and reads
 category-specific fields from the ``category_profile`` sub-object
 (``category_profile.model_name``, ``category_profile.tool_call_id``).
+LLM payload parsing is delegated per-event to the extractor registered
+for that event's ``data_schema``.
 
 Usage:
     python convert_atof_examples_to_atif.py [--input-dir DIR] [--output-dir DIR]
@@ -33,6 +46,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from nat.atof import register_anthropic_messages_v1
+from nat.atof import register_gemini_generate_content_v1
 from nat.atof.scripts.atof_to_atif_converter import convert_file
 
 EXAMPLES_DIR = Path(__file__).parent
@@ -42,7 +57,21 @@ EXAMPLES = [
     "exmp01_atof.jsonl",
     "exmp02_atof.jsonl",
     "exmp03_atof.jsonl",
+    "exmp04_atof.jsonl",
+    "exmp05_atof.jsonl",
+    "exmp06_atof.jsonl",
 ]
+
+
+def _register_opt_in_schemas() -> None:
+    """Install Anthropic + Gemini schema maps and JSON Schemas.
+
+    Registration is idempotent. We do it here (not at import time) so the
+    runner is the single place that opts in to the multi-schema providers
+    needed by EXMP-04/05/06.
+    """
+    register_anthropic_messages_v1()
+    register_gemini_generate_content_v1()
 
 
 def main() -> None:
@@ -50,6 +79,8 @@ def main() -> None:
     parser.add_argument("--input-dir", type=Path, default=OUTPUT_DIR, help="Directory with JSONL files")
     parser.add_argument("--output-dir", type=Path, default=OUTPUT_DIR, help="Output directory for ATIF JSON")
     args = parser.parse_args()
+
+    _register_opt_in_schemas()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
 

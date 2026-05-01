@@ -56,12 +56,8 @@ def _openai_shaped_stream() -> list:
             name="gpt-4.1",
             category="llm",
             category_profile={"model_name": "gpt-4.1"},
-            data={"messages": [{
-                "role": "user", "content": "3 + 4?"
-            }]},
-            data_schema={
-                "name": "openai/chat-completions", "version": "1"
-            },
+            data={"messages": [{"role": "user", "content": "3 + 4?"}]},
+            data_schema={"name": "openai/chat-completions", "version": "1"},
         ),
         ScopeEvent(
             scope_category="end",
@@ -72,9 +68,7 @@ def _openai_shaped_stream() -> list:
             category="llm",
             category_profile={"model_name": "gpt-4.1"},
             data={"content": "The answer is 7."},
-            data_schema={
-                "name": "openai/chat-completions", "version": "1"
-            },
+            data_schema={"name": "openai/chat-completions", "version": "1"},
         ),
         ScopeEvent(
             scope_category="end",
@@ -111,14 +105,8 @@ def _anthropic_input_stream() -> list:
             name="claude",
             category="llm",
             category_profile={"model_name": "claude"},
-            data={
-                "system": "be helpful", "input": [{
-                    "role": "user", "parts": []
-                }]
-            },
-            data_schema={
-                "name": "anthropic/messages", "version": "1"
-            },
+            data={"system": "be helpful", "input": [{"role": "user", "parts": []}]},
+            data_schema={"name": "anthropic/messages", "version": "1"},
         ),
         ScopeEvent(
             scope_category="end",
@@ -165,12 +153,8 @@ def _anthropic_output_stream() -> list:
             name="claude",
             category="llm",
             category_profile={"model_name": "claude"},
-            data={"messages": [{
-                "role": "user", "content": "go"
-            }]},
-            data_schema={
-                "name": "openai/chat-completions", "version": "1"
-            },
+            data={"messages": [{"role": "user", "content": "go"}]},
+            data_schema={"name": "openai/chat-completions", "version": "1"},
         ),
         ScopeEvent(
             scope_category="end",
@@ -180,14 +164,8 @@ def _anthropic_output_stream() -> list:
             name="claude",
             category="llm",
             category_profile={"model_name": "claude"},
-            data={
-                "stop_reason": "end_turn", "output_blocks": [{
-                    "type": "text", "text": "done"
-                }]
-            },
-            data_schema={
-                "name": "anthropic/messages", "version": "1"
-            },
+            data={"stop_reason": "end_turn", "output_blocks": [{"type": "text", "text": "done"}]},
+            data_schema={"name": "anthropic/messages", "version": "1"},
         ),
         ScopeEvent(
             scope_category="end",
@@ -224,9 +202,7 @@ def _tool_calls_only_stream() -> list:
             name="gpt",
             category="llm",
             category_profile={"model_name": "gpt"},
-            data={"messages": [{
-                "role": "user", "content": "3 + 4?"
-            }]},
+            data={"messages": [{"role": "user", "content": "3 + 4?"}]},
         ),
         ScopeEvent(
             scope_category="end",
@@ -237,11 +213,7 @@ def _tool_calls_only_stream() -> list:
             category="llm",
             category_profile={"model_name": "gpt"},
             # No ``content`` key at all; only tool_calls.
-            data={"tool_calls": [{
-                "id": "call_1", "name": "add", "arguments": {
-                    "a": 3, "b": 4
-                }
-            }]},
+            data={"tool_calls": [{"id": "call_1", "name": "add", "arguments": {"a": 3, "b": 4}}]},
         ),
         ScopeEvent(
             scope_category="end",

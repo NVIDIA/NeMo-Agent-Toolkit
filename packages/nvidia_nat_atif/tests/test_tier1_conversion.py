@@ -152,7 +152,8 @@ def test_tier1_agent_name_falls_back_to_root_scope() -> None:
     trajectory = convert(events)
 
     assert trajectory.agent.name == "calculator_agent", (
-        f"expected root-scope fallback 'calculator_agent', got {trajectory.agent.name!r}")
+        f"expected root-scope fallback 'calculator_agent', got {trajectory.agent.name!r}"
+    )
     # No LLM scope exists → no model_name resolvable.
     assert trajectory.agent.model_name is None
 

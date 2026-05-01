@@ -1,0 +1,113 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "session_id": "orchestrator-006",
+  "agent": {
+    "name": "multi_provider_router",
+    "version": "1.0.0",
+    "model_name": "gpt-4o"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-01-06T00:00:01Z",
+      "source": "system",
+      "message": "You are a router. Decide which specialist handles each part of the user's request."
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-01-06T00:00:01Z",
+      "source": "user",
+      "message": "Two things: (1) write a Python function for factorial, and (2) tell me what 2^32 equals."
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2026-01-06T00:00:02Z",
+      "source": "agent",
+      "message": "Plan: send the factorial-code task to claude-3-5-sonnet (strong code synthesis), and the 2^32 arithmetic to gemini-2.0-flash. I'll combine the responses.",
+      "extra": {
+        "invocation": {
+          "invocation_id": "llm-006-router",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767657601.0,
+          "end_timestamp": 1767657602.0
+        },
+        "data_schema": {
+          "name": "openai/chat-completions",
+          "version": "1"
+        }
+      },
+      "function_ancestry": {
+        "function_id": "llm-006-router",
+        "function_name": "gpt-4o-router",
+        "parent_id": "orchestrator-006",
+        "parent_name": "multi_provider_router"
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 4,
+      "timestamp": "2026-01-06T00:00:03Z",
+      "source": "user",
+      "message": "Write a Python function for factorial."
+    },
+    {
+      "step_id": 5,
+      "timestamp": "2026-01-06T00:00:04Z",
+      "source": "agent",
+      "message": "```python\ndef factorial(n: int) -> int:\n    return 1 if n <= 1 else n * factorial(n - 1)\n```",
+      "extra": {
+        "invocation": {
+          "invocation_id": "llm-006-code",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767657603.0,
+          "end_timestamp": 1767657604.0
+        },
+        "data_schema": {
+          "name": "anthropic/messages",
+          "version": "1"
+        }
+      },
+      "function_ancestry": {
+        "function_id": "llm-006-code",
+        "function_name": "claude-3-5-sonnet",
+        "parent_id": "orchestrator-006",
+        "parent_name": "multi_provider_router"
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 6,
+      "timestamp": "2026-01-06T00:00:05Z",
+      "source": "user",
+      "message": "What is 2^32?"
+    },
+    {
+      "step_id": 7,
+      "timestamp": "2026-01-06T00:00:06Z",
+      "source": "agent",
+      "message": "2^32 = 4,294,967,296",
+      "extra": {
+        "invocation": {
+          "invocation_id": "llm-006-math",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767657605.0,
+          "end_timestamp": 1767657606.0
+        },
+        "data_schema": {
+          "name": "gemini/generate-content",
+          "version": "1"
+        }
+      },
+      "function_ancestry": {
+        "function_id": "llm-006-math",
+        "function_name": "gemini-2.0-flash",
+        "parent_id": "orchestrator-006",
+        "parent_name": "multi_provider_router"
+      },
+      "llm_call_count": 1
+    }
+  ]
+}

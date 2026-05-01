@@ -1,0 +1,92 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "session_id": "root-001",
+  "agent": {
+    "name": "opaque_workflow",
+    "version": "1.0.0"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-01-01T00:00:02Z",
+      "source": "system",
+      "message": "{\"raw_payload\":\"<provider response 1: tool invocation>\"}",
+      "extra": {
+        "invocation": {
+          "invocation_id": "inner-001",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767225601.0,
+          "end_timestamp": 1767225602.0
+        }
+      },
+      "function_ancestry": {
+        "function_id": "inner-001",
+        "function_name": "provider_callback_1",
+        "parent_id": "root-001",
+        "parent_name": "opaque_workflow"
+      }
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-01-01T00:00:04Z",
+      "source": "system",
+      "message": "{\"raw_payload\":\"<provider response 2: tool result>\"}",
+      "extra": {
+        "invocation": {
+          "invocation_id": "inner-002",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767225603.0,
+          "end_timestamp": 1767225604.0
+        }
+      },
+      "function_ancestry": {
+        "function_id": "inner-002",
+        "function_name": "provider_callback_2",
+        "parent_id": "root-001",
+        "parent_name": "opaque_workflow"
+      }
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2026-01-01T00:00:06Z",
+      "source": "system",
+      "message": "{\"raw_payload\":\"<provider response 3: final answer>\"}",
+      "extra": {
+        "invocation": {
+          "invocation_id": "inner-003",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767225605.0,
+          "end_timestamp": 1767225606.0
+        }
+      },
+      "function_ancestry": {
+        "function_id": "inner-003",
+        "function_name": "provider_callback_3",
+        "parent_id": "root-001",
+        "parent_name": "opaque_workflow"
+      }
+    },
+    {
+      "step_id": 4,
+      "timestamp": "2026-01-01T00:00:07Z",
+      "source": "system",
+      "message": "{\"raw_result\":\"3 + 4 = 7\"}",
+      "extra": {
+        "invocation": {
+          "invocation_id": "root-001",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767225600.0,
+          "end_timestamp": 1767225607.0
+        }
+      },
+      "function_ancestry": {
+        "function_id": "root-001",
+        "function_name": "opaque_workflow"
+      }
+    }
+  ]
+}
