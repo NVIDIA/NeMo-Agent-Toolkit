@@ -63,15 +63,20 @@ wheels = [
 name = "nvidia-nat-atif"
 source = { editable = "." }
 dependencies = [
-    { name = "jsonschema" },
     { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+full = [
+    { name = "jsonschema" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "jsonschema", specifier = ">=4.0" },
+    { name = "jsonschema", marker = "extra == 'full'", specifier = ">=4.0" },
     { name = "pydantic", specifier = "~=2.11" },
 ]
+provides-extras = ["full"]
 
 [[package]]
 name = "pydantic"

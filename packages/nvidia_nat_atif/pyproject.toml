@@ -55,8 +55,22 @@ dependencies = [
   # Keep package version constraints as open as possible to avoid conflicts with other packages. Always define a minimum
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
-  "jsonschema>=4.0",
   "pydantic~=2.11",
+]
+
+[tool.setuptools_dynamic_dependencies.optional-dependencies]
+# Optional extras for nvidia-nat-atif. The base package ships only the ATIF
+# Pydantic models (consumed by nvidia-nat-core, nvidia-nat-eval, and the rest
+# of the toolkit). The ATOF→ATIF converter and ATOF wire-format tools live
+# under nat.atof.* and require jsonschema for data_schema validation; that
+# dependency is gated behind the [full] extra so transitive consumers
+# (nvidia-nat-core, etc.) don't pull it in unnecessarily.
+#
+# Install via:
+#   uv pip install "nvidia-nat-atif[full]"
+#   pip install "nvidia-nat-atif[full]"
+full = [
+  "jsonschema>=4.0",
 ]
 
 [tool.uv]

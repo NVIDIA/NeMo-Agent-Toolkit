@@ -46,7 +46,18 @@ import logging
 from pathlib import Path
 from typing import Any
 
-import jsonschema
+# jsonschema is gated behind the [full] extra of nvidia-nat-atif. The base
+# package ships only the ATIF Pydantic models; the converter (this module)
+# is the only consumer and requires jsonschema for data_schema validation.
+# Failing fast at import time with an actionable message is better than a
+# late NameError deep inside _validate_event_data_schema.
+try:
+    import jsonschema
+except ImportError as _jsonschema_import_err:  # pragma: no cover
+    raise ImportError("The ATOF→ATIF converter requires `jsonschema` for data_schema "
+                      "validation. Install via the `[full]` extra:\n"
+                      "    pip install nvidia-nat-atif[full]\n"
+                      "    uv pip install nvidia-nat-atif[full]") from _jsonschema_import_err
 
 from nat.atif.agent import Agent
 from nat.atif.step import Step
