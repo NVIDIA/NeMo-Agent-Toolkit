@@ -549,7 +549,7 @@ We see that the `llama-3.3-70b-instruct` LLM generates the most tokens, indicati
 
 ### Understanding Where the Models Spend Time
 We can also analyze the bottleneck analysis provided by the profiler to understand where the LLMs spend most of their time. This can help us identify potential bottlenecks in the workflow and optimize the LLMs accordingly.
-For example, we can explore why the `mistral-large-3-675b-instruct-2512` model has such a long runtime!. To do so, we can directly visualize the `Gantt charts` produced by the `nested stack analysis` in the `bottleneck_analysis` section of the profiler configuration for each model.
+For example, we can explore why the `mistral-large-3-675b-instruct-2512` model has such a long runtime in the worst-case scenario. To do so, we can directly visualize the `Gantt charts` produced by the `nested stack analysis` in the `bottleneck_analysis` section of the profiler configuration for each model.
 Let's look at one below:
 
 ![ time chart one ](../_static/mistral-large-3-675b-instruct-2512_gantt_chart.png)
