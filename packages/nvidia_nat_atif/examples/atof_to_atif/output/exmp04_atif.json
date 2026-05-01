@@ -25,11 +25,20 @@
           "arguments": {
             "path": "/docs/intro.md"
           },
-          "tool_ancestry": {
-            "function_id": "tool-004",
-            "function_name": "read_file",
-            "parent_id": "agent-004",
-            "parent_name": "claude_summarizer"
+          "extra": {
+            "ancestry": {
+              "function_id": "tool-004",
+              "function_name": "read_file",
+              "parent_id": "agent-004",
+              "parent_name": "claude_summarizer"
+            },
+            "invocation": {
+              "invocation_id": "toolu_01abc",
+              "framework": "nat",
+              "status": "completed",
+              "start_timestamp": 1767484803.0,
+              "end_timestamp": 1767484804.0
+            }
           }
         }
       ],
@@ -42,6 +51,12 @@
         ]
       },
       "extra": {
+        "ancestry": {
+          "function_id": "llm-004-1",
+          "function_name": "claude-3-5-sonnet",
+          "parent_id": "agent-004",
+          "parent_name": "claude_summarizer"
+        },
         "invocation": {
           "invocation_id": "llm-004-1",
           "framework": "nat",
@@ -52,22 +67,7 @@
         "data_schema": {
           "name": "anthropic/messages",
           "version": "1"
-        },
-        "tool_invocations": [
-          {
-            "invocation_id": "toolu_01abc",
-            "framework": "nat",
-            "status": "completed",
-            "start_timestamp": 1767484803.0,
-            "end_timestamp": 1767484804.0
-          }
-        ]
-      },
-      "function_ancestry": {
-        "function_id": "llm-004-1",
-        "function_name": "claude-3-5-sonnet",
-        "parent_id": "agent-004",
-        "parent_name": "claude_summarizer"
+        }
       },
       "llm_call_count": 1
     },
@@ -77,6 +77,12 @@
       "source": "agent",
       "message": "The document is the introduction page for an end-to-end demo project.",
       "extra": {
+        "ancestry": {
+          "function_id": "llm-004-2",
+          "function_name": "claude-3-5-sonnet",
+          "parent_id": "agent-004",
+          "parent_name": "claude_summarizer"
+        },
         "invocation": {
           "invocation_id": "llm-004-2",
           "framework": "nat",
@@ -88,12 +94,6 @@
           "name": "anthropic/messages",
           "version": "1"
         }
-      },
-      "function_ancestry": {
-        "function_id": "llm-004-2",
-        "function_name": "claude-3-5-sonnet",
-        "parent_id": "agent-004",
-        "parent_name": "claude_summarizer"
       },
       "llm_call_count": 1
     }

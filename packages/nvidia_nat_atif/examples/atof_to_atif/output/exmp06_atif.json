@@ -25,6 +25,12 @@
       "source": "agent",
       "message": "Plan: send the factorial-code task to claude-3-5-sonnet (strong code synthesis), and the 2^32 arithmetic to gemini-2.0-flash. I'll combine the responses.",
       "extra": {
+        "ancestry": {
+          "function_id": "llm-006-router",
+          "function_name": "gpt-4o-router",
+          "parent_id": "orchestrator-006",
+          "parent_name": "multi_provider_router"
+        },
         "invocation": {
           "invocation_id": "llm-006-router",
           "framework": "nat",
@@ -36,12 +42,6 @@
           "name": "openai/chat-completions",
           "version": "1"
         }
-      },
-      "function_ancestry": {
-        "function_id": "llm-006-router",
-        "function_name": "gpt-4o-router",
-        "parent_id": "orchestrator-006",
-        "parent_name": "multi_provider_router"
       },
       "llm_call_count": 1
     },
@@ -57,6 +57,12 @@
       "source": "agent",
       "message": "```python\ndef factorial(n: int) -> int:\n    return 1 if n <= 1 else n * factorial(n - 1)\n```",
       "extra": {
+        "ancestry": {
+          "function_id": "llm-006-code",
+          "function_name": "claude-3-5-sonnet",
+          "parent_id": "orchestrator-006",
+          "parent_name": "multi_provider_router"
+        },
         "invocation": {
           "invocation_id": "llm-006-code",
           "framework": "nat",
@@ -68,12 +74,6 @@
           "name": "anthropic/messages",
           "version": "1"
         }
-      },
-      "function_ancestry": {
-        "function_id": "llm-006-code",
-        "function_name": "claude-3-5-sonnet",
-        "parent_id": "orchestrator-006",
-        "parent_name": "multi_provider_router"
       },
       "llm_call_count": 1
     },
@@ -89,6 +89,12 @@
       "source": "agent",
       "message": "2^32 = 4,294,967,296",
       "extra": {
+        "ancestry": {
+          "function_id": "llm-006-math",
+          "function_name": "gemini-2.0-flash",
+          "parent_id": "orchestrator-006",
+          "parent_name": "multi_provider_router"
+        },
         "invocation": {
           "invocation_id": "llm-006-math",
           "framework": "nat",
@@ -100,12 +106,6 @@
           "name": "gemini/generate-content",
           "version": "1"
         }
-      },
-      "function_ancestry": {
-        "function_id": "llm-006-math",
-        "function_name": "gemini-2.0-flash",
-        "parent_id": "orchestrator-006",
-        "parent_name": "multi_provider_router"
       },
       "llm_call_count": 1
     }

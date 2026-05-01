@@ -25,11 +25,20 @@
           "arguments": {
             "timezone": "Asia/Tokyo"
           },
-          "tool_ancestry": {
-            "function_id": "tool-005",
-            "function_name": "get_current_time",
-            "parent_id": "agent-005",
-            "parent_name": "gemini_assistant"
+          "extra": {
+            "ancestry": {
+              "function_id": "tool-005",
+              "function_name": "get_current_time",
+              "parent_id": "agent-005",
+              "parent_name": "gemini_assistant"
+            },
+            "invocation": {
+              "invocation_id": "get_current_time__1",
+              "framework": "nat",
+              "status": "completed",
+              "start_timestamp": 1767571203.0,
+              "end_timestamp": 1767571204.0
+            }
           }
         }
       ],
@@ -42,6 +51,12 @@
         ]
       },
       "extra": {
+        "ancestry": {
+          "function_id": "llm-005-1",
+          "function_name": "gemini-2.0-flash",
+          "parent_id": "agent-005",
+          "parent_name": "gemini_assistant"
+        },
         "invocation": {
           "invocation_id": "llm-005-1",
           "framework": "nat",
@@ -52,22 +67,7 @@
         "data_schema": {
           "name": "gemini/generate-content",
           "version": "1"
-        },
-        "tool_invocations": [
-          {
-            "invocation_id": "get_current_time__1",
-            "framework": "nat",
-            "status": "completed",
-            "start_timestamp": 1767571203.0,
-            "end_timestamp": 1767571204.0
-          }
-        ]
-      },
-      "function_ancestry": {
-        "function_id": "llm-005-1",
-        "function_name": "gemini-2.0-flash",
-        "parent_id": "agent-005",
-        "parent_name": "gemini_assistant"
+        }
       },
       "llm_call_count": 1
     },
@@ -77,6 +77,12 @@
       "source": "agent",
       "message": "It's currently 3:30 PM on April 30, 2026 in Tokyo (Japan Standard Time).",
       "extra": {
+        "ancestry": {
+          "function_id": "llm-005-2",
+          "function_name": "gemini-2.0-flash",
+          "parent_id": "agent-005",
+          "parent_name": "gemini_assistant"
+        },
         "invocation": {
           "invocation_id": "llm-005-2",
           "framework": "nat",
@@ -88,12 +94,6 @@
           "name": "gemini/generate-content",
           "version": "1"
         }
-      },
-      "function_ancestry": {
-        "function_id": "llm-005-2",
-        "function_name": "gemini-2.0-flash",
-        "parent_id": "agent-005",
-        "parent_name": "gemini_assistant"
       },
       "llm_call_count": 1
     }

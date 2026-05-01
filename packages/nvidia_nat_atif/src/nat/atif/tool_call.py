@@ -23,8 +23,6 @@ from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
 
-from nat.atif.function_ancestry import FunctionAncestry
-
 
 class ToolCall(BaseModel):
     """A tool call within a step."""
@@ -41,14 +39,13 @@ class ToolCall(BaseModel):
         default_factory=dict,
         description="Arguments passed to the function (can be empty dict)",
     )
-    tool_ancestry: FunctionAncestry | None = Field(
-        default=None,
-        description=("Per-tool-call ancestry in the workflow call graph (ATIF v1.7). "
-                     "Records the tool's callable identity and its parent."),
-    )
     extra: dict[str, Any] | None = Field(
         default=None,
-        description="Custom tool-call-level metadata (ATIF v1.7)",
+        description=("Custom tool-call-level metadata (ATIF v1.7). NAT writes "
+                     "per-tool-call ancestry / invocation timing here — see "
+                     ":class:`nat.atif.atif_step_extra.AtifToolCallExtra`. The "
+                     "spec treats this field as loosely-typed; consumers MUST "
+                     "tolerate absent and unknown keys."),
     )
 
     model_config = ConfigDict(extra="forbid")

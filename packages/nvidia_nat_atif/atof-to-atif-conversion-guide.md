@@ -484,7 +484,7 @@ A correct ATOF→ATIF mapper MUST guarantee these properties.
 | I-08 | An LLM event with non-empty `data` that yields no extractable content raises `ShapeMismatchError` (never silently empty).     |
 | I-09 | Multi-schema streams are dispatched per-event; no per-stream schema lock.                                                     |
 | I-10 | Conversion is deterministic given a sorted event sequence and a stable extractor registry.                                    |
-| I-11 | `parent_uuid` ancestry is preserved in `function_ancestry` of each step.                                                      |
+| I-11 | `parent_uuid` ancestry is preserved per record. By NAT convention, step-level ancestry is recorded at `step.extra["ancestry"]` and per-tool-call ancestry at `tool_call.extra["ancestry"]` (ATIF v1.7 places this in `extra` rather than as a typed field). |
 | I-12 | Mark events that don't classify as sourced steps still preserve their `data` as a system step's message.                      |
 
 

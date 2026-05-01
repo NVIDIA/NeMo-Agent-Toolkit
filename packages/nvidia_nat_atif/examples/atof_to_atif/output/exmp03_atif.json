@@ -25,6 +25,12 @@
       "source": "agent",
       "message": "The capital of France is Paris.",
       "extra": {
+        "ancestry": {
+          "function_id": "llm-003",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-003",
+          "parent_name": "chat_agent"
+        },
         "invocation": {
           "invocation_id": "llm-003",
           "framework": "nat",
@@ -32,12 +38,6 @@
           "start_timestamp": 1767398402.0,
           "end_timestamp": 1767398403.0
         }
-      },
-      "function_ancestry": {
-        "function_id": "llm-003",
-        "function_name": "gpt-4.1",
-        "parent_id": "agent-003",
-        "parent_name": "chat_agent"
       },
       "llm_call_count": 1
     },

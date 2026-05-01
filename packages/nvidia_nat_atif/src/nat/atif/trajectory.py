@@ -17,7 +17,6 @@
 
 from __future__ import annotations
 
-import uuid
 from typing import Any
 from typing import Literal
 
@@ -49,11 +48,28 @@ class Trajectory(BaseModel):
         default=ATIF_VERSION,
         description="String defining ATIF compatibility",
     )
-    # NAT deviation: defaults to a generated UUID so the converter can create
-    # trajectories without an explicit session_id. Harbor upstream requires it.
-    session_id: str = Field(
-        default_factory=lambda: str(uuid.uuid4()),
-        description="Unique identifier for the entire agent run",
+    session_id: str | None = Field(
+        default=None,
+        description=("Identifier for the agent run this trajectory belongs to (ATIF v1.7). "
+                     "Run-scoped — multiple Trajectory documents MAY share the same "
+                     "session_id when they belong to the same logical run (e.g., a "
+                     "parent and its embedded subagents). Producers SHOULD set this on "
+                     "root trajectories for run-level traceability, and MAY omit it on "
+                     "embedded subagents that inherit the parent's run identity. "
+                     "Required in v1.6 and earlier; relaxed to Optional in v1.7."),
+    )
+    trajectory_id: str | None = Field(
+        default=None,
+        description=("Canonical per-trajectory-document identifier, distinct from "
+                     "``session_id`` (ATIF v1.7). Unlike ``session_id`` (run-scoped, "
+                     "MAY be shared), ``trajectory_id`` uniquely identifies THIS "
+                     "trajectory object. Used to resolve ``SubagentTrajectoryRef`` "
+                     "entries against the root's ``subagent_trajectories`` array "
+                     "without overloading ``session_id``'s run-scoped semantics. "
+                     "Optional on standalone trajectories, but REQUIRED on any "
+                     "trajectory embedded in a parent's ``subagent_trajectories`` "
+                     "array. ``trajectory_id``s within a single parent's "
+                     "``subagent_trajectories`` array MUST be unique."),
     )
     agent: Agent = Field(
         ...,
@@ -83,11 +99,15 @@ class Trajectory(BaseModel):
     )
     subagent_trajectories: list[Trajectory] | None = Field(
         default=None,
-        description=("Array of embedded subagent trajectories (ATIF v1.7). Each element "
-                     "is a complete, independently-valid ATIF Trajectory with its own "
-                     "step_id sequence starting at 1. Consumers resolve SubagentTrajectoryRef "
-                     "entries with null trajectory_path by matching session_id against "
-                     "entries in this array."),
+        description=("Array of embedded subagent trajectories (ATIF v1.7). Each "
+                     "element is a complete, independently-valid ATIF Trajectory "
+                     "with its own ``trajectory_id``, ``agent``, and ``step_id`` "
+                     "sequence starting at 1. Consumers resolve a ``SubagentTrajectoryRef`` "
+                     "with ``trajectory_path`` unset by matching ``trajectory_id`` "
+                     "against entries in this array. Every embedded subagent MUST "
+                     "set ``trajectory_id``; ``trajectory_id``s within this array "
+                     "MUST be unique. (``session_id``s, by contrast, are run-scoped "
+                     "and MAY collide across siblings.)"),
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -102,8 +122,32 @@ class Trajectory(BaseModel):
         for i, step in enumerate(self.steps):
             expected_step_id = i + 1
             if step.step_id != expected_step_id:
-                raise ValueError(f"steps[{i}].step_id: expected {expected_step_id} "
-                                 f"(sequential from 1), got {step.step_id}")
+                raise ValueError(
+                    f"steps[{i}].step_id: expected {expected_step_id} (sequential from 1), got {step.step_id}")
+        return self
+
+    @model_validator(mode="after")
+    def validate_subagent_trajectory_ids(self) -> Trajectory:
+        """Spec §IV: every embedded subagent MUST set ``trajectory_id``,
+        and ``trajectory_id``s within the parent's ``subagent_trajectories``
+        array MUST be unique. (``session_id``s, by contrast, are run-scoped
+        and MAY collide across siblings.)"""
+        if not self.subagent_trajectories:
+            return self
+        seen: set[str] = set()
+        for i, sub in enumerate(self.subagent_trajectories):
+            if sub.trajectory_id is None:
+                raise ValueError(
+                    f"subagent_trajectories[{i}].trajectory_id: REQUIRED on "
+                    f"embedded subagents (ATIF v1.7); cannot be null when the "
+                    f"trajectory appears in a parent's subagent_trajectories "
+                    f"array.", )
+            if sub.trajectory_id in seen:
+                raise ValueError(
+                    f"subagent_trajectories[{i}].trajectory_id: duplicate value "
+                    f"{sub.trajectory_id!r}; trajectory_ids within a parent's "
+                    f"subagent_trajectories array MUST be unique (ATIF v1.7).", )
+            seen.add(sub.trajectory_id)
         return self
 
     @model_validator(mode="after")

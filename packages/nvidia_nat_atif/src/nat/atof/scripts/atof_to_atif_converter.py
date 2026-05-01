@@ -49,7 +49,6 @@ from typing import Any
 import jsonschema
 
 from nat.atif.agent import Agent
-from nat.atif.function_ancestry import FunctionAncestry
 from nat.atif.step import Step
 from nat.atif.tool_call import ToolCall
 from nat.atif.trajectory import Trajectory
@@ -195,7 +194,9 @@ def _validate_event_data_schema(event: Event) -> None:
 
 
 def _build_ancestry(uuid: str, name: str, parent_uuid: str | None, name_map: dict[str, str]) -> dict:
-    """Build a v1.7 FunctionAncestry dict (parent_id/parent_name null at root)."""
+    """Build a v1.7 ancestry dict for embedding in ``Step.extra["ancestry"]``
+    or ``ToolCall.extra["ancestry"]``. Matches :class:`nat.atif.atif_step_extra.AtifAncestry`
+    shape: ``parent_id`` / ``parent_name`` are null at the root."""
     parent_name = name_map.get(parent_uuid) if parent_uuid else None
     return {
         "function_id": uuid,
@@ -331,7 +332,7 @@ def _events_to_step_dicts(
     pending_observations: list[dict] = []
     pending_obs_timestamp: str | int | None = None
     pending_tool_ancestry_by_id: dict[str, dict] = {}
-    pending_tool_invocations: list[dict] = []
+    pending_tool_invocations_by_id: dict[str, dict] = {}
     current_agent_step_idx: int | None = None
     # Per (parent_uuid, role) → set of already-emitted content strings.
     # Used for R2/R3 (user turns) and extended role=system handling — lets
@@ -340,9 +341,15 @@ def _events_to_step_dicts(
     seen_input_messages: dict[tuple[str | None, str], set[str]] = {}
 
     def flush_observations() -> None:
-        """Attach buffered observations to the preceding agent step (R4 drain)."""
+        """Attach buffered observations to the preceding agent step (R4 drain).
+
+        Per-tool-call ancestry and invocation timing are written into each
+        ``tool_call.extra`` dict (ATIF v1.7 layout — see
+        :class:`nat.atif.atif_step_extra.AtifToolCallExtra`). Step-level
+        invocation timing remains on ``step.extra["invocation"]``.
+        """
         nonlocal pending_observations, pending_obs_timestamp
-        nonlocal pending_tool_ancestry_by_id, pending_tool_invocations
+        nonlocal pending_tool_ancestry_by_id, pending_tool_invocations_by_id
 
         if not pending_observations and not pending_tool_ancestry_by_id:
             return
@@ -364,16 +371,22 @@ def _events_to_step_dicts(
             if pending_observations:
                 agent_step["observation"] = {"results": _build_results(pending_observations)}
 
-            if pending_tool_ancestry_by_id and agent_step.get("tool_calls"):
+            # Attach per-tool ancestry + invocation to each tool_call's extra
+            # dict. ATIF v1.7 spec adds `extra` to ToolCall for exactly this
+            # kind of producer-defined per-call metadata.
+            if (pending_tool_ancestry_by_id or pending_tool_invocations_by_id) and agent_step.get("tool_calls"):
                 for tc in agent_step["tool_calls"]:
-                    anc = pending_tool_ancestry_by_id.get(tc["tool_call_id"])
-                    if anc:
-                        tc["tool_ancestry"] = anc
-
-            if pending_tool_invocations:
-                extra = dict(agent_step.get("extra") or {})
-                extra["tool_invocations"] = pending_tool_invocations
-                agent_step["extra"] = extra
+                    tc_id = tc["tool_call_id"]
+                    anc = pending_tool_ancestry_by_id.get(tc_id)
+                    inv = pending_tool_invocations_by_id.get(tc_id)
+                    if anc is None and inv is None:
+                        continue
+                    tc_extra = dict(tc.get("extra") or {})
+                    if anc is not None:
+                        tc_extra["ancestry"] = anc
+                    if inv is not None:
+                        tc_extra["invocation"] = inv
+                    tc["extra"] = tc_extra
         elif pending_observations:
             step_dicts.append({
                 "source": "system",
@@ -386,7 +399,7 @@ def _events_to_step_dicts(
 
         pending_observations = []
         pending_tool_ancestry_by_id = {}
-        pending_tool_invocations = []
+        pending_tool_invocations_by_id = {}
         pending_obs_timestamp = None
 
     # Main event loop
@@ -464,7 +477,12 @@ def _events_to_step_dicts(
             start_micros = start_ts_map.get(event.uuid)
             invocation = _build_invocation_info(start_micros, event.ts_micros, event.uuid)
 
-            extra_fields: dict = {"invocation": invocation}
+            # ATIF v1.7: ancestry lives in extra["ancestry"] (no typed
+            # top-level field). Step-level invocation timing accompanies it.
+            extra_fields: dict = {
+                "ancestry": function_ancestry,
+                "invocation": invocation,
+            }
             # Producer extension: preserve data_schema declared by the producer
             # on the LLM scope-end (consumer may want to validate data shape).
             if event.data_schema:
@@ -474,7 +492,6 @@ def _events_to_step_dicts(
                 "source": "agent",
                 "message": agent_msg,
                 "timestamp": event.timestamp,
-                "function_ancestry": function_ancestry,
                 "llm_call_count": 1,
                 "extra": extra_fields,
             }
@@ -501,10 +518,9 @@ def _events_to_step_dicts(
                                                                             event.name,
                                                                             event.parent_uuid,
                                                                             name_map)
-
-            start_micros = start_ts_map.get(event.uuid)
-            pending_tool_invocations.append(
-                _build_invocation_info(start_micros, event.ts_micros, tool_call_id or event.uuid))
+                start_micros = start_ts_map.get(event.uuid)
+                pending_tool_invocations_by_id[tool_call_id] = _build_invocation_info(
+                    start_micros, event.ts_micros, tool_call_id)
 
         elif isinstance(event, MarkEvent) and event.data is not None:
             flush_observations()
@@ -612,14 +628,16 @@ def _events_to_step_dicts(
             start_micros = start_ts_map.get(event.uuid)
             invocation = _build_invocation_info(start_micros, event.ts_micros, event.uuid)
 
-            r13_extra: dict = {"invocation": invocation}
+            r13_extra: dict = {
+                "ancestry": function_ancestry,
+                "invocation": invocation,
+            }
             if event.data_schema:
                 r13_extra["data_schema"] = event.data_schema
             step_dict = {
                 "source": "agent",
                 "message": "",
                 "timestamp": event.timestamp,
-                "function_ancestry": function_ancestry,
                 "llm_call_count": 0,
                 "tool_calls": synthetic_tcs,
                 "extra": r13_extra,
@@ -648,14 +666,16 @@ def _events_to_step_dicts(
             start_micros = start_ts_map.get(event.uuid)
             invocation = _build_invocation_info(start_micros, event.ts_micros, event.uuid)
 
-            r8_extra: dict = {"invocation": invocation}
+            r8_extra: dict = {
+                "ancestry": function_ancestry,
+                "invocation": invocation,
+            }
             if event.data_schema:
                 r8_extra["data_schema"] = event.data_schema
             step_dicts.append({
                 "source": "system",
                 "message": message,
                 "timestamp": event.timestamp,
-                "function_ancestry": function_ancestry,
                 "extra": r8_extra,
             })
 
@@ -677,22 +697,21 @@ def _events_to_step_dicts(
 
 
 def _materialize_steps(step_dicts: list[dict]) -> list[Step]:
-    """Build validated Step instances from raw step dicts."""
+    """Build validated Step instances from raw step dicts.
+
+    ATIF v1.7: ancestry is no longer a typed top-level field — it's
+    embedded in ``Step.extra["ancestry"]`` and ``ToolCall.extra["ancestry"]``
+    as plain dicts (``AtifAncestry`` shape, see :mod:`nat.atif.atif_step_extra`).
+    No model conversion is needed here; the dicts pass through to the
+    ``extra`` field unchanged.
+    """
     steps = []
     for sd in step_dicts:
         tool_calls = None
         if sd.get("tool_calls"):
-            tool_calls = []
-            for tc in sd["tool_calls"]:
-                anc = tc.pop("tool_ancestry", None)
-                tc_kwargs = dict(tc)
-                if anc is not None:
-                    tc_kwargs["tool_ancestry"] = FunctionAncestry(**anc)
-                tool_calls.append(ToolCall(**tc_kwargs))
+            tool_calls = [ToolCall(**tc) for tc in sd["tool_calls"]]
 
         step_kwargs = {k: v for k, v in sd.items() if k != "tool_calls"}
-        if "function_ancestry" in step_kwargs and step_kwargs["function_ancestry"] is not None:
-            step_kwargs["function_ancestry"] = FunctionAncestry(**step_kwargs["function_ancestry"])
         if tool_calls is not None:
             step_kwargs["tool_calls"] = tool_calls
         steps.append(Step(**step_kwargs))
@@ -769,7 +788,15 @@ def _convert_impl(events: list[Event], explicit_root_uuid: str | None) -> Trajec
                         wrapping_tc_id = (e.category_profile or {}).get("tool_call_id")
                     break
 
-        ref = {"session_id": child_trajectory.session_id, "trajectory_path": None}
+        # ATIF v1.7: refs resolve via `trajectory_id` (canonical). `session_id`
+        # is recorded as informational only — consumers MUST NOT use it to
+        # resolve. `trajectory_path` stays null for embedded refs.
+        ref: dict[str, Any] = {
+            "trajectory_id": child_trajectory.trajectory_id,
+            "trajectory_path": None,
+        }
+        if child_trajectory.session_id is not None:
+            ref["session_id"] = child_trajectory.session_id
         if wrapping_category == "tool" and wrapping_tc_id:
             subagent_ref_by_tc_id[wrapping_tc_id] = ref
         elif wrapping_category == "context" and wrapping_uuid:
@@ -826,6 +853,14 @@ def _convert_impl(events: list[Event], explicit_root_uuid: str | None) -> Trajec
     if session_id is None:
         session_id = root_agent_uuid or "atof-session"
 
+    # ATIF v1.7: trajectory_id is REQUIRED on embedded subagents and OPTIONAL
+    # on standalone (root) trajectories. Derive from the root agent's UUID
+    # — already document-unique per ATOF semantics. Only set it on embedded
+    # subagent invocations (signaled by `explicit_root_uuid`); leave None on
+    # the top-level call so standalone trajectories don't carry a synthetic
+    # ID a consumer might mistake for a meaningful one.
+    trajectory_id = root_agent_uuid if explicit_root_uuid is not None else None
+
     # Pick up model_name from the first LLM scope-end (prefer ones under the root)
     for event in main_events:
         if _is_scope_end(event) and event.category == "llm":
@@ -845,6 +880,7 @@ def _convert_impl(events: list[Event], explicit_root_uuid: str | None) -> Trajec
     return Trajectory(
         schema_version="ATIF-v1.7",
         session_id=session_id,
+        trajectory_id=trajectory_id,
         agent=Agent(name=agent_name, version=agent_version, model_name=model_name),
         steps=steps,
         subagent_trajectories=subagent_trajectories or None,
