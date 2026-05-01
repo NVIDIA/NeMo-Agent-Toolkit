@@ -1,0 +1,12 @@
+{
+  "tenantId": "06938c20-42d5-4112-9f91-643dff159d7f",
+  "agentBlueprintDisplayName": "NatA365WorkerAgentSpike Blueprint",
+  "subscriptionId": "08536547-4266-47b1-b19e-00bb6fffb4d4",
+  "resourceGroup": "a365-nat-dev-rg-1",
+  "location": "westus2",
+  "appServicePlanName": "nat-a365-worker-asp",
+  "appServicePlanSku": "F1",
+  "webAppName": "nat-a365-worker-webapp",
+  "deploymentProjectPath": ".",
+  "clientAppId": "ab868bfc-b1ab-4e28-9028-92711ee51d9d"
+}

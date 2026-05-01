@@ -24,7 +24,7 @@ general:
     tracing:
       a365:
         _type: a365
-        agent_id: "83d6fb2b-0af5-424a-a785-637c8c1b33c3"
+        agent_id: "d734986e-5087-4b93-af06-efb1834504ad"
         tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
         token_resolver: "a365_auth"
         cluster_category: "prod"
@@ -40,7 +40,7 @@ authentication:
 function_groups:
   a365_tools:
     _type: a365_mcp_tooling
-    agentic_app_id: "a185cf21-03c8-4bf1-919a-ec8f0782118d"
+    agentic_app_id: "d734986e-5087-4b93-af06-efb1834504ad"
     auth_token: "a365_auth"
 
 functions:

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/vdevPreview/MicrosoftTeams.schema.json",
+  "id": "d734986e-5087-4b93-af06-efb1834504ad",
+  "name": {
+    "short": "NAT Worker Agent",
+    "full": "NAT Worker Agent"
+  },
+  "description": {
+    "short": "API-based worker agent for the NAT A365 spike.",
+    "full": "API-based worker agent for the NAT A365 spike. This agent is deployed from the NAT worker runtime and is intended to be instantiated from the Agent 365 worker blueprint flow."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#9ec9d9",
+  "version": "1.1.4",
+  "manifestVersion": "devPreview",
+  "developer": {
+    "name": "Alexander Fournier",
+    "mpnId": "",
+    "websiteUrl": "https://www.nvidia.com",
+    "privacyUrl": "https://www.nvidia.com/en-us/about-nvidia/privacy-policy/",
+    "termsOfUseUrl": "https://www.nvidia.com/en-us/about-nvidia/legal-info/"
+  },
+  "agenticUserTemplates": [
+    {
+      "id": "7b0926a6-c4ee-445a-a913-bd054594bd09",
+      "file": "agenticUserTemplateManifest.json"
+    }
+  ]
+}

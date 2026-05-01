@@ -22,6 +22,7 @@ import logging
 import os
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+from urllib.parse import quote
 
 import aiohttp
 from mcp.server.fastmcp import FastMCP
@@ -38,7 +39,7 @@ _port = int(os.environ.get("GRAPH_MAIL_PORT", "8100"))
 # Stateful mode (default): supports SSE-based session initialization required by
 # the NAT MCP client (streamable_http_client). mcp.run() handles routing internally
 # without a Starlette wrapper, avoiding the 307-redirect / Session terminated issue.
-mcp = FastMCP("graph_mail", host="0.0.0.0", port=_port)
+mcp = FastMCP("graph_mail", host="0.0.0.0", port=_port, stateless_http=True)
 
 
 @mcp.custom_route("/health", methods=["GET"])
@@ -52,6 +53,13 @@ def _auth_headers() -> dict[str, str]:
     if not token:
         raise RuntimeError("GRAPH_MAIL_TOKEN environment variable is not set")
     return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+
+def _mailbox_root() -> str:
+    mailbox_user = os.environ.get("GRAPH_MAILBOX_USER", "").strip()
+    if mailbox_user:
+        return f"/users/{quote(mailbox_user, safe='')}"
+    return "/me"
 
 
 async def _graph_get(path: str, params: dict | None = None) -> dict:
@@ -102,7 +110,7 @@ async def search_emails(
         "$top": str(min(max_results, 50)),
     }
 
-    data = await _graph_get("/me/messages", params)
+    data = await _graph_get(f"{_mailbox_root()}/messages", params)
     emails = data.get("value", [])
 
     if not emails:
@@ -132,7 +140,7 @@ async def get_email_content(email_id: str) -> str:
         The full email body as plain text, along with sender, recipients, and date.
     """
     data = await _graph_get(
-        f"/me/messages/{email_id}",
+        f"{_mailbox_root()}/messages/{email_id}",
         params={"$select": "subject,from,toRecipients,receivedDateTime,body"},
     )
 

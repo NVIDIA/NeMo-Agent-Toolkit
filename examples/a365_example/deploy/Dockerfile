@@ -8,8 +8,8 @@
 #   docker build --platform linux/amd64 -f examples/a365_example/deploy/Dockerfile -t nat-a365-bot:latest .
 #
 # Run (inject secrets at runtime; never bake into the image):
-#   Bot + A365 MCP tooling (default CMD):
-#     docker run --rm -e A365_APP_ID=... -e A365_APP_PASSWORD=... -e A365_BEARER_TOKEN=... -p 3978:3978 nat-a365-bot:latest
+#   Bot + A365 MCP tooling + Phoenix telemetry (default CMD):
+#     docker run --rm -e A365_APP_ID=... -e A365_APP_PASSWORD=... -e A365_MCP_TOKEN=... -e PHOENIX_ENDPOINT=... -p 3978:3978 nat-a365-bot:latest
 #   Bot only (no MCP): override CMD to use config_a365_front_end_azure.yml — no A365_BEARER_TOKEN required.
 
 FROM python:3.11-slim-bookworm
@@ -45,7 +45,7 @@ ENV SETUPTOOLS_SCM_PRETEND_VERSION=${SETUPTOOLS_SCM_PRETEND_VERSION}
 ARG NAT_BUILD_STAMP=unknown
 ENV NAT_BUILD_STAMP=${NAT_BUILD_STAMP}
 
-RUN uv sync --frozen --no-dev --extra mcp
+RUN uv sync --prerelease=allow --no-dev --extra mcp --extra phoenix
 
 ENV PATH="/workspace/examples/a365_example/.venv/bin:$PATH"
 

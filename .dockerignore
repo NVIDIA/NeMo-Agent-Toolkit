@@ -29,3 +29,21 @@ env/
 # Ignore python bytecode files
 *.pyc
 __pycache__/
+
+# Speed up A365 bot image builds by excluding repo content not used by the deploy Dockerfile
+external/
+docs/build/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/dist/
+**/build/
+**/node_modules/
+**/*.ipynb
+
+# Keep only the A365 examples needed for bot image builds
+examples/*
+!examples/a365_example/
+!examples/a365_example/**
+!examples/a365_worker_agent_spike/
+!examples/a365_worker_agent_spike/**

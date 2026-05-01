@@ -25,6 +25,7 @@ if [[ -z "${TOKEN}" ]]; then
     echo "Fetching fresh Graph token via az CLI..."
     TOKEN="$(az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv)"
 fi
+MAILBOX_USER="${GRAPH_MAILBOX_USER:-}"
 
 echo "==> Logging in to ACR"
 az acr login --name "${REGISTRY%.azurecr.io}"
@@ -44,7 +45,10 @@ if az containerapp show -g "${RG}" -n "${APP}" &>/dev/null; then
     az containerapp secret set -g "${RG}" -n "${APP}" \
         --secrets "graph-mail-token=${TOKEN}"
     az containerapp update -g "${RG}" -n "${APP}" \
-        --image "${FULL_IMAGE}"
+        --image "${FULL_IMAGE}" \
+        --set-env-vars \
+          "GRAPH_MAIL_TOKEN=secretref:graph-mail-token" \
+          "GRAPH_MAILBOX_USER=${MAILBOX_USER}"
 else
     echo "    Creating new container app..."
     az containerapp create \
@@ -58,7 +62,9 @@ else
         --min-replicas 1 \
         --max-replicas 1 \
         --secrets "graph-mail-token=${TOKEN}" \
-        --env-vars "GRAPH_MAIL_TOKEN=secretref:graph-mail-token"
+        --env-vars \
+          "GRAPH_MAIL_TOKEN=secretref:graph-mail-token" \
+          "GRAPH_MAILBOX_USER=${MAILBOX_USER}"
 fi
 
 FQDN="$(az containerapp show -g "${RG}" -n "${APP}" --query "properties.configuration.ingress.fqdn" -o tsv)"

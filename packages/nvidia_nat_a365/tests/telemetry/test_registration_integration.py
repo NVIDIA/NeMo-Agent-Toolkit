@@ -25,6 +25,10 @@ from nat.builder.context import Context
 from nat.data_models.authentication import AuthResult, BearerTokenCred
 from nat.data_models.component_ref import AuthenticationRef
 from nat.plugins.a365.exceptions import A365AuthenticationError
+from nat.plugins.a365.telemetry.agentic_token_cache import (
+    cache_agentic_observability_token,
+    clear_agentic_observability_token_cache,
+)
 from nat.plugins.a365.telemetry.register import a365_telemetry_exporter
 from nat.plugins.a365.telemetry.register import A365TelemetryExporter
 
@@ -135,6 +139,27 @@ class TestRegistrationIntegration:
                     # Batch config (batch_size, flush_interval) is passed to parent class
                     # and used in processors - not stored as instance attributes
                     # The fact that exporter was created successfully verifies config was valid
+
+    @pytest.mark.asyncio
+    async def test_registration_token_resolver_uses_cached_agentic_token(
+        self, config, mock_builder, mock_auth_provider
+    ):
+        """Test that the SDK token_resolver can return cache-backed agentic tokens."""
+        clear_agentic_observability_token_cache()
+        cache_agentic_observability_token(
+            "turn-tenant-456",
+            "turn-agent-123",
+            "cached-agentic-token",
+        )
+
+        try:
+            with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"):
+                async with a365_telemetry_exporter(config, mock_builder) as exporter:
+                    token = exporter._token_resolver("turn-agent-123", "turn-tenant-456")
+                    assert token == "cached-agentic-token"
+                    mock_builder.get_auth_provider.assert_not_called()
+        finally:
+            clear_agentic_observability_token_cache()
 
     @pytest.mark.asyncio
     async def test_registration_handles_auth_provider_resolution_failure(

@@ -13,9 +13,9 @@ This folder mirrors the **intent** of blueprints like **NVIDIA AI-Q** on your ma
 
 **Secrets (runtime env, never in image):**
 
-- `A365_APP_ID` — Entra application (client) ID of the Bot registration
-- `A365_APP_PASSWORD` — client secret
-- `A365_ALLOWED_AUDIENCES` — optional comma-separated inbound Bot JWT audience aliases if Teams sends an `aud` different from `A365_APP_ID`
+- `A365_APP_ID` — for the API-based worker lane, the Agent 365 worker blueprint ID; for a standard Teams bot, the Azure Bot / Entra application client ID
+- `A365_APP_PASSWORD` — matching blueprint client secret or bot app client secret
+- `A365_ALLOWED_AUDIENCES` — for the API-based worker lane, include the Azure Bot Microsoft App ID / `botMsaAppId`; otherwise optional comma-separated inbound Bot JWT audience aliases
 - `A365_BEARER_TOKEN` — **Required for the default config** (client-credentials token for A365 telemetry + tooling discovery; same pattern as [get_a365_token.py](../scripts/get_a365_token.py))
 
 Optional: override `tenant_id` in YAML or inject **`AZURE_TENANT_ID`** on the Container App ( **`aca_rollout_mcp.sh`** copies it when set before rollout). For **production** tooling gateway (**`GET …/mcpServers`**), set **`ENVIRONMENT=Production`** (the rollout script sets this). **`config_a365_bot_with_tooling.yml`** should set **`tooling_gateway_tenant_id`** to your Entra **directory (tenant) ID** for NAT’s gateway headers; see [docs/A365-MCP-NATIVE-SETUP.md](../docs/A365-MCP-NATIVE-SETUP.md) and [docs/A365-DEV-INVENTORY.md](../docs/A365-DEV-INVENTORY.md).
@@ -90,7 +90,7 @@ Verify health: `curl -i https://<fqdn>/api/messages` → expect **401/405** with
 ## Azure App Service (Linux container)
 
 - Configure **container** to expose **3978** (or map **WEBSITES_PORT** if your image honors it — this image uses fixed **3978**).
-- Set **application settings** for `A365_APP_ID`, `A365_APP_PASSWORD`.
+- Set **application settings** for `A365_APP_ID`, `A365_APP_PASSWORD`, and for API-based worker agents `A365_ALLOWED_AUDIENCES=<botMsaAppId>`.
 - Set **HTTPS only**; Bot endpoint uses the App Service **default hostname** or custom domain.
 
 ## AI-Q reference (same machine layout)

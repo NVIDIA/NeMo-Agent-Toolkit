@@ -2,15 +2,11 @@
 # All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 #
-# A365 worker-agent bot (Teams / Bot Framework) + MCP tools + A365 telemetry.
-# Container / Azure: set A365_APP_ID, A365_APP_PASSWORD, A365_ALLOWED_AUDIENCES,
-# A365_MCP_TOKEN, and A365_BEARER_TOKEN.
-# Run: nat start a365 --config_file configs/config_a365_bot_with_tooling.yml
+# A365 worker-agent bot (Teams / Bot Framework) + MCP tools + A365 telemetry
+# using the Agentic/OBO observability auth handler.
 #
-# Requires: nvidia-nat-mcp (Docker image built with: uv sync --frozen --no-dev --extra mcp).
-# Development: ENVIRONMENT=Development and ToolingManifest.json in process cwd (see deploy/Dockerfile).
-# A365 telemetry uses the worker/service token path and the Agent 365 S2S
-# observability endpoint. Do not confuse this worker lane with the assistant/OBO lane.
+# Use this only as a controlled experiment for Microsoft Agent 365 observability
+# debugging. The worker/S2S path remains config_a365_bot_with_tooling.yml.
 
 general:
   telemetry:
@@ -25,23 +21,28 @@ general:
         tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
         token_resolver: "a365_observability_auth"
         cluster_category: "prod"
-        use_s2s_endpoint: true
+        use_s2s_endpoint: false
   front_end:
     _type: a365
     host: "0.0.0.0"
     port: 3978
+    observability_auth_handler_id: AGENTIC
     app_id: ${A365_APP_ID}
     app_password: ${A365_APP_PASSWORD}
-    # Optional: set via YAML list or env A365_ALLOWED_AUDIENCES="aud1,aud2"
-    # when Teams / Bot Framework sends an audience different from A365_APP_ID.
     tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
     enable_notifications: false
 
 authentication:
   a365_observability_auth:
-    _type: api_key
-    raw_key: ${A365_BEARER_TOKEN}
-    auth_scheme: Bearer
+    _type: oauth2_auth_code_flow
+    client_id: ${A365_APP_ID}
+    client_secret: ${A365_APP_PASSWORD}
+    authorization_url: https://login.microsoftonline.com/06938c20-42d5-4112-9f91-643dff159d7f/oauth2/v2.0/authorize
+    token_url: https://login.microsoftonline.com/06938c20-42d5-4112-9f91-643dff159d7f/oauth2/v2.0/token
+    redirect_uri: http://localhost/a365/observability/callback
+    scopes:
+      - api://9b975845-388f-4429-889e-eab1ef63949c/Agent365.Observability.OtelWrite
+    use_pkce: false
   a365_mcp_auth:
     _type: api_key
     raw_key: ${A365_MCP_TOKEN}

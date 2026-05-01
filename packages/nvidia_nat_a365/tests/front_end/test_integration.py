@@ -21,11 +21,16 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
+from nat.data_models.authentication import AuthenticatedContext, AuthFlowType
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
 from nat.plugins.a365.front_end.front_end_config import A365FrontEndConfig
 from nat.plugins.a365.front_end.plugin import A365FrontEndPlugin
 from nat.plugins.a365.front_end.worker import A365FrontEndPluginWorker
+from nat.plugins.a365.telemetry.agentic_token_cache import (
+    clear_agentic_observability_token_cache,
+    get_cached_agentic_observability_token,
+)
 from nat.test.functions import EchoFunctionConfig
 
 
@@ -42,7 +47,7 @@ def mock_agent_application():
     
     # activity is used as a decorator factory: @agent_app.activity("message")
     # It's called with "message", then the result is used as a decorator
-    def activity_decorator_factory(activity_type):
+    def activity_decorator_factory(activity_type, **kwargs):
         def decorator(func):
             return func
         return decorator
@@ -164,10 +169,10 @@ def create_notification_decorator_mock(handler_storage):
 def create_activity_decorator_mock(handler_storage):
     """Helper to create a mock for agent_app.activity() decorator.
     
-    agent_app.activity("message") returns a decorator, so this creates
-    a callable that takes an activity type and returns a decorator.
+    agent_app.activity("message", auth_handlers=[...]) returns a decorator,
+    so this creates a callable that accepts the activity type and kwargs.
     """
-    def activity_decorator(activity_type):
+    def activity_decorator(activity_type, **kwargs):
         def decorator(func):
             handler_storage.append(func)
             return func
@@ -814,6 +819,138 @@ class TestNotificationWorkflowRouting:
             # Verify notification_session_manager was used (not default_session_manager)
             notification_session_manager.run.assert_called_once()
             default_session_manager.run.assert_not_called()
+
+
+class TestPerTurnAuthBridge:
+    """Test per-turn auth callback/session wiring for delegated auth support."""
+
+    @pytest.mark.asyncio
+    async def test_build_turn_telemetry_context_uses_activity_and_token_callback(
+        self,
+        full_config,
+        mock_agent_application,
+        mock_turn_context,
+        mock_turn_state,
+    ):
+        worker = A365FrontEndPluginWorker(full_config)
+        mock_turn_context.activity.get_agentic_instance_id = Mock(return_value="turn-agent-123")
+        mock_turn_context.activity.get_agentic_tenant_id = Mock(return_value="turn-tenant-456")
+        mock_turn_context.activity.get_agentic_user = Mock(return_value="turn-user-789")
+
+        async def token_callback(_config, method):
+            assert method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE
+            return AuthenticatedContext(
+                headers={"Authorization": "Bearer turn-token"},
+                metadata={"expires_at": None},
+            )
+
+        turn_context = await worker._build_turn_telemetry_context(
+            mock_agent_application,
+            mock_turn_context,
+            mock_turn_state,
+            token_callback,
+        )
+
+        assert turn_context.agent_id == "turn-agent-123"
+        assert turn_context.tenant_id == "turn-tenant-456"
+        assert turn_context.agentic_user_id == "turn-user-789"
+        assert turn_context.token == "turn-token"
+
+    @pytest.mark.asyncio
+    async def test_build_turn_telemetry_context_can_cache_token(
+        self,
+        mock_agent_application,
+        mock_turn_context,
+        mock_turn_state,
+    ):
+        clear_agentic_observability_token_cache()
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            observability_token_bridge="cache",
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        worker = A365FrontEndPluginWorker(full_config)
+        mock_turn_context.activity.get_agentic_instance_id = Mock(return_value="turn-agent-123")
+        mock_turn_context.activity.get_agentic_tenant_id = Mock(return_value="turn-tenant-456")
+        mock_turn_context.activity.get_agentic_user = Mock(return_value="turn-user-789")
+
+        async def token_callback(_config, method):
+            assert method == AuthFlowType.OAUTH2_AUTHORIZATION_CODE
+            return AuthenticatedContext(
+                headers={"Authorization": "Bearer cached-turn-token"},
+                metadata={"expires_at": None},
+            )
+
+        try:
+            turn_context = await worker._build_turn_telemetry_context(
+                mock_agent_application,
+                mock_turn_context,
+                mock_turn_state,
+                token_callback,
+            )
+
+            assert turn_context.agent_id == "turn-agent-123"
+            assert turn_context.tenant_id == "turn-tenant-456"
+            assert turn_context.agentic_user_id == "turn-user-789"
+            assert turn_context.token is None
+            assert get_cached_agentic_observability_token("turn-tenant-456", "turn-agent-123") == "cached-turn-token"
+        finally:
+            clear_agentic_observability_token_cache()
+
+    @pytest.mark.asyncio
+    async def test_message_handler_passes_user_auth_callback_through_session(
+        self,
+        full_config,
+        mock_agent_application,
+        mock_turn_context,
+        mock_turn_state,
+    ):
+        worker = A365FrontEndPluginWorker(full_config)
+
+        callback = AsyncMock()
+
+        class CustomWorker(A365FrontEndPluginWorker):
+            def _extract_user_id(self, context, state):
+                return 'aad-user-123'
+
+            def _get_user_authentication_callback(self, agent_app, context, state):
+                return callback
+
+        worker = CustomWorker(full_config)
+
+        mock_runner = MagicMock()
+        mock_runner.__aenter__ = AsyncMock(return_value=mock_runner)
+        mock_runner.__aexit__ = AsyncMock(return_value=None)
+        mock_runner.result = AsyncMock(return_value='Delegated workflow result')
+
+        mock_session = MagicMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        mock_session.run = MagicMock(return_value=mock_runner)
+
+        session_manager = MagicMock()
+        session_manager.session = MagicMock(return_value=mock_session)
+
+        handlers = []
+        mock_agent_application.activity = MagicMock(side_effect=create_activity_decorator_mock(handlers))
+
+        await worker.setup_message_handlers(
+            agent_app=mock_agent_application,
+            session_manager=session_manager,
+        )
+
+        await handlers[0](mock_turn_context, mock_turn_state)
+
+        session_manager.session.assert_called_once_with(
+            user_id='aad-user-123',
+            user_authentication_callback=callback,
+        )
+        mock_session.run.assert_called_once()
+        mock_turn_context.send_activity.assert_called_once_with('Delegated workflow result')
 
 
 class TestWorkerPatternMethods:

@@ -11,18 +11,18 @@ Keep tenant-specific values in `.env` or Azure secret stores, not in this file.
 
 ## Identity Map
 
-The same Entra app registration is reused in several places:
+The worker/hireable-agent lane uses two identities:
+
+- Agent 365 worker blueprint ID -> `A365_APP_ID`
+- Agent 365 worker blueprint client secret -> `A365_APP_PASSWORD`
+- Azure Bot `Microsoft App ID` / `botMsaAppId` -> `A365_ALLOWED_AUDIENCES`
+- Azure Bot `Microsoft App ID` / `botMsaAppId` -> Teams manifest `bots[].botId`
+
+For standalone token minting, use the Entra app that owns the worker blueprint:
 
 - Entra app `Application (client) ID` -> `AZURE_CLIENT_ID`
-- Same app id -> `A365_APP_ID`
-- Same app id -> Azure Bot `Microsoft App ID`
-- Same app id -> Teams manifest `bots[].botId`
-
-That identity also provides:
-
-- `AZURE_TENANT_ID`
-- `AZURE_CLIENT_SECRET`
-- `A365_APP_PASSWORD` if you reuse the app secret for the bot
+- Entra app secret -> `AZURE_CLIENT_SECRET`
+- tenant -> `AZURE_TENANT_ID`
 
 ## Azure Services Used
 
@@ -80,16 +80,17 @@ The working subscription resource for this example is:
 
 ## Teams / Bot Alignment
 
-These values must match:
+For the API-based worker path:
 
-1. Azure Bot `Microsoft App ID`
-2. `A365_APP_ID`
-3. Teams manifest `bots[].botId`
-4. Entra app registration `Application (client) ID`
+1. Teams manifest `bots[].botId` must match Azure Bot `Microsoft App ID`.
+2. `A365_APP_ID` must be the Agent 365 worker blueprint ID.
+3. `A365_APP_PASSWORD` must be the worker blueprint client secret.
+4. `A365_ALLOWED_AUDIENCES` must include the Azure Bot `Microsoft App ID`.
 
 If Teams inbound auth works but replies fail, also confirm the app registration
-tenant model matches the bot setup. In this demo, aligning the app to
-single-tenant was part of the working fix.
+tenant model matches the bot setup. In this demo, accepting the bot ID as an
+audience while authenticating outbound agentic requests as the blueprint was the
+working fix.
 
 ## Operational Split
 

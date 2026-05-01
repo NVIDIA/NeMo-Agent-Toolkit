@@ -1,0 +1,46 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.25/MicrosoftTeams.schema.json",
+  "version": "0.1.0",
+  "manifestVersion": "1.25",
+  "id": "<new-teams-app-id>",
+  "name": {
+    "short": "worker-agent-spike",
+    "full": "worker-agent-spike"
+  },
+  "developer": {
+    "name": "Alexander Fournier",
+    "websiteUrl": "https://www.nvidia.com",
+    "privacyUrl": "https://www.nvidia.com/en-us/about-nvidia/privacy-policy/",
+    "termsOfUseUrl": "https://www.nvidia.com/en-us/about-nvidia/legal-info/"
+  },
+  "description": {
+    "short": "Worker-style A365 agent spike",
+    "full": "API-based worker-style A365 agent spike isolated from the current OBO bot."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#ffffff",
+  "bots": [
+    {
+      "botId": "ab868bfc-b1ab-4e28-9028-92711ee51d9d",
+      "scopes": [
+        "personal",
+        "groupChat",
+        "team"
+      ],
+      "isNotificationOnly": false,
+      "supportsCalling": true,
+      "supportsVideo": true,
+      "supportsFiles": true
+    }
+  ],
+  "validDomains": [
+    "token.botframework.com"
+  ],
+  "webApplicationInfo": {
+    "id": "ab868bfc-b1ab-4e28-9028-92711ee51d9d",
+    "resource": "api://botid-ab868bfc-b1ab-4e28-9028-92711ee51d9d"
+  }
+}

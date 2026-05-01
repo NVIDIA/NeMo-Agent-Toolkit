@@ -82,11 +82,11 @@ Runs three scenarios in sequence: telemetry-only, telemetry + A365 MCP tooling, 
 
 See **[docs/A365-TROUBLESHOOTING-401.md](./docs/A365-TROUBLESHOOTING-401.md)**. Short version:
 
-1. Use **`A365_TOKEN_SCOPE=api://AzureADTokenExchange/.default`** with the **blueprint** app’s client id/secret; add **`A365_FMI_PATH=<agent-identity-client-id>`** if the token request fails or Microsoft’s flow requires it.
+1. Use **`A365_TOKEN_SCOPE=api://AzureADTokenExchange/.default`** with the **worker blueprint** app’s client id/secret; add **`A365_FMI_PATH=<agent-identity-client-id>`** if the token request fails or Microsoft’s flow requires it.
 2. Inspect the JWT: `uv run python scripts/get_a365_token.py --decode` — confirm **`aud`** matches what the Power Platform traces URL expects. If it shows Graph, traces will often reject it.
 3. If still 401, try **`A365_TOKEN_SCOPE=https://api.powerplatform.com/.default`** (same app, if permitted).
 4. **Hosting:** For `TurnContext`-based apps, Microsoft documents `exchange_token` + `get_observability_authentication_scope()` ([Agent observability](https://learn.microsoft.com/en-us/microsoft-agent-365/developer/reference/observability-schema/)); that path is separate from `nat serve` HTTP smoke.
 
 ### If the bot works in Web Chat but not in Teams
 
-See **[docs/A365-DEV-INVENTORY.md](./docs/A365-DEV-INVENTORY.md)**. The usual fix is aligning **Teams manifest `botId`** with **Azure Bot Microsoft App ID** and **`A365_APP_ID`**; server logs may show **401 Invalid audience** for **`Microsoft-SkypeBotApi`** when they are misaligned.
+See **[docs/A365-DEV-INVENTORY.md](./docs/A365-DEV-INVENTORY.md)**. For the API-based worker path, **`A365_APP_ID`** is the worker blueprint ID and **`A365_ALLOWED_AUDIENCES`** should include the Azure Bot Microsoft App ID / `botMsaAppId`; server logs may show **401 Invalid audience** for **`Microsoft-SkypeBotApi`** when that split is missing.

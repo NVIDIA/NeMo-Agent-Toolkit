@@ -17,6 +17,7 @@
 """Configuration for Microsoft Agent 365 front-end."""
 
 import logging
+from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 
@@ -85,6 +86,18 @@ class A365FrontEndConfig(FrontEndBaseConfig, name="a365"):
         default=None,
         description="Custom worker class for handling A365 setup (default: built-in worker). "
                    "Specify as 'module.path.ClassName' to use a custom worker implementation."
+    )
+    observability_auth_handler_id: str | None = Field(
+        default=None,
+        description="Optional Microsoft Agents auth handler ID to use for delegated/OBO "
+                    "observability token exchange. Leave unset for service-token/S2S setups."
+    )
+    observability_token_bridge: Literal["turn_context", "cache", "both"] = Field(
+        default="turn_context",
+        description="How delegated observability tokens are bridged to the Agent 365 exporter. "
+                    "'turn_context' keeps the token only in the active turn ContextVar, "
+                    "'cache' stores it by tenant_id and agent_id for the SDK token_resolver callback, "
+                    "and 'both' enables both paths."
     )
 
     @model_validator(mode="after")

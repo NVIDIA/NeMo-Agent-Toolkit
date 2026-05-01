@@ -26,6 +26,12 @@ from opentelemetry.trace import SpanContext, SpanKind, TraceFlags
 
 from nat.builder.context import ContextState
 from nat.plugins.a365.telemetry.a365_exporter import A365OtelExporter, _ReadableSpanAdapter
+from nat.plugins.a365.telemetry.turn_context import (
+    A365TurnTelemetryContext,
+    get_a365_turn_telemetry_context,
+    reset_a365_turn_telemetry_context,
+    set_a365_turn_telemetry_context,
+)
 from nat.plugins.opentelemetry.otel_span import OtelSpan
 from nat.plugins.opentelemetry.otel_span import InstrumentationScope
 
@@ -148,6 +154,73 @@ class TestA365ExporterIntegration:
         assert readable_span.attributes["gen_ai.agent.id"] == "test-agent-123"
         assert readable_span.context.trace_id == span.get_span_context().trace_id
         assert readable_span.context.span_id == span.get_span_context().span_id
+
+    @pytest.mark.asyncio
+    async def test_export_uses_turn_context_identity(self, a365_exporter):
+        """Test that per-turn telemetry context overrides static tenant/agent IDs."""
+        span = create_mock_otel_span(name="test_span_1")
+        token = set_a365_turn_telemetry_context(
+            A365TurnTelemetryContext(
+                agent_id="turn-agent-123",
+                tenant_id="turn-tenant-456",
+                agentic_user_id="turn-user-789",
+                token="turn-token",
+            )
+        )
+
+        try:
+            await a365_exporter.export_otel_spans([span])
+        finally:
+            reset_a365_turn_telemetry_context(token)
+
+        call_args = a365_exporter._mock_a365_exporter_instance.export.call_args
+        readable_span = call_args[0][0][0]
+
+        assert readable_span.attributes["tenant.id"] == "turn-tenant-456"
+        assert readable_span.attributes["microsoft.tenant.id"] == "turn-tenant-456"
+        assert readable_span.attributes["gen_ai.agent.id"] == "turn-agent-123"
+
+    @pytest.mark.asyncio
+    async def test_export_preserves_turn_context_for_sdk_token_resolver(self, mock_context_state):
+        """Test that run_in_executor keeps ContextVar state for SDK token resolution."""
+        resolved_tokens = []
+
+        def token_resolver(_agent_id: str, _tenant_id: str) -> str | None:
+            turn_context = get_a365_turn_telemetry_context()
+            token = turn_context.token if turn_context is not None else None
+            resolved_tokens.append(token)
+            return token
+
+        with patch(
+            "nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"
+        ) as mock_exporter_class:
+            mock_exporter_instance = Mock()
+            mock_exporter_instance.export = Mock(
+                side_effect=lambda _spans: token_resolver("agent", "tenant")
+            )
+            mock_exporter_class.return_value = mock_exporter_instance
+
+            exporter = A365OtelExporter(
+                agent_id="test-agent-123",
+                tenant_id="test-tenant-456",
+                token_resolver=token_resolver,
+                context_state=mock_context_state,
+            )
+
+            token = set_a365_turn_telemetry_context(
+                A365TurnTelemetryContext(
+                    agent_id="turn-agent-123",
+                    tenant_id="turn-tenant-456",
+                    token="turn-token",
+                )
+            )
+
+            try:
+                await exporter.export_otel_spans([create_mock_otel_span()])
+            finally:
+                reset_a365_turn_telemetry_context(token)
+
+            assert resolved_tokens == ["turn-token"]
 
     @pytest.mark.asyncio
     async def test_export_multiple_spans(self, a365_exporter):

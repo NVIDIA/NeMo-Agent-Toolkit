@@ -33,9 +33,13 @@ dependencies = [
 [project.optional-dependencies]
 # Enables config_telemetry_and_tooling.yml (A365 MCP tooling). Install: uv sync --extra mcp
 mcp = ["nvidia-nat-mcp"]
+# Enables Phoenix trace export. Install: uv sync --extra phoenix
+phoenix = ["nvidia-nat-phoenix"]
 
 [tool.uv.sources]
 nvidia-nat = { path = "../..", editable = true }
 nvidia-nat-a365 = { path = "../../packages/nvidia_nat_a365", editable = true }
 nvidia-nat-langchain = { path = "../../packages/nvidia_nat_langchain", editable = true }
 nvidia-nat-mcp = { path = "../../packages/nvidia_nat_mcp", editable = true }
+nvidia-nat-opentelemetry = { path = "../../packages/nvidia_nat_opentelemetry", editable = true }
+nvidia-nat-phoenix = { path = "../../packages/nvidia_nat_phoenix", editable = true }

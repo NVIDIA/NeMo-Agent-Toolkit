@@ -30,6 +30,8 @@ from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.plugins.a365.exceptions import A365AuthenticationError, A365ConfigurationError
+from nat.plugins.a365.telemetry.agentic_token_cache import get_cached_agentic_observability_token
+from nat.plugins.a365.telemetry.turn_context import get_a365_turn_telemetry_context
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +259,10 @@ class A365TelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name=
         default=False,
         description="Use service-to-service endpoint instead of standard endpoint"
     )
+    observability_lane: str | None = Field(
+        default=None,
+        description="Optional diagnostic label for the Agent 365 observability auth/identity lane."
+    )
     suppress_invoke_agent_input: bool = Field(
         default=False,
         description="Suppress input messages for InvokeAgent spans"
@@ -284,10 +290,40 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
 
     def token_resolver(agent_id: str, tenant_id: str) -> str | None:
         """Sync callable for SDK; returns cached token (filled on first export)."""
-        return token_cache.get_token()
+        turn_context = get_a365_turn_telemetry_context()
+        if turn_context is not None and turn_context.token:
+            logger.info(
+                "Token resolver using per-turn delegated token "
+                "(lane=%s, agent_id=%s, tenant_id=%s)",
+                config.observability_lane,
+                agent_id,
+                tenant_id,
+            )
+            return turn_context.token
+        cached_token = get_cached_agentic_observability_token(tenant_id, agent_id)
+        if cached_token:
+            logger.info(
+                "Token resolver using cached delegated token "
+                "(lane=%s, agent_id=%s, tenant_id=%s)",
+                config.observability_lane,
+                agent_id,
+                tenant_id,
+            )
+            return cached_token
+        token = token_cache.get_token()
+        if token:
+            logger.info(
+                "Token resolver using app-only/static token "
+                "(lane=%s, agent_id=%s, tenant_id=%s)",
+                config.observability_lane,
+                agent_id,
+                tenant_id,
+            )
+        return token
 
     logger.info(
-        f"A365 telemetry exporter initialized for agent_id={config.agent_id}, "
+        f"A365 telemetry exporter initialized for lane={config.observability_lane}, "
+        f"agent_id={config.agent_id}, "
         f"tenant_id={config.tenant_id}, cluster={config.cluster_category}, "
         f"token_resolver=deferred (auth resolved on first export)"
     )
@@ -303,6 +339,7 @@ async def a365_telemetry_exporter(config: A365TelemetryExporter, builder: Builde
         token_extractor=token_extractor_fn,
         cluster_category=config.cluster_category,
         use_s2s_endpoint=config.use_s2s_endpoint,
+        observability_lane=config.observability_lane,
         suppress_invoke_agent_input=config.suppress_invoke_agent_input,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,

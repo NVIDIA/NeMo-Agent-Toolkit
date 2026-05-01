@@ -45,7 +45,7 @@ general:
     tracing:
       a365:
         _type: a365
-        agent_id: "a185cf21-03c8-4bf1-919a-ec8f0782118d"
+        agent_id: "d734986e-5087-4b93-af06-efb1834504ad"
         tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
         token_resolver: "a365_auth"
         cluster_category: "prod"
@@ -156,7 +156,7 @@ Correlation IDs change per request; the **401** is consistent until the correct 
 
 1. **Exact OAuth scope or app permission** required to **POST** to the Agent 365 **traces** API (`…/traces?api-version=1`) for a given tenant/agent.
 2. Whether a **standalone** `nat serve` process (not Agent Hosting) must use **client credentials** + a specific resource, or a token from **`get_observability_authentication_scope()`**-equivalent flow.
-3. Any **tenant / agent registration** step so the identity tied to the token is allowed to write traces for agent `a185cf21-03c8-4bf1-919a-ec8f0782118d`.
+3. Any **tenant / agent registration** step so the identity tied to the token is allowed to write traces for worker agent `d734986e-5087-4b93-af06-efb1834504ad`.
 
 ---
 

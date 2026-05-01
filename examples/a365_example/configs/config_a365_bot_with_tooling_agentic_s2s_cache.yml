@@ -3,14 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # A365 worker-agent bot (Teams / Bot Framework) + MCP tools + A365 telemetry.
-# Container / Azure: set A365_APP_ID, A365_APP_PASSWORD, A365_ALLOWED_AUDIENCES,
-# A365_MCP_TOKEN, and A365_BEARER_TOKEN.
-# Run: nat start a365 --config_file configs/config_a365_bot_with_tooling.yml
 #
-# Requires: nvidia-nat-mcp (Docker image built with: uv sync --frozen --no-dev --extra mcp).
-# Development: ENVIRONMENT=Development and ToolingManifest.json in process cwd (see deploy/Dockerfile).
-# A365 telemetry uses the worker/service token path and the Agent 365 S2S
-# observability endpoint. Do not confuse this worker lane with the assistant/OBO lane.
+# Cache-backed Agent 365 observability experiment:
+# - Keep the Agent 365 service-to-service telemetry endpoint.
+# - Register the AGENTIC auth handler on message turns.
+# - Exchange an observability token from TurnContext for the current agentic
+#   instance/user.
+# - Cache that token by tenant_id and agent_id.
+# - Let the Agent 365 SDK token_resolver callback retrieve the cached token
+#   using the agent_id and tenant_id arguments it receives.
+# - Fall back to A365_BEARER_TOKEN if no cached agentic token is available.
+#
+# Run: nat start a365 --config_file configs/config_a365_bot_with_tooling_agentic_s2s_cache.yml
 
 general:
   telemetry:
@@ -30,10 +34,10 @@ general:
     _type: a365
     host: "0.0.0.0"
     port: 3978
+    observability_auth_handler_id: AGENTIC
+    observability_token_bridge: cache
     app_id: ${A365_APP_ID}
     app_password: ${A365_APP_PASSWORD}
-    # Optional: set via YAML list or env A365_ALLOWED_AUDIENCES="aud1,aud2"
-    # when Teams / Bot Framework sends an audience different from A365_APP_ID.
     tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
     enable_notifications: false
 

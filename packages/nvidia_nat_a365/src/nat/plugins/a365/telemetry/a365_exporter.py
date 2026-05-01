@@ -15,13 +15,19 @@
 # limitations under the License.
 
 import asyncio
+import contextvars
 import logging
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
-from microsoft_agents_a365.observability.core.exporters.agent365_exporter import (
-    Agent365Exporter,
-)
+try:
+    from microsoft_agents_a365.observability.core.exporters.agent365_exporter import (
+        Agent365Exporter,
+    )
+except ImportError:
+    from microsoft_agents_a365.observability.core.exporters.agent365_exporter import (
+        _Agent365Exporter as Agent365Exporter,
+    )
 
 from nat.builder.context import ContextState
 from nat.plugins.a365.exceptions import A365AuthenticationError, A365SDKError
@@ -29,6 +35,8 @@ from nat.plugins.a365.telemetry.register import (
     _get_token_extractor,
     _raise_no_bearer_token,
 )
+from nat.plugins.a365.telemetry.agentic_token_cache import get_cached_agentic_observability_token
+from nat.plugins.a365.telemetry.turn_context import get_a365_turn_telemetry_context
 from nat.plugins.opentelemetry.otel_span import OtelSpan
 from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 from opentelemetry.sdk.trace import Event as OtelEvent
@@ -64,6 +72,7 @@ class _ReadableSpanAdapter:
         # Add tenant_id and agent_id to attributes (required for A365 partitioning)
         self.attributes = dict(otel_span.attributes)
         self.attributes["tenant.id"] = tenant_id
+        self.attributes["microsoft.tenant.id"] = tenant_id
         self.attributes["gen_ai.agent.id"] = agent_id
 
         self.events = []
@@ -162,6 +171,7 @@ class A365OtelExporter(OtelSpanExporter):
         auth_ref=None,
         builder=None,
         token_extractor=None,
+        observability_lane: str | None = None,
     ):
         """Initialize the A365 exporter."""
         self._token_extractor = (
@@ -187,6 +197,7 @@ class A365OtelExporter(OtelSpanExporter):
         self._token_cache = token_cache
         self._auth_ref = auth_ref
         self._builder = builder
+        self._observability_lane = observability_lane
         self._auth_resolve_lock = asyncio.Lock()
 
         # SDK requires token_resolver to be non-None, so if None is passed, SDK will raise ValueError
@@ -197,7 +208,8 @@ class A365OtelExporter(OtelSpanExporter):
         )
 
         logger.info(
-            f"A365 telemetry exporter initialized for agent_id={agent_id}, "
+            f"A365 telemetry exporter initialized for lane={observability_lane}, "
+            f"agent_id={agent_id}, "
             f"tenant_id={tenant_id}, cluster={cluster_category}"
         )
 
@@ -207,6 +219,16 @@ class A365OtelExporter(OtelSpanExporter):
         Telemetry is built in __aenter__ before auth exists; by first export,
         populate_builder has run so we can resolve here. Keeps core unchanged.
         """
+        turn_context = get_a365_turn_telemetry_context()
+        if turn_context is not None and turn_context.token:
+            return
+        if turn_context is not None:
+            cached_token = get_cached_agentic_observability_token(
+                turn_context.tenant_id or self._tenant_id,
+                turn_context.agent_id or self._agent_id,
+            )
+            if cached_token:
+                return
         if self._auth_provider is not None or self._auth_ref is None or self._builder is None:
             return
         if self._token_cache is None:
@@ -239,6 +261,16 @@ class A365OtelExporter(OtelSpanExporter):
 
         Only refreshes if using AuthenticationRef-based token resolver.
         """
+        turn_context = get_a365_turn_telemetry_context()
+        if turn_context is not None and turn_context.token:
+            return
+        if turn_context is not None:
+            cached_token = get_cached_agentic_observability_token(
+                turn_context.tenant_id or self._tenant_id,
+                turn_context.agent_id or self._agent_id,
+            )
+            if cached_token:
+                return
         if self._auth_provider is None or self._token_cache is None:
             return
 
@@ -296,28 +328,46 @@ class A365OtelExporter(OtelSpanExporter):
         await self._refresh_token_if_needed()
 
         try:
+            turn_context = get_a365_turn_telemetry_context()
+            tenant_id = self._tenant_id
+            agent_id = self._agent_id
+            if turn_context is not None:
+                tenant_id = turn_context.tenant_id or tenant_id
+                agent_id = turn_context.agent_id or agent_id
+                logger.info(
+                    "A365 exporter using turn telemetry context "
+                    "(lane=%s, agent_id=%s, tenant_id=%s, agentic_user_id=%s, token=%s)",
+                    self._observability_lane,
+                    agent_id,
+                    tenant_id,
+                    turn_context.agentic_user_id,
+                    "present" if turn_context.token else "missing",
+                )
+
             readable_spans = []
             for otel_span in spans:
                 readable_span = _convert_otel_span_to_readable(
                     otel_span=otel_span,
-                    tenant_id=self._tenant_id,
-                    agent_id=self._agent_id,
+                    tenant_id=tenant_id,
+                    agent_id=agent_id,
                 )
                 readable_spans.append(readable_span)
 
             logger.debug(
                 f"A365 exporter: converted {len(spans)} OtelSpans to ReadableSpan format "
-                f"(tenant={self._tenant_id}, agent={self._agent_id})"
+                f"(tenant={tenant_id}, agent={agent_id})"
             )
 
             # Bridge async/sync: A365's Agent365Exporter.export() is synchronous
-            # Run it in a thread pool executor to avoid blocking the event loop
+            # Run it in a thread pool executor to avoid blocking the event loop.
+            # copy_context() preserves the per-turn token for the SDK resolver.
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self._a365_exporter.export, readable_spans)
+            execution_context = contextvars.copy_context()
+            await loop.run_in_executor(None, execution_context.run, self._a365_exporter.export, readable_spans)
 
             logger.debug(
                 f"A365 exporter: successfully exported {len(readable_spans)} spans "
-                f"(tenant={self._tenant_id}, agent={self._agent_id})"
+                f"(tenant={tenant_id}, agent={agent_id})"
             )
         except Exception as e:
             error_msg = str(e).lower()

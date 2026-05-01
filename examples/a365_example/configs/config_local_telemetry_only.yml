@@ -5,7 +5,7 @@
 # A365 telemetry-only smoke test (no A365 front-end). Use for local run to verify spans reach A365.
 # Run: A365_BEARER_TOKEN=<token> nat serve --config_file configs/config_local_telemetry_only.yml
 # Then trigger a request (e.g. via console prompt) and check A365 observability for spans.
-# agent_id: use Agent identity Blueprint ID from Entra → Agent identities → your agent → Overview
+# agent_id: use the worker Agent 365 blueprint ID / agent identity.
 # (not the app registration Application (client) ID used for MSAL).
 
 general:
@@ -17,7 +17,7 @@ general:
     tracing:
       a365:
         _type: a365
-        agent_id: "83d6fb2b-0af5-424a-a785-637c8c1b33c3"
+        agent_id: "d734986e-5087-4b93-af06-efb1834504ad"
         tenant_id: "06938c20-42d5-4112-9f91-643dff159d7f"
         token_resolver: "a365_auth"
         cluster_category: "prod"
