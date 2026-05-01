@@ -60,8 +60,7 @@ def _is_terminal_agent_step(step: dict[str, Any]) -> bool:
 
 
 def _per_toolcall_meta(
-    tool_calls: list[dict[str, Any]],
-) -> tuple[list[AtifAncestry], list[AtifInvocationInfo | None]]:
+    tool_calls: list[dict[str, Any]], ) -> tuple[list[AtifAncestry], list[AtifInvocationInfo | None]]:
     """Pull per-tool-call ancestry + invocation out of each tool_call's
     own ``extra`` dict. ATIF v1.7 colocates this metadata with the
     tool_call rather than as parallel arrays on the parent step.
