@@ -59,6 +59,29 @@ def _is_terminal_agent_step(step: dict[str, Any]) -> bool:
     return (step.get("source") == "agent" and bool(step.get("message")) and not step.get("tool_calls"))
 
 
+def _per_toolcall_meta(
+    tool_calls: list[dict[str, Any]],
+) -> tuple[list[AtifAncestry], list[AtifInvocationInfo | None]]:
+    """Pull per-tool-call ancestry + invocation out of each tool_call's
+    own ``extra`` dict. ATIF v1.7 colocates this metadata with the
+    tool_call rather than as parallel arrays on the parent step.
+
+    Tool calls missing ``extra.ancestry`` are skipped from the ancestry
+    list; the invocation list is index-aligned with the ancestry list.
+    """
+    ancestry: list[AtifAncestry] = []
+    invocations: list[AtifInvocationInfo | None] = []
+    for tc in tool_calls:
+        extra = tc.get("extra") or {}
+        anc_dict = extra.get("ancestry")
+        if not anc_dict:
+            continue
+        ancestry.append(AtifAncestry.model_validate(anc_dict))
+        inv_dict = extra.get("invocation")
+        invocations.append(AtifInvocationInfo.model_validate(inv_dict) if inv_dict else None)
+    return ancestry, invocations
+
+
 def _topo_sort_indices(ancestries: list[AtifAncestry]) -> list[int]:
     """Return indices in topological order (parents before children)."""
     id_to_idx = {a.function_id: i for i, a in enumerate(ancestries)}
@@ -365,8 +388,7 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
         spans.append(llm_span)
 
         tool_calls = step.get("tool_calls") or []
-        tool_ancestry = step_extra.tool_ancestry
-        tool_invocations = step_extra.tool_invocations or []
+        tool_ancestry, tool_invocations = _per_toolcall_meta(tool_calls)
         obs_results = (step.get("observation") or {}).get("results") or []
 
         if tool_calls and tool_ancestry:
@@ -477,8 +499,7 @@ class ATIFTrajectorySpanExporter(SerializeMixin):
         spans.append(func_span)
 
         tool_calls = step.get("tool_calls") or []
-        tool_ancestry = step_extra.tool_ancestry
-        tool_invocations = step_extra.tool_invocations or []
+        tool_ancestry, tool_invocations = _per_toolcall_meta(tool_calls)
         obs_results = (step.get("observation") or {}).get("results") or []
 
         if tool_calls and tool_ancestry:
