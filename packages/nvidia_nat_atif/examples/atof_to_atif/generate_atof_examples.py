@@ -236,7 +236,9 @@ def generate_exmp02() -> list[Event]:
             attributes=[],
             category="llm",
             category_profile={"model_name": "gpt-4.1"},
-            data={"messages": [{"role": "user", "content": "What is 3 + 4?"}]},
+            data={"messages": [{
+                "role": "user", "content": "What is 3 + 4?"
+            }]},
             data_schema=_OPENAI_CHAT_SCHEMA,
         ),
         ScopeEvent(
@@ -250,9 +252,11 @@ def generate_exmp02() -> list[Event]:
             category_profile={"model_name": "gpt-4.1"},
             data={
                 "content": "",
-                "tool_calls": [
-                    {"id": "call_abc", "name": "calculator__add", "arguments": {"a": 3, "b": 4}},
-                ],
+                "tool_calls": [{
+                    "id": "call_abc", "name": "calculator__add", "arguments": {
+                        "a": 3, "b": 4
+                    }
+                }, ],
             },
             data_schema=_OPENAI_CHAT_SCHEMA,
         ),
@@ -265,7 +269,9 @@ def generate_exmp02() -> list[Event]:
             attributes=["remote"],
             category="tool",
             category_profile={"tool_call_id": "call_abc"},
-            data={"a": 3, "b": 4},
+            data={
+                "a": 3, "b": 4
+            },
         ),
         ScopeEvent(
             scope_category="end",
@@ -289,18 +295,25 @@ def generate_exmp02() -> list[Event]:
             category_profile={"model_name": "gpt-4.1"},
             data={
                 "messages": [
-                    {"role": "user", "content": "What is 3 + 4?"},
                     {
-                        "role": "assistant",
-                        "tool_calls": [
-                            {
-                                "id": "call_abc",
-                                "name": "calculator__add",
-                                "arguments": {"a": 3, "b": 4},
-                            },
-                        ],
+                        "role": "user", "content": "What is 3 + 4?"
                     },
-                    {"role": "tool", "tool_call_id": "call_abc", "content": {"result": 7}},
+                    {
+                        "role":
+                            "assistant",
+                        "tool_calls": [{
+                            "id": "call_abc",
+                            "name": "calculator__add",
+                            "arguments": {
+                                "a": 3, "b": 4
+                            },
+                        }, ],
+                    },
+                    {
+                        "role": "tool", "tool_call_id": "call_abc", "content": {
+                            "result": 7
+                        }
+                    },
                 ]
             },
             data_schema=_OPENAI_CHAT_SCHEMA,
@@ -359,7 +372,9 @@ def generate_exmp03() -> list[Event]:
             parent_uuid=None,
             timestamp=_ts(3, 0),
             name="session_start",
-            data={"session_id": "sess-003", "user_id": "user-042"},
+            data={
+                "session_id": "sess-003", "user_id": "user-042"
+            },
         ),
         ScopeEvent(
             scope_category="start",
@@ -380,7 +395,9 @@ def generate_exmp03() -> list[Event]:
             attributes=[],
             category="llm",
             category_profile={"model_name": "gpt-4.1"},
-            data={"messages": [{"role": "user", "content": "What's the capital of France?"}]},
+            data={"messages": [{
+                "role": "user", "content": "What's the capital of France?"
+            }]},
         ),
         ScopeEvent(
             scope_category="end",
@@ -408,7 +425,9 @@ def generate_exmp03() -> list[Event]:
             parent_uuid=None,
             timestamp=_ts(3, 5),
             name="session_end",
-            data={"session_id": "sess-003", "message_count": 1},
+            data={
+                "session_id": "sess-003", "message_count": 1
+            },
         ),
     ]
     return events
@@ -463,9 +482,9 @@ def generate_exmp04() -> list[Event]:
             category_profile={"model_name": "claude-3-5-sonnet"},
             data={
                 "model": "claude-3-5-sonnet-20241022",
-                "messages": [
-                    {"role": "user", "content": "Summarize the document at /docs/intro.md"},
-                ],
+                "messages": [{
+                    "role": "user", "content": "Summarize the document at /docs/intro.md"
+                }, ],
             },
             data_schema=_ANTHROPIC_MESSAGES_SCHEMA,
         ),
@@ -483,12 +502,16 @@ def generate_exmp04() -> list[Event]:
                 "role": "assistant",
                 "model": "claude-3-5-sonnet-20241022",
                 "content": [
-                    {"type": "text", "text": "Let me read that file for you."},
+                    {
+                        "type": "text", "text": "Let me read that file for you."
+                    },
                     {
                         "type": "tool_use",
                         "id": tu_id,
                         "name": "read_file",
-                        "input": {"path": "/docs/intro.md"},
+                        "input": {
+                            "path": "/docs/intro.md"
+                        },
                     },
                 ],
                 "stop_reason": "tool_use",
@@ -527,30 +550,36 @@ def generate_exmp04() -> list[Event]:
             category="llm",
             category_profile={"model_name": "claude-3-5-sonnet"},
             data={
-                "model": "claude-3-5-sonnet-20241022",
+                "model":
+                    "claude-3-5-sonnet-20241022",
                 "messages": [
-                    {"role": "user", "content": "Summarize the document at /docs/intro.md"},
                     {
-                        "role": "assistant",
+                        "role": "user", "content": "Summarize the document at /docs/intro.md"
+                    },
+                    {
+                        "role":
+                            "assistant",
                         "content": [
-                            {"type": "text", "text": "Let me read that file for you."},
+                            {
+                                "type": "text", "text": "Let me read that file for you."
+                            },
                             {
                                 "type": "tool_use",
                                 "id": tu_id,
                                 "name": "read_file",
-                                "input": {"path": "/docs/intro.md"},
+                                "input": {
+                                    "path": "/docs/intro.md"
+                                },
                             },
                         ],
                     },
                     {
                         "role": "user",
-                        "content": [
-                            {
-                                "type": "tool_result",
-                                "tool_use_id": tu_id,
-                                "content": file_content,
-                            },
-                        ],
+                        "content": [{
+                            "type": "tool_result",
+                            "tool_use_id": tu_id,
+                            "content": file_content,
+                        }, ],
                     },
                 ],
             },
@@ -569,12 +598,10 @@ def generate_exmp04() -> list[Event]:
                 "id": "msg_02xyz",
                 "role": "assistant",
                 "model": "claude-3-5-sonnet-20241022",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "The document is the introduction page for an end-to-end demo project.",
-                    },
-                ],
+                "content": [{
+                    "type": "text",
+                    "text": "The document is the introduction page for an end-to-end demo project.",
+                }, ],
                 "stop_reason": "end_turn",
             },
             data_schema=_ANTHROPIC_MESSAGES_SCHEMA,
@@ -645,9 +672,11 @@ def generate_exmp05() -> list[Event]:
             category="llm",
             category_profile={"model_name": "gemini-2.0-flash"},
             data={
-                "contents": [
-                    {"role": "user", "parts": [{"text": "What time is it in Tokyo right now?"}]},
-                ],
+                "contents": [{
+                    "role": "user", "parts": [{
+                        "text": "What time is it in Tokyo right now?"
+                    }]
+                }, ],
             },
             data_schema=_GEMINI_GENERATE_CONTENT_SCHEMA,
         ),
@@ -661,23 +690,26 @@ def generate_exmp05() -> list[Event]:
             category="llm",
             category_profile={"model_name": "gemini-2.0-flash"},
             data={
-                "candidates": [
-                    {
-                        "content": {
-                            "role": "model",
-                            "parts": [
-                                {"text": "Let me check the current time in Tokyo. "},
-                                {
-                                    "functionCall": {
-                                        "name": "get_current_time",
-                                        "args": {"timezone": "Asia/Tokyo"},
+                "candidates": [{
+                    "content": {
+                        "role":
+                            "model",
+                        "parts": [
+                            {
+                                "text": "Let me check the current time in Tokyo. "
+                            },
+                            {
+                                "functionCall": {
+                                    "name": "get_current_time",
+                                    "args": {
+                                        "timezone": "Asia/Tokyo"
                                     },
                                 },
-                            ],
-                        },
-                        "finishReason": "STOP",
+                            },
+                        ],
                     },
-                ],
+                    "finishReason": "STOP",
+                }, ],
             },
             data_schema=_GEMINI_GENERATE_CONTENT_SCHEMA,
         ),
@@ -714,28 +746,34 @@ def generate_exmp05() -> list[Event]:
             category_profile={"model_name": "gemini-2.0-flash"},
             data={
                 "contents": [
-                    {"role": "user", "parts": [{"text": "What time is it in Tokyo right now?"}]},
                     {
-                        "role": "model",
-                        "parts": [
-                            {
-                                "functionCall": {
-                                    "name": "get_current_time",
-                                    "args": {"timezone": "Asia/Tokyo"},
-                                },
-                            },
-                        ],
+                        "role": "user", "parts": [{
+                            "text": "What time is it in Tokyo right now?"
+                        }]
                     },
                     {
-                        "role": "user",
-                        "parts": [
-                            {
-                                "functionResponse": {
-                                    "name": "get_current_time",
-                                    "response": {"result": iso_now},
+                        "role":
+                            "model",
+                        "parts": [{
+                            "functionCall": {
+                                "name": "get_current_time",
+                                "args": {
+                                    "timezone": "Asia/Tokyo"
                                 },
                             },
-                        ],
+                        }, ],
+                    },
+                    {
+                        "role":
+                            "user",
+                        "parts": [{
+                            "functionResponse": {
+                                "name": "get_current_time",
+                                "response": {
+                                    "result": iso_now
+                                },
+                            },
+                        }, ],
                     },
                 ],
             },
@@ -751,19 +789,16 @@ def generate_exmp05() -> list[Event]:
             category="llm",
             category_profile={"model_name": "gemini-2.0-flash"},
             data={
-                "candidates": [
-                    {
-                        "content": {
-                            "role": "model",
-                            "parts": [
-                                {
-                                    "text": "It's currently 3:30 PM on April 30, 2026 in Tokyo (Japan Standard Time).",
-                                },
-                            ],
-                        },
-                        "finishReason": "STOP",
+                "candidates": [{
+                    "content": {
+                        "role":
+                            "model",
+                        "parts": [{
+                            "text": "It's currently 3:30 PM on April 30, 2026 in Tokyo (Japan Standard Time).",
+                        }, ],
                     },
-                ],
+                    "finishReason": "STOP",
+                }, ],
             },
             data_schema=_GEMINI_GENERATE_CONTENT_SCHEMA,
         ),
@@ -843,7 +878,9 @@ def generate_exmp06() -> list[Event]:
                         "role": "system",
                         "content": "You are a router. Decide which specialist handles each part of the user's request.",
                     },
-                    {"role": "user", "content": user_query},
+                    {
+                        "role": "user", "content": user_query
+                    },
                 ],
             },
             data_schema=_OPENAI_CHAT_SCHEMA,
@@ -858,11 +895,9 @@ def generate_exmp06() -> list[Event]:
             category="llm",
             category_profile={"model_name": "gpt-4o"},
             data={
-                "content": (
-                    "Plan: send the factorial-code task to claude-3-5-sonnet "
-                    "(strong code synthesis), and the 2^32 arithmetic to "
-                    "gemini-2.0-flash. I'll combine the responses."
-                )
+                "content": ("Plan: send the factorial-code task to claude-3-5-sonnet "
+                            "(strong code synthesis), and the 2^32 arithmetic to "
+                            "gemini-2.0-flash. I'll combine the responses.")
             },
             data_schema=_OPENAI_CHAT_SCHEMA,
         ),
@@ -878,12 +913,10 @@ def generate_exmp06() -> list[Event]:
             category_profile={"model_name": "claude-3-5-sonnet"},
             data={
                 "model": "claude-3-5-sonnet-20241022",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": "Write a Python function for factorial.",
-                    },
-                ],
+                "messages": [{
+                    "role": "user",
+                    "content": "Write a Python function for factorial.",
+                }, ],
             },
             data_schema=_ANTHROPIC_MESSAGES_SCHEMA,
         ),
@@ -900,7 +933,9 @@ def generate_exmp06() -> list[Event]:
                 "id": "msg_006code",
                 "role": "assistant",
                 "model": "claude-3-5-sonnet-20241022",
-                "content": [{"type": "text", "text": code_answer}],
+                "content": [{
+                    "type": "text", "text": code_answer
+                }],
                 "stop_reason": "end_turn",
             },
             data_schema=_ANTHROPIC_MESSAGES_SCHEMA,
@@ -916,9 +951,11 @@ def generate_exmp06() -> list[Event]:
             category="llm",
             category_profile={"model_name": "gemini-2.0-flash"},
             data={
-                "contents": [
-                    {"role": "user", "parts": [{"text": "What is 2^32?"}]},
-                ],
+                "contents": [{
+                    "role": "user", "parts": [{
+                        "text": "What is 2^32?"
+                    }]
+                }, ],
             },
             data_schema=_GEMINI_GENERATE_CONTENT_SCHEMA,
         ),
@@ -932,15 +969,15 @@ def generate_exmp06() -> list[Event]:
             category="llm",
             category_profile={"model_name": "gemini-2.0-flash"},
             data={
-                "candidates": [
-                    {
-                        "content": {
-                            "role": "model",
-                            "parts": [{"text": math_answer}],
-                        },
-                        "finishReason": "STOP",
+                "candidates": [{
+                    "content": {
+                        "role": "model",
+                        "parts": [{
+                            "text": math_answer
+                        }],
                     },
-                ],
+                    "finishReason": "STOP",
+                }, ],
             },
             data_schema=_GEMINI_GENERATE_CONTENT_SCHEMA,
         ),

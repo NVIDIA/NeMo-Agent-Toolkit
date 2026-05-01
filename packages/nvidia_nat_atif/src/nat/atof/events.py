@@ -63,21 +63,19 @@ from nat.atof.flags import Flags  # noqa: F401  (re-exported for convenience)
 
 _ATOF_VERSION_PATTERN = re.compile(r"^0\.\d+$")
 
-_CANONICAL_CATEGORIES: frozenset[str] = frozenset(
-    {
-        "agent",
-        "function",
-        "llm",
-        "tool",
-        "retriever",
-        "embedder",
-        "reranker",
-        "guardrail",
-        "evaluator",
-        "custom",
-        "unknown",
-    }
-)
+_CANONICAL_CATEGORIES: frozenset[str] = frozenset({
+    "agent",
+    "function",
+    "llm",
+    "tool",
+    "retriever",
+    "embedder",
+    "reranker",
+    "guardrail",
+    "evaluator",
+    "custom",
+    "unknown",
+})
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -107,10 +105,8 @@ def _require_subtype_when_custom(category: str | None, category_profile: dict[st
     if category == "custom":
         subtype = (category_profile or {}).get("subtype")
         if not isinstance(subtype, str) or not subtype:
-            raise ValueError(
-                "category_profile.subtype is REQUIRED and must be a non-empty string "
-                "when category == 'custom' (spec §4.2)"
-            )
+            raise ValueError("category_profile.subtype is REQUIRED and must be a non-empty string "
+                             "when category == 'custom' (spec §4.2)")
 
 
 # ---------------------------------------------------------------------------
@@ -129,11 +125,9 @@ class _EventBase(BaseModel):
     data: Any | None = Field(default=None, description="Application-defined payload; opaque to ATOF")
     data_schema: dict[str, Any] | None = Field(
         default=None,
-        description=(
-            "Schema identifier {name, version} describing the shape of ``data``. "
-            "Opaque to ATOF core; validation against the named schema is the "
-            "consumer's responsibility (spec §2, §3)."
-        ),
+        description=("Schema identifier {name, version} describing the shape of ``data``. "
+                     "Opaque to ATOF core; validation against the named schema is the "
+                     "consumer's responsibility (spec §2, §3)."),
     )
     metadata: dict[str, Any] | None = Field(default=None, description="Tracing/correlation envelope")
 
@@ -210,9 +204,7 @@ class ScopeEvent(_EventBase):
     """
 
     kind: Literal["scope"] = "scope"
-    scope_category: Literal["start", "end"] = Field(
-        description="Lifecycle phase of the scope event (spec §3.1)",
-    )
+    scope_category: Literal["start", "end"] = Field(description="Lifecycle phase of the scope event (spec §3.1)", )
     attributes: list[str] = Field(
         default_factory=list,
         description="Canonical lowercase flag array, sorted and deduplicated (spec §2.1)",
@@ -220,11 +212,9 @@ class ScopeEvent(_EventBase):
     category: str = Field(description="Semantic category of the scope (spec §4)")
     category_profile: dict[str, Any] | None = Field(
         default=None,
-        description=(
-            "Category-specific typed fields (spec §4.4). Keys: "
-            "'model_name' for llm, 'tool_call_id' for tool, 'subtype' for custom. "
-            "Null for tier-1 opaque events and categories with no defined keys."
-        ),
+        description=("Category-specific typed fields (spec §4.4). Keys: "
+                     "'model_name' for llm, 'tool_call_id' for tool, 'subtype' for custom. "
+                     "Null for tier-1 opaque events and categories with no defined keys."),
     )
 
     @field_validator("attributes", mode="before")
@@ -263,10 +253,8 @@ class MarkEvent(_EventBase):
     )
     category_profile: dict[str, Any] | None = Field(
         default=None,
-        description=(
-            "Category-specific typed fields (spec §4.4). REQUIRED when "
-            "category == 'custom' (must carry category_profile.subtype)."
-        ),
+        description=("Category-specific typed fields (spec §4.4). REQUIRED when "
+                     "category == 'custom' (must carry category_profile.subtype)."),
     )
 
     @model_validator(mode="after")
@@ -278,8 +266,7 @@ class MarkEvent(_EventBase):
         # via _validate_category).
         if self.category is not None and not self.category:
             raise ValueError(
-                "category must be a non-empty string when set; use None for an uncategorized mark (spec §3.2, §4)"
-            )
+                "category must be a non-empty string when set; use None for an uncategorized mark (spec §3.2, §4)")
         return self
 
     @model_validator(mode="after")
@@ -292,10 +279,8 @@ class MarkEvent(_EventBase):
         extras = self.__pydantic_extra__ or {}
         forbidden = {"scope_category", "attributes"} & extras.keys()
         if forbidden:
-            raise ValueError(
-                f"mark event must not carry {sorted(forbidden)} "
-                "(spec §3.2: 'mark does NOT carry scope_category or attributes')"
-            )
+            raise ValueError(f"mark event must not carry {sorted(forbidden)} "
+                             "(spec §3.2: 'mark does NOT carry scope_category or attributes')")
         return self
 
 

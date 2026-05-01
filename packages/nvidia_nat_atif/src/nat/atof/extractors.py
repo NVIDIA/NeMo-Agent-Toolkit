@@ -260,7 +260,7 @@ class SchemaMap:
     output_text_paths: tuple[str, ...] = ()
     output_tool_calls_paths: tuple[str, ...] = ()
 
-    tool_call_id_paths: tuple[str, ...] = ("id",)
+    tool_call_id_paths: tuple[str, ...] = ("id", )
     tool_call_name_paths: tuple[str, ...] = ("name", "function.name")
     tool_call_args_paths: tuple[str, ...] = ("arguments", "function.arguments")
     tool_call_args_parse_json: bool = True
@@ -379,7 +379,7 @@ OPENAI_CHAT_COMPLETIONS_V1_MAP = SchemaMap(
     input_messages_paths=("content.messages", "messages"),
     output_text_paths=("content", "choices.0.message.content"),
     output_tool_calls_paths=("tool_calls", "choices.0.message.tool_calls"),
-    tool_call_id_paths=("id",),
+    tool_call_id_paths=("id", ),
     tool_call_name_paths=("name", "function.name"),
     tool_call_args_paths=("arguments", "function.arguments"),
     tool_call_args_parse_json=True,
@@ -481,9 +481,7 @@ def _anthropic_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
     return out
 
 
-def _anthropic_normalize_output_message(
-    data: Any,
-) -> tuple[str, list[dict[str, Any]]]:
+def _anthropic_normalize_output_message(data: Any, ) -> tuple[str, list[dict[str, Any]]]:
     """Decompose an Anthropic response's top-level ``content`` block list
     into ``(text, tool_calls)``.
 
@@ -512,13 +510,11 @@ def _anthropic_normalize_output_message(
             inp = block.get("input")
             if not isinstance(inp, dict):
                 inp = {}
-            tool_calls.append(
-                {
-                    "tool_call_id": block.get("id", ""),
-                    "function_name": block.get("name", ""),
-                    "arguments": inp,
-                }
-            )
+            tool_calls.append({
+                "tool_call_id": block.get("id", ""),
+                "function_name": block.get("name", ""),
+                "arguments": inp,
+            })
 
     return "".join(text_parts), tool_calls
 
@@ -603,13 +599,11 @@ def _gemini_walk_parts_for_tool_calls(parts: Any) -> list[dict[str, Any]]:
             # a custom ``tool_call_id`` field to the part dict — we
             # honour it if present.
             tool_id = part.get("tool_call_id") or f"{name}__{idx}"
-            out.append(
-                {
-                    "tool_call_id": tool_id,
-                    "function_name": name,
-                    "arguments": args,
-                }
-            )
+            out.append({
+                "tool_call_id": tool_id,
+                "function_name": name,
+                "arguments": args,
+            })
     return out
 
 
@@ -643,9 +637,7 @@ def _gemini_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
     return out
 
 
-def _gemini_normalize_output_message(
-    data: Any,
-) -> tuple[str, list[dict[str, Any]]]:
+def _gemini_normalize_output_message(data: Any, ) -> tuple[str, list[dict[str, Any]]]:
     """Decompose a Gemini response's first candidate into ``(text, tool_calls)``.
 
     Gemini may return multiple candidates — ATIF represents a single

@@ -112,7 +112,9 @@ class _OpenAiFactory(_PayloadFactory):
     ) -> dict[str, Any]:
         return {
             "content": prefix_text,
-            "tool_calls": [{"id": tool_id, "name": name, "arguments": args}],
+            "tool_calls": [{
+                "id": tool_id, "name": name, "arguments": args
+            }],
         }
 
     def llm_input_with_tool_result(
@@ -125,12 +127,18 @@ class _OpenAiFactory(_PayloadFactory):
     ) -> dict[str, Any]:
         return {
             "messages": [
-                {"role": "user", "content": prior_user_msg},
+                {
+                    "role": "user", "content": prior_user_msg
+                },
                 {
                     "role": "assistant",
-                    "tool_calls": [{"id": tool_id, "name": name, "arguments": args}],
+                    "tool_calls": [{
+                        "id": tool_id, "name": name, "arguments": args
+                    }],
                 },
-                {"role": "tool", "tool_call_id": tool_id, "content": result},
+                {
+                    "role": "tool", "tool_call_id": tool_id, "content": result
+                },
             ],
         }
 
@@ -148,7 +156,9 @@ class _AnthropicFactory(_PayloadFactory):
         return {
             "id": "msg_test",
             "role": "assistant",
-            "content": [{"type": "text", "text": text}],
+            "content": [{
+                "type": "text", "text": text
+            }],
             "stop_reason": "end_turn",
         }
 
@@ -162,14 +172,12 @@ class _AnthropicFactory(_PayloadFactory):
         content_blocks: list[dict[str, Any]] = []
         if prefix_text:
             content_blocks.append({"type": "text", "text": prefix_text})
-        content_blocks.append(
-            {
-                "type": "tool_use",
-                "id": tool_id,
-                "name": name,
-                "input": args,
-            }
-        )
+        content_blocks.append({
+            "type": "tool_use",
+            "id": tool_id,
+            "name": name,
+            "input": args,
+        })
         return {
             "id": "msg_test",
             "role": "assistant",
@@ -186,16 +194,23 @@ class _AnthropicFactory(_PayloadFactory):
         result: str,
     ) -> dict[str, Any]:
         return {
-            "model": "claude-3-5-sonnet-20241022",
+            "model":
+                "claude-3-5-sonnet-20241022",
             "messages": [
-                {"role": "user", "content": prior_user_msg},
+                {
+                    "role": "user", "content": prior_user_msg
+                },
                 {
                     "role": "assistant",
-                    "content": [{"type": "tool_use", "id": tool_id, "name": name, "input": args}],
+                    "content": [{
+                        "type": "tool_use", "id": tool_id, "name": name, "input": args
+                    }],
                 },
                 {
                     "role": "user",
-                    "content": [{"type": "tool_result", "tool_use_id": tool_id, "content": result}],
+                    "content": [{
+                        "type": "tool_result", "tool_use_id": tool_id, "content": result
+                    }],
                 },
             ],
         }
@@ -209,26 +224,25 @@ class _GeminiFactory(_PayloadFactory):
         return "model" if role == "assistant" else role
 
     def llm_input(self, messages: list[dict[str, str]]) -> dict[str, Any]:
-        contents = [
-            {
-                "role": self._to_gemini_role(m["role"]),
-                "parts": [{"text": m["content"]}],
-            }
-            for m in messages
-        ]
+        contents = [{
+            "role": self._to_gemini_role(m["role"]),
+            "parts": [{
+                "text": m["content"]
+            }],
+        } for m in messages]
         return {"contents": contents}
 
     def llm_output_text(self, text: str) -> dict[str, Any]:
         return {
-            "candidates": [
-                {
-                    "content": {
-                        "role": "model",
-                        "parts": [{"text": text}],
-                    },
-                    "finishReason": "STOP",
+            "candidates": [{
+                "content": {
+                    "role": "model",
+                    "parts": [{
+                        "text": text
+                    }],
                 },
-            ],
+                "finishReason": "STOP",
+            }, ],
         }
 
     def llm_output_tool_call(
@@ -243,12 +257,12 @@ class _GeminiFactory(_PayloadFactory):
             parts.append({"text": prefix_text})
         parts.append({"functionCall": {"name": name, "args": args}})
         return {
-            "candidates": [
-                {
-                    "content": {"role": "model", "parts": parts},
-                    "finishReason": "STOP",
+            "candidates": [{
+                "content": {
+                    "role": "model", "parts": parts
                 },
-            ],
+                "finishReason": "STOP",
+            }, ],
         }
 
     def llm_input_with_tool_result(
@@ -265,18 +279,28 @@ class _GeminiFactory(_PayloadFactory):
         # surfaces back to the converter).
         return {
             "contents": [
-                {"role": "user", "parts": [{"text": prior_user_msg}]},
+                {
+                    "role": "user", "parts": [{
+                        "text": prior_user_msg
+                    }]
+                },
                 {
                     "role": "model",
-                    "parts": [{"functionCall": {"name": name, "args": args}}],
+                    "parts": [{
+                        "functionCall": {
+                            "name": name, "args": args
+                        }
+                    }],
                 },
                 {
                     "role": "user",
-                    "parts": [
-                        {
-                            "functionResponse": {"name": name, "response": {"result": result}},
+                    "parts": [{
+                        "functionResponse": {
+                            "name": name, "response": {
+                                "result": result
+                            }
                         },
-                    ],
+                    }, ],
                 },
             ],
         }
@@ -287,7 +311,6 @@ _FACTORIES = {
     "anthropic": _AnthropicFactory(),
     "gemini": _GeminiFactory(),
 }
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -354,7 +377,9 @@ def _build_simple(factory: _PayloadFactory) -> list[Event]:
             attributes=[],
             category="llm",
             category_profile={"model_name": "test"},
-            data=factory.llm_input([{"role": "user", "content": user_msg}]),
+            data=factory.llm_input([{
+                "role": "user", "content": user_msg
+            }]),
             data_schema=factory.schema,
         ),
         ScopeEvent(
@@ -422,7 +447,9 @@ def _build_nested(factory: _PayloadFactory) -> list[Event]:
             attributes=[],
             category="llm",
             category_profile={"model_name": "test"},
-            data=factory.llm_input([{"role": "user", "content": user_msg}]),
+            data=factory.llm_input([{
+                "role": "user", "content": user_msg
+            }]),
             data_schema=factory.schema,
         ),
         ScopeEvent(
@@ -535,7 +562,9 @@ def _build_multi_turn(factory: _PayloadFactory) -> list[Event]:
             attributes=[],
             category="llm",
             category_profile={"model_name": "test"},
-            data=factory.llm_input([{"role": "user", "content": user1}]),
+            data=factory.llm_input([{
+                "role": "user", "content": user1
+            }]),
             data_schema=factory.schema,
         ),
         ScopeEvent(
@@ -559,13 +588,17 @@ def _build_multi_turn(factory: _PayloadFactory) -> list[Event]:
             attributes=[],
             category="llm",
             category_profile={"model_name": "test"},
-            data=factory.llm_input(
-                [
-                    {"role": "user", "content": user1},
-                    {"role": "assistant", "content": agent1},
-                    {"role": "user", "content": user2},
-                ]
-            ),
+            data=factory.llm_input([
+                {
+                    "role": "user", "content": user1
+                },
+                {
+                    "role": "assistant", "content": agent1
+                },
+                {
+                    "role": "user", "content": user2
+                },
+            ]),
             data_schema=factory.schema,
         ),
         ScopeEvent(
@@ -620,9 +653,8 @@ def test_nested_scenario(factory: _PayloadFactory, opt_in_extractors: None) -> N
     trajectory = convert(events)
 
     sources = [s.source for s in trajectory.steps]
-    assert sources == ["user", "agent", "agent"], (
-        f"{factory.schema['name']}: expected [user, agent, agent], got {sources}"
-    )
+    assert sources == ["user", "agent",
+                       "agent"], (f"{factory.schema['name']}: expected [user, agent, agent], got {sources}")
 
     user_step, agent_with_tool, agent_final = trajectory.steps
     assert user_step.message == "What is 7 squared?"
@@ -630,8 +662,7 @@ def test_nested_scenario(factory: _PayloadFactory, opt_in_extractors: None) -> N
     # Mid-round agent step carries the tool_call and observation.
     assert agent_with_tool.tool_calls, f"{factory.schema['name']}: expected tool_calls on mid agent step"
     assert len(agent_with_tool.tool_calls) == 1, (
-        f"{factory.schema['name']}: expected exactly 1 tool_call, got {len(agent_with_tool.tool_calls)}"
-    )
+        f"{factory.schema['name']}: expected exactly 1 tool_call, got {len(agent_with_tool.tool_calls)}")
     tc = agent_with_tool.tool_calls[0]
     assert tc.function_name == "pow"
     assert tc.arguments == {"base": 7, "exp": 2}
@@ -652,9 +683,8 @@ def test_multi_turn_scenario(factory: _PayloadFactory, opt_in_extractors: None) 
     trajectory = convert(events)
 
     sources = [s.source for s in trajectory.steps]
-    assert sources == ["user", "agent", "user", "agent"], (
-        f"{factory.schema['name']}: expected [user, agent, user, agent], got {sources}"
-    )
+    assert sources == ["user", "agent", "user",
+                       "agent"], (f"{factory.schema['name']}: expected [user, agent, user, agent], got {sources}")
 
     u1, a1, u2, a2 = trajectory.steps
     assert u1.message == "Who wrote Pride and Prejudice?"
@@ -708,7 +738,9 @@ def test_heterogeneous_stream_dispatches_per_event(opt_in_extractors: None) -> N
             attributes=[],
             category="llm",
             category_profile={"model_name": "gpt-4o"},
-            data=_OpenAiFactory().llm_input([{"role": "user", "content": user_query}]),
+            data=_OpenAiFactory().llm_input([{
+                "role": "user", "content": user_query
+            }]),
             data_schema=_OpenAiFactory().schema,
         ),
         ScopeEvent(
@@ -733,7 +765,9 @@ def test_heterogeneous_stream_dispatches_per_event(opt_in_extractors: None) -> N
             attributes=[],
             category="llm",
             category_profile={"model_name": "claude-3-5-sonnet"},
-            data=_AnthropicFactory().llm_input([{"role": "user", "content": "Write factorial"}]),
+            data=_AnthropicFactory().llm_input([{
+                "role": "user", "content": "Write factorial"
+            }]),
             data_schema=_AnthropicFactory().schema,
         ),
         ScopeEvent(
@@ -758,7 +792,9 @@ def test_heterogeneous_stream_dispatches_per_event(opt_in_extractors: None) -> N
             attributes=[],
             category="llm",
             category_profile={"model_name": "gemini-2.0-flash"},
-            data=_GeminiFactory().llm_input([{"role": "user", "content": "What is 2^32?"}]),
+            data=_GeminiFactory().llm_input([{
+                "role": "user", "content": "What is 2^32?"
+            }]),
             data_schema=_GeminiFactory().schema,
         ),
         ScopeEvent(

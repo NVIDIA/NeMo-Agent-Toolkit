@@ -138,26 +138,40 @@ def lookup_schema(name: str, version: str) -> dict[str, Any] | None:
 # foreign conventions (Anthropic ``input``/``output_blocks``, Gemini
 # ``candidates``, etc.) fail.
 OPENAI_CHAT_COMPLETIONS_V1: dict[str, Any] = {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "openai/chat-completions@1",
-    "title": "OpenAI chat-completions payload (request or response, permissive)",
-    "type": "object",
+    "$schema":
+        "https://json-schema.org/draft/2020-12/schema",
+    "$id":
+        "openai/chat-completions@1",
+    "title":
+        "OpenAI chat-completions payload (request or response, permissive)",
+    "type":
+        "object",
     "anyOf": [
-        {"type": "object", "required": ["messages"]},
+        {
+            "type": "object", "required": ["messages"]
+        },
         {
             "type": "object",
             "required": ["content"],
             "properties": {
                 "content": {
                     "oneOf": [
-                        {"type": "string"},
-                        {"type": "object", "required": ["messages"]},
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "object", "required": ["messages"]
+                        },
                     ],
                 },
             },
         },
-        {"type": "object", "required": ["tool_calls"]},
-        {"type": "object", "required": ["choices"]},
+        {
+            "type": "object", "required": ["tool_calls"]
+        },
+        {
+            "type": "object", "required": ["choices"]
+        },
     ],
 }
 
@@ -187,8 +201,12 @@ ANTHROPIC_MESSAGES_V1: dict[str, Any] = {
     "title": "Anthropic Messages API payload (request or response, permissive)",
     "type": "object",
     "anyOf": [
-        {"type": "object", "required": ["messages"]},
-        {"type": "object", "required": ["content"]},
+        {
+            "type": "object", "required": ["messages"]
+        },
+        {
+            "type": "object", "required": ["content"]
+        },
     ],
 }
 
@@ -204,8 +222,12 @@ GEMINI_GENERATE_CONTENT_V1: dict[str, Any] = {
     "title": "Gemini generateContent payload (request or response, permissive)",
     "type": "object",
     "anyOf": [
-        {"type": "object", "required": ["contents"]},
-        {"type": "object", "required": ["candidates"]},
+        {
+            "type": "object", "required": ["contents"]
+        },
+        {
+            "type": "object", "required": ["candidates"]
+        },
     ],
 }
 

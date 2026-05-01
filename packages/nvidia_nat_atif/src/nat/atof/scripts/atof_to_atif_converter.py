@@ -100,11 +100,9 @@ class ShapeMismatchError(ValueError):
         self.uuid = uuid
         self.data_schema = data_schema
         self.data_keys = data_keys
-        super().__init__(
-            f"ATOF→ATIF would drop data on {kind} event (uuid={uuid}): "
-            "the payload did not match the converter's extraction assumptions. "
-            f"data_schema={data_schema}, data_keys={data_keys}"
-        )
+        super().__init__(f"ATOF→ATIF would drop data on {kind} event (uuid={uuid}): "
+                         "the payload did not match the converter's extraction assumptions. "
+                         f"data_schema={data_schema}, data_keys={data_keys}")
 
 
 class DataSchemaViolationError(ValueError):
@@ -141,11 +139,9 @@ class DataSchemaViolationError(ValueError):
         self.data_schema = data_schema
         self.path = path
         self.message = message
-        super().__init__(
-            f"ATOF event (uuid={uuid}) data violates its declared "
-            f"data_schema {data_schema}: {message} "
-            f"(at {path or '<root>'})"
-        )
+        super().__init__(f"ATOF event (uuid={uuid}) data violates its declared "
+                         f"data_schema {data_schema}: {message} "
+                         f"(at {path or '<root>'})")
 
 
 # ---------------------------------------------------------------------------
@@ -258,13 +254,8 @@ def _find_subagent_roots(events: list[Event], category_map: dict[str, str]) -> l
     """
     roots: list[ScopeEvent] = []
     for e in events:
-        if (
-            _is_scope_start(e)
-            and isinstance(e, ScopeEvent)
-            and e.category == "agent"
-            and e.parent_uuid is not None
-            and category_map.get(e.parent_uuid) in ("tool", "context")
-        ):
+        if (_is_scope_start(e) and isinstance(e, ScopeEvent) and e.category == "agent" and e.parent_uuid is not None
+                and category_map.get(e.parent_uuid) in ("tool", "context")):
             roots.append(e)
     return roots
 
@@ -384,14 +375,14 @@ def _events_to_step_dicts(
                 extra["tool_invocations"] = pending_tool_invocations
                 agent_step["extra"] = extra
         elif pending_observations:
-            step_dicts.append(
-                {
-                    "source": "system",
-                    "message": "",
-                    "timestamp": pending_obs_timestamp,
-                    "observation": {"results": _build_results(pending_observations)},
-                }
-            )
+            step_dicts.append({
+                "source": "system",
+                "message": "",
+                "timestamp": pending_obs_timestamp,
+                "observation": {
+                    "results": _build_results(pending_observations)
+                },
+            })
 
         pending_observations = []
         pending_tool_ancestry_by_id = {}
@@ -439,13 +430,11 @@ def _events_to_step_dicts(
                 key = (event.parent_uuid, role)
                 seen = seen_input_messages.setdefault(key, set())
                 if dedup_key not in seen:
-                    step_dicts.append(
-                        {
-                            "source": role,
-                            "message": emit_content,
-                            "timestamp": event.timestamp,
-                        }
-                    )
+                    step_dicts.append({
+                        "source": role,
+                        "message": emit_content,
+                        "timestamp": event.timestamp,
+                    })
                     seen.add(dedup_key)
                     # A new user/system step breaks any active agent
                     # observation window (it's a fresh turn, not a
@@ -508,14 +497,14 @@ def _events_to_step_dicts(
             pending_observations.append(obs_entry)
 
             if tool_call_id:
-                pending_tool_ancestry_by_id[tool_call_id] = _build_ancestry(
-                    event.uuid, event.name, event.parent_uuid, name_map
-                )
+                pending_tool_ancestry_by_id[tool_call_id] = _build_ancestry(event.uuid,
+                                                                            event.name,
+                                                                            event.parent_uuid,
+                                                                            name_map)
 
             start_micros = start_ts_map.get(event.uuid)
             pending_tool_invocations.append(
-                _build_invocation_info(start_micros, event.ts_micros, tool_call_id or event.uuid)
-            )
+                _build_invocation_info(start_micros, event.ts_micros, tool_call_id or event.uuid))
 
         elif isinstance(event, MarkEvent) and event.data is not None:
             flush_observations()
@@ -540,13 +529,11 @@ def _events_to_step_dicts(
                     seen_input_messages.setdefault((event.parent_uuid, source), set()).add(content)
                 step_dicts.append(step_dict)
             else:
-                step_dicts.append(
-                    {
-                        "source": "system",
-                        "message": json.dumps(data, separators=(",", ":")) if isinstance(data, dict) else str(data),
-                        "timestamp": event.timestamp,
-                    }
-                )
+                step_dicts.append({
+                    "source": "system",
+                    "message": json.dumps(data, separators=(",", ":")) if isinstance(data, dict) else str(data),
+                    "timestamp": event.timestamp,
+                })
 
         elif _is_scope_end(event) and event.category == "context":
             # R10: context-window transformation boundary. Emit a system step
@@ -615,13 +602,11 @@ def _events_to_step_dicts(
                 if not tc_id:
                     continue
                 anc = pending_tool_ancestry_by_id.get(tc_id, {})
-                synthetic_tcs.append(
-                    {
-                        "tool_call_id": tc_id,
-                        "function_name": anc.get("function_name", "unknown"),
-                        "arguments": tool_start_args_by_tc_id.get(tc_id, {}),
-                    }
-                )
+                synthetic_tcs.append({
+                    "tool_call_id": tc_id,
+                    "function_name": anc.get("function_name", "unknown"),
+                    "arguments": tool_start_args_by_tc_id.get(tc_id, {}),
+                })
 
             function_ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
             start_micros = start_ts_map.get(event.uuid)
@@ -666,15 +651,13 @@ def _events_to_step_dicts(
             r8_extra: dict = {"invocation": invocation}
             if event.data_schema:
                 r8_extra["data_schema"] = event.data_schema
-            step_dicts.append(
-                {
-                    "source": "system",
-                    "message": message,
-                    "timestamp": event.timestamp,
-                    "function_ancestry": function_ancestry,
-                    "extra": r8_extra,
-                }
-            )
+            step_dicts.append({
+                "source": "system",
+                "message": message,
+                "timestamp": event.timestamp,
+                "function_ancestry": function_ancestry,
+                "extra": r8_extra,
+            })
 
         else:
             logger.debug(

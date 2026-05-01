@@ -362,9 +362,8 @@ def test_scope_has_all_required_v0_1_fields() -> None:
         "data_schema",
         "metadata",
     }
-    assert expected.issubset(set(ScopeEvent.model_fields)), (
-        f"missing fields on ScopeEvent: {expected - set(ScopeEvent.model_fields)}"
-    )
+    assert expected.issubset(set(
+        ScopeEvent.model_fields)), (f"missing fields on ScopeEvent: {expected - set(ScopeEvent.model_fields)}")
 
 
 # ===========================================================================
@@ -419,13 +418,13 @@ def test_mark_category_profile_defaults_to_none() -> None:
 
 def test_mark_preserves_data_schema_and_data() -> None:
     """§3.2 + §2: mark carries data, data_schema, metadata like scope events do."""
-    e = MarkEvent(
-        **_mark_kwargs(
-            data={"session_id": "s1"},
-            data_schema={"name": "myco/session", "version": "1"},
-            metadata={"trace_id": "t-1"},
-        )
-    )
+    e = MarkEvent(**_mark_kwargs(
+        data={"session_id": "s1"},
+        data_schema={
+            "name": "myco/session", "version": "1"
+        },
+        metadata={"trace_id": "t-1"},
+    ))
     assert e.data == {"session_id": "s1"}
     assert e.data_schema == {"name": "myco/session", "version": "1"}
     assert e.metadata == {"trace_id": "t-1"}
@@ -530,12 +529,12 @@ def test_tool_category_profile_carries_tool_call_id() -> None:
 
 def test_category_profile_preserves_extra_keys() -> None:
     """§4.4: unknown profile keys MUST be preserved verbatim."""
-    e = ScopeEvent(
-        **_scope_kwargs(
-            category="llm",
-            category_profile={"model_name": "gpt-4.1", "future_key": "future_value"},
-        )
-    )
+    e = ScopeEvent(**_scope_kwargs(
+        category="llm",
+        category_profile={
+            "model_name": "gpt-4.1", "future_key": "future_value"
+        },
+    ))
     assert e.category_profile["future_key"] == "future_value"
 
 
@@ -619,8 +618,14 @@ def test_wire_round_trip_scope_event_rfc3339() -> None:
         attributes=["remote", "streaming"],
         category="tool",
         category_profile={"tool_call_id": "call_xyz"},
-        data={"a": 1, "nested": {"b": 2}},
-        data_schema={"name": "myco/tool", "version": "1"},
+        data={
+            "a": 1, "nested": {
+                "b": 2
+            }
+        },
+        data_schema={
+            "name": "myco/tool", "version": "1"
+        },
         metadata={"trace_id": "t-rt"},
     )
     with tempfile.TemporaryDirectory() as td:
@@ -631,17 +636,17 @@ def test_wire_round_trip_scope_event_rfc3339() -> None:
     r = restored[0]
     assert isinstance(r, ScopeEvent)
     for field in (
-        "scope_category",
-        "uuid",
-        "parent_uuid",
-        "timestamp",
-        "name",
-        "attributes",
-        "category",
-        "category_profile",
-        "data",
-        "data_schema",
-        "metadata",
+            "scope_category",
+            "uuid",
+            "parent_uuid",
+            "timestamp",
+            "name",
+            "attributes",
+            "category",
+            "category_profile",
+            "data",
+            "data_schema",
+            "metadata",
     ):
         assert getattr(r, field) == getattr(original, field), f"field {field} diverged on round-trip"
 
@@ -666,7 +671,9 @@ def test_wire_round_trip_mark_event() -> None:
         category="llm",
         category_profile={"model_name": "gpt-4.1"},
         data={"tokens_used": 42},
-        data_schema={"name": "myco/session_mark", "version": "1"},
+        data_schema={
+            "name": "myco/session_mark", "version": "1"
+        },
         metadata={"trace_id": "t-m"},
     )
     with tempfile.TemporaryDirectory() as td:
@@ -697,11 +704,11 @@ def test_wire_emits_explicit_null_for_optional_none_fields() -> None:
         content = path.read_text()
     # Explicit nulls in the serialized JSON, not dropped keys
     for expected in (
-        '"parent_uuid": null',
-        '"data": null',
-        '"data_schema": null',
-        '"metadata": null',
-        '"category_profile": null',
+            '"parent_uuid": null',
+            '"data": null',
+            '"data_schema": null',
+            '"metadata": null',
+            '"category_profile": null',
     ):
         assert expected in content, f"expected {expected!r} literally on the wire; got: {content}"
 
@@ -732,13 +739,17 @@ def test_wire_preserves_unknown_fields_lossless() -> None:
         "data": None,
         "data_schema": None,
         "metadata": None,
-        "vendor_extension": {"nested": "value"},
+        "vendor_extension": {
+            "nested": "value"
+        },
         "producer_trace_id": "pt-1",
     }
     adapter = TypeAdapter(Event)
     evt = adapter.validate_python(raw)
     assert evt.model_extra == {
-        "vendor_extension": {"nested": "value"},
+        "vendor_extension": {
+            "nested": "value"
+        },
         "producer_trace_id": "pt-1",
     }
     dumped = evt.model_dump(exclude={"ts_micros"}, mode="json", by_alias=True)
