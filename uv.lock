@@ -85,23 +85,22 @@ wheels = [
 
 [[package]]
 name = "ag2"
-version = "0.11.5"
+version = "0.12.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
-    { name = "diskcache" },
-    { name = "docker" },
     { name = "fast-depends", extra = ["pydantic"] },
     { name = "httpx" },
     { name = "packaging" },
     { name = "pydantic" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "termcolor" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/03/d5/52fd346e6bbbbe478fa47be8b1a5b2664d9ba631c9a30b4d08904812979b/ag2-0.11.5.tar.gz", hash = "sha256:ca93386c509333fee061e790a0c7e678463df0bc32a82041fe81e6a9ef448604", size = 4087816, upload-time = "2026-04-05T00:01:21.295Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/28/e6/341ec7dc12d4752c59f0cf69e958eebe1df9adf67c347837341d76d13d71/ag2-0.12.2.tar.gz", hash = "sha256:4245ace868991eab93365c8b41a3b63d1be2e5e19a520f1f682168c30e8a4aec", size = 4257523, upload-time = "2026-05-01T00:20:04.469Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/b9/ebe65a6a779e3f46af630a97d4bbc5836309279bcfa51e1dbdda4dd5fea6/ag2-0.11.5-py3-none-any.whl", hash = "sha256:48921aba42a5a8239bd4a1f2131db28b6a4aca793ee3d7c7bbd469a24181e8e2", size = 1111978, upload-time = "2026-04-05T00:01:18.323Z" },
+    { url = "https://files.pythonhosted.org/packages/96/f5/b0d2f787813887d84045e01bf8ceff32f0e1f1f4242186000d1a928cf734/ag2-0.12.2-py3-none-any.whl", hash = "sha256:8e9209723f1c94d913b8560ad0bff7bdc2ec8bc4961d67df3849621cb96ce76b", size = 1259892, upload-time = "2026-05-01T00:20:01.361Z" },
 ]
 
 [package.optional-dependencies]
@@ -1949,20 +1948,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8c/8b/57666417c0f90f08bcafa776861060426765fdb422eb10212086fb811d26/dnspython-2.8.0.tar.gz", hash = "sha256:181d3c6996452cb1189c4046c61599b84a5a86e099562ffde77d26984ff26d0f", size = 368251, upload-time = "2025-09-07T18:58:00.022Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ba/5a/18ad964b0086c6e62e2e7500f7edc89e3faa45033c71c1893d34eed2b2de/dnspython-2.8.0-py3-none-any.whl", hash = "sha256:01d9bbc4a2d76bf0db7c1f729812ded6d912bd318d3b1cf81d30c0f845dbf3af", size = 331094, upload-time = "2025-09-07T18:57:58.071Z" },
-]
-
-[[package]]
-name = "docker"
-version = "7.1.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "requests" },
-    { name = "urllib3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/91/9b/4a2ea29aeba62471211598dac5d96825bb49348fa07e906ea930394a83ce/docker-7.1.0.tar.gz", hash = "sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c", size = 117834, upload-time = "2024-05-23T11:13:57.216Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e3/26/57c6fb270950d476074c087527a558ccb6f4436657314bfb6cdf484114c4/docker-7.1.0-py3-none-any.whl", hash = "sha256:c96b93b7f0a746f9e77d325bcfb87422a3d8bd4f03136ae8a85b37f1898d5fc0", size = 147774, upload-time = "2024-05-23T11:13:55.01Z" },
 ]
 
 [[package]]
