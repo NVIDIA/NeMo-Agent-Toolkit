@@ -38,7 +38,7 @@ Converts to a 4-step ATIF trajectory of opaque `system` steps via the reference 
 
 ### EXMP-02 — tier-2 semantic-tagged
 
-Same calculator workflow as EXMP-01 but with every scope classified (`category: "agent"` / `"llm"` / `"tool"`) and `category_profile` populated (`category_profile.model_name` for llm events, `category_profile.tool_call_id` for tool events — see spec §4.4). Additionally demonstrates `attributes: ["remote"]` on the tool scope (the tool is dispatched out-of-process, spec §2.1) and `data_schema` on the llm scopes pointing at `openai/chat-completions.v1` (spec §2).
+Same calculator workflow as EXMP-01 but with every scope classified (`category: "agent"` / `"llm"` / `"tool"`) and `category_profile` populated (`category_profile.model_name` for LLM events, `category_profile.tool_call_id` for tool events — see spec §4.4). Additionally demonstrates `attributes: ["remote"]` on the tool scope (the tool is dispatched out-of-process, spec §2.1) and `data_schema` on the llm scopes pointing at `openai/chat-completions.v1` (spec §2).
 
 Converts to a 5-step rich ATIF trajectory (user → agent → system → user → agent) with `Trajectory.agent.name` derived from the `category: "agent"` scope's `name`.
 
@@ -66,7 +66,7 @@ python convert_atof_examples_to_atif.py
 | Scenario | Events | ATIF steps | Tier | Workflow                                         |
 | -------- | ------ | ---------- | ---- | ------------------------------------------------ |
 | EXMP-01  | 8      | 4          | 1    | Opaque wrapper: 3 unclassified inner callbacks   |
-| EXMP-02  | 8      | 5          | 2    | Calculator: agent → llm → tool → llm → agent     |
+| EXMP-02  | 8      | 5          | 2    | Calculator: agent → LLM → tool → LLM → agent     |
 | EXMP-03  | 6      | 4          | 2    | Chat agent bracketed by session-boundary marks   |
 
 EXMP-01 and EXMP-02 each consist of 4 paired `scope` events (4 start + 4 end). EXMP-03 consists of 2 paired `scope` events plus 2 `mark` events. The ATOF v0.1 spec has no stream-level metadata event.
@@ -137,7 +137,7 @@ If your runtime emits payloads the built-in extractors don't recognize — a non
 3. **Use a `mark` event with structured `data`**. For non-lifecycle observations, a `mark` with non-null `data` produces a `system` step with the data serialized into `message`. Fastest path for one-off events.
 4. **Fork the reference converter**. Only needed when your category needs entirely new ATIF structural rules (new step sources, new observation shapes, and so on).
 
-Option 1 is the right default. It keeps producer-specific parsing out of the core dispatch and composes cleanly with the JSON Schema validator.
+Option 1 is the right default. It keeps producer-specific parsing out of the core dispatch and composes cleanly with the JSON Schema `validator`.
 
 ### Extending the converter
 
@@ -145,7 +145,7 @@ The converter maintains two registries that producers plug into, both keyed on t
 
 | Registry | Purpose | Public API |
 |----------|---------|------------|
-| `SCHEMA_REGISTRY` | JSON Schema validators that run in a pre-pass; raise `DataSchemaViolationError` on mismatch. | `nat.atof.register_schema(name, version, schema)` |
+| `SCHEMA_REGISTRY` | JSON Schema `validators` that run in a pre-pass; raise `DataSchemaViolationError` on mismatch. | `nat.atof.register_schema(name, version, schema)` |
 | `LLM_EXTRACTOR_REGISTRY` / `TOOL_EXTRACTOR_REGISTRY` / `MARK_EXTRACTOR_REGISTRY` | Extractor objects that pull ATIF-relevant content out of `event.data` during conversion. | `nat.atof.register_llm_extractor(name, version, extractor)` (and `register_tool_extractor`, `register_mark_extractor`) |
 
 Built-in defaults:
@@ -195,7 +195,7 @@ register_schema(
 )
 ```
 
-A validation failure raises `DataSchemaViolationError` with the offending event UUID, the declared schema, the JSON-pointer path to the failure, and the underlying validator message.
+A validation failure raises `DataSchemaViolationError` with the offending event UUID, the declared schema, the JSON-pointer path to the failure, and the underlying `validator` message.
 
 Unregistered `data_schema` values log a `WARNING` and skip validation — the converter cannot validate what it doesn't know about.
 
@@ -259,7 +259,7 @@ Both exceptions carry the offending event's UUID so producers can locate the fai
 
 ### Known limitations
 
-- **Tools without `category_profile.tool_call_id`.** Tool events emitted without a `category_profile.tool_call_id` (tier-1 producers that don't have provider-assigned correlation IDs) produce `observation.results[*].source_call_id == None`. The call graph is still reconstructable via `parent_uuid` / `extra.ancestry`, but invocation-level correlation is lost.
+- **Tools without `category_profile.tool_call_id`.** Tool events emitted without a `category_profile.tool_call_id` (tier-1 producers that don't have provider-assigned correlation IDs) produce `observation.results[*].source_call_id == None`. The call graph can still be constructed via `parent_uuid` / `extra.ancestry`, but invocation-level correlation is lost.
 - **Naive RFC 3339 timestamps.** `datetime.fromisoformat()` accepts naive ISO 8601 strings (no timezone), which spec §5.1 forbids. Naive strings reinterpret in the consumer's local timezone and can silently shift `ts_micros` by hours between environments. Producers MUST emit `Z` or an explicit UTC offset.
 - **Null-data marks.** A `mark` event whose `data` field is `null` is skipped — no step is emitted. If you need a marker step with empty content, emit `data: {}` instead — the converter produces a `system` step with `message == "{}"`.
 
@@ -276,7 +276,7 @@ def convert_file(input_path: str | Path, output_path: str | Path | None = None) 
     """File-based: read .jsonl → convert → optionally write ATIF JSON."""
 ```
 
-Both return a Pydantic-validated `nat.atif.trajectory.Trajectory` (the NAT-side ATIF model that mirrors Harbor's `0001-trajectory-format.md` RFC v1.7).
+Both return a Pydantic-validated `nat.atif.trajectory.Trajectory` (the Toolkit-side ATIF model that mirrors Harbor's `0001-trajectory-format.md` RFC v1.7).
 
 ---
 

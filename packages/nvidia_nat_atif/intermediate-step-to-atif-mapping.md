@@ -83,7 +83,7 @@ fields. See `atif-step-extra-guide.md` for the full `Step.extra` /
     `tool_calls[i].extra.invocation.end_timestamp`.
 
   Per-tool timing was an aligned-by-index list at `step.extra.tool_invocations[i]`
-  in the pre-v1.7 layout; v1.7 co-locates each invocation with its tool_call
+  in the pre-v1.7 layout; v1.7 co-locates each invocation with its `tool_call`
   via `tool_call.extra.invocation`.
 
 ## Practical Validation Checklist

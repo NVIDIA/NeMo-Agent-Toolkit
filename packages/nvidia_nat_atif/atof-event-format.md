@@ -72,9 +72,9 @@ Beyond the base envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`, `a
 | `scope_category` (scope), `attributes` (scope), `category` (scope, mark), `category_profile` (scope, mark) | `data`, `data_schema`, `metadata` |
 
 
-- `scope_category` — lifecycle phase of a `scope` event. Closed enum: `"start"` or `"end"`.
+- `scope_category` — lifecycle phase of a `scope` event. Closed `enum`: `"start"` or `"end"`.
 - `attributes` — behavioral flag array. Vocabulary is shared across categories (see §2.1); per-flag applicability is documented with each flag. Carried by `scope` events only.
-- `category` — semantic category of the work. Closed enum (see §4). Required on `scope`, optional on `mark`.
+- `category` — semantic category of the work. Closed `enum` (see §4). Required on `scope`, optional on `mark`.
 - `category_profile` — category-specific typed fields packaged as a sub-object. Keys vary by `category` — `subtype` for `custom`, `model_name` for `llm`, `tool_call_id` for `tool`, additional keys reserved for future categories (see §4.4). Null for tier-1 opaque events and for categories with no kind-specific fields.
 - `data` — application-defined payload. Opaque to ATOF. On `scope` events, typically carries the scope's input on `scope_category: "start"` and the scope's output on `scope_category: "end"`. Consumers MUST NOT dispatch on `data` contents.
 - `data_schema` — optional identifier `{name: string, version: string}` describing the shape of `data`. Opaque to ATOF core; the producer declares it, and validation of `data` against the named schema is the consumer's responsibility. The reference ATOF→ATIF converter provides two registries keyed on this identifier: `nat.atof.schemas` for JSON Schema validators and `nat.atof.extractors` for payload parsers. See [examples/atof_to_atif/README.md](examples/atof_to_atif/README.md#extending-the-converter) for registration guidance.
@@ -92,7 +92,7 @@ Every event carries the envelope fields below. The first six (`kind`, `atof_vers
 | `kind`         | string                                  | Yes      | Event kind discriminator. One of: `"scope"`, `"mark"`.                                                                                                |
 | `atof_version` | string                                  | Yes      | ATOF protocol version, `"MAJOR.MINOR"` (e.g., `"0.1"`). See §5.6.                                                                                     |
 | `uuid`         | string (UUID)                           | Yes      | Unique identifier for this event or span. For `scope` start/end pairs, the two events share a `uuid`.                                                 |
-| `parent_uuid`  | string (UUID) or null                   | No       | UUID of the containing scope when this event was emitted. Null only for root scope events and unparented `mark` events.                               |
+| `parent_uuid`  | string (UUID) or null                   | No       | UUID of the containing scope when this event was emitted. Null only for root scope events and `mark` events without parents.                          |
 | `timestamp`    | string (RFC 3339) or integer (epoch µs) | Yes      | Wall-clock time the event was emitted. See §5.1.                                                                                                      |
 | `name`         | string                                  | Yes      | Human-readable label — e.g., `"my_agent"`, `"calculator__add"`, `"gpt-4.1"`.                                                                          |
 | `data`         | object or null                          | No       | Application-defined payload. Opaque to ATOF.                                                                                                          |
@@ -140,7 +140,7 @@ Emitted at scope lifecycle transitions. A single scope span produces two `scope`
 | Field              | Type                  | Required | Description                                                                                                                                                                                                                                                |
 | ------------------ | --------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kind`             | string                | Yes      | Literal `"scope"`.                                                                                                                                                                                                                                         |
-| `scope_category`   | string (enum)         | Yes      | Lifecycle phase. One of: `"start"`, `"end"`.                                                                                                                                                                                                               |
+| `scope_category`   | string (`enum`)         | Yes      | Lifecycle phase. One of: `"start"`, `"end"`.                                                                                                                                                                                                               |
 | `atof_version`     | string                | Yes      | See §2.                                                                                                                                                                                                                                                    |
 | `uuid`             | string (UUID)         | Yes      | Shared between the start and end events for the same scope span.                                                                                                                                                                                           |
 | `parent_uuid`      | string (UUID) or null | No       | See §2. Null on the root scope. Same on both start and end.                                                                                                                                                                                                |
@@ -220,7 +220,7 @@ When `category != "custom"`, `category_profile.subtype` SHOULD be absent. Consum
 
 ### 4.3 Extensibility
 
-The `category` enum is closed but `"custom"` + `category_profile.subtype` provides unbounded vendor expressiveness. ATOF reserves the right to promote frequently-used `subtype` values into first-class `category` vocabulary entries in future versions (backward-compat MINOR bump).
+The `category` `enum` is closed but `"custom"` + `category_profile.subtype` provides unbounded vendor expressiveness. ATOF reserves the right to promote frequently-used `subtype` values into first-class `category` vocabulary entries in future versions (backward-compat MINOR bump).
 
 ### 4.4 The `category_profile` Object
 
@@ -275,7 +275,7 @@ If the runtime dies before emitting a paired end event, no event appears in the 
 
 ### 5.4 UUID Uniqueness
 
-Each scope span receives a unique UUID at creation time. The `uuid` is stable across the start and end events for the same scope. In the Rust reference implementation, UUIDs are v7 (time-ordered).
+Each scope span receives a unique UUID at creation time. The `uuid` is stable across the start and end events for the same scope. In the Rust reference implementation, UUID is v7 (time-ordered).
 
 ### 5.5 ID Relationships
 
@@ -288,7 +288,7 @@ Two distinct identifier namespaces appear in an ATOF stream:
 
 Every event carries a required `atof_version` field, formatted `"MAJOR.MINOR"` — e.g., `"0.1"`. This section defines when producers bump the version and how consumers dispatch on it.
 
-**Reading rules.** Consumers SHOULD accept any `0.Y` event as ATOF-v0-family. Major-version bumps (`1.0`, `2.0`) MAY introduce breaking changes; consumers that want forward compat MUST dispatch on the major version and fail fast on unknown majors.
+**Reading rules.** Consumers SHOULD accept any `0.Y` event as ATOF-v0-family. Major-version bumps (`1.0`, `2.0`) MAY introduce breaking changes; consumers that want forward compatibility MUST dispatch on the major version and fail fast on unknown majors.
 
 **Mixed-version streams.** A single stream MAY contain events at different minor versions (`0.1` and `0.2`). Consumers MUST NOT reject a stream because it contains newer minor versions than expected; unknown fields are preserved per §2.
 
@@ -301,7 +301,7 @@ Every event carries a required `atof_version` field, formatted `"MAJOR.MINOR"` �
 
 ## 6. What ATOF Is Not
 
-- **Not ATIF.** ATIF is a higher-level trajectory format with computed ancestry, merged observations, sequenced step_ids, and turn-based structure. ATOF events are the raw observations ATIF is built from. See `examples/atof_to_atif/README.md` for the conversion reference.
+- **Not ATIF.** ATIF is a higher-level trajectory format with computed ancestry, merged observations, sequenced `step_ids`, and turn-based structure. ATOF events are the raw observations ATIF is built from. See `examples/atof_to_atif/README.md` for the conversion reference.
 - **Not a metrics format.** Token counts, latency budgets, cost attribution — those live in `data` payloads or in downstream aggregation. ATOF does not normalize or roll up metrics.
 - **Not a trace format.** ATOF is compatible with distributed tracing (subscribers can export to OpenTelemetry via `metadata.trace_id`/`metadata.span_id`) but is not itself an OTLP-equivalent wire format.
 - **Not a replay executor.** An ATOF stream lets you reconstruct what happened. It does not provide the mechanism to re-run it — that's a separate layer built on top.

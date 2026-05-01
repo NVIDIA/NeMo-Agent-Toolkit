@@ -26,7 +26,7 @@ ATOF is a wire format for **runtime observation** of agent execution. It
 captures events as they happen — scopes opening and closing, marks being
 placed — serialized as JSON Lines. Producers (instrumented agent
 runtimes, observability SDKs) emit ATOF; consumers (replay systems,
-validators, eval harnesses) ingest it.
+validators`, eval harnesses) ingest it.
 
 ATOF makes few assumptions about the agent. Each event carries:
 
@@ -127,11 +127,11 @@ and need separate extraction logic. A complete mapping framework defines
 three extractor types, each backed by its own registry:
 
 
-| Extractor type     | Pulls from event `data`                 | Used at                     |
-| ------------------ | --------------------------------------- | --------------------------- |
-| **LLM extractor**  | input messages, output text, tool_calls | every `llm` scope start/end |
-| **Tool extractor** | serialized result string                | every `tool` scope-end      |
-| **Mark extractor** | optional `(role, content)` lift         | every mark event            |
+| Extractor type     | Pulls from event `data`                   | Used at                     |
+| ------------------ | ----------------------------------------- | --------------------------- |
+| **LLM extractor**  | input messages, output text, `tool_calls` | every `llm` scope start/end |
+| **Tool extractor** | serialized result string                  | every `tool` scope-end      |
+| **Mark extractor** | optional `(role, content)` lift           | every mark event            |
 
 
 Each extractor MUST be a pure function over `data` — no side effects, no
@@ -144,7 +144,7 @@ from "shape mismatch" at the dispatch layer.
 ## 3. Event Mapping Rules
 
 This section gives the conversion rule for each ATOF event type.
-Rule IDs use the form `M-NN`. Conformant mappers MUST satisfy every
+Rule IDs use the form `M-NN`. Conforming mappers MUST satisfy every
 rule.
 
 ### 3.1 Quick reference: which events emit which steps
@@ -155,7 +155,7 @@ rule.
 | Agent scope-start            | None (informational only)                                              |
 | Agent scope-end              | None (informational only)                                              |
 | LLM scope-start              | One `user` or `system` step per **new** role=user/system input message |
-| LLM scope-end                | Exactly one `agent` step (with text, tool_calls, or both)              |
+| LLM scope-end                | Exactly one `agent` step (with text, `tool_calls`, or both)              |
 | Tool scope-start             | None (cached for ancestry/args)                                        |
 | Tool scope-end               | An observation result (attached later, not its own step)               |
 | Mark event with role lift    | One sourced step (role from extractor)                                 |
@@ -193,14 +193,14 @@ When an LLM scope-start fires, the consumer:
 
 1. Resolves the LLM extractor for `event.data_schema`.
 2. Calls `extract_input_messages(data)` — yields a list of
-  `{role, content}` dicts.
+  `{role, content}` dictionaries.
 3. For each message with `role ∈ {user, system}`: emits a sourced step
   IFF the `(parent_uuid, role, content_hash)` tuple is **new** under
    the current agent.
 
-**Rule M-04 (dedup).** Steps are deduplicated per
+**Rule M-04 (deduplication).** Steps are deduplicated per
 `(parent_uuid, role, content_hash)`. On a multi-turn LLM call, the prior
-user turn appears again in the input — the dedup ensures it doesn't
+user turn appears again in the input — the deduplication ensures it doesn't
 re-emit.
 
 **Rule M-05 (role filter).** Only `role ∈ {user, system}` emits steps
@@ -209,7 +209,7 @@ re-emitted by the LLM scope-end). Tool-role turns and any
 provider-specific role values not in the canonical set are skipped.
 
 **Rule M-06 (multimodal pass-through).** When `content` is a list of
-content parts (multimodal), pass it through unchanged. The dedup key is
+content parts (multimodal), pass it through unchanged. The deduplication key is
 the canonical JSON serialization of the list.
 
 **Rule M-07 (parent reset on new sourced step).** Emitting a new user or
@@ -226,17 +226,17 @@ When an LLM scope-end fires, the consumer:
 2. Resolves the LLM extractor.
 3. Calls `extract_output_text(data)` — yields a string.
 4. Calls `extract_tool_calls(data)` — yields a list of
-  `{tool_call_id, function_name, arguments}` dicts.
-5. Emits exactly ONE `agent` step with the text and tool_calls.
+  `{tool_call_id, function_name, arguments}` dictionaries.
+5. Emits exactly ONE `agent` step with the text and `tool_calls`.
 
 **Rule M-08 (output uniqueness).** Each LLM scope-end emits exactly one
-agent step. A response with both text and tool_calls produces ONE agent
-step carrying both. A response with only tool_calls emits an agent step
-with empty `message` and the tool_calls. A response with only text emits
-an agent step with the text and no tool_calls.
+agent step. A response with both text and `tool_calls` produces ONE agent
+step carrying both. A response with only `tool_calls` emits an agent step
+with empty `message` and the `tool_calls`. A response with only text emits
+an agent step with the text and no `tool_calls`.
 
 **Rule M-09 (shape mismatch).** If `data` is non-empty but BOTH
-extracted text and extracted tool_calls are empty, the converter MUST
+extracted text and extracted `tool_calls` are empty, the converter MUST
 raise `ShapeMismatchError`. This catches schema mismatches at the
 dispatch layer rather than silently dropping content.
 
@@ -244,11 +244,11 @@ dispatch layer rather than silently dropping content.
 
 Tool scope events are paired and carry
 `category_profile.tool_call_id`. The ID matches the `tool_call_id` of a
-tool_call extracted from the parent agent's LLM scope-end.
+`tool_call` extracted from the parent agent's LLM scope-end.
 
 When a tool scope-start fires:
 
-- The converter MAY cache the args from `data` for later ancestry
+- The converter MAY cache the arguments from `data` for later ancestry
 reconciliation. No step is emitted.
 
 When a tool scope-end fires:
@@ -294,7 +294,7 @@ When a mark event fires:
 
 **Rule M-13 (mark independence).** Marks are unpaired and independent.
 A mark event that classifies as a sourced step does NOT participate in
-LLM-derived dedup. The same content can appear as both a mark-lifted
+LLM-derived deduplication. The same content can appear as both a mark-lifted
 step and an LLM-derived step without collision.
 
 ### 3.8 Unknown / tier-1 categories
@@ -370,7 +370,7 @@ Use **hooks** when:
 
 - Content is polymorphic at the same position (string OR list-of-blocks)
 - Multiple ATIF fields are derived from a single payload field (text +
-tool_calls from a single content block list)
+`tool_calls` from a single content block list)
 - Per-call shape requires non-trivial logic (ID synthesis, JSON parsing,
 multi-step field assembly)
 
@@ -388,7 +388,7 @@ message list.
 **Common responsibilities:**
 
 - Walk a polymorphic content field, extract text blocks, drop wire-level
-artifacts (tool_use markers, tool_result echoes — see §4.5)
+artifacts (`tool_use` markers, tool_result echoes — see §4.5)
 - Normalize role names (e.g. `model` → `assistant`)
 - Skip messages that have no surface text after extraction (avoids
 duplicate user steps from echoed tool results)
@@ -403,8 +403,8 @@ would scan the same array twice and need shared filtering logic.
 **Common responsibilities:**
 
 - Concatenate text-block text values into a single output string
-- Collect tool-use-block fields into ATIF tool_call dicts
-- Synthesize tool_call_ids when the provider doesn't supply them
+- Collect tool-use-block fields into ATIF `tool_call` dictionaries
+- Synthesize `tool_call_ids` when the provider doesn't supply them
 
 #### Hook 3 — `transform_tool_call(raw_call, index) → ATIF tool_call`
 
@@ -426,7 +426,7 @@ before the converter sees them.
 
 This normalization is necessary even though assistant turns are skipped
 by the converter — downstream consumers may want consistent role labels,
-and dedup keys benefit from canonical role values.
+and deduplicated keys benefit from canonical role values.
 
 ### 4.5 Tool result transport (provider-specific echoes)
 
@@ -434,7 +434,7 @@ Each LLM provider has its own way of representing tool results in the
 **next** LLM call's input. Examples (without naming providers):
 
 - A dedicated `tool`-role message with a result string and a
-back-reference to the tool_call_id
+back-reference to the `tool_call_id`
 - A typed `tool_result` block embedded in a `user`-role message's
 content list
 - A typed `function_response` part in a `user`-role parts list
@@ -462,7 +462,7 @@ The conversion has two fail-fast checks at the dispatch layer:
   yields no content, the converter raises `ShapeMismatchError`.
 
 These two errors catch the failure modes that would otherwise silently
-lose producer content. Conformant mappers MUST surface both as typed
+lose producer content. Conforming mappers MUST surface both as typed
 exceptions, not warnings.
 
 ---
@@ -484,7 +484,7 @@ A correct ATOF→ATIF mapper MUST guarantee these properties.
 | I-08 | An LLM event with non-empty `data` that yields no extractable content raises `ShapeMismatchError` (never silently empty).     |
 | I-09 | Multi-schema streams are dispatched per-event; no per-stream schema lock.                                                     |
 | I-10 | Conversion is deterministic given a sorted event sequence and a stable extractor registry.                                    |
-| I-11 | `parent_uuid` ancestry is preserved per record. By NAT convention, step-level ancestry is recorded at `step.extra["ancestry"]` and per-tool-call ancestry at `tool_call.extra["ancestry"]` (ATIF v1.7 places this in `extra` rather than as a typed field). |
+| I-11 | `parent_uuid` ancestry is preserved per record. By Toolkit convention, step-level ancestry is recorded at `step.extra["ancestry"]` and per-tool-call ancestry at `tool_call.extra["ancestry"]` (ATIF v1.7 places this in `extra` rather than as a typed field). |
 | I-12 | Mark events that don't classify as sourced steps still preserve their `data` as a system step's message.                      |
 
 
@@ -545,7 +545,7 @@ The `nat.atof` package maintains four module-level registries:
 Registration is via `register_*()` helpers; lookup is via `resolve_*()`
 resolvers. The default OpenAI chat-completions extractor is auto-registered
 at import time; all other built-in extractors (Anthropic Messages, Gemini
-generateContent) are opt-in.
+`generateContent`) are opt-in.
 
 ### 7.2 Adding a new LLM consumer schema (by example)
 
@@ -652,7 +652,7 @@ class implementing the Protocol is the right shape.
 Default to declarative paths. Reach for a hook only when:
 
 - Content is polymorphic at one position → `normalize_input_messages`
-- Output text and tool_calls share a structure → `normalize_output_message`
+- Output text and `tool_calls` share a structure → `normalize_output_message`
 - Per-call processing requires synthesis → `transform_tool_call`
 
 A hook should be small (typically 5-20 lines). If your hook is
@@ -669,8 +669,8 @@ implementations. Read these as templates when adding a new provider:
 | Provider                | Schema map                       | Hooks used                                                              | Notes                                                                              |
 | ----------------------- | -------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | OpenAI chat-completions | `OPENAI_CHAT_COMPLETIONS_V1_MAP` | none                                                                    | Pure paths — the simplest case.                                                    |
-| Anthropic Messages      | `ANTHROPIC_MESSAGES_V1_MAP`      | `normalize_input_messages`, `normalize_output_message`                  | Polymorphic `content` (string OR block list); text and tool_use coexist in output. |
-| Gemini generateContent  | `GEMINI_GENERATE_CONTENT_V1_MAP` | `normalize_input_messages`, `normalize_output_message` + `role_aliases` | Polymorphic `parts[]`; `model` → `assistant`; synthesized tool_call_ids.           |
+| Anthropic Messages      | `ANTHROPIC_MESSAGES_V1_MAP`      | `normalize_input_messages`, `normalize_output_message`                  | Polymorphic `content` (string OR block list); text and `tool_use` coexist in output. |
+| Gemini `generateContent`  | `GEMINI_GENERATE_CONTENT_V1_MAP` | `normalize_input_messages`, `normalize_output_message` + `role_aliases` | Polymorphic `parts[]`; `model` → `assistant`; synthesized `tool_call_ids`.           |
 
 
 Example trajectories exercising each are under
@@ -694,38 +694,6 @@ a `_PayloadFactory` subclass for the provider, add it to the
 > ⚠️ **Placeholder — to be specified once the producer story is built
 > out.**
 
-The current architecture is **consumer-driven**: producers declare their
-schema per-event via `data_schema`, but the schema definition and
-extractor logic must be pre-installed on the consumer side. This is fine
-when producer and consumer are co-developed, but creates friction when:
-
-- A consumer ingests trajectories from multiple producers without prior
-coordination
-- A new producer ships in production before the consumer has been
-updated
-- A trajectory is replayed from an archive whose original producer is no
-longer running
-
-A future ATOF revision should specify how producers can ship their
-schema **along with** the trajectory. Three design options have been
-sketched:
-
-
-| Option                       | Mechanism                                                                             | Pros                                        | Cons                                                                        |
-| ---------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------------- |
-| **A. Stream-level manifest** | Reserve the first JSONL line for `{"type": "atof_schema_manifest", "schemas": [...]}` | Backward-compat; explicit; easy to ship     | Requires wire-format reservation; opaque `extractor_plugin` references      |
-| **B. Scope-start metadata**  | Embed in `metadata._atof_schemas` on the root agent ScopeStart                        | No wire-format change; zero-overhead opt-in | Late discovery (consumer can't pre-register); convention adherence required |
-| **C. Out-of-band sidecar**   | Ship a manifest file alongside the JSONL                                              | Clean separation; signable independently    | Two-file coupling fragile; transports often drop sidecars                   |
-
-
-**Recommendation when this work is taken up:** prototype Option A first
-— least invasive, self-documenting in the stream itself. Decline Option
-C unless storage transports demand it. Option B is a cheap fallback if
-A hits backward-compat blockers.
-
-This section will be populated when the design is locked in. Until then,
-producers and consumers MUST coordinate out-of-band.
-
 ---
 
 ## 9. References
@@ -736,7 +704,7 @@ producers and consumers MUST coordinate out-of-band.
 and NeMo Agent Toolkit ATIF docs; canonical models in `nat.atif`
 (Trajectory, Step, ToolCall, Observation)
 - **Reference implementation**: `nat.atof` Python package
-(`packages/nvidia_nat_atif` in the NeMo Agent Toolkit monorepo)
+(`packages/nvidia_nat_atif` in the NeMo Agent Toolkit subpackage)
 - **Example trajectories**: `packages/nvidia_nat_atif/examples/atof_to_atif/`
 
 ---
@@ -749,7 +717,7 @@ For consistency, mappers SHOULD use these terms with the meanings given.
 | Term           | Meaning                                                                                                                                   |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | **Producer**   | The system emitting ATOF events (instrumented agent runtime, observability SDK).                                                          |
-| **Consumer**   | The system ingesting ATOF events and producing ATIF (replay tool, validator, eval harness).                                               |
+| **Consumer**   | The system ingesting ATOF events and producing ATIF (replay tool, `validator`, eval harness).                                               |
 | **Event**      | A single ATOF JSON-Lines record.                                                                                                          |
 | **Step**       | A single ATIF action with `source`, `message`, optional `tool_calls`, optional `observation`.                                             |
 | **Schema**     | A `(name, version)` pair declaring the shape of `event.data`. Optional per-event.                                                         |

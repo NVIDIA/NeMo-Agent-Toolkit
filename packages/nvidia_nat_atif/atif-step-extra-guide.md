@@ -31,25 +31,25 @@ It is intended as a shareable reference for:
 ## What changed in ATIF v1.7
 
 ATIF v1.7 deliberately leaves ancestry out of the typed schema. The previous
-NAT-internal layout exposed `Step.function_ancestry` and `ToolCall.tool_ancestry`
+Toolkit-internal layout exposed `Step.function_ancestry` and `ToolCall.tool_ancestry`
 as typed top-level fields; those fields are no longer part of the ATIF schema.
 Per-record `extra` objects are the spec-blessed location for producer-specific
 metadata, and the v1.7 spec adds an `extra` field to `ToolCall` specifically
 to make per-tool-call metadata first-class.
 
-NAT's convention places its lineage and timing payloads inside `extra` dicts:
+The Toolkit convention places its lineage and timing payloads inside `extra` dictionaries:
 
 - **`Step.extra["ancestry"]`** — step-level callable lineage (formerly
   `Step.function_ancestry`).
 - **`Step.extra["invocation"]`** — step-level invocation timing.
 - **`ToolCall.extra["ancestry"]`** — per-tool callable lineage (formerly
   `Step.extra.tool_ancestry[i]`, an aligned-by-index list; now co-located
-  with the tool_call).
+  with the `tool_call`).
 - **`ToolCall.extra["invocation"]`** — per-tool invocation timing
   (formerly `Step.extra.tool_invocations[i]`).
 
 The aligned-by-index `tool_ancestry` and `tool_invocations` lists on
-`Step.extra` are removed. Per-tool data lives next to the tool_call it
+`Step.extra` are removed. Per-tool data lives next to the `tool_call` it
 describes.
 
 ## Data Model
@@ -86,7 +86,7 @@ metadata. Used in both `Step.extra["invocation"]` and
   - Invocation end timestamp in epoch seconds.
 - `invocation_id: str | None` (optional)
   - Stable invocation identifier for correlation. For tool invocations
-    NAT sets this equal to `tool_call_id`.
+    the Toolkit sets this equal to `tool_call_id`.
 - `status: str | None` (optional)
   - Terminal status (for example, `completed`, `error`).
 - `framework: str | None` (optional)
@@ -97,7 +97,7 @@ be set (validated).
 
 ### `AtifStepExtra`
 
-`AtifStepExtra` is the validated structure for NAT-owned `Step.extra`
+`AtifStepExtra` is the validated structure for Toolkit-owned `Step.extra`
 content.
 
 - `ancestry: AtifAncestry` (required)
@@ -110,7 +110,7 @@ producer-supplied `data_schema`) may coexist without breaking readers.
 
 ### `AtifToolCallExtra`
 
-`AtifToolCallExtra` is the validated structure for NAT-owned
+`AtifToolCallExtra` is the validated structure for Toolkit-owned
 `ToolCall.extra` content.
 
 - `ancestry: AtifAncestry | None` (optional)
@@ -232,7 +232,7 @@ occurrence IDs remain distinct and lineage stays unambiguous.
 
 Consumers should implement lineage reads in this order:
 
-1. Iterate `tool_calls`. For each tool_call, read `tool_call.extra.ancestry`
+1. Iterate `tool_calls`. For each` tool_call`, read `tool_call.extra.ancestry`
    for callable lineage and `tool_call.extra.invocation` for timing.
    (No alignment by index — each record carries its own metadata.)
 2. Read `step.extra.ancestry` for step-level callable context and
@@ -240,7 +240,7 @@ Consumers should implement lineage reads in this order:
 3. Tolerate missing observation rows and treat absent observation output
    as unavailable, not linkage failure.
 4. Tolerate missing `extra` keys: `extra` is loosely-typed per ATIF spec
-   §3, and consumers MUST treat any subset of NAT's keys as optional.
+   §3, and consumers MUST treat any subset of Toolkit keys as optional.
 
 ### Evaluator guidance for nested trajectories
 
