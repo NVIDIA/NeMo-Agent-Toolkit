@@ -1,4 +1,5 @@
 ###### Place new entries directly below this line! ######
+/.codex
 
 # auto-generated chainlit stuff
 chainlit.md
@@ -223,6 +224,3 @@ examples/notebooks/examples/retail_sales_agent/deploy/volumes/
 
 # End of https://www.gitignore.io/api/vim,c++,cmake,python,synology
 /.idea
-
-# Codex file
-.codex
