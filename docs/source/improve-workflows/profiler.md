@@ -409,7 +409,7 @@ nat eval --config_file examples/evaluation_and_profiling/email_phishing_analyzer
 Among other files, this will produce a `standardized_data_all.csv` file in the `output_dir` specified in the configuration file. This file will contain the profiling results of the workflow that we will use for the rest of the analysis.
 
 ### Analyzing the Profiling Results
-The remainder of this guide will demonstrate how to perform a simple analysis of the profiling results using the `standardized_data_all.csv` file to compare the performance of various LLMs and evaluate the workflow's efficiency.
+The remainder of this guide will demonstrate how to perform a simple analysis of the profiling results using the `standardized_data_all.csv` file to compare the performance of various LLMs and evaluate the efficiency of the workflow.
 Ultimately, we will use the collected telemetry data to identify which LLM we think is the best fit for our workflow.
 
 Particularly, we evaluate the following models:
