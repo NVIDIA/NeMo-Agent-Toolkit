@@ -388,7 +388,7 @@ message list.
 **Common responsibilities:**
 
 - Walk a polymorphic content field, extract text blocks, drop wire-level
-artifacts (`tool_use` markers, tool_result echoes — see §4.5)
+artifacts (`tool_use` markers, `tool_result` echoes — see §4.5)
 - Normalize role names (e.g. `model` → `assistant`)
 - Skip messages that have no surface text after extraction (avoids
 duplicate user steps from echoed tool results)

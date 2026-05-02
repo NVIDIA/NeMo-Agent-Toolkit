@@ -57,7 +57,7 @@ Datadog
 [Dd]atastore
 DB(s?)
 [Dd]eclaratively
-[Dd]eduplicated
+[Dd]eduplicat(ed|ion)
 [Dd]enylist
 [Dd]eserialize
 [Dd]ev
@@ -187,7 +187,7 @@ SSE
 [Ss]ubpackage(s?)
 [Ss]ubsampl(e|ing)
 [Ss]ubtask(s?)
-[Ss]ubprocess(es)
+[Ss]ubprocess(es)?
 [Ss]ubword(s?)
 [Ss]uperset(s?)
 Tavily
