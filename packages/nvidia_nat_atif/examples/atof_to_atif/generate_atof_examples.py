@@ -29,10 +29,13 @@
   scopes. Converts to a 5-step rich ATIF trajectory (user → agent → system →
   user → agent).
 
-- **EXMP-03 — mark events**: A short chat agent bracketed by ``mark`` events
-  (session-start / session-end checkpoints). Demonstrates the second event
-  kind — ``mark`` — including the generic checkpoint form (``category: null``,
-  just a named timestamp with associated data).
+- **EXMP-03 — mark events (in-line guardrail)**: A short chat agent demonstrating
+  an in-line categorized ``mark`` event — a single ``category: "guardrail"``
+  checkpoint fired mid-trajectory, before the LLM call so a rejected prompt
+  avoids the LLM cost, recording an input-safety policy check parented under
+  the agent scope. Demonstrates that marks are in-line lifecycle checkpoints
+  (not session brackets) and that the ``guardrail`` category is a first-class
+  spec category (atof-event-format.md §4).
 
 - **EXMP-04 — Anthropic Messages**: A document-summarization workflow where
   Claude calls a ``read_file`` tool, then formulates a summary. LLM payloads
@@ -345,37 +348,42 @@ def generate_exmp02() -> list[Event]:
 
 
 # ---------------------------------------------------------------------------
-# EXMP-03: Chat agent with session-boundary mark events
+# EXMP-03: Chat agent with an in-line categorized guardrail mark event
 # ---------------------------------------------------------------------------
 
 
 def generate_exmp03() -> list[Event]:
-    """A short chat agent bracketed by two ``mark`` events.
+    """A short chat agent with a single in-line categorized ``mark`` event.
 
-    Demonstrates the ``mark`` event kind (spec §3.2):
-    - Generic checkpoint form — ``category`` and ``category_profile`` are both
-      absent / null; the mark is just a named timestamp with associated data.
+    Demonstrates an input-safety guardrail (prompt-injection / policy check)
+    that fires before the LLM call so a rejected prompt avoids the LLM cost.
+    Demonstrates that mark events are unpaired in-line lifecycle checkpoints
+    (spec §3.2), categorized via the ``guardrail`` category (§4), parented
+    under the agent scope so the checkpoint anchors within the agent's
+    execution:
+    - ``category="guardrail"`` (a first-class spec category per
+      atof-event-format.md §4), ``category_profile=None``.
+    - Fired AFTER the agent scope-start and BEFORE the LLM scope-start,
+      parented under the agent scope (``parent_uuid="agent-003"``) so it
+      rides alongside the agent's lifecycle.
     - Unpaired — marks are single-shot, no start/end semantics.
 
     Workflow:
-        session_start mark → agent turn (one llm call, no tools) → session_end mark.
+        agent scope-start → guardrail mark (input-safety check) →
+        llm scope-start → llm scope-end → agent scope-end.
 
-    Six events total (2 marks + 2 paired scope events for agent + 2 paired
-    scope events for the single llm turn). Converts to a 4-step ATIF
-    trajectory (system → user → agent → system) with the two marks
-    materialising as ``source: "system"`` steps carrying the mark's ``data``
-    as the message.
+    Five events total: 2 paired scope events for the agent + 2 paired scope
+    events for the single LLM turn + 1 in-line ``mark`` event. Converts to a
+    3-step ATIF trajectory (user → system → agent) — the user/agent pair
+    surfaces from the LLM turn, and the guardrail mark materializes as a
+    ``source: "system"`` step between them (its ``data`` shape doesn't match
+    the role extractor heuristic, so it falls into the JSON-blob system-step
+    arm at ``atof_to_atif_converter.py`` lines 644-651). Phoenix's native
+    ATIF helper folds this pre-LLM ``source: "system"`` step into the LLM
+    span's ``llm.input_messages`` so the guardrail check renders inline on
+    the LLM span.
     """
     events: list[Event] = [
-        MarkEvent(
-            uuid="mark-start-001",
-            parent_uuid=None,
-            timestamp=_ts(3, 0),
-            name="session_start",
-            data={
-                "session_id": "sess-003", "user_id": "user-042"
-            },
-        ),
         ScopeEvent(
             scope_category="start",
             uuid="agent-003",
@@ -386,11 +394,22 @@ def generate_exmp03() -> list[Event]:
             category="agent",
             data={"input": "What's the capital of France?"},
         ),
+        MarkEvent(
+            uuid="guardrail-003",
+            parent_uuid="agent-003",
+            timestamp=_ts(3, 2),
+            name="input_safety_check",
+            data={
+                "check": "input_safety", "passed": True, "policies": ["prompt_injection", "pii"]
+            },
+            category="guardrail",
+            category_profile=None,
+        ),
         ScopeEvent(
             scope_category="start",
             uuid="llm-003",
             parent_uuid="agent-003",
-            timestamp=_ts(3, 2),
+            timestamp=_ts(3, 3),
             name="gpt-4.1",
             attributes=[],
             category="llm",
@@ -403,7 +422,7 @@ def generate_exmp03() -> list[Event]:
             scope_category="end",
             uuid="llm-003",
             parent_uuid="agent-003",
-            timestamp=_ts(3, 3),
+            timestamp=_ts(3, 4),
             name="gpt-4.1",
             attributes=[],
             category="llm",
@@ -414,20 +433,11 @@ def generate_exmp03() -> list[Event]:
             scope_category="end",
             uuid="agent-003",
             parent_uuid=None,
-            timestamp=_ts(3, 4),
+            timestamp=_ts(3, 5),
             name="chat_agent",
             attributes=[],
             category="agent",
             data={"response": "The capital of France is Paris."},
-        ),
-        MarkEvent(
-            uuid="mark-end-001",
-            parent_uuid=None,
-            timestamp=_ts(3, 5),
-            name="session_end",
-            data={
-                "session_id": "sess-003", "message_count": 1
-            },
         ),
     ]
     return events
@@ -1015,7 +1025,7 @@ def main() -> None:
     scenarios = [
         ("exmp01_atof.jsonl", "tier-1 raw pass-through", generate_exmp01),
         ("exmp02_atof.jsonl", "tier-2 semantic-tagged", generate_exmp02),
-        ("exmp03_atof.jsonl", "mark events", generate_exmp03),
+        ("exmp03_atof.jsonl", "mark events — in-line guardrail", generate_exmp03),
         ("exmp04_atof.jsonl", "Anthropic Messages — tool_use", generate_exmp04),
         ("exmp05_atof.jsonl", "Gemini generateContent — functionCall", generate_exmp05),
         ("exmp06_atof.jsonl", "heterogeneous router (3 providers)", generate_exmp06),

@@ -23,6 +23,7 @@
       "step_id": 3,
       "timestamp": "2026-01-06T00:00:02Z",
       "source": "agent",
+      "model_name": "gpt-4o",
       "message": "Plan: send the factorial-code task to claude-3-5-sonnet (strong code synthesis), and the 2^32 arithmetic to gemini-2.0-flash. I'll combine the responses.",
       "extra": {
         "ancestry": {
@@ -55,6 +56,7 @@
       "step_id": 5,
       "timestamp": "2026-01-06T00:00:04Z",
       "source": "agent",
+      "model_name": "claude-3-5-sonnet",
       "message": "```python\ndef factorial(n: int) -> int:\n    return 1 if n <= 1 else n * factorial(n - 1)\n```",
       "extra": {
         "ancestry": {
@@ -87,6 +89,7 @@
       "step_id": 7,
       "timestamp": "2026-01-06T00:00:06Z",
       "source": "agent",
+      "model_name": "gemini-2.0-flash",
       "message": "2^32 = 4,294,967,296",
       "extra": {
         "ancestry": {

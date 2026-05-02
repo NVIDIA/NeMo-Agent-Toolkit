@@ -9,20 +9,21 @@
   "steps": [
     {
       "step_id": 1,
-      "timestamp": "2026-01-03T00:00:00Z",
+      "timestamp": "2026-01-03T00:00:02Z",
       "source": "system",
-      "message": "{\"session_id\":\"sess-003\",\"user_id\":\"user-042\"}"
+      "message": "{\"check\":\"input_safety\",\"passed\":true,\"policies\":[\"prompt_injection\",\"pii\"]}"
     },
     {
       "step_id": 2,
-      "timestamp": "2026-01-03T00:00:02Z",
+      "timestamp": "2026-01-03T00:00:03Z",
       "source": "user",
       "message": "What's the capital of France?"
     },
     {
       "step_id": 3,
-      "timestamp": "2026-01-03T00:00:03Z",
+      "timestamp": "2026-01-03T00:00:04Z",
       "source": "agent",
+      "model_name": "gpt-4.1",
       "message": "The capital of France is Paris.",
       "extra": {
         "ancestry": {
@@ -35,17 +36,11 @@
           "invocation_id": "llm-003",
           "framework": "nat",
           "status": "completed",
-          "start_timestamp": 1767398402.0,
-          "end_timestamp": 1767398403.0
+          "start_timestamp": 1767398403.0,
+          "end_timestamp": 1767398404.0
         }
       },
       "llm_call_count": 1
-    },
-    {
-      "step_id": 4,
-      "timestamp": "2026-01-03T00:00:05Z",
-      "source": "system",
-      "message": "{\"session_id\":\"sess-003\",\"message_count\":1}"
     }
   ]
 }

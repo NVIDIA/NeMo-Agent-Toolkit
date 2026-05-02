@@ -231,6 +231,46 @@ def _build_invocation_info(start_micros: int | None, end_micros: int | None, inv
     return info
 
 
+def _serialize_root_data(data: Any) -> str | None:
+    """Tier-1 boundary-step message serializer.
+
+    Used to lift an opaque root scope's ``data`` payload into the ATIF
+    user/agent boundary steps emitted by Branch A (root scope-start →
+    user step) and Branch B (root scope-end → agent step) of the main
+    converter loop.
+
+    Rules (locked-in by 260501-1ko quick plan brief):
+
+    - ``str``                                 → return as-is.
+    - ``dict`` with exactly one entry whose
+      value is a ``str``                      → return that string
+      (single-key-dict lift heuristic — covers the common
+      ``{"query": "..."}`` / ``{"result": "..."}`` shapes).
+    - ``dict`` with anything else (multi-key,
+      or single-key whose value is non-str
+      and non-empty)                          → ``json.dumps(data,
+      separators=(",", ":"))`` (compact JSON).
+    - ``None`` or empty dict                  → ``None`` (caller skips
+      emission entirely; no boundary step is produced).
+    - Any other type                          → fall through to compact
+      JSON for safety so we never silently drop content.
+    """
+    if data is None:
+        return None
+    if isinstance(data, str):
+        return data
+    if isinstance(data, dict):
+        if not data:
+            return None
+        if len(data) == 1:
+            only_value = next(iter(data.values()))
+            if isinstance(only_value, str):
+                return only_value
+        return json.dumps(data, separators=(",", ":"))
+    # Non-str / non-dict / non-None: fall through to JSON for safety.
+    return json.dumps(data, separators=(",", ":"))
+
+
 def _is_scope_start(event: Event) -> bool:
     return isinstance(event, ScopeEvent) and event.scope_category == "start"
 
@@ -465,6 +505,34 @@ def _events_to_step_dicts(
                     # continuation of the previous agent step).
                     current_agent_step_idx = None
 
+        elif (_is_scope_start(event) and event.parent_uuid is None
+              and event.category not in ("agent", "llm", "tool", "context")):
+            # Branch A (260501-1ko): tier-1 root scope-start boundary
+            # promotion. An opaque root scope (parent_uuid is None and
+            # category not classified as agent/llm/tool/context) lifts its
+            # `data` payload into a leading source="user" step using the
+            # _serialize_root_data heuristic. Inner non-root opaque
+            # scope-starts remain call-graph shaping only (no step).
+            message = _serialize_root_data(event.data)
+            if message is not None:
+                function_ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
+                start_micros = start_ts_map.get(event.uuid)
+                invocation = _build_invocation_info(start_micros, event.ts_micros, event.uuid)
+                user_extra: dict = {
+                    "ancestry": function_ancestry,
+                    "invocation": invocation,
+                }
+                if event.data_schema:
+                    user_extra["data_schema"] = event.data_schema
+                step_dicts.append({
+                    "source": "user",
+                    "message": message,
+                    "timestamp": event.timestamp,
+                    "extra": user_extra,
+                })
+            # If message is None (empty/None root data), skip emission;
+            # no observation lifecycle interaction at a root scope-start.
+
         elif _is_scope_end(event) and event.category == "llm":
             flush_observations()
 
@@ -499,10 +567,22 @@ def _events_to_step_dicts(
             if event.data_schema:
                 extra_fields["data_schema"] = event.data_schema
 
+            # ATIF v1.7 §step.model_name: per-step model identifier for the
+            # specific LLM that produced this turn. Disambiguates which
+            # provider handled each step in heterogeneous workflows (e.g.
+            # router → code-LLM → math-LLM). Falls back to event.name when
+            # category_profile is null so tier-1 producers still emit
+            # *something* identifying the call. Set on every agent step
+            # emitted from an LLM scope-end. NOT set on no-LLM
+            # orchestrator steps (R13, llm_call_count=0) — model_name on a
+            # deterministic dispatch step is meaningless per spec.
+            step_model_name = (event.category_profile or {}).get("model_name") or event.name
+
             step_dict: dict = {
                 "source": "agent",
                 "message": agent_msg,
                 "timestamp": event.timestamp,
+                "model_name": step_model_name,
                 "llm_call_count": 1,
                 "extra": extra_fields,
             }
@@ -663,15 +743,33 @@ def _events_to_step_dicts(
             flush_observations()
             current_agent_step_idx = None
 
-            data = event.data
-            if isinstance(data, dict):
-                message = json.dumps(data, separators=(",", ":"))
-            elif isinstance(data, str):
-                message = data
-            elif data is not None:
-                message = str(data)
+            # Branch B (260501-1ko): tier-1 root scope-end boundary
+            # promotion. When parent_uuid is None this is the closing
+            # boundary of an opaque root scope — emit source="agent" using
+            # _serialize_root_data (skip on None to avoid empty-message
+            # boundary noise). Inner (non-root) opaque scope-ends keep the
+            # original behavior: source="system" with the full
+            # dict/str/None message construction.
+            is_root = event.parent_uuid is None
+            if is_root:
+                message = _serialize_root_data(event.data)
+                if message is None:
+                    # Empty/None root data — skip agent-boundary emission
+                    # entirely. flush_observations() and the
+                    # current_agent_step_idx reset above already ran.
+                    continue
+                source = "agent"
             else:
-                message = ""
+                data = event.data
+                if isinstance(data, dict):
+                    message = json.dumps(data, separators=(",", ":"))
+                elif isinstance(data, str):
+                    message = data
+                elif data is not None:
+                    message = str(data)
+                else:
+                    message = ""
+                source = "system"
 
             function_ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
             start_micros = start_ts_map.get(event.uuid)
@@ -684,7 +782,7 @@ def _events_to_step_dicts(
             if event.data_schema:
                 r8_extra["data_schema"] = event.data_schema
             step_dicts.append({
-                "source": "system",
+                "source": source,
                 "message": message,
                 "timestamp": event.timestamp,
                 "extra": r8_extra,

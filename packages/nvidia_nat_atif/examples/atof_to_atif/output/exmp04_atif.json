@@ -17,6 +17,7 @@
       "step_id": 2,
       "timestamp": "2026-01-04T00:00:02Z",
       "source": "agent",
+      "model_name": "claude-3-5-sonnet",
       "message": "Let me read that file for you.",
       "tool_calls": [
         {
@@ -75,6 +76,7 @@
       "step_id": 3,
       "timestamp": "2026-01-04T00:00:06Z",
       "source": "agent",
+      "model_name": "claude-3-5-sonnet",
       "message": "The document is the introduction page for an end-to-end demo project.",
       "extra": {
         "ancestry": {

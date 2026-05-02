@@ -8,6 +8,27 @@
   "steps": [
     {
       "step_id": 1,
+      "timestamp": "2026-01-01T00:00:00Z",
+      "source": "user",
+      "message": "What is 3 + 4?",
+      "extra": {
+        "ancestry": {
+          "function_id": "root-001",
+          "function_name": "opaque_workflow",
+          "parent_id": null,
+          "parent_name": null
+        },
+        "invocation": {
+          "invocation_id": "root-001",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767225600.0,
+          "end_timestamp": 1767225600.0
+        }
+      }
+    },
+    {
+      "step_id": 2,
       "timestamp": "2026-01-01T00:00:02Z",
       "source": "system",
       "message": "{\"raw_payload\":\"<provider response 1: tool invocation>\"}",
@@ -28,7 +49,7 @@
       }
     },
     {
-      "step_id": 2,
+      "step_id": 3,
       "timestamp": "2026-01-01T00:00:04Z",
       "source": "system",
       "message": "{\"raw_payload\":\"<provider response 2: tool result>\"}",
@@ -49,7 +70,7 @@
       }
     },
     {
-      "step_id": 3,
+      "step_id": 4,
       "timestamp": "2026-01-01T00:00:06Z",
       "source": "system",
       "message": "{\"raw_payload\":\"<provider response 3: final answer>\"}",
@@ -70,10 +91,10 @@
       }
     },
     {
-      "step_id": 4,
+      "step_id": 5,
       "timestamp": "2026-01-01T00:00:07Z",
-      "source": "system",
-      "message": "{\"raw_result\":\"3 + 4 = 7\"}",
+      "source": "agent",
+      "message": "3 + 4 = 7",
       "extra": {
         "ancestry": {
           "function_id": "root-001",
