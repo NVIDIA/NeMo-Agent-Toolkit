@@ -96,7 +96,7 @@ A multi-provider orchestrator that receives a single user request, routes pieces
 
 This is the strongest end-to-end evidence that the converter dispatches **per event** by schema, not per stream. Each LLM span in the Phoenix tree below was parsed by a different registered extractor, yet they coexist under a single trajectory and trace.
 
-Per-step `step.model_name` (ATIF v1.7) disambiguous which provider produced each agent step: the three LLM-derived agent steps in the converted ATIF carry `model_name: "gpt-4o"` (router), `model_name: "claude-3-5-sonnet"` (code synthesis), and `model_name: "gemini-2.0-flash"` (math) respectively, while the root `agent.model_name = "gpt-4o"` reflects only the first LLM scope-end (the orchestrator/router). A consumer that previously had to guess which model produced step 5 can now read the answer off the step itself.
+Per-step `step.model_name` (ATIF v1.7) describes which provider produced each agent step: the three LLM-derived agent steps in the converted ATIF carry `model_name: "gpt-4o"` (router), `model_name: "claude-3-5-sonnet"` (code synthesis), and `model_name: "gemini-2.0-flash"` (math) respectively, while the root `agent.model_name = "gpt-4o"` reflects only the first LLM scope-end (the orchestrator/router). A consumer that previously had to guess which model produced step 5 can now read the answer off the step itself.
 
 **When to use:** any orchestrator pattern where one workflow fans out to multiple providers. Demonstrates that no schema-switching ceremony is needed at the producer side beyond declaring `data_schema` on each event.
 
