@@ -37,7 +37,7 @@ Transport is JSON Lines: one JSON object per line. The `kind` field at the top o
 - `"scope"` — a scope lifecycle event (start or end, distinguished by `scope_category`)
 - `"mark"` — a point-in-time checkpoint was recorded
 
-A `scope` event carries a required `scope_category` field valued in `"start"` or `"end"`. A start/end pair shares the same `uuid` (§5.3).
+A `scope` event carries a required `scope_category` field valued in `"start"` or `"end"`. A start and end pair shares the same `uuid` (§5.3).
 
 What *kind of work* an event represents — an LLM call, a tool invocation, an agent turn, a retriever lookup, a vendor extension — is carried by the `category` field. Kind-specific typed fields (`model_name` for `llm`, `tool_call_id` for `tool`, `subtype` for `custom`, future fields for other categories) are packaged into a single optional `category_profile` object. The `category_profile` is `null` for tier-1 opaque events and for categories with no kind-specific fields; tier-2 producers populate the keys appropriate to the `category`. Keeping the profile as a sub-object keeps the envelope flat and extensible — adding a retriever profile shape in the future does not bloat the top-level JSON.
 
@@ -78,7 +78,7 @@ Beyond the base envelope (`kind`, `uuid`, `parent_uuid`, `timestamp`, `name`, `a
 - `category_profile` — category-specific typed fields packaged as a sub-object. Keys vary by `category` — `subtype` for `custom`, `model_name` for `llm`, `tool_call_id` for `tool`, additional keys reserved for future categories (see §4.4). Null for tier-1 opaque events and for categories with no kind-specific fields.
 - `data` — application-defined payload. Opaque to ATOF. On `scope` events, typically carries the scope's input on `scope_category: "start"` and the scope's output on `scope_category: "end"`. Consumers MUST NOT dispatch on `data` contents.
 - `data_schema` — optional identifier `{name: string, version: string}` describing the shape of `data`. Opaque to ATOF core; the producer declares it, and validation of `data` against the named schema is the consumer's responsibility. The reference ATOF→ATIF converter provides two registries keyed on this identifier: `nat.atof.schemas` for JSON Schema validators and `nat.atof.extractors` for payload parsers. See [examples/atof_to_atif/README.md](examples/atof_to_atif/README.md#extending-the-converter) for registration guidance.
-- `metadata` — tracing/correlation envelope (`trace_id`, `span_id`, etc.).
+- `metadata` — tracing and correlation envelope (`trace_id`, `span_id`, etc.).
 
 ---
 
@@ -91,13 +91,13 @@ Every event carries the envelope fields below. The first six (`kind`, `atof_vers
 | -------------- | --------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `kind`         | string                                  | Yes      | Event kind discriminator. One of: `"scope"`, `"mark"`.                                                                                                |
 | `atof_version` | string                                  | Yes      | ATOF protocol version, `"MAJOR.MINOR"` (e.g., `"0.1"`). See §5.6.                                                                                     |
-| `uuid`         | string (UUID)                           | Yes      | Unique identifier for this event or span. For `scope` start/end pairs, the two events share a `uuid`.                                                 |
+| `uuid`         | string (UUID)                           | Yes      | Unique identifier for this event or span. For `scope` start and end pairs, the two events share a `uuid`.                                                 |
 | `parent_uuid`  | string (UUID) or null                   | No       | UUID of the containing scope when this event was emitted. Null only for root scope events and `mark` events without parents.                          |
 | `timestamp`    | string (RFC 3339) or integer (epoch µs) | Yes      | Wall-clock time the event was emitted. See §5.1.                                                                                                      |
 | `name`         | string                                  | Yes      | Human-readable label — e.g., `"my_agent"`, `"calculator__add"`, `"gpt-4.1"`.                                                                          |
 | `data`         | object or null                          | No       | Application-defined payload. Opaque to ATOF.                                                                                                          |
 | `data_schema`  | object or null                          | No       | Schema identifier `{name: string, version: string}` describing the shape of `data`. Opaque to ATOF core; validation is the consumer's responsibility. |
-| `metadata`     | object or null                          | No       | Tracing/correlation envelope — e.g., `{"trace_id": "...", "span_id": "..."}`.                                                                         |
+| `metadata`     | object or null                          | No       | Tracing and correlation envelope — e.g., `{"trace_id": "...", "span_id": "..."}`.                                                                         |
 
 
 ### 2.1 `attributes` — behavioral flag array
@@ -156,7 +156,7 @@ Emitted at scope lifecycle transitions. A single scope span produces two `scope`
 
 ### 3.2 `mark` event
 
-Emitted as a point-in-time checkpoint. Unpaired (no start/end semantics). A `mark` MAY carry `category` + `category_profile` to indicate the kind of work the checkpoint relates to; when both are absent, the mark is a generic named timestamp.
+Emitted as a point-in-time checkpoint. Unpaired (no start and end semantics). A `mark` MAY carry `category` + `category_profile` to indicate the kind of work the checkpoint relates to; when both are absent, the mark is a generic named timestamp.
 
 
 | Field              | Type                  | Required | Description                                                                                                                                           |
@@ -324,7 +324,7 @@ The following capabilities have been deliberately deferred from v0.1. They may b
 
 - **Terminal status on scope end.** A `status` field on `scope` events with `scope_category: "end"` — valued in `"ok"` / `"error"` / `"cancelled"` — to carry the scope's terminal outcome on the wire. Consumers currently infer outcome (when needed) from `data` contents defined by the producer.
 - **Structured error payload.** An `error` field pairing with `status == "error"`, carrying `{message, type, traceback}` for structured error reporting.
-- **Cascading cancellation semantics.** Normative guidance for how parent/child cancellation flows through the scope stack — contingent on `status` being adopted.
+- **Cascading cancellation semantics.** Normative guidance for how parent and child cancellation flows through the scope stack — contingent on `status` being adopted.
 
 Producers and consumers experimenting with these fields ahead of standardization SHOULD namespace them (e.g., under `data` with a vendor-prefixed `data_schema` name) so that a future promotion into ATOF core remains backward-compatible.
 

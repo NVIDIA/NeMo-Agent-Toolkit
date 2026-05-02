@@ -38,7 +38,7 @@ payload's shape
 
 ATOF defines two event kinds:
 
-- `**ScopeEvent`** — paired start/end events sharing a `uuid`. Represents
+- `**ScopeEvent`** — paired start and end events sharing a `uuid`. Represents
 a span of work: an agent turn, an LLM call, a tool invocation, a
 retrieval. Each scope carries a `category` (`agent`, `llm`, `tool`,
 `function`, `retriever`, `embedder`, `reranker`, `guardrail`,
@@ -127,11 +127,11 @@ and need separate extraction logic. A complete mapping framework defines
 three extractor types, each backed by its own registry:
 
 
-| Extractor type     | Pulls from event `data`                   | Used at                     |
-| ------------------ | ----------------------------------------- | --------------------------- |
-| **LLM extractor**  | input messages, output text, `tool_calls` | every `llm` scope start/end |
-| **Tool extractor** | serialized result string                  | every `tool` scope-end      |
-| **Mark extractor** | optional `(role, content)` lift           | every mark event            |
+| Extractor type     | Pulls from event `data`                   | Used at                         |
+| ------------------ | ----------------------------------------- | ------------------------------- |
+| **LLM extractor**  | input messages, output text, `tool_calls` | every `llm` scope start and end |
+| **Tool extractor** | serialized result string                  | every `tool` scope-end          |
+| **Mark extractor** | optional `(role, content)` lift           | every mark event                |
 
 
 Each extractor MUST be a pure function over `data` — no side effects, no
@@ -150,18 +150,18 @@ rule.
 ### 3.1 Quick reference: which events emit which steps
 
 
-| ATOF event                   | Step emission                                                          |
-| ---------------------------- | ---------------------------------------------------------------------- |
-| Agent scope-start            | None (informational only)                                              |
-| Agent scope-end              | None (informational only)                                              |
-| LLM scope-start              | One `user` or `system` step per **new** role=user/system input message |
-| LLM scope-end                | Exactly one `agent` step (with text, `tool_calls`, or both)              |
-| Tool scope-start             | None (cached for ancestry/args)                                        |
-| Tool scope-end               | An observation result (attached later, not its own step)               |
-| Mark event with role lift    | One sourced step (role from extractor)                                 |
-| Mark event without role lift | One `system` step (opaque)                                             |
-| Unknown/opaque scope-end     | One `system` step (tier-1 fall-through)                                |
-| Unknown/opaque scope-start   | None (ignored)                                                         |
+| ATOF event                    | Step emission                                                              |
+| ----------------------------- | -------------------------------------------------------------------------- |
+| Agent scope-start             | None (informational only)                                                  |
+| Agent scope-end               | None (informational only)                                                  |
+| LLM scope-start               | One `user` or `system` step per **new** role=user or system input message  |
+| LLM scope-end                 | Exactly one `agent` step (with text, `tool_calls`, or both)                |
+| Tool scope-start              | None (cached for ancestry/args)                                            |
+| Tool scope-end                | An observation result (attached later, not its own step)                   |
+| Mark event with role lift     | One sourced step (role from extractor)                                     |
+| Mark event without role lift  | One `system` step (opaque)                                                 |
+| Unknown or opaque scope-end   | One `system` step (tier-1 fall-through)                                    |
+| Unknown or opaque scope-start | None (ignored)                                                             |
 
 
 ### 3.2 Time ordering
@@ -310,7 +310,7 @@ as the message. Scope-start events for unknown categories are ignored
 (their data is informational only).
 
 This guarantees that even zero-instrumentation producers produce a valid
-ATIF trajectory — just one without rich agent/user/tool decomposition.
+ATIF trajectory — just one without rich agent, user, or tool decomposition.
 
 ### 3.9 Other categories
 
@@ -573,7 +573,7 @@ To add it as a consumer-side extractor:
 from nat.atof.extractors import SchemaMap, SchemaMapLlmExtractor
 
 MYCO_LLM_V1_MAP = SchemaMap(
-    name="myco/llm",
+    name="myco.llm",
     version="1",
     input_messages_paths=("input.history",),
     output_text_paths=("output.answer",),
@@ -596,7 +596,7 @@ hook. If output text and tool calls coexist in a single structure, add a
 ```python
 MYCO_LLM_V1: dict = {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "myco/llm@1",
+    "$id": "myco.llm@1",
     "type": "object",
     "anyOf": [
         {"type": "object", "required": ["input"]},
@@ -613,9 +613,9 @@ field-by-field validation. Strict validation belongs at the producer.
 ```python
 from nat.atof import register_schema, register_llm_extractor
 
-register_schema("myco/llm", "1", MYCO_LLM_V1)
+register_schema("myco.llm", "1", MYCO_LLM_V1)
 register_llm_extractor(
-    "myco/llm", "1", SchemaMapLlmExtractor(MYCO_LLM_V1_MAP)
+    "myco.llm", "1", SchemaMapLlmExtractor(MYCO_LLM_V1_MAP)
 )
 ```
 
@@ -623,9 +623,9 @@ register_llm_extractor(
 
 ```python
 def register_myco_llm_v1() -> None:
-    register_schema("myco/llm", "1", MYCO_LLM_V1)
+    register_schema("myco.llm", "1", MYCO_LLM_V1)
     register_llm_extractor(
-        "myco/llm", "1", SchemaMapLlmExtractor(MYCO_LLM_V1_MAP)
+        "myco.llm", "1", SchemaMapLlmExtractor(MYCO_LLM_V1_MAP)
     )
 ```
 
@@ -722,7 +722,7 @@ For consistency, mappers SHOULD use these terms with the meanings given.
 | **Step**       | A single ATIF action with `source`, `message`, optional `tool_calls`, optional `observation`.                                             |
 | **Schema**     | A `(name, version)` pair declaring the shape of `event.data`. Optional per-event.                                                         |
 | **Schema map** | A declarative description of where ATIF-relevant fields live within a producer's payload, plus optional hooks for irreducible transforms. |
-| **Extractor**  | A function/object that pulls ATIF fields from an event's `data`. Three types: LLM, tool, mark.                                            |
+| **Extractor**  | A function or object that pulls ATIF fields from an event's `data`. Three types: LLM, tool, mark.                                            |
 | **Hook**       | An imperative escape hatch in a schema map that handles a transform paths can't express.                                                  |
 | **Dispatch**   | The act of resolving the right extractor for an event based on `event.data_schema`.                                                       |
 | **Tier-1**     | An ATOF stream where producers can't classify scopes (everything is `category: "unknown"`). Falls through to system steps.                |
