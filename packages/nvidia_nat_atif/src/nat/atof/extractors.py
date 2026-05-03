@@ -51,7 +51,7 @@ Ships one built-in extractor per protocol:
   extractor is registered.
 
 Register new extractors before calling the converter. For an
-OpenAI-shaped provider, define a SchemaMap and register it:
+OpenAI-shaped provider, define a SchemaMap and register it::
 
     from nat.atof.extractors import (
         SchemaMap, SchemaMapLlmExtractor, register_llm_extractor,
@@ -158,11 +158,12 @@ def _resolve_path(data: Any, path: str) -> Any:
     into a list at that position; any other segment is a dict key. Returns
     the value at the final position, or ``None`` if any step fails.
 
-    Examples:
-        _resolve_path({"a": {"b": 1}}, "a.b")               # → 1
-        _resolve_path({"a": [{"b": 2}]}, "a.0.b")           # → 2
-        _resolve_path({"a": 1}, "a.b")                      # → None
-        _resolve_path({}, "x")                              # → None
+    Examples::
+
+        _resolve_path({"a": {"b": 1}}, "a.b")               # -> 1
+        _resolve_path({"a": [{"b": 2}]}, "a.0.b")           # -> 2
+        _resolve_path({"a": 1}, "a.b")                      # -> None
+        _resolve_path({}, "x")                              # -> None
     """
     if not path:
         return data
@@ -231,26 +232,25 @@ class SchemaMap:
     Pure-paths providers (OpenAI) leave the hooks at ``None``. Mixed
     providers (Anthropic, Gemini) use one or two hooks.
 
-    Args:
-        name: Schema name (e.g. ``"openai/chat-completions"``).
-        version: Schema version string.
-        input_messages_paths: Candidate paths to the input messages array.
-        output_text_paths: Candidate paths to the output assistant text.
-        output_tool_calls_paths: Candidate paths to the output tool-calls array.
-        tool_call_id_paths: Candidate sub-paths for tool-call ID.
-        tool_call_name_paths: Candidate sub-paths for tool-call function name.
-        tool_call_args_paths: Candidate sub-paths for tool-call arguments.
-        tool_call_args_parse_json: When True, parse string arguments as JSON.
-        role_aliases: Map of provider role values to canonical role values
-            (e.g., ``{"model": "assistant"}`` for Gemini). Applied to messages
-            extracted via field paths; hooks bypass this.
-        normalize_input_messages: Optional hook overriding path-based input
-            extraction. Signature: ``(data) → list[{"role", "content", ...}]``.
-        normalize_output_message: Optional hook overriding path-based output
-            extraction. Signature: ``(data) → (text, tool_calls)``.
-        transform_tool_call: Optional per-call adapter. Signature:
-            ``(raw_call_dict, index) → ATIF-shaped {"tool_call_id", "function_name", "arguments"}``.
-            When set, replaces the per-tool-call path resolution entirely.
+    :param name: Schema name (e.g. ``"openai/chat-completions"``).
+    :param version: Schema version string.
+    :param input_messages_paths: Candidate paths to the input messages array.
+    :param output_text_paths: Candidate paths to the output assistant text.
+    :param output_tool_calls_paths: Candidate paths to the output tool-calls array.
+    :param tool_call_id_paths: Candidate sub-paths for tool-call ID.
+    :param tool_call_name_paths: Candidate sub-paths for tool-call function name.
+    :param tool_call_args_paths: Candidate sub-paths for tool-call arguments.
+    :param tool_call_args_parse_json: When True, parse string arguments as JSON.
+    :param role_aliases: Map of provider role values to canonical role values
+        (e.g., ``{"model": "assistant"}`` for Gemini). Applied to messages
+        extracted via field paths; hooks bypass this.
+    :param normalize_input_messages: Optional hook overriding path-based input
+        extraction. Signature: ``(data) -> list[{"role", "content", ...}]``.
+    :param normalize_output_message: Optional hook overriding path-based output
+        extraction. Signature: ``(data) -> (text, tool_calls)``.
+    :param transform_tool_call: Optional per-call adapter. Signature:
+        ``(raw_call_dict, index) -> ATIF-shaped {"tool_call_id", "function_name", "arguments"}``.
+        When set, replaces the per-tool-call path resolution entirely.
     """
 
     name: str
@@ -394,14 +394,17 @@ class OpenAiChatCompletionsLlmExtractor(SchemaMapLlmExtractor):
     ``SchemaMapLlmExtractor(OPENAI_CHAT_COMPLETIONS_V1_MAP)``.
 
     Input shapes (extract_input_messages):
+
     - ``{"messages": [...]}``
     - ``{"content": {"messages": [...]}}``
 
     Output shapes (extract_output_text):
+
     - ``{"content": "..."}``
     - ``{"choices": [{"message": {"content": "..."}}]}``
 
     Tool-call shapes (extract_tool_calls):
+
     - Flat: ``{"tool_calls": [{"id", "name", "arguments"}]}``
     - Nested: ``{"choices": [{"message": {"tool_calls": [...]}}]}``
     - Per-call: either flat ``{id, name, arguments}`` or the OpenAI
@@ -435,12 +438,13 @@ def _anthropic_normalize_input_messages(data: Any) -> list[dict[str, Any]]:
     ``[{"role", "content"}]`` for the converter.
 
     Per-message rules:
-    - String content → emitted unchanged.
-    - List content with text blocks → text blocks concatenated into a
+
+    - String content -> emitted unchanged.
+    - List content with text blocks -> text blocks concatenated into a
       single string (round-trip-clean: each block's text joined with no
       separator, matching Anthropic's own ``response.content[*].text``
       concatenation semantics).
-    - List content with only ``tool_use`` / ``tool_result`` blocks →
+    - List content with only ``tool_use`` / ``tool_result`` blocks ->
       message dropped (tool I/O is captured by tool scope events, not
       LLM input messages — see module-level note above).
 

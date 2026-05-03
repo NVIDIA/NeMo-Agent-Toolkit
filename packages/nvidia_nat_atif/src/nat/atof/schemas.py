@@ -26,7 +26,7 @@ This module maintains a process-wide registry keyed on
   least one of the extractable top-level keys: ``messages``, ``content``,
   ``tool_calls``, ``choices``.
 
-External producers register their own schemas via :func:`register_schema`:
+External producers register their own schemas via :func:`register_schema`::
 
     from nat.atof.schemas import register_schema
 
@@ -59,7 +59,7 @@ are implemented yet. Captured here so the next iteration doesn't
 relitigate the trade-off space:
 
 (A) **Stream-level schema manifest** — Reserve the first line of the
-    JSONL stream for a non-event manifest:
+    JSONL stream for a non-event manifest::
 
         {"type": "atof_schema_manifest",
          "schemas": [{"name": ..., "version": ..., "json_schema": {...},

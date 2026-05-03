@@ -68,7 +68,7 @@ class Trajectory(BaseModel):
                      "without overloading ``session_id``'s run-scoped semantics. "
                      "Optional on standalone trajectories, but REQUIRED on any "
                      "trajectory embedded in a parent's ``subagent_trajectories`` "
-                     "array. ``trajectory_id``s within a single parent's "
+                     "array. ``trajectory_id``\\ s within a single parent's "
                      "``subagent_trajectories`` array MUST be unique."),
     )
     agent: Agent = Field(
@@ -105,8 +105,8 @@ class Trajectory(BaseModel):
                      "sequence starting at 1. Consumers resolve a ``SubagentTrajectoryRef`` "
                      "with ``trajectory_path`` unset by matching ``trajectory_id`` "
                      "against entries in this array. Every embedded subagent MUST "
-                     "set ``trajectory_id``; ``trajectory_id``s within this array "
-                     "MUST be unique. (``session_id``s, by contrast, are run-scoped "
+                     "set ``trajectory_id``; ``trajectory_id``\\ s within this array "
+                     "MUST be unique. (``session_id``\\ s, by contrast, are run-scoped "
                      "and MAY collide across siblings.)"),
     )
 
@@ -129,8 +129,8 @@ class Trajectory(BaseModel):
     @model_validator(mode="after")
     def validate_subagent_trajectory_ids(self) -> Trajectory:
         """Spec §IV: every embedded subagent MUST set ``trajectory_id``,
-        and ``trajectory_id``s within the parent's ``subagent_trajectories``
-        array MUST be unique. (``session_id``s, by contrast, are run-scoped
+        and ``trajectory_id``\\ s within the parent's ``subagent_trajectories``
+        array MUST be unique. (``session_id``\\ s, by contrast, are run-scoped
         and MAY collide across siblings.)"""
         if not self.subagent_trajectories:
             return self

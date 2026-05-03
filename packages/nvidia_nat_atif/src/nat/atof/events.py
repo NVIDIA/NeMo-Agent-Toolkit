@@ -18,9 +18,9 @@ Standalone Pydantic models for each event kind. The ``Event`` type is a
 discriminated union keyed on the ``kind`` field.
 
 Two event kinds:
+
 - ``ScopeEvent`` — a scope lifecycle event (start or end, distinguished by
-                   ``scope_category``). A start/end pair shares the same
-                   ``uuid`` (spec §5.3).
+  ``scope_category``). A start/end pair shares the same ``uuid`` (spec §5.3).
 - ``MarkEvent`` — a point-in-time checkpoint, unpaired.
 
 What kind of work an event represents is carried by the ``category`` field.
@@ -31,6 +31,7 @@ keys reserved for future categories. ``category`` is REQUIRED on
 ``ScopeEvent`` and OPTIONAL on ``MarkEvent``.
 
 See ATOF spec:
+
 - §2 (common envelope), §2.1 (attributes)
 - §3 (event kinds)
 - §4 (category vocabulary)
