@@ -72,8 +72,14 @@ dependencies = [
 full = [
   "jsonschema>=4.0",
 ]
+test = [
+  "nvidia-nat-test == {version}",
+]
 
 [tool.uv]
 build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
+
+[tool.uv.sources]
+nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }
