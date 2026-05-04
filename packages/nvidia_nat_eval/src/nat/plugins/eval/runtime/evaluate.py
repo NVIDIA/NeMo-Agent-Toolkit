@@ -347,6 +347,9 @@ class EvaluationRun:
 
         all_stats = [item.trajectory for item in self.eval_input.eval_input_items]
 
+        if len(all_stats) == 0 or all(len(stats) == 0 for stats in all_stats):
+            raise ValueError("No trajectories found for profiling.")
+
         profiler_runner = ProfilerRunner(self.eval_config.general.profiler,
                                          self.eval_config.general.output_dir,
                                          write_output=self.config.write_output)
