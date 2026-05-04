@@ -1525,6 +1525,25 @@ async def test_stream_fn_yields_content_after_final_answer_marker(stream_fn_fact
     assert "The result is 42" in combined
 
 
+async def test_stream_fn_handles_split_final_answer(stream_fn_factory):
+    """_stream_fn correctly buffers and detects Final Answer: when the marker is split across chunk boundaries."""
+    from langchain_core.messages import AIMessageChunk
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        yield (AIMessageChunk(content="Final An"), {"langgraph_node": "agent"})
+        yield (AIMessageChunk(content="swer: The result is 42"), {"langgraph_node": "agent"})
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("What is 6*7?")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    combined = "".join(c.choices[0].delta.content for c in chunks if c.choices and c.choices[0].delta.content)
+    assert "The result is 42" in combined
+
+
 async def test_stream_fn_yields_after_marker_in_same_chunk(stream_fn_factory):
     """_stream_fn yields content that follows Final Answer: within a single chunk."""
     from langchain_core.messages import AIMessageChunk
