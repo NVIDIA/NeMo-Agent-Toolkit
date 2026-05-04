@@ -21,6 +21,8 @@ from pathlib import Path
 from pydantic import BaseModel
 from pydantic import Discriminator
 from pydantic import Field
+from pydantic import ValidationInfo
+from pydantic import field_validator
 from pydantic import model_validator
 
 from nat.data_models.common import TypedBaseModel
@@ -132,12 +134,16 @@ class EvalGeneralConfig(BaseModel):
         "this creates a fresh workflow instance per eval item, resetting all stateful tools to their "
         "initial state. Set to False to disable this behavior.")
 
-    # overwrite the output_dir with the output config if present
+    # If output_dir is defined and output is not, define an EvalOutputConfig with output_dir as the dir
     @model_validator(mode="before")
     @classmethod
     def override_output_dir(cls, values):
-        if values.get("output") and values["output"].get("dir"):
-            values["output_dir"] = values["output"]["dir"]
+        output_config = values.get("output")
+        if output_config is None:
+            output_dir = values.get("output_dir")
+            if output_dir is not None:
+                values["output"] = EvalOutputConfig(dir=output_dir)
+
         return values
 
     @classmethod
