@@ -1,0 +1,68 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from pathlib import Path
+from urllib.parse import urlparse
+
+import click
+import yaml
+
+from nat.data_models.config import Config
+
+
+def validate_url(_ctx: click.Context, _param: click.Parameter, value: str) -> str:
+    """Validate URL format for CLI options.
+
+    Args:
+        _ctx: Click context (unused, required by Click callback interface)
+        _param: Click parameter (unused, required by Click callback interface)
+        value: URL string to validate
+
+    Returns:
+        The validated URL string
+
+    Raises:
+        click.BadParameter: If URL is invalid or uses unsupported scheme
+    """
+    if not value:
+        return value
+
+    try:
+        result = urlparse(value)
+        if result.scheme not in ('http', 'https'):
+            raise click.BadParameter('URL must use http:// or https:// scheme')
+        if not result.netloc:
+            raise click.BadParameter('URL must include a hostname')
+        return value
+    except click.BadParameter:
+        raise
+    except Exception as e:
+        raise click.BadParameter(f'Invalid URL format: {e}')
+
+
+def validate_config(config_file: Path) -> Config:
+    """Validate configuration file and return parsed config"""
+    try:
+        from nat.runtime.loader import load_config
+
+        # Load using the NAT loader functions. This performs validation
+        config = load_config(config_file)
+
+        return config
+
+    except yaml.YAMLError as e:
+        raise click.ClickException(f"Invalid YAML format: {str(e)}")
+    except Exception as e:
+        raise click.ClickException(f"Validation error: {str(e)}")

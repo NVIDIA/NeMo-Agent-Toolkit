@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+repos:
+  - repo: https://github.com/google/yapf
+    rev: v0.43.0
+    hooks:
+      - id: yapf
+        args: ["-i", "--style", "./pyproject.toml"]
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.0
+    hooks:
+      # Run the linter.
+      - id: ruff-check
+        args: [ --fix ]
+  - repo: local
+    hooks:
+      - id: uv-lock-all-pyprojects
+        name: Ensure `uv lock` is run for all pyproject.toml files
+        entry: >-
+          bash -ec '
+            status=0
+            while IFS= read -r -d "" pyproject; do
+              (
+                echo "Locking $(dirname "$pyproject")" &&
+                cd "$(dirname "$pyproject")" &&
+                uv lock
+              ) || status=$?
+            done < <(find . -name pyproject.toml -not -path "*/.*/*" -print0)
+            exit "$status"
+          '
+        language: system
+        files: "pyproject\\.toml$"
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: clear-notebook-output-cells
+        name: Clear Jupyter Notebook Output Cells
+        entry: ci/scripts/clear_notebook_output_cells.sh
+        files: "\\.ipynb$"
+        language: python
+        additional_dependencies: ["nbconvert"]
+
+  - repo: https://github.com/tcort/markdown-link-check
+    rev: v3.14.2
+    hooks:
+      - id: markdown-link-check
+        args: ["-q", "--config", "ci/markdown-link-check-config.json"]
+        exclude: "^(packages/nvidia_nat_core/src/nat/meta/pypi\\.md|CHANGELOG\\.md)$"
+
+default_language_version:
+  python: python3

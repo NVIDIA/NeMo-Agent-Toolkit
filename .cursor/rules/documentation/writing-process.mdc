@@ -1,0 +1,106 @@
+---
+description: 
+globs: **/*.md
+alwaysApply: false
+---
+# Writing Process Guidelines
+
+Follow the structured 8-step writing process when creating or updating documentation.
+
+## The 8-Step Writing Process
+
+### 1. Understand Your Audience
+- Identify who will read the documentation (developers, users, administrators)
+- Consider their technical level and familiarity with the subject
+- Determine what they need to know to accomplish their goals
+- Ask: "What does the reader need to know to do what I want them to do?"
+
+### 2. Determine Your Purpose
+- Clearly define why you're writing the documentation
+- Identify the specific outcome you want to achieve
+- Determine if this is a user guide, developer guide, quick start guide, or other type
+- Ask: "What do I want the reader to know or do after reading this?"
+
+### 3. Brainstorm Your Ideas
+- List all relevant information, facts, and concepts
+- Include notes about writing style and approach
+- Consider vocabulary and terminology
+- Don't limit or reject ideas at this stage
+
+### 4. Choose and Sort Your Ideas
+- Select the best ideas that fulfill your purpose
+- Eliminate anything that doesn't help achieve your goal
+- Organize ideas into logical categories
+- Ensure you have all necessary information
+
+### 5. Organize Your Ideas into a Writing Plan
+- Create a clear structure using lists, outlines, or diagrams
+- Plan paragraph breaks and section headings
+- Decide on formatting elements (headings, lists, charts, graphics)
+- Eliminate anything that doesn't directly relate to your purpose
+- Review: Will this plan fulfill your purpose? Are any steps or information missing?
+
+### 6. Write the First Draft
+- Follow your plan without worrying about perfection
+- Don't focus on grammar, word choice, or spelling yet
+- Keep your audience and purpose in mind
+- Focus on getting ideas down
+
+### 7. Revise, Correct, and Rewrite
+- **Content review**: Ensure the writing fulfills its purpose
+- **Clarity check**: Make sure it's clear and easy to understand
+- **Structure review**: Check paragraph and sentence structure
+- **Grammar and style**: Proofread for grammar, word choice, and style issues
+- **Completeness**: Answer any questions readers might have
+
+### 8. Send a "Clean" Draft to Your Reviewers
+- Technical writers depend on subject matter experts (SMEs) for accuracy
+- Ensure reviewers review the documentation thoroughly
+- Incorporate feedback from reviews
+- Do a final accuracy check with SMEs before publishing
+
+## Best Practices
+
+### Before Writing
+- Research your topic thoroughly
+- Gather all necessary information
+- Identify your target audience clearly
+- Define success metrics for your documentation
+
+### During Writing
+- Stay focused on your purpose
+- Write in a consistent voice and tone
+- Use clear, simple language
+- Follow formatting guidelines consistently
+
+### After Writing
+- Always have content reviewed by SMEs
+- Test procedures with actual users when possible
+- Update documentation based on feedback
+- Keep documentation current with product changes
+
+## Documentation Types
+
+### User Guides
+- Focus on helping users accomplish specific tasks
+- Use step-by-step instructions
+- Include screenshots and examples
+- Assume minimal technical knowledge
+
+### Developer Guides
+- Focus on technical implementation
+- Include code examples and API references
+- Assume higher technical expertise
+- Provide comprehensive technical details
+
+### Quick Start Guides
+- Focus on getting users up and running quickly
+- Include only essential steps
+- Minimize explanatory text
+- Provide links to comprehensive documentation
+
+### Release Notes
+- Focus on what changed and why it matters
+- Organize by impact level (breaking changes, new features, bug fixes)
+- Include migration instructions for breaking changes
+- Provide clear dates and version numbers

@@ -1,0 +1,31 @@
+# Ignore temporary folders
+**/.*/*
+
+# Ignore vscode folder
+.vscode/
+
+# Ignore git objects
+.git/
+.gitignore
+.gitlab-ci.yml
+.gitmodules
+
+# Ignore all Dockerfiles
+**/*Dockerfile*
+
+# Ignore temperory volumes
+**/volumes
+
+# creating a docker image
+.dockerignore
+
+# Ignore all .env files
+**/*.env
+
+# Ignore any virtual environment configuration files
+.venv/
+env/
+
+# Ignore python bytecode files
+*.pyc
+__pycache__/

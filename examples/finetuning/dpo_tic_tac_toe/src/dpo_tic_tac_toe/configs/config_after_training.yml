@@ -1,0 +1,108 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# Configuration for DPO Tic-Tac-Toe workflow
+#
+# This workflow uses Test Time Compute (TTC) to generate multiple candidate
+# moves per turn, score them using game-theoretic evaluation, and select
+# the best move. All candidates are recorded as intermediate steps for
+# DPO preference dataset construction.
+#
+# Architecture:
+#   workflow (dpo_tic_tac_toe)
+#     └── ttc_move_selector (NAT Function)
+#           ├── move_searcher (TTC SEARCH strategy)
+#           │     └── choose_move (NAT Function)
+#           ├── move_scorer (TTC SCORING strategy)
+#
+
+llms:
+  # LLM for the trained player
+  # Uses vLLM or any OpenAI-compatible endpoint
+  training_llm:
+    _type: openai
+    model_name: ${CUSTOMIZER_LLM_MODEL_NAME}
+    base_url: ${CUSTOMIZER_NIM_URL}
+
+functions:
+  # === Trained player functions (uses LLM) ===
+  # Base function that generates a single move using LLM
+  trained_choose_move:
+    _type: choose_move
+    llm: training_llm
+    max_retries: 2
+
+  # TTC move selector for trained player
+  trained_ttc_move_selector:
+    _type: ttc_move_selector
+    search: trained_move_searcher
+    scorer: move_scorer
+    selector: move_selector
+
+  # === Opponent functions (random moves) ===
+  # Base function that generates random moves (no LLM)
+  random_choose_move:
+    _type: choose_move
+    # llm is null - generates random moves
+
+  # TTC move selector for random opponent
+  random_ttc_move_selector:
+    _type: ttc_move_selector
+    search: random_move_searcher
+    scorer: move_scorer
+    selector: move_selector
+
+ttc_strategies:
+  # TTC SEARCH for trained player: Generates N candidates using LLM
+  trained_move_searcher:
+    _type: multi_candidate_move_search
+    choose_move_fn: trained_choose_move
+    num_candidates: 3
+
+  # TTC SEARCH for opponent: Generates N random candidates
+  random_move_searcher:
+    _type: multi_candidate_move_search
+    choose_move_fn: random_choose_move
+    num_candidates: 3
+
+  # TTC SCORING: Evaluates moves using game-theoretic position analysis
+  # (shared by both players)
+  move_scorer:
+    _type: board_position_scorer
+
+  # TTC SELECTION: Selects the highest-scoring move
+  # (shared by both players)
+  move_selector:
+    _type: best_of_n_selection
+
+workflow:
+  _type: dpo_tic_tac_toe
+  # Both players use TTC pipeline - enables DPO data from all turns
+  trained_ttc_move_selector_fn: trained_ttc_move_selector
+  opponent_ttc_move_selector_fn: random_ttc_move_selector
+
+eval:
+  general:
+    max_concurrency: 8
+    output_dir: .tmp/nat/dpo_tic_tac_toe/eval_after_training
+    dataset:
+      _type: json
+      file_path: examples/finetuning/dpo_tic_tac_toe/data/data.json
+
+  evaluators:
+    # Simple game outcome evaluator
+    game_outcome:
+      _type: dpo_game_outcome

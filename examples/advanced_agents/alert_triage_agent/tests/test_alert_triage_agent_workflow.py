@@ -1,0 +1,62 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import json
+from pathlib import Path
+
+import pytest
+import yaml
+
+
+@pytest.mark.integration
+@pytest.mark.usefixtures("nvidia_api_key")
+async def test_full_workflow(root_repo_dir: Path):
+    from nat.test.utils import locate_example_config
+    from nat.test.utils import run_workflow
+    from nat_alert_triage_agent.register import AlertTriageAgentWorkflowConfig
+
+    config_file: Path = locate_example_config(AlertTriageAgentWorkflowConfig, "config_offline_mode.yml")
+
+    with open(config_file, encoding="utf-8") as file:
+        config = yaml.safe_load(file)
+        input_filepath = config["eval"]["general"]["dataset"]["file_path"]
+
+    input_filepath_abs = root_repo_dir.joinpath(input_filepath).absolute()
+
+    assert input_filepath_abs.exists(), f"Input data file {input_filepath_abs} does not exist"
+
+    # Load input data
+    with open(input_filepath_abs, encoding="utf-8") as f:
+        input_data = json.load(f)
+
+    input_data = input_data[0]  # Limit to first row for testing
+
+    # Run the workflow
+    result = await run_workflow(config_file=config_file,
+                                question=input_data["question"],
+                                expected_answer=input_data["label"])
+
+    # Check that the result contains a root cause categorization
+    assert "root cause category" in result.lower()
+
+    # Check that the expected label appears in the result
+    expected_label = input_data["label"].lower()
+    assert expected_label in result.lower(), (f"Expected label '{input_data['label']}' not found in result. "
+                                              f"Got: {result[:500]}")
+
+    # Check that the agent produced a triage report, not just a bare categorizer output.
+    # A bare categorizer output is ~100 chars; a real report is much longer.
+    assert len(result) > 200, (f"Result too short ({len(result)} chars), agent likely returned an empty report. "
+                               f"Got: {result[:500]}")

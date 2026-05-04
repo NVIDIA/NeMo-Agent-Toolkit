@@ -1,0 +1,135 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Example: Running nat optimize on the email phishing analyzer with LangSmith experiment tracking
+#
+# Prerequisites:
+#   export LANGSMITH_API_KEY=<your-langsmith-api-key>
+#   export NVIDIA_API_KEY=<your-nvidia-api-key>
+#
+# Run:
+#   nat optimize --config_file examples/evaluation_and_profiling/email_phishing_analyzer/src/nat_email_phishing_analyzer/configs/config-langsmith-optimize.yml
+#
+# After running, check your LangSmith project for:
+#   - Per-trial experiments with optimized parameters as metadata
+#   - Per-example runs within each trial with tokens, latency, and scores
+#   - Side-by-side trial comparison in the Datasets & Experiments UI
+#   - Evolved prompts pushed to LangSmith prompt management with metric tags
+#   - OTEL span traces for each LLM call (from the existing langsmith OTEL exporter)
+
+general:
+  telemetry:
+    tracing:
+      langsmith:
+        _type: langsmith
+        project: nat-email-phishing-optimize
+        endpoint: "${LANGSMITH_ENDPOINT:-https://api.smith.langchain.com}/otel/v1/traces"
+        api_key: ${LANGSMITH_API_KEY}
+        workspace_id: ${LANGSMITH_WORKSPACE_ID:-}
+
+functions:
+  email_phishing_analyzer:
+    _type: email_phishing_analyzer
+    llm: phishing_llm
+    optimizable_params:
+      - prompt
+  prompt_init:
+    _type: prompt_init
+    optimizer_llm: prompt_optimizer
+    system_objective: Agent that triages an email to see if it is a phishing attempt or not.
+  prompt_recombination:
+    _type: prompt_recombiner
+    optimizer_llm: prompt_optimizer
+    system_objective: Agent that triages an email to see if it is a phishing attempt or not.
+
+llms:
+  phishing_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 1024
+    optimizable_params:
+      - temperature
+      - top_p
+      - max_tokens
+      - model_name
+    search_space:
+      model_name:
+        values:
+          - nvidia/nemotron-3-nano-30b-a3b
+          - meta/llama-3.1-70b-instruct
+
+  prompt_optimizer:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.5
+    max_tokens: 2048
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - email_phishing_analyzer
+  llm_name: prompt_optimizer
+  verbose: true
+  parse_agent_response_max_retries: 3
+
+eval:
+  general:
+    output_dir: ./.tmp/eval/examples/evaluation_and_profiling/email_phishing_analyzer/langsmith_optimize
+    verbose: true
+    dataset:
+        _type: csv
+        file_path: examples/evaluation_and_profiling/email_phishing_analyzer/data/smaller_test.csv
+        id_key: "subject"
+        structure:
+          question_key: body
+          answer_key: label
+
+  evaluators:
+    accuracy:
+      _type: ragas
+      metric: AnswerAccuracy
+      llm_name: prompt_optimizer
+    llm_latency:
+      _type: avg_llm_latency
+    token_efficiency:
+      _type: avg_tokens_per_llm_end
+
+optimizer:
+  output_path: ./.tmp/examples/evaluation_and_profiling/email_phishing_analyzer/langsmith_optimize/optimizer/
+  reps_per_param_set: 1
+  eval_metrics:
+    accuracy:
+      evaluator_name: accuracy
+      direction: maximize
+    token_efficiency:
+      evaluator_name: token_efficiency
+      direction: minimize
+    latency:
+      evaluator_name: llm_latency
+      direction: minimize
+
+  numeric:
+    enabled: true
+    n_trials: 5
+
+  prompt:
+    enabled: true
+    prompt_population_init_function: prompt_init
+    prompt_recombination_function: prompt_recombination
+    ga_generations: 3
+    ga_population_size: 3
+    ga_diversity_lambda: 0.3
+    ga_parallel_evaluations: 1

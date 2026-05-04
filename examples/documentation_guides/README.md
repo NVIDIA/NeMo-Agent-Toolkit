@@ -1,0 +1,28 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+# Documentation Examples
+
+This directory contains the code for examples used in documentation guides which are located under the `docs/source` directory.
+
+## Installation and Setup
+
+If you have not already done so, follow the instructions in the [Install Guide](../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+
+### Using Documentation Examples:
+
+The examples in this directory are referenced in various documentation guides. Each subdirectory contains specific examples used in tutorials and guides. Refer to the main documentation for detailed instructions on running these examples.

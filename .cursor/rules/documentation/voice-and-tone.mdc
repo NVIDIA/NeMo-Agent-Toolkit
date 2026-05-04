@@ -1,0 +1,126 @@
+---
+description: 
+globs: **/*.md
+alwaysApply: false
+---
+# Voice and Tone Guidelines
+
+Write in a friendly, straightforward way that is authoritative, instructive, and welcoming to all audiences.
+
+## Voice Characteristics
+
+### Authoritative
+Write with confidence and knowledge without being bossy, rude, or condescending.
+
+#### Avoid Redundancy
+- **Problem**: Unnecessary repetition that takes up space and obscures meaning
+- **Example (incorrect)**: "The process of freeing a stuck vehicle that has been stuck..."
+- **Example (correct)**: "The process of freeing a stuck vehicle consists of..."
+
+#### Avoid Flowery Language
+- **Problem**: Overly elaborate writing that uses complicated words to sound skillful
+- **Example (incorrect)**: "High-quality learning environments are a necessary precondition for the facilitation and enhancement of the ongoing learning process."
+- **Example (correct)**: "People need good schools if they are to learn properly."
+
+#### Use Active Voice
+- **Active voice**: Subject performs the action (strong, direct, clear)
+- **Passive voice**: Subject receives the action (weak, indirect)
+- **Example (correct)**: "Marti logged into the account."
+- **Example (incorrect)**: "The account was logged into by Marti."
+
+**Note**: Use passive voice only when the actor is unknown or when changing to active voice would alter the intended meaning.
+
+#### Choose Appropriate Formality
+- Use **second person** ("you") whenever possible
+- Write prose that empowers the user to take action
+- **Example (incorrect)**: "The product allows you to create multiple user segments."
+- **Example (correct)**: "With the product you can create multiple user segments."
+
+### Instructive
+Make instructions immediately understandable without requiring multiple readings.
+
+#### Writing Style for Instructions
+- Use declarative, command, or direct address writing
+- Use active instead of passive voice
+- Include all necessary articles (a, an, the)
+- Use action verbs
+- Ensure graphics match descriptive text
+- Keep text short but descriptive
+- Avoid complicated jargon; use simple language
+- Use concise headings and subheadings
+- Leave plenty of white space around headings
+- Highlight safety information and warnings
+- Keep illustrations simple
+
+#### Sentence Types
+
+**Declarative Sentences**
+- Relay information, opinions, and facts
+- End with a period
+- Have at least two words
+- Include subject and predicate
+- **Examples**: "The dogs barked at the moon." "Jim worked hard, but he failed the exam."
+
+**Imperative Sentences**
+- Issue commands and requests
+- End with period or exclamation mark
+- Can be as short as one word
+- Don't explicitly state a subject (implied "you")
+- **Examples**: "Close the door." "Stop!" "Come here, look at this dress, and tell me what you think."
+
+**Usage**: Use declarative language most frequently in technical documentation, with imperative language when giving direct instructions.
+
+### Welcoming to All Audiences
+Consider accessibility and usability for the widest possible audience.
+
+#### Accessibility Checklist
+- Would this language make sense to someone who doesn't work here?
+- Could someone quickly scan this document and understand the material?
+- If someone can't see colors, images, or video, is the message still clear?
+- Is the markup clean and structured?
+- Does this work well on mobile devices with accessibility features?
+
+## Writing Guidelines
+
+### Use Second Person
+- Address the reader directly with "you"
+- Makes instructions more personal and clear
+- Helps users understand they are the ones taking action
+
+### Be Direct and Clear
+- Get to the point quickly
+- Use simple, clear language
+- Avoid unnecessary words
+- Choose specific verbs over generic ones
+
+### Be Consistent
+- Use the same terms throughout a document
+- Follow the same style patterns
+- Maintain consistent formatting
+- Use parallel construction in lists and procedures
+
+### Be Helpful
+- Anticipate user questions and answer them
+- Provide context when needed
+- Include examples and use cases
+- Link to related information when helpful
+
+## Common Mistakes to Avoid
+
+### Don't Use These Phrases
+- "Simply" or "just" (implies something is easy when it might not be)
+- "Obviously" or "clearly" (condescending if it's not obvious to the reader)
+- "Please note that" (unnecessary filler)
+- "It should be noted that" (wordy and impersonal)
+
+### Avoid These Constructions
+- "In order to" (use "to" instead)
+- "Due to the fact that" (use "because" instead)
+- "At this point in time" (use "now" instead)
+- "For the purpose of" (use "to" instead)
+
+### Don't Assume
+- Don't assume users know background information
+- Don't assume users have specific tools or permissions
+- Don't assume users will read everything in order
+- Don't assume users have the same level of expertise

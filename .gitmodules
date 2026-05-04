@@ -1,0 +1,6 @@
+[submodule "external/nat-ui"]
+	path = external/nat-ui
+	url = https://github.com/NVIDIA/NeMo-Agent-Toolkit-UI.git
+[submodule "external/lc-deepagents-quickstarts"]
+	path = external/lc-deepagents-quickstarts
+	url = https://github.com/langchain-ai/deepagents-quickstarts.git

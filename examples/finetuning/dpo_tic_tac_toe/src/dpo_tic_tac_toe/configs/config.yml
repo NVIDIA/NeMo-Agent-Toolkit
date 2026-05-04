@@ -1,0 +1,170 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# Configuration for DPO Tic-Tac-Toe workflow
+#
+# This workflow uses Test Time Compute (TTC) to generate multiple candidate
+# moves per turn, score them using game-theoretic evaluation, and select
+# the best move. All candidates are recorded as intermediate steps for
+# DPO preference dataset construction.
+#
+# Architecture:
+#   workflow (dpo_tic_tac_toe)
+#     └── ttc_move_selector (NAT Function)
+#           ├── move_searcher (TTC SEARCH strategy)
+#           │     └── choose_move (NAT Function)
+#           ├── move_scorer (TTC SCORING strategy)
+#           └── move_selector (TTC SELECTION strategy)
+
+llms:
+  # LLM for the trained player
+  # Uses vLLM or any OpenAI-compatible endpoint
+  training_llm:
+    _type: nim
+    model_name: meta/llama-3.1-8b-instruct
+
+functions:
+  # === Trained player functions (uses LLM) ===
+  # Base function that generates a single move using LLM
+  trained_choose_move:
+    _type: choose_move
+    llm: training_llm
+    max_retries: 2
+
+  # TTC move selector for trained player
+  trained_ttc_move_selector:
+    _type: ttc_move_selector
+    search: trained_move_searcher
+    scorer: move_scorer
+    selector: move_selector
+
+  # === Opponent functions (random moves) ===
+  # Base function that generates random moves (no LLM)
+  random_choose_move:
+    _type: choose_move
+    # llm is null - generates random moves
+
+  # TTC move selector for random opponent
+  random_ttc_move_selector:
+    _type: ttc_move_selector
+    search: random_move_searcher
+    scorer: move_scorer
+    selector: move_selector
+
+ttc_strategies:
+  # TTC SEARCH for trained player: Generates N candidates using LLM
+  trained_move_searcher:
+    _type: multi_candidate_move_search
+    choose_move_fn: trained_choose_move
+    num_candidates: 3
+
+  # TTC SEARCH for opponent: Generates N random candidates
+  random_move_searcher:
+    _type: multi_candidate_move_search
+    choose_move_fn: random_choose_move
+    num_candidates: 3
+
+  # TTC SCORING: Evaluates moves using game-theoretic position analysis
+  # (shared by both players)
+  move_scorer:
+    _type: board_position_scorer
+
+  # TTC SELECTION: Selects the highest-scoring move
+  # (shared by both players)
+  move_selector:
+    _type: best_of_n_selection
+
+workflow:
+  _type: dpo_tic_tac_toe
+  # Both players use TTC pipeline - enables DPO data from all turns
+  trained_ttc_move_selector_fn: trained_ttc_move_selector
+  opponent_ttc_move_selector_fn: random_ttc_move_selector
+
+eval:
+  general:
+    max_concurrency: 8
+    output_dir: .tmp/nat/dpo_tic_tac_toe/eval
+    dataset:
+      _type: json
+      file_path: examples/finetuning/dpo_tic_tac_toe/data/data.json
+
+  evaluators:
+    # Simple game outcome evaluator
+    game_outcome:
+      _type: dpo_game_outcome
+
+# =============================================================================
+# DPO Finetuning Configuration
+# =============================================================================
+
+trajectory_builders:
+  # DPO trajectory builder that collects preference pairs from scored candidates
+  dpo_builder:
+    _type: dpo_traj_builder
+    # Name of the CUSTOM intermediate step to collect
+    custom_step_name: dpo_candidate_move
+    # Generate all pairwise comparisons (not just best vs worst)
+    exhaustive_pairs: true
+    # Minimum score difference to create a pair (filters trivial pairs)
+    min_score_diff: 0.01
+    # Maximum pairs per turn (None = unlimited)
+    max_pairs_per_turn: 5
+    # Reward computation
+    reward_from_score_diff: true
+
+trainer_adapters:
+  nemo_customizer_trainer_adapter:
+    _type: nemo_customizer_trainer_adapter
+    # Base URL for NeMo Customizer
+    entity_host: ${CUSTOMIZER_HOST}
+    # Base URL for NeMo MS Datastore
+    datastore_host: ${DATASTORE_HOST}
+    # Namespace to run training, and store datasets and models
+    namespace: nat-dpo-test
+    customization_config: meta/llama-3.1-8b-instruct@v1.0.0+A100
+    dataset_output_dir: .tmp/output/datasets  # Files saved here
+    hyperparameters:
+      training_type: dpo
+      # Epochs on remote server for training job
+      epochs: 5
+      batch_size: 8
+    use_full_message_history: false
+    deploy_on_completion: true
+    deployment_config:
+      image_name: nvcr.io/nim/meta/llama-3.1-8b-instruct
+      image_tag: latest
+      gpu: 2
+      deployment_name: nat_dpo_tic_tac_toe_model
+      description: Fine-tuned agent model by the NeMo Agent Toolkit
+
+
+trainers:
+  nemo_customizer_trainer:
+    _type: nemo_customizer_trainer
+    num_runs: 1
+    continue_on_collection_error: true
+    deduplicate_pairs: true
+    wait_for_completion: true
+
+# Finetuning configuration (requires a trainer adapter to be implemented)
+finetuning:
+  enabled: true  # Set to true when trainer adapter is available
+  trainer: nemo_customizer_trainer
+  trajectory_builder: dpo_builder
+  trainer_adapter: nemo_customizer_trainer_adapter
+  output_dir: ./.tmp/nat/finetuning/dpo_tic_tac_toe
+
+

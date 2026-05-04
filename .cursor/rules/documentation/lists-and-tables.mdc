@@ -1,0 +1,203 @@
+---
+description: 
+globs: **/*.md
+alwaysApply: false
+---
+# Lists and Tables Guidelines
+
+Lists organize information for faster scanning. Tables present descriptions of choices, options, and fields users encounter in tasks. Use these elements to improve content structure and readability.
+
+## General List Best Practices
+
+### Required Elements
+- **Lead-in sentence**: Always introduce lists with a complete sentence
+- **Multiple items**: Lists must have more than one item
+- **Maximum two levels**: Primary list and sub-list only
+- **Sub-list rules**: Sub-lists must also have more than one item
+
+### Content Guidelines
+- **Capitalize** the first letter of every list item
+- **Parallel construction**: Use consistent sentence structure across items
+- **One idea per item**: Keep each list item focused on a single concept
+- **Link placement**: Avoid links that take users away from task lists
+- **Minimal links**: If links are necessary, don't hyperlink entire list items
+
+### Punctuation Rules
+- **Complete sentences**: Use end punctuation if list items are complete sentences
+- **Phrases/words**: No end punctuation for characters, words, or short phrases
+- **Consistency**: Apply the same punctuation rule to all items in a list
+
+## Types of Lists
+
+### Bulleted Lists (Unordered)
+**Use when**: Order doesn't matter (options, features, benefits)
+
+#### Requirements
+- Complete lead-in sentence ending with a colon
+- More than one list item
+- Up to two levels maximum
+- Parallel sentence construction
+- One sentence or idea per item
+- End punctuation only if items are complete sentences
+
+#### Example Structure
+```markdown
+The toolkit provides the following benefits:
+- Easy installation and setup
+- Comprehensive documentation
+- Active community support
+- Regular updates and improvements
+```
+
+### Numbered Lists (Ordered)
+**Use when**: Order matters (sequential steps, procedures, priorities)
+
+#### Requirements
+- Complete lead-in sentence ending with period or colon
+- More than one list item
+- Up to two levels maximum
+- Parallel sentence construction
+- One action per list item
+- Each step ends with period or colon
+- End punctuation based on sentence completeness
+
+#### Example Structure
+```markdown
+To install the toolkit:
+1. Download the installation package
+2. Extract the files to your desired directory
+3. Run the setup command
+4. Verify the installation
+```
+
+### Definition Lists
+**Use when**: Defining terms, descriptions, explanations, or associations
+
+#### Requirements
+- Complete lead-in sentence
+- More than one defined term
+- Two levels: term (bold, own line) and definition (indented, own line)
+- Parallel sentence construction
+- One definition per term
+- End punctuation in every definition
+
+#### Example Structure
+```markdown
+Key concepts include:
+
+**API**: Application Programming Interface that allows different software applications to communicate with each other.
+
+**SDK**: Software Development Kit that provides tools and libraries for building applications.
+```
+
+## Table Guidelines
+
+### When to Use Tables
+- Reference information and lookup data
+- Decision support matrices
+- Compatibility information
+- Choices and options for users
+- Comparative information
+- Configuration parameters
+
+### Table Requirements
+
+#### Structure
+- **Introduction**: Full sentence with colon before table
+- **Multiple rows**: Never create single-row tables
+- **Headers**: Use title case for column headers
+- **Titles**: Every table must have a descriptive title
+
+#### Content Guidelines
+- **Avoid empty cells**: Use non-breaking space if cell must appear blank
+- **Minimal links**: Avoid links unless table's purpose is navigation
+- **Limited code**: Use code samples sparingly in tables
+- **No merged cells**: Avoid merging or splitting table cells
+- **Lists in tables**: Use sparingly; prefer restructuring content
+
+#### Example Structure
+```markdown
+The following table describes the configuration options:
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| timeout | integer | Request timeout in seconds | 30 |
+| retries | integer | Number of retry attempts | 3 |
+| debug | boolean | Enable debug logging | false |
+```
+
+## Formatting Best Practices
+
+### Parallel Construction
+Maintain consistent patterns:
+
+**Good - Parallel verbs**:
+- Install the package
+- Configure the settings
+- Start the service
+
+**Bad - Mixed patterns**:
+- Install the package
+- Configuration of settings
+- The service should be started
+
+### List Organization
+
+#### Logical Ordering
+- **Alphabetical**: For reference lists (features, options)
+- **Chronological**: For procedures and processes
+- **Priority**: For recommendations or importance
+- **Categorical**: For grouped related items
+
+#### Length Considerations
+- **Short lists** (3-7 items): Use simple bullet points
+- **Long lists** (8+ items): Consider sub-categories or tables
+- **Complex items**: Consider definition lists or tables
+
+### Visual Formatting
+
+#### Spacing
+- Leave white space around lists and tables
+- Use consistent indentation for sub-lists
+- Separate complex list items with line breaks when needed
+
+#### Emphasis
+- **Bold**: For terms in definition lists
+- **Italic**: For UI elements in instructions
+- **Code**: For technical terms and values
+
+## Common Mistakes to Avoid
+
+### Don't Do These
+- **Single-item lists**: Use paragraphs instead
+- **Inconsistent punctuation**: Apply same rules to all items
+- **Mixed sentence structures**: Maintain parallel construction
+- **Overly complex tables**: Break into multiple simpler tables
+- **Empty table cells**: Use descriptive text or non-breaking spaces
+- **Too many sub-levels**: Limit to two levels maximum
+
+### Better Alternatives
+- **Instead of long paragraphs**: Use bulleted lists for multiple points
+- **Instead of complex lists**: Use tables for structured data
+- **Instead of nested lists**: Use headings and separate lists
+- **Instead of single-row tables**: Use definition lists or paragraphs
+
+## Accessibility Considerations
+
+### Screen Reader Support
+- Use proper markup for lists and tables
+- Include table headers and captions
+- Provide clear list introductions
+- Use descriptive link text
+
+### Scannability
+- Use consistent formatting patterns
+- Keep list items concise
+- Use meaningful headings
+- Group related information logically
+
+### Translation Support
+- Use simple, clear language in lists
+- Avoid idioms in list items
+- Keep parallel construction for easier translation
+- Use standard punctuation patterns

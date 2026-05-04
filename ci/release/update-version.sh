@@ -1,0 +1,83 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+## Usage
+# Either supply full versions:
+#    `bash update-version.sh <new_version>`
+#    Format is <maj>.<minor>.<patch> - no leading 'v'
+
+set -e
+
+# If the user has not supplied the versions, determine them from the git tags
+if [[ "$#" -ne 1 ]]; then
+   echo "No versions were provided."
+   exit 1;
+else
+   NEXT_VERSION=$1
+fi
+
+export CUR_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
+# The root to the NAT repo
+export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${CUR_DIR}/../..)"}
+
+NEXT_MAJOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[1]}')
+NEXT_MINOR=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[2]}')
+NEXT_PATCH=$(echo ${NEXT_VERSION} | awk '{split($0, a, "."); print a[3]}')
+NEXT_SHORT_TAG=${NEXT_MAJOR}.${NEXT_MINOR}
+
+# Inplace sed replace; workaround for Linux and Mac. Accepts multiple files
+function sed_runner() {
+
+   pattern=$1
+   shift
+
+   for f in $@ ; do
+      sed -i.bak ''"$pattern"'' "$f" && rm -f "$f.bak"
+   done
+}
+
+# Update the pypi description file
+# Currently only the pypi.md file for the nvidia-nat package contains links to documentation
+# Replace this with a `find ./ -name "pypi.md"` if this is needed for the other pypi.md files
+if [[ -z "${SKIP_MD_UPDATE}" ]]; then
+   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" \
+      "${PROJECT_ROOT}/packages/nvidia_nat_core/src/nat/meta/pypi.md"
+fi
+
+mapfile -t NAT_NOTEBOOKS < <(find ./examples/notebooks -name "*.ipynb" | sort)
+for NOTEBOOK_FILE in "${NAT_NOTEBOOKS[@]}"; do
+   sed_runner "s|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/\([0-9|\.]\+\)|https:\/\/docs.nvidia.com\/nemo\/agent-toolkit\/${NEXT_SHORT_TAG}|g" ${NOTEBOOK_FILE}
+done
+
+if [[ "${USE_FULL_VERSION}" == "1" ]]; then
+   NAT_VERSION=${NEXT_VERSION}
+   VERSION_MATCH="=="
+else
+   NAT_VERSION=${NEXT_SHORT_TAG}
+   VERSION_MATCH="~="
+fi
+
+# Change directory to the repo root
+pushd "${PROJECT_ROOT}" &> /dev/null
+
+# Update the documentation versions1.json file
+if [[ -z "${SKIP_MD_UPDATE}" ]]; then
+   ${CUR_DIR}/update_doc_versions1.py \
+   --versions-file=${PROJECT_ROOT}/docs/source/versions1.json \
+   --new-version="${NEXT_SHORT_TAG}"
+fi
+

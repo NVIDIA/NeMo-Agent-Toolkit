@@ -1,0 +1,321 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+# LLMs
+
+[Large language models (LLMs)](https://www.nvidia.com/en-us/glossary/large-language-models/)  are deep learning algorithms that can recognize, summarize, translate, predict, and generate content using very large datasets.
+
+## Supported LLM Providers
+
+NVIDIA NeMo Agent Toolkit supports the following LLM providers:
+| Provider | Type | Description |
+|----------|------|-------------|
+| [NVIDIA NIM](https://build.nvidia.com) | `nim` | NVIDIA Inference Microservice (NIM) |
+| [OpenAI](https://openai.com) | `openai` | OpenAI API |
+| [AWS Bedrock](https://aws.amazon.com/bedrock/) | `aws_bedrock` | AWS Bedrock API |
+| [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
+| [OCI Generative AI](https://docs.oracle.com/en-us/iaas/Content/generative-ai/home.htm) | `oci` | OCI Generative AI |
+| [LiteLLM](https://github.com/BerriAI/litellm) | `litellm` | LiteLLM API |
+| [Hugging Face](https://huggingface.co) | `huggingface` | Hugging Face API |
+| [Hugging Face Inference](https://huggingface.co/docs/api-inference) | `huggingface_inference` | Hugging Face Inference API, Endpoints, and TGI |
+
+
+## LLM Configuration
+
+The LLM configuration is defined in the `llms` section of the workflow configuration file. The `_type` value refers to the LLM provider, and the `model_name` value always refers to the name of the model to use.
+
+```yaml
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+  openai_llm:
+    _type: openai
+    model_name: gpt-4o-mini
+  aws_bedrock_llm:
+    _type: aws_bedrock
+    model_name: meta/llama-3.1-70b-instruct
+    region_name: us-east-1
+  azure_openai_llm:
+    _type: azure_openai
+    azure_deployment: gpt-4o-mini
+  oci_llm:
+    _type: oci
+    model_name: nvidia/Llama-3.1-Nemotron-Nano-8B-v1
+    region: us-chicago-1
+    compartment_id: ocid1.compartment.oc1..example
+    auth_type: API_KEY
+    auth_profile: DEFAULT
+    auth_file_location: ~/.oci/config
+    provider: meta
+  litellm_llm:
+    _type: litellm
+    model_name: gpt-4o
+  huggingface_llm:
+    _type: huggingface
+    model_name: Qwen/Qwen3Guard-Gen-0.6B
+```
+
+### NVIDIA NIM
+
+You can use the following environment variables to configure the NVIDIA NIM LLM provider:
+
+* `NVIDIA_API_KEY` - The API key to access NVIDIA NIM resources
+
+
+The NIM LLM provider is defined by the {py:class}`~nat.llm.nim_llm.NIMModelConfig` class.
+
+* `model_name` - The name of the model to use
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_tokens` - The maximum number of tokens to generate
+* `api_key` - The API key to use for the model
+* `base_url` - The base URL to use for the model
+* `max_retries` - The maximum number of retries for the request
+
+:::{note}
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
+:::
+
+### OpenAI
+
+You can use the following environment variables to configure the OpenAI LLM provider:
+
+* `OPENAI_API_KEY` - The API key to access OpenAI resources
+
+
+The OpenAI LLM provider is defined by the {py:class}`~nat.llm.openai_llm.OpenAIModelConfig` class.
+
+* `model_name` - The name of the model to use
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_tokens` - The maximum number of tokens to generate
+* `seed` - The seed to use for the model
+* `api_key` - The API key to use for the model
+* `base_url` - The base URL to use for the model
+* `max_retries` - The maximum number of retries for the request
+* `request_timeout` - HTTP request timeout in seconds
+
+:::{note}
+`temperature` and `top_p` are model-gated fields and may not be supported by all models. If unsupported and explicitly set, validation will fail. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
+:::
+
+### AWS Bedrock
+
+The AWS Bedrock LLM provider is defined by the {py:class}`~nat.llm.aws_bedrock_llm.AWSBedrockModelConfig` class.
+
+* `model_name` - The name of the model to use
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model. This field is ignored for LlamaIndex.
+* `max_tokens` - The maximum number of tokens to generate
+* `context_size` - The maximum number of tokens available for input. This is only required for LlamaIndex. This field is ignored for LangChain/LangGraph.
+* `region_name` - The region to use for the model
+* `base_url` - The base URL to use for the model
+* `credentials_profile_name` - The credentials profile name to use for the model
+* `max_retries` - The maximum number of retries for the request
+
+### OCI Generative AI
+
+You can use the following fields to configure the OCI Generative AI LLM provider:
+
+* `region` - OCI region for the Generative AI service (defaults to `us-chicago-1`). The service endpoint is derived automatically.
+* `endpoint` - Optional explicit endpoint URL. Overrides the region-derived endpoint when set.
+* `compartment_id` - The OCI compartment OCID used for inference requests
+* `auth_type` - OCI SDK auth mode such as `API_KEY`, `SECURITY_TOKEN`, `INSTANCE_PRINCIPAL`, or `RESOURCE_PRINCIPAL`
+* `auth_profile` - OCI config profile name for file-backed auth
+* `auth_file_location` - Path to the OCI config file
+* `provider` - Optional provider override such as `meta`, `google`, `cohere`, or `openai`
+
+The OCI Generative AI LLM provider is defined by the {py:class}`~nat.llm.oci_llm.OCIModelConfig` class.
+
+* `model_name` - The name of the model to use
+* `region` - OCI region (defaults to `us-chicago-1`). The endpoint is derived from `https://inference.generativeai.{region}.oci.oraclecloud.com`.
+* `endpoint` - Optional explicit endpoint URL. Overrides the region-derived endpoint.
+* `compartment_id` - OCI compartment OCID
+* `auth_type` - OCI SDK auth type
+* `auth_profile` - OCI profile name for file-backed auth
+* `auth_file_location` - Path to the OCI config file
+* `provider` - Optional OCI provider override such as `meta`, `google`, `cohere`, or `openai`
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_tokens` - The maximum number of tokens to generate
+* `seed` - The seed to use for the model
+* `max_retries` - The maximum number of retries for the request
+* `request_timeout` - HTTP request timeout in seconds
+
+:::{note}
+This provider targets OCI Generative AI through the OCI SDK-backed `langchain-oci` path and does not enable the Responses API.
+:::
+
+### Azure OpenAI
+
+You can use the following environment variables to configure the Azure OpenAI LLM provider:
+
+* `AZURE_OPENAI_API_KEY` - The API key to access Azure OpenAI resources
+* `AZURE_OPENAI_ENDPOINT` - The Azure OpenAI endpoint to access Azure OpenAI resources
+
+The Azure OpenAI LLM provider is defined by the {py:class}`~nat.llm.azure_openai_llm.AzureOpenAIModelConfig` class.
+
+* `api_key` - The API key to use for the model
+* `api_version` - The API version to use for the model
+* `azure_endpoint` - The Azure OpenAI endpoint to use for the model
+* `azure_deployment` - The name of the Azure OpenAI deployment to use
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `seed` - The seed to use for the model
+* `max_retries` - The maximum number of retries for the request
+* `request_timeout` - HTTP request timeout in seconds
+
+:::{note}
+`temperature` is model-gated and may not be supported by all models. See [Gated Fields](../../extend/custom-components/gated-fields.md) for details.
+:::
+
+### LiteLLM
+
+LiteLLM is a general purpose LLM provider that can be used with any model provider that is supported by LiteLLM.
+See the [LiteLLM provider documentation](https://docs.litellm.ai/docs/providers) for more information on how to use LiteLLM.
+
+The LiteLLM LLM provider is defined by the {py:class}`~nat.llm.litellm_llm.LiteLlmModelConfig` class.
+
+* `model_name` - The name of the model to use (dependent on the model provider)
+* `api_key` - The API key to use for the model (dependent on the model provider)
+* `base_url` - The base URL to use for the model
+* `seed` - The seed to use for the model
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_retries` - The maximum number of retries for the request
+
+### Hugging Face
+
+Hugging Face is a general-purpose LLM provider that can be used with any model supported by the Hugging Face API.
+See the [Hugging Face documentation](https://huggingface.co/docs) for more information.
+
+The Hugging Face LLM provider is defined by the {py:class}`~nat.llm.huggingface_llm.HuggingFaceConfig` class.
+
+* `model_name` - The Hugging Face model name or path (for example, `Qwen/Qwen3Guard-Gen-0.6B`)
+* `device` - Device for model execution: `cpu`, `cuda`, `cuda:0`, or `auto` (default: `auto`)
+* `dtype` - Torch data type: `float16`, `bfloat16`, `float32`, or `auto` (default: `auto`)
+* `max_new_tokens` - Maximum number of new tokens to generate (default: `128`)
+* `temperature` - Sampling temperature (default: `0.0`)
+* `trust_remote_code` - Whether to trust remote code when loading the model (default: `false`)
+
+:::{note}
+Hugging Face is a built-in NeMo Agent Toolkit LLM provider, but requires extra dependencies to run. They can be installed with:
+```
+pip install "transformers[torch,accelerate]~=4.57"
+```
+:::
+
+### Hugging Face Inference
+
+Hugging Face Inference is an LLM provider for remote model inference via the Hugging Face Serverless Inference API, Dedicated Inference Endpoints, or self-hosted TGI servers.
+
+You can use the following environment variables to configure the Hugging Face Inference LLM provider:
+
+* `HF_TOKEN` - The API token to access Hugging Face Inference resources
+
+The Hugging Face Inference LLM provider is defined by the {py:class}`~nat.llm.huggingface_inference_llm.HuggingFaceInferenceLLMConfig` class.
+
+* `model_name` - The Hugging Face model identifier (for example, `meta-llama/Llama-3.2-8B-Instruct`)
+* `api_key` - The Hugging Face API token for authentication
+* `endpoint_url` - Custom endpoint URL for Inference Endpoints or self-hosted TGI servers. If not provided, uses Serverless API
+* `max_new_tokens` - Maximum number of new tokens to generate (default: `512`)
+* `temperature` - Sampling temperature (default: `0.7`)
+* `top_p` - Top-p (nucleus) sampling parameter
+* `top_k` - Top-k sampling parameter
+* `repetition_penalty` - Penalty for repeating tokens
+* `seed` - Random seed for reproducible generation
+* `timeout` - Request timeout in seconds (default: `120.0`)
+
+```yaml
+llms:
+  # Serverless Inference API
+  serverless_llm:
+    _type: huggingface_inference
+    model_name: meta-llama/Llama-3.2-8B-Instruct
+    api_key: ${HF_TOKEN}
+    max_new_tokens: 512
+    temperature: 0.7
+
+  # Dedicated Inference Endpoint
+  endpoint_llm:
+    _type: huggingface_inference
+    model_name: your-model-name
+    api_key: ${HF_TOKEN}
+    endpoint_url: https://your-endpoint.endpoints.huggingface.cloud
+
+  # Self-hosted TGI server
+  tgi_llm:
+    _type: huggingface_inference
+    model_name: local-model
+    endpoint_url: http://localhost:8080
+```
+
+### NVIDIA Dynamo (experimental)
+
+Dynamo is an inference engine agnostic LLM provider designed to optimize KV cache reuse of LLMs served on NVIDIA hardware. See the [ai-dynamo repository](https://github.com/ai-dynamo/dynamo) for instructions on how to use Dynamo.
+
+The Dynamo LLM provider is defined by the {py:class}`~nat.llm.dynamo_llm.DynamoModelConfig` class. The provider mirrors the implementation of the OpenAI provider, with additional prefix hints for Dynamo inference optimizations.
+
+* `model_name` - The name of the model to use
+* `temperature` - The temperature to use for the model
+* `top_p` - The top-p value to use for the model
+* `max_tokens` - The maximum number of tokens to generate
+* `seed` - The seed to use for the model
+* `api_key` - The API key to use for the model
+* `base_url` - The base URL to use for the model
+* `max_retries` - The maximum number of retries for the request
+* `prefix_template` - a template for conversation prefix IDs. Setting to null will disable use of `prefix_template`, `prefix_total_requests`, `prefix_osl`, and `prefix_iat`
+* `prefix_total_requests` - Expected number of requests for this conversation
+* `prefix_osl` - Output sequence length for the Dynamo router
+* `prefix_iat` - Inter-arrival time hint for the Dynamo router
+* `request_timeout` - HTTP request timeout in seconds for Dynamo LLM requests
+
+## Testing Provider
+### `nat_test_llm`
+`nat_test_llm` is a development and testing provider intended for examples and CI. It is not intended for production use.
+
+* Installation: `uv pip install nvidia-nat-test`
+* Purpose: Deterministic cycling responses for quick validation
+* Not for production
+
+Minimal YAML example with `chat_completion`:
+
+```yaml
+llms:
+  main:
+    _type: nat_test_llm
+    response_seq: [alpha, beta, gamma]
+    delay_ms: 0
+workflow:
+  _type: chat_completion
+  llm_name: main
+  system_prompt: "Say only the answer."
+```
+
+* Learn how to add your own LLM provider: [Adding an LLM Provider](../../extend/custom-components/adding-an-llm-provider.md)
+<!-- vale off -->
+* See a short tutorial using YAML and `nat_test_llm`: [Test with nat_test_llm](../../extend/testing/test-with-nat-test-llm.md)
+<!-- vale on -->
+
+## Related Topics
+
+```{toctree}
+:titlesonly:
+
+Using Local LLMs <./using-local-llms.md>
+```

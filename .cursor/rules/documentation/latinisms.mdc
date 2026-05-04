@@ -1,0 +1,116 @@
+---
+description: Guidelines for avoiding Latin phrases in documentation to simplify content for a global audience
+globs: **/*.md
+alwaysApply: false
+---
+
+# Latinisms Guidelines
+
+To help simplify content for a global audience, avoid using Latin phrases that have simpler equivalents. Formal, academic content can be an exception or where space is constrained.
+
+## Common Latin Phrases to Avoid
+
+### e.g. (exempli gratia)
+- **Instead use**: "for example" or "such as"
+- **Example (incorrect)**: "RTX is incredibly useful in creative applications, e.g., applying effects or rendering video projects."
+- **Example (correct)**: "RTX is incredibly useful in creative applications such as applying effects or rendering video projects."
+
+### etc. (et cetera)
+- **Instead use**: "and so on"
+- **Example (incorrect)**: "The system supports various file formats like PNG, JPEG, GIF, etc."
+- **Example (correct)**: "The system supports various file formats like PNG, JPEG, GIF, and so on."
+
+### i.e. (id est)
+- **Instead use**: "that is"
+- **Example (incorrect)**: "The primary programming language, i.e., Python, is used throughout the codebase."
+- **Example (correct)**: "The primary programming language, that is Python, is used throughout the codebase."
+
+### versus (vs.)
+- **Instead use**: "compared to"
+- **Example (incorrect)**: "Cloud deployment vs. on-premises installation offers different benefits."
+- **Example (correct)**: "Cloud deployment compared to on-premises installation offers different benefits."
+
+### via
+- **Instead use**: "by" or "through"
+- **Example (incorrect)**: "Access the dashboard via the main menu."
+- **Example (correct)**: "Access the dashboard through the main menu."
+
+### vice versa
+- **Instead use**: "conversely"
+- **Example (incorrect)**: "Python can call JavaScript functions and vice versa."
+- **Example (correct)**: "Python can call JavaScript functions and conversely."
+
+## Exceptions
+
+The following Latin phrases are exceptions because they are industry-standard terms with less-well-known substitutions. When using these terms, italicize them in running text:
+
+- **in silico**: Computer-based simulations or modeling
+- **in vitro**: Laboratory-based experiments outside living organisms
+- **in vivo**: Experiments within living organisms
+
+### Usage Examples for Exceptions
+- "The *in silico* analysis revealed potential drug interactions."
+- "These results were validated through *in vitro* testing."
+- "The compound showed promising results in *in vivo* studies."
+
+## Why Avoid Latinisms?
+
+### Accessibility Benefits
+- Makes content more accessible to non-native English speakers
+- Reduces cognitive load for all readers
+- Eliminates potential confusion about abbreviation meanings
+
+### Clarity Benefits
+- Provides explicit meaning rather than abbreviations
+- Avoids assumptions about reader's Latin knowledge
+- Makes documentation more scannable and understandable
+
+### Global Audience Considerations
+- Latin phrases may not translate well
+- Some cultures may be unfamiliar with Latin abbreviations
+- Simpler alternatives are universally understood
+
+## When Latin Phrases May Be Acceptable
+
+### Academic or Formal Context
+- Research papers or technical specifications
+- Legal documentation where precision is critical
+- Scientific publications following established conventions
+
+### Space Constraints
+- Tables with limited column width
+- UI elements with character limits
+- Technical diagrams with space restrictions
+
+**Note**: Even in these contexts, consider whether the simpler alternative would be better for your audience.
+
+## Quick Reference
+
+| Latin Phrase | Simple Alternative | Usage Context |
+|-------------|-------------------|---------------|
+| e.g. | for example, such as | Most contexts |
+| etc. | and so on | Most contexts |
+| i.e. | that is | Most contexts |
+| vs./versus | compared to | Most contexts |
+| via | by, through | Most contexts |
+| vice versa | conversely | Most contexts |
+| *in silico* | (keep as is) | Scientific/technical |
+| *in vitro* | (keep as is) | Scientific/technical |
+| *in vivo* | (keep as is) | Scientific/technical |
+
+## Implementation Tips
+
+### During Writing
+- Use your editor's find/replace feature to identify Latin phrases
+- Consider your audience's background and expertise level
+- When in doubt, choose the simpler alternative
+
+### During Review
+- Scan for Latin abbreviations and phrases
+- Check if exceptions are properly italicized
+- Ensure alternatives maintain the intended meaning
+
+### Style Guide Integration
+- Include these guidelines in your project's style guide
+- Set up automated checks for common Latin phrases
+- Train team members on these alternatives

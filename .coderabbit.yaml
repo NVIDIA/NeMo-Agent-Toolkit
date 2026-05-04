@@ -1,0 +1,230 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Docs: https://docs.coderabbit.ai/getting-started/configure-coderabbit/
+language: "en-US"
+reviews:
+  review_status: true
+  collapse_walkthrough: false
+  pre_merge_checks:
+    title:
+      mode: error
+      requirements: "Title should be concise, and descriptive, and use imperative mood (max ~72 chars)."
+    description:
+      mode: warning
+    issue_assessment:
+      mode: warning
+  auto_review:
+    base_branches: ["develop", "release/.*"]
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+
+  poem: false
+  sequence_diagrams: true
+  suggested_reviewers: false
+
+  path_instructions:
+    - path: "**/*"
+      instructions: >-
+        # Code Review Instructions
+
+        - Ensure the code follows best practices and coding standards.
+        - For **Python** code, follow
+          [PEP 20](https://peps.python.org/pep-0020/) and
+          [PEP 8](https://peps.python.org/pep-0008/) for style guidelines.
+        - Check for security vulnerabilities and potential issues.
+        - Python methods should use type hints for all parameters and return values (except for return values of `None`,
+          in that situation no return type hint is needed).
+          Example:
+            ```python
+            def my_function(param1: int, param2: str) -> bool:
+                pass
+            ```
+        - For **Python exception handling**, ensure proper stack trace preservation:
+          - When re-raising exceptions: use bare `raise` statements to maintain the original stack trace,
+            and use `logger.error()` (not `logger.exception()`) to avoid duplicate stack trace output.
+          - When catching and logging exceptions without re-raising: always use `logger.exception()`
+            to capture the full stack trace information.
+
+        # Documentation Review Instructions
+        - Verify that documentation and comments are clear and comprehensive.
+        - Verify that the documentation doesn't contain any TODOs, FIXMEs or placeholder text like "lorem ipsum".
+        - Verify that the documentation doesn't contain any offensive or outdated terms.
+        - Verify that documentation and comments are free of spelling mistakes, ensure the documentation doesn't contain any
+          words listed in the `ci/vale/styles/config/vocabularies/nat/reject.txt` file, words that might appear to be
+          spelling mistakes but are listed in the `ci/vale/styles/config/vocabularies/nat/accept.txt` file are OK.
+        - Documentation in Markdown files should not contain usage of a possessive 's with inanimate objects
+          (ex: "the system's performance" should be "the performance of the system").
+        - Documentation in Markdown files should not use NAT as an acronym, always spell out NeMo Agent Toolkit.
+          The exception to this rule is when referring to package names or code identifiers that contain "nat", these
+          should always be surrounded by backticks (ex: `nvidia-nat`), and be lowercase.
+
+
+        # Misc.
+        - All code (except .mdc files that contain Cursor rules) should be licensed under the Apache License 2.0,
+          and should contain an Apache License 2.0 header comment at the top of each file.
+        - Confirm that copyright years are up-to date whenever a file is changed.
+
+        # Common Bugs to Look For
+        - Pydantic models using one of the `SecretStr`, `SerializableSecretStr`, or `OptionalSecretStr` with a default
+          defined as `default=""`, creates a bug where the field will be initialized as `str` and not as an instance of
+          `SecretStr`. Instead, use `default=None` for optional secret fields such as `OptionalSecretStr` or with a
+          `default_factory=lambda: SerializableSecretStr("")` for non-optional secret fields such as `SerializableSecretStr`.
+          The `default_factory` approach is preferred for non-optional secret fields to ensure that the field is always
+          returns a unique instance.
+
+    - path: "docs/source/**/*"
+      instructions: >-
+        This directory contains the source code for the documentation. All documentation should be written in Markdown
+        format. Any image files should be placed in the `docs/source/_static` directory.
+
+
+        # Documentation Categories
+
+        Ensure documentation is placed in the correct category:
+
+        - `get-started/`: Introductory documentation for new users
+          - `get-started/tutorials/`: Step-by-step learning guides
+        - `build-workflows/`: Workflow creation, configuration, adding remote MCP tools or A2A agents
+        - `run-workflows/`: Execution, observability, serving workflows via MCP and A2A protocols
+        - `improve-workflows/`: Evaluation and optimization guides
+        - `components/`: Specific component implementations (agents, tools, connectors)
+        - `extend/`: Custom component development and testing (not core library contributions)
+        - `reference/`: Python and REST API documentation only
+        - `resources/`: Project information (licensing, FAQs)
+          - `resources/contributing/`: Development environment and contribution guides
+
+
+        Placement rules:
+
+        1. Component implementations always belong in `components/`, not `build-workflows/`
+        2. API documentation belongs only in `reference/`
+        3. Using remote MCP tools or A2A agents should be placed in `build-workflows/`
+        4. Serving workflows via MCP/A2A should be placed in `run-workflows/`
+
+    - path: "examples/**/*"
+      instructions: >-
+        - This directory contains example code and usage scenarios for the toolkit, at a minimum an example should
+          contain a README.md or file README.ipynb.
+        - If an example contains Python code, it should be placed in a subdirectory named `src/` and should
+          contain a `pyproject.toml` file. Optionally, it might also contain scripts in a `scripts/` directory.
+        - If an example contains a `pyproject.toml` file, it should be added to the `examples` list in the root `pyproject.toml` file.
+        - If an example contains a tests directory, it should contain a `pyproject.toml` file.
+        - If an example contains YAML files, they should be placed in a subdirectory named `configs/`.
+        - If an example contains sample data files, they should be placed in a subdirectory named `data/`, and should
+          be checked into git-lfs.
+
+    - path: "packages/nvidia_nat_core/src/nat/**/*"
+      instructions: >-
+        This directory contains the core functionality of the toolkit. Changes should prioritize backward compatibility.
+
+    - path: "packages/nvidia_nat_core/src/nat/eval/**/*"
+      instructions: >-
+        - This is a deprecated compatibility shim area and should not grow.
+        - Flag any PR that adds new files under this path as a blocking issue.
+        - New evaluation code should be added under `packages/nvidia_nat_eval/src/nat/plugins/eval/` instead.
+        - Changes in this path should be limited to compatibility-only fixes that are explicitly justified in PR notes.
+
+    - path: "packages/**/*"
+      instructions: >-
+        - This directory contains packages for the toolkit, each should contain a `pyproject.toml` file.
+        - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
+          `tests/` directory at the same level as the `pyproject.toml` file.
+    - path: "packages/*/pyproject.toml"
+      instructions: >-
+        - The `pyproject.toml` file should never declare a dependency on the `nvidia-nat` meta package.
+        - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
+          probably be added as a dependency to the most extra in the root `pyproject.toml` file.
+        - `nvidia-nat-core` should likely be listed as a dependency.
+        - `nvidia-nat-test` should likely be listed as an optional dependency in the `test` extra
+        - A single dependency should be listed on each line and should always have a version specifier.
+        - All dependencies should be listed under the `[tool.setuptools_dynamic_dependencies]` section
+        - Any dependency that is an NVIDIA NeMo Agent Toolkit package should be declared with a version constraint of `== {version}`
+
+    - path: "packages/nvidia_nat_core/pyproject.toml"
+      instructions: >-
+        - This package is part of the thin-core strategy; default to minimizing direct dependencies.
+        - Treat any new dependency addition as high-risk and require explicit justification in PR review notes.
+        - Prefer moving framework-specific or optional capabilities into non-core plugin packages instead of adding dependencies here.
+        - If a new dependency is unavoidable, confirm it is required by core contracts/runtime and not by optional evaluators, exporters, profiling, or framework integrations.
+
+    - path: "packages/nvidia_nat_eval/pyproject.toml"
+      instructions: >-
+        - This package follows a thin-core eval strategy; prioritize keeping dependencies minimal.
+        - Treat any new dependency addition as high-risk and require explicit justification in PR review notes.
+        - Prefer package-affinity placement (framework/profiler/security/exporter packages) instead of adding dependencies here.
+        - If a new dependency is unavoidable, confirm it supports core harness/contracts only and is not better hosted in optional packages.
+
+    - path: "**/tests/**/*.py"
+      instructions: >-
+        - Ensure that tests are comprehensive, cover edge cases, and validate the functionality of the code.
+        - Test functions should be named using the `test_` prefix, using snake_case.
+        - Any frequently repeated code should be extracted into pytest fixtures.
+        - Pytest fixtures should define the name argument when applying the pytest.fixture decorator. The fixture
+          function being decorated should be named using either a `fixture_` prefix or `_fixture` suffix, using snake_case. Example:
+            @pytest.fixture(name="my_custom_config")
+            def my_custom_config_fixture():
+                pass
+        - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
+          async runner - the decorator is unnecessary clutter.
+
+    - path: "examples/README.md"
+      instructions: >-
+        - Ensure that the README.md file is up-to-date with the latest changes in the project.
+        - Ensure that there is an entry for each example under the examples directory which contains a README.md file in the examples list.
+        - Any added examples should be added to the README.md file.
+        - Any removed examples should be removed from the README.md file.
+        - Example entries should be categorized by the directory they are located in.
+
+    - path: "**/pyproject.toml"
+      instructions: >-
+        # pyproject.toml example section review instructions
+        - Ensure that for any examples that are added or removed, the examples list in the pyproject.toml file is updated accordingly.
+          This is only necessary if the example added contains a pyproject.toml file (e.g. it is installable as a package)
+        - All added examples must have a `nat_` prefix within the `uv.sources` name. The path to the example does NOT need to have this prefix. If the example does not have a `nat_` prefix, it should be added.
+
+  auto_apply_labels: true
+  suggested_labels: true
+  labeling_instructions:
+    - label: "! - Release"
+      instructions: >-
+        You should only apply this label when the source branch has a name matching the regex pattern `release/\d+\.\d+`
+        and the target branch is `main`.
+    - label: DO NOT MERGE
+      instructions: >-
+        Apply this label to PRs that should not be merged due to critical issues, incomplete work, or other blocking
+        concerns. Check the PR description for specific details about why it should not be merged. There is no need to
+        apply this label to draft PRs.
+    - label: duplicate
+      instructions: >-
+        Apply this label when the PR addresses the same issue or implements the same feature as another existing
+        PR or issue.
+    - label: invalid
+      instructions: >-
+        Apply this label when the PR contains invalid changes, doesn't follow project guidelines, or has fundamental
+        issues that make it unsuitable for the project.
+
+  tools:
+    ruff:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    osvScanner:
+      enabled: true

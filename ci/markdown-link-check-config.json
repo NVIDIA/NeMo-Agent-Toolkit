@@ -1,0 +1,31 @@
+{
+    "ignorePatterns": [
+        {
+            "pattern": "^https?://localhost:.*$"
+        },
+        {
+            "pattern": "^https?://$"
+        },
+        {
+            "pattern": "^https://(platform\\.)?openai\\.com"
+        },
+        {
+            "pattern": "^https://code\\.visualstudio\\.com$"
+        },
+        {
+            "pattern": "^https://www\\.mysql\\.com"
+        },
+        {
+            "pattern": "^https://arize\\.com"
+        },
+        {
+            "pattern": "^https://milvus\\.io"
+        },
+        {
+            "pattern": "^https://docs\\.cursor\\.com"
+        },
+        {
+            "pattern": "^https://docs\\.docker\\.com"
+        }
+    ]
+}

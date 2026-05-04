@@ -1,0 +1,140 @@
+<!--
+SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+-->
+
+# Simple Calculator - Evaluation and Profiling
+
+**Complexity:** 🟨 Intermediate
+
+This example demonstrates how to evaluate and profile AI agent performance using the NVIDIA NeMo Agent Toolkit. You'll learn to systematically measure your agent's accuracy and analyze its behavior using the Simple Calculator workflow.
+
+## Key Features
+
+- **Tunable RAG Evaluator Integration:** Demonstrates the `nat eval` command with Tunable RAG Evaluator to measure agent response accuracy against ground truth datasets.
+- **Performance Analysis Framework:** Shows systematic evaluation of agent behavior, accuracy, and response quality using standardized test datasets.
+- **Question-by-Question Analysis:** Provides detailed breakdown of individual responses with comprehensive metrics for identifying failure patterns and areas for improvement.
+- **Evaluation Dataset Management:** Demonstrates how to work with structured evaluation datasets (`simple_calculator.json`) for consistent and reproducible testing.
+- **Results Interpretation:** Shows how to analyze evaluation metrics and generate comprehensive performance reports for agent optimization.
+
+## What You'll Learn
+
+- **Accuracy Evaluation**: Measure and validate agent responses using the Tunable RAG Evaluator
+- **Performance Analysis**: Understand agent behavior through systematic evaluation
+- **Dataset Management**: Work with evaluation datasets for consistent testing
+- **Results Interpretation**: Analyze evaluation metrics to improve agent performance
+
+## Prerequisites
+
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
+2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
+3. **Phoenix tracing backend**: Start Phoenix before running trajectory-based configurations in this example.
+
+### Using Docker Container for Phoenix
+Start Phoenix using a Docker container with the following command:
+```bash
+docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
+```
+
+### Using a Separate Virtual Environment for Phoenix
+Alternately, you can run Phoenix from a separate virtual environment than the one used for NeMo Agent Toolkit evaluation runs. In either case using a Docker container or a separate virtual environment is needed to avoid dependency and version conflicts between Phoenix packages and toolkit plus evaluator dependencies.
+
+```bash
+# Create a new virtual environment for Phoenix, must be performed in a different directory
+uv venv -p 3.13 --seed .venv
+uv pip install arize-phoenix
+phoenix serve
+```
+
+## Installation
+
+Install this evaluation example:
+
+```bash
+uv pip install -e examples/evaluation_and_profiling/simple_calculator_eval
+```
+
+## Run the Workflow
+
+### Running Evaluation
+
+Evaluate the Simple Calculator agent's accuracy against a test dataset:
+
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-tunable-rag-eval.yml
+```
+
+> [!NOTE]
+> If you encounter rate limiting (`[429] Too Many Requests`) during evaluation, try setting the `eval.general.max_concurrency` value either in the YAML directly or via the command line with: `--override eval.general.max_concurrency 1`.
+
+The configuration file specified above contains configurations for the NeMo Agent Toolkit `evaluation` and `profiler` capabilities. Additional documentation for evaluation configuration can be found in the [evaluation guide](../../../docs/source/improve-workflows/evaluate.md). Furthermore, similar documentation for profiling configuration can be found in the [profiling guide](../../../docs/source/improve-workflows/profiler.md).
+
+This command:
+- Uses the test dataset from `examples/getting_started/simple_calculator/data/simple_calculator.json`
+- Applies the Tunable RAG Evaluator to measure response accuracy
+- Saves detailed results to `.tmp/nat/examples/getting_started/simple_calculator/tuneable_eval_output.json`
+
+### Understanding Results
+
+The evaluation generates comprehensive metrics including:
+
+- **Accuracy Scores**: Quantitative measures of response correctness
+- **Question-by-Question Analysis**: Detailed breakdown of individual responses
+- **Performance Metrics**: Overall quality assessments
+- **Error Analysis**: Identification of common failure patterns
+
+### Running Nested Trajectory Evaluation
+
+Evaluate a workflow that performs a nested tool call (`power_of_two` -> `calculator__multiply`) and inspect how it appears in the ATIF trajectory output:
+
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-nested-trajectory-eval.yml
+```
+
+This command:
+- Uses `examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_of_two.json`
+- Runs the built-in `trajectory` evaluator
+- Writes workflow trajectories to `.tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json`
+
+To inspect the call hierarchy from the generated ATIF file:
+
+```bash
+python packages/nvidia_nat_eval/scripts/print_atif_function_tree.py \
+  .tmp/nat/examples/simple_calculator/nested-eval/workflow_output_atif.json \
+  --view ancestry \
+  --item-id 1
+```
+
+### Running Branching Nested Trajectory Evaluation
+
+Evaluate a workflow where one top-level tool (`power_branch`) fans out to two internal tools (`square_via_multiply` and `cube_via_multiply_chain`) and each branch calls `calculator__multiply`.
+
+```bash
+nat eval --config_file examples/evaluation_and_profiling/simple_calculator_eval/configs/config-branching-nested-trajectory-eval.yml
+```
+
+This command:
+- Uses `examples/evaluation_and_profiling/simple_calculator_eval/data/simple_calculator_power_branch.json`
+- Runs the built-in `trajectory` evaluator
+- Writes trajectories to `.tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json`
+
+To inspect one input item:
+
+```bash
+python packages/nvidia_nat_eval/scripts/print_atif_function_tree.py \
+  .tmp/nat/examples/simple_calculator/branching-nested-eval/workflow_output_atif.json \
+  --view ancestry \
+  --item-id 1
+```

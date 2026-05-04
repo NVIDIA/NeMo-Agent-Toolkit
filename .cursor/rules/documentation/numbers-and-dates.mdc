@@ -1,0 +1,200 @@
+---
+description: 
+globs: **/*.md
+alwaysApply: false
+---
+# Numbers and Dates Guidelines
+
+Be consistent with number usage throughout documentation. When documenting examples or UI elements, duplicate numbers exactly as they appear in the interface.
+
+## Numbers in Text
+
+### Basic Number Rules
+
+#### Spell Out vs. Numerals
+- **Spell out**: Zero through nine in body text
+  - "five databases"
+  - "zero probability" 
+  - "seven years"
+- **Use numerals**: 10 and greater
+  - "10 screen savers"
+  - "28 days"
+  - "12 hrs"
+
+#### Consistency Rule
+If one item in a group requires a numeral, use numerals for all items of that type:
+- **Correct**: "One article has 16 pages, one has 7 pages, and the third has only 5 pages"
+- **Correct**: "Christmas is only one month and 12 days away"
+
+#### Adjacent Numbers
+When two numbers referring to different things appear together, use a numeral for one and spell out the other:
+- **Example**: "fifteen 20-page articles"
+
+#### Starting Sentences
+Never start a sentence with a numeral:
+- **Correct**: "More than 10 apps are included"
+- **Correct**: "Eleven apps are included"
+- **Acceptable in lists**: List items may start with numerals
+
+### Special Number Formatting
+
+#### Commas in Numbers
+- **Use commas**: For numbers with four or more digits
+  - "$1,024"
+  - "1,093 MB"
+
+#### Exceptions to Comma Rule
+For years, pixels, and baud, use commas only with five or more digits:
+- **Years**: "2500 B.C." but "10,000 B.C."
+- **Pixels**: "1920 × 1080 pixels" but "10,240 × 4320 pixels" 
+- **Baud**: "9600 baud" but "14,400 baud"
+
+#### Never Use Commas In
+- **Page numbers**: "page 1091"
+- **Addresses**: "15601 NE 40th Street"
+- **After decimal points**: "1.06377 units"
+
+#### Negative Numbers
+Use an en dash (–), not a hyphen (-):
+- **Correct**: "–79"
+- **Incorrect**: "-79"
+
+#### Compound Numbers
+Hyphenate spelled-out compound numbers:
+- "twenty-five fonts"
+- "the twenty-first day"
+
+#### Ordinal Numbers
+Always spell out ordinals:
+- **Correct**: "the first row", "the twenty-first anniversary"
+- **Don't use**: "1st", "21st" in regular text
+- **Don't use**: Ordinal numbers for dates ("June first" → "June 1")
+- **Don't add**: "-ly" to ordinals ("firstly" → "first")
+
+### Number Ranges
+
+#### Preferred Format
+Use "from," "through," and "to":
+- **Example**: "from 9 through 17"
+
+#### Exceptions
+- **En dash for pages**: "pages 112–120"
+- **En dash for years**: "2016–2020"
+- **Use "to" for times**: "from 10:00 AM to 2:00 PM"
+- **Don't use "from" with en dash**: Wrong: "from 10–15"
+
+### Abbreviations
+
+#### General Rule
+Don't abbreviate thousand, million, billion as K, M, B:
+- **Preferred**: "65,000 people" or "sixty-five thousand people"
+- **Preferred**: "$30 million" not "$30M"
+
+#### When Abbreviations Are Necessary
+- **Capitalize**: K, M, B
+- **No space**: "8K", "30M", "2B"
+- **Avoid decimals with K**: "8,210" not "8.21K" (same character count)
+
+#### Global Considerations
+- Machine translation may not handle abbreviations correctly
+- Target languages may not have equivalent abbreviations
+- Allow space for expansion in localized content
+
+## Dates and Times
+
+### Date Format
+
+#### Standard Format
+Use "Month DD, YYYY" format:
+- **Correct**: "July 31, 2016"
+- **Incorrect**: "31 July 2016"
+
+#### Avoid Ordinals in Dates
+- **Correct**: "Jan 18"
+- **Incorrect**: "Jan 18th"
+
+#### Global Considerations
+Always spell out month names to avoid confusion:
+- "6/12/2017" could be June 12 or December 6 depending on region
+- "June 12, 2017" is unambiguous
+
+### Time Format
+
+#### AM/PM Format
+- **Use**: AM and PM with space before
+- **Capitalize**: Both letters
+- **Examples**: "10:45 AM", "6:30 PM"
+
+#### 24/7 Usage
+Don't use "24/7":
+- **Use instead**: "all day, every day", "always", "around the clock"
+
+### Days and Months
+
+#### Days of the Week
+- **Capitalize**: Sunday, Monday, Tuesday, etc.
+- **Don't abbreviate** unless space is severely limited
+- **Three-letter abbreviations**: Sun, Mon, Tue, Wed, Thu, Fri, Sat
+- **Use sentence case**: "Sun" not "SUN"
+
+#### Months
+- **Capitalize**: January, February, March, etc.
+- **Don't abbreviate** unless space is severely limited
+- **Three-letter abbreviations**: Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec
+- **No periods**: "Jan" not "Jan."
+
+## Technical Context Numbers
+
+### Limited Space Contexts
+In tables and UI, numerals for 0-9 are acceptable:
+- Tables with space constraints
+- User interface labels
+- Dashboard displays
+- Mobile interfaces
+
+### Code and Technical Values
+Match exact formatting from code or systems:
+- API response values
+- Configuration parameters
+- Version numbers
+- Error codes
+
+### Measurements and Units
+- **Use numerals**: With units of measurement
+  - "5 GB", "32-bit", "1080p"
+- **Include units**: Always specify units for clarity
+- **Standard abbreviations**: Use accepted technical abbreviations
+
+## Best Practices
+
+### Consistency Within Documents
+- **Same type, same format**: Use consistent formatting for similar numbers
+- **Document-wide rules**: Apply the same number style throughout
+- **Style sheets**: Create guides for recurring number types
+
+### Readability
+- **Choose clarity**: When rules conflict, prioritize reader understanding
+- **Context matters**: Consider your audience's expectations
+- **Test with users**: Verify number formats work for your audience
+
+### International Considerations
+- **Decimal separators**: Be aware of comma vs. period conventions
+- **Currency**: Follow local currency formatting when relevant
+- **Date formats**: Stick to unambiguous formats
+- **Number grouping**: Consider space vs. comma preferences
+
+## Common Mistakes to Avoid
+
+### Don't Do These
+- **Inconsistent formatting**: "5 items" and "ten options" in same context
+- **Starting with numerals**: "10 steps are required" (rewrite as "Ten steps are required")
+- **Wrong dash types**: "-79" instead of "–79"
+- **Ordinals in dates**: "June 21st" instead of "June 21"
+- **Unnecessary abbreviations**: "5K users" instead of "5,000 users"
+
+### Style Conflicts
+When guidelines conflict, prioritize:
+1. **User interface accuracy**: Match UI exactly
+2. **Technical precision**: Use standard technical formats
+3. **Document consistency**: Apply same rules throughout
+4. **Readability**: Choose clearest option for audience

@@ -1,0 +1,8 @@
+Flask==3.1
+numpy
+pandas
+scipy
+ipython
+plotly
+pydantic
+pyuwsgi==2.0.*

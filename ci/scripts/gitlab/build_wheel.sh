@@ -1,0 +1,60 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+set -e
+
+GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+source ${GITLAB_SCRIPT_DIR}/common.sh
+
+GIT_TAG=$(get_git_tag)
+IS_TAGGED=$(is_current_commit_release_tagged)
+echo "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
+
+create_env
+
+# Set the version for the wheels based on GIT_TAG / SCM
+set_versions
+
+WHEELS_BASE_DIR="${CI_PROJECT_DIR}/.tmp/wheels"
+WHEELS_DIR="${WHEELS_BASE_DIR}/nvidia-nat"
+
+build_wheel . "nvidia-nat"
+
+# Build all packages with a pyproject.toml in the first directory below packages
+for NAT_PACKAGE in "${NAT_PACKAGES[@]}"; do
+    build_package_wheel ${NAT_PACKAGE}
+done
+
+# When we perform a release, the tag is created from the main branch, this triggers two CI pipelines.
+# The first for the main branch, and the second for the tag. Gitlab's internal package registry will reject uploads
+# of duplicate versions, so we only want one of these pipelines to perform the upload.
+# Note: A hotfix for an older release is the exception to this and the tag will be created from the release/X.Y branch
+if [[ "${CI_COMMIT_BRANCH}" == "${CI_DEFAULT_BRANCH}" || "${CI_COMMIT_BRANCH}" == "main" || "${CI_COMMIT_BRANCH}" == "release/"* ]]; then
+    echo "Uploading Wheels"
+
+    # Find and upload all .whl files from nested directories
+    while read -r WHEEL_FILE; do
+        echo "Uploading ${WHEEL_FILE}..."
+
+        python -m twine upload \
+            -u gitlab-ci-token \
+            -p "${CI_JOB_TOKEN}" \
+            --non-interactive \
+            --repository-url "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi" \
+            "${WHEEL_FILE}"
+    done < <(find "${WHEELS_BASE_DIR}" -type f -name "*.whl")
+fi

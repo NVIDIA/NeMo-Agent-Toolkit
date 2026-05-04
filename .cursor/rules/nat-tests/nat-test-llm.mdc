@@ -1,0 +1,47 @@
+---
+description: Follow these rules when the user's request involves using NAT test LLM (nat_test_llm) to simulate deterministic responses in workflows or tests
+globs:
+alwaysApply: false
+---
+# Test LLM (nat_test_llm)
+
+- Use `_type: nat_test_llm` in `llms` to stub responses.
+- Fields:
+  - `response_seq`: list of strings; cycles per call; `[]` returns empty string.
+  - `delay_ms`: per-call artificial latency in milliseconds.
+- YAML example:
+    ```yaml
+    llms:
+    main:
+        _type: nat_test_llm
+        response_seq: [alpha, 2, "gamma"]
+        delay_ms: 0
+    workflow:
+    _type: chat_completion
+    llm_name: main
+    ```
+- Programmatic (builder):
+  - Create `TestLLMConfig(response_seq=[...], delay_ms=0)`, `add_llm("main", cfg)`, then `get_llm("main", wrapper_type=<LANGCHAIN|LLAMA_INDEX|CREWAI|SEMANTIC_KERNEL|AGNO>)` and call the wrapper’s method (`ainvoke`, `achat`, `call`, etc.).
+  - Python example:
+    ```python
+    from nat.test.llm import TestLLMConfig
+    from nat.builder.workflow_builder import WorkflowBuilder
+    from nat.builder.framework_enum import LLMFrameworkEnum
+
+    async def main():
+        async with WorkflowBuilder() as builder:
+            # 1) Add the test LLM with a deterministic cycle of responses
+            await builder.add_llm(
+                "main",
+                TestLLMConfig(response_seq=["alpha", "beta", "gamma"], delay_ms=0),
+            )
+            # 2) Get a wrapper for the framework and call the test LLM
+            llm = await builder.get_llm("main", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+            print(await llm.ainvoke("hello"))  # alpha
+            print(llm.invoke("world"))         # beta
+    ```
+- Registration:
+  - Ensure `nat.test.llm` is importable (install the `nvidia-nat-test` package from `packages/` or import `nat.test.llm` once).
+- Notes:
+  - The `response_seq` cycle persists within a loaded workflow instance and resets on reload.
+  - Returns plain strings; no NAT retry/thinking patches applied.
