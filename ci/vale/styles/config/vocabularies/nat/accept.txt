@@ -65,9 +65,9 @@ Dynatrace
 [Ee]ngineerable
 etcd
 [Ee]val
-Exa
 [Ee]xfiltration
 [Ee]xplainability
+Exa
 Faiss
 [Ff]inetunable
 [Ff]inetune(d?)
@@ -174,6 +174,7 @@ Qwen
 [Ss]erverless
 SGLang
 spaCy
+Synap
 SQLAlchemy
 SSE
 [Ss]treamable
