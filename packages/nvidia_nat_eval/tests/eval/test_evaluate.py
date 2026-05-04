@@ -896,7 +896,8 @@ async def test_run_and_evaluate(evaluation_run, default_eval_config, session_man
     with patch("nat.runtime.loader.load_config", mock_load_config), \
          patch("nat.plugins.eval.runtime.builder.WorkflowEvalBuilder.from_config", side_effect=mock_eval_builder), \
          patch("nat.plugins.eval.runtime.evaluate.DatasetHandler", return_value=mock_dataset_handler), \
-         patch("nat.plugins.eval.runtime.evaluate.OutputUploader", return_value=mock_uploader), \
+         patch("nat.plugins.eval.runtime.evaluate._get_output_uploader_cls",
+               return_value=MagicMock(return_value=mock_uploader)), \
          patch("nat.plugins.eval.runtime.evaluate.EvaluationRunOutput", return_value=MagicMock()) \
             as mock_eval_run_output, \
          patch.object(evaluation_run, "run_workflow_local",
