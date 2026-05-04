@@ -74,6 +74,11 @@ trap create_package_report_tarball EXIT
 for whl in "${MOVED_WHEELS[@]}"; do
 
     for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
+        if ! python "${SCRIPT_DIR}/python_compat.py" wheel "${whl}" "${pyver}"; then
+            echo "Skipping wheel ${whl} with Python ${pyver}; wheel Requires-Python is not compatible"
+            continue
+        fi
+
         echo "Testing wheel: ${whl} with Python ${pyver}"
         UV_VENV_OUT=$(uv venv -q -p ${pyver} --seed "${TEMP_INSTALL_LOCATION}" 2>&1)
         UV_VENV_RESULT=$?
