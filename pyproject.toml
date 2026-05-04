@@ -134,7 +134,6 @@ examples = [
   "nat_autogen_demo",
   "nat_automated_description_generation",
   "nat_currency_agent_a2a",
-  "nat_demo_workflow",
   "nat_dpo_tic_tac_toe",
   "nat_documentation_guides",
   "nat_email_phishing_analyzer",
@@ -275,7 +274,6 @@ nat_alert_triage_agent = { path = "examples/advanced_agents/alert_triage_agent",
 nat_autogen_demo = { path = "examples/frameworks/nat_autogen_demo", editable = true }
 nat_automated_description_generation = { path = "examples/custom_functions/automated_description_generation", editable = true }
 nat_currency_agent_a2a = { path = "examples/A2A/currency_agent_a2a", editable = true }
-nat_demo_workflow = { path = "examples/demo_workflow", editable = true }
 nat_dpo_tic_tac_toe = { path = "examples/finetuning/dpo_tic_tac_toe", editable = true }
 nat_documentation_guides = { path = "examples/documentation_guides", editable = true }
 nat_email_phishing_analyzer = { path = "examples/evaluation_and_profiling/email_phishing_analyzer", editable = true }
