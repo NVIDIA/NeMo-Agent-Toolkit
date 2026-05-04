@@ -17,6 +17,7 @@
 import argparse
 import logging
 import os
+import platform
 import re
 import signal
 import subprocess
@@ -26,6 +27,8 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 from dotenv import find_dotenv
+from python_compat import project_requires_python
+from python_compat import project_supports_python
 
 REPO = Path(__file__).resolve().parents[2]
 ART = REPO / ".artifacts"
@@ -139,6 +142,12 @@ def run_one(
     env = make_env(project_dir)
 
     display_project_dir = project_dir.relative_to(REPO).as_posix()
+    python_version = platform.python_version()
+    if not project_supports_python(project_dir, python_version):
+        requires_python = project_requires_python(project_dir)
+        logger.info(f"{display_project_dir} (skipping; requires Python {requires_python}, "
+                    f"running Python {python_version})")
+        return 0
 
     name = slug(project_dir)
     junit = JUNIT_DIR / f"{name}.xml"

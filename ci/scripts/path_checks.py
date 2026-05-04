@@ -81,6 +81,14 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
     ),
     (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/harbor-eval-readme.md",
+        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
+    ),
+    (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/README.md",
+        r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
+    ),
+    (
         r"^examples/A2A/math_assistant_a2a/README.md",
         r"^examples/getting_started/simple_calculator/configs/config.yml",
     ),
@@ -235,6 +243,15 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     (
         r"^examples/A2A/currency_agent_a2a/README.md",
         r"^samples/python/agents/langgraph",
+    ),
+    # ignore editable side checkout paths documented for Harbor integration
+    (
+        r"^examples/evaluation_and_profiling/simple_calculator_eval/harbor-eval-readme.md",
+        r"^external/harbor$",
+    ),
+    (
+        r"^packages/nvidia_nat_harbor/README.md",
+        r"^external/harbor$",
     ),
     # ignore generated files
     (
