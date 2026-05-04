@@ -151,6 +151,19 @@ def openai_api_key_fixture(fail_missing: bool):
                                 fail_missing=fail_missing)
 
 
+@pytest.fixture(name="oci_nemotron_endpoint", scope='session')
+def oci_nemotron_endpoint_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require an OCI-hosted Nemotron OpenAI-compatible endpoint.
+    """
+    yield require_env_variables(
+        varnames=["OCI_NEMOTRON_BASE_URL", "OCI_NEMOTRON_MODEL"],
+        reason="OCI Nemotron integration tests require the `OCI_NEMOTRON_BASE_URL` and "
+        "`OCI_NEMOTRON_MODEL` environment variables to be defined.",
+        fail_missing=fail_missing,
+    )
+
+
 @pytest.fixture(name="nvidia_api_key", scope='session')
 def nvidia_api_key_fixture(fail_missing: bool):
     """
@@ -230,6 +243,23 @@ def azure_openai_keys_fixture(fail_missing: bool):
         reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
         "variables to be defined.",
         fail_missing=fail_missing)
+
+
+@pytest.fixture(name="oci_genai", scope='session')
+def oci_genai_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require OCI Generative AI credentials.
+    Required: OCI_COMPARTMENT_ID.
+    Optional: OCI_REGION (default: us-chicago-1), OCI_META_MODEL (default: meta.llama-3.3-70b-instruct),
+    OCI_GOOGLE_MODEL (default: google.gemini-2.5-flash).
+    Auth is read from ~/.oci/config using the DEFAULT profile.
+    """
+    yield require_env_variables(
+        varnames=["OCI_COMPARTMENT_ID"],
+        reason=
+        "OCI Generative AI integration tests require the `OCI_COMPARTMENT_ID` environment variable to be defined.",
+        fail_missing=fail_missing,
+    )
 
 
 @pytest.fixture(name="langfuse_keys", scope='session')
