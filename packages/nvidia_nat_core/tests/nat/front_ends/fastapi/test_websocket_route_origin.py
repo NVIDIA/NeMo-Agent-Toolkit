@@ -38,6 +38,9 @@ from nat.front_ends.fastapi.routes.websocket import _is_origin_allowed
         # None origin is always rejected
         (None, ["*"], None, False),
         (None, ["http://localhost:3000"], r".*", False),
+        # Empty-string origin is always rejected (falsy-origin guard)
+        ("", ["*"], None, False),
+        ("", ["http://localhost:3000"], r".*", False),
         # Empty allowed list, no regex
         ("http://localhost:3000", [], None, False),
         # Regex takes precedence when list is empty
