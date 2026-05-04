@@ -289,7 +289,7 @@ class TestBatchConverter:
         result = batch_converter.convert([])
         assert isinstance(result, ATIFTrajectory)
         assert result.steps == []
-        assert result.schema_version == "ATIF-v1.6"
+        assert result.schema_version == "ATIF-v1.7"
 
     def test_simple_trajectory(
         self,
@@ -466,7 +466,7 @@ class TestBatchConverter:
         json_str = result.model_dump_json(exclude_none=True)
         restored = ATIFTrajectory.model_validate_json(json_str)
         assert len(restored.steps) == len(result.steps)
-        assert restored.schema_version == "ATIF-v1.6"
+        assert restored.schema_version == "ATIF-v1.7"
 
     def test_metrics_include_reasoning_tokens(
         self,
@@ -1125,7 +1125,7 @@ class TestStreamConverter:
         trajectory = converter.get_trajectory()
 
         assert isinstance(trajectory, ATIFTrajectory)
-        assert trajectory.schema_version == "ATIF-v1.6"
+        assert trajectory.schema_version == "ATIF-v1.7"
         assert len(trajectory.steps) >= 2
         assert trajectory.steps[0].source == "user"
 
