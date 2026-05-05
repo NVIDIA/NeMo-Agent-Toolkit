@@ -99,14 +99,15 @@ def read_persisted_consent() -> ConsentState:
         section = data.get("telemetry", {})
         consent = section.get("consent")
         prompt_version = section.get("prompt_version")
-        if (prompt_version == PROMPT_VERSION
-                and consent in (ConsentState.ENABLED.value, ConsentState.DISABLED.value)):
+        if (prompt_version == PROMPT_VERSION and consent in (ConsentState.ENABLED.value, ConsentState.DISABLED.value)):
             return ConsentState(consent)
         if prompt_version is not None and prompt_version != PROMPT_VERSION:
             logger.debug(
                 "Persisted consent at %s was recorded under prompt_version %r; "
                 "current is %r — treating as NEVER_ASKED to force re-prompt.",
-                path, prompt_version, PROMPT_VERSION,
+                path,
+                prompt_version,
+                PROMPT_VERSION,
             )
     except Exception:  # noqa: BLE001 - defensive; never let consent reading break the CLI
         logger.debug("Failed to read consent file at %s", path, exc_info=True)

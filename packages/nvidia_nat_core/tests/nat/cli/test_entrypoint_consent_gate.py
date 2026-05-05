@@ -31,8 +31,7 @@ from nat.cli import entrypoint
         (["nat", "configure", "telemetry", "--disable"], "configure", True),
         (["nat", "configure", "telemetry"], "configure", True),
         # Root-level flags before "configure" don't fool the detection.
-        (["nat", "--log-level", "DEBUG", "configure", "telemetry", "--status"],
-         "configure", True),
+        (["nat", "--log-level", "DEBUG", "configure", "telemetry", "--status"], "configure", True),
         # Other subcommands of `nat configure` (hypothetical) must still prompt.
         (["nat", "configure", "something-else"], "configure", False),
         (["nat", "configure"], "configure", False),
