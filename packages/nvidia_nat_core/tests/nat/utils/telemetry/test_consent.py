@@ -117,22 +117,36 @@ def test_write_failure_is_silent(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_is_interactive_session_returns_false_when_stdout_not_tty():
-    with patch("sys.stdout") as stdout, patch("sys.stdin"):
+    with patch("sys.stdout") as stdout, patch("sys.stdin") as stdin, patch("sys.stderr") as stderr:
         stdout.isatty.return_value = False
+        stdin.isatty.return_value = True
+        stderr.isatty.return_value = True
         assert consent.is_interactive_session() is False
 
 
 def test_is_interactive_session_returns_false_when_stdin_not_tty():
-    with patch("sys.stdout") as stdout, patch("sys.stdin") as stdin:
+    with patch("sys.stdout") as stdout, patch("sys.stdin") as stdin, patch("sys.stderr") as stderr:
         stdout.isatty.return_value = True
         stdin.isatty.return_value = False
+        stderr.isatty.return_value = True
         assert consent.is_interactive_session() is False
 
 
-def test_is_interactive_session_returns_true_only_when_both_ttys():
-    with patch("sys.stdout") as stdout, patch("sys.stdin") as stdin:
+def test_is_interactive_session_returns_false_when_stderr_not_tty():
+    """Captured stderr (``2>/some/log``, journald, Docker, CI) means the
+    prompt is invisible — must NOT prompt in that case."""
+    with patch("sys.stdout") as stdout, patch("sys.stdin") as stdin, patch("sys.stderr") as stderr:
         stdout.isatty.return_value = True
         stdin.isatty.return_value = True
+        stderr.isatty.return_value = False
+        assert consent.is_interactive_session() is False
+
+
+def test_is_interactive_session_returns_true_only_when_all_three_ttys():
+    with patch("sys.stdout") as stdout, patch("sys.stdin") as stdin, patch("sys.stderr") as stderr:
+        stdout.isatty.return_value = True
+        stdin.isatty.return_value = True
+        stderr.isatty.return_value = True
         assert consent.is_interactive_session() is True
 
 

@@ -141,12 +141,22 @@ def write_persisted_consent(state: ConsentState) -> None:
 def is_interactive_session() -> bool:
     """Whether we should attempt to prompt the user.
 
-    Requires both stdin and stdout to be TTYs. Pipes, redirects, CI
-    runners, daemons, and other headless contexts return False — in those
-    cases we never prompt, and telemetry defaults to OFF.
+    Requires **all three** standard streams to be TTYs:
+
+    - ``stdin`` — so ``input()`` can read the user's reply.
+    - ``stdout`` — so any echoed feedback reaches the user.
+    - ``stderr`` — because :func:`prompt_user` writes the prompt itself
+      to stderr; if stderr is captured (``2>/some/log``, journald, Docker
+      log capture, CI log files), the user would be asked a question
+      they cannot see and a keystroke / Enter would silently change
+      their consent state.
+
+    Pipes, redirects, CI runners, daemons, and any other headless
+    context return False — in those cases we never prompt, and
+    telemetry defaults to OFF.
     """
     try:
-        return sys.stdin.isatty() and sys.stdout.isatty()
+        return sys.stdin.isatty() and sys.stdout.isatty() and sys.stderr.isatty()
     except Exception:  # noqa: BLE001
         return False
 
@@ -159,7 +169,7 @@ def render_prompt() -> str:
     """
     return ("\n"
             "===========================================================\n"
-            "  NeMo Agent Toolkit — anonymous telemetry\n"
+            "  NeMo Agent toolkit — anonymous telemetry\n"
             "===========================================================\n"
             "  We collect aggregate, anonymous CLI usage data to help us\n"
             "  prioritize features and fix bugs.\n"
