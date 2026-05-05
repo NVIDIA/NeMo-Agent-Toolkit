@@ -40,7 +40,7 @@ async def test_run_full_workflow():
             "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your "
             "account. Please provide your account and routing numbers so we can complete the transaction. Thank you, "
             "[Your Company]"),
-        expected_answer="likely")
+        expected_answer="phishing")
 
 
 @pytest.mark.skip(reason="This test gets rate limited potentially issue #842 and does not complete")

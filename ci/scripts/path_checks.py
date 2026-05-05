@@ -159,6 +159,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "LangChain/LangGraph.",
     "LangChain/LangGraph-based",
     "LTE/5G",
+    "mistralai/mistral-large-3-675b-instruct-2512",
+    "mistralai/mistral-small-4-119b-2603",
     "N/A",
     "output/jobs/job_",
     "POST/PUT",
@@ -207,7 +209,7 @@ ALLOWLISTED_WORDS: set[str] = {
     # anything starting with nvcr.io
     "nvcr\\.io/.*",  # anything starting with default/
     "default/.*",  # Models with their prefixes
-    "(azure|openai|gcp|google)/.*",
+    "(azure|openai|gcp|google|anthropic|gemini)/.*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
