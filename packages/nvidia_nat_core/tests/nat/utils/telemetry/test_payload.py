@@ -73,7 +73,7 @@ def test_build_payload_carries_session_and_version():
     # clientId is shared with the NeMo Usage Telemetry project (D-18); NAT events
     # are distinguished by nemoSource = "agent_toolkit" rather than a separate clientId.
     assert payload["clientId"] == "184482118588404"
-    assert payload["eventSchemaVer"] == "1.4"
+    assert payload["eventSchemaVer"] == "1.5"
 
 
 def test_build_payload_contains_one_event_per_queued():

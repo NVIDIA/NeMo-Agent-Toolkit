@@ -37,7 +37,7 @@ def test_telemetry_event_subclass_with_event_name_succeeds():
         _event_name: ClassVar[str] = "good_event"
 
     assert GoodEvent._event_name == "good_event"
-    assert GoodEvent._schema_version == "1.4"
+    assert GoodEvent._schema_version == "1.5"
 
 
 def test_cli_command_event_serializes_with_camel_case_aliases():
@@ -127,3 +127,33 @@ def test_cli_command_event_rejects_negative_duration_below_minus_one():
             exit_code=0,
             python_version="3.11.7",
         )
+
+
+def test_nemo_source_enum_mirrors_schema_1_5():
+    """Pin against drift from the published schema's ``NemoSourceEnum``."""
+    expected = {
+        "inference",
+        "auditor",
+        "datadesigner",
+        "evaluator",
+        "guardrails",
+        "safe-synthesizer",
+        "anonymizer",
+        "agent_toolkit",
+        "undefined",
+    }
+    assert {member.value for member in NemoSourceEnum} == expected
+
+
+def test_task_status_enum_mirrors_schema_1_5():
+    """Pin against drift from the published schema's ``TaskStatusEnum``."""
+    expected = {
+        "success",
+        "failure",
+        "completed",
+        "error",
+        "canceled",
+        "interrupted",
+        "undefined",
+    }
+    assert {member.value for member in TaskStatusEnum} == expected

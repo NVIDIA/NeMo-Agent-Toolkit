@@ -36,20 +36,39 @@ from pydantic import Field
 
 class NemoSourceEnum(StrEnum):
     """The NeMo product that emitted the event. Discriminator across NeMo products
-    sharing the NeMo Usage Telemetry schema."""
+    sharing the NeMo Usage Telemetry schema.
+
+    Values mirror the schema-1.5 ``NemoSourceEnum`` definition in
+    ``nemo-telemetry/schemas/anonymous_events.json``. NAT itself only emits
+    ``AGENT_TOOLKIT``; the other values exist so this enum is a faithful
+    mirror of the published schema (e.g. tests can deserialize foreign
+    payloads, and future upstream additions surface as diff conflicts here).
+    """
 
     INFERENCE = "inference"
     AUDITOR = "auditor"
     DATADESIGNER = "datadesigner"
     EVALUATOR = "evaluator"
     GUARDRAILS = "guardrails"
+    SAFE_SYNTHESIZER = "safe-synthesizer"
+    ANONYMIZER = "anonymizer"
     AGENT_TOOLKIT = "agent_toolkit"
     UNDEFINED = "undefined"
 
 
 class TaskStatusEnum(StrEnum):
+    """Outcome of the task being reported.
+
+    Values mirror the schema-1.5 ``TaskStatusEnum`` definition. NAT's
+    ``CliCommandEvent`` only emits ``SUCCESS`` / ``FAILURE`` / ``INTERRUPTED``;
+    the other values exist for schema-mirror parity with other NeMo products.
+    """
+
     SUCCESS = "success"
     FAILURE = "failure"
+    COMPLETED = "completed"
+    ERROR = "error"
+    CANCELED = "canceled"
     INTERRUPTED = "interrupted"
     UNDEFINED = "undefined"
 
@@ -62,7 +81,7 @@ class TelemetryEvent(BaseModel):
     """
 
     _event_name: ClassVar[str]
-    _schema_version: ClassVar[str] = "1.4"
+    _schema_version: ClassVar[str] = "1.5"
 
     def __init_subclass__(cls, **kwargs: Any) -> None:
         super().__init_subclass__(**kwargs)
