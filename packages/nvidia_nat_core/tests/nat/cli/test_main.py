@@ -6,6 +6,12 @@
 # You may obtain a copy of the License at
 #
 # http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 """Tests for ``nat.cli.main.run_cli`` exit-handling and telemetry.
 
 The wrapper runs Click with ``standalone_mode=False`` so it can see the
@@ -136,6 +142,7 @@ def test_run_cli_generic_exception_records_failure_and_reraises():
 
 
 def test_run_cli_callback_sys_exit_zero_records_success():
+    """Clean sys.exit(0) → SUCCESS with no error_class (no error to classify)."""
     emits, code, raised = _run_with_cli_raising(exc=SystemExit(0))
     assert isinstance(raised, SystemExit)
     assert code == 0
@@ -146,26 +153,30 @@ def test_run_cli_callback_sys_exit_zero_records_success():
     }]
 
 
-def test_run_cli_callback_sys_exit_nonzero_records_failure():
+def test_run_cli_callback_sys_exit_nonzero_records_failure_with_systemexit_class():
+    """A callback that calls ``sys.exit(5)`` is a programmatic failure;
+    error_class should be ``"SystemExit"`` so analytics can distinguish
+    callback-driven exits from silent failures."""
     emits, code, raised = _run_with_cli_raising(exc=SystemExit(5))
     assert isinstance(raised, SystemExit)
     assert code == 5
     assert emits == [{
         "task_status": TaskStatusEnum.FAILURE,
         "exit_code": 5,
-        "error_class": None,
+        "error_class": "SystemExit",
     }]
 
 
 def test_run_cli_callback_sys_exit_string_message_records_failure_with_code_1():
     """``sys.exit("error message")`` produces ``SystemExit(code='error message')``;
-    we map non-int codes to FAILURE/1 (matching standalone-mode behavior)."""
+    map non-int codes to FAILURE/1 (matching standalone-mode behavior) and
+    still record the SystemExit class for visibility."""
     emits, code, _raised = _run_with_cli_raising(exc=SystemExit("oops"))
     assert code == 1
     assert emits == [{
         "task_status": TaskStatusEnum.FAILURE,
         "exit_code": 1,
-        "error_class": None,
+        "error_class": "SystemExit",
     }]
 
 

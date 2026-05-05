@@ -18,7 +18,11 @@ Order of precedence for whether telemetry is active:
 
 1. ``NAT_TELEMETRY_ENABLED`` environment variable, if set (any value).
 2. Persisted consent file at ``~/.config/nat/telemetry.toml``.
-3. Interactive prompt — only if both stdin and stdout are TTYs.
+3. Interactive prompt — only if all three of ``stdin``, ``stdout``, and
+   ``stderr`` are TTYs (see :func:`is_interactive_session`). The prompt
+   itself is rendered to ``stderr``, so a captured stderr (``2>/log``,
+   journald, Docker / CI log capture) would be invisible-but-effectful;
+   gating on all three streams prevents that footgun.
 4. Default OFF, in non-interactive contexts (CI, cron, daemons).
 
 The prompt is shown at most once per machine: the user's answer is
@@ -238,7 +242,8 @@ def maybe_prompt_for_consent() -> None:
 
     - ``NAT_TELEMETRY_ENABLED`` env var is set (the user opted via env).
     - A persisted consent decision already exists.
-    - The session is non-interactive (no TTY on stdin or stdout).
+    - The session is non-interactive — see :func:`is_interactive_session`,
+      which requires ``stdin``, ``stdout``, and ``stderr`` to all be TTYs.
 
     Otherwise: print the prompt, read the user's answer, persist the
     decision, and update the live ``TELEMETRY_ENABLED`` flag so the rest

@@ -88,16 +88,20 @@ def run_cli():
         # ``--help`` / ``--version`` short-circuits (which use ``ctx.exit()``
         # → ``sys.exit(0)`` regardless of standalone mode).
         raw_code = exc.code
+        ec_class: str | None
         if raw_code is None or raw_code == 0:
             ts: TaskStatusEnum = TaskStatusEnum.SUCCESS
             ec = 0
+            ec_class = None
         elif isinstance(raw_code, int):
             ts = TaskStatusEnum.FAILURE
             ec = raw_code
+            ec_class = type(exc).__name__
         else:
             ts = TaskStatusEnum.FAILURE
             ec = 1
-        emit_command_event(ctx_obj, task_status=ts, exit_code=ec, error_class=None)
+            ec_class = type(exc).__name__
+        emit_command_event(ctx_obj, task_status=ts, exit_code=ec, error_class=ec_class)
         raise
     except BaseException as exc:  # noqa: BLE001 - we always re-raise
         emit_command_event(
