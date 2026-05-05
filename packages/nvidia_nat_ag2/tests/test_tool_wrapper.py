@@ -15,10 +15,9 @@
 """Test AG2 `tool_wrapper.py` — async tool wrapping for AG2."""
 
 import asyncio
+from dataclasses import dataclass
 from unittest.mock import AsyncMock
 from unittest.mock import Mock
-
-from dataclasses import dataclass
 
 import pytest
 from pydantic import BaseModel
