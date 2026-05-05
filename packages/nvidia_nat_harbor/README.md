@@ -58,8 +58,10 @@ uv pip install -e packages/nvidia_nat_harbor
 Install the Harbor side branch used by the inline verifier examples:
 
 ```bash
-git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
-git -C external/harbor checkout ak-harbor-libary-mode
+# git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
+# git -C external/harbor checkout ak-harbor-libary-mode
+
+git clone git@github.com:soluwalana/harbor.git external/harbor
 uv pip install -e external/harbor
 ```
 
@@ -89,16 +91,9 @@ phoenix serve
 
 ## Current environment mode behavior
 
-`harbor run --env local` is not accepted by current Harbor CLI enumeration validation.
+`harbor run --env local` is included in external/harbor.
 
-Use this supported workaround:
-
-- Set `--env docker`
-- Set `--environment-import-path nat_harbor.environments.local:LocalEnvironment`
-
-This keeps execution host-local through the imported environment class while satisfying Harbor CLI validation.
-
-This is a temporary compatibility path. Once first-class local environment support is accepted upstream in Harbor, this workaround can be dropped in favor of direct `--env local` usage. See [`upstream-plan.md`](./upstream-plan.md).
+This keeps execution host-local through the LocalEnvironment.
 
 ## Execution modes
 
@@ -106,7 +101,7 @@ The examples use three related but separate concepts:
 
 | Term | How it is selected | What runs on the host |
 |---|---|---|
-| Local environment | `--environment-import-path nat_harbor.environments.local:LocalEnvironment` with the temporary `--env docker` workaround | Harbor environment operations and shell commands |
+| Local environment | With `--env local` workaround | Harbor environment operations and shell commands |
 | Shell compatibility mode | Default `NemoAgent` behavior when `library_mode` is not set | The NeMo Agent Toolkit wrapper process and task verifier script |
 | Library mode | `--ak library_mode=true` | NeMo Agent Toolkit workflow execution in-process through the active Harbor Python |
 | Inline verifier | `--verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier` | ATIF evaluator dispatch in-process through the active Harbor Python |
@@ -261,9 +256,8 @@ rm -rf "$NAT_HARBOR_JOBS_DIR/sc-power-of-two-library-inline-smoke"
   --jobs-dir "$NAT_HARBOR_JOBS_DIR" \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
-  --environment-import-path nat_harbor.environments.local:LocalEnvironment \
   --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
-  --env docker \
+  --env local \
   --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file="$NAT_HARBOR_TRAJECTORY_CONFIG" \
   --ak local_install_policy=skip \
@@ -284,9 +278,8 @@ rm -rf "$NAT_HARBOR_JOBS_DIR/sc-power-of-two-library-inline"
   --jobs-dir "$NAT_HARBOR_JOBS_DIR" \
   --yes -n 1 --max-retries 1 \
   --agent-import-path nat_harbor.agents.installed.nemo_agent:NemoAgent \
-  --environment-import-path nat_harbor.environments.local:LocalEnvironment \
   --verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier \
-  --env docker \
+  --env local \
   --model nvidia/nemotron-3-nano-30b-a3b \
   --ak config_file="$NAT_HARBOR_TRAJECTORY_CONFIG" \
   --ak local_install_policy=skip \
