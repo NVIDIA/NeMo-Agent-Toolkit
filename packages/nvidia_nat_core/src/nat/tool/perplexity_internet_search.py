@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import AsyncIterator
 from typing import Literal
 
 import httpx
@@ -55,7 +56,11 @@ class PerplexityInternetSearchToolConfig(FunctionBaseConfig, name="perplexity_in
         default=None, description="Filter search results by recency - 'hour', 'day', 'week', 'month', or 'year'."
     )
     country: str | None = Field(
-        default=None, description="Country to filter search results by ISO 3166-1 alpha-2 code."
+        default=None,
+        min_length=2,
+        max_length=2,
+        pattern=r"^[A-Z]{2}$",
+        description="Country to filter search results by ISO 3166-1 alpha-2 code (uppercase, e.g. 'US', 'GB').",
     )
     max_tokens_per_page: int = Field(
         default=4096, ge=1, description="Maximum number of tokens to retrieve per search result page."
@@ -91,7 +96,9 @@ def _get_integration_header() -> str:
         LLMFrameworkEnum.AUTOGEN,
     ],
 )
-async def perplexity_internet_search(tool_config: PerplexityInternetSearchToolConfig, builder: Builder):
+async def perplexity_internet_search(
+    tool_config: PerplexityInternetSearchToolConfig, builder: Builder
+) -> AsyncIterator[FunctionInfo]:
     """Register the Perplexity internet search tool with the NAT runtime.
 
     Resolves the Perplexity API key from the tool config or the
@@ -156,6 +163,16 @@ async def perplexity_internet_search(tool_config: PerplexityInternetSearchToolCo
             for attempt in range(tool_config.max_retries):
                 try:
                     response = await client.post(PERPLEXITY_SEARCH_URL, headers=headers, json=request_body)
+                    # Short-circuit on non-retriable client errors
+                    if response.status_code in {401, 403, 404}:
+                        logger.error(
+                            "Perplexity search returned non-retriable status %d; aborting without retry",
+                            response.status_code,
+                        )
+                        return (
+                            f"Web search failed with non-retriable status {response.status_code}. "
+                            f"Check that PERPLEXITY_API_KEY is set correctly."
+                        )
                     response.raise_for_status()
                     search_response = response.json()
                     results = search_response.get("results") if isinstance(search_response, dict) else None
@@ -169,6 +186,17 @@ async def perplexity_internet_search(tool_config: PerplexityInternetSearchToolCo
                         ]
                     )
                     return web_search_results or f"No web search results found for: {question}"
+                except httpx.HTTPStatusError as exc:
+                    # raise_for_status() raises HTTPStatusError for 4xx/5xx not handled above (e.g. 5xx)
+                    logger.warning(
+                        "Perplexity search attempt %d of %d failed with status %d",
+                        attempt + 1,
+                        tool_config.max_retries,
+                        exc.response.status_code,
+                    )
+                    if attempt == tool_config.max_retries - 1:
+                        return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
+                    await asyncio.sleep(2**attempt)
                 except Exception:
                     # Return a graceful message instead of raising, so the agent can
                     # continue reasoning without web search rather than failing entirely.

@@ -199,7 +199,7 @@ workflow:
 
 ### Using Perplexity Search
 
-The `perplexity_internet_search` tool ships with the core `nvidia-nat` package and is framework-agnostic — it can be used with any of the agent frameworks supported by NAT (`langchain`, `llama_index`, `crewai`, `semantic_kernel`, `agno`, `adk`, `strands`, and `autogen`). No framework-specific extra is required to install it:
+The `perplexity_internet_search` tool ships with the core `nvidia-nat` package and is framework-agnostic — it can be used with any of the agent frameworks supported by the toolkit (`langchain`, `llama_index`, `crewai`, `semantic_kernel`, `agno`, `adk`, `strands`, and `autogen`). No framework-specific extra is required to install it:
 ```bash
 # local package install from source
 uv pip install -e .
