@@ -109,7 +109,55 @@ Workflow Result:
 ```
 
 ## Alternate Method Using a Web Search Tool
-Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. NeMo Agent Toolkit provides web search tools including: `tavily_internet_search` which utilizes the [Tavily Search API](https://tavily.com/), `exa_internet_search` which utilizes the [Exa Search API](https://exa.ai/), and `perplexity_internet_search` which utilizes the [Perplexity Search API](https://docs.perplexity.ai/api-reference/search-post).
+Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. NeMo Agent Toolkit provides web search tools including: `perplexity_internet_search` which utilizes the [Perplexity Search API](https://docs.perplexity.ai/api-reference/search-post), `tavily_internet_search` which utilizes the [Tavily Search API](https://tavily.com/), and `exa_internet_search` which utilizes the [Exa Search API](https://exa.ai/).
+
+### Using Perplexity Search
+
+The `perplexity_internet_search` tool ships with the core `nvidia-nat` package and is framework-agnostic — it can be used with any of the agent frameworks supported by the toolkit (`langchain`, `llama_index`, `crewai`, `semantic_kernel`, `agno`, `adk`, `strands`, and `autogen`). No framework-specific extra is required to install it:
+```bash
+# local package install from source
+uv pip install -e .
+```
+
+Prior to using the `perplexity_internet_search` tool, create a Perplexity account and obtain an API key from the [API key page](https://www.perplexity.ai/account/api/keys). Once obtained, set the `PERPLEXITY_API_KEY` environment variable to the API key (`PPLX_API_KEY` is also accepted as a fallback):
+```bash
+export PERPLEXITY_API_KEY=<YOUR_PERPLEXITY_API_KEY>
+```
+
+We will now update the `functions` section of the configuration file replacing the two `webpage_query` tools with a single `perplexity_internet_search` tool entry:
+```yaml
+functions:
+  internet_search:
+    _type: perplexity_internet_search
+  current_datetime:
+    _type: current_datetime
+```
+
+Next, update the `workflow.tool_names` section to include the new tool:
+```yaml
+workflow:
+  _type: react_agent
+  tool_names: [internet_search, current_datetime]
+```
+
+When you re-run the workflow with the updated configuration file:
+```bash
+nat run --config_file <your_config_file> \
+  --input "How do I trace only specific parts of my LangChain application?"
+```
+
+The `perplexity_internet_search` tool supports additional configuration options:
+```yaml
+functions:
+  internet_search:
+    _type: perplexity_internet_search
+    max_results: 5
+    max_retries: 3
+    max_query_length: 2000  # queries longer than this are truncated
+    search_recency_filter: week  # 'hour', 'day', 'week', 'month', or 'year'
+    country: US  # ISO 3166-1 alpha-2 country code
+    max_tokens_per_page: 4096
+```
 
 ### Using Tavily Search
 
@@ -124,7 +172,7 @@ Prior to using the `tavily_internet_search` tool, create an account at [`tavily.
 export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 ```
 
-We will now update the `functions` section of the configuration file replacing the two `webpage_query` tools with a single `tavily_internet_search` tool entry:
+You can use the `tavily_internet_search` tool by updating the `functions` section of the configuration file:
 ```yaml
 functions:
   internet_search:
@@ -133,26 +181,14 @@ functions:
     _type: current_datetime
 ```
 
-Next, update the `workflow.tool_names` section to include the new tool:
+Then ensure the tool is included in the workflow tool list:
 ```yaml
 workflow:
   _type: react_agent
   tool_names: [internet_search, current_datetime]
 ```
 
-The resulting configuration file is located at `examples/documentation_guides/workflows/custom_workflow/search_config.yml` in the NeMo Agent Toolkit repository.
-
-When you re-run the workflow with the updated configuration file:
-```bash
-nat run --config_file examples/documentation_guides/workflows/custom_workflow/search_config.yml \
-  --input "How do I trace only specific parts of my LangChain application?"
-```
-
-Which will then yield a slightly different result to the same question:
-```
-Workflow Result:
-['To trace only specific parts of a LangChain application, users can use the `@traceable` decorator to mark specific functions or methods as traceable. Additionally, users can configure the tracing functionality to log traces to a specific project, add metadata and tags to traces, and customize the run name and ID. Users can also use the `LangChainTracer` class to trace specific invocations or parts of their application. Furthermore, users can use the `tracing_v2_enabled` context manager to trace a specific block of code.']
-```
+A sample configuration file using `tavily_internet_search` is located at `examples/documentation_guides/workflows/custom_workflow/search_config.yml` in the NeMo Agent Toolkit repository.
 
 ### Using Exa Search
 
@@ -167,7 +203,7 @@ Prior to using the `exa_internet_search` tool, create an account at [`exa.ai`](h
 export EXA_API_KEY=<YOUR_EXA_API_KEY>
 ```
 
-You can use the `exa_internet_search` tool in the same way as `tavily_internet_search` by updating the `functions` section of the configuration file:
+You can use the `exa_internet_search` tool in the same way as the other web search tools by updating the `functions` section of the configuration file:
 ```yaml
 functions:
   internet_search:
@@ -188,48 +224,6 @@ functions:
     max_query_length: 2000  # queries longer than this are truncated
     highlights: true  # include highlights in results
     max_content_length: 10000  # max chars of text per result; set to None to disable
-```
-
-Then ensure the tool is included in the workflow tool list:
-```yaml
-workflow:
-  _type: react_agent
-  tool_names: [internet_search, current_datetime]
-```
-
-### Using Perplexity Search
-
-The `perplexity_internet_search` tool ships with the core `nvidia-nat` package and is framework-agnostic — it can be used with any of the agent frameworks supported by the toolkit (`langchain`, `llama_index`, `crewai`, `semantic_kernel`, `agno`, `adk`, `strands`, and `autogen`). No framework-specific extra is required to install it:
-```bash
-# local package install from source
-uv pip install -e .
-```
-
-Prior to using the `perplexity_internet_search` tool, create a Perplexity account and obtain an API key from the [API key page](https://www.perplexity.ai/account/api/keys). Once obtained, set the `PERPLEXITY_API_KEY` environment variable to the API key:
-```bash
-export PERPLEXITY_API_KEY=<YOUR_PERPLEXITY_API_KEY>
-```
-
-You can use the `perplexity_internet_search` tool in the same way as the other web search tools by updating the `functions` section of the configuration file:
-```yaml
-functions:
-  internet_search:
-    _type: perplexity_internet_search
-  current_datetime:
-    _type: current_datetime
-```
-
-The `perplexity_internet_search` tool supports additional configuration options:
-```yaml
-functions:
-  internet_search:
-    _type: perplexity_internet_search
-    max_results: 5
-    max_retries: 3
-    max_query_length: 2000  # queries longer than this are truncated
-    search_recency_filter: week  # 'hour', 'day', 'week', 'month', or 'year'
-    country: US  # ISO 3166-1 alpha-2 country code
-    max_tokens_per_page: 4096
 ```
 
 Then ensure the tool is included in the workflow tool list:
