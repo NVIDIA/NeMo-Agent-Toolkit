@@ -89,7 +89,18 @@ class Step(BaseModel):
     )
     extra: dict[str, Any] | None = Field(
         default=None,
-        description="Custom step-level metadata",
+        description=("Custom step-level metadata. NAT writes ancestry/invocation "
+                     "metadata under reserved keys here — see "
+                     ":class:`nat.atif.atif_step_extra.AtifStepExtra`. The spec "
+                     "treats this field as loosely-typed; consumers MUST tolerate "
+                     "absent and unknown keys."),
+    )
+    llm_call_count: int | None = Field(
+        default=None,
+        ge=0,
+        description=("Number of LLM inferences this step represents (ATIF v1.7). "
+                     "0 = deterministic/non-LLM dispatch (v1.7-alignment-proposal); "
+                     "1 = single inference; >1 = aggregated metrics; null = not tracked."),
     )
 
     model_config = ConfigDict(extra="forbid")
@@ -118,6 +129,6 @@ class Step(BaseModel):
             ]
             for field in agent_only_fields:
                 if getattr(self, field) is not None:
-                    raise ValueError(f"Field '{field}' is only applicable when source is 'agent', "
-                                     f"but source is '{self.source}'")
+                    raise ValueError(
+                        f"Field '{field}' is only applicable when source is 'agent', but source is '{self.source}'")
         return self

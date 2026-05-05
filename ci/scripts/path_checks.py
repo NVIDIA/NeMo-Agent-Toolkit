@@ -209,7 +209,7 @@ ALLOWLISTED_WORDS: set[str] = {
     # anything starting with nvcr.io
     "nvcr\\.io/.*",  # anything starting with default/
     "default/.*",  # Models with their prefixes
-    "(azure|openai|gcp|google)/.*",
+    "(azure|openai|gcp|google|anthropic|gemini)/.*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
