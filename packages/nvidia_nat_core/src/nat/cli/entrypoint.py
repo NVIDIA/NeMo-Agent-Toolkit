@@ -92,12 +92,42 @@ def cli(ctx: click.Context, log_level: str):
     ctx_dict["start_time"] = time.time()
     ctx_dict["log_level"] = log_level
 
-    # Telemetry: prompt for first-run consent (TTY only, no persisted decision,
-    # no env-var override) and capture identifiers for the post-invocation
-    # event. Both are safe no-ops when telemetry is disabled or already
-    # decided.
-    maybe_prompt_for_consent()
+    # Telemetry: prompt for first-run consent (TTY only, no persisted
+    # decision, no env-var override). Skip the prompt when the user is
+    # invoking ``nat configure telemetry [--enable|--disable|--status]``,
+    # since that subcommand exists for the user to *manage* the very
+    # decision the prompt asks about. Prompting them first would (a)
+    # break the read-only contract of ``--status`` and (b) interleave a
+    # default-yes prompt with an explicit ``--disable`` request.
+    #
+    # Bookkeeping (``record_invocation_start``) still runs unconditionally;
+    # it has no UX side effect, and it lets already-consented users emit a
+    # properly-tagged ``command="configure", subcommand="telemetry"``
+    # event on exit. Pre-consent users emit nothing because
+    # ``TELEMETRY_ENABLED`` is false at import time.
+    if not _is_invoking_configure_telemetry(ctx.invoked_subcommand):
+        maybe_prompt_for_consent()
     record_invocation_start(ctx)
+
+
+def _is_invoking_configure_telemetry(invoked_subcommand: str | None) -> bool:
+    """True for ``nat configure telemetry [...]`` invocations.
+
+    Walks ``sys.argv`` past the ``configure`` token and checks whether the
+    next non-flag positional is ``telemetry``. Other ``nat configure
+    <something-else>`` paths still trigger the prompt as normal.
+    """
+    if invoked_subcommand != "configure":
+        return False
+    try:
+        idx = sys.argv.index("configure")
+    except ValueError:
+        return False
+    for token in sys.argv[idx + 1:]:
+        if token.startswith("-"):
+            continue
+        return token == "telemetry"
+    return False
 
 
 # Discover and load ALL CLI commands (core + plugins) via entry points

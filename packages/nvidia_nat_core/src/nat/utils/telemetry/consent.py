@@ -70,8 +70,24 @@ def _consent_file_path() -> Path:
 def read_persisted_consent() -> ConsentState:
     """Read the user's persisted consent decision, if any.
 
-    Returns ``ConsentState.NEVER_ASKED`` if the file is missing, malformed,
-    or contains an unrecognized value.
+    Returns the persisted ``ConsentState`` only when **both** of the
+    following hold:
+
+    1. ``[telemetry].consent`` is one of the two terminal states
+       (``"enabled"`` / ``"disabled"``).
+    2. ``[telemetry].prompt_version`` matches the current
+       :data:`PROMPT_VERSION`.
+
+    The version gate is the privacy escape hatch: if we materially change
+    what the prompt discloses (e.g. add a new collected field, change
+    endpoints), bumping :data:`PROMPT_VERSION` automatically forces a
+    re-prompt for users who consented under the old language. Without
+    this, a stale "yes" from v1.0 would silently authorize collection
+    under v1.1's disclosure.
+
+    Returns ``ConsentState.NEVER_ASKED`` when the file is missing,
+    malformed, the consent value is unrecognized, or the persisted
+    ``prompt_version`` is missing or mismatched.
     """
     path = _consent_file_path()
     if not path.exists():
@@ -80,9 +96,18 @@ def read_persisted_consent() -> ConsentState:
         import tomllib
         with path.open("rb") as f:
             data = tomllib.load(f)
-        consent = data.get("telemetry", {}).get("consent")
-        if consent in (ConsentState.ENABLED.value, ConsentState.DISABLED.value):
+        section = data.get("telemetry", {})
+        consent = section.get("consent")
+        prompt_version = section.get("prompt_version")
+        if (prompt_version == PROMPT_VERSION
+                and consent in (ConsentState.ENABLED.value, ConsentState.DISABLED.value)):
             return ConsentState(consent)
+        if prompt_version is not None and prompt_version != PROMPT_VERSION:
+            logger.debug(
+                "Persisted consent at %s was recorded under prompt_version %r; "
+                "current is %r — treating as NEVER_ASKED to force re-prompt.",
+                path, prompt_version, PROMPT_VERSION,
+            )
     except Exception:  # noqa: BLE001 - defensive; never let consent reading break the CLI
         logger.debug("Failed to read consent file at %s", path, exc_info=True)
     return ConsentState.NEVER_ASKED

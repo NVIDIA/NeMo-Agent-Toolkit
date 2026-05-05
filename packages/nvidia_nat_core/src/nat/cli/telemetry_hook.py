@@ -139,11 +139,22 @@ def _resolve_subcommand(root_command: object | None, top_level: str) -> str | No
     Click command tree.
 
     Click does not expose nested ``invoked_subcommand`` from the root context,
-    so we scan ``sys.argv`` for a candidate token. Crucially, we only return a
-    token if it matches the name of an *actually registered* subcommand of the
-    top-level group. This is the privacy boundary: positional arguments
+    so we scan ``sys.argv`` for a candidate token. We only return a token if
+    it matches the name of an *actually registered* subcommand of the
+    ``top_level`` group. This is the privacy boundary: positional arguments
     (file paths, workflow names, free-form queries) cannot match a registered
     subcommand name and therefore cannot leak.
+
+    To prevent option-value tokens that appear *later* on the command line
+    from being misclassified as the subcommand, the scan only considers the
+    **first non-flag token after** ``top_level``. Anything later — even if
+    it happens to spell a subcommand name — is ignored.
+
+    Known limitation: an option whose *value* (e.g. ``--filter list-components``)
+    appears before the subcommand position can still be picked up here,
+    because we cannot infer Click option metadata from raw argv. The exposure
+    is bounded — the value must exactly match a registered subcommand name —
+    and is fully eliminated only by switching to Click's parsed context tree.
 
     Returns ``None`` when:
 
@@ -151,7 +162,9 @@ def _resolve_subcommand(root_command: object | None, top_level: str) -> str | No
     - ``top_level`` isn't a registered subcommand of the root group.
     - The resolved top-level command is itself a leaf (not a group), so no
       second level is possible.
-    - No argv token matches a registered subcommand of that group.
+    - The first non-flag token after ``top_level`` doesn't match a
+      registered subcommand.
+    - ``top_level`` doesn't appear in ``sys.argv`` at all.
     """
     try:
         if not isinstance(root_command, click.Group):
@@ -160,9 +173,15 @@ def _resolve_subcommand(root_command: object | None, top_level: str) -> str | No
         if not isinstance(sub, click.Group):
             return None
         registered: set[str] = set(sub.commands.keys())
-        for token in sys.argv[1:]:
-            if token in registered:
-                return token
+        argv_tail = sys.argv[1:]
+        try:
+            start = argv_tail.index(top_level) + 1
+        except ValueError:
+            return None
+        for token in argv_tail[start:]:
+            if token.startswith("-"):
+                continue
+            return token if token in registered else None
         return None
     except Exception:  # noqa: BLE001
         return None

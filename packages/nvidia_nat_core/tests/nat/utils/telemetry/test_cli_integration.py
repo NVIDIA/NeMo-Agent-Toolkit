@@ -211,3 +211,32 @@ def test_resolve_subcommand_handles_unknown_top_level(monkeypatch):
     """Top-level token that isn't actually registered (e.g. 'unknown' fallback)."""
     monkeypatch.setattr("sys.argv", ["nat", "info", "list-components"])
     assert telemetry_hook._resolve_subcommand(_make_root(), "unknown") is None
+
+
+def test_resolve_subcommand_ignores_later_token_matching_registered(monkeypatch):
+    """A registered name appearing *after* the real subcommand position must
+    not be picked up. Without the position-aware scan, the legacy
+    'first match anywhere' loop would have leaked
+    ``"list-components"`` here."""
+    monkeypatch.setattr(
+        "sys.argv",
+        ["nat", "info", "my-real-arg", "--some-flag", "list-components"],
+    )
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") is None
+
+
+def test_resolve_subcommand_skips_flags_immediately_after_top_level(monkeypatch):
+    """Long and short flags between ``top_level`` and the subcommand are
+    skipped; the first *non-flag* token is what's checked."""
+    monkeypatch.setattr(
+        "sys.argv",
+        ["nat", "info", "--verbose", "-q", "list-components"],
+    )
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") == "list-components"
+
+
+def test_resolve_subcommand_returns_none_when_top_level_absent_from_argv(monkeypatch):
+    """If ``top_level`` doesn't appear in argv (extremely rare; guards
+    against pathological cases), don't fall back to a global scan."""
+    monkeypatch.setattr("sys.argv", ["nat", "list-components"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") is None

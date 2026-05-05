@@ -73,6 +73,39 @@ def test_read_handles_unrecognized_consent_value(consent_file: Path):
     assert consent.read_persisted_consent() == ConsentState.NEVER_ASKED
 
 
+def test_read_returns_never_asked_for_stale_prompt_version(consent_file: Path):
+    """A consent recorded under an older prompt language must trigger a
+    re-prompt — bumping PROMPT_VERSION is the privacy escape hatch for
+    materially-changed disclosures."""
+    consent_file.write_text(
+        '[telemetry]\n'
+        'consent = "enabled"\n'
+        'prompt_version = "0.0-ancient"\n'
+    )
+    assert consent.read_persisted_consent() == ConsentState.NEVER_ASKED
+
+
+def test_read_returns_never_asked_when_prompt_version_missing(consent_file: Path):
+    """A consent file without prompt_version cannot be matched to the
+    disclosure the user saw — re-prompt to be safe."""
+    consent_file.write_text(
+        '[telemetry]\n'
+        'consent = "enabled"\n'
+    )
+    assert consent.read_persisted_consent() == ConsentState.NEVER_ASKED
+
+
+def test_read_returns_state_when_prompt_version_matches(consent_file: Path):
+    """Sanity check: a consent file written under the current prompt
+    version is honored."""
+    consent_file.write_text(
+        '[telemetry]\n'
+        'consent = "disabled"\n'
+        f'prompt_version = "{consent.PROMPT_VERSION}"\n'
+    )
+    assert consent.read_persisted_consent() == ConsentState.DISABLED
+
+
 def test_write_failure_is_silent(monkeypatch: pytest.MonkeyPatch):
     """A read-only path should not crash the CLI on write."""
     monkeypatch.setenv("NAT_TELEMETRY_CONSENT_FILE", "/proc/never-writable/telemetry.toml")
