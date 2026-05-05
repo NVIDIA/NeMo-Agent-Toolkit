@@ -31,7 +31,7 @@ from pydantic import ValidationError
     ids=["default", "empty_api_key", "provided_api_key"],
 )
 def test_api_key_is_secret_str(constructor_args: dict):
-    from nat.plugins.langchain.tools.perplexity_internet_search import PerplexityInternetSearchToolConfig
+    from nat.tool.perplexity_internet_search import PerplexityInternetSearchToolConfig
 
     expected_api_key = constructor_args.get("api_key", "")
 
@@ -43,7 +43,7 @@ def test_api_key_is_secret_str(constructor_args: dict):
 
 
 def test_default_api_key_is_unique_instance():
-    from nat.plugins.langchain.tools.perplexity_internet_search import PerplexityInternetSearchToolConfig
+    from nat.tool.perplexity_internet_search import PerplexityInternetSearchToolConfig
 
     config1 = PerplexityInternetSearchToolConfig()
     config2 = PerplexityInternetSearchToolConfig()
@@ -52,28 +52,28 @@ def test_default_api_key_is_unique_instance():
 
 
 def test_max_retries_rejects_zero():
-    from nat.plugins.langchain.tools.perplexity_internet_search import PerplexityInternetSearchToolConfig
+    from nat.tool.perplexity_internet_search import PerplexityInternetSearchToolConfig
 
     with pytest.raises(ValidationError):
         PerplexityInternetSearchToolConfig(max_retries=0)
 
 
 def test_max_results_rejects_zero():
-    from nat.plugins.langchain.tools.perplexity_internet_search import PerplexityInternetSearchToolConfig
+    from nat.tool.perplexity_internet_search import PerplexityInternetSearchToolConfig
 
     with pytest.raises(ValidationError):
         PerplexityInternetSearchToolConfig(max_results=0)
 
 
 def test_max_results_rejects_above_20():
-    from nat.plugins.langchain.tools.perplexity_internet_search import PerplexityInternetSearchToolConfig
+    from nat.tool.perplexity_internet_search import PerplexityInternetSearchToolConfig
 
     with pytest.raises(ValidationError):
         PerplexityInternetSearchToolConfig(max_results=21)
 
 
 def test_invalid_search_recency_filter_rejected():
-    from nat.plugins.langchain.tools.perplexity_internet_search import PerplexityInternetSearchToolConfig
+    from nat.tool.perplexity_internet_search import PerplexityInternetSearchToolConfig
 
     with pytest.raises(ValidationError):
         PerplexityInternetSearchToolConfig(search_recency_filter="invalid")
@@ -84,7 +84,7 @@ def test_invalid_search_recency_filter_rejected():
 
 @pytest.fixture
 def tool_config():
-    from nat.plugins.langchain.tools.perplexity_internet_search import PerplexityInternetSearchToolConfig
+    from nat.tool.perplexity_internet_search import PerplexityInternetSearchToolConfig
 
     return PerplexityInternetSearchToolConfig(api_key="test-key", max_retries=2, max_query_length=50)
 
@@ -106,8 +106,8 @@ def _mock_async_client(post_mock: AsyncMock):
 
 
 async def test_empty_key_returns_unavailable():
-    from nat.plugins.langchain.tools.perplexity_internet_search import PerplexityInternetSearchToolConfig
-    from nat.plugins.langchain.tools.perplexity_internet_search import perplexity_internet_search
+    from nat.tool.perplexity_internet_search import PerplexityInternetSearchToolConfig
+    from nat.tool.perplexity_internet_search import perplexity_internet_search
 
     config = PerplexityInternetSearchToolConfig(api_key="")
     with patch.dict(os.environ, {"PERPLEXITY_API_KEY": ""}):
@@ -118,14 +118,14 @@ async def test_empty_key_returns_unavailable():
 
 
 async def test_query_truncation(tool_config):
-    from nat.plugins.langchain.tools.perplexity_internet_search import perplexity_internet_search
+    from nat.tool.perplexity_internet_search import perplexity_internet_search
 
     long_query = "a" * 100  # exceeds max_query_length=50
     post_mock = AsyncMock(return_value=_mock_response([]))
     mock_context_manager, mock_client = _mock_async_client(post_mock)
 
     with patch(
-        "nat.plugins.langchain.tools.perplexity_internet_search.httpx.AsyncClient", return_value=mock_context_manager
+        "nat.tool.perplexity_internet_search.httpx.AsyncClient", return_value=mock_context_manager
     ):
         async with perplexity_internet_search(tool_config, None) as func_info:
             await func_info.single_fn(long_query)
@@ -138,13 +138,13 @@ async def test_query_truncation(tool_config):
 
 
 async def test_empty_results(tool_config):
-    from nat.plugins.langchain.tools.perplexity_internet_search import perplexity_internet_search
+    from nat.tool.perplexity_internet_search import perplexity_internet_search
 
     post_mock = AsyncMock(return_value=_mock_response([]))
     mock_context_manager, _ = _mock_async_client(post_mock)
 
     with patch(
-        "nat.plugins.langchain.tools.perplexity_internet_search.httpx.AsyncClient", return_value=mock_context_manager
+        "nat.tool.perplexity_internet_search.httpx.AsyncClient", return_value=mock_context_manager
     ):
         async with perplexity_internet_search(tool_config, None) as func_info:
             result = await func_info.single_fn("test query")
@@ -152,17 +152,17 @@ async def test_empty_results(tool_config):
 
 
 async def test_retries_on_exception(tool_config):
-    from nat.plugins.langchain.tools.perplexity_internet_search import perplexity_internet_search
+    from nat.tool.perplexity_internet_search import perplexity_internet_search
 
     post_mock = AsyncMock(side_effect=Exception("API error"))
     mock_context_manager, mock_client = _mock_async_client(post_mock)
 
     with (
         patch(
-            "nat.plugins.langchain.tools.perplexity_internet_search.httpx.AsyncClient",
+            "nat.tool.perplexity_internet_search.httpx.AsyncClient",
             return_value=mock_context_manager,
         ),
-        patch("nat.plugins.langchain.tools.perplexity_internet_search.asyncio.sleep", new_callable=AsyncMock),
+        patch("nat.tool.perplexity_internet_search.asyncio.sleep", new_callable=AsyncMock),
     ):
         async with perplexity_internet_search(tool_config, None) as func_info:
             result = await func_info.single_fn("test query")
@@ -173,13 +173,13 @@ async def test_retries_on_exception(tool_config):
 
 
 async def test_attribution_header_sent(tool_config):
-    from nat.plugins.langchain.tools.perplexity_internet_search import perplexity_internet_search
+    from nat.tool.perplexity_internet_search import perplexity_internet_search
 
     post_mock = AsyncMock(return_value=_mock_response([]))
     mock_context_manager, mock_client = _mock_async_client(post_mock)
 
     with patch(
-        "nat.plugins.langchain.tools.perplexity_internet_search.httpx.AsyncClient", return_value=mock_context_manager
+        "nat.tool.perplexity_internet_search.httpx.AsyncClient", return_value=mock_context_manager
     ):
         async with perplexity_internet_search(tool_config, None) as func_info:
             await func_info.single_fn("test query")
@@ -189,7 +189,7 @@ async def test_attribution_header_sent(tool_config):
 
 
 async def test_results_formatted_as_documents(tool_config):
-    from nat.plugins.langchain.tools.perplexity_internet_search import perplexity_internet_search
+    from nat.tool.perplexity_internet_search import perplexity_internet_search
 
     post_mock = AsyncMock(
         return_value=_mock_response(
@@ -208,7 +208,7 @@ async def test_results_formatted_as_documents(tool_config):
     mock_context_manager, _ = _mock_async_client(post_mock)
 
     with patch(
-        "nat.plugins.langchain.tools.perplexity_internet_search.httpx.AsyncClient", return_value=mock_context_manager
+        "nat.tool.perplexity_internet_search.httpx.AsyncClient", return_value=mock_context_manager
     ):
         async with perplexity_internet_search(tool_config, None) as func_info:
             result = await func_info.single_fn("test query")

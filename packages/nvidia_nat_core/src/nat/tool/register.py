@@ -21,6 +21,7 @@ from . import datetime_tools
 from . import document_search
 from . import github_tools
 from . import nvidia_rag
+from . import perplexity_internet_search
 from . import retriever
 from . import server_tools
 from .code_execution import register

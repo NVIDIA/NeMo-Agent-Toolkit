@@ -199,10 +199,10 @@ workflow:
 
 ### Using Perplexity Search
 
-The `perplexity_internet_search` tool is also part of the `nvidia-nat[langchain]` package. If you haven't already installed it:
+The `perplexity_internet_search` tool ships with the core `nvidia-nat` package and is framework-agnostic — it can be used with any of the agent frameworks supported by NAT (`langchain`, `llama_index`, `crewai`, `semantic_kernel`, `agno`, `adk`, `strands`, and `autogen`). No framework-specific extra is required to install it:
 ```bash
 # local package install from source
-uv pip install -e ".[langchain]"
+uv pip install -e .
 ```
 
 Prior to using the `perplexity_internet_search` tool, create a Perplexity account and obtain an API key from the [API key page](https://www.perplexity.ai/account/api/keys). Once obtained, set the `PERPLEXITY_API_KEY` environment variable to the API key:

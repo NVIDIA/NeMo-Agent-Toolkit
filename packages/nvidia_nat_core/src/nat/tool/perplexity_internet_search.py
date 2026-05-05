@@ -67,18 +67,30 @@ def _get_integration_header() -> str:
 
     Returns:
         str: A ``"nemo-agent-toolkit/<version>"`` slug. Falls back to ``"unknown"``
-        when the ``nvidia-nat-langchain`` package metadata cannot be resolved.
+        when the ``nvidia-nat`` package metadata cannot be resolved.
     """
     from importlib import metadata
 
     try:
-        package_version = metadata.version("nvidia-nat-langchain")
+        package_version = metadata.version("nvidia-nat")
     except metadata.PackageNotFoundError:
         package_version = "unknown"
     return f"nemo-agent-toolkit/{package_version}"
 
 
-@register_function(config_type=PerplexityInternetSearchToolConfig, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
+@register_function(
+    config_type=PerplexityInternetSearchToolConfig,
+    framework_wrappers=[
+        LLMFrameworkEnum.LANGCHAIN,
+        LLMFrameworkEnum.LLAMA_INDEX,
+        LLMFrameworkEnum.CREWAI,
+        LLMFrameworkEnum.SEMANTIC_KERNEL,
+        LLMFrameworkEnum.AGNO,
+        LLMFrameworkEnum.ADK,
+        LLMFrameworkEnum.STRANDS,
+        LLMFrameworkEnum.AUTOGEN,
+    ],
+)
 async def perplexity_internet_search(tool_config: PerplexityInternetSearchToolConfig, builder: Builder):
     """Register the Perplexity internet search tool with the NAT runtime.
 
@@ -87,6 +99,10 @@ async def perplexity_internet_search(tool_config: PerplexityInternetSearchToolCo
     wrapping an async coroutine that calls Perplexity's Search API
     (``POST https://api.perplexity.ai/search``) with retry/backoff and formats
     results as ``<Document>`` blocks suitable for LLM consumption.
+
+    The tool is framework-agnostic (uses raw ``httpx``) and is registered with
+    every framework wrapper in :class:`LLMFrameworkEnum` so it can be consumed
+    by any NAT-supported agent framework.
 
     Args:
         tool_config: ``PerplexityInternetSearchToolConfig`` carrying API key,
