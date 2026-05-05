@@ -154,15 +154,18 @@ def render_prompt() -> str:
             "    nat configure telemetry --enable | --disable | --status\n"
             "    or set NAT_TELEMETRY_ENABLED=true|false in your environment.\n"
             "===========================================================\n"
-            "Allow anonymous telemetry? [y/N]: ")
+            "Allow anonymous telemetry? [Y/n]: ")
 
 
 def prompt_user() -> ConsentState:
     """Display the consent prompt and read the user's answer.
 
-    Returns ENABLED only on an explicit ``y`` / ``yes``. Anything else —
-    including pressing enter, ``n``, EOF, or KeyboardInterrupt — yields
-    DISABLED. Conservative-by-default: silence equals "no thanks."
+    Returns ENABLED on an explicit ``y`` / ``yes`` or on an empty line
+    (just pressing Enter, matching the ``[Y/n]`` default). Returns
+    DISABLED on ``n`` / ``no``, on any other input, or on EOF /
+    KeyboardInterrupt. The decision is always persisted by the caller,
+    so a hostile interrupt is treated as "no thanks" rather than
+    re-prompting indefinitely.
     """
     try:
         sys.stderr.write(render_prompt())
@@ -170,7 +173,7 @@ def prompt_user() -> ConsentState:
         answer = input().strip().lower()
     except (EOFError, KeyboardInterrupt):
         return ConsentState.DISABLED
-    if answer in ("y", "yes"):
+    if answer in ("", "y", "yes"):
         return ConsentState.ENABLED
     return ConsentState.DISABLED
 

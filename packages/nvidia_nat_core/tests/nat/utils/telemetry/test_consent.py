@@ -192,9 +192,12 @@ def test_maybe_prompt_updates_live_telemetry_enabled_flag(consent_file: Path, mo
         ("Y", ConsentState.ENABLED),
         ("yes", ConsentState.ENABLED),
         ("YES", ConsentState.ENABLED),
+        ("", ConsentState.ENABLED),  # default yes on enter ([Y/n])
+        ("   ", ConsentState.ENABLED),  # whitespace-only line is also "just Enter"
         ("n", ConsentState.DISABLED),
+        ("N", ConsentState.DISABLED),
         ("no", ConsentState.DISABLED),
-        ("", ConsentState.DISABLED),  # default no on enter
+        ("NO", ConsentState.DISABLED),
         ("garbage", ConsentState.DISABLED),
     ])
 def test_prompt_user_interprets_answers(answer: str, expected: ConsentState):
@@ -229,3 +232,11 @@ def test_prompt_text_lists_what_is_collected_and_not_collected():
     assert "user-supplied" in text or "user input" in text
     assert "NAT_TELEMETRY_ENABLED" in text
     assert "nat configure telemetry" in text
+
+
+def test_prompt_text_uses_default_yes_bracket():
+    """Pressing Enter must accept (default-yes). The visual ``[Y/n]`` cue
+    has to match the parsing in ``prompt_user``; this test ties them
+    together so a future flip back to default-no is impossible to do
+    halfway."""
+    assert "[Y/n]" in consent.render_prompt()

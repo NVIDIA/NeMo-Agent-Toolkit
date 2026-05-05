@@ -31,11 +31,13 @@ Environment variables
 - ``NAT_TELEMETRY_ENABLED`` (no default — first-run prompt or persisted
   consent decides): master opt-out switch. Accepts ``1``/``true``/``yes``
   (case-insensitive); anything else disables.
-- ``NAT_TELEMETRY_ENDPOINT`` (default: empty): destination for telemetry
-  payloads. When empty, no HTTP request is issued; events are still built
-  and validated, which keeps the path exercised during local development.
-  The literal value ``stdout`` writes JSON-line payloads to stderr
-  instead of issuing HTTP POSTs.
+- ``NAT_TELEMETRY_ENDPOINT`` (default:
+  ``https://events.telemetry.data.nvidia.com/v1.1/events/json``):
+  destination for telemetry payloads. The default points at the shared
+  NeMo Usage Telemetry production ingest. Set to the empty string to
+  build payloads locally without issuing any HTTP request, or to the
+  literal value ``stdout`` to write JSON-line payloads to stderr for
+  inspection.
 - ``NAT_SESSION_PREFIX`` (default: unset): optional prefix prepended to
   every session ID. Useful for tagging dev/CI runs.
 - ``NAT_TELEMETRY_DRY_RUN`` (default: ``false``): when truthy, payloads
@@ -64,12 +66,18 @@ CPU_ARCHITECTURE = platform.uname().machine
 
 # Default ingest endpoint for NAT.
 #
-# Intentionally blank: an owned ingest URL has not been provisioned yet. With
-# no endpoint configured, the handler builds and validates payloads but does
-# not issue any HTTP request, which keeps the code path exercised for local
-# development. Set ``NAT_TELEMETRY_ENDPOINT=stdout`` to inspect payloads, or
-# point at a real endpoint once one is available.
-DEFAULT_NAT_TELEMETRY_ENDPOINT = ""
+# Mirrors the production URL used by ``nemo-telemetry/telemetry.py`` (the
+# canonical reference handler for the shared NeMo Usage Telemetry project).
+# Sending is still gated behind opt-in consent (``TELEMETRY_ENABLED``); the
+# default endpoint only matters once the user has consented.
+#
+# Override paths:
+# - ``NAT_TELEMETRY_ENDPOINT=""`` — build and validate payloads locally
+#   without issuing any HTTP request. Useful for offline development.
+# - ``NAT_TELEMETRY_ENDPOINT=stdout`` — write JSON-line payloads to stderr
+#   for inspection. Useful for verifying the wire shape.
+# - any other URL — point at a custom ingest (e.g. UAT for stage testing).
+DEFAULT_NAT_TELEMETRY_ENDPOINT = "https://events.telemetry.data.nvidia.com/v1.1/events/json"
 
 STDOUT_ENDPOINT_SENTINEL = "stdout"
 """When ``NAT_TELEMETRY_ENDPOINT`` equals this value, payloads are written to

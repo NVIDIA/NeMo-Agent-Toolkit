@@ -167,13 +167,11 @@ Before getting started, it's possible to run this simple workflow and many other
 
 ## 📊 Telemetry
 
-The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation.
-
-> **Note**: An ingest endpoint has not been provisioned yet, so by default no telemetry is sent over the network. The collection path is exercised locally and can be inspected through the debug modes below. A future release will set a default endpoint.
+The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation. Once you opt in (see below), events are sent to the shared NeMo Usage Telemetry ingest at `https://events.telemetry.data.nvidia.com/v1.1/events/json`. To override or disable network sends without opting out of the prompt, set `NAT_TELEMETRY_ENDPOINT` (see *Local debugging* below).
 
 ### How consent works
 
-The NeMo Agent Toolkit does not send any telemetry until you have explicitly opted in. The first time you run an interactive `nat` command, you'll see a one-time consent prompt explaining what is collected and asking whether to allow it. Your decision is persisted to `~/.config/nat/telemetry.toml` and respected on every subsequent invocation.
+The first time you run an interactive `nat` command, you'll see a one-time consent prompt explaining what is collected and asking whether to allow it. The prompt defaults to **yes** (pressing Enter accepts); type `n` to opt out. Your decision is persisted to `~/.config/nat/telemetry.toml` and respected on every subsequent invocation.
 
 In **non-interactive contexts** (CI, cron, piped scripts, daemons), telemetry is **always off** unless you explicitly enable it via the environment variable below. We never send data when there's no opportunity to ask.
 
