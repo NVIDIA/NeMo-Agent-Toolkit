@@ -1756,6 +1756,11 @@ dependencies = [
     { name = "pydantic" },
 ]
 
+[package.optional-dependencies]
+full = [
+    { name = "jsonschema" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "jsonschema", marker = "extra == 'full'", specifier = ">=4.0" },
@@ -1874,6 +1879,7 @@ name = "nvidia-nat-harbor"
 source = { editable = "." }
 dependencies = [
     { name = "harbor" },
+    { name = "nvidia-nat-atif", extra = ["full"] },
     { name = "nvidia-nat-core" },
     { name = "nvidia-nat-eval" },
 ]
@@ -1888,6 +1894,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "harbor", specifier = ">=0.5.0" },
+    { name = "nvidia-nat-atif", extras = ["full"], specifier = "==1.7.0.dev28+g1ec6fe20" },
     { name = "nvidia-nat-core", editable = "../nvidia_nat_core" },
     { name = "nvidia-nat-eval", editable = "../nvidia_nat_eval" },
     { name = "nvidia-nat-langchain", marker = "extra == 'test'", editable = "../nvidia_nat_langchain" },

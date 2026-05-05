@@ -27,6 +27,8 @@ class OpenCodeNeMoFlow(OpenCode):
     _DEFAULT_CONTAINER_NEMO_FLOW_DIR = "/opt/nemo-flow"
     _DEFAULT_ATOF_DIR = "/logs/agent/nemo-flow-atof"
     _DEFAULT_ATIF_DIR = "/logs/agent/nemo-flow-atif"
+    _CONVERTED_ATIF_DIR_NAME = "nemo-flow-atof-atif"
+    _CONVERTED_ATIF_FILENAME = "trajectory.json"
     _DEFAULT_TASK_DIR = "/testbed"
 
     def __init__(
@@ -36,6 +38,8 @@ class OpenCodeNeMoFlow(OpenCode):
         container_nemo_flow_dir: str = _DEFAULT_CONTAINER_NEMO_FLOW_DIR,
         fail_missing_nemoflow_atof: bool = True,
         fail_missing_nemoflow_atif: bool = False,
+        convert_nemoflow_atof: bool = True,
+        fail_nemoflow_atof_conversion: bool = True,
         opencode_config: dict[str, Any] | None = None,
         **kwargs: Any,
     ):
@@ -50,6 +54,8 @@ class OpenCodeNeMoFlow(OpenCode):
         self._container_nemo_flow_dir = container_nemo_flow_dir.rstrip("/")
         self._fail_missing_nemoflow_atof = fail_missing_nemoflow_atof
         self._fail_missing_nemoflow_atif = fail_missing_nemoflow_atif
+        self._convert_nemoflow_atof = convert_nemoflow_atof
+        self._fail_nemoflow_atof_conversion = fail_nemoflow_atof_conversion
 
     @staticmethod
     def name() -> str:
@@ -127,8 +133,8 @@ class OpenCodeNeMoFlow(OpenCode):
         )
         await self.exec_as_root(
             environment,
-            command=
-            f"mkdir -p {shlex.quote(self._container_nemo_flow_dir)} && chmod 777 {shlex.quote(self._container_nemo_flow_dir)}",
+            command=(f"mkdir -p {shlex.quote(self._container_nemo_flow_dir)} && "
+                     f"chmod 777 {shlex.quote(self._container_nemo_flow_dir)}"),
         )
         await environment.upload_dir(
             source_dir=upload_tree,
@@ -221,11 +227,54 @@ class OpenCodeNeMoFlow(OpenCode):
         atof_path = self.logs_dir / "nemo-flow-atof" / "events.jsonl"
         atif_dir = self.logs_dir / "nemo-flow-atif"
         atif_files = sorted(atif_dir.glob("*.json")) if atif_dir.exists() else []
+        converted_atif_path = self.logs_dir / self._CONVERTED_ATIF_DIR_NAME / self._CONVERTED_ATIF_FILENAME
 
         if self._fail_missing_nemoflow_atof and not atof_path.exists():
             raise FileNotFoundError(f"Missing NeMo-Flow ATOF JSONL artifact: {atof_path}")
         if self._fail_missing_nemoflow_atif and not atif_files:
             raise FileNotFoundError(f"Missing NeMo-Flow ATIF artifact under: {atif_dir}")
+
+        if self._convert_nemoflow_atof and atof_path.exists():
+            try:
+                self._convert_atof_to_atif(atof_path, converted_atif_path)
+            except Exception as exc:
+                self.logger.exception("Failed to convert NeMo-Flow ATOF artifact to ATIF")
+                if self._fail_nemoflow_atof_conversion:
+                    raise RuntimeError(f"Failed to convert NeMo-Flow ATOF artifact to ATIF: {atof_path}") from exc
+
+        self._record_nemoflow_artifacts(
+            context,
+            atof_path=atof_path,
+            native_atif_files=atif_files,
+            converted_atif_path=converted_atif_path,
+        )
+
+    def _convert_atof_to_atif(self, atof_path: Path, output_path: Path) -> Path:
+        try:
+            from nat.atof.scripts.atof_to_atif_converter import convert_file
+        except ImportError as exc:
+            raise RuntimeError("The ATOF-to-ATIF converter is unavailable. Install nvidia-nat-atif[full].") from exc
+
+        trajectory = convert_file(atof_path, output_path)
+        steps_count = len(getattr(trajectory, "steps", []) or [])
+        self.logger.debug("Wrote ATOF-derived ATIF trajectory to %s with %s steps", output_path, steps_count)
+        return output_path
+
+    def _record_nemoflow_artifacts(
+        self,
+        context: AgentContext,
+        *,
+        atof_path: Path,
+        native_atif_files: list[Path],
+        converted_atif_path: Path,
+    ) -> None:
+        metadata = dict(context.metadata or {})
+        metadata["nemo_flow_atof_path"] = str(atof_path)
+        metadata["nemo_flow_atof_exists"] = atof_path.exists()
+        metadata["nemo_flow_native_atif_paths"] = [str(path) for path in native_atif_files]
+        metadata["nemo_flow_converted_atif_path"] = str(converted_atif_path)
+        metadata["nemo_flow_converted_atif_exists"] = converted_atif_path.exists()
+        context.metadata = metadata
 
     def _build_provider_env(self, provider: str) -> dict[str, str]:
         keys: list[str]
