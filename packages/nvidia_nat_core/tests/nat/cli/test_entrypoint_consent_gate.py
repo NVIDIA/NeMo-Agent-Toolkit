@@ -23,9 +23,31 @@ request.
 """
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from nat.cli import entrypoint
+
+
+@pytest.fixture
+def _restore_nat_logger_level():
+    """Restore the ``nat`` logger level around tests that invoke the real CLI.
+
+    The root ``cli`` callback calls ``setup_logging()`` and then pins
+    ``logging.getLogger("nat").setLevel(numeric_level)`` (default INFO).
+    That mutation persists globally and leaks into later tests: any
+    subsequent ``caplog.at_level(logging.DEBUG)`` against a ``nat.*``
+    child logger silently fails because the parent ``nat`` logger
+    filters DEBUG before propagation. Snapshot/restore the level so the
+    pollution stays inside this file.
+    """
+    nat_logger = logging.getLogger("nat")
+    original_level = nat_logger.level
+    try:
+        yield
+    finally:
+        nat_logger.setLevel(original_level)
 
 
 @pytest.mark.parametrize(
@@ -57,7 +79,7 @@ def test_is_invoking_configure_telemetry(monkeypatch, argv, invoked, expected):
     assert entrypoint._is_invoking_configure_telemetry(invoked) is expected
 
 
-def test_root_callback_skips_prompt_for_configure_telemetry(monkeypatch):
+def test_root_callback_skips_prompt_for_configure_telemetry(monkeypatch, _restore_nat_logger_level):
     """The root ``cli`` callback must not call ``maybe_prompt_for_consent``
     when the invoked path is ``nat configure telemetry``."""
     from click.testing import CliRunner
@@ -79,7 +101,7 @@ def test_root_callback_skips_prompt_for_configure_telemetry(monkeypatch):
     assert prompt_calls == []  # prompt SUPPRESSED for configure-telemetry
 
 
-def test_root_callback_prompts_for_other_commands(monkeypatch):
+def test_root_callback_prompts_for_other_commands(monkeypatch, _restore_nat_logger_level):
     """Any non-configure-telemetry path must still trigger
     ``maybe_prompt_for_consent`` (whose own short-circuits then decide
     whether to actually display anything)."""
