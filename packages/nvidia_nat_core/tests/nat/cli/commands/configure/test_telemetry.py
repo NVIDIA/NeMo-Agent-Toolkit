@@ -101,3 +101,42 @@ def test_enable_warns_when_env_var_will_override(consent_file: Path, monkeypatch
     assert read_persisted_consent() == ConsentState.ENABLED
     assert "NAT_TELEMETRY_ENABLED" in result.output
     assert "override" in result.output
+
+
+def test_disable_fails_loudly_when_persistence_silently_drops(consent_file: Path,
+                                                              monkeypatch: pytest.MonkeyPatch):
+    """If ``write_persisted_consent`` silently swallows a write failure
+    (e.g. read-only filesystem), the configure subcommand must NOT
+    falsely report success — that would leave a previously-enabled user
+    confidently believing they opted out while the next invocation still
+    emits."""
+    from nat.cli.commands.configure import telemetry as telemetry_module
+
+    def fake_write(_state):
+        # Simulate a swallowed failure: pretend the write happened, but
+        # the persisted state remains whatever was there before
+        # (NEVER_ASKED here, since the consent_file fixture starts empty).
+        pass
+
+    monkeypatch.setattr(telemetry_module, "write_persisted_consent", fake_write)
+    monkeypatch.delenv("NAT_TELEMETRY_ENABLED", raising=False)
+
+    runner = CliRunner()
+    result = runner.invoke(telemetry_command, ["--disable"])
+    assert result.exit_code != 0, "Configure must fail when persistence didn't take effect"
+    assert "Failed to persist telemetry consent" in result.output
+    assert "your previous decision is unchanged" in result.output.lower()
+
+
+def test_enable_fails_loudly_when_persistence_silently_drops(consent_file: Path,
+                                                             monkeypatch: pytest.MonkeyPatch):
+    """Symmetric to the --disable case."""
+    from nat.cli.commands.configure import telemetry as telemetry_module
+
+    monkeypatch.setattr(telemetry_module, "write_persisted_consent", lambda _state: None)
+    monkeypatch.delenv("NAT_TELEMETRY_ENABLED", raising=False)
+
+    runner = CliRunner()
+    result = runner.invoke(telemetry_command, ["--enable"])
+    assert result.exit_code != 0
+    assert "Failed to persist telemetry consent" in result.output

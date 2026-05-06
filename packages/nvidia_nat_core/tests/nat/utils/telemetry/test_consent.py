@@ -73,27 +73,46 @@ def test_read_handles_unrecognized_consent_value(consent_file: Path):
     assert consent.read_persisted_consent() == ConsentState.NEVER_ASKED
 
 
-def test_read_returns_never_asked_for_stale_prompt_version(consent_file: Path):
-    """A consent recorded under an older prompt language must trigger a
-    re-prompt — bumping PROMPT_VERSION is the privacy escape hatch for
-    materially-changed disclosures."""
+def test_read_returns_never_asked_for_stale_enabled(consent_file: Path):
+    """Stale ENABLED → re-prompt under the new disclosure. A "yes" from
+    a previous prompt version should not silently authorize collection
+    under a (potentially broader) new disclosure."""
     consent_file.write_text('[telemetry]\n'
                             'consent = "enabled"\n'
                             'prompt_version = "0.0-ancient"\n')
     assert consent.read_persisted_consent() == ConsentState.NEVER_ASKED
 
 
-def test_read_returns_never_asked_when_prompt_version_missing(consent_file: Path):
-    """A consent file without prompt_version cannot be matched to the
-    disclosure the user saw — re-prompt to be safe."""
+def test_read_returns_disabled_for_stale_disabled(consent_file: Path):
+    """**Critical privacy invariant:** a user who explicitly opted out
+    under ANY version of the prompt remains opted out. Re-prompting them
+    combined with the default-yes prompt would be a silent opt-in flip —
+    the worst possible privacy regression."""
+    consent_file.write_text('[telemetry]\n'
+                            'consent = "disabled"\n'
+                            'prompt_version = "0.0-ancient"\n')
+    assert consent.read_persisted_consent() == ConsentState.DISABLED
+
+
+def test_read_returns_never_asked_for_enabled_missing_prompt_version(consent_file: Path):
+    """ENABLED without a prompt_version cannot be matched to a disclosure;
+    re-prompt to be safe (still asymmetric: enabled → re-prompt)."""
     consent_file.write_text('[telemetry]\n'
                             'consent = "enabled"\n')
     assert consent.read_persisted_consent() == ConsentState.NEVER_ASKED
 
 
+def test_read_returns_disabled_for_disabled_missing_prompt_version(consent_file: Path):
+    """DISABLED without a prompt_version still preserves the opt-out.
+    Same trust invariant as the stale-version case."""
+    consent_file.write_text('[telemetry]\n'
+                            'consent = "disabled"\n')
+    assert consent.read_persisted_consent() == ConsentState.DISABLED
+
+
 def test_read_returns_state_when_prompt_version_matches(consent_file: Path):
     """Sanity check: a consent file written under the current prompt
-    version is honored."""
+    version is honored as-is."""
     consent_file.write_text('[telemetry]\n'
                             'consent = "disabled"\n'
                             f'prompt_version = "{consent.PROMPT_VERSION}"\n')

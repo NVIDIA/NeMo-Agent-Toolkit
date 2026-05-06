@@ -40,12 +40,12 @@ from nat.utils.telemetry.consent import write_persisted_consent
 def telemetry_command(action: str) -> None:
     """Manage NAT telemetry consent."""
     if action == "enable":
-        write_persisted_consent(ConsentState.ENABLED)
+        _persist_and_verify(ConsentState.ENABLED)
         click.echo(f"Telemetry enabled. Persisted to {_consent_file_path()}.")
         _warn_on_env_var_override()
         return
     if action == "disable":
-        write_persisted_consent(ConsentState.DISABLED)
+        _persist_and_verify(ConsentState.DISABLED)
         click.echo(f"Telemetry disabled. Persisted to {_consent_file_path()}.")
         _warn_on_env_var_override()
         return
@@ -68,6 +68,34 @@ def telemetry_command(action: str) -> None:
     click.echo("Effective: disabled (source: default — no decision recorded yet)")
     click.echo("Run 'nat configure telemetry --enable' or '--disable' to record a decision,")
     click.echo("or any other 'nat' command interactively to be prompted.")
+
+
+def _persist_and_verify(state: ConsentState) -> None:
+    """Persist ``state`` and read it back to confirm it actually landed.
+
+    ``write_persisted_consent`` swallows write failures by design (the
+    interactive consent flow can tolerate a re-prompt next run). The
+    explicit ``nat configure telemetry --enable | --disable`` path
+    cannot tolerate that: a failed write would leave the user
+    confidently believing they opted out while the next invocation
+    still emits. Verify the readback and surface a hard error if the
+    state did not land.
+
+    A readback mismatch usually means filesystem permission issues, a
+    full disk, or an env var overriding the persisted decision (we
+    don't fail on env override — that's reported separately by
+    ``_warn_on_env_var_override``; we only fail on outright persistence
+    failure).
+    """
+    write_persisted_consent(state)
+    actual = read_persisted_consent()
+    if actual != state:
+        raise click.ClickException(
+            f"Failed to persist telemetry consent to {_consent_file_path()}. "
+            f"Expected {state.value!r}, file reads {actual.value!r}. "
+            "Check filesystem permissions and disk space; your previous "
+            "decision is unchanged."
+        )
 
 
 def _warn_on_env_var_override() -> None:

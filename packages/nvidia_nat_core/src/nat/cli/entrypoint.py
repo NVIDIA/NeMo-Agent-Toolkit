@@ -31,15 +31,25 @@ import click
 import nest_asyncio2
 from dotenv import load_dotenv
 
-from nat.utils.log_levels import LOG_LEVELS
-from nat.utils.log_utils import setup_logging as log_utils_setup_logging
-from nat.utils.telemetry import maybe_prompt_for_consent
-
-from .plugin_loader import discover_and_load_cli_plugins
-from .telemetry_hook import record_invocation_start
-
-# Load environment variables from .env file, if it exists
+# Load .env BEFORE any ``nat.utils.telemetry`` import. The telemetry config
+# module snapshots NAT_TELEMETRY_ENABLED / NAT_TELEMETRY_ENDPOINT /
+# NAT_TELEMETRY_DRY_RUN / NAT_SESSION_PREFIX at import time. If ``.env``
+# loads after that import, the snapshot is taken with the wrong values:
+# ``maybe_prompt_for_consent`` then sees the post-load env (and short-
+# circuits the prompt) while ``config.TELEMETRY_ENABLED`` still reflects
+# the pre-load state — silent no-emit despite the user explicitly opting
+# in via ``.env``.
 load_dotenv()
+
+# Same hazard applies to plugin loading: a plugin module that imports
+# ``nat.utils.telemetry`` would trigger the snapshot. ``load_dotenv`` runs
+# above so we're safe regardless of load order below.
+from nat.utils.log_levels import LOG_LEVELS  # noqa: E402
+from nat.utils.log_utils import setup_logging as log_utils_setup_logging  # noqa: E402
+from nat.utils.telemetry import maybe_prompt_for_consent  # noqa: E402
+
+from .plugin_loader import discover_and_load_cli_plugins  # noqa: E402
+from .telemetry_hook import record_invocation_start  # noqa: E402
 
 # Apply at the beginning of the file to avoid issues with asyncio
 nest_asyncio2.apply()

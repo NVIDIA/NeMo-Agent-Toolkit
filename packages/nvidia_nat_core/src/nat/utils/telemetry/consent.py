@@ -74,24 +74,27 @@ def _consent_file_path() -> Path:
 def read_persisted_consent() -> ConsentState:
     """Read the user's persisted consent decision, if any.
 
-    Returns the persisted ``ConsentState`` only when **both** of the
-    following hold:
+    Asymmetric ``prompt_version`` gating, designed around user trust:
 
-    1. ``[telemetry].consent`` is one of the two terminal states
-       (``"enabled"`` / ``"disabled"``).
-    2. ``[telemetry].prompt_version`` matches the current
-       :data:`PROMPT_VERSION`.
+    - **Current ``prompt_version``**: return the persisted state as-is.
+    - **Stale or missing ``prompt_version`` with ``consent = "disabled"``**:
+      return ``DISABLED``. A user who explicitly opted out under any
+      version of the prompt must remain opted out — we never silently
+      re-enable telemetry for someone who said no, even if we materially
+      change the disclosure.
+    - **Stale or missing ``prompt_version`` with ``consent = "enabled"``**:
+      return ``NEVER_ASKED`` to force a re-prompt under the new
+      disclosure. A stale "yes" from a previous prompt version should
+      not silently authorize collection under a new (potentially
+      broader) disclosure.
+    - **File missing, malformed, or unrecognized consent value**: return
+      ``NEVER_ASKED``.
 
-    The version gate is the privacy escape hatch: if we materially change
-    what the prompt discloses (e.g. add a new collected field, change
-    endpoints), bumping :data:`PROMPT_VERSION` automatically forces a
-    re-prompt for users who consented under the old language. Without
-    this, a stale "yes" from v1.0 would silently authorize collection
-    under v1.1's disclosure.
-
-    Returns ``ConsentState.NEVER_ASKED`` when the file is missing,
-    malformed, the consent value is unrecognized, or the persisted
-    ``prompt_version`` is missing or mismatched.
+    The asymmetry is the key: re-prompting an already-disabled user
+    combined with the default-yes prompt would be a silent opt-in flip
+    — the worst possible privacy regression. Re-prompting an
+    already-enabled user is conservative and respects the new
+    disclosure.
     """
     path = _consent_file_path()
     if not path.exists():
@@ -103,16 +106,32 @@ def read_persisted_consent() -> ConsentState:
         section = data.get("telemetry", {})
         consent = section.get("consent")
         prompt_version = section.get("prompt_version")
-        if (prompt_version == PROMPT_VERSION and consent in (ConsentState.ENABLED.value, ConsentState.DISABLED.value)):
+
+        if consent not in (ConsentState.ENABLED.value, ConsentState.DISABLED.value):
+            return ConsentState.NEVER_ASKED
+
+        if prompt_version == PROMPT_VERSION:
             return ConsentState(consent)
-        if prompt_version is not None and prompt_version != PROMPT_VERSION:
+
+        # Stale or missing prompt_version: asymmetric handling.
+        if consent == ConsentState.DISABLED.value:
             logger.debug(
-                "Persisted consent at %s was recorded under prompt_version %r; "
-                "current is %r — treating as NEVER_ASKED to force re-prompt.",
+                "Persisted consent at %s was DISABLED under prompt_version %r "
+                "(current %r); keeping DISABLED — never silently re-opt-in.",
                 path,
                 prompt_version,
                 PROMPT_VERSION,
             )
+            return ConsentState.DISABLED
+
+        logger.debug(
+            "Persisted consent at %s was ENABLED under prompt_version %r "
+            "(current %r); treating as NEVER_ASKED to force re-prompt under "
+            "the new disclosure.",
+            path,
+            prompt_version,
+            PROMPT_VERSION,
+        )
     except Exception:  # noqa: BLE001 - defensive; never let consent reading break the CLI
         logger.debug("Failed to read consent file at %s", path, exc_info=True)
     return ConsentState.NEVER_ASKED
