@@ -301,3 +301,12 @@ rm -rf "$NAT_HARBOR_JOBS_DIR/sc-power-of-two-library-inline"
 - [Harbor library mode discussion guide](./harbor-library-mode.md)
 - [Simple calculator example cookbook](../../examples/evaluation_and_profiling/simple_calculator_eval/harbor-eval-readme.md)
 - [Simple calculator Harbor adapter guide](../../examples/evaluation_and_profiling/simple_calculator_eval/harbor_adapters/README.md)
+
+## Third-Party Notices
+
+`nvidia-nat-harbor` depends on Harbor and its resolved dependency set. The
+Harbor lockfile currently resolves `pathspec==1.1.0`, which is licensed under
+the Mozilla Public License Version 2.0 (`MPL-2.0`).
+
+- [pathspec third-party notice](./third_party/notices/pathspec-1.1.0.md)
+- [as-received third-party source package](./third_party/source/pathspec-1.1.0.tar.gz)
