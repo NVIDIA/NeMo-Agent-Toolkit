@@ -90,12 +90,10 @@ def _persist_and_verify(state: ConsentState) -> None:
     write_persisted_consent(state)
     actual = read_persisted_consent()
     if actual != state:
-        raise click.ClickException(
-            f"Failed to persist telemetry consent to {_consent_file_path()}. "
-            f"Expected {state.value!r}, file reads {actual.value!r}. "
-            "Check filesystem permissions and disk space; your previous "
-            "decision is unchanged."
-        )
+        raise click.ClickException(f"Failed to persist telemetry consent to {_consent_file_path()}. "
+                                   f"Expected {state.value!r}, file reads {actual.value!r}. "
+                                   "Check filesystem permissions and disk space; your previous "
+                                   "decision is unchanged.")
 
 
 def _warn_on_env_var_override() -> None:

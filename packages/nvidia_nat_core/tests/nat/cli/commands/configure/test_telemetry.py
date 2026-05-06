@@ -103,8 +103,7 @@ def test_enable_warns_when_env_var_will_override(consent_file: Path, monkeypatch
     assert "override" in result.output
 
 
-def test_disable_fails_loudly_when_persistence_silently_drops(consent_file: Path,
-                                                              monkeypatch: pytest.MonkeyPatch):
+def test_disable_fails_loudly_when_persistence_silently_drops(consent_file: Path, monkeypatch: pytest.MonkeyPatch):
     """If ``write_persisted_consent`` silently swallows a write failure
     (e.g. read-only filesystem), the configure subcommand must NOT
     falsely report success — that would leave a previously-enabled user
@@ -128,8 +127,7 @@ def test_disable_fails_loudly_when_persistence_silently_drops(consent_file: Path
     assert "your previous decision is unchanged" in result.output.lower()
 
 
-def test_enable_fails_loudly_when_persistence_silently_drops(consent_file: Path,
-                                                             monkeypatch: pytest.MonkeyPatch):
+def test_enable_fails_loudly_when_persistence_silently_drops(consent_file: Path, monkeypatch: pytest.MonkeyPatch):
     """Symmetric to the --disable case."""
     from nat.cli.commands.configure import telemetry as telemetry_module
 
