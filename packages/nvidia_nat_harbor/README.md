@@ -19,6 +19,9 @@ limitations under the License.
 
 `nvidia-nat-harbor` integrates [Harbor](https://github.com/harbor-framework/harbor) evaluation runs with NVIDIA NeMo Agent Toolkit workflows and evaluators.
 
+> [!WARNING]
+> **Experimental**: The `nvidia-nat-harbor` package is Experimental and is not recommended for production use. Behavior may change without notice.
+
 Use this README for package setup, execution-mode concepts, and a short
 library-mode smoke path. The simple calculator example cookbook and
 adapter guide are linked at the end. For a short discussion-oriented overview,

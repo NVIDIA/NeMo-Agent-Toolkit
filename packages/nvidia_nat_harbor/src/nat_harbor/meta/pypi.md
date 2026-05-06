@@ -22,6 +22,9 @@ limitations under the License.
 `nvidia-nat-harbor` provides Harbor-focused agent and environment integrations and
 ATIF verifier bridge utilities.
 
+> [!WARNING]
+> **Experimental**: The `nvidia-nat-harbor` package is Experimental and is not recommended for production use. Behavior may change without notice.
+
 Use this package to run NeMo Agent Toolkit workflows through Harbor tasks, iterate
 locally with host-side execution, and score generated artifacts with inline ATIF
 verifiers backed by NeMo Agent Toolkit evaluators.
