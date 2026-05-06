@@ -28,7 +28,7 @@ branch.
 ## Pipeline
 
 ```mermaid
-flowchart LR
+flowchart TD
   task[SWE-bench task<br/>django__django-13741] --> harbor[Harbor trial<br/>Docker task environment]
 
   harbor --> run[Patched OpenCode run<br/>NeMo-Flow enabled]
@@ -42,11 +42,11 @@ flowchart LR
   harbor --> swe[SWE-bench verifier<br/>patch + task tests]
   swe --> result[result.json<br/>reward/resolved]
 
-  nativeAtif --> compare[Apples-to-apples comparison<br/>NAT evaluators + Phoenix]
+  nativeAtif --> compare[Trajectory comparison<br/>tool sequence + NAT evaluators + Phoenix]
   nfAtif --> compare
-  result --> compare
+  result --> outcome[Outcome sanity check<br/>successful/resolved run]
 
-  control[Optional control run<br/>NeMo-Flow disabled] -. behavior regression check .-> compare
+  control[Optional control run<br/>NeMo-Flow disabled] -. behavior regression check .-> outcome
 ```
 
 One NeMo-Flow-enabled OpenCode run emits both source streams:
@@ -150,6 +150,27 @@ for rel in ("trajectory.json", "nemo-flow-atof-atif/trajectory.json"):
     print(rel, trajectory.schema_version, len(trajectory.steps))
 PY
 ```
+
+Compare the native and ATOF-derived tool sequences:
+
+```bash
+.venv/bin/python -m nat_harbor.smoke.compare_atif_tools \
+  --native "$TRIAL/agent/trajectory.json" \
+  --candidate "$TRIAL/agent/nemo-flow-atof-atif/trajectory.json"
+```
+
+Current expected result:
+
+```text
+Classification: match (richer)
+```
+
+The checker uses ordered subsequence matching:
+
+- `match (same)`: both trajectories expose the same tool sequence
+- `match (richer)`: candidate preserves the native sequence and adds tool calls
+- `match (poorer)`: candidate is missing tool calls but preserves order
+- `mismatch`: tool order cannot be reconciled
 
 ## Phoenix Inspection
 
