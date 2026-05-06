@@ -167,7 +167,7 @@ Before getting started, it's possible to run this simple workflow and many other
 
 ## 📊 Telemetry
 
-The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation. Once you opt in (see below), events are sent to the shared NeMo Usage Telemetry ingest at `https://events.telemetry.data.nvidia.com/v1.1/events/json`. To override or disable network sends without opting out of the prompt, set `NAT_TELEMETRY_ENDPOINT` (see *Local debugging* below).
+The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation. Once you opt in (see below), events are sent to the shared NeMo Usage Telemetry ingest.
 
 ### How consent works
 
@@ -212,20 +212,6 @@ The following are never collected:
 - Workflow names, function names, model names, or any contents of configuration files.
 - File paths, hostnames, usernames, IP addresses, or any other identifying information.
 - The output of any command.
-
-### Local debugging
-
-To inspect what would be sent without making any network requests, set the endpoint to the literal value `stdout`. Payloads are written as JSON lines to stderr:
-
-```bash
-NAT_TELEMETRY_ENABLED=true NAT_TELEMETRY_ENDPOINT=stdout nat info list-components
-```
-
-To skip the network call without printing payloads:
-
-```bash
-NAT_TELEMETRY_DRY_RUN=true nat run --config_file my_config.yml
-```
 
 ## 💬 Feedback
 
