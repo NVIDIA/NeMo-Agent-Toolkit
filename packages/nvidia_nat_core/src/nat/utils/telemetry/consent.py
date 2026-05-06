@@ -45,6 +45,11 @@ logger = logging.getLogger(__name__)
 # Override path used by tests; production callers should not set this.
 _CONSENT_FILE_ENV_VAR = "NAT_TELEMETRY_CONSENT_FILE"
 
+TELEMETRY_ENV_VAR = "NAT_TELEMETRY_ENABLED"
+"""The single env var that, when set, overrides every other consent signal
+(persisted file, first-run prompt). Centralised here so producers and
+consumers share one canonical name."""
+
 PROMPT_VERSION = "1.0"
 """Bump if we materially change the prompt language. The persisted decision
 records which prompt version the user saw, so we can re-prompt on
@@ -57,6 +62,29 @@ class ConsentState(StrEnum):
     ENABLED = "enabled"
     DISABLED = "disabled"
     NEVER_ASKED = "never_asked"
+
+
+def resolve_env_consent() -> bool | None:
+    """Return the env-var-driven consent override, or ``None`` if unset.
+
+    Single source of truth for "what does ``NAT_TELEMETRY_ENABLED`` say".
+    Used by:
+
+    - :func:`resolve_initial_consent` — initial telemetry on/off decision.
+    - :func:`maybe_prompt_for_consent` — short-circuit when env wins.
+    - ``nat configure telemetry --status`` — report which signal source is
+      effective.
+
+    Returns:
+        ``True`` if the env var is set to a truthy value (case-insensitive
+        ``1`` / ``true`` / ``yes``); ``False`` if set to anything else;
+        ``None`` if unset (caller should consult the persisted decision
+        and/or prompt).
+    """
+    value = os.getenv(TELEMETRY_ENV_VAR)
+    if value is None:
+        return None
+    return value.strip().lower() in _TRUTHY
 
 
 def _consent_file_path() -> Path:
@@ -248,9 +276,9 @@ def resolve_initial_consent() -> bool:
     2. Persisted consent file.
     3. Default OFF — until the CLI prompt or env var resolves it.
     """
-    env = os.getenv("NAT_TELEMETRY_ENABLED")
-    if env is not None:
-        return env.strip().lower() in _TRUTHY
+    override = resolve_env_consent()
+    if override is not None:
+        return override
     return read_persisted_consent() == ConsentState.ENABLED
 
 
@@ -268,7 +296,7 @@ def maybe_prompt_for_consent() -> None:
     decision, and update the live ``TELEMETRY_ENABLED`` flag so the rest
     of this same invocation honors the choice.
     """
-    if os.getenv("NAT_TELEMETRY_ENABLED") is not None:
+    if resolve_env_consent() is not None:
         return
     if read_persisted_consent() != ConsentState.NEVER_ASKED:
         return

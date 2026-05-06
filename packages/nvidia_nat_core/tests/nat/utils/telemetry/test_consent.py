@@ -166,6 +166,37 @@ def test_is_interactive_session_returns_true_only_when_all_three_ttys():
 # --------------------------------------------------------------- initial state
 
 
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        # Truthy
+        ("1", True),
+        ("true", True),
+        ("True", True),
+        ("TRUE", True),
+        ("yes", True),
+        ("Yes", True),
+        ("  yes  ", True),  # surrounding whitespace tolerated
+        # Falsy (anything-not-truthy)
+        ("0", False),
+        ("false", False),
+        ("no", False),
+        ("", False),
+        ("garbage", False),
+    ])
+def test_resolve_env_consent_parsing(monkeypatch: pytest.MonkeyPatch, value: str, expected: bool):
+    """The single-source-of-truth env-var parser. Used by both
+    ``resolve_initial_consent`` and the ``configure --status`` path."""
+    monkeypatch.setenv(consent.TELEMETRY_ENV_VAR, value)
+    assert consent.resolve_env_consent() is expected
+
+
+def test_resolve_env_consent_returns_none_when_unset(monkeypatch: pytest.MonkeyPatch):
+    """Unset env var → ``None`` (caller should consult persisted/prompt)."""
+    monkeypatch.delenv(consent.TELEMETRY_ENV_VAR, raising=False)
+    assert consent.resolve_env_consent() is None
+
+
 def test_resolve_initial_consent_env_var_overrides_persisted(consent_file: Path, monkeypatch: pytest.MonkeyPatch):
     """Env var beats persisted file."""
     consent.write_persisted_consent(ConsentState.DISABLED)

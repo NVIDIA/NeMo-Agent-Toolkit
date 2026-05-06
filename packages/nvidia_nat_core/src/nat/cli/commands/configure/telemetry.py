@@ -27,9 +27,11 @@ import os
 
 import click
 
+from nat.utils.telemetry.consent import TELEMETRY_ENV_VAR
 from nat.utils.telemetry.consent import ConsentState
 from nat.utils.telemetry.consent import _consent_file_path
 from nat.utils.telemetry.consent import read_persisted_consent
+from nat.utils.telemetry.consent import resolve_env_consent
 from nat.utils.telemetry.consent import write_persisted_consent
 
 
@@ -51,11 +53,14 @@ def telemetry_command(action: str) -> None:
         return
 
     # Status (default)
-    env_value = os.getenv("NAT_TELEMETRY_ENABLED")
     persisted = read_persisted_consent()
-    if env_value is not None:
-        active = env_value.strip().lower() in ("1", "true", "yes")
-        click.echo(f"Effective: {'enabled' if active else 'disabled'} (source: NAT_TELEMETRY_ENABLED={env_value!r})")
+    override = resolve_env_consent()
+    if override is not None:
+        # Re-read the raw value just for display; the parsed bool comes from
+        # the shared helper above.
+        env_value = os.getenv(TELEMETRY_ENV_VAR)
+        click.echo(f"Effective: {'enabled' if override else 'disabled'} "
+                   f"(source: {TELEMETRY_ENV_VAR}={env_value!r})")
         if persisted != ConsentState.NEVER_ASKED:
             click.echo(f"  Persisted decision ({persisted.value}) is being overridden by the env var.")
         return
@@ -97,15 +102,16 @@ def _persist_and_verify(state: ConsentState) -> None:
 
 
 def _warn_on_env_var_override() -> None:
-    """If NAT_TELEMETRY_ENABLED is set, the persisted decision is overridden.
+    """If ``NAT_TELEMETRY_ENABLED`` is set, the persisted decision is overridden.
 
-    Tell the user so they aren't surprised when their next `nat run`
+    Tell the user so they aren't surprised when their next ``nat run``
     doesn't behave as they just configured.
     """
-    env_value = os.getenv("NAT_TELEMETRY_ENABLED")
-    if env_value is not None:
-        click.echo(
-            f"Note: NAT_TELEMETRY_ENABLED is set to {env_value!r} in your environment "
-            "and will override the persisted decision until unset.",
-            err=True,
-        )
+    if resolve_env_consent() is None:
+        return
+    env_value = os.getenv(TELEMETRY_ENV_VAR)
+    click.echo(
+        f"Note: {TELEMETRY_ENV_VAR} is set to {env_value!r} in your environment "
+        "and will override the persisted decision until unset.",
+        err=True,
+    )
