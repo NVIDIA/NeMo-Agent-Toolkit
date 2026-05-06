@@ -23,7 +23,7 @@ limitations under the License.
 ATIF verifier bridge utilities.
 
 > [!WARNING]
-> **Experimental**: The `nvidia-nat-harbor` package is Experimental and is not recommended for production use. Behavior may change without notice.
+> **Experimental**: The `nvidia-nat-harbor` package is Experimental and is not recommended for production use. Behavior may change without notice, and the package may be deleted without notice.
 
 Use this package to run NeMo Agent Toolkit workflows through Harbor tasks, iterate
 locally with host-side execution, and score generated artifacts with inline ATIF
