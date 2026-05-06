@@ -32,7 +32,7 @@ verifiers backed by NeMo Agent Toolkit evaluators.
 ## Third-Party Notices
 
 `nvidia-nat-harbor` depends on Harbor and its resolved dependency set. The
-Harbor lockfile currently resolves `pathspec==1.1.0`, which is licensed under
+Harbor <code>lockfile</code> currently resolves `pathspec==1.1.0`, which is licensed under
 the Mozilla Public License Version 2.0 (`MPL-2.0`). The repository contains a
 third-party notice and the as-received `pathspec` source distribution under
 `packages/nvidia_nat_harbor/third_party/`.

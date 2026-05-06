@@ -308,8 +308,8 @@ rm -rf "$NAT_HARBOR_JOBS_DIR/sc-power-of-two-library-inline"
 ## Third-Party Notices
 
 `nvidia-nat-harbor` depends on Harbor and its resolved dependency set. The
-Harbor lockfile currently resolves `pathspec==1.1.0`, which is licensed under
+Harbor <code>lockfile</code> currently resolves `pathspec==1.1.0`, which is licensed under
 the Mozilla Public License Version 2.0 (`MPL-2.0`).
 
-- [pathspec third-party notice](./third_party/notices/pathspec-1.1.0.md)
+- [<code>pathspec</code> third-party notice](./third_party/notices/pathspec-1.1.0.md)
 - [as-received third-party source package](./third_party/source/pathspec-1.1.0.tar.gz)
