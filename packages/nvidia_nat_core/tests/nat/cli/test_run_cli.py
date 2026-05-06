@@ -77,6 +77,57 @@ def test_run_cli_success_records_success(capsys):
     }]
 
 
+def test_run_cli_callback_returning_zero_int_records_success(capsys):
+    """Callback explicitly returning 0 — same as returning None: SUCCESS."""
+    emits, _, raised = _run_with_cli_raising(exc=None, return_value=0)
+    assert raised is None
+    assert emits == [{
+        "task_status": TaskStatusEnum.SUCCESS,
+        "exit_code": 0,
+        "error_class": None,
+    }]
+
+
+def test_run_cli_callback_returning_nonzero_int_records_failure(capsys):
+    """Click's ``standalone_mode=False`` returns the callback's return
+    value verbatim. A non-zero int signals "exit with this code"
+    (Click's convention) — record FAILURE and propagate the code, even
+    though no exception was raised."""
+    emits, _, raised = _run_with_cli_raising(exc=None, return_value=5)
+    assert raised is None
+    assert emits == [{
+        "task_status": TaskStatusEnum.FAILURE,
+        "exit_code": 5,
+        "error_class": None,
+    }]
+
+
+def test_run_cli_callback_returning_non_int_treated_as_success(capsys):
+    """Non-int return values (lists from chained commands, arbitrary
+    objects, strings) are not exit codes — fall back to SUCCESS / 0."""
+    for return_value in ([None, None], "ok", {"status": "ok"}):
+        emits, _, raised = _run_with_cli_raising(exc=None, return_value=return_value)
+        assert raised is None, f"unexpected raise for return_value={return_value!r}"
+        assert emits == [{
+            "task_status": TaskStatusEnum.SUCCESS,
+            "exit_code": 0,
+            "error_class": None,
+        }], f"wrong telemetry for return_value={return_value!r}"
+
+
+def test_run_cli_returns_int_for_console_script_wrapper(capsys):
+    """The ``nat`` console-script wrapper does ``sys.exit(run_cli())`` —
+    so on the int-return path, ``run_cli`` must return that int (not
+    ``None``) so the process exits with the right code."""
+    # Capture run_cli's actual return value by bypassing the helper's
+    # SystemExit translation.
+    from unittest.mock import patch as _patch
+    with _patch("nat.cli.entrypoint.cli", lambda *a, **kw: 7), \
+         _patch("nat.cli.telemetry_hook.emit_command_event", lambda *a, **kw: None):
+        ret = main_module.run_cli()
+    assert ret == 7
+
+
 def test_run_cli_keyboard_interrupt_records_interrupted_and_exits_130(capsys):
     emits, code, raised = _run_with_cli_raising(exc=KeyboardInterrupt())
     assert isinstance(raised, SystemExit)

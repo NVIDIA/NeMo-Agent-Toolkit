@@ -16,7 +16,46 @@
 
 # The purpose of this function is to allow loading the current directory as a module. This allows relative imports and
 # more specifically `..common` to function correctly
-def run_cli():
+def run_cli() -> int | None:
+    """Process entrypoint for the ``nat`` console script.
+
+    Bootstraps ``sys.path`` so the ``nat`` package can be imported from a
+    source checkout, then delegates to the Click ``cli`` group with
+    ``standalone_mode=False`` so the wrapper sees real exceptions
+    (``KeyboardInterrupt``, :class:`click.Abort`,
+    :class:`click.ClickException`) rather than the generic
+    :class:`SystemExit` that standalone mode produces. Each branch
+    records a single ``nat_cli_command`` telemetry event via
+    :func:`nat.cli.telemetry_hook.emit_command_event` before re-raising
+    or calling :func:`sys.exit`.
+
+    Side effects:
+        - Sets ``TRANSFORMERS_VERBOSITY=error`` in the process environment.
+        - Appends the ``packages/.../src`` parent directory to ``sys.path``.
+        - Replicates Click's standalone-mode user-facing UX: prints the
+          ``"Aborted!"`` line on Ctrl-C / :class:`click.Abort`; calls
+          ``ClickException.show()`` on usage errors.
+        - Emits exactly one telemetry event per invocation (success,
+          failure, or interrupted), gated by the user's persisted
+          consent decision and the ``NAT_TELEMETRY_ENABLED`` env var.
+
+    Returns:
+        On the **success path**, the integer exit code if the invoked
+        Click callback returned an int (Click's convention for "exit
+        with this code" without raising); otherwise ``None`` (treated
+        as exit 0 by the console-script wrapper's ``sys.exit(...)``).
+        On every **non-success path**, the function does not return —
+        :class:`SystemExit` is re-raised after telemetry emission so
+        the host process exits with the appropriate status code.
+
+    Raises:
+        SystemExit: Re-raised after a telemetry event is emitted, so the
+            host process exits with the appropriate status code (0 on
+            success / ``--help``, 1 on uncaught exception or
+            :class:`click.Abort`, 2 on :class:`click.UsageError`, 130 on
+            ``KeyboardInterrupt``, ``exc.exit_code`` for other
+            :class:`click.ClickException` subclasses).
+    """
     import os
     import sys
 
@@ -44,8 +83,9 @@ def run_cli():
     # In exchange we replicate Click's standalone-mode UX explicitly:
     # ``ClickException.show()``, the "Aborted!" line, and the right exit
     # codes per case.
+    cli_result = None
     try:
-        cli(
+        cli_result = cli(
             obj=ctx_obj,
             auto_envvar_prefix='NAT',
             show_default=True,
@@ -113,12 +153,23 @@ def run_cli():
         raise
     else:
         # Successful return from a non-standalone Click invocation.
+        # Honor an int return value from the invoked callback as the
+        # process exit code: that's the Click convention for "exit with
+        # this code" without raising. Anything else (None, lists from
+        # chained commands, arbitrary objects) is treated as exit 0.
+        # A non-zero int signals failure even though no exception was
+        # raised — record FAILURE so analytics can spot it.
+        exit_code = cli_result if isinstance(cli_result, int) else 0
+        task_status = TaskStatusEnum.SUCCESS if exit_code == 0 else TaskStatusEnum.FAILURE
         emit_command_event(
             ctx_obj,
-            task_status=TaskStatusEnum.SUCCESS,
-            exit_code=0,
+            task_status=task_status,
+            exit_code=exit_code,
             error_class=None,
         )
+        # Return the int so the ``nat`` console-script wrapper's
+        # ``sys.exit(run_cli())`` exits the process with the right code.
+        return exit_code
 
 
 if __name__ == '__main__':
