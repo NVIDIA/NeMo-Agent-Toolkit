@@ -45,7 +45,6 @@ flowchart TD
   nfAtif --> compare
   result --> outcome[Outcome sanity check<br/>successful/resolved run]
 
-  control[Optional control run<br/>NeMo-Flow disabled] -. behavior regression check .-> outcome
 ```
 
 One NeMo-Flow-enabled OpenCode run emits both source streams:
