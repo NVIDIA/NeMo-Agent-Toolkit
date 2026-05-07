@@ -17,6 +17,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import Field
@@ -42,6 +44,13 @@ class ObservationResult(BaseModel):
     subagent_trajectory_ref: list[SubagentTrajectoryRef] | None = Field(
         default=None,
         description="Array of references to delegated subagent trajectories",
+    )
+    extra: dict[str, Any] | None = Field(
+        default=None,
+        description=("Custom observation-result-level metadata (ATIF v1.7). For example, "
+                     "confidence score, retrieval score, source document ID. The spec "
+                     "treats this field as loosely-typed; consumers MUST tolerate absent "
+                     "and unknown keys."),
     )
 
     model_config = ConfigDict(extra="forbid")

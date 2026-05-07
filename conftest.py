@@ -47,6 +47,16 @@ TEST_DATA_DIR = str(Path(os.path.join(ROOT_DIR, "test_data")).resolve())
 
 os.environ.setdefault("DASK_DISTRIBUTED__WORKER__PYTHON", sys.executable)
 
+# Suppress NAT CLI usage telemetry during the test suite so test runs (and any
+# ``nat run`` / ``nat serve`` subprocesses they spawn) don't pollute the
+# author's CLI analytics. Without this, a developer who has consented via
+# ``nat configure telemetry --enable`` would silently emit one event per test
+# that shells out to ``nat`` — biasing dashboards and (post-merge) hitting the
+# production ingest from dev machines. ``setdefault`` respects an explicit
+# override (e.g. ``NAT_TELEMETRY_ENABLED=true pytest ...`` for developing
+# the telemetry feature itself).
+os.environ.setdefault("NAT_TELEMETRY_ENABLED", "false")
+
 if typing.TYPE_CHECKING:
     from dask.distributed import Client as DaskClient
     from dask.distributed import LocalCluster
