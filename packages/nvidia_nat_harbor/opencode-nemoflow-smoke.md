@@ -17,13 +17,12 @@ limitations under the License.
 
 # OpenCode NeMo-Flow Harbor Smoke
 
-This is a draft developer workflow for comparing OpenCode's native event stream
-with NeMo-Flow ATOF for the same Harbor SWE-bench task execution.
+This developer workflow compares OpenCode's native event stream with NeMo-Flow
+ATOF for the same Harbor SWE-bench task execution.
 
-Important: this workflow currently depends on branch-local code. The NAT Harbor
-wrapper, Harbor-side OpenCode support, and NeMo-Flow OpenCode patch should be
-rechecked after the related changes are ready for a PR to the `topic/harbor`
-branch.
+This smoke still depends on NAT and Harbor branch-local integration code until
+the Harbor OpenCode wrapper and related support are promoted to their target
+branches.
 
 ## Pipeline
 
@@ -61,19 +60,82 @@ One NeMo-Flow-enabled OpenCode run emits both source streams:
 ## Prerequisites
 
 - Docker is running.
-- `external/harbor` is available and installed into the active NAT environment.
-- `external/nemo-flow` is checked out to the OpenCode NeMo-Flow branch.
-- The SWE-bench smoke task exists at:
+- NAT is checked out to a branch containing
+  `nat_harbor.agents.installed.opencode_nemoflow:OpenCodeNeMoFlow`.
+
+Clone the external Harbor and NeMo-Flow repositories and check out the expected
+branches:
+
+```bash
+mkdir -p external
+
+if [ ! -d external/harbor/.git ]; then
+  git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
+fi
+git -C external/harbor fetch origin
+git -C external/harbor checkout ak-harbor-opencode-nemoflow-smoke
+
+if [ ! -d external/nemo-flow/.git ]; then
+  git clone https://github.com/NVIDIA/NeMo-Flow.git external/nemo-flow
+fi
+git -C external/nemo-flow fetch origin
+git -C external/nemo-flow checkout main
+```
+
+The SWE-bench smoke task should exist at:
 
 ```text
 external/harbor/datasets/swebench-opencode-smoke/django__django-13741
 ```
 
-- `NVIDIA_FRONTIER_API_KEY` is exported in the host shell.
-- `NVIDIA_FRONTIER_BASE_URL` points at the NVIDIA inference endpoint:
+If that task is missing, create it with Harbor's SWE-bench adapter:
 
 ```bash
-export NVIDIA_FRONTIER_BASE_URL=https://inference-api.nvidia.com/v1
+cd external/harbor/adapters/swebench
+
+uv run swebench \
+  --instance-id django__django-13741 \
+  --task-dir ../../datasets/swebench-opencode-smoke \
+  --overwrite
+
+cd ../../../..
+```
+
+Use an editable install for the local packages:
+
+```bash
+uv pip install -e packages/nvidia_nat_harbor
+uv pip install -e external/harbor
+```
+
+Prepare the merged NeMo-Flow OpenCode checkout:
+
+```bash
+cd external/nemo-flow
+./scripts/bootstrap-third-party.sh
+./scripts/apply-patches.sh --check
+if [ ! -e third_party/opencode/packages/opencode/src/nemo_flow/index.ts ]; then
+  git -C third_party/opencode apply ../../patches/opencode/0001-add-nemo-flow-integration.patch
+fi
+
+cd crates/node
+npm install
+npm run build
+
+cd ../../../..
+```
+
+The smoke expects the NeMo-Flow Node binding at:
+
+```text
+external/nemo-flow/crates/node/nemo-flow.linux-x64-gnu.node
+```
+
+`NVIDIA_FRONTIER_BASE_URL` should point at the OpenAI-compatible NVIDIA
+Frontier endpoint provided by your environment or team-specific setup notes:
+
+```bash
+export NVIDIA_FRONTIER_BASE_URL=<openai-compatible-frontier-base-url>
 ```
 
 ## Run the Smoke
@@ -83,6 +145,7 @@ file.
 
 ```bash
 mkdir -p .tmp/harbor/secrets
+read -rsp 'NVIDIA_FRONTIER_API_KEY: ' NVIDIA_FRONTIER_API_KEY; echo
 cat > .tmp/harbor/secrets/frontier.env <<EOF
 NVIDIA_FRONTIER_API_KEY=${NVIDIA_FRONTIER_API_KEY}
 NVIDIA_FRONTIER_BASE_URL=${NVIDIA_FRONTIER_BASE_URL}
@@ -95,11 +158,16 @@ Run the NeMo-Flow-enabled OpenCode smoke:
 export HARBOR_JOBS_DIR=.tmp/harbor/opencode-nemoflow-smoke
 export SWEBENCH_TASK=external/harbor/datasets/swebench-opencode-smoke/django__django-13741
 export NEMO_FLOW_REPO="$PWD/external/nemo-flow"
+export JOB_NAME=opencode-nemoflow-repeatable-smoke-1
+
+set -a
+. .tmp/harbor/secrets/frontier.env
+set +a
 
 .venv/bin/harbor run \
   --path "$SWEBENCH_TASK" \
   -l 1 \
-  --job-name opencode-nemoflow-atof-convert-smoke-1 \
+  --job-name "$JOB_NAME" \
   --jobs-dir "$HARBOR_JOBS_DIR" \
   --yes -n 1 --max-retries 0 \
   --env-file .tmp/harbor/secrets/frontier.env \
@@ -127,27 +195,41 @@ verifier/report.json
 Set `TRIAL` to the completed trial directory:
 
 ```bash
-TRIAL=.tmp/harbor/opencode-nemoflow-smoke/opencode-nemoflow-atof-convert-smoke-1/django__django-13741__qqy4ngX
+export HARBOR_JOBS_DIR=.tmp/harbor/opencode-nemoflow-smoke
+export JOB_NAME=opencode-nemoflow-repeatable-smoke-1
+export TRIAL
+TRIAL=$(find "$HARBOR_JOBS_DIR/$JOB_NAME" -maxdepth 1 -type d -name 'django__django-13741__*' | head -n 1)
+test -n "$TRIAL"
 ```
 
-Check that both ATIF artifacts load:
+Check that both ATIF artifacts load and that the ATOF sidecar exists:
 
 ```bash
 .venv/bin/python - <<'PY'
+import os
 from pathlib import Path
 
 from nat_harbor.verifier.evaluator_adapter import load_atif_samples
 
-root = Path(".tmp/harbor/opencode-nemoflow-smoke/opencode-nemoflow-atof-convert-smoke-1")
-trials = [path for path in root.iterdir() if path.is_dir() and path.name.startswith("django__django-13741__")]
-if len(trials) != 1:
-    raise SystemExit(f"Expected one trial directory, found {len(trials)}")
+trial = Path(os.environ["TRIAL"])
+agent = trial / "agent"
+for rel in (
+    "opencode.txt",
+    "trajectory.json",
+    "nemo-flow-atof/events.jsonl",
+    "nemo-flow-atof-atif/trajectory.json",
+):
+    path = agent / rel
+    if not path.exists():
+        raise SystemExit(f"Missing {path}")
+    print("ok", rel, path.stat().st_size)
 
-agent = trials[0] / "agent"
 for rel in ("trajectory.json", "nemo-flow-atof-atif/trajectory.json"):
     samples = load_atif_samples(agent / rel)
     trajectory = samples[0].trajectory
     print(rel, trajectory.schema_version, len(trajectory.steps))
+
+print("atof_events", sum(1 for _ in (agent / "nemo-flow-atof/events.jsonl").open()))
 PY
 ```
 
@@ -165,6 +247,16 @@ Current expected result:
 Classification: match (richer)
 ```
 
+Observed local repeatability run on 2026-05-06:
+
+| Artifact | Result |
+|---|---|
+| Harbor reward | `1.0` |
+| Native OpenCode ATIF | `ATIF-v1.6`, 21 steps |
+| ATOF-derived ATIF | `ATIF-v1.7`, 32 steps |
+| Raw ATOF sidecar | 129 JSONL events |
+| Tool sequence comparison | `match (richer)` |
+
 The checker uses ordered subsequence matching:
 
 - `match (same)`: both trajectories expose the same tool sequence
@@ -178,7 +270,9 @@ If Phoenix is running locally at `http://localhost:6006`, export the two ATIF
 artifacts to separate projects:
 
 ```bash
-TRIAL=.tmp/harbor/opencode-nemoflow-smoke/opencode-nemoflow-atof-convert-smoke-1/django__django-13741__qqy4ngX
+export HARBOR_JOBS_DIR=.tmp/harbor/opencode-nemoflow-smoke
+export JOB_NAME=opencode-nemoflow-repeatable-smoke-1
+TRIAL=$(find "$HARBOR_JOBS_DIR/$JOB_NAME" -maxdepth 1 -type d -name 'django__django-13741__*' | head -n 1)
 ENDPOINT=http://localhost:6006/v1/traces
 
 .venv/bin/python -m nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix \
@@ -200,3 +294,16 @@ Observed local result from the first successful smoke:
 | `harbor-opencode-nemoflow-atof` | `agent/nemo-flow-atof-atif/trajectory.json` | 31 |
 
 Open `http://localhost:6006` and switch between the two projects.
+
+## Known Limitations
+
+- The OpenCode/NeMo-Flow setup runs inside each Harbor task container today, so
+  the first run is slow. The validated one-task smoke took about 6 minutes and
+  37 seconds locally.
+- Full SWE-bench runs are disk-heavy because each trial contains setup and
+  artifact directories. Clean old `.tmp/harbor/opencode-nemoflow-smoke/*` jobs
+  before launching large shards.
+- Some full-suite ATOF streams currently fail conversion with
+  `llm_output` payloads shaped like `data_keys=['content', 'role']`. Preserve
+  the raw `agent/nemo-flow-atof/events.jsonl` sidecar for those cases while the
+  converter support catches up.
