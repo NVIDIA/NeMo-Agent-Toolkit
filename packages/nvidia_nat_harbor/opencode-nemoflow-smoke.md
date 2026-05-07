@@ -263,6 +263,62 @@ The checker uses ordered subsequence matching:
 - `match (poorer)`: candidate is missing tool calls but preserves order
 - `mismatch`: tool order cannot be reconciled
 
+## Post-Run Trajectory Scoring
+
+After the smoke run completes, score the native and ATOF-derived ATIF
+trajectories with the NAT LangChain trajectory evaluator. This is a post-run
+quality signal only; SWE-bench verification remains the source of truth for task
+success.
+
+The scorer writes:
+
+- `swebench_reward`
+- deterministic tool-sequence comparison
+- native trajectory score
+- NeMo-Flow trajectory score
+- `score_delta = nemoflow_score - native_score`
+- score category: `score_same`, `nemoflow_higher`, or `native_higher`
+
+First run the scorer without LLM calls to verify artifact discovery:
+
+```bash
+export HARBOR_JOBS_DIR=.tmp/harbor/opencode-nemoflow-smoke
+export JOB_NAME=opencode-nemoflow-repeatable-smoke-1
+
+.venv/bin/python -m nat_harbor.smoke.score_atif_trajectories \
+  --job-dir "$HARBOR_JOBS_DIR/$JOB_NAME" \
+  --output-dir "$HARBOR_JOBS_DIR/$JOB_NAME/post-run-scores" \
+  --no-llm
+```
+
+Run the LLM scoring pass with an OpenAI-compatible judge endpoint:
+
+```bash
+set -a
+. .tmp/harbor/secrets/frontier.env
+set +a
+
+export OPENAI_API_KEY="$NVIDIA_FRONTIER_API_KEY"
+export OPENAI_BASE_URL="$NVIDIA_FRONTIER_BASE_URL"
+export NAT_HARBOR_TRAJECTORY_JUDGE_MODEL=<openai-compatible-judge-model>
+
+.venv/bin/python -m nat_harbor.smoke.score_atif_trajectories \
+  --job-dir "$HARBOR_JOBS_DIR/$JOB_NAME" \
+  --output-dir "$HARBOR_JOBS_DIR/$JOB_NAME/post-run-llm-scores" \
+  --config-file packages/nvidia_nat_harbor/configs/opencode-nemoflow-trajectory-eval.yml \
+  --evaluator-name trajectory_eval \
+  --score-timeout-sec 45
+```
+
+Observed local one-task judge result on 2026-05-07:
+
+| Task | Reward | Deterministic | Native | NeMo-Flow | Delta | Category |
+|---|---:|---|---:|---:|---:|---|
+| `django__django-13741` | 1 | `match (richer)` | 0.75 | 0.75 | 0 | `score_same` |
+
+Sample scorer outputs are checked in under
+`packages/nvidia_nat_harbor/data/opencode-nemoflow-smoke/`.
+
 ## Phoenix Inspection
 
 If Phoenix is running locally at `http://localhost:6006`, export the two ATIF
