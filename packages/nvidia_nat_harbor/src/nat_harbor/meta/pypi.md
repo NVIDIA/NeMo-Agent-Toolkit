@@ -22,6 +22,17 @@ limitations under the License.
 `nvidia-nat-harbor` provides Harbor-focused agent and environment integrations and
 ATIF verifier bridge utilities.
 
+> [!WARNING]
+> **Experimental**: The `nvidia-nat-harbor` package is Experimental and is not recommended for production use. Behavior may change without notice, and the package may be deleted without notice.
+
 Use this package to run NeMo Agent Toolkit workflows through Harbor tasks, iterate
 locally with host-side execution, and score generated artifacts with inline ATIF
 verifiers backed by NeMo Agent Toolkit evaluators.
+
+## Third-Party Notices
+
+`nvidia-nat-harbor` depends on Harbor and its resolved dependency set. The
+Harbor <code>lockfile</code> currently resolves `pathspec==1.1.0`, which is licensed under
+the Mozilla Public License Version 2.0 (`MPL-2.0`). The repository contains a
+third-party notice and the as-received `pathspec` source distribution under
+`packages/nvidia_nat_harbor/third_party/`.
