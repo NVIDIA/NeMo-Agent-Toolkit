@@ -62,6 +62,7 @@ branch that contains verifier import-hook support after installing
 
 ```bash
 mkdir -p external
+# path-check-skip-next-line
 if [ ! -d external/harbor/.git ]; then
   git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
 fi
