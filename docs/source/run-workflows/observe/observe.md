@@ -21,7 +21,7 @@ The NeMo Agent Toolkit uses a flexible, plugin-based observability system that p
 
 - Uses an event-driven architecture with `IntermediateStepManager` publishing workflow events to a reactive stream
 - Supports multiple concurrent telemetry exporters processing events asynchronously
-- Provides built-in exporters for popular observability platforms (LangSmith, Phoenix, Langfuse, Weave, etc.)
+- Provides built-in exporters for popular observability platforms (LangSmith, Phoenix, Arize AX, Langfuse, Weave, etc.)
 - Enables custom telemetry exporter development for any observability service
 
 These features enable developers to test their workflows locally and integrate observability seamlessly with their preferred monitoring stack.
@@ -75,6 +75,7 @@ The following table lists each exporter with its supported features and configur
 
 | Provider | Integration Documentation | Supported Features |
 | -------- | ------------------------- | ------------------ |
+| [Arize AX](https://arize.com/docs/ax/) | [Observing with Arize AX](?provider=Arize-AX#provider-integration-guides){.external} | Logging, Tracing |
 | [Catalyst](https://docs.raga.ai/ragaai-catalyst) | [Observing with Catalyst](?provider=Catalyst#provider-integration-guides){.external} | Logging, Tracing |
 | [NVIDIA Data Flywheel Blueprint](https://build.nvidia.com/nvidia/build-an-enterprise-data-flywheel) | [Observing with Data Flywheel](?provider=Data-Flywheel#provider-integration-guides){.external} | Logging, Tracing |
 | [DBNL](https://distributional.com/) | [Observing with DBNL](?provider=DBNL#provider-integration-guides){.external} | Logging, Tracing |
@@ -196,6 +197,13 @@ For complete information about developing and integrating custom telemetry expor
 
 ::::{tab-set}
   :sync-group: provider
+
+  :::{tab-item} Arize AX
+  :sync: Arize-AX
+
+    :::{include} ./observe-workflow-with-arize-ax.md
+
+  :::
 
   :::{tab-item} Catalyst
   :sync: Catalyst
