@@ -1,0 +1,2 @@
+task_id,trial_name,swebench_reward,deterministic_comparison,native_score,nemoflow_score,score_delta,score_category,native_error,nemoflow_error,native_path,nemoflow_path
+django__django-13741,django__django-13741__example,1,match (richer),1,0.75,-0.25,native_higher,,,agent/trajectory.json,agent/nemo-flow-atof-atif/trajectory.json

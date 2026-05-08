@@ -41,7 +41,7 @@ This package provides:
 - Core dependencies:
   - `nvidia-nat-core`
   - `nvidia-nat-eval`
-  - `harbor>=0.5.0`
+  - `harbor`
 
 ## Install (Editable Repository Workflow)
 
@@ -58,17 +58,24 @@ Then install the Harbor integration package:
 uv pip install -e packages/nvidia_nat_harbor
 ```
 
-Install the Harbor side branch used by the inline verifier examples:
+`nvidia-nat-harbor` pins the supported Harbor runtime dependency in
+`pyproject.toml`. For inline verifier examples, install the Harbor source
+branch that contains verifier import-hook support after installing
+`nvidia-nat-harbor`:
 
 ```bash
-git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
+mkdir -p external
+# path-check-skip-next-line
+if [ ! -d external/harbor/.git ]; then
+  git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
+fi
+git -C external/harbor fetch origin
 git -C external/harbor checkout ak-harbor-libary-mode
 uv pip install -e external/harbor
 ```
 
-If `external/harbor` already exists, update it to the side branch instead of
-cloning again. Do not patch the Harbor files inside `.venv` or
-`site-packages`; `uv sync` or a reinstall can overwrite those changes.
+This editable install intentionally overrides the package-pinned Harbor
+dependency for local development.
 
 Install sample workflow packages used by the simple calculator Harbor examples:
 
@@ -114,7 +121,11 @@ The examples use three related but separate concepts:
 | Library mode | `--ak library_mode=true` | NeMo Agent Toolkit workflow execution in-process through the active Harbor Python |
 | Inline verifier | `--verifier-import-path nat_harbor.verifier.inline_verifier:ATIFInlineVerifier` | ATIF evaluator dispatch in-process through the active Harbor Python |
 
-For new local development, prefer **local environment + library mode + inline verifier**. Shell compatibility mode is useful for parity checks against script-based Harbor tasks, but it needs explicit host Python wiring because the agent wrapper and task verifier script run as child processes.
+For new local development, prefer **local environment + library mode + inline
+verifier** with the Harbor source install above. Shell compatibility mode is
+useful for parity checks against script-based Harbor tasks, but it needs
+explicit host Python wiring because the agent wrapper and task verifier script
+run as child processes.
 
 The local environment backend is for developer iteration, not benchmark
 isolation. It uses best-effort path translation to keep expected Harbor
@@ -149,15 +160,9 @@ Inline verifier execution is configured through the Harbor verifier import hook:
 ```
 
 This requires Harbor verifier import-hook support (`harbor.verifier.factory`,
-`VerifierConfig.import_path`, and the `--verifier-import-path` CLI flag).
-Until that hook is available in a released Harbor version, use the Harbor side
-branch as an editable source checkout:
-
-```bash
-uv pip install -e external/harbor
-```
-
-See the install section for the full checkout command.
+`VerifierConfig.import_path`, and the `--verifier-import-path` CLI flag). Use
+the Harbor source install from the install section until that hook is available
+in the package-pinned Harbor runtime.
 
 You can confirm the active Harbor CLI has the hook with:
 
