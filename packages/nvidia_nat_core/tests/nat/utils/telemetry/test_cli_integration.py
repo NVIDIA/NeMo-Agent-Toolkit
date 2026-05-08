@@ -1,0 +1,242 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+from __future__ import annotations
+
+from unittest.mock import MagicMock
+from unittest.mock import patch
+
+import click
+
+from nat.cli import telemetry_hook
+from nat.utils.telemetry import config as config_module
+from nat.utils.telemetry.events import CliCommandEvent
+from nat.utils.telemetry.events import TaskStatusEnum
+
+
+def test_emit_command_event_constructs_expected_event():
+    ctx_obj = {
+        "telemetry_session_id": "abc123",
+        "telemetry_start_time": 0.0,
+        "telemetry_command": "run",
+    }
+    captured: list[CliCommandEvent] = []
+
+    handler_instance = MagicMock()
+    handler_instance.__enter__ = MagicMock(return_value=handler_instance)
+    handler_instance.__exit__ = MagicMock(return_value=False)
+    handler_instance.enqueue.side_effect = lambda ev: captured.append(ev)
+
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
+         patch.object(telemetry_hook, "NATTelemetryHandler", return_value=handler_instance) as mock_cls, \
+         patch("time.monotonic", return_value=2.5):
+        telemetry_hook.emit_command_event(
+            ctx_obj,
+            task_status=TaskStatusEnum.SUCCESS,
+            exit_code=0,
+        )
+
+    mock_cls.assert_called_once()
+    assert mock_cls.call_args.kwargs["session_id"] == "abc123"
+
+    assert len(captured) == 1
+    event = captured[0]
+    assert event.command == "run"
+    assert event.task_status == TaskStatusEnum.SUCCESS
+    assert event.exit_code == 0
+    assert event.duration_ms == 2500  # (2.5 - 0.0) * 1000
+    # Per D-19 the schema requires strings; emit_command_event coerces None -> "undefined".
+    assert event.error_class == "undefined"
+
+
+def test_emit_command_event_skipped_when_telemetry_disabled():
+    with patch.object(config_module, "TELEMETRY_ENABLED", False), \
+         patch.object(telemetry_hook, "NATTelemetryHandler") as mock_cls:
+        telemetry_hook.emit_command_event(
+            {},
+            task_status=TaskStatusEnum.SUCCESS,
+            exit_code=0,
+        )
+    mock_cls.assert_not_called()
+
+
+def test_emit_command_event_failure_includes_error_class():
+    handler_instance = MagicMock()
+    handler_instance.__enter__ = MagicMock(return_value=handler_instance)
+    handler_instance.__exit__ = MagicMock(return_value=False)
+    captured: list[CliCommandEvent] = []
+    handler_instance.enqueue.side_effect = lambda ev: captured.append(ev)
+
+    ctx_obj = {
+        "telemetry_session_id": "sid",
+        "telemetry_start_time": 0.0,
+        "telemetry_command": "evaluate",
+    }
+
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
+         patch.object(telemetry_hook, "NATTelemetryHandler", return_value=handler_instance):
+        telemetry_hook.emit_command_event(
+            ctx_obj,
+            task_status=TaskStatusEnum.FAILURE,
+            exit_code=1,
+            error_class="ValueError",
+        )
+
+    assert captured[0].task_status == TaskStatusEnum.FAILURE
+    assert captured[0].error_class == "ValueError"
+    assert captured[0].exit_code == 1
+
+
+def test_emit_command_event_handles_missing_ctx_obj():
+    handler_instance = MagicMock()
+    handler_instance.__enter__ = MagicMock(return_value=handler_instance)
+    handler_instance.__exit__ = MagicMock(return_value=False)
+    captured: list[CliCommandEvent] = []
+    handler_instance.enqueue.side_effect = lambda ev: captured.append(ev)
+
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
+         patch.object(telemetry_hook, "NATTelemetryHandler", return_value=handler_instance):
+        telemetry_hook.emit_command_event(
+            None,
+            task_status=TaskStatusEnum.FAILURE,
+            exit_code=2,
+        )
+
+    assert captured[0].command == "unknown"
+    assert captured[0].duration_ms == -1
+
+
+def test_emit_command_event_swallows_handler_errors():
+    """A bug or exception inside telemetry must never propagate."""
+
+    class Boom:
+
+        def __enter__(self):
+            raise RuntimeError("internal telemetry bug")
+
+        def __exit__(self, *a):
+            return False
+
+    with patch.object(config_module, "TELEMETRY_ENABLED", True), \
+         patch.object(telemetry_hook, "NATTelemetryHandler", return_value=Boom()):
+        # Should not raise.
+        telemetry_hook.emit_command_event(
+            {"telemetry_command": "run"},
+            task_status=TaskStatusEnum.SUCCESS,
+            exit_code=0,
+        )
+
+
+def _make_root() -> click.Group:
+    """Build a minimal Click command tree mirroring the real ``nat`` CLI."""
+    import click
+
+    @click.group()
+    def root():
+        pass
+
+    @root.group()
+    def info():
+        pass
+
+    @info.command(name="list-components")
+    def list_components():
+        pass
+
+    @info.command(name="list-channels")
+    def list_channels():
+        pass
+
+    @root.command()
+    @click.argument("config_file", required=False)
+    def run(config_file):
+        pass
+
+    return root
+
+
+def test_resolve_subcommand_picks_registered_subcommand(monkeypatch):
+    monkeypatch.setattr("sys.argv", ["nat", "info", "list-components"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") == "list-components"
+
+
+def test_resolve_subcommand_skips_top_level_flags(monkeypatch):
+    monkeypatch.setattr(
+        "sys.argv",
+        ["nat", "--log-level", "DEBUG", "info", "list-components", "--filter", "x"],
+    )
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") == "list-components"
+
+
+def test_resolve_subcommand_returns_none_when_top_level_is_leaf(monkeypatch):
+    """Top-level commands that aren't groups have no second level."""
+    monkeypatch.setattr("sys.argv", ["nat", "run"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "run") is None
+
+
+def test_resolve_subcommand_rejects_positional_argument(monkeypatch):
+    """A positional argument that isn't a registered subcommand must not leak.
+
+    This is the core privacy guarantee: file paths, workflow names, queries,
+    and any other user-supplied positional text passed to a leaf command
+    must never appear in the telemetry payload.
+    """
+    monkeypatch.setattr("sys.argv", ["nat", "run", "/home/user/my-secret-config.yml"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "run") is None
+
+
+def test_resolve_subcommand_rejects_unknown_token_under_group(monkeypatch):
+    """Even under a known group, only registered subcommand names are returned."""
+    monkeypatch.setattr("sys.argv", ["nat", "info", "my-private-workflow-name"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") is None
+
+
+def test_resolve_subcommand_handles_no_root_command():
+    """Called from non-CLI contexts (root_command is None), returns None."""
+    assert telemetry_hook._resolve_subcommand(None, "anything") is None
+
+
+def test_resolve_subcommand_handles_unknown_top_level(monkeypatch):
+    """Top-level token that isn't actually registered (e.g. 'unknown' fallback)."""
+    monkeypatch.setattr("sys.argv", ["nat", "info", "list-components"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "unknown") is None
+
+
+def test_resolve_subcommand_ignores_later_token_matching_registered(monkeypatch):
+    """A registered name appearing *after* the real subcommand position must
+    not be picked up. Without the position-aware scan, the legacy
+    'first match anywhere' loop would have leaked
+    ``"list-components"`` here."""
+    monkeypatch.setattr(
+        "sys.argv",
+        ["nat", "info", "my-real-arg", "--some-flag", "list-components"],
+    )
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") is None
+
+
+def test_resolve_subcommand_skips_flags_immediately_after_top_level(monkeypatch):
+    """Long and short flags between ``top_level`` and the subcommand are
+    skipped; the first *non-flag* token is what's checked."""
+    monkeypatch.setattr(
+        "sys.argv",
+        ["nat", "info", "--verbose", "-q", "list-components"],
+    )
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") == "list-components"
+
+
+def test_resolve_subcommand_returns_none_when_top_level_absent_from_argv(monkeypatch):
+    """If ``top_level`` doesn't appear in argv (extremely rare; guards
+    against pathological cases), don't fall back to a global scan."""
+    monkeypatch.setattr("sys.argv", ["nat", "list-components"])
+    assert telemetry_hook._resolve_subcommand(_make_root(), "info") is None

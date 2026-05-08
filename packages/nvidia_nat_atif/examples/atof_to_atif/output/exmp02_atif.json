@@ -1,0 +1,104 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "session_id": "agent-001",
+  "agent": {
+    "name": "calculator_agent",
+    "version": "1.0.0",
+    "model_name": "gpt-4.1"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-01-02T00:00:01Z",
+      "source": "user",
+      "message": "What is 3 + 4?"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-01-02T00:00:02Z",
+      "source": "agent",
+      "model_name": "gpt-4.1",
+      "message": "",
+      "tool_calls": [
+        {
+          "tool_call_id": "call_abc",
+          "function_name": "calculator__add",
+          "arguments": {
+            "a": 3,
+            "b": 4
+          },
+          "extra": {
+            "ancestry": {
+              "function_id": "tool-001",
+              "function_name": "calculator__add",
+              "parent_id": "agent-001",
+              "parent_name": "calculator_agent"
+            },
+            "invocation": {
+              "invocation_id": "call_abc",
+              "framework": "nat",
+              "status": "completed",
+              "start_timestamp": 1767312003.0,
+              "end_timestamp": 1767312004.0
+            }
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "call_abc",
+            "content": "7"
+          }
+        ]
+      },
+      "extra": {
+        "ancestry": {
+          "function_id": "llm-001",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-001",
+          "parent_name": "calculator_agent"
+        },
+        "invocation": {
+          "invocation_id": "llm-001",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767312001.0,
+          "end_timestamp": 1767312002.0
+        },
+        "data_schema": {
+          "name": "openai/chat-completions",
+          "version": "1"
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2026-01-02T00:00:06Z",
+      "source": "agent",
+      "model_name": "gpt-4.1",
+      "message": "3 + 4 = 7",
+      "extra": {
+        "ancestry": {
+          "function_id": "llm-002",
+          "function_name": "gpt-4.1",
+          "parent_id": "agent-001",
+          "parent_name": "calculator_agent"
+        },
+        "invocation": {
+          "invocation_id": "llm-002",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767312005.0,
+          "end_timestamp": 1767312006.0
+        },
+        "data_schema": {
+          "name": "openai/chat-completions",
+          "version": "1"
+        }
+      },
+      "llm_call_count": 1
+    }
+  ]
+}
