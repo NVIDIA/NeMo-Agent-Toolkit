@@ -63,7 +63,8 @@ One NeMo-Flow-enabled OpenCode run emits both source streams:
   `nat_harbor.agents.installed.opencode_nemoflow:OpenCodeNeMoFlow`.
 
 Clone the external Harbor and NeMo-Flow repositories and check out the expected
-branches:
+branches. The Harbor checkout is used for SWE-bench adapter assets and, after
+the editable install below, for Harbor branch-local runtime support.
 
 ```bash
 mkdir -p external
@@ -72,7 +73,7 @@ if [ ! -d external/harbor/.git ]; then
   git clone https://github.com/AnuradhaKaruppiah/harbor.git external/harbor
 fi
 git -C external/harbor fetch origin
-git -C external/harbor checkout ak-harbor-opencode-nemoflow-smoke
+git -C external/harbor checkout ak-harbor-libary-mode
 
 if [ ! -d external/nemo-flow/.git ]; then
   git clone https://github.com/NVIDIA/NeMo-Flow.git external/nemo-flow
@@ -103,8 +104,13 @@ cd ../../../..
 Use an editable install for the local packages:
 
 ```bash
+uv venv --python 3.13 --seed .venv
 uv pip install -e packages/nvidia_nat_harbor
 uv pip install -e external/harbor
+.venv/bin/python - <<'PY'
+import importlib.metadata as md
+print("harbor", md.version("harbor"))
+PY
 ```
 
 Prepare the NeMo-Flow OpenCode patch:
@@ -130,11 +136,11 @@ The smoke expects the NeMo-Flow Node binding at:
 external/nemo-flow/crates/node/nemo-flow.linux-x64-gnu.node
 ```
 
-`NVIDIA_FRONTIER_BASE_URL` should point at the OpenAI-compatible NVIDIA
-Frontier endpoint:
+`NVIDIA_BASE_URL` should point at the OpenAI-compatible NVIDIA endpoint used
+for this smoke:
 
 ```bash
-export NVIDIA_FRONTIER_BASE_URL=<openai-compatible-frontier-base-url>
+export NVIDIA_BASE_URL=<openai-compatible-nvidia-base-url>
 ```
 
 ## Run the Smoke
@@ -144,10 +150,10 @@ file.
 
 ```bash
 mkdir -p .tmp/harbor/secrets
-read -rsp 'NVIDIA_FRONTIER_API_KEY: ' NVIDIA_FRONTIER_API_KEY; echo
-cat > .tmp/harbor/secrets/frontier.env <<EOF
-NVIDIA_FRONTIER_API_KEY=${NVIDIA_FRONTIER_API_KEY}
-NVIDIA_FRONTIER_BASE_URL=${NVIDIA_FRONTIER_BASE_URL}
+read -rsp 'NVIDIA_API_KEY: ' NVIDIA_API_KEY; echo
+cat > .tmp/harbor/secrets/nvidia.env <<EOF
+NVIDIA_API_KEY=${NVIDIA_API_KEY}
+NVIDIA_BASE_URL=${NVIDIA_BASE_URL}
 EOF
 ```
 
@@ -160,7 +166,7 @@ export NEMO_FLOW_REPO="$PWD/external/nemo-flow"
 export JOB_NAME=opencode-nemoflow-repeatable-smoke-1
 
 set -a
-. .tmp/harbor/secrets/frontier.env
+. .tmp/harbor/secrets/nvidia.env
 set +a
 
 .venv/bin/harbor run \
@@ -169,10 +175,10 @@ set +a
   --job-name "$JOB_NAME" \
   --jobs-dir "$HARBOR_JOBS_DIR" \
   --yes -n 1 --max-retries 0 \
-  --env-file .tmp/harbor/secrets/frontier.env \
+  --env-file .tmp/harbor/secrets/nvidia.env \
   --agent-import-path nat_harbor.agents.installed.opencode_nemoflow:OpenCodeNeMoFlow \
   --env docker \
-  --model nvidia-frontier/opus-frontier \
+  --model nvidia/opus-frontier \
   --ak nemo_flow_repo="$NEMO_FLOW_REPO" \
   --ak fail_missing_nemoflow_atof=true \
   --ak fail_missing_nemoflow_atif=false
@@ -251,9 +257,9 @@ Sample results:
 | Artifact | Result |
 |---|---|
 | Harbor reward | `1.0` |
-| Native OpenCode ATIF | `ATIF-v1.6`, 21 steps |
+| Native OpenCode ATIF | `ATIF-v1.6`, 19 steps |
 | ATOF-derived ATIF | `ATIF-v1.7`, 32 steps |
-| Raw ATOF sidecar | 129 JSONL events |
+| Raw ATOF sidecar | 131 JSONL events |
 | Tool sequence comparison | `match (richer)` |
 
 The checker uses ordered subsequence matching:
@@ -295,11 +301,11 @@ Run the LLM scoring pass with an OpenAI-compatible judge endpoint:
 
 ```bash
 set -a
-. .tmp/harbor/secrets/frontier.env
+. .tmp/harbor/secrets/nvidia.env
 set +a
 
-export OPENAI_API_KEY="$NVIDIA_FRONTIER_API_KEY"
-export OPENAI_BASE_URL="$NVIDIA_FRONTIER_BASE_URL"
+export OPENAI_API_KEY="$NVIDIA_API_KEY"
+export OPENAI_BASE_URL="$NVIDIA_BASE_URL"
 export NAT_HARBOR_TRAJECTORY_JUDGE_MODEL=<openai-compatible-judge-model>
 
 .venv/bin/python -m nat_harbor.smoke.score_atif_trajectories \
@@ -314,7 +320,7 @@ Sample judge result:
 
 | Task | Reward | Deterministic | Native | NeMo-Flow | Delta | Category |
 |---|---:|---|---:|---:|---:|---|
-| `django__django-13741` | 1 | `match (richer)` | 0.75 | 0.75 | 0 | `score_same` |
+| `django__django-13741` | 1 | `match (richer)` | 1 | 0.75 | -0.25 | `native_higher` |
 
 Sample scorer outputs are checked in under
 `packages/nvidia_nat_harbor/data/opencode-nemoflow-smoke/`.
@@ -353,8 +359,8 @@ Open `http://localhost:6006` and switch between the two projects.
 ## Known Limitations
 
 - The OpenCode/NeMo-Flow setup runs inside each Harbor task container today, so
-  the first run is slow. The validated one-task smoke took about 6 minutes and
-  37 seconds locally.
+  the first run is slow. Recent validated one-task smoke runs took about 6 to 8
+  minutes locally.
 - Full SWE-bench runs are disk-heavy because each trial contains setup and
   artifact directories. Clean old `.tmp/harbor/opencode-nemoflow-smoke/*` jobs
   before launching large shards.

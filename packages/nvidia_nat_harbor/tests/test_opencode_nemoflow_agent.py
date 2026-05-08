@@ -31,7 +31,7 @@ def _make_agent(tmp_path: Path, **kwargs) -> OpenCodeNeMoFlow:
     logs_dir.mkdir(parents=True)
     return OpenCodeNeMoFlow(
         logs_dir=logs_dir,
-        model_name="nvidia-frontier/opus-frontier",
+        model_name="nvidia/opus-frontier",
         nemo_flow_repo=str(tmp_path / "nemo-flow"),
         **kwargs,
     )
@@ -87,26 +87,37 @@ def test_populate_context_can_treat_atof_conversion_as_best_effort(tmp_path: Pat
     assert context.metadata["nemo_flow_converted_atif_exists"] is False
 
 
-def test_build_provider_env_handles_nvidia_frontier_locally(tmp_path: Path) -> None:
+def test_build_provider_env_handles_nvidia_locally(tmp_path: Path) -> None:
     agent = _make_agent(
         tmp_path,
         extra_env={
-            "NVIDIA_FRONTIER_API_KEY": "frontier-key",
-            "NVIDIA_FRONTIER_BASE_URL": "https://frontier.example/v1",
+            "NVIDIA_API_KEY": "nvidia-key",
+            "NVIDIA_BASE_URL": "https://nvidia.example/v1",
         },
     )
 
-    assert agent._build_provider_env("nvidia-frontier") == {
-        "NVIDIA_FRONTIER_API_KEY": "frontier-key",
-        "NVIDIA_FRONTIER_BASE_URL": "https://frontier.example/v1",
+    assert agent._build_provider_env("nvidia") == {
+        "NVIDIA_API_KEY": "nvidia-key",
+        "NVIDIA_BASE_URL": "https://nvidia.example/v1",
     }
 
 
-def test_build_provider_env_requires_nvidia_frontier_api_key(tmp_path: Path) -> None:
-    agent = _make_agent(tmp_path, extra_env={"NVIDIA_FRONTIER_BASE_URL": "https://frontier.example/v1"})
+def test_build_provider_env_requires_nvidia_api_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    agent = _make_agent(tmp_path, extra_env={"NVIDIA_BASE_URL": "https://nvidia.example/v1"})
 
-    with pytest.raises(ValueError, match="NVIDIA_FRONTIER_API_KEY"):
-        agent._build_provider_env("nvidia-frontier")
+    with pytest.raises(ValueError, match="NVIDIA_API_KEY"):
+        agent._build_provider_env("nvidia")
+
+
+def test_default_opencode_config_registers_nvidia_opus_alias(tmp_path: Path) -> None:
+    agent = _make_agent(tmp_path)
+
+    provider_config = agent._opencode_config["provider"]["nvidia"]
+    assert provider_config["options"]["apiKey"] == "{env:NVIDIA_API_KEY}"
+    assert provider_config["options"]["baseURL"] == "{env:NVIDIA_BASE_URL}"
+    assert provider_config["models"]["opus-frontier"]["id"] == "aws/anthropic/claude-opus-4-5"
+    assert agent._opencode_config["experimental"]["nemo_flow"] is True
 
 
 def test_build_provider_env_delegates_to_parent_when_available(tmp_path: Path) -> None:
@@ -123,8 +134,8 @@ def test_build_provider_env_delegates_to_parent_when_available(tmp_path: Path) -
     parent_provider_env.assert_called_once_with("openai")
 
 
-def test_build_provider_env_rejects_non_frontier_without_parent_support(tmp_path: Path) -> None:
+def test_build_provider_env_rejects_non_nvidia_without_parent_support(tmp_path: Path) -> None:
     agent = _make_agent(tmp_path)
 
-    with pytest.raises(ValueError, match="only handles provider 'nvidia-frontier' locally"):
+    with pytest.raises(ValueError, match="only handles provider 'nvidia' locally"):
         agent._build_provider_env("openai")

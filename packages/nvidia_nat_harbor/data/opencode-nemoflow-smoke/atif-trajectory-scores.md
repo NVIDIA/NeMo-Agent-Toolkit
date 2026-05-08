@@ -19,4 +19,4 @@ limitations under the License.
 
 | Task | Reward | Deterministic | Native | NeMo-Flow | Delta | Category | Errors |
 | --- | ---: | --- | ---: | ---: | ---: | --- | --- |
-| django__django-13741 | 1 | match (richer) | 0.75 | 0.75 | 0 | score_same |  |
+| django__django-13741 | 1 | match (richer) | 1 | 0.75 | -0.25 | native_higher |  |

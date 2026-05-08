@@ -30,8 +30,33 @@ class OpenCodeNeMoFlow(OpenCode):
     _CONVERTED_ATIF_DIR_NAME = "nemo-flow-atof-atif"
     _CONVERTED_ATIF_FILENAME = "trajectory.json"
     _DEFAULT_TASK_DIR = "/testbed"
-    _NVIDIA_FRONTIER_PROVIDER = "nvidia-frontier"
-    _NVIDIA_FRONTIER_ENV_KEYS = ("NVIDIA_FRONTIER_API_KEY", "NVIDIA_FRONTIER_BASE_URL")
+    _NVIDIA_PROVIDER = "nvidia"
+    _NVIDIA_ENV_KEYS = ("NVIDIA_API_KEY", "NVIDIA_BASE_URL")
+    _DEFAULT_OPENCODE_CONFIG: dict[str, Any] = {
+        "provider": {
+            "nvidia": {
+                "npm": "@ai-sdk/openai-compatible",
+                "name": "NVIDIA",
+                "options": {
+                    "baseURL": "{env:NVIDIA_BASE_URL}",
+                    "apiKey": "{env:NVIDIA_API_KEY}",
+                },
+                "models": {
+                    "opus-frontier": {
+                        "id": "aws/anthropic/claude-opus-4-5",
+                        "name": "Claude 4.5 Opus",
+                        "reasoning": True,
+                        "options": {
+                            "reasoning_effort": "high",
+                        },
+                    }
+                },
+            }
+        },
+        "experimental": {
+            "nemo_flow": True,
+        },
+    }
 
     def __init__(
         self,
@@ -46,9 +71,7 @@ class OpenCodeNeMoFlow(OpenCode):
         **kwargs: Any,
     ):
         merged_config = self._deep_merge(
-            {"experimental": {
-                "nemo_flow": True
-            }},
+            copy.deepcopy(self._DEFAULT_OPENCODE_CONFIG),
             copy.deepcopy(opencode_config or {}),
         )
         super().__init__(*args, opencode_config=merged_config, **kwargs)
@@ -279,24 +302,21 @@ class OpenCodeNeMoFlow(OpenCode):
         context.metadata = metadata
 
     def _build_provider_env(self, provider: str) -> dict[str, str]:
-        if provider == self._NVIDIA_FRONTIER_PROVIDER:
-            # Keep Frontier separate from the standard "nvidia" provider:
-            # this smoke registers an OpenAI-compatible provider/model surface
-            # without changing Harbor's normal NVIDIA/NIM environment contract.
-            return self._build_nvidia_frontier_env()
+        if provider == self._NVIDIA_PROVIDER:
+            return self._build_nvidia_env()
 
         parent_provider_env = getattr(super(), "_build_provider_env", None)
         if callable(parent_provider_env):
             return parent_provider_env(provider)
 
-        raise ValueError(f"OpenCodeNeMoFlow only handles provider {self._NVIDIA_FRONTIER_PROVIDER!r} locally. "
+        raise ValueError(f"OpenCodeNeMoFlow only handles provider {self._NVIDIA_PROVIDER!r} locally. "
                          f"Provider {provider!r} requires Harbor OpenCode provider env support.")
 
-    def _build_nvidia_frontier_env(self) -> dict[str, str]:
-        env = self._copy_env_keys(self._NVIDIA_FRONTIER_ENV_KEYS)
-        required_key = self._NVIDIA_FRONTIER_ENV_KEYS[0]
+    def _build_nvidia_env(self) -> dict[str, str]:
+        env = self._copy_env_keys(self._NVIDIA_ENV_KEYS)
+        required_key = self._NVIDIA_ENV_KEYS[0]
         if required_key not in env:
-            raise ValueError(f"Provider {self._NVIDIA_FRONTIER_PROVIDER!r} requires {required_key} "
+            raise ValueError(f"Provider {self._NVIDIA_PROVIDER!r} requires {required_key} "
                              "in the host environment or extra_env")
         return env
 
