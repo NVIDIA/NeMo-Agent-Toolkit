@@ -31,13 +31,25 @@ import click
 import nest_asyncio2
 from dotenv import load_dotenv
 
-from nat.utils.log_levels import LOG_LEVELS
-from nat.utils.log_utils import setup_logging as log_utils_setup_logging
-
-from .plugin_loader import discover_and_load_cli_plugins
-
-# Load environment variables from .env file, if it exists
+# Load .env BEFORE any ``nat.utils.telemetry`` import. The telemetry config
+# module snapshots NAT_TELEMETRY_ENABLED / NAT_TELEMETRY_ENDPOINT /
+# NAT_TELEMETRY_DRY_RUN / NAT_SESSION_PREFIX at import time. If ``.env``
+# loads after that import, the snapshot is taken with the wrong values:
+# ``maybe_prompt_for_consent`` then sees the post-load env (and short-
+# circuits the prompt) while ``config.TELEMETRY_ENABLED`` still reflects
+# the pre-load state — silent no-emit despite the user explicitly opting
+# in via ``.env``.
 load_dotenv()
+
+# Same hazard applies to plugin loading: a plugin module that imports
+# ``nat.utils.telemetry`` would trigger the snapshot. ``load_dotenv`` runs
+# above so we're safe regardless of load order below.
+from nat.utils.log_levels import LOG_LEVELS  # noqa: E402
+from nat.utils.log_utils import setup_logging as log_utils_setup_logging  # noqa: E402
+from nat.utils.telemetry import maybe_prompt_for_consent  # noqa: E402
+
+from .plugin_loader import discover_and_load_cli_plugins  # noqa: E402
+from .telemetry_hook import record_invocation_start  # noqa: E402
 
 # Apply at the beginning of the file to avoid issues with asyncio
 nest_asyncio2.apply()
@@ -89,6 +101,43 @@ def cli(ctx: click.Context, log_level: str):
 
     ctx_dict["start_time"] = time.time()
     ctx_dict["log_level"] = log_level
+
+    # Telemetry: prompt for first-run consent (TTY only, no persisted
+    # decision, no env-var override). Skip the prompt when the user is
+    # invoking ``nat configure telemetry [--enable|--disable|--status]``,
+    # since that subcommand exists for the user to *manage* the very
+    # decision the prompt asks about. Prompting them first would (a)
+    # break the read-only contract of ``--status`` and (b) interleave a
+    # default-yes prompt with an explicit ``--disable`` request.
+    #
+    # Bookkeeping (``record_invocation_start``) still runs unconditionally;
+    # it has no UX side effect, and it lets already-consented users emit a
+    # properly-tagged ``command="configure", subcommand="telemetry"``
+    # event on exit. Pre-consent users emit nothing because
+    # ``TELEMETRY_ENABLED`` is false at import time.
+    if not _is_invoking_configure_telemetry(ctx.invoked_subcommand):
+        maybe_prompt_for_consent()
+    record_invocation_start(ctx)
+
+
+def _is_invoking_configure_telemetry(invoked_subcommand: str | None) -> bool:
+    """True for ``nat configure telemetry [...]`` invocations.
+
+    Walks ``sys.argv`` past the ``configure`` token and checks whether the
+    next non-flag positional is ``telemetry``. Other ``nat configure
+    <something-else>`` paths still trigger the prompt as normal.
+    """
+    if invoked_subcommand != "configure":
+        return False
+    try:
+        idx = sys.argv.index("configure")
+    except ValueError:
+        return False
+    for token in sys.argv[idx + 1:]:
+        if token.startswith("-"):
+            continue
+        return token == "telemetry"
+    return False
 
 
 # Discover and load ALL CLI commands (core + plugins) via entry points
