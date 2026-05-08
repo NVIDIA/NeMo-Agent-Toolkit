@@ -47,6 +47,7 @@ flowchart TD
 
 ```
 
+<!-- path-check-skip-begin -->
 One NeMo-Flow-enabled OpenCode run emits both source streams:
 
 - Native path: OpenCode JSON events -> Harbor OpenCode adapter ->
@@ -55,6 +56,7 @@ One NeMo-Flow-enabled OpenCode run emits both source streams:
   `agent/nemo-flow-atof-atif/trajectory.json`.
 - A no-NeMo-Flow run is optional control coverage for instrumentation side
   effects, not required for the native-vs-ATOF artifact comparison.
+<!-- path-check-skip-end -->
 
 ## Prerequisites
 
@@ -66,6 +68,7 @@ Clone the external Harbor and NeMo-Flow repositories and check out the expected
 branches. The Harbor checkout is used for SWE-bench adapter assets and, after
 the editable install below, for Harbor branch-local runtime support.
 
+<!-- path-check-skip-begin -->
 ```bash
 mkdir -p external
 
@@ -135,6 +138,7 @@ The smoke expects the NeMo-Flow Node binding at:
 ```text
 external/nemo-flow/crates/node/nemo-flow.linux-x64-gnu.node
 ```
+<!-- path-check-skip-end -->
 
 `NVIDIA_BASE_URL` should point at the OpenAI-compatible NVIDIA endpoint used
 for this smoke:
@@ -148,6 +152,7 @@ export NVIDIA_BASE_URL=<openai-compatible-nvidia-base-url>
 Create a local env file for the Docker task environment. Do not commit this
 file.
 
+<!-- path-check-skip-begin -->
 ```bash
 mkdir -p .tmp/harbor/secrets
 read -rsp 'NVIDIA_API_KEY: ' NVIDIA_API_KEY; echo
@@ -355,9 +360,11 @@ Observed local result from the first successful smoke:
 | `harbor-opencode-nemoflow-atof` | `agent/nemo-flow-atof-atif/trajectory.json` | 31 |
 
 Open `http://localhost:6006` and switch between the two projects.
+<!-- path-check-skip-end -->
 
 ## Known Limitations
 
+<!-- path-check-skip-begin -->
 - The OpenCode/NeMo-Flow setup runs inside each Harbor task container today, so
   the first run is slow. Recent validated one-task smoke runs took about 6 to 8
   minutes locally.
@@ -368,3 +375,4 @@ Open `http://localhost:6006` and switch between the two projects.
   `llm_output` payloads shaped like `data_keys=['content', 'role']`. Preserve
   the raw `agent/nemo-flow-atof/events.jsonl` sidecar for those cases while the
   converter support catches up.
+<!-- path-check-skip-end -->
