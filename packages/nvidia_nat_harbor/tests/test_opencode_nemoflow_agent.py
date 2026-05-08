@@ -121,3 +121,10 @@ def test_build_provider_env_delegates_to_parent_when_available(tmp_path: Path) -
         assert agent._build_provider_env("openai") == {"OPENAI_API_KEY": "parent-key"}
 
     parent_provider_env.assert_called_once_with("openai")
+
+
+def test_build_provider_env_rejects_non_frontier_without_parent_support(tmp_path: Path) -> None:
+    agent = _make_agent(tmp_path)
+
+    with pytest.raises(ValueError, match="only handles provider 'nvidia-frontier' locally"):
+        agent._build_provider_env("openai")

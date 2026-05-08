@@ -32,32 +32,6 @@ class OpenCodeNeMoFlow(OpenCode):
     _DEFAULT_TASK_DIR = "/testbed"
     _NVIDIA_FRONTIER_PROVIDER = "nvidia-frontier"
     _NVIDIA_FRONTIER_ENV_KEYS = ("NVIDIA_FRONTIER_API_KEY", "NVIDIA_FRONTIER_BASE_URL")
-    _PROVIDER_ENV_KEYS = {
-        "amazon-bedrock": ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"),
-        "anthropic": ("ANTHROPIC_API_KEY",),
-        "azure": ("AZURE_RESOURCE_NAME", "AZURE_API_KEY"),
-        "deepseek": ("DEEPSEEK_API_KEY",),
-        "github-copilot": ("GITHUB_TOKEN",),
-        "google": (
-            "GEMINI_API_KEY",
-            "GOOGLE_GENERATIVE_AI_API_KEY",
-            "GOOGLE_APPLICATION_CREDENTIALS",
-            "GOOGLE_CLOUD_PROJECT",
-            "GOOGLE_CLOUD_LOCATION",
-            "GOOGLE_GENAI_USE_VERTEXAI",
-            "GOOGLE_API_KEY",
-        ),
-        "groq": ("GROQ_API_KEY",),
-        "huggingface": ("HF_TOKEN",),
-        "llama": ("LLAMA_API_KEY",),
-        "mistral": ("MISTRAL_API_KEY",),
-        "nvidia": ("NVIDIA_API_KEY", "NVIDIA_BASE_URL"),
-        "openai": ("OPENAI_API_KEY", "OPENAI_BASE_URL"),
-        "opencode": ("OPENCODE_API_KEY",),
-        "xai": ("XAI_API_KEY",),
-        "openrouter": ("OPENROUTER_API_KEY",),
-    }
-    _REQUIRED_PROVIDER_ENV_KEYS = {"nvidia": "NVIDIA_API_KEY"}
 
     def __init__(
         self,
@@ -315,7 +289,8 @@ class OpenCodeNeMoFlow(OpenCode):
         if callable(parent_provider_env):
             return parent_provider_env(provider)
 
-        return self._build_provider_env_compat(provider)
+        raise ValueError(f"OpenCodeNeMoFlow only handles provider {self._NVIDIA_FRONTIER_PROVIDER!r} locally. "
+                         f"Provider {provider!r} requires Harbor OpenCode provider env support.")
 
     def _build_nvidia_frontier_env(self) -> dict[str, str]:
         env = self._copy_env_keys(self._NVIDIA_FRONTIER_ENV_KEYS)
@@ -323,21 +298,6 @@ class OpenCodeNeMoFlow(OpenCode):
         if required_key not in env:
             raise ValueError(f"Provider {self._NVIDIA_FRONTIER_PROVIDER!r} requires {required_key} "
                              "in the host environment or extra_env")
-        return env
-
-    def _build_provider_env_compat(self, provider: str) -> dict[str, str]:
-        # Compatibility path for Harbor versions whose OpenCode agent still keeps
-        # provider env selection inline in run().
-        keys = self._PROVIDER_ENV_KEYS.get(provider)
-        if keys is None:
-            raise ValueError(f"Unknown provider {provider}. If you believe this provider "
-                             "should be supported, please contact the maintainers.")
-
-        env = self._copy_env_keys(keys)
-        required_key = self._REQUIRED_PROVIDER_ENV_KEYS.get(provider)
-        if required_key and required_key not in env:
-            raise ValueError(f"Provider {provider!r} requires {required_key} in the host environment or extra_env")
-
         return env
 
     def _copy_env_keys(self, keys: tuple[str, ...]) -> dict[str, str]:
