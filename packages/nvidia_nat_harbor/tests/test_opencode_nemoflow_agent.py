@@ -124,10 +124,10 @@ def test_build_provider_env_delegates_to_parent_when_available(tmp_path: Path) -
     agent = _make_agent(tmp_path)
 
     with patch.object(
-        OpenCode,
-        "_build_provider_env",
-        return_value={"OPENAI_API_KEY": "parent-key"},
-        create=True,
+            OpenCode,
+            "_build_provider_env",
+            return_value={"OPENAI_API_KEY": "parent-key"},
+            create=True,
     ) as parent_provider_env:
         assert agent._build_provider_env("openai") == {"OPENAI_API_KEY": "parent-key"}
 

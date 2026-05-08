@@ -43,13 +43,18 @@ def _trajectory(*, include_user: bool, tools: list[str], final_message: str) -> 
         step_id += 1
     for tool in tools:
         steps.append({
-            "step_id": step_id,
-            "source": "agent",
-            "message": "(tool use)",
+            "step_id":
+                step_id,
+            "source":
+                "agent",
+            "message":
+                "(tool use)",
             "tool_calls": [{
                 "tool_call_id": f"call-{step_id}",
                 "function_name": tool,
-                "arguments": {"path": "file.py"},
+                "arguments": {
+                    "path": "file.py"
+                },
             }],
         })
         step_id += 1

@@ -20,9 +20,9 @@ limitations under the License.
 This developer workflow compares OpenCode's native event stream with NeMo-Flow
 ATOF for the same Harbor SWE-bench task execution.
 
-This smoke still depends on NAT and Harbor branch-local integration code until
-the Harbor OpenCode wrapper and related support are promoted to their target
-branches.
+This smoke still depends on NeMo Agent Toolkit and Harbor branch-local
+integration code until the Harbor OpenCode wrapper and related support are
+promoted to their target branches.
 
 ## Pipeline
 
@@ -35,13 +35,13 @@ flowchart TD
   nativeLog --> nativeAtif[agent/trajectory.json<br/>Harbor OpenCode ATIF]
 
   run --> atof[agent/nemo-flow-atof/events.jsonl<br/>raw ATOF stream]
-  atof --> converter[NAT ATOF-to-ATIF converter]
+  atof --> converter[ATOF-to-ATIF converter]
   converter --> nfAtif[agent/nemo-flow-atof-atif/trajectory.json<br/>ATOF-derived ATIF]
 
   harbor --> swe[SWE-bench verifier<br/>patch + task tests]
   swe --> result[result.json<br/>reward/resolved]
 
-  nativeAtif --> compare[Trajectory comparison<br/>tool sequence + NAT evaluators + Phoenix]
+  nativeAtif --> compare[Trajectory comparison<br/>tool sequence + toolkit evaluators + Phoenix]
   nfAtif --> compare
   result --> outcome[Outcome sanity check<br/>successful/resolved run]
 
@@ -52,7 +52,7 @@ One NeMo-Flow-enabled OpenCode run emits both source streams:
 
 - Native path: OpenCode JSON events -> Harbor OpenCode adapter ->
   `agent/trajectory.json`.
-- NeMo-Flow path: ATOF JSONL -> NAT ATOF-to-ATIF converter ->
+- NeMo-Flow path: ATOF JSONL -> toolkit ATOF-to-ATIF converter ->
   `agent/nemo-flow-atof-atif/trajectory.json`.
 - A no-NeMo-Flow run is optional control coverage for instrumentation side
   effects, not required for the native-vs-ATOF artifact comparison.
@@ -61,7 +61,7 @@ One NeMo-Flow-enabled OpenCode run emits both source streams:
 ## Prerequisites
 
 - Docker is running.
-- NAT is checked out to a branch containing
+- This repository is checked out to a branch containing
   `nat_harbor.agents.installed.opencode_nemoflow:OpenCodeNeMoFlow`.
 
 Clone the external Harbor and NeMo-Flow repositories and check out the expected
@@ -149,8 +149,8 @@ export NVIDIA_BASE_URL=<openai-compatible-nvidia-base-url>
 
 ## Run the Smoke
 
-Create a local env file for the Docker task environment. Do not commit this
-file.
+Create a local environment file for the Docker task environment. Do not commit
+this file.
 
 <!-- path-check-skip-begin -->
 ```bash

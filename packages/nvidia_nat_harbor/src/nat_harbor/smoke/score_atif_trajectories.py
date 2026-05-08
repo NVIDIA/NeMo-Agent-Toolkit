@@ -363,16 +363,15 @@ def _write_markdown(rows: list[TrialScoreRow], output_path: Path) -> None:
     ]
     for row in rows:
         errors = "; ".join(error for error in [row.native_error, row.nemoflow_error] if error)
-        lines.append(
-            "| "
-            f"{row.task_id} | "
-            f"{_format_optional_number(row.swebench_reward)} | "
-            f"{row.deterministic_comparison} | "
-            f"{_format_optional_number(row.native_score)} | "
-            f"{_format_optional_number(row.nemoflow_score)} | "
-            f"{_format_optional_number(row.score_delta)} | "
-            f"{row.score_category} | "
-            f"{errors} |")
+        lines.append("| "
+                     f"{row.task_id} | "
+                     f"{_format_optional_number(row.swebench_reward)} | "
+                     f"{row.deterministic_comparison} | "
+                     f"{_format_optional_number(row.native_score)} | "
+                     f"{_format_optional_number(row.nemoflow_score)} | "
+                     f"{_format_optional_number(row.score_delta)} | "
+                     f"{row.score_category} | "
+                     f"{errors} |")
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
