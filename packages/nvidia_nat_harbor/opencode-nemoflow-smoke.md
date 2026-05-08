@@ -302,6 +302,14 @@ export JOB_NAME=opencode-nemoflow-repeatable-smoke-1
   --no-llm
 ```
 
+Install the LangChain plugin package before running the LLM scoring pass. The
+base Harbor smoke does not require this package, but the trajectory evaluator
+does.
+
+```bash
+uv pip install -e packages/nvidia_nat_langchain
+```
+
 Run the LLM scoring pass with an OpenAI-compatible judge endpoint:
 
 ```bash
