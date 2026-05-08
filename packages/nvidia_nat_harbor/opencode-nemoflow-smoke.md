@@ -107,7 +107,7 @@ uv pip install -e packages/nvidia_nat_harbor
 uv pip install -e external/harbor
 ```
 
-Prepare the merged NeMo-Flow OpenCode checkout:
+Prepare the NeMo-Flow OpenCode patch:
 
 ```bash
 cd external/nemo-flow
@@ -131,7 +131,7 @@ external/nemo-flow/crates/node/nemo-flow.linux-x64-gnu.node
 ```
 
 `NVIDIA_FRONTIER_BASE_URL` should point at the OpenAI-compatible NVIDIA
-Frontier endpoint provided by your environment or team-specific setup notes:
+Frontier endpoint:
 
 ```bash
 export NVIDIA_FRONTIER_BASE_URL=<openai-compatible-frontier-base-url>
@@ -201,7 +201,7 @@ TRIAL=$(find "$HARBOR_JOBS_DIR/$JOB_NAME" -maxdepth 1 -type d -name 'django__dja
 test -n "$TRIAL"
 ```
 
-Check that both ATIF artifacts load and that the ATOF sidecar exists:
+Check that both ATIF artifacts load:
 
 ```bash
 .venv/bin/python - <<'PY'
@@ -246,7 +246,7 @@ Current expected result:
 Classification: match (richer)
 ```
 
-Observed local repeatability run on 2026-05-06:
+Sample results:
 
 | Artifact | Result |
 |---|---|
