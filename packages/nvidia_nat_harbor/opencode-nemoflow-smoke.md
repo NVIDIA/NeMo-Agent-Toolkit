@@ -266,7 +266,7 @@ The checker uses ordered subsequence matching:
 ## Post-Run Trajectory Scoring
 
 After the smoke run completes, score the native and ATOF-derived ATIF
-trajectories with the NAT LangChain trajectory evaluator. This is a post-run
+trajectories with the toolkit LangChain trajectory evaluator. This is a post-run
 quality signal only; SWE-bench verification remains the source of truth for task
 success.
 
@@ -310,7 +310,7 @@ export NAT_HARBOR_TRAJECTORY_JUDGE_MODEL=<openai-compatible-judge-model>
   --score-timeout-sec 45
 ```
 
-Observed local one-task judge result on 2026-05-07:
+Sample judge result:
 
 | Task | Reward | Deterministic | Native | NeMo-Flow | Delta | Category |
 |---|---:|---|---:|---:|---:|---|
