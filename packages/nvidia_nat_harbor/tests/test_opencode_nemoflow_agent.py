@@ -19,6 +19,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+from harbor.agents.installed.opencode import OpenCode
 from harbor.models.agent.context import AgentContext
 
 from nat_harbor.agents.installed.opencode_nemoflow import OpenCodeNeMoFlow
@@ -83,3 +85,39 @@ def test_populate_context_can_treat_atof_conversion_as_best_effort(tmp_path: Pat
     assert context.metadata is not None
     assert context.metadata["nemo_flow_atof_exists"] is True
     assert context.metadata["nemo_flow_converted_atif_exists"] is False
+
+
+def test_build_provider_env_handles_nvidia_frontier_locally(tmp_path: Path) -> None:
+    agent = _make_agent(
+        tmp_path,
+        extra_env={
+            "NVIDIA_FRONTIER_API_KEY": "frontier-key",
+            "NVIDIA_FRONTIER_BASE_URL": "https://frontier.example/v1",
+        },
+    )
+
+    assert agent._build_provider_env("nvidia-frontier") == {
+        "NVIDIA_FRONTIER_API_KEY": "frontier-key",
+        "NVIDIA_FRONTIER_BASE_URL": "https://frontier.example/v1",
+    }
+
+
+def test_build_provider_env_requires_nvidia_frontier_api_key(tmp_path: Path) -> None:
+    agent = _make_agent(tmp_path, extra_env={"NVIDIA_FRONTIER_BASE_URL": "https://frontier.example/v1"})
+
+    with pytest.raises(ValueError, match="NVIDIA_FRONTIER_API_KEY"):
+        agent._build_provider_env("nvidia-frontier")
+
+
+def test_build_provider_env_delegates_to_parent_when_available(tmp_path: Path) -> None:
+    agent = _make_agent(tmp_path)
+
+    with patch.object(
+        OpenCode,
+        "_build_provider_env",
+        return_value={"OPENAI_API_KEY": "parent-key"},
+        create=True,
+    ) as parent_provider_env:
+        assert agent._build_provider_env("openai") == {"OPENAI_API_KEY": "parent-key"}
+
+    parent_provider_env.assert_called_once_with("openai")
