@@ -13,24 +13,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """End-to-end integration tests for A365 telemetry exporter registration."""
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 
 from nat.builder.builder import Builder
 from nat.builder.context import Context
-from nat.data_models.authentication import AuthResult, BearerTokenCred
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BearerTokenCred
 from nat.data_models.component_ref import AuthenticationRef
 from nat.plugins.a365.exceptions import A365AuthenticationError
-from nat.plugins.a365.telemetry.agentic_token_cache import (
-    cache_agentic_observability_token,
-    clear_agentic_observability_token_cache,
-)
-from nat.plugins.a365.telemetry.register import a365_telemetry_exporter
 from nat.plugins.a365.telemetry.register import A365TelemetryExporter
+from nat.plugins.a365.telemetry.register import a365_telemetry_exporter
 
 
 class TestRegistrationIntegration:
@@ -60,9 +58,7 @@ class TestRegistrationIntegration:
         )
 
     @pytest.mark.asyncio
-    async def test_registration_creates_exporter_successfully(
-        self, config, mock_builder, mock_auth_provider
-    ):
+    async def test_registration_creates_exporter_successfully(self, config, mock_builder, mock_auth_provider):
         """Test that registration function creates exporter with correct config."""
         from pydantic import SecretStr
 
@@ -85,7 +81,7 @@ class TestRegistrationIntegration:
                     assert exporter._agent_id == "test-agent-123"
                     assert exporter._tenant_id == "test-tenant-456"
                     assert exporter._token_resolver is not None
-                    assert exporter._auth_provider is None
+                    assert exporter._auth_providers == {}
                     assert exporter._auth_ref == config.token_resolver
                     assert exporter._builder is mock_builder
                     assert exporter._token_cache is not None
@@ -105,12 +101,11 @@ class TestRegistrationIntegration:
                     mock_span.parent = None
                     await exporter.export_otel_spans([mock_span])
                     mock_builder.get_auth_provider.assert_called_once_with(config.token_resolver)
-                    assert exporter._auth_provider is mock_auth_provider
+                    assert ("test-agent-123", "test-tenant-456") in exporter._auth_providers
+                    assert exporter._auth_providers[("test-agent-123", "test-tenant-456")] is mock_auth_provider
 
     @pytest.mark.asyncio
-    async def test_registration_passes_all_config_to_exporter(
-        self, config, mock_builder, mock_auth_provider
-    ):
+    async def test_registration_passes_all_config_to_exporter(self, config, mock_builder, mock_auth_provider):
         """Test that all config fields are passed to exporter."""
         from pydantic import SecretStr
 
@@ -135,36 +130,13 @@ class TestRegistrationIntegration:
                     assert exporter._cluster_category == "dev"
                     assert exporter._use_s2s_endpoint is True
                     assert exporter._suppress_invoke_agent_input is True
-                    
+
                     # Batch config (batch_size, flush_interval) is passed to parent class
                     # and used in processors - not stored as instance attributes
                     # The fact that exporter was created successfully verifies config was valid
 
     @pytest.mark.asyncio
-    async def test_registration_token_resolver_uses_cached_agentic_token(
-        self, config, mock_builder, mock_auth_provider
-    ):
-        """Test that the SDK token_resolver can return cache-backed agentic tokens."""
-        clear_agentic_observability_token_cache()
-        cache_agentic_observability_token(
-            "turn-tenant-456",
-            "turn-agent-123",
-            "cached-agentic-token",
-        )
-
-        try:
-            with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter"):
-                async with a365_telemetry_exporter(config, mock_builder) as exporter:
-                    token = exporter._token_resolver("turn-agent-123", "turn-tenant-456")
-                    assert token == "cached-agentic-token"
-                    mock_builder.get_auth_provider.assert_not_called()
-        finally:
-            clear_agentic_observability_token_cache()
-
-    @pytest.mark.asyncio
-    async def test_registration_handles_auth_provider_resolution_failure(
-        self, config, mock_builder
-    ):
+    async def test_registration_handles_auth_provider_resolution_failure(self, config, mock_builder):
         """Test that auth provider resolution failure is raised on first export (lazy)."""
         mock_builder.get_auth_provider.side_effect = ValueError("Auth provider not found")
 
@@ -175,9 +147,7 @@ class TestRegistrationIntegration:
                     await exporter.export_otel_spans([mock_span])
 
     @pytest.mark.asyncio
-    async def test_registration_handles_authentication_failure(
-        self, config, mock_builder, mock_auth_provider
-    ):
+    async def test_registration_handles_authentication_failure(self, config, mock_builder, mock_auth_provider):
         """Test that authentication failure is raised on first export (lazy)."""
         mock_auth_provider.authenticate.side_effect = A365AuthenticationError("Auth failed")
 
@@ -191,9 +161,7 @@ class TestRegistrationIntegration:
                         await exporter.export_otel_spans([mock_span])
 
     @pytest.mark.asyncio
-    async def test_registration_handles_no_credentials(
-        self, config, mock_builder, mock_auth_provider
-    ):
+    async def test_registration_handles_no_credentials(self, config, mock_builder, mock_auth_provider):
         """Test that no credentials is raised on first export (lazy)."""
         auth_result = Mock(spec=AuthResult)
         auth_result.credentials = []

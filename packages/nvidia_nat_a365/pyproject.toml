@@ -55,7 +55,7 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "microsoft-agents-a365-notifications~=0.1.0",
-  "microsoft-agents-a365-observability-core>=0.3.0.dev0,<0.4.0",
+  "microsoft-agents-a365-observability-core==1.0.0",
   "microsoft-agents-a365-tooling~=0.1.0",
   "microsoft-agents-activity~=0.8.0",
   "microsoft-agents-authentication-msal~=0.8.0",

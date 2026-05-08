@@ -5135,34 +5135,30 @@ wheels = [
 
 [[package]]
 name = "microsoft-agents-a365-observability-core"
-version = "0.1.0"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "microsoft-agents-a365-runtime" },
-    { name = "opentelemetry-api", version = "1.38.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "opentelemetry-api", version = "1.39.1", source = { registry = "https://pypi.org/simple" }, marker = "(extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "opentelemetry-exporter-otlp", version = "1.38.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "opentelemetry-exporter-otlp", version = "1.39.1", source = { registry = "https://pypi.org/simple" }, marker = "(extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
-    { name = "opentelemetry-sdk", version = "1.38.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'extra-10-nvidia-nat-adk' or extra == 'extra-10-nvidia-nat-most' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-crewai' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands')" },
-    { name = "opentelemetry-sdk", version = "1.39.1", source = { registry = "https://pypi.org/simple" }, marker = "(extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-rag') or (extra != 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-openpipe-art') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra != 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag')" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp" },
+    { name = "opentelemetry-sdk" },
     { name = "pydantic" },
     { name = "typing-extensions" },
+    { name = "wrapt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/50/33/f455ddfa500fa3b4d28e15b72f7129c975897cba1eaa511f9cc49a228509/microsoft_agents_a365_observability_core-0.1.0.tar.gz", hash = "sha256:c59eff33359175e1031d17a0218aed7ff2ec23f2df63d3da25eee6e842d7b282", size = 25429, upload-time = "2025-11-18T19:59:18.543Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fc/ab/6898ab81ceb84976a932d2e09a0fd19d9e3a27721cc3e6eec95da3c378f9/microsoft_agents_a365_observability_core-0.1.0-py3-none-any.whl", hash = "sha256:5dc96eabc4222064b4bfba19b3ef3092c6687f1a13f0a1ef47ff1b0e54f7cf0d", size = 34143, upload-time = "2025-11-18T19:59:32.008Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/bb/47d1571e427b5d6e60a4081161f83b629c7e2acb8264aaaae06595096739/microsoft_agents_a365_observability_core-1.0.0-py3-none-any.whl", hash = "sha256:d922ef8be2bbce17f387e53400745e05cff94e127460d144910d53a77d64d516", size = 56431, upload-time = "2026-05-01T02:59:53.542Z" },
 ]
 
 [[package]]
 name = "microsoft-agents-a365-runtime"
-version = "0.1.0"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyjwt" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/58/e2/c02f268cf60ed11f031bb6f65d1cee8ea722651b465f04ed456d3f529e89/microsoft_agents_a365_runtime-0.1.0.tar.gz", hash = "sha256:644f52703548005f5cad7511445a87ba71660c2a08ef457ea1a23830f51060a2", size = 6129, upload-time = "2025-11-18T19:59:23.438Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/66/a201d51aa81c743298c5b1e974ebd7c4136f7cd2f0337188ee54cfcacf51/microsoft_agents_a365_runtime-0.1.0-py3-none-any.whl", hash = "sha256:c35b7268617e85e292c55ce3773dcf75515ff39cf9631fdd7fc1b049f048b030", size = 6958, upload-time = "2025-11-18T19:59:36.526Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/3b/9912007bd969b7d0e376b138a7bf05e80d8989a977b03f193228635e5f22/microsoft_agents_a365_runtime-1.0.0-py3-none-any.whl", hash = "sha256:da4d5e3e74f1303391d440ce99144afb711867bee606911a5ec56b74a714fa5c", size = 10926, upload-time = "2026-05-01T03:00:01.333Z" },
 ]
 
 [[package]]
@@ -6910,7 +6906,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "microsoft-agents-a365-notifications", specifier = "~=0.1.0" },
-    { name = "microsoft-agents-a365-observability-core", specifier = "~=0.1.0" },
+    { name = "microsoft-agents-a365-observability-core", specifier = "==1.0.0" },
     { name = "microsoft-agents-a365-tooling", specifier = "~=0.1.0" },
     { name = "microsoft-agents-activity", specifier = "~=0.8.0" },
     { name = "microsoft-agents-authentication-msal", specifier = "~=0.8.0" },

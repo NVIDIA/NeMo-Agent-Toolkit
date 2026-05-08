@@ -13,76 +13,91 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Tests for _AgentTokenCache (per-(agent_id, tenant_id) token caching)."""
 
-"""Tests for _TokenCache class in A365 telemetry registration."""
+from datetime import UTC
+from datetime import datetime
+from datetime import timedelta
 
-from datetime import datetime, timedelta, timezone
+from nat.plugins.a365.telemetry.register import _AgentTokenCache
 
-import pytest
+KEY_A = ("agent-A", "tenant-A")
+KEY_B = ("agent-B", "tenant-B")
 
-from nat.plugins.a365.telemetry.register import _TokenCache
 
+class TestAgentTokenCache:
 
-class TestTokenCache:
-    """Tests for _TokenCache thread-safe token caching."""
+    def test_get_token_returns_none_when_unset(self):
+        cache = _AgentTokenCache()
+        assert cache.get_token(*KEY_A) is None
 
-    def test_get_token_with_expiration_valid(self):
-        """Test that valid token (not expiring soon) is returned."""
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-        cache = _TokenCache("test_token_123", expires_at)
+    def test_update_then_get_returns_token(self):
+        cache = _AgentTokenCache()
+        expires = datetime.now(UTC) + timedelta(minutes=10)
 
-        token = cache.get_token()
-        assert token == "test_token_123"
+        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
 
-    def test_get_token_with_expiration_expired(self):
-        """Test that expired token returns None."""
-        expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
-        cache = _TokenCache("test_token_123", expires_at)
+        assert cache.get_token(*KEY_A) == "token-A"
 
-        token = cache.get_token()
-        assert token is None
+    def test_get_returns_none_when_token_expired(self):
+        cache = _AgentTokenCache()
+        expires = datetime.now(UTC) - timedelta(minutes=1)
 
-    def test_get_token_with_expiration_expiring_soon(self):
-        """Test that token expiring within 5 minutes returns None."""
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=3)
-        cache = _TokenCache("test_token_123", expires_at)
+        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
 
-        token = cache.get_token()
-        assert token is None
+        assert cache.get_token(*KEY_A) is None
 
-    def test_get_token_without_expiration(self):
-        """Test that token without expiration info is always returned."""
-        cache = _TokenCache("test_token_123", None)
+    def test_get_returns_none_when_token_expiring_soon(self):
+        cache = _AgentTokenCache()
+        expires = datetime.now(UTC) + timedelta(minutes=3)
 
-        token = cache.get_token()
-        assert token == "test_token_123"
+        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
 
-    def test_update_token(self):
-        """Test updating token and expiration."""
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-        cache = _TokenCache("old_token", expires_at)
+        assert cache.get_token(*KEY_A) is None
 
-        new_expires_at = datetime.now(timezone.utc) + timedelta(minutes=20)
-        cache.update_token("new_token", new_expires_at)
+    def test_get_returns_token_when_no_expiration_set(self):
+        cache = _AgentTokenCache()
 
-        assert cache.get_token() == "new_token"
+        cache.update_token(*KEY_A, token="token-A", expires_at=None)
 
-    def test_is_expiring_soon_with_expiration(self):
-        """Test is_expiring_soon returns True when token expires soon."""
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=3)
-        cache = _TokenCache("test_token", expires_at)
+        assert cache.get_token(*KEY_A) == "token-A"
 
-        assert cache.is_expiring_soon() is True
+    def test_keys_are_independent(self):
+        cache = _AgentTokenCache()
+        long = datetime.now(UTC) + timedelta(minutes=10)
+        short = datetime.now(UTC) - timedelta(minutes=1)
 
-    def test_is_expiring_soon_not_expiring(self):
-        """Test is_expiring_soon returns False when token is not expiring soon."""
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
-        cache = _TokenCache("test_token", expires_at)
+        cache.update_token(*KEY_A, token="token-A", expires_at=long)
+        cache.update_token(*KEY_B, token="token-B", expires_at=short)
 
-        assert cache.is_expiring_soon() is False
+        assert cache.get_token(*KEY_A) == "token-A"
+        assert cache.get_token(*KEY_B) is None  # B is expired, A is not
 
-    def test_is_expiring_soon_without_expiration(self):
-        """Test is_expiring_soon returns False when no expiration info."""
-        cache = _TokenCache("test_token", None)
+    def test_is_expiring_soon_true_when_within_buffer(self):
+        cache = _AgentTokenCache()
+        expires = datetime.now(UTC) + timedelta(minutes=3)
 
-        assert cache.is_expiring_soon() is False
+        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
+
+        assert cache.is_expiring_soon(*KEY_A) is True
+
+    def test_is_expiring_soon_false_when_outside_buffer(self):
+        cache = _AgentTokenCache()
+        expires = datetime.now(UTC) + timedelta(minutes=10)
+
+        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
+
+        assert cache.is_expiring_soon(*KEY_A) is False
+
+    def test_is_expiring_soon_false_when_no_expiration(self):
+        cache = _AgentTokenCache()
+
+        cache.update_token(*KEY_A, token="token-A", expires_at=None)
+
+        assert cache.is_expiring_soon(*KEY_A) is False
+
+    def test_is_expiring_soon_true_when_unset(self):
+        """An unset key needs a fresh token, so 'expiring soon' should be True."""
+        cache = _AgentTokenCache()
+
+        assert cache.is_expiring_soon(*KEY_A) is True
