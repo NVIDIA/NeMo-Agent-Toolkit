@@ -21,7 +21,7 @@ This guide shows how to send **OpenTelemetry** traces from NeMo Agent Toolkit to
 
 ## Step 1: Arize space and API key
 
-In the Arize AX UI, open your **space** and create or select a **project** for trace ingestion. You need the **space ID** and an **API key** with permission to send OTLP data. Official OTLP details: [OpenTelemetry (arize-otel)](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel).
+In the Arize AX UI, open your **space** and create or select a **project** for trace ingestion. You need the **space ID** and an **API key** with permission to send OTLP data. Official OTLP details: [OpenTelemetry with Arize OTel](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel).
 
 ## Step 2: Configure the environment
 

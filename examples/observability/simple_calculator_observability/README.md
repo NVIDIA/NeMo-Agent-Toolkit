@@ -102,7 +102,7 @@ This is useful for filtering out internal tool calls when analyzing agent behavi
 
 ### Arize AX (hosted OTLP)
 
-Send traces to [Arize AX](https://arize.com/docs/ax/) using the `arize_ax` exporter (`nvidia-nat[opentelemetry]`). This example uses the same OTLP metadata as [arize-otel](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel).
+Send traces to [Arize AX](https://arize.com/docs/ax/) using the `arize_ax` exporter (`nvidia-nat[opentelemetry]`). This example uses the same OTLP metadata as [Arize OTel](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel).
 
 1. Set credentials (project name defaults to `simple_calculator` in `config-arize-ax.yml` if `ARIZE_PROJECT_NAME` is unset):
 
@@ -349,7 +349,7 @@ The example includes multiple configuration files for different observability pl
 |-------------------|----------|----------|
 | `config-phoenix.yml` | Phoenix | Tracing with Phoenix |
 | `config-phoenix-nested.yml` | Phoenix | Testing parent-child span tracking with nested tool calls |
-| `config-arize-ax.yml` | Arize AX | Hosted OTLP tracing to Arize AX (requires `ARIZE_*` env vars) |
+| `config-arize-ax.yml` | Arize AX | Hosted OTLP tracing to Arize AX (requires `ARIZE_*` environment variables) |
 | `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
 | `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |

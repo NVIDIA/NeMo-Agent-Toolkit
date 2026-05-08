@@ -271,7 +271,7 @@ Before creating a custom exporter, check if your observability service is alread
 
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
-| **Arize AX** | `arize_ax` | `pip install "nvidia-nat[opentelemetry]"` | Arize space ID, API key, project name, optional US/EU endpoint and HTTP or gRPC |
+| **Arize AX** | `arize_ax` | `pip install "nvidia-nat[opentelemetry]"` | Arize space ID, API key, project name, optional US or EU endpoint and HTTP or gRPC |
 | **DBNL** | `dbnl` | `pip install "nvidia-nat[opentelemetry]"` | API URL + API token + project id |
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
