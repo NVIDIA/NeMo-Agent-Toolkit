@@ -17,9 +17,11 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_embedder_client
 from nat.data_models.retry_mixin import RetryMixin
+from nat.data_models.common import get_secret_value
 from nat.embedder.azure_openai_embedder import AzureOpenAIEmbedderModelConfig
 from nat.embedder.nim_embedder import NIMEmbedderModelConfig
 from nat.embedder.openai_embedder import OpenAIEmbedderModelConfig
+from nat.embedder.perplexity_embedder import PerplexityEmbedderModelConfig
 from nat.llm.utils.http_client import http_clients
 from nat.utils.exception_handlers.automatic_retries import patch_with_retry
 
@@ -95,3 +97,45 @@ async def openai_llama_index(embedder_config: OpenAIEmbedderModelConfig, _builde
                                       retry_on_messages=embedder_config.retry_on_errors)
 
         yield client
+
+
+@register_embedder_client(config_type=PerplexityEmbedderModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
+async def perplexity_llama_index(embedder_config: PerplexityEmbedderModelConfig, _builder: Builder):
+    """LlamaIndex client for the Perplexity Embeddings API.
+
+    Builds a ``PerplexityLlamaIndexEmbedding`` adapter around the shared
+    ``PerplexityEmbeddings`` HTTP client. Outbound requests carry the
+    ``X-Pplx-Integration: nemo-agent-toolkit/<version>`` attribution header.
+    """
+    import os
+
+    from nat.plugins.langchain.perplexity_embeddings_client import PerplexityEmbeddings
+    from nat.plugins.llama_index.perplexity_embeddings_client import PerplexityLlamaIndexEmbedding
+
+    raw_key = get_secret_value(embedder_config.api_key) if embedder_config.api_key else ""
+    resolved_key = raw_key or os.environ.get("PERPLEXITY_API_KEY", "")
+    if not resolved_key:
+        raise ValueError(
+            "Perplexity embedder requires a non-empty API key. Set ``api_key`` in the "
+            "workflow config or export ``PERPLEXITY_API_KEY``."
+        )
+
+    inner = PerplexityEmbeddings(
+        api_key=resolved_key,
+        base_url=embedder_config.base_url,
+        model=embedder_config.model_name,
+        dimensions=embedder_config.dimensions,
+        encoding_format=embedder_config.encoding_format,
+        batch_size=embedder_config.batch_size,
+        max_retries=getattr(embedder_config, "num_retries", 3),
+        verify_ssl=getattr(embedder_config, "verify_ssl", True),
+    )
+    client = PerplexityLlamaIndexEmbedding(client=inner)
+
+    if isinstance(embedder_config, RetryMixin):
+        client = patch_with_retry(client,
+                                  retries=embedder_config.num_retries,
+                                  retry_codes=embedder_config.retry_on_status_codes,
+                                  retry_on_messages=embedder_config.retry_on_errors)
+
+    yield client

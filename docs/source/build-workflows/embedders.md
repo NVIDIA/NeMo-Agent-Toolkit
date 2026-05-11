@@ -25,6 +25,7 @@ NeMo Agent Toolkit supports the following embedder providers:
 | [OpenAI](https://openai.com) | `openai` | OpenAI API |
 | [Azure OpenAI](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/quickstart) | `azure_openai` | Azure OpenAI API |
 | [Hugging Face](https://huggingface.co) | `huggingface` | Local sentence-transformers or remote Inference Endpoints (TEI) |
+| [Perplexity](https://docs.perplexity.ai/api-reference/embeddings-post) | `perplexity` | Perplexity Embeddings API (`pplx-embed-v1-0.6b`, `pplx-embed-v1-4b`, contextualized variants) |
 
 ## Embedder Configuration
 
@@ -41,6 +42,9 @@ embedders:
   azure_openai_embedder:
     _type: azure_openai
     azure_deployment: text-embedding-3-small
+  perplexity_embedder:
+    _type: perplexity
+    model_name: pplx-embed-v1-0.6b
 ```
 
 ### NVIDIA NIM
@@ -119,4 +123,29 @@ embedders:
     _type: huggingface
     endpoint_url: http://localhost:8081
     api_key: ${HF_TOKEN}
+```
+
+### Perplexity
+
+Perplexity exposes a dedicated embeddings endpoint at `POST https://api.perplexity.ai/v1/embeddings`. The toolkit ships a native client that batches inputs, decodes the on-wire base64 payload locally, and forwards an `X-Pplx-Integration: nemo-agent-toolkit/<version>` attribution header on every request.
+
+You can use the following environment variables to configure the Perplexity embedder provider:
+
+* `PERPLEXITY_API_KEY` - The API key to access the Perplexity Embeddings API
+
+The Perplexity embedder provider is defined by the {py:class}`~nat.embedder.perplexity_embedder.PerplexityEmbedderModelConfig` class.
+
+* `model_name` - Embedding model identifier. Standard embeddings: `pplx-embed-v1-0.6b` (1024-dim, default) or `pplx-embed-v1-4b` (2560-dim). Document-aware: `pplx-embed-context-v1-0.6b` or `pplx-embed-context-v1-4b`
+* `api_key` - Perplexity API key (falls back to `PERPLEXITY_API_KEY`)
+* `base_url` - Base URL for the Perplexity API (default: `https://api.perplexity.ai/v1`)
+* `dimensions` - Optional Matryoshka output dimension. Range 128-1024 for `0.6b` models and 128-2560 for `4b` models. Omit for full dimensions
+* `encoding_format` - On-wire encoding: `base64_int8` (default, signed int8) or `base64_binary` (packed bits for large-scale retrieval)
+* `batch_size` - Maximum inputs per request (1-512). Defaults to `64`
+
+```yaml
+embedders:
+  perplexity_embedder:
+    _type: perplexity
+    model_name: pplx-embed-v1-0.6b
+    dimensions: 512   # optional Matryoshka truncation
 ```

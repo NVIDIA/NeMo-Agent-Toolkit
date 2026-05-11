@@ -21,3 +21,4 @@ from . import azure_openai_embedder
 from . import huggingface_embedder
 from . import nim_embedder
 from . import openai_embedder
+from . import perplexity_embedder

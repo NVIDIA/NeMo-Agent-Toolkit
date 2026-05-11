@@ -40,7 +40,7 @@ NeMo Agent Toolkit provides different levels of support for each framework acros
 The ability to use various large language model providers with a framework, including NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, and Hugging Face.
 
 ### Embedder Provider Support
-The ability to use embedding model providers for vector representations, including NVIDIA NIM embeddings, OpenAI embeddings, and Azure OpenAI embeddings.
+The ability to use embedding model providers for vector representations, including NVIDIA NIM embeddings, OpenAI embeddings, Azure OpenAI embeddings, and Perplexity embeddings.
 
 ### Retriever Provider Support
 The ability to integrate with vector databases and retrieval systems, such as NeMo Retriever and Milvus.
@@ -154,7 +154,7 @@ For more information, visit the [LangChain documentation](https://docs.langchain
 | Capability              | Providers / Details                                                                 |
 |-------------------------|-------------------------------------------------------------------------------------|
 | **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM, Hugging Face                |
-| **Embedder Providers**  | NVIDIA NIM, OpenAI, Azure OpenAI                                                    |
+| **Embedder Providers**  | NVIDIA NIM, OpenAI, Azure OpenAI, Perplexity                                        |
 | **Retriever Providers** | NeMo Retriever, Milvus                                                              |
 | **Tool Calling**        | Fully supported through LangChain's `StructuredTool` interface                      |
 | **Profiling**           | Comprehensive profiling support with callback handlers                              |
@@ -174,7 +174,7 @@ For more information, visit the [LlamaIndex website](https://www.llamaindex.ai/)
 | Capability              | Providers / Details                                                                 |
 |-------------------------|-------------------------------------------------------------------------------------|
 | **LLM Providers**       | NVIDIA NIM, OpenAI, Azure OpenAI, AWS Bedrock, LiteLLM                              |
-| **Embedder Providers**  | NVIDIA NIM, OpenAI, Azure OpenAI                                                    |
+| **Embedder Providers**  | NVIDIA NIM, OpenAI, Azure OpenAI, Perplexity                                        |
 | **Retriever Providers** | None (Use LlamaIndex native retrievers)                                             |
 | **Tool Calling**        | Fully supported through LlamaIndex's `FunctionTool` interface                       |
 | **Profiling**           | Comprehensive profiling support with callback handlers                              |
