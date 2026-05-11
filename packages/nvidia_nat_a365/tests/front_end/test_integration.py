@@ -15,6 +15,7 @@
 # limitations under the License.
 """Integration tests for A365 front-end plugin with mocked Microsoft Agents SDK."""
 
+import logging
 from contextlib import contextmanager
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
@@ -519,6 +520,151 @@ class TestConnectionManagerConfiguration:
         assert "AUDIENCE_ALIAS_1" in connections
         assert connections["AUDIENCE_ALIAS_1"].CLIENT_ID == "alternate-aud"
         assert "AUDIENCE_ALIAS_2" not in connections
+
+    def test_connection_manager_dedups_aliases_case_insensitively(self):
+        """Aliases that case-insensitively duplicate each other or the bot's app_id are dropped.
+
+        Regression guard against silently inflating the SDK connection map (and the
+        bot secret's in-memory exposure) when YAML configs contain accidental
+        duplicates with mixed casing.
+        """
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            tenant_id="test-tenant-id",
+            allowed_audiences=[
+                "alternate-aud",  # unique
+                "Alternate-Aud",  # case-insensitive dup of #1 -> dropped
+                "alternate-aud",  # exact dup of #1 -> dropped
+                "TEST-APP-ID",  # case-insensitive dup of service CLIENT_ID -> dropped
+                "another-aud",  # unique
+            ],
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        worker = A365FrontEndPluginWorker(full_config)
+
+        mock_service_connection = Mock()
+        mock_service_connection.CLIENT_ID = "test-app-id"
+        mock_service_connection.AUTH_TYPE = "client_secret"
+
+        with patch("microsoft_agents.authentication.msal.MsalConnectionManager") as mock_manager:
+            worker._get_connection_manager(mock_service_connection)
+
+        connections = mock_manager.call_args.kwargs["connections_configurations"]
+        # Expect exactly: SERVICE_CONNECTION, AUDIENCE_ALIAS_1 (alternate-aud),
+        # AUDIENCE_ALIAS_2 (another-aud). No gaps in numbering despite the dups.
+        assert set(connections.keys()) == {"SERVICE_CONNECTION", "AUDIENCE_ALIAS_1", "AUDIENCE_ALIAS_2"}
+        assert connections["AUDIENCE_ALIAS_1"].CLIENT_ID == "alternate-aud"
+        assert connections["AUDIENCE_ALIAS_2"].CLIENT_ID == "another-aud"
+
+    def test_connection_manager_logs_accepted_audiences(self, caplog):
+        """``_get_connection_manager`` should emit a single INFO line naming each accepted audience.
+
+        Operators debugging 401s on Teams/Bot Framework need a way to confirm
+        which audiences are actually installed. The startup log is that surface.
+        """
+        a365_config = A365FrontEndConfig(
+            app_id="test-app-id",
+            app_password="test-app-password",
+            tenant_id="test-tenant-id",
+            allowed_audiences=["alternate-aud"],
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        worker = A365FrontEndPluginWorker(full_config)
+
+        mock_service_connection = Mock()
+        mock_service_connection.CLIENT_ID = "test-app-id"
+        mock_service_connection.AUTH_TYPE = "client_secret"
+
+        with patch("microsoft_agents.authentication.msal.MsalConnectionManager"):
+            with caplog.at_level(logging.INFO, logger="nat.plugins.a365.front_end.worker"):
+                worker._get_connection_manager(mock_service_connection)
+
+        # Single line should name both audiences with their connection names.
+        matching = [r for r in caplog.records if "accepting JWT audiences" in r.getMessage()]
+        assert len(matching) == 1, f"Expected exactly one accepted-audiences log, got {len(matching)}"
+        message = matching[0].getMessage()
+        assert "SERVICE_CONNECTION=test-app-id" in message
+        assert "AUDIENCE_ALIAS_1=alternate-aud" in message
+
+    def test_jwt_patch_accepts_alias_audience_end_to_end(self):
+        """End-to-end: a JWT-validator built from the production connection manager accepts alias audiences.
+
+        This test pins the SDK behavior the audience-alias feature actually relies on:
+        ``MsalConnectionManager.__init__`` cross-populates ``AgentAuthConfiguration._connections``
+        across every entry in ``connections_configurations`` (the "# JWT-patch" loop in 0.8.0),
+        and ``JwtTokenValidator`` calls ``_jwt_patch_is_valid_aud`` to accept any matching audience.
+
+        Both ``_connections`` and ``_jwt_patch_is_valid_aud`` are SDK private members. If
+        Microsoft renames, removes, or behaviorally changes either in a patch version, this
+        test fails and we catch the regression before production sees 401s on inbound Teams
+        tokens with non-``app_id`` audiences.
+
+        The test does NOT verify cryptographic JWT signing -- only audience-set membership,
+        which is the part of validation our alias mechanism contributes to. Signature
+        verification is exercised by the SDK's own test suite.
+        """
+        # Real SDK imports, not mocks. If these fail to resolve, the SDK contract has changed.
+        from microsoft_agents.authentication.msal import MsalConnectionManager
+        from microsoft_agents.hosting.core import AgentAuthConfiguration
+        from microsoft_agents.hosting.core.authorization.auth_types import AuthTypes
+
+        a365_config = A365FrontEndConfig(
+            app_id="11111111-1111-1111-1111-111111111111",
+            app_password="dummy-secret-not-used-by-validator",
+            tenant_id="22222222-2222-2222-2222-222222222222",
+            allowed_audiences=["33333333-3333-3333-3333-333333333333"],
+        )
+        full_config = Config(
+            general=GeneralConfig(front_end=a365_config),
+            workflow=EchoFunctionConfig(),
+        )
+        worker = A365FrontEndPluginWorker(full_config)
+
+        # Build the real SERVICE_CONNECTION exactly as production does.
+        service_connection = AgentAuthConfiguration(
+            client_id=a365_config.app_id,
+            client_secret="dummy-secret-not-used-by-validator",
+            auth_type=AuthTypes.client_secret,
+            connection_name="SERVICE_CONNECTION",
+            tenant_id=a365_config.tenant_id,
+        )
+
+        # Drive through the real connection manager so its "# JWT-patch" cross-population
+        # runs and mutates ``service_connection._connections`` to include the alias.
+        connections_dict = worker._build_connection_configurations(service_connection)
+        MsalConnectionManager(connections_configurations=connections_dict)
+
+        # After MsalConnectionManager.__init__, the SDK private _jwt_patch_is_valid_aud
+        # method on the SERVICE_CONNECTION config should accept both app_id and the alias.
+        # If this attribute disappears, the SDK has changed in an incompatible way.
+        assert hasattr(service_connection, "_jwt_patch_is_valid_aud"), (
+            "SDK regression: AgentAuthConfiguration._jwt_patch_is_valid_aud is gone. "
+            "The audience-alias feature relies on this private method; an alternative "
+            "validation API must be wired up before merging.")
+
+        # Primary CLIENT_ID accepted.
+        assert service_connection._jwt_patch_is_valid_aud(a365_config.app_id), (
+            "SDK regression: validator rejects the bot's own app_id. Something is "
+            "very wrong with the connection manager wiring.")
+
+        # Alias CLIENT_ID accepted -- this is the actual feature under test.
+        assert service_connection._jwt_patch_is_valid_aud("33333333-3333-3333-3333-333333333333"), (
+            "Audience-alias regression: _jwt_patch_is_valid_aud rejected an alias audience "
+            "that was passed to MsalConnectionManager. Either the SDK's # JWT-patch loop "
+            "no longer cross-populates ``_connections``, or NAT's audience-alias mechanism "
+            "in worker.py has stopped routing aliases through ``connections_configurations``.")
+
+        # Sanity: a truly-unknown audience is rejected.
+        assert not service_connection._jwt_patch_is_valid_aud("99999999-9999-9999-9999-999999999999"), (
+            "Validator accepted an audience that was never configured -- the alias mechanism "
+            "appears to be accepting everything, which is a security regression.")
 
 
 class TestErrorHandler:

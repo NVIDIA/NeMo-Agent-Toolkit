@@ -79,25 +79,57 @@ class A365FrontEndPluginWorker:
             self, service_connection: AgentAuthConfiguration) -> dict[str, AgentAuthConfiguration]:
         """Build SDK connection configs, including optional JWT audience aliases.
 
-        The Microsoft Agents SDK validates inbound JWT audiences against the
-        ``CLIENT_ID`` values present in ``AgentAuthConfiguration._connections``.
-        We keep ``SERVICE_CONNECTION`` as the default outbound auth config and add
-        alias-only connections so Bot Framework / Teams tokens with alternate
-        audiences are accepted without modifying SDK internals.
+        The Microsoft Agents SDK validates inbound JWT audiences via
+        ``AgentAuthConfiguration._jwt_patch_is_valid_aud`` (a private SDK method, as
+        indicated by the ``_jwt_patch_`` prefix). ``MsalConnectionManager.__init__``
+        cross-populates ``AgentAuthConfiguration._connections`` on every config in
+        ``connections_configurations`` (the "# JWT-patch" loop in 0.8.0 wheels), so
+        adding alias entries here is enough to make Bot Framework / Teams tokens with
+        non-``app_id`` audiences pass JWT validation.
+
+        SECURITY NOTE: alias entries are constructed as fully-functional
+        ``AgentAuthConfiguration`` objects carrying the bot's real ``client_secret``.
+        Today the SDK only consults aliases on the inbound audience-validation path,
+        but each alias is also registered as an outbound ``MsalAuth`` provider keyed
+        by the alias ``client_id``. If a future SDK feature (e.g. ``connections_map``)
+        routes outbound token acquisition through an alias, MSAL will attempt to mint
+        a token for ``client_id=<alias_audience>`` using the bot's secret -- which
+        Azure AD will reject. This is not a credential-leak vector but it does mean
+        the secret is now copied into N+1 in-memory ``MsalAuth`` instances. Worth
+        revisiting if/when the SDK exposes an audience-only validation API.
+
+        STABILITY NOTE: the underlying mechanism depends on SDK private members
+        (``_connections``, ``_jwt_patch_is_valid_aud``). A test in
+        ``tests/front_end/test_integration.py`` exercises the SDK end-to-end so
+        regressions surface before shipping.
         """
         from microsoft_agents.hosting.core import AgentAuthConfiguration
 
         connections = {"SERVICE_CONNECTION": service_connection}
 
-        for index, audience in enumerate(self.front_end_config.allowed_audiences, start=1):
-            if audience.lower() == service_connection.CLIENT_ID.lower():
-                continue
+        # Dereference the secret once (rather than per-alias) to limit how often we
+        # pierce the SecretStr abstraction.
+        app_secret = get_secret_value(self.front_end_config.app_password)
 
-            connections[f"AUDIENCE_ALIAS_{index}"] = AgentAuthConfiguration(
+        # Dedup case-insensitively across all aliases AND against the service
+        # connection's CLIENT_ID. Reserve the service CLIENT_ID up-front so even an
+        # explicit duplicate of ``app_id`` in ``allowed_audiences`` is skipped.
+        seen_audiences: set[str] = {service_connection.CLIENT_ID.lower()}
+        for audience in self.front_end_config.allowed_audiences:
+            lowered = audience.lower()
+            if lowered in seen_audiences:
+                continue
+            seen_audiences.add(lowered)
+
+            # 1-based index reflects the number of unique aliases admitted so far,
+            # so gap-free numbering survives duplicate inputs.
+            alias_index = len(seen_audiences) - 1
+            alias_name = f"AUDIENCE_ALIAS_{alias_index}"
+            connections[alias_name] = AgentAuthConfiguration(
                 client_id=audience,
-                client_secret=get_secret_value(self.front_end_config.app_password),
+                client_secret=app_secret,
                 auth_type=service_connection.AUTH_TYPE,
-                connection_name=f"AUDIENCE_ALIAS_{index}",
+                connection_name=alias_name,
                 tenant_id=self.front_end_config.tenant_id,
             )
 
@@ -117,8 +149,15 @@ class A365FrontEndPluginWorker:
         """
         from microsoft_agents.authentication.msal import MsalConnectionManager
 
-        return MsalConnectionManager(
-            connections_configurations=self._build_connection_configurations(service_connection))
+        connections = self._build_connection_configurations(service_connection)
+
+        # Surface which JWT audiences are actually accepted on the inbound path.
+        # Operators debugging 401s on Teams/Bot Framework can grep this single line
+        # to confirm the alias they configured was installed.
+        accepted = ", ".join(f"{name}={cfg.CLIENT_ID}" for name, cfg in connections.items())
+        logger.info("A365 front-end accepting JWT audiences: %s", accepted)
+
+        return MsalConnectionManager(connections_configurations=connections)
 
     async def create_agent_application(self, ) -> tuple[AgentApplication[TurnState], Connections, CloudAdapter]:
         """Create and initialize Microsoft Agents SDK application.

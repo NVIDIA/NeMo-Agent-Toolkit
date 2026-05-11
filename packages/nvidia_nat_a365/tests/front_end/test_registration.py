@@ -96,6 +96,62 @@ def test_a365_frontend_config_allowed_audiences_string_normalization():
     assert config.allowed_audiences == ["aud-1", "aud-2", "aud-3"]
 
 
+def test_a365_frontend_config_warns_on_short_allowed_audience(caplog):
+    """Suspiciously short audience entries should warn (not reject) at config-load time.
+
+    Real Microsoft audiences are GUIDs (36 chars) or URLs. A 3-character entry is
+    almost certainly a typo, so we surface the warning early -- but still install
+    the entry so a deliberately-short canonical value (should Microsoft introduce
+    one) is not blocked.
+    """
+    with caplog.at_level(logging.WARNING):
+        config = A365FrontEndConfig(
+            app_id="11111111-1111-1111-1111-111111111111",
+            app_password="test-app-password",
+            allowed_audiences=["foo", "11111111-1111-1111-1111-111111111111"],
+        )
+
+    # Warning fired for the short entry, naming it explicitly.
+    assert any("'foo'" in r.getMessage() and "suspiciously short" in r.getMessage() for r in caplog.records), (
+        f"Expected a 'suspiciously short' warning naming 'foo' in caplog. "
+        f"Got: {[r.getMessage() for r in caplog.records]}")
+    # Entry still installed (warn, don't reject).
+    assert "foo" in config.allowed_audiences
+
+
+def test_a365_frontend_config_warns_on_internal_whitespace_allowed_audience(caplog):
+    """An audience with internal whitespace usually means the user forgot to comma-split."""
+    with caplog.at_level(logging.WARNING):
+        # Pass a list so the comma-split normalizer doesn't pre-process this.
+        config = A365FrontEndConfig(
+            app_id="11111111-1111-1111-1111-111111111111",
+            app_password="test-app-password",
+            allowed_audiences=["aud-1 aud-2"],
+        )
+
+    assert any("internal whitespace" in r.getMessage() and "'aud-1 aud-2'" in r.getMessage()
+               for r in caplog.records), (f"Expected a whitespace warning naming the bad entry. "
+                                          f"Got: {[r.getMessage() for r in caplog.records]}")
+    # Entry still installed (warn, don't reject).
+    assert "aud-1 aud-2" in config.allowed_audiences
+
+
+def test_a365_frontend_config_no_warning_on_good_allowed_audiences(caplog):
+    """Well-formed audiences (GUIDs, URLs) should not trigger any warning."""
+    with caplog.at_level(logging.WARNING):
+        A365FrontEndConfig(
+            app_id="11111111-1111-1111-1111-111111111111",
+            app_password="test-app-password",
+            allowed_audiences=[
+                "33333333-3333-3333-3333-333333333333",
+                "https://api.botframework.com",
+            ],
+        )
+
+    suspicious = [r for r in caplog.records if "suspiciously" in r.getMessage() or "whitespace" in r.getMessage()]
+    assert not suspicious, f"Expected no warnings for well-formed audiences, got: {suspicious}"
+
+
 def test_a365_frontend_config_port_validation():
     """Test that port validation works."""
     # Valid port

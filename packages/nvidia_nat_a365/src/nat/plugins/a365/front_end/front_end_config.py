@@ -99,3 +99,37 @@ class A365FrontEndConfig(FrontEndBaseConfig, name="a365"):
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
+
+    @field_validator("allowed_audiences", mode="after")
+    @classmethod
+    def warn_on_suspicious_allowed_audiences(cls, value: list[str]) -> list[str]:
+        """Warn (don't reject) on entries that don't look like real audiences.
+
+        Real Microsoft audiences are either a GUID (the bot's ``app_id`` or another
+        registered app's), a fully-qualified URL such as
+        ``https://api.botframework.com``, or a Microsoft resource ID. Anything much
+        shorter or containing internal whitespace is almost certainly a typo.
+
+        We emit a warning instead of raising because Microsoft may introduce new
+        canonical audiences in the future and we shouldn't gate config load on a
+        heuristic. The warning surfaces the typo early; the deployment still loads.
+        """
+        for audience in value:
+            if not audience:
+                continue
+            if len(audience) < 8:
+                logger.warning(
+                    "A365 ``allowed_audiences`` contains a suspiciously short entry %r "
+                    "(len=%d). Real Microsoft audiences are GUIDs (36 chars) or URLs. "
+                    "This entry will still be installed -- verify it is intentional.",
+                    audience,
+                    len(audience),
+                )
+            elif any(ch.isspace() for ch in audience):
+                logger.warning(
+                    "A365 ``allowed_audiences`` contains an entry with internal whitespace: %r. "
+                    "This entry will still be installed but is unlikely to match any real JWT audience. "
+                    "Did you mean to separate values with a comma?",
+                    audience,
+                )
+        return value
