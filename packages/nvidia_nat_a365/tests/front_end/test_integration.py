@@ -25,6 +25,9 @@ import pytest
 
 from nat.data_models.config import Config
 from nat.data_models.config import GeneralConfig
+from nat.plugins.a365.exceptions import A365AuthenticationError
+from nat.plugins.a365.exceptions import A365SDKError
+from nat.plugins.a365.exceptions import A365WorkflowExecutionError
 from nat.plugins.a365.front_end.front_end_config import A365FrontEndConfig
 from nat.plugins.a365.front_end.plugin import A365FrontEndPlugin
 from nat.plugins.a365.front_end.worker import A365FrontEndPluginWorker
@@ -32,13 +35,15 @@ from nat.test.functions import EchoFunctionConfig
 
 
 # Helper functions and fixtures
-@pytest.fixture
-def mock_agent_application():
+@pytest.fixture(name="mock_agent_application")
+def mock_agent_application_fixture():
     """Create a mock AgentApplication.
 
     The mock needs to support:
-    - @agent_app.activity("message") - activity is called with "message", returns a decorator
-    - @agent_app.error - error is called with no args, returns a decorator
+    - ``@agent_app.activity("message")`` — activity is a decorator factory:
+      called with ``"message"``, the result is then used as a decorator over the handler.
+    - ``@agent_app.error`` — error is used directly as a decorator (no call):
+      it must behave as ``error(func) -> func`` so the handler ends up bound.
     """
     app = MagicMock()
 
@@ -53,18 +58,21 @@ def mock_agent_application():
 
     app.activity = MagicMock(side_effect=activity_decorator_factory)
 
-    # error is used as a decorator: @agent_app.error
-    # It's called with no args, then the result is used as a decorator
+    # error is used as a *direct* decorator: ``@agent_app.error`` (no parentheses).
+    # The SDK's contract is ``error(func) -> func``, so the attribute itself must be the
+    # callable that takes the handler function. Use ``side_effect`` (not ``return_value``)
+    # so that ``@agent_app.error`` actually invokes ``error_decorator(on_error)`` and the
+    # caller ends up with the real handler bound — not a fresh MagicMock.
     def error_decorator(func):
         return func
 
-    app.error = MagicMock(return_value=error_decorator)
+    app.error = MagicMock(side_effect=error_decorator)
 
     return app
 
 
-@pytest.fixture
-def mock_notification():
+@pytest.fixture(name="mock_notification")
+def mock_notification_fixture():
     """Create a mock AgentNotification."""
     notification = Mock()
     for method in ["on_email", "on_word", "on_excel", "on_powerpoint", "on_user_created", "on_user_deleted"]:
@@ -72,8 +80,8 @@ def mock_notification():
     return notification
 
 
-@pytest.fixture
-def mock_turn_context():
+@pytest.fixture(name="mock_turn_context")
+def mock_turn_context_fixture():
     """Create a mock TurnContext."""
     context = Mock()
     context.activity = Mock()
@@ -82,14 +90,14 @@ def mock_turn_context():
     return context
 
 
-@pytest.fixture
-def mock_turn_state():
+@pytest.fixture(name="mock_turn_state")
+def mock_turn_state_fixture():
     """Create a mock TurnState."""
     return Mock()
 
 
-@pytest.fixture
-def mock_notification_activity():
+@pytest.fixture(name="mock_notification_activity")
+def mock_notification_activity_fixture():
     """Create a mock AgentNotificationActivity."""
     activity = Mock()
     activity.text = "Test notification text"
@@ -101,8 +109,8 @@ def mock_notification_activity():
     return activity
 
 
-@pytest.fixture
-def mock_session_manager():
+@pytest.fixture(name="mock_session_manager")
+def mock_session_manager_fixture():
     """Create a mock SessionManager.
 
     SessionManager.run() is an @asynccontextmanager, so it returns an async context manager.
@@ -120,8 +128,8 @@ def mock_session_manager():
     return manager
 
 
-@pytest.fixture
-def mock_workflow_builder():
+@pytest.fixture(name="mock_workflow_builder")
+def mock_workflow_builder_fixture():
     """Create a mock WorkflowBuilder."""
     builder = Mock()
     builder.__aenter__ = AsyncMock(return_value=builder)
@@ -129,8 +137,8 @@ def mock_workflow_builder():
     return builder
 
 
-@pytest.fixture
-def a365_config():
+@pytest.fixture(name="a365_config")
+def a365_config_fixture():
     """Create A365FrontEndConfig for testing."""
     return A365FrontEndConfig(
         app_id="test-app-id",
@@ -141,8 +149,8 @@ def a365_config():
     )
 
 
-@pytest.fixture
-def full_config(a365_config):
+@pytest.fixture(name="full_config")
+def full_config_fixture(a365_config):
     """Create full Config for testing."""
     return Config(
         general=GeneralConfig(front_end=a365_config),
@@ -150,8 +158,8 @@ def full_config(a365_config):
     )
 
 
-@pytest.fixture
-def a365_plugin(full_config):
+@pytest.fixture(name="a365_plugin")
+def a365_plugin_fixture(full_config):
     """Create A365FrontEndPlugin instance."""
     return A365FrontEndPlugin(full_config=full_config)
 
@@ -247,9 +255,21 @@ def patch_sdk_components(mock_agent_app=None,
             patch("microsoft_agents.hosting.core.app.oauth.Authorization", return_value=mock_auth),
         ])
 
+        # Optional patches: targets whose underlying module is NOT a hard dependency of
+        # ``nvidia-nat-a365`` and may legitimately be missing in the test environment.
+        # Currently this is only ``microsoft_agents_a365.notifications`` (mirrors the
+        # production ``except ModuleNotFoundError`` in ``worker.setup_notification_handlers``).
+        # Every other patch targets a hard dep — if it fails to start, that's a real
+        # breakage (typo, SDK rename, etc.) and should surface, not be swallowed.
+        optional_patches: set[int] = set()
+
         if mock_notification:
-            patches.append(
-                patch("microsoft_agents_a365.notifications.AgentNotification", return_value=mock_notification))
+            optional_patch = patch(
+                "microsoft_agents_a365.notifications.AgentNotification",
+                return_value=mock_notification,
+            )
+            optional_patches.add(id(optional_patch))
+            patches.append(optional_patch)
 
         async def raise_keyboard_interrupt(*args, **kwargs):
             raise KeyboardInterrupt()
@@ -260,16 +280,21 @@ def patch_sdk_components(mock_agent_app=None,
                 side_effect=raise_keyboard_interrupt,
             ))
 
-        # Start all patches, handling failures gracefully for optional imports
         started_patches = []
         for p in patches:
             try:
                 p.start()
-                started_patches.append(p)
-            except AttributeError:
-                # If a patch fails (module/attribute doesn't exist), skip it
-                # This can happen for optional imports that aren't available in test environment
-                pass
+            except ModuleNotFoundError:
+                # Tolerated only for patches we marked optional above. For required
+                # SDK targets, a missing module is a real configuration error.
+                if id(p) not in optional_patches:
+                    raise
+                continue
+            # NOTE: A missing *attribute* on an existing module raises AttributeError
+            # and is deliberately NOT caught here — that's how we detect SDK renames
+            # (e.g., a future MemoryStorage move) instead of running tests against the
+            # un-mocked real implementation.
+            started_patches.append(p)
 
         # Update patches list to only include successfully started patches
         patches[:] = started_patches
@@ -284,7 +309,6 @@ def patch_sdk_components(mock_agent_app=None,
 class TestNotificationHandlerSetup:
     """Test notification handler setup."""
 
-    @pytest.mark.asyncio
     async def test_notification_handlers_registered_when_enabled(
         self,
         full_config,
@@ -301,7 +325,6 @@ class TestNotificationHandlerSetup:
             )
         verify_all_notification_handlers(mock_notification)
 
-    @pytest.mark.asyncio
     async def test_notification_handler_executes_workflow(
         self,
         full_config,
@@ -323,12 +346,13 @@ class TestNotificationHandlerSetup:
                 session_manager=mock_session_manager,
             )
 
-        if handlers:
-            await handlers[0](mock_turn_context, mock_turn_state, mock_notification_activity)
-            mock_session_manager.run.assert_called_once()
-            mock_turn_context.send_activity.assert_called_once_with("Test workflow result")
+        assert len(handlers) == 1, (
+            f"Expected exactly one email notification handler registered by "
+            f"setup_notification_handlers, got {len(handlers)}.")
+        await handlers[0](mock_turn_context, mock_turn_state, mock_notification_activity)
+        mock_session_manager.run.assert_called_once()
+        mock_turn_context.send_activity.assert_called_once_with("Test workflow result")
 
-    @pytest.mark.asyncio
     async def test_notification_handler_missing_package(
         self,
         full_config,
@@ -341,18 +365,20 @@ class TestNotificationHandlerSetup:
         original_notifications = sys.modules.pop("microsoft_agents_a365.notifications", None)
         original_models = sys.modules.pop("microsoft_agents_a365.notifications.models", None)
 
-        # Patch __import__ to raise ImportError for this specific import
+        # Patch __import__ to raise ModuleNotFoundError for this specific import.
+        # ModuleNotFoundError is what Python actually raises when a package is missing,
+        # and is what setup_notification_handlers narrowly catches for graceful degradation.
         original_import = __import__
 
         def mock_import(name, globals=None, locals=None, fromlist=(), level=0):
             if name == "microsoft_agents_a365.notifications":
-                raise ImportError("No module named 'microsoft_agents_a365.notifications'")
+                raise ModuleNotFoundError("No module named 'microsoft_agents_a365.notifications'")
             return original_import(name, globals, locals, fromlist, level)
 
         try:
             worker = A365FrontEndPluginWorker(full_config)
             with patch("builtins.__import__", side_effect=mock_import):
-                # Should return early without error (ImportError is caught inside the function)
+                # Should return early without error (ModuleNotFoundError is caught inside the function)
                 await worker.setup_notification_handlers(
                     agent_app=mock_agent_application,
                     session_manager=mock_session_manager,
@@ -370,7 +396,6 @@ class TestNotificationHandlerSetup:
 class TestMessageHandlerSetup:
     """Test message handler setup."""
 
-    @pytest.mark.asyncio
     async def test_message_handler_registered_and_executes(
         self,
         full_config,
@@ -390,12 +415,12 @@ class TestMessageHandlerSetup:
         )
 
         mock_agent_application.activity.assert_called_once_with("message")
-        if handlers:
-            await handlers[0](mock_turn_context, mock_turn_state)
-            mock_session_manager.run.assert_called_once()
-            mock_turn_context.send_activity.assert_called_once_with("Test workflow result")
+        assert len(handlers) == 1, (f"Expected exactly one message handler registered by "
+                                    f"setup_message_handlers, got {len(handlers)}.")
+        await handlers[0](mock_turn_context, mock_turn_state)
+        mock_session_manager.run.assert_called_once()
+        mock_turn_context.send_activity.assert_called_once_with("Test workflow result")
 
-    @pytest.mark.asyncio
     async def test_message_handler_empty_message(
         self,
         full_config,
@@ -415,13 +440,13 @@ class TestMessageHandlerSetup:
             session_manager=mock_session_manager,
         )
 
-        if handlers:
-            await handlers[0](mock_turn_context, mock_turn_state)
-            mock_session_manager.run.assert_not_called()
-            mock_turn_context.send_activity.assert_called_once()
-            assert "didn't receive" in mock_turn_context.send_activity.call_args[0][0].lower()
+        assert len(handlers) == 1, (f"Expected exactly one message handler registered by "
+                                    f"setup_message_handlers, got {len(handlers)}.")
+        await handlers[0](mock_turn_context, mock_turn_state)
+        mock_session_manager.run.assert_not_called()
+        mock_turn_context.send_activity.assert_called_once()
+        assert "didn't receive" in mock_turn_context.send_activity.call_args[0][0].lower()
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("handler_type", ["notification", "message"])
     async def test_handler_error_handling(
         self,
@@ -446,8 +471,8 @@ class TestMessageHandlerSetup:
                     agent_app=mock_agent_application,
                     session_manager=mock_session_manager,
                 )
-            if handlers:
-                await handlers[0](mock_turn_context, mock_turn_state, mock_notification_activity)
+            assert len(handlers) == 1, (f"Expected exactly one email notification handler, got {len(handlers)}.")
+            await handlers[0](mock_turn_context, mock_turn_state, mock_notification_activity)
         else:  # message
             handlers = []
             mock_agent_application.activity = Mock(side_effect=create_activity_decorator_mock(handlers))
@@ -455,8 +480,8 @@ class TestMessageHandlerSetup:
                 agent_app=mock_agent_application,
                 session_manager=mock_session_manager,
             )
-            if handlers:
-                await handlers[0](mock_turn_context, mock_turn_state)
+            assert len(handlers) == 1, (f"Expected exactly one message handler, got {len(handlers)}.")
+            await handlers[0](mock_turn_context, mock_turn_state)
 
         mock_turn_context.send_activity.assert_called_once()
         error_msg = mock_turn_context.send_activity.call_args[0][0].lower()
@@ -497,38 +522,107 @@ class TestConnectionManagerConfiguration:
 
 
 class TestErrorHandler:
-    """Test error handler setup."""
+    """Test error handler setup.
 
-    @pytest.mark.asyncio
-    async def test_error_handler_registered_and_sends_message(
+    These tests exercise the *production* ``A365FrontEndPluginWorker.setup_error_handlers``
+    rather than reimplementing a stub handler locally. We rely on the
+    ``mock_agent_application`` fixture, whose ``app.error`` is a ``MagicMock`` with
+    ``side_effect=error_decorator``, so ``@agent_app.error`` passes the production
+    handler straight through to us via ``call_args``.
+    """
+
+    @staticmethod
+    def _register_and_capture_handler(full_config, mock_agent_application):
+        """Run ``setup_error_handlers`` on a real worker and return the registered handler."""
+        worker = A365FrontEndPluginWorker(full_config)
+        worker.setup_error_handlers(mock_agent_application)
+        mock_agent_application.error.assert_called_once()
+        registered = mock_agent_application.error.call_args[0][0]
+        assert callable(registered), "Expected setup_error_handlers to register a callable"
+        return registered
+
+    async def test_error_handler_is_registered_on_agent_app(
         self,
+        full_config,
+        mock_agent_application,
+    ):
+        """``setup_error_handlers`` must register exactly one handler on ``agent_app.error``."""
+        handler = self._register_and_capture_handler(full_config, mock_agent_application)
+        # Production registers an async function named ``on_error``; sanity-check the shape.
+        import inspect
+        assert inspect.iscoroutinefunction(handler)
+
+    @pytest.mark.parametrize(
+        "error, expected_substring",
+        [
+            # Custom exception types — explicit isinstance branches in production code.
+            pytest.param(
+                A365AuthenticationError("token rejected"),
+                "authentication failed",
+                id="auth-error",
+            ),
+            pytest.param(
+                A365SDKError("address already in use", sdk_component="aiohttp_server"),
+                "server configuration error",
+                id="sdk-error-address-in-message",
+            ),
+            pytest.param(
+                A365SDKError("unrelated SDK failure"),
+                "a system error occurred",
+                id="sdk-error-generic",
+            ),
+            pytest.param(
+                A365WorkflowExecutionError("workflow crashed"),
+                "encountered an error",
+                id="workflow-execution-error",
+            ),
+            # Generic exceptions — string-match fallback branches.
+            pytest.param(
+                Exception("Connection timeout while contacting upstream"),
+                "timed out",
+                id="generic-timeout",
+            ),
+            pytest.param(
+                Exception("Unauthorized access to resource"),
+                "authentication failed",
+                id="generic-unauthorized",
+            ),
+            pytest.param(
+                Exception("Network connection refused"),
+                "connection error",
+                id="generic-connection",
+            ),
+            pytest.param(
+                Exception("Something completely unexpected"),
+                "encountered an error",
+                id="generic-fallback",
+            ),
+        ],
+    )
+    async def test_error_handler_classifies_and_messages_user(
+        self,
+        full_config,
         mock_agent_application,
         mock_turn_context,
+        error,
+        expected_substring,
     ):
-        """Test that error handler is registered and sends error message."""
-        handlers = []
+        """The registered handler must classify exceptions and send the right user-facing message."""
+        handler = self._register_and_capture_handler(full_config, mock_agent_application)
 
-        # error is used as a decorator: @agent_app.error
-        def error_decorator(func):
-            handlers.append(func)
-            return func
+        await handler(mock_turn_context, error)
 
-        mock_agent_application.error = Mock(return_value=error_decorator)
-
-        @mock_agent_application.error
-        async def on_error(context, error):
-            await context.send_activity("I encountered an error processing your request. Please try again.")
-
-        mock_agent_application.error.assert_called_once()
-        if handlers:
-            await handlers[0](mock_turn_context, Exception("Test error"))
-            mock_turn_context.send_activity.assert_called_once()
+        mock_turn_context.send_activity.assert_called_once()
+        sent = mock_turn_context.send_activity.call_args[0][0]
+        assert expected_substring in sent.lower(), (
+            f"Error classification produced unexpected user message.\n"
+            f"  expected substring: {expected_substring!r}\n"
+            f"  actual message:     {sent!r}")
 
 
 class TestFrontEndPluginInitialization:
     """Test front-end plugin initialization and configuration."""
 
-    @pytest.mark.asyncio
     async def test_plugin_run_sets_up_handlers(
         self,
         a365_plugin,
@@ -572,7 +666,6 @@ class TestFrontEndPluginInitialization:
 class TestLogLevelConfiguration:
     """Test log_level configuration."""
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "log_level,expected_numeric_level",
         [
@@ -624,7 +717,6 @@ class TestLogLevelConfiguration:
                 # Verify logger.setLevel was called with correct numeric level
                 mock_logger.setLevel.assert_called_once_with(expected_numeric_level)
 
-    @pytest.mark.asyncio
     async def test_invalid_log_level_falls_back_to_info(
         self,
         mock_agent_application,
@@ -668,7 +760,6 @@ class TestLogLevelConfiguration:
 class TestNotificationWorkflowRouting:
     """Test notification_workflow routing functionality."""
 
-    @pytest.mark.asyncio
     async def test_notification_workflow_creates_separate_session_manager(
         self,
         mock_agent_application,
@@ -721,7 +812,6 @@ class TestNotificationWorkflowRouting:
         notification_call = session_manager_calls[1]
         assert notification_call.get("entry_function") == "custom_notification_workflow"
 
-    @pytest.mark.asyncio
     async def test_notification_workflow_none_uses_same_session_manager(
         self,
         mock_agent_application,
@@ -767,7 +857,6 @@ class TestNotificationWorkflowRouting:
         assert len(session_manager_calls) == 1
         assert session_manager_calls[0].get("entry_function") is None
 
-    @pytest.mark.asyncio
     async def test_notification_handlers_use_notification_session_manager(
         self,
         mock_agent_application,
@@ -830,12 +919,14 @@ class TestNotificationWorkflowRouting:
             )
 
         # Execute notification handler
-        if handlers:
-            await handlers[0](mock_turn_context, mock_turn_state, mock_notification_activity)
+        assert len(handlers) == 1, (
+            f"Expected exactly one email notification handler registered by "
+            f"setup_notification_handlers, got {len(handlers)}.")
+        await handlers[0](mock_turn_context, mock_turn_state, mock_notification_activity)
 
-            # Verify notification_session_manager was used (not default_session_manager)
-            notification_session_manager.run.assert_called_once()
-            default_session_manager.run.assert_not_called()
+        # Verify notification_session_manager was used (not default_session_manager)
+        notification_session_manager.run.assert_called_once()
+        default_session_manager.run.assert_not_called()
 
 
 class TestWorkerPatternMethods:
@@ -914,7 +1005,6 @@ class TestWorkerPatternMethods:
 class TestErrorHandlingInCreateAgentApplication:
     """Test error handling in create_agent_application."""
 
-    @pytest.mark.asyncio
     async def test_connection_manager_value_error_raises_a365_configuration_error(self, full_config):
         """Test that ValueError from connection manager raises A365ConfigurationError."""
         from nat.plugins.a365.exceptions import A365ConfigurationError
@@ -949,7 +1039,6 @@ class TestErrorHandlingInCreateAgentApplication:
                                                match="Invalid configuration for connection manager"):
                                 await worker.create_agent_application()
 
-    @pytest.mark.asyncio
     async def test_connection_manager_type_error_raises_a365_configuration_error(self, full_config):
         """Test that TypeError from connection manager raises A365ConfigurationError."""
         from nat.plugins.a365.exceptions import A365ConfigurationError
@@ -984,7 +1073,6 @@ class TestErrorHandlingInCreateAgentApplication:
                                                match="Invalid configuration for connection manager"):
                                 await worker.create_agent_application()
 
-    @pytest.mark.asyncio
     async def test_connection_manager_application_error_raises_a365_sdk_error(self, full_config):
         """Test that ApplicationError from connection manager raises A365SDKError."""
         from nat.plugins.a365.exceptions import A365SDKError
@@ -1027,7 +1115,6 @@ class TestErrorHandlingInCreateAgentApplication:
                                 with pytest.raises(A365SDKError, match="Failed to initialize connection manager"):
                                     await worker.create_agent_application()
 
-    @pytest.mark.asyncio
     async def test_cloud_adapter_error_raises_a365_sdk_error(self, full_config):
         """Test that CloudAdapter initialization failure raises A365SDKError."""
         from nat.plugins.a365.exceptions import A365SDKError
@@ -1045,7 +1132,6 @@ class TestErrorHandlingInCreateAgentApplication:
                     with pytest.raises(A365SDKError, match="Failed to initialize CloudAdapter"):
                         await worker.create_agent_application()
 
-    @pytest.mark.asyncio
     async def test_authorization_value_error_raises_a365_configuration_error(self, full_config):
         """Test that ValueError from Authorization raises A365ConfigurationError."""
         from nat.plugins.a365.exceptions import A365ConfigurationError
@@ -1063,7 +1149,6 @@ class TestErrorHandlingInCreateAgentApplication:
                         with pytest.raises(A365ConfigurationError, match="Invalid configuration for Authorization"):
                             await worker.create_agent_application()
 
-    @pytest.mark.asyncio
     async def test_agent_application_value_error_raises_a365_configuration_error(self, full_config):
         """Test that ValueError from AgentApplication raises A365ConfigurationError."""
         from nat.plugins.a365.exceptions import A365ConfigurationError
@@ -1094,7 +1179,6 @@ class TestErrorHandlingInCreateAgentApplication:
                                                match="Invalid configuration for AgentApplication"):
                                 await worker.create_agent_application()
 
-    @pytest.mark.asyncio
     async def test_agent_application_application_error_raises_a365_sdk_error(self, full_config):
         """Test that ApplicationError from AgentApplication raises A365SDKError."""
         from nat.plugins.a365.exceptions import A365SDKError

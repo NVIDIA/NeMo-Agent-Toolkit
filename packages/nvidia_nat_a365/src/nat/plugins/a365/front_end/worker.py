@@ -153,8 +153,17 @@ class A365FrontEndPluginWorker:
         # specific error handling for configuration vs. general SDK errors
 
         # Get storage instance (uses dependency injection pattern - defaults to MemoryStorage)
-        # Users can override _get_storage() in a subclass to use custom storage (e.g., BlobStorage, CosmosDbStorage)
-        storage = self._get_storage()
+        # Users can override _get_storage() in a subclass to use custom storage (e.g., BlobStorage, CosmosDbStorage).
+        # Wrap to honor the documented contract: storage failures from overrides surface as
+        # A365ConfigurationError / A365SDKError instead of leaking raw backend exceptions.
+        try:
+            storage = self._get_storage()
+        except Exception as e:
+            raise A365SDKError(
+                f"Failed to initialize storage: {str(e)}",
+                sdk_component="Storage",
+                original_error=e,
+            ) from e
 
         # Get connection manager instance (uses dependency injection pattern - defaults to MsalConnectionManager)
         # Users can override _get_connection_manager() in a subclass to use custom connection managers
@@ -248,7 +257,10 @@ class A365FrontEndPluginWorker:
         try:
             from microsoft_agents_a365.notifications import AgentNotification
             from microsoft_agents_a365.notifications.models import AgentNotificationActivity
-        except ImportError as e:
+        except ModuleNotFoundError as e:
+            # Only swallow the "package not installed" case. A broken/incompatible
+            # ``microsoft_agents_a365.notifications`` (e.g. a transitive ImportError from
+            # version skew) must propagate instead of silently disabling notifications.
             logger.warning("A365 notifications package not available. Notification handlers will be disabled. "
                            f"Install with: uv pip install microsoft-agents-a365-notifications. Error: {e}")
             return
@@ -304,32 +316,47 @@ class A365FrontEndPluginWorker:
 
                 await context.send_activity(user_message)
 
+        def _log_notification_received(kind: str, context: TurnContext) -> None:
+            """Log notification arrival without leaking user-supplied content.
+
+            We deliberately log only non-content metadata (length, conversation id) at
+            INFO so production log aggregators don't accumulate PII (email bodies,
+            document comments, etc.). Operators who need the content for debugging
+            can enable DEBUG on this logger.
+            """
+            text = context.activity.text or context.activity.summary or ""
+            conversation_id = getattr(getattr(context.activity, "conversation", None), "id", None)
+            logger.info(
+                "Received %s notification (text_len=%d, conversation_id=%s)",
+                kind,
+                len(text),
+                conversation_id,
+            )
+            if logger.isEnabledFor(logging.DEBUG) and text:
+                logger.debug("%s notification text (truncated): %s", kind, text[:100])
+
         # Email notification handler
         @notification.on_email()
         async def on_email(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
-            text = context.activity.text or context.activity.summary or ""
-            logger.info(f"Received email notification: {text[:100] if text else 'No text'}")
+            _log_notification_received("email", context)
             await execute_workflow_from_notification(context, activity, "email")
 
         # Word document notification handler
         @notification.on_word()
         async def on_word(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
-            text = context.activity.text or context.activity.summary or ""
-            logger.info(f"Received Word notification: {text[:100] if text else 'No text'}")
+            _log_notification_received("Word", context)
             await execute_workflow_from_notification(context, activity, "Word")
 
         # Excel notification handler
         @notification.on_excel()
         async def on_excel(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
-            text = context.activity.text or context.activity.summary or ""
-            logger.info(f"Received Excel notification: {text[:100] if text else 'No text'}")
+            _log_notification_received("Excel", context)
             await execute_workflow_from_notification(context, activity, "Excel")
 
         # PowerPoint notification handler
         @notification.on_powerpoint()
         async def on_powerpoint(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
-            text = context.activity.text or context.activity.summary or ""
-            logger.info(f"Received PowerPoint notification: {text[:100] if text else 'No text'}")
+            _log_notification_received("PowerPoint", context)
             await execute_workflow_from_notification(context, activity, "PowerPoint")
 
         # Lifecycle handlers
@@ -364,7 +391,12 @@ class A365FrontEndPluginWorker:
                     await context.send_activity("I didn't receive any message. Please try again.")
                     return
 
-                logger.info(f"Received message: {query[:100]}")
+                # Non-content INFO line: keep operational signal without logging the user's message body.
+                # Body content is only emitted when DEBUG is enabled for this logger.
+                conversation_id = getattr(getattr(context.activity, "conversation", None), "id", None)
+                logger.info("Received chat message (text_len=%d, conversation_id=%s)", len(query), conversation_id)
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("Chat message text (truncated): %s", query[:100])
 
                 from nat.data_models.api_server import ChatRequest
                 payload = ChatRequest.from_string(query)

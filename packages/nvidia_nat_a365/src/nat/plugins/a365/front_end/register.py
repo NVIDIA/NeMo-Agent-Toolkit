@@ -40,7 +40,10 @@ async def a365_front_end(config: A365FrontEndConfig, full_config):
     Raises:
         ValueError: If app_password is not provided in config or A365_APP_PASSWORD environment variable
     """
-    if not config.allowed_audiences:
+    # Only fall back to the env var when the field was truly omitted in config.
+    # An explicit ``allowed_audiences: []`` must NOT be silently widened by a
+    # deployment-wide env default, since that field gates accepted JWT audiences.
+    if "allowed_audiences" not in config.model_fields_set:
         env_audiences = os.environ.get("A365_ALLOWED_AUDIENCES", "")
         if env_audiences:
             config.allowed_audiences = [audience.strip() for audience in env_audiences.split(",") if audience.strip()]

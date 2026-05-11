@@ -43,32 +43,32 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-@pytest.fixture
-def mock_auth_provider():
+@pytest.fixture(name="mock_auth_provider")
+def mock_auth_provider_fixture():
     """Create a mock auth provider."""
     provider = Mock()
     provider.authenticate = AsyncMock()
     return provider
 
 
-@pytest.fixture
-def mock_builder(mock_auth_provider):
+@pytest.fixture(name="mock_builder")
+def mock_builder_fixture(mock_auth_provider):
     """Create a mock builder with auth provider resolution."""
     builder = Mock()
     builder.get_auth_provider = AsyncMock(return_value=mock_auth_provider)
     return builder
 
 
-@pytest.fixture
-def mock_a365_service():
+@pytest.fixture(name="mock_a365_service")
+def mock_a365_service_fixture():
     """Create a mock A365ToolingService."""
     service = Mock()
     service.list_tool_servers = AsyncMock()
     return service
 
 
-@pytest.fixture
-def mock_mcp_servers():
+@pytest.fixture(name="mock_mcp_servers")
+def mock_mcp_servers_fixture():
     """Create mock MCP server configurations."""
     server1 = Mock()
     server1.mcp_server_name = "server-1"
@@ -81,8 +81,8 @@ def mock_mcp_servers():
     return [server1, server2]
 
 
-@pytest.fixture
-def mock_mcp_function_group():
+@pytest.fixture(name="mock_mcp_function_group")
+def mock_mcp_function_group_fixture():
     """Create a mock MCP FunctionGroup with functions."""
 
     def create_mock_group(server_name: str, tool_names: list[str]):
@@ -110,8 +110,8 @@ def mock_mcp_function_group():
     return create_mock_group
 
 
-@pytest.fixture
-def mock_mcp_client_function_group(mock_mcp_function_group):
+@pytest.fixture(name="mock_mcp_client_function_group")
+def mock_mcp_client_function_group_fixture(mock_mcp_function_group):
     """Fixture to mock mcp_client_function_group as an async context manager."""
     call_count = {"value": 0}
 
@@ -129,8 +129,8 @@ def mock_mcp_client_function_group(mock_mcp_function_group):
     return factory
 
 
-@pytest.fixture
-def base_config():
+@pytest.fixture(name="base_config")
+def base_config_fixture():
     """Base config for tests."""
     return A365MCPToolingConfig(
         agentic_app_id="test-agent",
@@ -161,7 +161,6 @@ def patch_services(mock_a365_service, mock_mcp_client_function_group):
 class TestDelegationPattern:
     """Test that the composite group correctly delegates to MCP groups."""
 
-    @pytest.mark.asyncio
     async def test_composite_group_delegates_to_mcp_groups(
         self,
         mock_builder,
@@ -192,7 +191,6 @@ class TestDelegationPattern:
 class TestTokenExtraction:
     """Test token extraction from auth provider credentials."""
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "credentials,expected_token",
         [
@@ -231,7 +229,6 @@ class TestTokenExtraction:
                 call_args = mock_a365_service.list_tool_servers.call_args
                 assert call_args.kwargs["auth_token"] == expected_token
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "credentials,error_match",
         [
@@ -271,7 +268,6 @@ class TestTokenExtraction:
 class TestAuthProviderPriority:
     """Test auth provider priority logic for MCP servers."""
 
-    @pytest.mark.asyncio
     async def test_per_server_override_takes_priority(
         self,
         mock_builder,
@@ -311,7 +307,6 @@ class TestAuthProviderPriority:
                 second_mcp_config: MCPClientConfig = mock_mcp_patched.call_args_list[1][0][0]
                 assert str(second_mcp_config.server.auth_provider) == "gateway_auth"
 
-    @pytest.mark.asyncio
     async def test_gateway_auth_used_when_no_override(
         self,
         mock_builder,
@@ -342,7 +337,6 @@ class TestAuthProviderPriority:
                     server_mcp_config: MCPClientConfig = call[0][0]
                     assert str(server_mcp_config.server.auth_provider) == "gateway_auth"
 
-    @pytest.mark.asyncio
     async def test_string_token_no_auth_for_servers(self,
                                                     mock_builder,
                                                     mock_a365_service,
@@ -375,7 +369,6 @@ class TestAuthProviderPriority:
 class TestUserContext:
     """Test user context handling for OAuth flows."""
 
-    @pytest.mark.asyncio
     @pytest.mark.parametrize("has_context", [True, False])
     async def test_user_id_passed_to_authenticate(
         self,
@@ -415,7 +408,6 @@ class TestUserContext:
 class TestEdgeCases:
     """Test edge cases and error handling."""
 
-    @pytest.mark.asyncio
     async def test_empty_servers_list_returns_empty_group(
         self,
         mock_builder,
@@ -435,7 +427,6 @@ class TestEdgeCases:
                 all_functions = await result.get_all_functions()
                 assert len(all_functions) == 0
 
-    @pytest.mark.asyncio
     async def test_server_without_url_is_skipped(
         self,
         mock_builder,
@@ -466,7 +457,6 @@ class TestEdgeCases:
                 url_str = str(call_args.server.url).rstrip("/")
                 assert url_str == "https://mcp-server.example.com"
 
-    @pytest.mark.asyncio
     async def test_mcp_client_registration_failure_is_handled(
         self,
         mock_builder,
@@ -512,7 +502,6 @@ class TestEdgeCases:
                     assert len(all_functions) == 1
                     assert "mcp_client__tool3" in all_functions
 
-    @pytest.mark.asyncio
     async def test_tool_overrides_conversion(
         self,
         mock_builder,
@@ -560,7 +549,6 @@ class TestEdgeCases:
                     assert add_override.alias == "add_numbers"
                     assert add_override.description == "Add two numbers together"
 
-    @pytest.mark.asyncio
     async def test_tool_overrides_invalid_config_raises_error(
         self,
         mock_builder,
@@ -611,7 +599,6 @@ class TestEdgeCases:
                     async with a365_mcp_tooling_function_group(config, mock_builder):
                         pass
 
-    @pytest.mark.asyncio
     async def test_auth_provider_resolution_failure(
         self,
         mock_builder,
@@ -638,7 +625,6 @@ class TestEdgeCases:
                 async with a365_mcp_tooling_function_group(config, mock_builder):
                     pass
 
-    @pytest.mark.asyncio
     async def test_non_auth_error_raises_a365_sdk_error(
         self,
         mock_builder,
@@ -661,7 +647,6 @@ class TestEdgeCases:
                 async with a365_mcp_tooling_function_group(base_config, mock_builder):
                     pass
 
-    @pytest.mark.asyncio
     async def test_all_config_fields_passed_to_mcp_client_config(
         self,
         mock_builder,

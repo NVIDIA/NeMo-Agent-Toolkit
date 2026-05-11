@@ -74,14 +74,14 @@ def create_mock_otel_span(
     return span
 
 
-@pytest.fixture
-def mock_context_state():
+@pytest.fixture(name="mock_context_state")
+def mock_context_state_fixture():
     """Create a mock ContextState for testing."""
     return Mock(spec=ContextState)
 
 
-@pytest.fixture
-def mock_token_resolver():
+@pytest.fixture(name="mock_token_resolver")
+def mock_token_resolver_fixture():
     """Create a mock token resolver function."""
 
     def resolver(agent_id: str, tenant_id: str) -> str:
@@ -90,8 +90,8 @@ def mock_token_resolver():
     return resolver
 
 
-@pytest.fixture
-def a365_exporter(mock_context_state, mock_token_resolver):
+@pytest.fixture(name="a365_exporter")
+def a365_exporter_fixture(mock_context_state, mock_token_resolver):
     """Create an A365OtelExporter instance for testing."""
     # Patch the A365 exporter where it's imported in our module
     with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter") as mock_exporter_class:
@@ -119,7 +119,6 @@ def a365_exporter(mock_context_state, mock_token_resolver):
 class TestA365ExporterIntegration:
     """Integration tests for A365OtelExporter."""
 
-    @pytest.mark.asyncio
     async def test_export_empty_spans(self, a365_exporter):
         """Test that exporting empty spans list does nothing."""
         await a365_exporter.export_otel_spans([])
@@ -127,7 +126,6 @@ class TestA365ExporterIntegration:
         # Should not call the A365 exporter
         a365_exporter._mock_a365_exporter_instance.export.assert_not_called()
 
-    @pytest.mark.asyncio
     async def test_export_single_span(self, a365_exporter):
         """Test exporting a single span."""
         span = create_mock_otel_span(name="test_span_1")
@@ -155,7 +153,6 @@ class TestA365ExporterIntegration:
         assert readable_span.context.trace_id == span.get_span_context().trace_id
         assert readable_span.context.span_id == span.get_span_context().span_id
 
-    @pytest.mark.asyncio
     async def test_export_multiple_spans(self, a365_exporter):
         """Test exporting multiple spans."""
         span1 = create_mock_otel_span(name="span_1")
@@ -176,7 +173,6 @@ class TestA365ExporterIntegration:
         assert readable_spans[1].name == "span_2"
         assert readable_spans[2].name == "span_3"
 
-    @pytest.mark.asyncio
     async def test_span_conversion_with_attributes(self, a365_exporter):
         """Test that span attributes are preserved and tenant/agent IDs are added."""
         span = create_mock_otel_span(name="test_span", attributes={"custom.attr": "value", "another.attr": 42})
@@ -194,7 +190,6 @@ class TestA365ExporterIntegration:
         assert readable_span.attributes[TENANT_ID_KEY] == "test-tenant-456"
         assert readable_span.attributes[GEN_AI_AGENT_ID_KEY] == "test-agent-123"
 
-    @pytest.mark.asyncio
     async def test_span_conversion_with_events(self, a365_exporter):
         """Test that span events are converted correctly."""
         from opentelemetry.sdk.trace import Event as OtelEvent
@@ -215,7 +210,6 @@ class TestA365ExporterIntegration:
         assert readable_span.events[0].name == "event1"
         assert readable_span.events[1].name == "event2"
 
-    @pytest.mark.asyncio
     async def test_span_conversion_with_parent(self, a365_exporter):
         """Test that parent span context is converted correctly."""
         parent_span = create_mock_otel_span(name="parent_span")
@@ -231,7 +225,6 @@ class TestA365ExporterIntegration:
         assert readable_span.parent.trace_id == parent_span.get_span_context().trace_id
         assert readable_span.parent.span_id == parent_span.get_span_context().span_id
 
-    @pytest.mark.asyncio
     async def test_export_error_handling(self, a365_exporter):
         """Test that export errors are caught, logged, and re-raised as A365SDKError."""
         from nat.plugins.a365.exceptions import A365SDKError
@@ -252,7 +245,6 @@ class TestA365ExporterIntegration:
             assert "Error exporting spans to A365" in error_call[0][0]
             assert "Export failed" in str(error_call)
 
-    @pytest.mark.asyncio
     async def test_exporter_initialization_with_config(self, mock_context_state, mock_token_resolver):
         """Test that exporter is initialized with correct A365 SDK configuration."""
         with patch("nat.plugins.a365.telemetry.a365_exporter.Agent365Exporter") as mock_exporter_class:
@@ -279,7 +271,6 @@ class TestA365ExporterIntegration:
             assert exporter._agent_id == "custom-agent"
             assert exporter._tenant_id == "custom-tenant"
 
-    @pytest.mark.asyncio
     async def test_async_executor_bridge(self, a365_exporter):
         """Test that async/sync bridge works correctly."""
         span = create_mock_otel_span(name="test_span")
@@ -317,21 +308,21 @@ def test_readable_span_adapter_uses_sdk_attribute_keys():
 class TestEnsureTokenFor:
     """Tests for per-key lazy token resolution in A365OtelExporter._ensure_token_for."""
 
-    @pytest.fixture
-    def mock_auth_provider(self):
+    @pytest.fixture(name="mock_auth_provider")
+    def mock_auth_provider_fixture(self):
         """Create a mock auth provider."""
         provider = Mock()
         provider.authenticate = AsyncMock()
         return provider
 
-    @pytest.fixture
-    def agent_token_cache(self):
+    @pytest.fixture(name="agent_token_cache")
+    def agent_token_cache_fixture(self):
         """Create a real _AgentTokenCache for testing."""
         from nat.plugins.a365.telemetry.register import _AgentTokenCache
         return _AgentTokenCache()
 
-    @pytest.fixture
-    def exporter_with_auth_ref(self, mock_context_state, agent_token_cache, mock_auth_provider):
+    @pytest.fixture(name="exporter_with_auth_ref")
+    def exporter_with_auth_ref_fixture(self, mock_context_state, agent_token_cache, mock_auth_provider):
         """Create an A365OtelExporter backed by a real _AgentTokenCache, a stub auth_ref, and a mock builder."""
         from nat.data_models.component_ref import AuthenticationRef
 
@@ -360,7 +351,6 @@ class TestEnsureTokenFor:
             exporter._mock_builder = mock_builder
             yield exporter
 
-    @pytest.mark.asyncio
     async def test_no_refresh_when_token_not_expiring(self, exporter_with_auth_ref, agent_token_cache):
         """Token is not refreshed when the cache entry is still valid."""
         from datetime import datetime
@@ -382,7 +372,6 @@ class TestEnsureTokenFor:
         assert exporter_with_auth_ref._auth_providers == {}
         exporter_with_auth_ref._mock_a365_exporter_instance.export.assert_called_once()
 
-    @pytest.mark.asyncio
     async def test_refresh_when_token_expiring_soon(self, exporter_with_auth_ref, agent_token_cache,
                                                     mock_auth_provider):
         """Token is refreshed (per key) when the cache entry is about to expire."""
@@ -428,7 +417,6 @@ class TestEnsureTokenFor:
         # Cache should have the new token.
         assert agent_token_cache.get_token("test-agent-123", "test-tenant-456") == "new_token_456"
 
-    @pytest.mark.asyncio
     async def test_ensure_token_for_two_distinct_keys(self, mock_context_state, mock_auth_provider):
         """Two separate (agent_id, tenant_id) keys each get their own cache entry."""
         from datetime import datetime
@@ -516,7 +504,6 @@ def test_readable_span_adapter_falls_back_to_static_when_no_turn():
     assert adapter.attributes[TENANT_ID_KEY] == "static-tenant"
 
 
-@pytest.mark.asyncio
 async def test_export_uses_turn_identity_for_token_lookup():
     """Span attributes and the token-cache key must use turn-context identity."""
     from microsoft_agents_a365.observability.core.constants import GEN_AI_AGENT_ID_KEY

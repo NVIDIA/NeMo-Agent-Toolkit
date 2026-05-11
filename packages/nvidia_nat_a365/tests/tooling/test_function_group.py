@@ -26,8 +26,8 @@ from nat.plugins.a365.tooling import A365MCPToolingConfig
 from nat.plugins.a365.tooling.register import A365MCPToolingFunctionGroup
 
 
-@pytest.fixture
-def base_config():
+@pytest.fixture(name="base_config")
+def base_config_fixture():
     """Base config for tests."""
     return A365MCPToolingConfig(
         agentic_app_id="test-agent",
@@ -35,16 +35,16 @@ def base_config():
     )
 
 
-@pytest.fixture
-def mock_function():
+@pytest.fixture(name="mock_function")
+def mock_function_fixture():
     """Create a mock Function."""
     func = Mock(spec=Function)
     func.name = "test_function"
     return func
 
 
-@pytest.fixture
-def mock_mcp_group():
+@pytest.fixture(name="mock_mcp_group")
+def mock_mcp_group_fixture():
     """Create a mock MCP FunctionGroup."""
     group = Mock(spec=FunctionGroup)
     return group
@@ -53,7 +53,6 @@ def mock_mcp_group():
 class TestFunctionAggregation:
     """Test function aggregation logic in A365MCPToolingFunctionGroup."""
 
-    @pytest.mark.asyncio
     async def test_function_name_collision_overwrites(self, base_config, mock_function):
         """Test that function name collisions result in the last group's function winning."""
         # Create two groups with the same function name
@@ -77,7 +76,6 @@ class TestFunctionAggregation:
         # Should be func2 (from group2, the last one)
         assert all_functions["collision_func"] is func2
 
-    @pytest.mark.asyncio
     async def test_filter_fn_propagated_to_all_groups(self, base_config):
         """Test that filter_fn parameter is passed to all MCP groups."""
         group1 = Mock(spec=FunctionGroup)
@@ -98,7 +96,6 @@ class TestFunctionAggregation:
         group1.get_all_functions.assert_called_once_with(filter_fn=filter_fn)
         group2.get_all_functions.assert_called_once_with(filter_fn=filter_fn)
 
-    @pytest.mark.asyncio
     async def test_filter_fn_propagated_to_accessible_functions(self, base_config):
         """Test that filter_fn is propagated to get_accessible_functions."""
         group1 = Mock(spec=FunctionGroup)
@@ -113,7 +110,6 @@ class TestFunctionAggregation:
 
         group1.get_accessible_functions.assert_called_once_with(filter_fn=filter_fn)
 
-    @pytest.mark.asyncio
     async def test_filter_fn_propagated_to_included_functions(self, base_config):
         """Test that filter_fn is propagated to get_included_functions."""
         group1 = Mock(spec=FunctionGroup)
@@ -128,7 +124,6 @@ class TestFunctionAggregation:
 
         group1.get_included_functions.assert_called_once_with(filter_fn=filter_fn)
 
-    @pytest.mark.asyncio
     async def test_filter_fn_propagated_to_excluded_functions(self, base_config):
         """Test that filter_fn is propagated to get_excluded_functions."""
         group1 = Mock(spec=FunctionGroup)
@@ -143,7 +138,6 @@ class TestFunctionAggregation:
 
         group1.get_excluded_functions.assert_called_once_with(filter_fn=filter_fn)
 
-    @pytest.mark.asyncio
     async def test_empty_groups_list(self, base_config):
         """Test that empty groups list returns empty functions dict."""
         composite = A365MCPToolingFunctionGroup(config=base_config, mcp_groups=[])

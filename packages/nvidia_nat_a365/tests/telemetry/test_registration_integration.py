@@ -57,7 +57,6 @@ class TestRegistrationIntegration:
             token_resolver=AuthenticationRef("test_auth"),
         )
 
-    @pytest.mark.asyncio
     async def test_registration_creates_exporter_successfully(self, config, mock_builder, mock_auth_provider):
         """Test that registration function creates exporter with correct config."""
         from pydantic import SecretStr
@@ -104,7 +103,6 @@ class TestRegistrationIntegration:
                     assert ("test-agent-123", "test-tenant-456") in exporter._auth_providers
                     assert exporter._auth_providers[("test-agent-123", "test-tenant-456")] is mock_auth_provider
 
-    @pytest.mark.asyncio
     async def test_registration_passes_all_config_to_exporter(self, config, mock_builder, mock_auth_provider):
         """Test that all config fields are passed to exporter."""
         from pydantic import SecretStr
@@ -135,7 +133,6 @@ class TestRegistrationIntegration:
                     # and used in processors - not stored as instance attributes
                     # The fact that exporter was created successfully verifies config was valid
 
-    @pytest.mark.asyncio
     async def test_registration_handles_auth_provider_resolution_failure(self, config, mock_builder):
         """Test that auth provider resolution failure is raised on first export (lazy)."""
         mock_builder.get_auth_provider.side_effect = ValueError("Auth provider not found")
@@ -146,7 +143,6 @@ class TestRegistrationIntegration:
                 with pytest.raises(ValueError, match="Auth provider not found"):
                     await exporter.export_otel_spans([mock_span])
 
-    @pytest.mark.asyncio
     async def test_registration_handles_authentication_failure(self, config, mock_builder, mock_auth_provider):
         """Test that authentication failure is raised on first export (lazy)."""
         mock_auth_provider.authenticate.side_effect = A365AuthenticationError("Auth failed")
@@ -160,7 +156,6 @@ class TestRegistrationIntegration:
                     with pytest.raises(A365AuthenticationError, match="Auth failed"):
                         await exporter.export_otel_spans([mock_span])
 
-    @pytest.mark.asyncio
     async def test_registration_handles_no_credentials(self, config, mock_builder, mock_auth_provider):
         """Test that no credentials is raised on first export (lazy)."""
         auth_result = Mock(spec=AuthResult)
@@ -176,7 +171,6 @@ class TestRegistrationIntegration:
                     with pytest.raises(A365AuthenticationError, match="No credentials available"):
                         await exporter.export_otel_spans([mock_span])
 
-    @pytest.mark.asyncio
     async def test_registration_is_context_manager(self, config, mock_builder, mock_auth_provider):
         """Test that registration function works as async context manager."""
         from pydantic import SecretStr

@@ -111,7 +111,6 @@ def test_a365_frontend_config_port_validation():
         A365FrontEndConfig(app_id="test-app-id", app_password="test-app-password", port=-1)
 
 
-@pytest.mark.asyncio
 async def test_register_a365_front_end():
     """Test that the register_a365_front_end function returns the correct plugin."""
     # Create configuration objects
@@ -129,7 +128,6 @@ async def test_register_a365_front_end():
         assert plugin.front_end_config is a365_config
 
 
-@pytest.mark.asyncio
 async def test_register_a365_front_end_with_env_var():
     """Test that app_password can be loaded from environment variable."""
     # Set environment variable
@@ -152,7 +150,6 @@ async def test_register_a365_front_end_with_env_var():
         os.environ.pop("A365_APP_PASSWORD", None)
 
 
-@pytest.mark.asyncio
 async def test_register_a365_front_end_with_allowed_audiences_env_var():
     """Test that allowed audiences can be loaded from environment."""
     os.environ["A365_ALLOWED_AUDIENCES"] = "aud-1, aud-2"
@@ -171,7 +168,6 @@ async def test_register_a365_front_end_with_allowed_audiences_env_var():
         os.environ.pop("A365_ALLOWED_AUDIENCES", None)
 
 
-@pytest.mark.asyncio
 async def test_register_a365_front_end_missing_password():
     """Test that registration fails if app_password is not provided."""
     # Ensure env var is not set

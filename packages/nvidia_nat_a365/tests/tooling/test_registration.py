@@ -56,7 +56,6 @@ class TestA365ToolingConfigRegistration:
 class TestA365ToolingMissingMCPDependency:
     """Test handling of missing nvidia-nat-mcp dependency."""
 
-    @pytest.mark.asyncio
     async def test_missing_mcp_dependency_raises_optional_import_error(self):
         """Test that missing nvidia-nat-mcp raises OptionalImportError with helpful message."""
         from nat.plugins.a365.tooling.register import a365_mcp_tooling_function_group
