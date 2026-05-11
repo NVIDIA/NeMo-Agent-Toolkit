@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 class A365MCPToolingFunctionGroup(FunctionGroup):
     """
     Composite FunctionGroup that aggregates functions from multiple MCP servers.
-    
+
     Instead of merging functions into a single group, this class delegates to
     multiple MCP FunctionGroups and aggregates their results. This preserves
     the original function bindings and avoids double-wrapping.
@@ -48,7 +48,7 @@ class A365MCPToolingFunctionGroup(FunctionGroup):
     def __init__(self, config: A365MCPToolingConfig, mcp_groups: list[FunctionGroup]):
         """
         Initialize the composite function group.
-        
+
         Args:
             config: The A365 MCP tooling configuration
             mcp_groups: List of MCP FunctionGroups to aggregate
@@ -62,7 +62,7 @@ class A365MCPToolingFunctionGroup(FunctionGroup):
     ) -> dict[str, Function]:
         """
         Aggregate all functions from all MCP groups.
-        
+
         Functions are collected from each MCP group and merged. Function names
         from MCP groups are already namespaced (e.g., "mcp_client__tool_name"),
         so we preserve those namespaces to avoid conflicts.
@@ -79,7 +79,7 @@ class A365MCPToolingFunctionGroup(FunctionGroup):
     ) -> dict[str, Function]:
         """
         Aggregate accessible functions from all MCP groups.
-        
+
         Respects include/exclude configuration from each MCP group.
         """
         all_functions = {}

@@ -182,17 +182,18 @@ async def test_register_a365_front_end_missing_password():
 
     # Registration should fail with ValueError
     with pytest.raises(ValueError, match="app_password must be provided"):
-        async with a365_front_end(a365_config, full_config) as plugin:
+        async with a365_front_end(a365_config, full_config) as _plugin:
             pass
 
 
 def test_security_configuration_validation_non_localhost(caplog):
     """Test that security warnings are logged for non-localhost bindings."""
     with caplog.at_level(logging.WARNING):
-        config = A365FrontEndConfig(
+        # Construct only for the side effect: the model validator emits warnings during init.
+        A365FrontEndConfig(
             app_id="test-app-id",
             app_password="test-password",
-            host="0.0.0.0"  # Non-localhost
+            host="0.0.0.0",  # Non-localhost
         )
 
     # Check that warning was logged
@@ -203,11 +204,12 @@ def test_security_configuration_validation_non_localhost(caplog):
 def test_security_configuration_validation_default_port(caplog):
     """Test that security warnings are logged for default port on non-localhost."""
     with caplog.at_level(logging.WARNING):
-        config = A365FrontEndConfig(
+        # Construct only for the side effect: the model validator emits warnings during init.
+        A365FrontEndConfig(
             app_id="test-app-id",
             app_password="test-password",
             host="192.168.1.100",  # Non-localhost
-            port=3978  # Default port
+            port=3978,  # Default port
         )
 
     # Check that warnings were logged
@@ -218,10 +220,11 @@ def test_security_configuration_validation_default_port(caplog):
 def test_security_configuration_validation_localhost_no_warning(caplog):
     """Test that no warnings are logged for localhost bindings."""
     with caplog.at_level(logging.WARNING):
-        config = A365FrontEndConfig(
+        # Construct only for the side effect: assert the validator stays quiet on localhost.
+        A365FrontEndConfig(
             app_id="test-app-id",
             app_password="test-password",
-            host="localhost"  # Localhost - should not warn
+            host="localhost",  # Localhost - should not warn
         )
 
     # Check that no security warnings were logged

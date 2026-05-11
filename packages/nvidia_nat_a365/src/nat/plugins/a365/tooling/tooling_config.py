@@ -104,7 +104,7 @@ class A365MCPToolingConfig(FunctionGroupBaseConfig, name="a365_mcp_tooling"):
         Maps MCP server names (from A365 discovery) to authentication provider references.
         If not specified, discovered servers will use the same auth provider as the A365 gateway
         (when auth_token is an AuthenticationRef). If auth_token is a string, servers will not have auth.
-        
+
         Example:
           server_auth_providers:
             "my-custom-server": "custom_auth_provider"

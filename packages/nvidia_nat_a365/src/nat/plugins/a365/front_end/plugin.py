@@ -76,7 +76,7 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
 
     async def run(self) -> None:
         """Run the Microsoft Agent 365 server.
-        
+
         This method orchestrates the workflow lifecycle:
         1. Imports and validates Microsoft Agents SDK dependencies
         2. Configures logging
@@ -114,7 +114,8 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                 notification_session_manager = session_manager
                 if self.front_end_config.notification_workflow:
                     logger.info(
-                        f"Creating separate session manager for notifications with entry_function='{self.front_end_config.notification_workflow}'"
+                        "Creating separate session manager for notifications with entry_function='%s'",
+                        self.front_end_config.notification_workflow,
                     )
                     notification_session_manager = await SessionManager.create(
                         config=self.full_config,

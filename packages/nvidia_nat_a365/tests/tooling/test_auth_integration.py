@@ -558,14 +558,16 @@ class TestEdgeCases:
         mock_mcp_client_function_group,
     ):
         """Test that invalid tool_overrides raises A365ConfigurationError.
-        
+
         Note: Since Pydantic validates tool_overrides at config creation time,
         we test the error handling by directly patching the conversion to raise ValidationError.
         """
         try:
             from pydantic import ValidationError
 
-            from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
+            # Presence-probe for nvidia-nat-mcp; the symbol itself is only referenced
+            # below via patch("...MCPToolOverrideConfig", ...), so silence F401.
+            from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig  # noqa: F401
         except ImportError:
             pytest.skip("nvidia-nat-mcp not installed")
 

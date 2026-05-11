@@ -23,7 +23,7 @@ class A365Error(Exception):
 
 class A365AuthenticationError(A365Error):
     """Authentication-related errors.
-    
+
     Used for authentication failures across A365 modules:
     - Front-end: Bot Framework authentication failures
     - Tooling: A365 Gateway and MCP server authentication failures
@@ -37,7 +37,7 @@ class A365AuthenticationError(A365Error):
 
 class A365ConfigurationError(A365Error):
     """Configuration-related errors.
-    
+
     Used for configuration validation failures across A365 modules:
     - Front-end: Invalid front-end configuration (missing fields, wrong types)
     - Tooling: Invalid tooling configuration (reconnect settings, auth config)
@@ -51,7 +51,7 @@ class A365ConfigurationError(A365Error):
 
 class A365WorkflowExecutionError(A365Error):
     """Errors during workflow execution.
-    
+
     Used when NAT workflows fail during execution in A365 handlers.
     """
 
@@ -63,7 +63,7 @@ class A365WorkflowExecutionError(A365Error):
 
 class A365SDKError(A365Error):
     """Errors related to Microsoft Agents SDK components.
-    
+
     Used for SDK-related errors across A365 modules:
     - Front-end: Microsoft Agents SDK (AgentApplication, CloudAdapter, etc.)
     - Telemetry: Agent365Exporter SDK errors
