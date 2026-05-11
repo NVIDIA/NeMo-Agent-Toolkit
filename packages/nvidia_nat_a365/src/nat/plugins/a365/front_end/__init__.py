@@ -13,16 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Microsoft Agent 365 front-end plugin."""
 
-from nat.plugins.a365.exceptions import (
-    A365AuthenticationError,
-    A365ConfigurationError,
-    A365Error,
-    A365SDKError,
-    A365WorkflowExecutionError,
-)
+from nat.plugins.a365.exceptions import A365AuthenticationError
+from nat.plugins.a365.exceptions import A365ConfigurationError
+from nat.plugins.a365.exceptions import A365Error
+from nat.plugins.a365.exceptions import A365SDKError
+from nat.plugins.a365.exceptions import A365WorkflowExecutionError
 
 from .front_end_config import A365FrontEndConfig
 from .plugin import A365FrontEndPlugin

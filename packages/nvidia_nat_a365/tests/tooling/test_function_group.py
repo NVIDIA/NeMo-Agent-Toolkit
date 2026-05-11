@@ -13,14 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Unit tests for A365MCPToolingFunctionGroup aggregation logic."""
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
 
 import pytest
 
-from nat.builder.function import Function, FunctionGroup
+from nat.builder.function import Function
+from nat.builder.function import FunctionGroup
 from nat.plugins.a365.tooling import A365MCPToolingConfig
 from nat.plugins.a365.tooling.register import A365MCPToolingFunctionGroup
 

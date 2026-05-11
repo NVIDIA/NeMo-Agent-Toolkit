@@ -13,12 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """A365 tooling service for MCP server discovery and configuration."""
 
 import logging
 
-from microsoft_agents_a365.tooling import MCPServerConfig, McpToolServerConfigurationService
+from microsoft_agents_a365.tooling import MCPServerConfig
+from microsoft_agents_a365.tooling import McpToolServerConfigurationService
 
 
 class A365ToolingService:

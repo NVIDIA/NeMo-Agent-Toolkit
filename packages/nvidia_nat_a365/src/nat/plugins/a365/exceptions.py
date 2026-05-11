@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Custom exceptions for A365 plugin (shared across all modules)."""
 
 
@@ -30,7 +29,7 @@ class A365AuthenticationError(A365Error):
     - Tooling: A365 Gateway and MCP server authentication failures
     - Telemetry: Token resolver authentication failures
     """
-    
+
     def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(message)
         self.original_error = original_error
@@ -44,7 +43,7 @@ class A365ConfigurationError(A365Error):
     - Tooling: Invalid tooling configuration (reconnect settings, auth config)
     - Telemetry: Invalid telemetry configuration (token resolver path)
     """
-    
+
     def __init__(self, message: str, original_error: Exception | None = None):
         super().__init__(message)
         self.original_error = original_error
@@ -55,7 +54,7 @@ class A365WorkflowExecutionError(A365Error):
     
     Used when NAT workflows fail during execution in A365 handlers.
     """
-    
+
     def __init__(self, message: str, workflow_type: str = "workflow", original_error: Exception | None = None):
         super().__init__(message)
         self.workflow_type = workflow_type
@@ -70,7 +69,7 @@ class A365SDKError(A365Error):
     - Telemetry: Agent365Exporter SDK errors
     - Tooling: McpToolServerConfigurationService SDK errors
     """
-    
+
     def __init__(self, message: str, sdk_component: str | None = None, original_error: Exception | None = None):
         super().__init__(message)
         self.sdk_component = sdk_component

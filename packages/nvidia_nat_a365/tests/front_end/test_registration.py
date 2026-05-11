@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for A365 front-end plugin registration and discovery."""
 
 import logging
@@ -60,10 +59,7 @@ def test_a365_frontend_config_validation():
 
     # Should succeed with required fields
     # Note: app_password can be None in config, but registration function will validate it
-    config = A365FrontEndConfig(
-        app_id="test-app-id",
-        app_password="test-app-password"
-    )
+    config = A365FrontEndConfig(app_id="test-app-id", app_password="test-app-password")
     assert config.app_id == "test-app-id"
     assert get_secret_value(config.app_password) == "test-app-password"
     assert config.host == "localhost"  # default
@@ -73,16 +69,14 @@ def test_a365_frontend_config_validation():
 
 def test_a365_frontend_config_optional_fields():
     """Test that optional fields work correctly."""
-    config = A365FrontEndConfig(
-        app_id="test-app-id",
-        app_password="test-app-password",
-        tenant_id="test-tenant-id",
-        allowed_audiences=["aud-1", "aud-2"],
-        host="0.0.0.0",
-        port=8080,
-        enable_notifications=False,
-        notification_workflow="custom-workflow"
-    )
+    config = A365FrontEndConfig(app_id="test-app-id",
+                                app_password="test-app-password",
+                                tenant_id="test-tenant-id",
+                                allowed_audiences=["aud-1", "aud-2"],
+                                host="0.0.0.0",
+                                port=8080,
+                                enable_notifications=False,
+                                notification_workflow="custom-workflow")
     assert config.tenant_id == "test-tenant-id"
     assert config.allowed_audiences == ["aud-1", "aud-2"]
     assert config.host == "0.0.0.0"
@@ -105,44 +99,26 @@ def test_a365_frontend_config_allowed_audiences_string_normalization():
 def test_a365_frontend_config_port_validation():
     """Test that port validation works."""
     # Valid port
-    config = A365FrontEndConfig(
-        app_id="test-app-id",
-        app_password="test-app-password",
-        port=8080
-    )
+    config = A365FrontEndConfig(app_id="test-app-id", app_password="test-app-password", port=8080)
     assert config.port == 8080
 
     # Invalid port (too high)
     with pytest.raises(Exception):  # Pydantic validation error
-        A365FrontEndConfig(
-            app_id="test-app-id",
-            app_password="test-app-password",
-            port=70000
-        )
+        A365FrontEndConfig(app_id="test-app-id", app_password="test-app-password", port=70000)
 
     # Invalid port (negative)
     with pytest.raises(Exception):  # Pydantic validation error
-        A365FrontEndConfig(
-            app_id="test-app-id",
-            app_password="test-app-password",
-            port=-1
-        )
+        A365FrontEndConfig(app_id="test-app-id", app_password="test-app-password", port=-1)
 
 
 @pytest.mark.asyncio
 async def test_register_a365_front_end():
     """Test that the register_a365_front_end function returns the correct plugin."""
     # Create configuration objects
-    a365_config = A365FrontEndConfig(
-        app_id="test-app-id",
-        app_password="test-app-password"
-    )
+    a365_config = A365FrontEndConfig(app_id="test-app-id", app_password="test-app-password")
 
     # Use a real Config with a proper workflow
-    full_config = Config(
-        general=GeneralConfig(front_end=a365_config),
-        workflow=EchoFunctionConfig()
-    )
+    full_config = Config(general=GeneralConfig(front_end=a365_config), workflow=EchoFunctionConfig())
 
     # Use the context manager pattern since a365_front_end
     # returns an AsyncGeneratorContextManager
@@ -158,19 +134,15 @@ async def test_register_a365_front_end_with_env_var():
     """Test that app_password can be loaded from environment variable."""
     # Set environment variable
     os.environ["A365_APP_PASSWORD"] = "env-password-123"
-    
+
     try:
         # Create config without app_password
-        a365_config = A365FrontEndConfig(
-            app_id="test-app-id"
-            # app_password not provided - should load from env
-        )
-        
-        full_config = Config(
-            general=GeneralConfig(front_end=a365_config),
-            workflow=EchoFunctionConfig()
-        )
-        
+        a365_config = A365FrontEndConfig(app_id="test-app-id"
+                                         # app_password not provided - should load from env
+                                         )
+
+        full_config = Config(general=GeneralConfig(front_end=a365_config), workflow=EchoFunctionConfig())
+
         # Registration should succeed and load password from env
         async with a365_front_end(a365_config, full_config) as plugin:
             assert isinstance(plugin, A365FrontEndPlugin)
@@ -191,10 +163,7 @@ async def test_register_a365_front_end_with_allowed_audiences_env_var():
             app_password="test-app-password",
         )
 
-        full_config = Config(
-            general=GeneralConfig(front_end=a365_config),
-            workflow=EchoFunctionConfig()
-        )
+        full_config = Config(general=GeneralConfig(front_end=a365_config), workflow=EchoFunctionConfig())
 
         async with a365_front_end(a365_config, full_config) as plugin:
             assert plugin.front_end_config.allowed_audiences == ["aud-1", "aud-2"]
@@ -207,18 +176,14 @@ async def test_register_a365_front_end_missing_password():
     """Test that registration fails if app_password is not provided."""
     # Ensure env var is not set
     os.environ.pop("A365_APP_PASSWORD", None)
-    
+
     # Create config without app_password
-    a365_config = A365FrontEndConfig(
-        app_id="test-app-id"
-        # app_password not provided
-    )
-    
-    full_config = Config(
-        general=GeneralConfig(front_end=a365_config),
-        workflow=EchoFunctionConfig()
-    )
-    
+    a365_config = A365FrontEndConfig(app_id="test-app-id"
+                                     # app_password not provided
+                                     )
+
+    full_config = Config(general=GeneralConfig(front_end=a365_config), workflow=EchoFunctionConfig())
+
     # Registration should fail with ValueError
     with pytest.raises(ValueError, match="app_password must be provided"):
         async with a365_front_end(a365_config, full_config) as plugin:
@@ -233,7 +198,7 @@ def test_security_configuration_validation_non_localhost(caplog):
             app_password="test-password",
             host="0.0.0.0"  # Non-localhost
         )
-    
+
     # Check that warning was logged
     assert "non-localhost interface" in caplog.text.lower()
     assert "0.0.0.0" in caplog.text
@@ -248,7 +213,7 @@ def test_security_configuration_validation_default_port(caplog):
             host="192.168.1.100",  # Non-localhost
             port=3978  # Default port
         )
-    
+
     # Check that warnings were logged
     assert "non-localhost interface" in caplog.text.lower()
     assert "default port" in caplog.text.lower() or "port 3978" in caplog.text
@@ -262,7 +227,7 @@ def test_security_configuration_validation_localhost_no_warning(caplog):
             app_password="test-password",
             host="localhost"  # Localhost - should not warn
         )
-    
+
     # Check that no security warnings were logged
     assert "non-localhost interface" not in caplog.text.lower()
     assert "default port" not in caplog.text.lower()

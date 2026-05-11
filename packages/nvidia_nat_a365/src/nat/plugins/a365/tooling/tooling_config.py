@@ -13,12 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Configuration for A365 tooling integration with NAT MCP client."""
 
 from datetime import timedelta
 
-from pydantic import Field, model_validator
+from pydantic import Field
+from pydantic import model_validator
 
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.function import FunctionGroupBaseConfig
@@ -47,8 +47,7 @@ class A365MCPToolingConfig(FunctionGroupBaseConfig, name="a365_mcp_tooling"):
 
     agentic_app_id: str = Field(..., description="Agent 365 agentic app ID")
     auth_token: str | AuthenticationRef = Field(
-        ..., description="Authentication token or reference to auth provider for A365 tooling gateway"
-    )
+        ..., description="Authentication token or reference to auth provider for A365 tooling gateway")
     tool_call_timeout: timedelta = Field(
         default=timedelta(seconds=60),
         description="Timeout for MCP tool calls. Defaults to 60 seconds.",
@@ -118,6 +117,5 @@ class A365MCPToolingConfig(FunctionGroupBaseConfig, name="a365_mcp_tooling"):
         """Validate reconnect backoff values."""
         if self.reconnect_max_backoff < self.reconnect_initial_backoff:
             raise A365ConfigurationError(
-                "reconnect_max_backoff must be greater than or equal to reconnect_initial_backoff"
-            )
+                "reconnect_max_backoff must be greater than or equal to reconnect_initial_backoff")
         return self

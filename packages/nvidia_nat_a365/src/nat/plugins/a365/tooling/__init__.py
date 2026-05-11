@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """A365 tooling/MCP integration plugin for NeMo Agent Toolkit."""
 
 from .register import a365_mcp_tooling_function_group

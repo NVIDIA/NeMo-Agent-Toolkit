@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Smoke tests for A365 telemetry exporter plugin registration and discovery."""
 
 import pytest
@@ -49,7 +48,7 @@ def test_a365_telemetry_exporter_discovered():
 def test_a365_telemetry_exporter_config_accepts_auth_ref():
     """Test that A365TelemetryExporter accepts AuthenticationRef for token_resolver."""
     from nat.data_models.component_ref import AuthenticationRef
-    
+
     # Pydantic will coerce strings to AuthenticationRef automatically
     # So both string and AuthenticationRef should work
     config1 = A365TelemetryExporter(
@@ -59,7 +58,7 @@ def test_a365_telemetry_exporter_config_accepts_auth_ref():
     )
     assert isinstance(config1.token_resolver, AuthenticationRef)
     assert str(config1.token_resolver) == "test_auth"
-    
+
     config2 = A365TelemetryExporter(
         agent_id="test-agent",
         tenant_id="test-tenant",

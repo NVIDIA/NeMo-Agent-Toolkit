@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Microsoft Agent 365 front-end plugin implementation."""
 
 import asyncio
@@ -22,9 +21,9 @@ import logging
 
 from nat.builder.front_end import FrontEndBase
 from nat.builder.workflow_builder import WorkflowBuilder
+from nat.plugins.a365.exceptions import A365SDKError
 from nat.plugins.a365.front_end.front_end_config import A365FrontEndConfig
 from nat.plugins.a365.front_end.worker import A365FrontEndPluginWorker
-from nat.plugins.a365.exceptions import A365SDKError
 from nat.runtime.session import SessionManager
 from nat.utils.log_levels import LOG_LEVELS
 from nat.utils.log_utils import setup_logging
@@ -40,7 +39,8 @@ async def _run_until_stopped() -> None:
 def _build_aiohttp_app(agent_app, connection_manager, adapter):
     """Build aiohttp application with JWT middleware and Bot Framework message route."""
     from aiohttp import web
-    from microsoft_agents.hosting.aiohttp import jwt_authorization_middleware, start_agent_process
+    from microsoft_agents.hosting.aiohttp import jwt_authorization_middleware
+    from microsoft_agents.hosting.aiohttp import start_agent_process
 
     async def messages(request: web.Request):
         return await start_agent_process(request, agent_app, adapter)
@@ -108,10 +108,7 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
 
         try:
             async with WorkflowBuilder.from_config(config=self.full_config) as builder:
-                session_manager = await SessionManager.create(
-                    config=self.full_config,
-                    shared_builder=builder
-                )
+                session_manager = await SessionManager.create(config=self.full_config, shared_builder=builder)
 
                 # Create separate session manager for notifications if configured
                 notification_session_manager = session_manager
@@ -122,8 +119,7 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                     notification_session_manager = await SessionManager.create(
                         config=self.full_config,
                         shared_builder=builder,
-                        entry_function=self.front_end_config.notification_workflow
-                    )
+                        entry_function=self.front_end_config.notification_workflow)
 
                 # Get worker instance (allows for custom workers via config)
                 worker = self._get_worker_instance()
@@ -131,22 +127,15 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                 agent_app, connection_manager, aiohttp_adapter = await worker.create_agent_application()
 
                 if self.front_end_config.enable_notifications:
-                    await worker.setup_notification_handlers(
-                        agent_app=agent_app,
-                        session_manager=notification_session_manager
-                    )
+                    await worker.setup_notification_handlers(agent_app=agent_app,
+                                                             session_manager=notification_session_manager)
 
-                await worker.setup_message_handlers(
-                    agent_app=agent_app,
-                    session_manager=session_manager
-                )
+                await worker.setup_message_handlers(agent_app=agent_app, session_manager=session_manager)
 
                 worker.setup_error_handlers(agent_app)
 
-                logger.info(
-                    f"Starting Microsoft Agent 365 server on "
-                    f"{self.front_end_config.host}:{self.front_end_config.port}"
-                )
+                logger.info(f"Starting Microsoft Agent 365 server on "
+                            f"{self.front_end_config.host}:{self.front_end_config.port}")
 
                 web_app = _build_aiohttp_app(agent_app, connection_manager, aiohttp_adapter)
                 try:
@@ -183,14 +172,14 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                     await session_manager.shutdown()
                 except Exception as e:
                     logger.error(f"Error cleaning up default session manager: {e}")
-            
+
             # If notification session manager is different, clean it up too
             if notification_session_manager is not None and notification_session_manager is not session_manager:
                 try:
                     await notification_session_manager.shutdown()
                 except Exception as e:
                     logger.error(f"Error cleaning up notification session manager: {e}")
-            
+
             if worker is not None:
                 try:
                     await worker.cleanup()
@@ -210,4 +199,3 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
         else:
             worker_cls = A365FrontEndPluginWorker
         return worker_cls(self.full_config)
-

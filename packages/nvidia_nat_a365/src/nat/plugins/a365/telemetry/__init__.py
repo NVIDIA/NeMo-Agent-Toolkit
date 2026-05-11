@@ -13,11 +13,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """A365 telemetry exporter plugin for NeMo Agent Toolkit."""
 
 # Import register module to ensure registration happens
 from . import register  # noqa: F401
-from .register import TokenExtractor, register_token_extractor
+from .register import TokenExtractor
+from .register import register_token_extractor
 
 __all__ = ["TokenExtractor", "register_token_extractor"]

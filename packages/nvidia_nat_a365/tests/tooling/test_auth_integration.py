@@ -13,27 +13,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Integration tests for A365 tooling integration with delegation pattern."""
 
 import sys
-from contextlib import asynccontextmanager, contextmanager
-from unittest.mock import AsyncMock, Mock, patch
+from contextlib import asynccontextmanager
+from contextlib import contextmanager
+from unittest.mock import AsyncMock
+from unittest.mock import Mock
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
 from pydantic import SecretStr
 
 from nat.builder.function import FunctionGroup
-from nat.data_models.authentication import AuthResult, BearerTokenCred, HeaderCred
+from nat.data_models.authentication import AuthResult
+from nat.data_models.authentication import BearerTokenCred
+from nat.data_models.authentication import HeaderCred
 from nat.data_models.component_ref import AuthenticationRef
 from nat.plugins.a365.exceptions import A365ConfigurationError
 from nat.plugins.a365.tooling import A365MCPToolingConfig
-from nat.plugins.a365.tooling.register import (
-    A365MCPToolingFunctionGroup,
-    a365_mcp_tooling_function_group,
-)
-from nat.utils.optional_imports import OptionalImportError
+from nat.plugins.a365.tooling.register import A365MCPToolingFunctionGroup
+from nat.plugins.a365.tooling.register import a365_mcp_tooling_function_group
 
 # Skip all tests on Python 3.13 until nvidia-nat-mcp supports it
 pytestmark = pytest.mark.skipif(
@@ -83,19 +84,21 @@ def mock_mcp_servers():
 @pytest.fixture
 def mock_mcp_function_group():
     """Create a mock MCP FunctionGroup with functions."""
+
     def create_mock_group(server_name: str, tool_names: list[str]):
         """Create a mock function group for a specific server."""
         group = Mock(spec=FunctionGroup)
         # Functions are namespaced with the MCP group's instance name
         # For simplicity, we'll use "mcp_client" as the namespace
         functions = {
-            f"mcp_client__{tool_name}": Mock(
-                ainvoke=AsyncMock(return_value=f"result-from-{tool_name}"),
-                has_single_output=True,
-                input_schema=None,
-                description=f"Tool {tool_name}",
-                converters=None,
-            )
+            f"mcp_client__{tool_name}":
+                Mock(
+                    ainvoke=AsyncMock(return_value=f"result-from-{tool_name}"),
+                    has_single_output=True,
+                    input_schema=None,
+                    description=f"Tool {tool_name}",
+                    converters=None,
+                )
             for tool_name in tool_names
         }
         group.get_all_functions = AsyncMock(return_value=functions)
@@ -148,9 +151,9 @@ def patch_services(mock_a365_service, mock_mcp_client_function_group):
     # Since the import happens inside the function, we patch the source module
     with patch("nat.plugins.a365.tooling.A365ToolingService", new=mock_service_class):
         with patch.object(
-            nat.plugins.mcp.client.client_impl,
-            "mcp_client_function_group",
-            side_effect=mock_mcp_client_function_group,
+                nat.plugins.mcp.client.client_impl,
+                "mcp_client_function_group",
+                side_effect=mock_mcp_client_function_group,
         ) as mock_mcp_patched:
             yield mock_mcp_patched
 
@@ -170,8 +173,7 @@ class TestDelegationPattern:
     ):
         """Test that composite group aggregates functions from all MCP groups."""
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
         with patch_services(mock_a365_service, mock_mcp_client_function_group):
@@ -255,7 +257,7 @@ class TestTokenExtraction:
     ):
         """Test error handling when token cannot be extracted."""
         from nat.plugins.a365.exceptions import A365AuthenticationError
-        
+
         mock_auth_provider.authenticate.return_value = AuthResult(credentials=credentials)
         # Return empty list so code can proceed past service discovery
         mock_a365_service.list_tool_servers.return_value = []
@@ -285,17 +287,13 @@ class TestAuthProviderPriority:
             pytest.skip("nvidia-nat-mcp not installed")
 
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("gateway-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("gateway-token"))])
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
         override_auth_provider = Mock()
         override_auth_provider.authenticate = AsyncMock()
         mock_builder.get_auth_provider = AsyncMock(
-            side_effect=lambda ref: (
-                override_auth_provider if str(ref) == "override_auth" else mock_auth_provider
-            )
-        )
+            side_effect=lambda ref: (override_auth_provider if str(ref) == "override_auth" else mock_auth_provider))
 
         config = A365MCPToolingConfig(
             agentic_app_id="test-agent",
@@ -329,8 +327,7 @@ class TestAuthProviderPriority:
             pytest.skip("nvidia-nat-mcp not installed")
 
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("gateway-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("gateway-token"))])
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
         config = A365MCPToolingConfig(
@@ -346,9 +343,11 @@ class TestAuthProviderPriority:
                     assert str(server_mcp_config.server.auth_provider) == "gateway_auth"
 
     @pytest.mark.asyncio
-    async def test_string_token_no_auth_for_servers(
-        self, mock_builder, mock_a365_service, mock_mcp_servers, mock_mcp_client_function_group
-    ):
+    async def test_string_token_no_auth_for_servers(self,
+                                                    mock_builder,
+                                                    mock_a365_service,
+                                                    mock_mcp_servers,
+                                                    mock_mcp_client_function_group):
         """Test that string token doesn't pass auth to MCP servers."""
         try:
             from nat.plugins.mcp.client.client_config import MCPClientConfig
@@ -390,8 +389,7 @@ class TestUserContext:
     ):
         """Test that user_id from context is passed to authenticate()."""
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
         if has_context:
@@ -428,8 +426,7 @@ class TestEdgeCases:
     ):
         """Test that empty servers list returns empty composite group."""
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
         mock_a365_service.list_tool_servers.return_value = []
 
         with patch_services(mock_a365_service, mock_mcp_client_function_group):
@@ -449,8 +446,7 @@ class TestEdgeCases:
     ):
         """Test that servers without URLs are skipped."""
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
 
         server_with_url = Mock()
         server_with_url.mcp_server_name = "server-with-url"
@@ -482,8 +478,7 @@ class TestEdgeCases:
     ):
         """Test that MCP client registration failures are handled gracefully."""
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
         call_count = {"value": 0}
@@ -508,9 +503,8 @@ class TestEdgeCases:
 
         mock_service_class = Mock(return_value=mock_a365_service)
         with patch.object(nat.plugins.a365.tooling, "A365ToolingService", new=mock_service_class):
-            with patch.object(
-                nat.plugins.mcp.client.client_impl, "mcp_client_function_group", side_effect=mock_factory
-            ):
+            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group",
+                              side_effect=mock_factory):
                 async with a365_mcp_tooling_function_group(base_config, mock_builder) as result:
                     assert isinstance(result, A365MCPToolingFunctionGroup)
                     all_functions = await result.get_all_functions()
@@ -529,13 +523,13 @@ class TestEdgeCases:
     ):
         """Test that tool_overrides dict is converted to MCPToolOverrideConfig."""
         try:
-            from nat.plugins.mcp.client.client_config import MCPClientConfig, MCPToolOverrideConfig
+            from nat.plugins.mcp.client.client_config import MCPClientConfig
+            from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
         except ImportError:
             pytest.skip("nvidia-nat-mcp not installed")
 
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
         config = A365MCPToolingConfig(
@@ -581,14 +575,14 @@ class TestEdgeCases:
         we test the error handling by directly patching the conversion to raise ValidationError.
         """
         try:
-            from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
             from pydantic import ValidationError
+
+            from nat.plugins.mcp.client.client_config import MCPToolOverrideConfig
         except ImportError:
             pytest.skip("nvidia-nat-mcp not installed")
-        
+
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
         config = A365MCPToolingConfig(
@@ -605,13 +599,14 @@ class TestEdgeCases:
         # Patch the conversion to raise ValidationError, simulating invalid MCPToolOverrideConfig data
         with patch_services(mock_a365_service, mock_mcp_client_function_group):
             # Patch MCPToolOverrideConfig where it's imported inside the function
-            with patch(
-                "nat.plugins.mcp.client.client_config.MCPToolOverrideConfig",
-                side_effect=ValidationError.from_exception_data(
-                    "MCPToolOverrideConfig",
-                    [{"type": "string_type", "loc": ("alias",), "msg": "Input should be a valid string", "input": None}]
-                )
-            ):
+            with patch("nat.plugins.mcp.client.client_config.MCPToolOverrideConfig",
+                       side_effect=ValidationError.from_exception_data("MCPToolOverrideConfig",
+                                                                       [{
+                                                                           "type": "string_type",
+                                                                           "loc": ("alias", ),
+                                                                           "msg": "Input should be a valid string",
+                                                                           "input": None
+                                                                       }])):
                 with pytest.raises(A365ConfigurationError, match="Invalid tool_overrides configuration"):
                     async with a365_mcp_tooling_function_group(config, mock_builder):
                         pass
@@ -625,7 +620,6 @@ class TestEdgeCases:
         mock_mcp_client_function_group,
     ):
         """Test that auth provider resolution failure is handled."""
-        from nat.plugins.a365.exceptions import A365AuthenticationError
 
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
@@ -657,9 +651,8 @@ class TestEdgeCases:
         from nat.plugins.a365.exceptions import A365SDKError
 
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
-        
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+
         # Make list_tool_servers raise a non-auth error (e.g., connection error)
         mock_a365_service.list_tool_servers = AsyncMock(side_effect=ConnectionError("Connection refused"))
 
@@ -680,13 +673,13 @@ class TestEdgeCases:
         """Test that all config fields are correctly passed to MCPClientConfig."""
         try:
             from datetime import timedelta
+
             from nat.plugins.mcp.client.client_config import MCPClientConfig
         except ImportError:
             pytest.skip("nvidia-nat-mcp not installed")
 
         mock_auth_provider.authenticate.return_value = AuthResult(
-            credentials=[BearerTokenCred(token=SecretStr("test-token"))]
-        )
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
         mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
 
         # Create config with custom values for all fields
@@ -709,7 +702,7 @@ class TestEdgeCases:
                 # Verify MCPClientConfig was created with correct values
                 assert mock_mcp_patched.call_count > 0
                 mcp_config: MCPClientConfig = mock_mcp_patched.call_args_list[0][0][0]
-                
+
                 # Verify all fields are passed correctly
                 assert mcp_config.tool_call_timeout == timedelta(seconds=90)
                 assert mcp_config.auth_flow_timeout == timedelta(seconds=600)

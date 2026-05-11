@@ -13,17 +13,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Registration tests for A365 tooling integration."""
 
-import sys
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
+from unittest.mock import patch
 
 import pytest
 
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.plugins.a365.tooling import A365MCPToolingConfig
-from nat.runtime.loader import PluginTypes, discover_and_register_plugins
+from nat.runtime.loader import PluginTypes
+from nat.runtime.loader import discover_and_register_plugins
 from nat.utils.optional_imports import OptionalImportError
 
 
@@ -71,12 +71,12 @@ class TestA365ToolingMissingMCPDependency:
         # Patch the import to raise ImportError when MCP module is imported
         # The import happens inside the function: from nat.plugins.mcp.client.client_config import ...
         original_import = __import__
-        
+
         def mock_import(name, globals=None, locals=None, fromlist=(), level=0):
             if name == "nat.plugins.mcp.client.client_config":
                 raise ImportError(f"No module named '{name}'")
             return original_import(name, globals, locals, fromlist, level)
-        
+
         with patch("builtins.__import__", side_effect=mock_import):
             with pytest.raises(OptionalImportError) as exc_info:
                 async with a365_mcp_tooling_function_group(config, mock_builder):
@@ -128,7 +128,6 @@ class TestA365ToolingFunctionGroupDiscovery:
 
     def test_config_class_validation(self):
         """Test that A365MCPToolingConfig validates reconnect backoff values."""
-        from datetime import timedelta
 
         # Should raise A365ConfigurationError if max_backoff < initial_backoff
         from nat.plugins.a365.exceptions import A365ConfigurationError

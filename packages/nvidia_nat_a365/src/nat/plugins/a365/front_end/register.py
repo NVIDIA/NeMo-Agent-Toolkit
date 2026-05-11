@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Registration for Microsoft Agent 365 front-end."""
 
 import os
@@ -44,19 +43,14 @@ async def a365_front_end(config: A365FrontEndConfig, full_config):
     if not config.allowed_audiences:
         env_audiences = os.environ.get("A365_ALLOWED_AUDIENCES", "")
         if env_audiences:
-            config.allowed_audiences = [
-                audience.strip()
-                for audience in env_audiences.split(",")
-                if audience.strip()
-            ]
+            config.allowed_audiences = [audience.strip() for audience in env_audiences.split(",") if audience.strip()]
 
     if not config.app_password:
         set_secret_from_env(config, "app_password", "A365_APP_PASSWORD")
-    
+
     if not config.app_password:
         raise ValueError(
-            "app_password must be provided in the configuration or in the environment variable `A365_APP_PASSWORD`"
-        )
-    
+            "app_password must be provided in the configuration or in the environment variable `A365_APP_PASSWORD`")
+
     plugin = A365FrontEndPlugin(full_config=full_config)
     yield plugin

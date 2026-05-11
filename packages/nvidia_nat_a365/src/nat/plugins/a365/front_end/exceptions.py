@@ -13,16 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Backward compatibility: Import exceptions from shared module."""
 
-from nat.plugins.a365.exceptions import (
-    A365AuthenticationError,
-    A365ConfigurationError,
-    A365Error,
-    A365SDKError,
-    A365WorkflowExecutionError,
-)
+from nat.plugins.a365.exceptions import A365AuthenticationError
+from nat.plugins.a365.exceptions import A365ConfigurationError
+from nat.plugins.a365.exceptions import A365Error
+from nat.plugins.a365.exceptions import A365SDKError
+from nat.plugins.a365.exceptions import A365WorkflowExecutionError
 
 __all__ = [
     "A365Error",
