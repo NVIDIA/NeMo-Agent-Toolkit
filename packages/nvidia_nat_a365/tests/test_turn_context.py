@@ -344,7 +344,9 @@ class TestTenantIdFallbackChain:
         activity = _agentic_activity(
             tenant=None,
             conversation=SimpleNamespace(id="conv-1", tenant_id=None),
-            channel_data={"tenant": {"id": "tenant-from-channel-data"}},
+            channel_data={"tenant": {
+                "id": "tenant-from-channel-data"
+            }},
         )
         identity = extract_identity_from_activity(activity)
         assert identity.tenant_id == "tenant-from-channel-data"
@@ -462,9 +464,6 @@ class TestCallableExceptionPaths:
         assert identity.agent_app_id == "fallback-agent"
 
         # m12: warning surfaces the exception type.
-        matching = [
-            r for r in caplog.records
-            if "get_agentic_instance_id() raised" in r.getMessage()
-        ]
+        matching = [r for r in caplog.records if "get_agentic_instance_id() raised" in r.getMessage()]
         assert len(matching) == 1
         assert "ValueError" in matching[0].getMessage()

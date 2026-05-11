@@ -765,8 +765,7 @@ class TestServerRegistrationErrorPolicy:
 
         mock_service_class = Mock(return_value=mock_a365_service)
         with patch.object(nat.plugins.a365.tooling, "A365ToolingService", new=mock_service_class):
-            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group",
-                              side_effect=factory):
+            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group", side_effect=factory):
                 from nat.plugins.a365.exceptions import A365SDKError
                 with pytest.raises(A365SDKError, match="policy=fail_fast"):
                     async with a365_mcp_tooling_function_group(config, mock_builder):
@@ -803,8 +802,7 @@ class TestServerRegistrationErrorPolicy:
 
         mock_service_class = Mock(return_value=mock_a365_service)
         with patch.object(nat.plugins.a365.tooling, "A365ToolingService", new=mock_service_class):
-            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group",
-                              side_effect=factory):
+            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group", side_effect=factory):
                 with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.tooling.register"):
                     async with a365_mcp_tooling_function_group(config, mock_builder) as result:
                         assert isinstance(result, A365MCPToolingFunctionGroup)
@@ -851,16 +849,14 @@ class TestServerRegistrationErrorPolicy:
 
         mock_service_class = Mock(return_value=mock_a365_service)
         with patch.object(nat.plugins.a365.tooling, "A365ToolingService", new=mock_service_class):
-            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group",
-                              side_effect=factory):
+            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group", side_effect=factory):
                 with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.tooling.register"):
                     async with a365_mcp_tooling_function_group(config, mock_builder) as result:
                         assert len(result.skipped_servers) == 1
 
         # No WARN log naming the skipped server (DEBUG-only under this policy).
         skip_logs = [r for r in caplog.records if "after registration failure" in r.getMessage()]
-        assert not skip_logs, (
-            f"skip_silently should not emit WARN logs, got: {[r.getMessage() for r in skip_logs]}")
+        assert not skip_logs, (f"skip_silently should not emit WARN logs, got: {[r.getMessage() for r in skip_logs]}")
 
 
 class TestServerAuthProvidersHygiene:
@@ -1018,8 +1014,7 @@ class TestToolNameCollisionWarning:
         assert merged["shared_tool"] is fn_b
         # Exactly one collision warning fired, naming the offending tool name.
         collisions = [r for r in caplog.records if "Tool name collision" in r.getMessage()]
-        assert len(collisions) == 1, (
-            f"Expected one collision warning, got: {[r.getMessage() for r in collisions]}")
+        assert len(collisions) == 1, (f"Expected one collision warning, got: {[r.getMessage() for r in collisions]}")
         assert "'shared_tool'" in collisions[0].getMessage()
 
     async def test_no_warning_when_same_function_instance_in_multiple_groups(self, caplog):
@@ -1063,6 +1058,7 @@ class TestDiscoveryErrorClassifier:
     ):
         """A ``ClientResponseError(status=401)`` from the gateway raises A365AuthenticationError."""
         from aiohttp import ClientResponseError
+
         from nat.plugins.a365.exceptions import A365AuthenticationError
 
         mock_auth_provider.authenticate.return_value = AuthResult(
@@ -1091,6 +1087,7 @@ class TestDiscoveryErrorClassifier:
     ):
         """A ``ClientResponseError(status=500)`` raises A365SDKError, not an auth error."""
         from aiohttp import ClientResponseError
+
         from nat.plugins.a365.exceptions import A365SDKError
 
         mock_auth_provider.authenticate.return_value = AuthResult(

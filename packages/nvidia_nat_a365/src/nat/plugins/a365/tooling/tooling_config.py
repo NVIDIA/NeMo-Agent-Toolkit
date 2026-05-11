@@ -25,7 +25,6 @@ from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.plugins.a365.exceptions import A365ConfigurationError
 
-
 # Policy for how to handle per-server registration failures during MCP discovery.
 # See ``on_server_registration_error`` on ``A365MCPToolingConfig`` for semantics.
 ServerRegistrationErrorPolicy = Literal["fail_fast", "skip_with_warning", "skip_silently"]

@@ -38,7 +38,6 @@ from nat.plugins.a365.tooling.tooling_config import ServerRegistrationErrorPolic
 
 logger = logging.getLogger(__name__)
 
-
 # Status codes that indicate the gateway considered our caller unauthenticated /
 # unauthorized -- distinct from server-side or network failures that should be
 # classified as SDK errors instead.
@@ -377,8 +376,7 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
             if override_key in configured_overrides:
                 server_auth_provider = configured_overrides[override_key]
                 used_override_keys.add(override_key)
-                logger.debug("Using per-server auth provider %r for server %r",
-                             server_auth_provider, server_name)
+                logger.debug("Using per-server auth provider %r for server %r", server_auth_provider, server_name)
             elif isinstance(config.auth_token, AuthenticationRef):
                 server_auth_provider = config.auth_token
                 logger.debug("Using A365 gateway auth provider for server %r", server_name)
@@ -426,9 +424,11 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
             )
 
         if not mcp_groups:
-            logger.warning("No MCP servers successfully registered for agent %s. "
-                           "Discovered %d servers but none could be registered.",
-                           config.agentic_app_id, len(servers))
+            logger.warning(
+                "No MCP servers successfully registered for agent %s. "
+                "Discovered %d servers but none could be registered.",
+                config.agentic_app_id,
+                len(servers))
 
         composite_group = A365MCPToolingFunctionGroup(
             config=config,
