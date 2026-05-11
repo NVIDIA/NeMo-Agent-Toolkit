@@ -25,7 +25,10 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_AGENTIC_ROLES = frozenset({"agenticIdentity", "agenticUser"})
+# Match roles case-insensitively: SDK enums are camelCase but JSON payloads from A365 /
+# Bot Framework are sometimes lowercased, and we don't want to fail open or silently
+# reject inbound agentic activities because of a casing drift.
+_AGENTIC_ROLES = frozenset({"agenticidentity", "agenticuser"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,12 +70,15 @@ def _call_if_callable(obj: Any, name: str) -> Any:
     if callable(fn):
         try:
             return fn()
-        except Exception:
-            # Method exists but threw — surface it so silent fallback to static config is observable.
+        except Exception as e:
+            # Method exists but threw -- surface it so silent fallback to static config is
+            # observable. Including the exception type in the log message (in addition to
+            # exc_info) makes log-search by failure mode possible without parsing tracebacks.
             logger.warning(
-                "A365 turn-identity extraction: %s.%s() raised; falling back to None",
+                "A365 turn-identity extraction: %s.%s() raised %s; falling back to None",
                 type(obj).__name__,
                 name,
+                type(e).__name__,
                 exc_info=True,
             )
             return None
@@ -140,7 +146,9 @@ def _extract_client_address(activity: Any) -> str | None:
 def _is_agentic_via_role(activity: Any) -> bool:
     recipient = getattr(activity, "recipient", None)
     role = getattr(recipient, "role", None)
-    return role in _AGENTIC_ROLES
+    if role is None:
+        return False
+    return str(role).lower() in _AGENTIC_ROLES
 
 
 def extract_identity_from_activity(activity: Any) -> A365TurnIdentity | None:
@@ -157,10 +165,12 @@ def extract_identity_from_activity(activity: Any) -> A365TurnIdentity | None:
     if callable(is_agentic_method):
         try:
             agentic = bool(is_agentic_method())
-        except Exception:
+        except Exception as e:
             logger.warning(
-                "A365 turn-identity extraction: %s.is_agentic_request() raised; treating as non-agentic",
+                "A365 turn-identity extraction: %s.is_agentic_request() raised %s; "
+                "treating as non-agentic",
                 type(activity).__name__,
+                type(e).__name__,
                 exc_info=True,
             )
             agentic = False
@@ -185,6 +195,12 @@ def extract_identity_from_activity(activity: Any) -> A365TurnIdentity | None:
         if tenant_id is None:
             conversation = getattr(activity, "conversation", None)
             tenant_id = getattr(conversation, "tenant_id", None)
+        if tenant_id is None:
+            # Canonical Bot Framework location for Teams traffic: ``channelData.tenant.id``.
+            # Group-chat scenarios and older SDK versions can leave ``recipient.tenant_id`` and
+            # ``conversation.tenant_id`` unset while still carrying tenant via channel_data.
+            channel_data = _get_attr(activity, "channel_data", "channelData")
+            tenant_id = _lookup_mapping_or_attr(channel_data, "tenant", "id")
 
     user_id = _call_if_callable(activity, "get_agentic_user")
     if user_id is None:
@@ -196,7 +212,12 @@ def extract_identity_from_activity(activity: Any) -> A365TurnIdentity | None:
     channel_name = _normalize_channel_name(_get_attr(activity, "channel_id", "channelId"))
     service_url = _get_attr(activity, "service_url", "serviceUrl")
 
-    caller = _get_attr(activity, "from_property", "from")
+    # ``Activity`` from microsoft-agents-activity binds the JSON ``"from"`` field to the
+    # Python attribute ``from_property`` via Pydantic ``alias="from"``. The alias only
+    # affects (de)serialization, not attribute access -- so ``getattr(activity, "from")``
+    # is always None on real SDK objects. We deliberately do NOT include a ``"from"``
+    # fallback here.
+    caller = _get_attr(activity, "from_property")
     caller_user_id = _first_nonempty(
         _get_attr(caller, "aad_object_id", "aadObjectId"),
         _get_attr(caller, "id"),
