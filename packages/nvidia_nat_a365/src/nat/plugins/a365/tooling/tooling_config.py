@@ -16,6 +16,7 @@
 """Configuration for A365 tooling integration with NAT MCP client."""
 
 from datetime import timedelta
+from typing import Literal
 
 from pydantic import Field
 from pydantic import model_validator
@@ -23,6 +24,11 @@ from pydantic import model_validator
 from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.plugins.a365.exceptions import A365ConfigurationError
+
+
+# Policy for how to handle per-server registration failures during MCP discovery.
+# See ``on_server_registration_error`` on ``A365MCPToolingConfig`` for semantics.
+ServerRegistrationErrorPolicy = Literal["fail_fast", "skip_with_warning", "skip_silently"]
 
 
 class A365MCPToolingConfig(FunctionGroupBaseConfig, name="a365_mcp_tooling"):
@@ -102,13 +108,36 @@ class A365MCPToolingConfig(FunctionGroupBaseConfig, name="a365_mcp_tooling"):
         default=None,
         description="""Optional per-server authentication provider overrides.
         Maps MCP server names (from A365 discovery) to authentication provider references.
+        Lookups are case-insensitive against the server names returned by the A365 gateway.
         If not specified, discovered servers will use the same auth provider as the A365 gateway
         (when auth_token is an AuthenticationRef). If auth_token is a string, servers will not have auth.
+
+        Override keys that don't match any discovered server are logged as warnings so dead
+        configuration is surfaced.
 
         Example:
           server_auth_providers:
             "my-custom-server": "custom_auth_provider"
             "another-server": "another_auth_provider"
+        """,
+    )
+    on_server_registration_error: ServerRegistrationErrorPolicy = Field(
+        default="skip_with_warning",
+        description="""Policy for handling per-MCP-server registration failures.
+
+        - ``fail_fast``: abort registration with ``A365SDKError`` on the first server failure.
+          Recommended for production where a missing tool should fail loudly rather than
+          allow the agent to run with a silently-degraded toolset.
+        - ``skip_with_warning`` (default): log a WARN per skipped server and continue. The
+          composite function group records the skipped server names; check via
+          ``A365MCPToolingFunctionGroup.skipped_servers``. Matches today's tolerant behavior
+          but escalates from a lossy ``logger.error`` line to an explicit policy.
+        - ``skip_silently``: log at DEBUG only. Reserved for dev / local manifest setups
+          where intermittent registration failures are expected.
+
+        Discovery failures from the A365 gateway itself (no servers returned, gateway 4xx)
+        always raise; this policy only governs per-server registration after discovery
+        succeeds.
         """,
     )
 

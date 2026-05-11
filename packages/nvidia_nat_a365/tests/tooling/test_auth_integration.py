@@ -15,6 +15,7 @@
 # limitations under the License.
 """Integration tests for A365 tooling integration with delegation pattern."""
 
+import logging
 import sys
 from contextlib import asynccontextmanager
 from contextlib import contextmanager
@@ -26,6 +27,7 @@ from uuid import uuid4
 import pytest
 from pydantic import SecretStr
 
+from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
 from nat.data_models.authentication import AuthResult
 from nat.data_models.authentication import BearerTokenCred
@@ -700,3 +702,441 @@ class TestEdgeCases:
                 assert mcp_config.session_aware_tools is False
                 assert mcp_config.max_sessions == 200
                 assert mcp_config.session_idle_timeout == timedelta(hours=2)
+
+
+# -----------------------------------------------------------------------------
+# Tests for the per-server registration error policy (C5) and the supporting
+# observability surfaces: skipped_servers metadata, server_auth_providers
+# unused-key warnings (M11), unnamed-server fallback names (M12), and tool-name
+# collision warnings (M13). The C6 classifier is exercised via an isinstance
+# branch test and a fallback-substring test.
+# -----------------------------------------------------------------------------
+
+
+def _make_alternating_failing_factory(mock_mcp_function_group, fail_indices: list[int]):
+    """Build a mock ``mcp_client_function_group`` factory that fails on the given call indices.
+
+    ``fail_indices`` is 1-based to match the call_count semantics already used in the file.
+    """
+    call_count = {"value": 0}
+
+    async def gen(*_args, **_kwargs):
+        call_count["value"] += 1
+        if call_count["value"] in fail_indices:
+            raise Exception(f"Simulated registration failure on call {call_count['value']}")
+        group = mock_mcp_function_group(f"server-{call_count['value']}", [f"tool{call_count['value']}"])
+        yield group
+
+    def factory(*args, **kwargs):
+        return asynccontextmanager(gen)(*args, **kwargs)
+
+    return factory
+
+
+class TestServerRegistrationErrorPolicy:
+    """Verify the ``on_server_registration_error`` policy field behaves correctly."""
+
+    async def test_fail_fast_raises_a365_sdk_error_on_first_server_failure(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_servers,
+        mock_mcp_function_group,
+    ):
+        """Under ``fail_fast``, a single per-server failure aborts the whole registration."""
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+        mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
+
+        config = A365MCPToolingConfig(
+            agentic_app_id="test-agent",
+            auth_token=AuthenticationRef("test_auth"),
+            on_server_registration_error="fail_fast",
+        )
+
+        factory = _make_alternating_failing_factory(mock_mcp_function_group, fail_indices=[1])
+
+        import nat.plugins.a365.tooling
+        try:
+            import nat.plugins.mcp.client.client_impl
+        except ImportError:
+            pytest.skip("nvidia-nat-mcp not installed")
+
+        mock_service_class = Mock(return_value=mock_a365_service)
+        with patch.object(nat.plugins.a365.tooling, "A365ToolingService", new=mock_service_class):
+            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group",
+                              side_effect=factory):
+                from nat.plugins.a365.exceptions import A365SDKError
+                with pytest.raises(A365SDKError, match="policy=fail_fast"):
+                    async with a365_mcp_tooling_function_group(config, mock_builder):
+                        pass  # pragma: no cover
+
+    async def test_skip_with_warning_continues_and_records_skipped_servers(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_servers,
+        mock_mcp_function_group,
+        caplog,
+    ):
+        """Under the default ``skip_with_warning``, failed servers are logged and recorded."""
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+        mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
+
+        config = A365MCPToolingConfig(
+            agentic_app_id="test-agent",
+            auth_token=AuthenticationRef("test_auth"),
+            # Default policy; specified explicitly to make intent clear.
+            on_server_registration_error="skip_with_warning",
+        )
+
+        factory = _make_alternating_failing_factory(mock_mcp_function_group, fail_indices=[1])
+
+        import nat.plugins.a365.tooling
+        try:
+            import nat.plugins.mcp.client.client_impl
+        except ImportError:
+            pytest.skip("nvidia-nat-mcp not installed")
+
+        mock_service_class = Mock(return_value=mock_a365_service)
+        with patch.object(nat.plugins.a365.tooling, "A365ToolingService", new=mock_service_class):
+            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group",
+                              side_effect=factory):
+                with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.tooling.register"):
+                    async with a365_mcp_tooling_function_group(config, mock_builder) as result:
+                        assert isinstance(result, A365MCPToolingFunctionGroup)
+                        # One server (server-1) failed and was skipped; one survived.
+                        all_functions = await result.get_all_functions()
+                        assert len(all_functions) == 1
+                        # Skipped-server metadata exposes the failure for monitoring.
+                        assert len(result.skipped_servers) == 1
+                        skipped_name, skipped_err = result.skipped_servers[0]
+                        assert "Simulated registration failure" in skipped_err
+
+        # WARN log emitted for the skipped server.
+        assert any("after registration failure (policy=skip_with_warning)" in r.getMessage()
+                   for r in caplog.records), \
+            f"Expected skip_with_warning log, got: {[r.getMessage() for r in caplog.records]}"
+
+    async def test_skip_silently_continues_without_warning(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_servers,
+        mock_mcp_function_group,
+        caplog,
+    ):
+        """Under ``skip_silently``, failures don't produce WARN logs but still record metadata."""
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+        mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
+
+        config = A365MCPToolingConfig(
+            agentic_app_id="test-agent",
+            auth_token=AuthenticationRef("test_auth"),
+            on_server_registration_error="skip_silently",
+        )
+
+        factory = _make_alternating_failing_factory(mock_mcp_function_group, fail_indices=[1])
+
+        import nat.plugins.a365.tooling
+        try:
+            import nat.plugins.mcp.client.client_impl
+        except ImportError:
+            pytest.skip("nvidia-nat-mcp not installed")
+
+        mock_service_class = Mock(return_value=mock_a365_service)
+        with patch.object(nat.plugins.a365.tooling, "A365ToolingService", new=mock_service_class):
+            with patch.object(nat.plugins.mcp.client.client_impl, "mcp_client_function_group",
+                              side_effect=factory):
+                with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.tooling.register"):
+                    async with a365_mcp_tooling_function_group(config, mock_builder) as result:
+                        assert len(result.skipped_servers) == 1
+
+        # No WARN log naming the skipped server (DEBUG-only under this policy).
+        skip_logs = [r for r in caplog.records if "after registration failure" in r.getMessage()]
+        assert not skip_logs, (
+            f"skip_silently should not emit WARN logs, got: {[r.getMessage() for r in skip_logs]}")
+
+
+class TestServerAuthProvidersHygiene:
+    """M11: case-insensitive lookup + warn on unused override keys."""
+
+    async def test_server_auth_providers_match_case_insensitively(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_servers,
+        mock_mcp_client_function_group,
+    ):
+        """A YAML override key with different casing still matches the discovered server name."""
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+        mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
+
+        # mock_mcp_servers has servers named "server-1" and "server-2". Use a mixed-case key.
+        config = A365MCPToolingConfig(
+            agentic_app_id="test-agent",
+            auth_token=AuthenticationRef("gateway_auth"),
+            server_auth_providers={"Server-1": "per_server_auth"},
+        )
+
+        with patch_services(mock_a365_service, mock_mcp_client_function_group) as mock_mcp_patched:
+            async with a365_mcp_tooling_function_group(config, mock_builder):
+                # Two MCPClientConfigs constructed; the first one (server-1) should carry the
+                # per-server override, the second (server-2) should fall back to the gateway auth.
+                server1_config = mock_mcp_patched.call_args_list[0][0][0]
+                server2_config = mock_mcp_patched.call_args_list[1][0][0]
+                assert str(server1_config.server.auth_provider) == "per_server_auth"
+                assert str(server2_config.server.auth_provider) == "gateway_auth"
+
+    async def test_server_auth_providers_warns_on_unused_override_keys(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_servers,
+        mock_mcp_client_function_group,
+        caplog,
+    ):
+        """Override entries that don't match any discovered server should warn the operator."""
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+        mock_a365_service.list_tool_servers.return_value = mock_mcp_servers
+
+        config = A365MCPToolingConfig(
+            agentic_app_id="test-agent",
+            auth_token=AuthenticationRef("test_auth"),
+            server_auth_providers={
+                "server-1": "real_override",  # matches a discovered server
+                "decommissioned-server": "stale_override",  # no match -> warn
+                "another-ghost": "another_stale",  # no match -> warn
+            },
+        )
+
+        with patch_services(mock_a365_service, mock_mcp_client_function_group):
+            with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.tooling.register"):
+                async with a365_mcp_tooling_function_group(config, mock_builder):
+                    pass
+
+        unused_warnings = [r for r in caplog.records if "references unknown MCP servers" in r.getMessage()]
+        assert len(unused_warnings) == 1, (
+            f"Expected one unused-keys warning, got: {[r.getMessage() for r in unused_warnings]}")
+        warning_msg = unused_warnings[0].getMessage()
+        # Both stale keys should be named in the warning.
+        assert "decommissioned-server" in warning_msg
+        assert "another-ghost" in warning_msg
+        # The valid key should NOT appear in the unused-keys warning.
+        assert "real_override" not in warning_msg
+
+
+class TestUnnamedServerFallback:
+    """M12: derive a deterministic display name from the URL when ``mcp_server_name`` is absent."""
+
+    async def test_unnamed_server_uses_url_hostname_in_logs_and_overrides(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_client_function_group,
+        caplog,
+    ):
+        """Two unnamed servers with distinct hostnames are distinguishable in logs and overrides."""
+        # Build two mock servers with no mcp_server_name and distinct hostnames.
+        unnamed_a = Mock()
+        unnamed_a.mcp_server_name = None
+        unnamed_a.url = "https://alpha.example.com/mcp"
+
+        unnamed_b = Mock()
+        unnamed_b.mcp_server_name = None
+        unnamed_b.url = "https://beta.example.com/mcp"
+
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+        mock_a365_service.list_tool_servers.return_value = [unnamed_a, unnamed_b]
+
+        # An override that targets one of the unnamed servers by its derived display name.
+        config = A365MCPToolingConfig(
+            agentic_app_id="test-agent",
+            auth_token=AuthenticationRef("gateway_auth"),
+            server_auth_providers={"unknown:alpha.example.com": "alpha_specific_auth"},
+        )
+
+        with patch_services(mock_a365_service, mock_mcp_client_function_group) as mock_mcp_patched:
+            with caplog.at_level(logging.INFO, logger="nat.plugins.a365.tooling.register"):
+                async with a365_mcp_tooling_function_group(config, mock_builder):
+                    pass
+
+        # Verify the override targeted the right server (M11 cooperation: lookup by derived name).
+        a_config = mock_mcp_patched.call_args_list[0][0][0]
+        b_config = mock_mcp_patched.call_args_list[1][0][0]
+        assert str(a_config.server.auth_provider) == "alpha_specific_auth"
+        assert str(b_config.server.auth_provider) == "gateway_auth"
+
+        # Logs name the servers distinctly so ops can tell them apart.
+        info_logs = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
+        assert any("unknown:alpha.example.com" in m for m in info_logs)
+        assert any("unknown:beta.example.com" in m for m in info_logs)
+
+
+class TestToolNameCollisionWarning:
+    """M13: warn when two MCP groups expose the same function name."""
+
+    async def test_get_all_functions_warns_on_collision(self, caplog):
+        """Two MCP groups exposing the same tool name should produce a WARN; later wins."""
+        from nat.plugins.a365.tooling.register import A365MCPToolingFunctionGroup
+
+        # Two groups, each claiming a tool with the same name -- distinct underlying functions.
+        fn_a = Mock(spec=Function)
+        fn_a.name = "from_group_a"
+        group_a = Mock(spec=FunctionGroup)
+        group_a.get_all_functions = AsyncMock(return_value={"shared_tool": fn_a})
+
+        fn_b = Mock(spec=Function)
+        fn_b.name = "from_group_b"
+        group_b = Mock(spec=FunctionGroup)
+        group_b.get_all_functions = AsyncMock(return_value={"shared_tool": fn_b})
+
+        config = A365MCPToolingConfig(
+            agentic_app_id="test-agent",
+            auth_token="test-token",
+        )
+        composite = A365MCPToolingFunctionGroup(
+            config=config,
+            mcp_groups=[group_a, group_b],
+        )
+
+        with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.tooling.register"):
+            merged = await composite.get_all_functions()
+
+        # Later definition wins (preserves prior dict.update semantics).
+        assert merged["shared_tool"] is fn_b
+        # Exactly one collision warning fired, naming the offending tool name.
+        collisions = [r for r in caplog.records if "Tool name collision" in r.getMessage()]
+        assert len(collisions) == 1, (
+            f"Expected one collision warning, got: {[r.getMessage() for r in collisions]}")
+        assert "'shared_tool'" in collisions[0].getMessage()
+
+    async def test_no_warning_when_same_function_instance_in_multiple_groups(self, caplog):
+        """If the same Function instance appears under the same name in two groups, no warning."""
+        from nat.plugins.a365.tooling.register import A365MCPToolingFunctionGroup
+
+        shared_fn = Mock(spec=Function)
+        shared_fn.name = "shared_fn"
+        group_a = Mock(spec=FunctionGroup)
+        group_a.get_all_functions = AsyncMock(return_value={"tool": shared_fn})
+        group_b = Mock(spec=FunctionGroup)
+        group_b.get_all_functions = AsyncMock(return_value={"tool": shared_fn})
+
+        config = A365MCPToolingConfig(
+            agentic_app_id="test-agent",
+            auth_token="test-token",
+        )
+        composite = A365MCPToolingFunctionGroup(
+            config=config,
+            mcp_groups=[group_a, group_b],
+        )
+
+        with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.tooling.register"):
+            await composite.get_all_functions()
+
+        collisions = [r for r in caplog.records if "Tool name collision" in r.getMessage()]
+        assert not collisions, (
+            f"Identical Function instances should not warn, got: {[r.getMessage() for r in collisions]}")
+
+
+class TestDiscoveryErrorClassifier:
+    """C6: classify gateway discovery errors via aiohttp.ClientResponseError status first, substring as fallback."""
+
+    async def test_aiohttp_401_classifies_as_authentication_error(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_client_function_group,
+        base_config,
+    ):
+        """A ``ClientResponseError(status=401)`` from the gateway raises A365AuthenticationError."""
+        from aiohttp import ClientResponseError
+        from nat.plugins.a365.exceptions import A365AuthenticationError
+
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+
+        err = ClientResponseError(
+            request_info=Mock(),
+            history=(),
+            status=401,
+            message="Unauthorized",
+        )
+        mock_a365_service.list_tool_servers = AsyncMock(side_effect=err)
+
+        with patch_services(mock_a365_service, mock_mcp_client_function_group):
+            with pytest.raises(A365AuthenticationError, match="HTTP 401"):
+                async with a365_mcp_tooling_function_group(base_config, mock_builder):
+                    pass
+
+    async def test_aiohttp_500_classifies_as_sdk_error(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_client_function_group,
+        base_config,
+    ):
+        """A ``ClientResponseError(status=500)`` raises A365SDKError, not an auth error."""
+        from aiohttp import ClientResponseError
+        from nat.plugins.a365.exceptions import A365SDKError
+
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+
+        err = ClientResponseError(
+            request_info=Mock(),
+            history=(),
+            status=500,
+            message="Internal Server Error",
+        )
+        mock_a365_service.list_tool_servers = AsyncMock(side_effect=err)
+
+        with patch_services(mock_a365_service, mock_mcp_client_function_group):
+            with pytest.raises(A365SDKError, match="HTTP 500"):
+                async with a365_mcp_tooling_function_group(base_config, mock_builder):
+                    pass
+
+    async def test_unclassified_exception_falls_back_to_sdk_error_with_warning(
+        self,
+        mock_builder,
+        mock_auth_provider,
+        mock_a365_service,
+        mock_mcp_client_function_group,
+        base_config,
+        caplog,
+    ):
+        """An unknown exception type without auth keywords falls back to A365SDKError + WARN."""
+        from nat.plugins.a365.exceptions import A365SDKError
+
+        mock_auth_provider.authenticate.return_value = AuthResult(
+            credentials=[BearerTokenCred(token=SecretStr("test-token"))])
+
+        # A custom exception type with no auth-related keywords in the message.
+        class WeirdGatewayError(Exception):
+            pass
+
+        mock_a365_service.list_tool_servers = AsyncMock(side_effect=WeirdGatewayError("internal mystery"))
+
+        with patch_services(mock_a365_service, mock_mcp_client_function_group):
+            with caplog.at_level(logging.WARNING, logger="nat.plugins.a365.tooling.register"):
+                with pytest.raises(A365SDKError):
+                    async with a365_mcp_tooling_function_group(base_config, mock_builder):
+                        pass
+
+        # The WARN should name the unclassified exception type so ops know the classifier is missing it.
+        unclassified = [r for r in caplog.records if "unclassified exception type" in r.getMessage()]
+        assert len(unclassified) == 1
+        assert "WeirdGatewayError" in unclassified[0].getMessage()
