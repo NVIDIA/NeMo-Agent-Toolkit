@@ -19,6 +19,7 @@ import logging
 import os
 
 import pytest
+from pydantic import ValidationError
 
 from nat.cli.type_registry import GlobalTypeRegistry
 from nat.data_models.common import get_secret_value
@@ -54,7 +55,7 @@ def test_a365_frontend_discovered():
 def test_a365_frontend_config_validation():
     """Test that A365FrontEndConfig validates required fields."""
     # Should fail without required fields (app_id is required)
-    with pytest.raises(Exception):  # Pydantic validation error
+    with pytest.raises(ValidationError):
         A365FrontEndConfig()
 
     # Should succeed with required fields
@@ -159,11 +160,11 @@ def test_a365_frontend_config_port_validation():
     assert config.port == 8080
 
     # Invalid port (too high)
-    with pytest.raises(Exception):  # Pydantic validation error
+    with pytest.raises(ValidationError):
         A365FrontEndConfig(app_id="test-app-id", app_password="test-app-password", port=70000)
 
     # Invalid port (negative)
-    with pytest.raises(Exception):  # Pydantic validation error
+    with pytest.raises(ValidationError):
         A365FrontEndConfig(app_id="test-app-id", app_password="test-app-password", port=-1)
 
 

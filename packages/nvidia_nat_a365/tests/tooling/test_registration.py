@@ -71,10 +71,10 @@ class TestA365ToolingMissingMCPDependency:
         # The import happens inside the function: from nat.plugins.mcp.client.client_config import ...
         original_import = __import__
 
-        def mock_import(name, globals=None, locals=None, fromlist=(), level=0):
+        def mock_import(name, globals_=None, locals_=None, fromlist=(), level=0):
             if name == "nat.plugins.mcp.client.client_config":
                 raise ImportError(f"No module named '{name}'")
-            return original_import(name, globals, locals, fromlist, level)
+            return original_import(name, globals_, locals_, fromlist, level)
 
         with patch("builtins.__import__", side_effect=mock_import):
             with pytest.raises(OptionalImportError) as exc_info:

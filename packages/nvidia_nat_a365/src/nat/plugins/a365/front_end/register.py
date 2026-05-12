@@ -16,15 +16,17 @@
 """Registration for Microsoft Agent 365 front-end."""
 
 import os
+from collections.abc import AsyncIterator
 
 from nat.cli.register_workflow import register_front_end
 from nat.data_models.common import set_secret_from_env
+from nat.data_models.config import Config
 from nat.plugins.a365.front_end.front_end_config import A365FrontEndConfig
 from nat.plugins.a365.front_end.plugin import A365FrontEndPlugin
 
 
 @register_front_end(config_type=A365FrontEndConfig)
-async def a365_front_end(config: A365FrontEndConfig, full_config):
+async def a365_front_end(config: A365FrontEndConfig, full_config: Config) -> AsyncIterator[A365FrontEndPlugin]:
     """Register the Microsoft Agent 365 front-end.
 
     This front-end integrates NAT workflows with Microsoft Agent 365 hosting framework,

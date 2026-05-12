@@ -371,10 +371,10 @@ class TestNotificationHandlerSetup:
         # and is what setup_notification_handlers narrowly catches for graceful degradation.
         original_import = __import__
 
-        def mock_import(name, globals=None, locals=None, fromlist=(), level=0):
+        def mock_import(name, globals_=None, locals_=None, fromlist=(), level=0):
             if name == "microsoft_agents_a365.notifications":
                 raise ModuleNotFoundError("No module named 'microsoft_agents_a365.notifications'")
-            return original_import(name, globals, locals, fromlist, level)
+            return original_import(name, globals_, locals_, fromlist, level)
 
         try:
             worker = A365FrontEndPluginWorker(full_config)

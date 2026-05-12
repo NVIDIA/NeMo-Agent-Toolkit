@@ -16,6 +16,7 @@
 """Microsoft Agent 365 front-end plugin implementation."""
 
 import asyncio
+import errno
 import importlib
 import logging
 
@@ -147,7 +148,8 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
                     )
                 except Exception as e:
                     error_msg = str(e).lower()
-                    if "address already in use" in error_msg or "port" in error_msg:
+                    is_addr_in_use = (isinstance(e, OSError) and getattr(e, "errno", None) == errno.EADDRINUSE)
+                    if (is_addr_in_use or "address already in use" in error_msg or "eaddrinuse" in error_msg):
                         raise A365SDKError(
                             f"Failed to start server: port {self.front_end_config.port} may already be in use. "
                             f"Try a different port or stop the process using this port.",

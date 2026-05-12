@@ -19,11 +19,13 @@ import contextvars
 import json
 import logging
 import os
+import socket
 import threading
 import time
 from collections.abc import Callable
 from datetime import UTC
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -54,9 +56,20 @@ from nat.plugins.opentelemetry.otel_span_exporter import OtelSpanExporter
 logger = logging.getLogger(__name__)
 _span_dump_lock = threading.Lock()
 
-_DEFAULT_AGENT_NAME = "NAT Worker Agent"
-_DEFAULT_AGENT_BLUEPRINT_ID = "d734986e-5087-4b93-af06-efb1834504ad"
-_DEFAULT_SERVER_ADDRESS = "nat-a365-worker-webapp.azurewebsites.net"
+_DEFAULT_AGENT_NAME = "NeMo Agent Toolkit Workflow"
+# A365_BLUEPRINT_ID intentionally has no default: it identifies a specific
+# A365-registered application. Shipping a literal here would silently
+# mis-attribute every operator's telemetry to a single blueprint. Operators
+# MUST set the env var; otherwise the attribute is omitted.
+
+
+@lru_cache(maxsize=1)
+def _warn_missing_blueprint_id_once() -> None:
+    logger.warning(
+        "A365_BLUEPRINT_ID is not set; spans will be exported without "
+        "'microsoft.a365.agent.blueprint.id'. A365 may reject or fail to "
+        "attribute these spans. Set A365_BLUEPRINT_ID to your registered "
+        "blueprint GUID to silence this warning.")
 
 _REQUIRED_A365_ATTRIBUTES = (
     GEN_AI_OPERATION_NAME_KEY,
@@ -299,11 +312,15 @@ class _ReadableSpanAdapter:
             "gen_ai.agent.name",
             os.getenv("A365_AGENT_NAME", _DEFAULT_AGENT_NAME),
         )
-        _set_string_attr(
-            self.attributes,
-            "microsoft.a365.agent.blueprint.id",
-            os.getenv("A365_BLUEPRINT_ID", _DEFAULT_AGENT_BLUEPRINT_ID),
-        )
+        blueprint_id = os.getenv("A365_BLUEPRINT_ID")
+        if blueprint_id:
+            _set_string_attr(
+                self.attributes,
+                "microsoft.a365.agent.blueprint.id",
+                blueprint_id,
+            )
+        else:
+            _warn_missing_blueprint_id_once()
         _set_string_attr(
             self.attributes,
             "gen_ai.agent.description",
@@ -344,7 +361,7 @@ class _ReadableSpanAdapter:
         _set_string_attr(
             self.attributes,
             "server.address",
-            os.getenv("A365_SERVER_ADDRESS") or os.getenv("WEBSITE_HOSTNAME") or _DEFAULT_SERVER_ADDRESS,
+            os.getenv("A365_SERVER_ADDRESS") or os.getenv("WEBSITE_HOSTNAME") or socket.getfqdn(),
         )
         _set_string_attr(
             self.attributes,
