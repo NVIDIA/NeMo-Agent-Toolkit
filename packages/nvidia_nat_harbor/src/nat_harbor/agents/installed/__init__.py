@@ -14,8 +14,8 @@
 # limitations under the License.
 """Installed-agent helpers aligned with Harbor structure."""
 
-from .nemo_agent import NemoAgent
 from .hermes_nemoflow import HermesNeMoFlow
+from .nemo_agent import NemoAgent
 from .policy import is_local_install_allowed
 from .policy import resolve_local_install_policy
 

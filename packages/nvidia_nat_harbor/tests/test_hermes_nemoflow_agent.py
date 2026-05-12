@@ -40,11 +40,11 @@ def _make_agent(tmp_path: Path, **kwargs) -> HermesNeMoFlow:
 
 def _write_minimal_nemo_flow_checkout(path: Path) -> None:
     for file_path in (
-        path / "Cargo.toml",
-        path / "Cargo.lock",
-        path / "crates" / "core" / "Cargo.toml",
-        path / "crates" / "sidecar" / "Cargo.toml",
-        path / "crates" / "sidecar" / "src" / "main.rs",
+            path / "Cargo.toml",
+            path / "Cargo.lock",
+            path / "crates" / "core" / "Cargo.toml",
+            path / "crates" / "cli" / "Cargo.toml",
+            path / "crates" / "cli" / "src" / "main.rs",
     ):
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text("# test\n", encoding="utf-8")
@@ -54,14 +54,14 @@ def test_name_is_hermes_nemoflow() -> None:
     assert HermesNeMoFlow.name() == "hermes-nemoflow"
 
 
-def test_validate_local_nemo_flow_checkout_requires_sidecar(tmp_path: Path) -> None:
+def test_validate_local_nemo_flow_checkout_requires_cli_crate(tmp_path: Path) -> None:
     agent = _make_agent(tmp_path)
 
-    with pytest.raises(FileNotFoundError, match="crates/sidecar/Cargo.toml"):
+    with pytest.raises(FileNotFoundError, match="crates/cli/Cargo.toml"):
         agent._validate_local_nemo_flow_checkout()
 
 
-def test_prepare_upload_tree_copies_sidecar_sources(tmp_path: Path) -> None:
+def test_prepare_upload_tree_copies_cli_sources(tmp_path: Path) -> None:
     source = tmp_path / "nemo-flow"
     _write_minimal_nemo_flow_checkout(source)
     agent = _make_agent(tmp_path)
@@ -69,21 +69,26 @@ def test_prepare_upload_tree_copies_sidecar_sources(tmp_path: Path) -> None:
     upload_tree = agent._prepare_upload_tree()
 
     assert (upload_tree / "Cargo.toml").exists()
-    assert (upload_tree / "crates" / "sidecar" / "src" / "main.rs").exists()
+    assert (upload_tree / "crates" / "cli" / "src" / "main.rs").exists()
 
 
-def test_build_config_yaml_includes_sidecar_hooks(tmp_path: Path) -> None:
+def test_build_config_yaml_includes_gateway_hooks(tmp_path: Path) -> None:
     agent = _make_agent(tmp_path)
     route = agent._build_provider_route("nvidia", "opus-frontier")
 
-    config = yaml.safe_load(agent._build_config_yaml_with_sidecar_hooks(route))
+    config = yaml.safe_load(agent._build_config_yaml_with_gateway_hooks(route))
 
     assert config["model"]["provider"] == "custom"
-    assert config["model"]["base_url"] == "${NEMO_FLOW_SIDECAR_URL}"
+    assert config["model"]["base_url"] == "${NEMO_FLOW_GATEWAY_URL}"
     assert config["model"]["api_key"] == "${OPENAI_API_KEY}"
-    assert config["hooks"]["pre_api_request"][0]["command"].startswith("nemo-flow-sidecar hook-forward hermes")
-    assert "--atof-dir /logs/agent/nemo-flow-atof" in config["hooks"]["pre_api_request"][0]["command"]
-    assert "--sidecar-url" not in config["hooks"]["pre_api_request"][0]["command"]
+    hook_command = config["hooks"]["pre_api_request"][0]["command"]
+    assert hook_command.startswith("nemo-flow hook-forward hermes")
+    assert "--atif-dir /logs/agent/nemo-flow-gateway-atif" in hook_command
+    # PR #88 adds ATOF exporter APIs, but the Hermes CLI gateway still exposes
+    # only --atif-dir until NeMo-Flow wires raw ATOF emission for this path.
+    assert "--atof-dir" not in hook_command
+    assert "--sidecar-url" not in hook_command
+    assert "--gateway-mode passthrough" in hook_command
     assert "subagent_start" in config["hooks"]
 
 
@@ -114,7 +119,7 @@ def test_build_run_env_requires_provider_api_key(tmp_path: Path, monkeypatch: py
 
 
 @pytest.mark.asyncio
-async def test_run_uses_sidecar_wrapper(tmp_path: Path) -> None:
+async def test_run_uses_gateway_wrapper(tmp_path: Path) -> None:
     agent = _make_agent(
         tmp_path,
         extra_env={
@@ -128,9 +133,12 @@ async def test_run_uses_sidecar_wrapper(tmp_path: Path) -> None:
     await agent.run("solve the task", mock_env, AsyncMock())
 
     commands = [call.kwargs["command"] for call in mock_env.exec.call_args_list]
-    run_command = next(command for command in commands if "nemo-flow-sidecar run" in command)
+    # Use a token boundary to avoid matching "nemo-flow run" as a substring of
+    # any other command (defensive against future log/tee changes).
+    run_command = next(command for command in commands if " nemo-flow run " in f" {command} ")
     assert "--agent hermes" in run_command
-    assert "--atof-dir /logs/agent/nemo-flow-atof" in run_command
+    assert "--atif-dir /logs/agent/nemo-flow-gateway-atif" in run_command
+    assert "--atof-dir" not in run_command
     assert "--openai-base-url https://nvidia.example/v1" in run_command
     assert "hermes --yolo chat" in run_command
     assert "tee /logs/agent/hermes.txt" in run_command
@@ -144,20 +152,18 @@ def test_populate_context_converts_atof_and_sets_tokens(tmp_path: Path, monkeypa
     atof_path = atof_dir / "events.jsonl"
     atof_path.write_text('{"event_type":"mark"}\n', encoding="utf-8")
 
-    sidecar_dir = agent.logs_dir / "nemo-flow-sidecar-atif"
-    sidecar_dir.mkdir(parents=True)
-    source = sidecar_dir / "session-1.atif.json"
+    gateway_dir = agent.logs_dir / "nemo-flow-gateway-atif"
+    gateway_dir.mkdir(parents=True)
+    source = gateway_dir / "session-1.atif.json"
     source.write_text(
-        json.dumps(
-            {
-                "schema_version": "ATIF-v1.6",
-                "final_metrics": {
-                    "total_prompt_tokens": 12,
-                    "total_completion_tokens": 7,
-                },
-                "steps": [],
-            }
-        ),
+        json.dumps({
+            "schema_version": "ATIF-v1.6",
+            "final_metrics": {
+                "total_prompt_tokens": 12,
+                "total_completion_tokens": 7,
+            },
+            "steps": [],
+        }),
         encoding="utf-8",
     )
 
@@ -165,16 +171,14 @@ def test_populate_context_converts_atof_and_sets_tokens(tmp_path: Path, monkeypa
         assert input_path == atof_path
         output_path.parent.mkdir(parents=True)
         output_path.write_text(
-            json.dumps(
-                {
-                    "schema_version": "ATIF-v1.7",
-                    "final_metrics": {
-                        "total_prompt_tokens": 21,
-                        "total_completion_tokens": 13,
-                    },
-                    "steps": [],
-                }
-            ),
+            json.dumps({
+                "schema_version": "ATIF-v1.7",
+                "final_metrics": {
+                    "total_prompt_tokens": 21,
+                    "total_completion_tokens": 13,
+                },
+                "steps": [],
+            }),
             encoding="utf-8",
         )
         return output_path
@@ -184,31 +188,64 @@ def test_populate_context_converts_atof_and_sets_tokens(tmp_path: Path, monkeypa
 
     agent.populate_context_post_run(context)
 
-    canonical = sidecar_dir / "trajectory.json"
+    canonical = gateway_dir / "trajectory.json"
     converted = agent.logs_dir / "nemo-flow-atof-atif" / "trajectory.json"
     assert canonical.exists()
     assert converted.exists()
     assert context.n_input_tokens == 21
     assert context.n_output_tokens == 13
     assert context.metadata is not None
-    assert context.metadata["nemo_flow_instrumentation"] == "sidecar"
+    assert context.metadata["nemo_flow_instrumentation"] == "gateway"
     assert context.metadata["nemo_flow_atof_path"] == str(atof_path)
     assert context.metadata["nemo_flow_converted_atif_path"] == str(converted)
-    assert context.metadata["nemo_flow_sidecar_canonical_atif_path"] == str(canonical)
+    assert context.metadata["nemo_flow_gateway_canonical_atif_path"] == str(canonical)
 
 
-def test_populate_context_raises_when_atof_missing(tmp_path: Path) -> None:
+def test_populate_context_default_does_not_raise_when_atof_missing(tmp_path: Path) -> None:
+    """ATOF is best-effort/optional until Hermes gateway events are wired into PR #88."""
     agent = _make_agent(tmp_path)
+    gateway_dir = agent.logs_dir / "nemo-flow-gateway-atif"
+    gateway_dir.mkdir(parents=True)
+    (gateway_dir / "session-1.atif.json").write_text(
+        json.dumps({
+            "schema_version": "ATIF-v1.6", "final_metrics": {}, "steps": []
+        }),
+        encoding="utf-8",
+    )
+
+    context = AgentContext()
+    agent.populate_context_post_run(context)
+
+    assert context.metadata is not None
+    assert context.metadata["nemo_flow_atof_exists"] is False
+    assert context.metadata["nemo_flow_gateway_canonical_atif_exists"] is True
+
+
+def test_populate_context_raises_when_atof_required_and_missing(tmp_path: Path) -> None:
+    """Opt-in fail-on-missing remains supported for branches that emit Hermes ATOF."""
+    agent = _make_agent(tmp_path, fail_missing_nemoflow_atof=True)
 
     with pytest.raises(FileNotFoundError, match="Missing NeMo-Flow ATOF JSONL"):
         agent.populate_context_post_run(AgentContext())
 
 
-def test_populate_context_raises_when_sidecar_atif_required_and_missing(tmp_path: Path) -> None:
-    agent = _make_agent(tmp_path, fail_missing_nemoflow_atif=True, convert_nemoflow_atof=False)
-    atof_dir = agent.logs_dir / "nemo-flow-atof"
-    atof_dir.mkdir(parents=True)
-    (atof_dir / "events.jsonl").write_text('{"event_type":"mark"}\n', encoding="utf-8")
+def test_populate_context_raises_when_gateway_atif_missing_by_default(tmp_path: Path) -> None:
+    """Gateway ATIF is the canonical artifact today; missing is fatal by default."""
+    agent = _make_agent(tmp_path)
 
-    with pytest.raises(FileNotFoundError, match="Missing NeMo-Flow sidecar ATIF"):
+    with pytest.raises(FileNotFoundError, match="Missing NeMo-Flow gateway ATIF"):
         agent.populate_context_post_run(AgentContext())
+
+
+def test_sidecar_atif_dir_kwarg_back_compat(tmp_path: Path) -> None:
+    """Older callers passing sidecar_atif_dir= still work; new name takes precedence."""
+    agent = _make_agent(tmp_path / "legacy_only", sidecar_atif_dir="/logs/agent/legacy")
+    assert agent._gateway_atif_dir == "/logs/agent/legacy"
+    assert agent._sidecar_atif_dir == "/logs/agent/legacy"
+
+    agent2 = _make_agent(
+        tmp_path / "both",
+        sidecar_atif_dir="/logs/agent/legacy",
+        gateway_atif_dir="/logs/agent/new",
+    )
+    assert agent2._gateway_atif_dir == "/logs/agent/new"
