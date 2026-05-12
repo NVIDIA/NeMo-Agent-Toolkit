@@ -254,6 +254,7 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
     """Register MCP servers discovered from A365 tooling as NAT function groups.
 
     This function:
+
     1. Uses A365 tooling service to discover configured MCP servers
     2. Creates MCP client function groups for each discovered server
     3. Returns a composite function group containing all discovered tools

@@ -18,6 +18,6 @@ limitations under the License.
 ![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit Subpackage
-This is a subpackage for Microsoft Agent 365 telemetry integration for observability.
+This is a subpackage for building and deploying Microsoft A365 Agents using the NeMo Agent Toolkit.
 
 For more information about the NVIDIA NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

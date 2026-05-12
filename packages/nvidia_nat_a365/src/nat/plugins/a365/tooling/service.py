@@ -60,12 +60,13 @@ class A365ToolingService:
                 or reading the manifest file.
 
         Example:
-            ```python
+
+        .. code-block:: python
+
             servers = await service.list_tool_servers(
                 agentic_app_id="my-agent-123",
                 auth_token="bearer-token-here"
             )
-            ```
         """
         self._logger.info(f"Listing MCP tool servers for agent {agentic_app_id}")
         servers = await self._service.list_tool_servers(
