@@ -17,11 +17,13 @@
 from __future__ import annotations
 
 import json
+import shlex
 from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
 import yaml
+from harbor.agents.installed.hermes import Hermes
 from harbor.models.agent.context import AgentContext
 
 from nat_harbor.agents.installed.hermes_nemoflow import HermesNeMoFlow
@@ -84,9 +86,10 @@ def test_build_config_yaml_includes_gateway_hooks(tmp_path: Path) -> None:
     hook_command = config["hooks"]["pre_api_request"][0]["command"]
     assert hook_command.startswith("nemo-flow hook-forward hermes")
     assert "--atif-dir /logs/agent/nemo-flow-gateway-atif" in hook_command
-    # PR #88 adds ATOF exporter APIs, but the Hermes CLI gateway still exposes
-    # only --atif-dir until NeMo-Flow wires raw ATOF emission for this path.
+    # The PR #89 observability plugin is process-global and belongs on
+    # `nemo-flow run`, not on per-hook `hook-forward` calls.
     assert "--atof-dir" not in hook_command
+    assert "--plugin-config" not in hook_command
     assert "--sidecar-url" not in hook_command
     assert "--gateway-mode passthrough" in hook_command
     assert "subagent_start" in config["hooks"]
@@ -119,6 +122,28 @@ def test_build_run_env_requires_provider_api_key(tmp_path: Path, monkeypatch: py
 
 
 @pytest.mark.asyncio
+async def test_install_can_use_prebuilt_nemo_flow(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def fake_hermes_install(self: HermesNeMoFlow, environment: AsyncMock) -> None:
+        return None
+
+    agent = _make_agent(tmp_path, use_prebuilt_nemo_flow=True)
+    monkeypatch.setattr(Hermes, "install", fake_hermes_install)
+    monkeypatch.setattr(agent, "_prepare_upload_tree", lambda: pytest.fail("should not upload source"))
+    mock_env = AsyncMock()
+    mock_env.exec.return_value = AsyncMock(return_code=0, stdout="", stderr="")
+
+    await agent.install(mock_env)
+
+    commands = [call.kwargs["command"] for call in mock_env.exec.call_args_list]
+    assert any("command -v nemo-flow" in command for command in commands)
+    assert any("nemo-flow run --help" in command for command in commands)
+    assert all("cargo build" not in command for command in commands)
+
+
+@pytest.mark.asyncio
 async def test_run_uses_gateway_wrapper(tmp_path: Path) -> None:
     agent = _make_agent(
         tmp_path,
@@ -139,10 +164,48 @@ async def test_run_uses_gateway_wrapper(tmp_path: Path) -> None:
     assert "--agent hermes" in run_command
     assert "--atif-dir /logs/agent/nemo-flow-gateway-atif" in run_command
     assert "--atof-dir" not in run_command
+    assert "--plugin-config" not in run_command
     assert "--openai-base-url https://nvidia.example/v1" in run_command
     assert "hermes --yolo chat" in run_command
     assert "tee /logs/agent/hermes.txt" in run_command
     assert "on_session_finalize" in run_command
+    assert "read_text(encoding=" in run_command
+    assert "utf-8" in run_command
+    assert "gateway-gateway" in run_command
+
+
+def test_gateway_run_can_enable_observability_plugin_config(tmp_path: Path) -> None:
+    agent = _make_agent(
+        tmp_path,
+        enable_nemoflow_observability_plugin=True,
+        atof_dir="/logs/agent/raw-atof",
+        plugin_atif_dir="/logs/agent/plugin-atif",
+        extra_env={
+            "NVIDIA_API_KEY": "nvidia-key",
+            "NVIDIA_BASE_URL": "https://nvidia.example/v1",
+        },
+    )
+    route = agent._build_provider_route("nvidia", "opus-frontier")
+
+    command = agent._build_gateway_run_command(route)
+
+    nemo_flow_segment = command.split("&& ", 1)[1].split(" 2>&1", 1)[0]
+    args = shlex.split(nemo_flow_segment)
+    plugin_index = args.index("--plugin-config")
+    plugin_config = json.loads(args[plugin_index + 1])
+    observability = plugin_config["components"][0]
+    assert observability["kind"] == "observability"
+    assert observability["config"]["atof"] == {
+        "enabled": True,
+        "output_directory": "/logs/agent/raw-atof",
+        "filename": "events.jsonl",
+        "mode": "overwrite",
+    }
+    assert observability["config"]["atif"] == {
+        "enabled": True,
+        "output_directory": "/logs/agent/plugin-atif",
+        "filename_template": "trajectory-{session_id}.atif.json",
+    }
 
 
 def test_populate_context_converts_atof_and_sets_tokens(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -196,9 +259,54 @@ def test_populate_context_converts_atof_and_sets_tokens(tmp_path: Path, monkeypa
     assert context.n_output_tokens == 13
     assert context.metadata is not None
     assert context.metadata["nemo_flow_instrumentation"] == "gateway"
+    assert context.metadata["nemo_flow_observability_plugin_enabled"] is False
     assert context.metadata["nemo_flow_atof_path"] == str(atof_path)
     assert context.metadata["nemo_flow_converted_atif_path"] == str(converted)
     assert context.metadata["nemo_flow_gateway_canonical_atif_path"] == str(canonical)
+    assert context.metadata["nemo_flow_plugin_canonical_atif_exists"] is False
+
+
+def test_populate_context_can_use_plugin_atif_when_atof_is_absent(tmp_path: Path) -> None:
+    agent = _make_agent(tmp_path, enable_nemoflow_observability_plugin=True)
+    plugin_dir = agent.logs_dir / "nemo-flow-plugin-atif"
+    plugin_dir.mkdir(parents=True)
+    source = plugin_dir / "trajectory-session-1.atif.json"
+    source.write_text(
+        json.dumps({
+            "schema_version": "ATIF-v1.6",
+            "final_metrics": {
+                "total_prompt_tokens": 34,
+                "total_completion_tokens": 21,
+            },
+            "steps": [],
+        }),
+        encoding="utf-8",
+    )
+    gateway_dir = agent.logs_dir / "nemo-flow-gateway-atif"
+    gateway_dir.mkdir(parents=True)
+    (gateway_dir / "session-1.atif.json").write_text(
+        json.dumps({
+            "schema_version": "ATIF-v1.6",
+            "final_metrics": {
+                "total_prompt_tokens": 1,
+                "total_completion_tokens": 1,
+            },
+            "steps": [],
+        }),
+        encoding="utf-8",
+    )
+
+    context = AgentContext()
+    agent.populate_context_post_run(context)
+
+    plugin_canonical = plugin_dir / "trajectory.json"
+    assert plugin_canonical.exists()
+    assert context.n_input_tokens == 34
+    assert context.n_output_tokens == 21
+    assert context.metadata is not None
+    assert context.metadata["nemo_flow_observability_plugin_enabled"] is True
+    assert context.metadata["nemo_flow_plugin_canonical_atif_path"] == str(plugin_canonical)
+    assert context.metadata["nemo_flow_plugin_canonical_atif_exists"] is True
 
 
 def test_populate_context_default_does_not_raise_when_atof_missing(tmp_path: Path) -> None:

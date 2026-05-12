@@ -5,12 +5,11 @@
 Tracks the current NeMo-Flow CLI gateway surface: ``crates/cli``, binary
 ``nemo-flow``, and runtime gateway discovery through ``NEMO_FLOW_GATEWAY_URL``.
 
-PR #88 adds native ATOF JSONL exporter APIs to NeMo-Flow, but the Hermes CLI
-gateway path still does not expose a raw ATOF JSONL artifact from
-``nemo-flow run``/``hook-forward``. The ATOF conversion code path is kept here,
-dormant by default, so it lights up automatically once NeMo-Flow wires Hermes
-gateway events into the exporter. Until then, the canonical artifact for this
-wrapper is the gateway-emitted ATIF (``*.atif.json``).
+PR #88 adds native ATOF JSONL exporter APIs to NeMo-Flow, and PR #89 adds a
+config-driven observability plugin that can install ATOF/ATIF exporters when the
+CLI gateway activates plugin config at startup. The plugin path is opt-in here
+so the wrapper can still run against NeMo-Flow branches that only support direct
+gateway ATIF via ``--atif-dir``.
 """
 
 from __future__ import annotations
@@ -51,9 +50,11 @@ class HermesNeMoFlow(Hermes):
     _DEFAULT_CONTAINER_NEMO_FLOW_DIR = "/opt/nemo-flow"
     _DEFAULT_ATOF_DIR = "/logs/agent/nemo-flow-atof"
     _DEFAULT_GATEWAY_ATIF_DIR = "/logs/agent/nemo-flow-gateway-atif"
+    _DEFAULT_PLUGIN_ATIF_DIR = "/logs/agent/nemo-flow-plugin-atif"
     _CONVERTED_ATIF_DIR_NAME = "nemo-flow-atof-atif"
     _CONVERTED_ATIF_FILENAME = "trajectory.json"
     _GATEWAY_CANONICAL_ATIF_FILENAME = "trajectory.json"
+    _PLUGIN_CANONICAL_ATIF_FILENAME = "trajectory.json"
     _DEFAULT_TASK_DIR = "/testbed"
     _HERMES_HOME = "/tmp/hermes"
     _HERMES_HOOK_EVENTS = (
@@ -78,11 +79,14 @@ class HermesNeMoFlow(Hermes):
         container_nemo_flow_dir: str = _DEFAULT_CONTAINER_NEMO_FLOW_DIR,
         atof_dir: str = _DEFAULT_ATOF_DIR,
         gateway_atif_dir: str | None = None,
+        plugin_atif_dir: str | None = None,
+        enable_nemoflow_observability_plugin: bool = False,
         fail_missing_nemoflow_atof: bool = False,
         fail_missing_nemoflow_atif: bool = True,
         convert_nemoflow_atof: bool = True,
         fail_nemoflow_atof_conversion: bool = False,
         canonicalize_nemoflow_atif: bool = True,
+        use_prebuilt_nemo_flow: bool = False,
         sidecar_atif_dir: str | None = None,
         **kwargs: Any,
     ):
@@ -94,15 +98,17 @@ class HermesNeMoFlow(Hermes):
         # branch may still pass `sidecar_atif_dir`. Prefer the new name when set.
         resolved_atif_dir = gateway_atif_dir if gateway_atif_dir is not None else sidecar_atif_dir
         self._gateway_atif_dir = (resolved_atif_dir or self._DEFAULT_GATEWAY_ATIF_DIR).rstrip("/")
-        # PR #88 adds the generic ATOF exporter API, but Hermes CLI gateway runs
-        # still only expose direct ATIF via --atif-dir. Keep the raw ATOF path
-        # dormant by default; fail-on-missing is opt-in for downstream users on
-        # a NeMo-Flow branch that wires Hermes gateway events into ATOF JSONL.
+        self._plugin_atif_dir = (plugin_atif_dir or self._DEFAULT_PLUGIN_ATIF_DIR).rstrip("/")
+        self._enable_nemoflow_observability_plugin = enable_nemoflow_observability_plugin
+        # Raw ATOF export requires a NeMo-Flow branch that activates PR #89
+        # plugin config in the CLI gateway. Keep fail-on-missing opt-in so the
+        # wrapper remains compatible with direct-ATIF-only gateway branches.
         self._fail_missing_nemoflow_atof = fail_missing_nemoflow_atof
         self._fail_missing_nemoflow_atif = fail_missing_nemoflow_atif
         self._convert_nemoflow_atof = convert_nemoflow_atof
         self._fail_nemoflow_atof_conversion = fail_nemoflow_atof_conversion
         self._canonicalize_nemoflow_atif = canonicalize_nemoflow_atif
+        self._use_prebuilt_nemo_flow = use_prebuilt_nemo_flow
 
     @property
     def _sidecar_atif_dir(self) -> str:
@@ -161,6 +167,14 @@ class HermesNeMoFlow(Hermes):
 
     async def install(self, environment: BaseEnvironment) -> None:
         await super().install(environment)
+        if self._use_prebuilt_nemo_flow:
+            await self.exec_as_agent(
+                environment,
+                command=self._validate_prebuilt_cli_command(),
+                timeout_sec=60,
+            )
+            return
+
         upload_tree = self._prepare_upload_tree()
 
         await self.exec_as_root(
@@ -194,9 +208,25 @@ class HermesNeMoFlow(Hermes):
                      "nemo-flow --help >/dev/null; "
                      "nemo-flow run --help | grep -q -- '--atif-dir' || "
                      "{ echo 'Error: nemo-flow run does not support --atif-dir' >&2; exit 1; }; "
+                     "nemo-flow run --help | grep -q -- '--plugin-config' || "
+                     "{ echo 'Error: nemo-flow run does not support --plugin-config' >&2; exit 1; }; "
                      "nemo-flow hook-forward --help | grep -q -- '--atif-dir' || "
                      "{ echo 'Error: nemo-flow hook-forward does not support --atif-dir' >&2; exit 1; }"),
             timeout_sec=1800,
+        )
+
+    def _validate_prebuilt_cli_command(self) -> str:
+        return (
+            'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"; '
+            "command -v nemo-flow >/dev/null || "
+            "{ echo 'Error: prebuilt image does not provide nemo-flow on PATH' >&2; exit 1; }; "
+            "nemo-flow --help >/dev/null; "
+            "nemo-flow run --help | grep -q -- '--atif-dir' || "
+            "{ echo 'Error: nemo-flow run does not support --atif-dir' >&2; exit 1; }; "
+            "nemo-flow run --help | grep -q -- '--plugin-config' || "
+            "{ echo 'Error: nemo-flow run does not support --plugin-config' >&2; exit 1; }; "
+            "nemo-flow hook-forward --help | grep -q -- '--atif-dir' || "
+            "{ echo 'Error: nemo-flow hook-forward does not support --atif-dir' >&2; exit 1; }"
         )
 
     @with_prompt_template
@@ -218,6 +248,7 @@ class HermesNeMoFlow(Hermes):
             environment,
             command=(f"mkdir -p {shlex.quote(self._HERMES_HOME)} "
                      f"{shlex.quote(self._atof_dir)} {shlex.quote(self._gateway_atif_dir)} "
+                     f"{shlex.quote(self._plugin_atif_dir)} "
                      "/logs/agent/nemo-flow-gateway && "
                      f"cat > {shlex.quote(self._HERMES_HOME)}/config.yaml << 'EOF'\n{config_yaml}EOF"),
             env=env,
@@ -240,8 +271,11 @@ class HermesNeMoFlow(Hermes):
 
         atof_path = self.logs_dir / self._atof_dir.removeprefix("/logs/agent/") / "events.jsonl"
         gateway_dir = self.logs_dir / self._gateway_atif_dir.removeprefix("/logs/agent/")
+        plugin_dir = self.logs_dir / self._plugin_atif_dir.removeprefix("/logs/agent/")
         atif_files = self._gateway_atif_files(gateway_dir)
         canonical_path = gateway_dir / self._GATEWAY_CANONICAL_ATIF_FILENAME
+        plugin_atif_files = self._gateway_atif_files(plugin_dir)
+        plugin_canonical_path = plugin_dir / self._PLUGIN_CANONICAL_ATIF_FILENAME
         converted_atif_path = self.logs_dir / self._CONVERTED_ATIF_DIR_NAME / self._CONVERTED_ATIF_FILENAME
 
         if self._fail_missing_nemoflow_atof and not atof_path.exists():
@@ -260,14 +294,19 @@ class HermesNeMoFlow(Hermes):
 
         if self._canonicalize_nemoflow_atif and atif_files:
             self._write_canonical_gateway_atif(atif_files[0], canonical_path)
+        if self._canonicalize_nemoflow_atif and plugin_atif_files:
+            self._write_canonical_gateway_atif(plugin_atif_files[0], plugin_canonical_path)
 
         if converted_atif_path.exists():
             self._populate_context_tokens_from_atif(context, converted_atif_path)
+        elif plugin_canonical_path.exists():
+            self._populate_context_tokens_from_atif(context, plugin_canonical_path)
         elif canonical_path.exists():
             self._populate_context_tokens_from_atif(context, canonical_path)
 
         metadata = dict(context.metadata or {})
         metadata["nemo_flow_instrumentation"] = "gateway"
+        metadata["nemo_flow_observability_plugin_enabled"] = self._enable_nemoflow_observability_plugin
         metadata["nemo_flow_atof_path"] = str(atof_path)
         metadata["nemo_flow_atof_exists"] = atof_path.exists()
         metadata["nemo_flow_converted_atif_path"] = str(converted_atif_path)
@@ -276,6 +315,10 @@ class HermesNeMoFlow(Hermes):
         metadata["nemo_flow_gateway_atif_paths"] = [str(path) for path in atif_files]
         metadata["nemo_flow_gateway_canonical_atif_path"] = str(canonical_path)
         metadata["nemo_flow_gateway_canonical_atif_exists"] = canonical_path.exists()
+        metadata["nemo_flow_plugin_atif_dir"] = str(plugin_dir)
+        metadata["nemo_flow_plugin_atif_paths"] = [str(path) for path in plugin_atif_files]
+        metadata["nemo_flow_plugin_canonical_atif_path"] = str(plugin_canonical_path)
+        metadata["nemo_flow_plugin_canonical_atif_exists"] = plugin_canonical_path.exists()
         context.metadata = metadata
 
     def _build_run_env(self, route: _ProviderRoute, instruction: str) -> dict[str, str]:
@@ -392,6 +435,11 @@ class HermesNeMoFlow(Hermes):
                 "source": "harbor", "agent": self.name()
             }, separators=(",", ":")),
         ]
+        if self._enable_nemoflow_observability_plugin:
+            args.extend([
+                "--plugin-config",
+                json.dumps(self._build_observability_plugin_config(), separators=(",", ":")),
+            ])
         if route.gateway_route == "anthropic":
             args.extend(["--anthropic-base-url", self._upstream_base_url(route)])
         else:
@@ -402,6 +450,31 @@ class HermesNeMoFlow(Hermes):
         return ('export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && '
                 f"{' '.join(shlex.quote(arg) for arg in args)} "
                 "2>&1 | stdbuf -oL tee /logs/agent/hermes.txt")
+
+    def _build_observability_plugin_config(self) -> dict[str, Any]:
+        return {
+            "version": 1,
+            "components": [
+                {
+                    "kind": "observability",
+                    "enabled": True,
+                    "config": {
+                        "version": 1,
+                        "atof": {
+                            "enabled": True,
+                            "output_directory": self._atof_dir,
+                            "filename": "events.jsonl",
+                            "mode": "overwrite",
+                        },
+                        "atif": {
+                            "enabled": True,
+                            "output_directory": self._plugin_atif_dir,
+                            "filename_template": "trajectory-{session_id}.atif.json",
+                        },
+                    },
+                }
+            ],
+        }
 
     def _build_child_script(self, route: _ProviderRoute) -> str:
         cli_parts = [
@@ -438,21 +511,22 @@ class HermesNeMoFlow(Hermes):
         session_id_expr = ("import json,pathlib;"
                            "p=pathlib.Path('/logs/agent/hermes-session.jsonl');"
                            "sid='';"
-                           "\nfor line in p.read_text().splitlines():"
+                           "\nfor line in p.read_text(encoding='utf-8').splitlines():"
                            "\n    line=line.strip();"
                            "\n    if not line: continue"
                            "\n    obj=json.loads(line);"
                            "\n    sid=str(obj.get('id') or obj.get('session_id') or '');"
                            "\n    break"
                            "\nprint(sid)")
-        payload = (
-            'printf \'{"session_id":"%s","hook_event_name":"on_session_finalize","source":"harbor"}\\n\' "$session_id"')
+        payload = ('printf \'{"session_id":"%s","hook_event_name":"on_session_finalize",'
+                   '"source":"harbor"}\\n\' "$nf_session_id"')
         return (f"if ! find {shlex.quote(self._gateway_atif_dir)} -name '*.atif.json' "
                 "-print -quit 2>/dev/null | grep -q .; then "
                 f"session_id=$(python3 -c {shlex.quote(session_id_expr)} 2>/dev/null || true); "
-                'if [ -n "$session_id" ]; then '
+                'for nf_session_id in "$session_id" gateway-gateway; do '
+                '[ -n "$nf_session_id" ] || continue; '
                 f"{payload} | {self._build_hook_forward_command()} || true; "
-                "fi; "
+                "done; "
                 "fi")
 
     def _upstream_base_url(self, route: _ProviderRoute) -> str:
