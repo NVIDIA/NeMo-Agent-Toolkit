@@ -65,11 +65,11 @@ _DEFAULT_AGENT_NAME = "NeMo Agent Toolkit Workflow"
 
 @lru_cache(maxsize=1)
 def _warn_missing_blueprint_id_once() -> None:
-    logger.warning(
-        "A365_BLUEPRINT_ID is not set; spans will be exported without "
-        "'microsoft.a365.agent.blueprint.id'. A365 may reject or fail to "
-        "attribute these spans. Set A365_BLUEPRINT_ID to your registered "
-        "blueprint GUID to silence this warning.")
+    logger.warning("A365_BLUEPRINT_ID is not set; spans will be exported without "
+                   "'microsoft.a365.agent.blueprint.id'. A365 may reject or fail to "
+                   "attribute these spans. Set A365_BLUEPRINT_ID to your registered "
+                   "blueprint GUID to silence this warning.")
+
 
 _REQUIRED_A365_ATTRIBUTES = (
     GEN_AI_OPERATION_NAME_KEY,
