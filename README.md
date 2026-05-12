@@ -165,6 +165,54 @@ Before getting started, it's possible to run this simple workflow and many other
 - [ ] MCP authentication improvements.
 - [ ] Improved memory interface to support self-improving agents.
 
+## 📊 Telemetry
+
+The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation. Once you opt in (see below), events are sent to the shared NeMo Usage Telemetry ingest.
+
+### How consent works
+
+The first time you run an interactive `nat` command, you'll see a one-time consent prompt explaining what is collected and asking whether to allow it. The prompt defaults to **yes** (pressing Enter accepts); type `n` to opt out. Your decision is persisted to `~/.config/nat/telemetry.toml` and respected on every subsequent invocation.
+
+In **non-interactive contexts** (CI, cron, piped scripts, daemons), telemetry is **always off** unless you explicitly enable it via the environment variable below. We never send data when there's no opportunity to ask.
+
+You can change your decision anytime:
+
+```bash
+nat configure telemetry --enable     # opt in
+nat configure telemetry --disable    # opt out
+nat configure telemetry --status     # show the current effective state
+```
+
+Or override the persisted decision (and skip the prompt) via environment variable:
+
+```bash
+export NAT_TELEMETRY_ENABLED=false   # disable for this shell session
+export NAT_TELEMETRY_ENABLED=true    # enable for this shell session
+```
+
+The environment variable takes precedence over the persisted file. If both disagree, `nat configure telemetry --status` will tell you which one is winning.
+
+### What is collected
+
+For each `nat` command invocation, a single event is sent at exit containing:
+
+- The top-level command name, such as `run`, `serve`, or `evaluate`.
+- The second-level command name when applicable, such as `list-components` for `nat info list-components`.
+- The outcome: `success`, `failure`, or `interrupted`.
+- The wall-clock duration in milliseconds.
+- The process exit code.
+- The Python class name of the raised exception on failure (the message is not collected).
+- The Python runtime version, such as `3.11.7`.
+
+### What is not collected
+
+The following are never collected:
+
+- Command arguments or option values.
+- Workflow names, function names, model names, or any contents of configuration files.
+- File paths, hostnames, usernames, IP addresses, or any other identifying information.
+- The output of any command.
+
 ## 💬 Feedback
 
 We would love to hear from you! Please file an issue on [GitHub](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) if you have any feedback or feature requests.

@@ -42,6 +42,7 @@ config
 [Cc]onfigurability
 [Cc]oroutine(s?)
 CPython
+cron
 [Cc]ryptocurrenc[y|ies]
 cuDF
 cuML
@@ -68,9 +69,9 @@ Dynatrace
 [Ee]ngineerable
 etcd
 [Ee]val
-Exa
 [Ee]xfiltration
 [Ee]xplainability
+Exa
 Faiss
 [Ff]inetunable
 [Ff]inetune(d?)
@@ -87,6 +88,7 @@ Grafana
 [Gg]uardrail(s|ed|ing)?
 [Hh]ashable
 [Hh]ardcode(s|d)?
+[Hh]ostname(s?)
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
@@ -178,8 +180,10 @@ SDK(s)
 [Ss]erverless
 SGLang
 spaCy
+Synap
 SQLAlchemy
 SSE
+stderr
 [Ss]treamable
 [Ss]ubcard(s?)
 [Ss]ubclassing

@@ -18,6 +18,7 @@ import logging
 import click
 
 from nat.cli.commands.configure.channel.channel import channel
+from nat.cli.commands.configure.telemetry import telemetry_command
 
 logger = logging.getLogger(__name__)
 
@@ -31,3 +32,4 @@ def configure_command(**kwargs):
 
 
 configure_command.add_command(channel, name="channel")
+configure_command.add_command(telemetry_command, name="telemetry")
