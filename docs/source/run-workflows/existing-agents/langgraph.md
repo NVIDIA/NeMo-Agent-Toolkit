@@ -17,7 +17,7 @@ limitations under the License.
 
 # Running Existing LangGraph Agents in NVIDIA NeMo Agent Toolkit
 
-NVIDIA NeMo Agent toolkit provides a `langgraph_wrapper` workflow type that allows you to integrate existing LangGraph agents with minimal changes to your code. This wrapper enables you to run LangGraph agents through the toolkit while adding configuration management, observability, and evaluation capabilities.
+NVIDIA NeMo Agent Toolkit provides a `langgraph_wrapper` workflow type that allows you to integrate existing LangGraph agents with minimal changes to your code. This wrapper enables you to run LangGraph agents through the toolkit while adding configuration management, observability, and evaluation capabilities.
 
 ## Prerequisites
 
@@ -79,7 +79,7 @@ This configuration works when your agent:
 - Does not require dynamic configuration
 - Has all necessary environment variables in the `.env` file
 
-You can then run the agent using standard NeMo Agent toolkit commands:
+You can then run the agent using standard NeMo Agent Toolkit commands:
 
 ```bash
 nat run --config_file config.yml --input "What is LangSmith?"
@@ -87,7 +87,7 @@ nat run --config_file config.yml --input "What is LangSmith?"
 
 ## Making Agents Configurable
 
-To make your LangGraph agent configurable through the NeMo Agent toolkit configuration system, you need to modify your agent code to retrieve LLMs, Embeddings, Tools, etc. from the NeMo Agent toolkit builder.
+To make your LangGraph agent configurable through the NeMo Agent Toolkit configuration system, you need to modify your agent code to retrieve LLMs, Embeddings, Tools, etc. from the NeMo Agent Toolkit builder.
 
 ### When Code Changes Are Necessary
 
@@ -100,7 +100,7 @@ You should modify your agent code when you want to:
 
 ### Modifying Your Agent Code
 
-To make your agent configurable, replace hardcoded component initialization with calls to the NeMo Agent toolkit builder. The following example demonstrates this pattern using LLMs, but the same approach works for tools, embedders, object stores, and other components.
+To make your agent configurable, replace hardcoded component initialization with calls to the NeMo Agent Toolkit builder. The following example demonstrates this pattern using LLMs, but the same approach works for tools, embedders, object stores, and other components.
 
 #### Original Agent Code
 
@@ -126,7 +126,7 @@ from deepagents import create_deep_agent
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.sync_builder import SyncBuilder
 
-# Get model from NeMo Agent toolkit configuration
+# Get model from NeMo Agent Toolkit configuration
 model = SyncBuilder.current().get_llm("agent", wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
 # Create the agent

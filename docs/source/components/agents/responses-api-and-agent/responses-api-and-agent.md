@@ -45,7 +45,7 @@ llms:
 
 ## Agent Configuration: `_type: responses_api_agent`
 
-The Responses API agent binds tools directly to the LLM for execution under the Responses API, while NeMo Agent toolkit tools run through the agent graph. This preserves the familiar flow of the NeMo Agent toolkit with added tool capabilities.
+The Responses API agent binds tools directly to the LLM for execution under the Responses API, while NeMo Agent Toolkit tools run through the agent graph. This preserves the familiar flow of the NeMo Agent Toolkit with added tool capabilities.
 
 ### Example `config.yml`
 
@@ -89,7 +89,7 @@ The following are more ways you can configure your config file when using the Re
 - `llm_name`: The LLM to use. Must refer to an entry under `llms`.
 - `verbose`: Defaults to `false`. When `true`, the agent logs input, output, and intermediate steps.
 - `handle_tool_errors`: Defaults to `true`. When enabled, tool errors are returned to the model (instead of raising) so it can recover.
-- `nat_tools`: A list of NeMo Agent toolkit tools (by function ref) that run in the agent graph.
+- `nat_tools`: A list of NeMo Agent Toolkit tools (by function ref) that run in the agent graph.
 - `builtin_tools`: A list of built-in tools to bind on the LLM. Availability depends on the selected model.
 - `mcp_tools`: A list of MCP tool descriptors bound on the LLM, with fields `server_label`, `server_url`, `allowed_tools`, and `require_approval`.
 - `max_iterations`: Defaults to `15`. Maximum number of tool invocations the agent may perform.

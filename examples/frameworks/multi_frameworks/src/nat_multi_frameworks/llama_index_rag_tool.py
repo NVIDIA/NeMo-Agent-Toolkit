@@ -48,9 +48,7 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
     from llama_index.core import Settings
     from llama_index.core import SimpleDirectoryReader
     from llama_index.core import VectorStoreIndex
-    from llama_index.core.agent import FunctionAgent
     from llama_index.core.node_parser import SimpleFileNodeParser
-    from llama_index.core.tools import QueryEngineTool
 
     if (not tool_config.api_key):
         set_secret_from_env(tool_config, "api_key", "NVIDIA_API_KEY")
@@ -65,24 +63,13 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
     embedder = await builder.get_embedder(tool_config.embedding_name, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
 
     Settings.embed_model = embedder
+    Settings.llm = llm
+
     md_docs = SimpleDirectoryReader(input_files=[tool_config.data_dir]).load_data()
     parser = SimpleFileNodeParser()
     nodes = parser.get_nodes_from_documents(md_docs)
     index = VectorStoreIndex(nodes)
-    Settings.llm = llm
     query_engine = index.as_query_engine(similarity_top_k=2)
-
-    is_nvdev = tool_config.model_name.startswith('nvdev')
-
-    if not is_nvdev:
-        tool = QueryEngineTool.from_defaults(
-            query_engine, name="rag", description="ingest data from README about this workflow with llama_index_rag")
-
-        agent = FunctionAgent(
-            tools=[tool],
-            llm=llm,
-            verbose=True,
-        )
 
     async def _arun(inputs: str) -> str:
         """
@@ -90,17 +77,21 @@ async def llama_index_rag_tool(tool_config: LlamaIndexRAGConfig, builder: Builde
         Args:
             inputs : user query
         """
-        output: str
-        if not is_nvdev:
-            agent_response = await agent.run(inputs)
-            response_content = agent_response.response
-            logger.info("response from llama-index Agent : \n %s %s", Fore.MAGENTA, response_content)
-            output = str(response_content) if response_content else ""
-        else:
-            logger.info("%s %s %s %s", Fore.MAGENTA, type(query_engine), query_engine, inputs)
+        try:
+            logger.info("Querying llama-index RAG with input: %s", inputs)
             response = await query_engine.aquery(inputs)
-            output = str(response) if response else ""
 
-        return output
+            if response is None:
+                logger.warning("Query engine returned None for input: %s", inputs)
+                return ""
+
+            # Extract the response text
+            response_text = str(response.response) if hasattr(response, 'response') else str(response)
+            logger.info("Response from llama-index RAG: %s%s", Fore.MAGENTA, response_text)
+            return response_text
+
+        except Exception as e:
+            logger.error("Error running llama-index RAG: %s", str(e), exc_info=True)
+            return f"Error processing query: {str(e)}"
 
     yield FunctionInfo.from_fn(_arun, description="extract relevant data via llama-index's RAG per user input query")

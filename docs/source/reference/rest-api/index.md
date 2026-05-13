@@ -21,6 +21,7 @@ limitations under the License.
 :titlesonly:
 
 API Server Endpoints <./api-server-endpoints.md>
+HTTP Interactive Execution <./http-interactive-execution.md>
 Evaluation API Endpoints <./evaluate-api.md>
 WebSocket Message Schema <./websockets.md>
 ```

@@ -30,8 +30,8 @@ from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import StreamEventData
 from nat.data_models.intermediate_step import TraceMetadata
 from nat.data_models.intermediate_step import UsageInfo
-from nat.profiler.callbacks.base_callback_class import BaseProfilerCallback
-from nat.profiler.callbacks.token_usage_base_model import TokenUsageBaseModel
+from nat.data_models.profiler_callback import BaseProfilerCallback
+from nat.data_models.token_usage import TokenUsageBaseModel
 
 logger = logging.getLogger(__name__)
 
@@ -183,9 +183,14 @@ class CrewAIProfilerHandler(BaseProfilerCallback):
             model_output = []
             try:
                 for choice in output.choices:
-                    msg = choice.model_extra["message"]
-                    content = msg.get('content', "")
-                    model_output.append("" if content is None else str(content))
+                    if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
+                        content = choice.message.content or ""
+                    elif hasattr(choice, 'model_extra') and 'message' in choice.model_extra:
+                        msg = choice.model_extra["message"]
+                        content = msg.get('content', "") or ""
+                    else:
+                        content = ""
+                    model_output.append(str(content))
             except Exception as e:
                 logger.exception("Error getting model output: %s", e)
 

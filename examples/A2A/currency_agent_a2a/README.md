@@ -17,6 +17,8 @@ limitations under the License.
 
 # Currency Agent A2A Example
 
+**Complexity:** 🟢 Beginner
+
 This example demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party A2A server, the LangGraph-based currency agent. The workflow acts as an A2A client to perform currency conversions and financial queries with time-based context.
 
 ## Key Features
@@ -54,7 +56,7 @@ flowchart LR
 
 ### Prerequisites
 
-Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Set Up API Keys
 
@@ -94,7 +96,7 @@ uv run app --port 11000
 
 ### Install Currency Agent Client
 
-From the root directory of the NeMo Agent toolkit library, install this example:
+From the root directory of the NeMo Agent Toolkit library, install this example:
 
 ```bash
 uv pip install -e examples/A2A/currency_agent_a2a
@@ -185,5 +187,9 @@ curl http://localhost:11000/.well-known/agent-card.json | jq
 
 ## Related Examples
 
-- [Math Assistant A2A](../math_assistant_a2a/) - NeMo Agent toolkit A2A with hybrid tools (unprotected)
+- [Math Assistant A2A](../math_assistant_a2a/) - NeMo Agent Toolkit A2A with hybrid tools (unprotected)
 - [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) - OAuth2-protected A2A example
+
+## References
+
+- [A2A Introduction](../../../docs/source/components/integrations/a2a.md)

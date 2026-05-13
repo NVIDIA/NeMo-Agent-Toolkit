@@ -5,7 +5,7 @@ alwaysApply: false
 ---
 # General Documentation Rules
 
-Follow these rules when working with any documentation in the NeMo Agent toolkit project.
+Follow these rules when working with any documentation in the NeMo Agent Toolkit project.
 
 ## Referenced Documentation
 
@@ -31,11 +31,11 @@ Follow these rules when working with any documentation in the NeMo Agent toolkit
 
 ### Terminology and Naming
 - Make sure to follow this naming convention for all the documentation. If there is any documentation not following this rule, you MUST update it.
-- **Full name (first use)**: "NVIDIA NeMo Agent toolkit" — use for document titles, webpage headers, and any public descriptions
-- **Short name (subsequent references)**: "NeMo Agent toolkit" or "the toolkit"
+- **Full name (first use)**: "NVIDIA NeMo Agent Toolkit" — use for document titles, webpage headers, and any public descriptions
+- **Short name (subsequent references)**: "NeMo Agent Toolkit" or "the toolkit"
 - **Capitalization rules**:
   - In document titles, headings, or any context where all words are capitalized, use "Toolkit" (capital T): e.g., "NVIDIA NeMo Agent Toolkit" or "NeMo Agent Toolkit"
-  - In all other contexts (body text, descriptions), use "toolkit" (lowercase t): e.g., "NVIDIA NeMo Agent toolkit" or "NeMo Agent toolkit"
+  - In all other contexts (body text, descriptions), use "toolkit" (lowercase t): e.g., "NVIDIA NeMo Agent Toolkit" or "NeMo Agent Toolkit"
 - **Technical identifiers** (code, CLI, packages, URLs):
   - `nat` for the API namespace and CLI tool
   - `nvidia-nat` for the package name
@@ -45,11 +45,11 @@ Follow these rules when working with any documentation in the NeMo Agent toolkit
   - OK in code comments
   - NEVER use "NAT" or "nat" to refer to the toolkit in documentation
 - Examples:
-  - "In the NeMo Agent toolkit, you can…"
-  - "Change directory to the NeMo Agent toolkit repo root…"
+  - "In the NeMo Agent Toolkit, you can…"
+  - "Change directory to the NeMo Agent Toolkit repo root…"
   - Heading: "# Getting Started with NeMo Agent Toolkit"
 - Consistently use this terminology throughout all documentation
-- NeMo Agent toolkit was previously known as the Agent Intelligence toolkit, and AgentIQ. You should NEVER use the deprecated names, including Agent Intelligence toolkit, aiqtoolkit, AgentIQ, or AIQ/aiq. If you see any of these names in the documentation, you MUST update it based on the latest naming convention above, unless those names are intentionally used to refer to the deprecated names, or implementing a compatibility layer for the deprecated names.
+- NeMo Agent Toolkit was previously known as the Agent Intelligence toolkit, and AgentIQ. You should NEVER use the deprecated names, including Agent Intelligence toolkit, aiqtoolkit, AgentIQ, or AIQ/aiq. If you see any of these names in the documentation, you MUST update it based on the latest naming convention above, unless those names are intentionally used to refer to the deprecated names, or implementing a compatibility layer for the deprecated names.
 
 ### Style Guide Compliance
 When creating, updating, or reviewing documentation, follow the comprehensive style guide rules listed in the Referenced Documentation section above. These rules cover:

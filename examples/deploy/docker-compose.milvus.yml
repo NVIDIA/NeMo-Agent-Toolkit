@@ -100,4 +100,3 @@ services:
 networks:
   default:
     name: nvidia-rag-test
-

@@ -22,14 +22,17 @@ functions:
     _type: nat_adk_demo/get_city_time_tool
 
 llms:
-  llm:
-    _type: openai
-    model_name: gpt-5
+  nim_llm:
+    _type: litellm
+    model_name: nvidia_nim/nvidia/nemotron-3-nano-30b-a3b
+    api_key: ${NVIDIA_API_KEY}
+    chat_template_kwargs:
+      enable_thinking: false
 
 workflow:
   _type: adk
   name: adk_demo
-  llm: llm
+  llm: nim_llm
   tool_names: [weather_update_tool, get_city_time_tool]
   description: "To get the current weather and time in a specific city"
   prompt: >

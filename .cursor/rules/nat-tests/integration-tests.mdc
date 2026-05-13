@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Integration Testing Guidelines
 
-Follow these rules when writing integration tests for NeMo Agent toolkit workflows.
+Follow these rules when writing integration tests for NeMo Agent Toolkit workflows.
 
 ## Required Test Structure
 

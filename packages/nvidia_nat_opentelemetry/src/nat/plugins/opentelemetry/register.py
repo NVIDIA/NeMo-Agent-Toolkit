@@ -15,6 +15,7 @@
 
 import logging
 import os
+from typing import Literal
 
 from pydantic import Field
 
@@ -28,6 +29,30 @@ from nat.observability.mixin.batch_config_mixin import BatchConfigMixin
 from nat.observability.mixin.collector_config_mixin import CollectorConfigMixin
 
 logger = logging.getLogger(__name__)
+
+# Arize AX OTLP defaults (align with arize-otel `Endpoint` and HTTPS trace path)
+_ARIZE_US_OTLP_GRPC = "https://otlp.arize.com/v1"
+_ARIZE_US_OTLP_HTTP = "https://otlp.arize.com/v1/traces"
+_ARIZE_EU_OTLP_GRPC = "https://otlp.eu-west-1a.arize.com/v1"
+_ARIZE_EU_OTLP_HTTP = "https://otlp.eu-west-1a.arize.com/v1/traces"
+
+
+def _arize_ax_auth_headers(*, space_id: str, api_key: str) -> dict[str, str]:
+    """Build OTLP metadata headers for Arize AX (same keys as arize-otel `arize.otel.otel._get_arize_auth_headers`)."""
+    return {
+        "authorization": api_key,
+        "api_key": api_key,
+        "arize-space-id": space_id,
+        "space_id": space_id,
+        "arize-interface": "otel",
+    }
+
+
+def _arize_ax_default_endpoint(*, protocol: Literal['http', 'grpc'], use_eu_region: bool) -> str:
+    """Return the default Arize AX OTLP collector URL for the given protocol and region."""
+    if use_eu_region:
+        return _ARIZE_EU_OTLP_HTTP if protocol == "http" else _ARIZE_EU_OTLP_GRPC
+    return _ARIZE_US_OTLP_HTTP if protocol == "http" else _ARIZE_US_OTLP_GRPC
 
 
 class LangfuseTelemetryExporter(BatchConfigMixin, TelemetryExporterBaseConfig, name="langfuse"):
@@ -76,6 +101,9 @@ class LangsmithTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, Telemet
     )
     api_key: SerializableSecretStr = Field(description="The Langsmith API key",
                                            default_factory=lambda: SerializableSecretStr(""))
+    workspace_id: str = Field(default="",
+                              description="The Langsmith workspace ID. "
+                              "Falls back to LANGSMITH_WORKSPACE_ID env var if not set.")
     resource_attributes: dict[str, str] = Field(default_factory=dict,
                                                 description="The resource attributes to add to the span")
 
@@ -91,6 +119,10 @@ async def langsmith_telemetry_exporter(config: LangsmithTelemetryExporter, build
         raise ValueError("API key is required for langsmith")
 
     headers = {"x-api-key": api_key, "Langsmith-Project": config.project}
+    workspace_id = config.workspace_id or os.environ.get("LANGSMITH_WORKSPACE_ID") or os.environ.get(
+        "LANGCHAIN_WORKSPACE_ID")
+    if workspace_id:
+        headers["X-Tenant-Id"] = workspace_id
     yield OTLPSpanAdapterExporter(endpoint=config.endpoint,
                                   headers=headers,
                                   batch_size=config.batch_size,
@@ -194,6 +226,86 @@ async def galileo_telemetry_exporter(config: GalileoTelemetryExporter, builder: 
     yield OTLPSpanAdapterExporter(
         endpoint=config.endpoint,
         headers=headers,
+        batch_size=config.batch_size,
+        flush_interval=config.flush_interval,
+        max_queue_size=config.max_queue_size,
+        drop_on_overflow=config.drop_on_overflow,
+        shutdown_timeout=config.shutdown_timeout,
+    )
+
+
+class ArizeAxTelemetryExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBaseConfig, name="arize_ax"):
+    """Export traces to Arize AX over OTLP.
+
+    See Arize AX OpenTelemetry docs. Headers match ``arize-otel`` (``authorization``, ``arize-space-id``, etc.)
+    with default US or EU collectors when ``endpoint`` is unset.
+    """
+
+    project: str = Field(
+        default="",
+        description="Arize project name. If empty, uses the ARIZE_PROJECT_NAME environment variable.",
+    )
+    space_id: str = Field(
+        default="",
+        description="Arize space ID. If empty, uses the ARIZE_SPACE_ID environment variable.",
+    )
+    api_key: SerializableSecretStr = Field(
+        description="Arize API key. If empty, uses the ARIZE_API_KEY environment variable.",
+        default_factory=lambda: SerializableSecretStr(""),
+    )
+    endpoint: str | None = Field(
+        default=None,
+        description="OTLP URL. If unset, uses the default US or EU host for the chosen protocol (HTTP or gRPC).",
+    )
+    use_eu_region: bool = Field(
+        default=False,
+        description="When true and endpoint is unset, use the Arize EU OTLP collector (otlp.eu-west-1a.arize.com).",
+    )
+    protocol: Literal['http', 'grpc'] = Field(
+        default="grpc",
+        description="OTLP transport. HTTP uses the /v1/traces path; gRPC uses the /v1 host path per Arize defaults.",
+    )
+    resource_attributes: dict[str, str] = Field(
+        default_factory=dict,
+        description="Extra OpenTelemetry resource attributes merged with the project name.",
+    )
+
+
+@register_telemetry_exporter(config_type=ArizeAxTelemetryExporter)
+async def arize_ax_telemetry_exporter(config: ArizeAxTelemetryExporter, builder: Builder):
+    """Create a telemetry exporter that sends OTLP traces to Arize AX."""
+
+    from nat.plugins.opentelemetry import OTLPSpanAdapterExporter
+
+    space_id = (config.space_id or os.environ.get("ARIZE_SPACE_ID") or "").strip()
+    if not space_id:
+        raise ValueError("space_id is required for Arize AX (set in config or ARIZE_SPACE_ID)")
+
+    api_key = get_secret_value(config.api_key) if config.api_key else None
+    api_key = api_key or os.environ.get("ARIZE_API_KEY")
+    if not api_key:
+        raise ValueError("api_key is required for Arize AX (set in config or ARIZE_API_KEY)")
+
+    project_name = (config.project or os.environ.get("ARIZE_PROJECT_NAME") or "").strip()
+    if not project_name:
+        raise ValueError("project is required for Arize AX (set `project` on the exporter or ARIZE_PROJECT_NAME)")
+
+    endpoint = config.endpoint or _arize_ax_default_endpoint(
+        protocol=config.protocol,
+        use_eu_region=config.use_eu_region,
+    )
+    headers = _arize_ax_auth_headers(space_id=space_id, api_key=api_key)
+
+    default_resource_attributes = {
+        "openinference.project.name": project_name,
+    }
+    merged_resource_attributes = {**default_resource_attributes, **config.resource_attributes}
+
+    yield OTLPSpanAdapterExporter(
+        endpoint=endpoint,
+        headers=headers,
+        protocol=config.protocol,
+        resource_attributes=merged_resource_attributes,
         batch_size=config.batch_size,
         flush_interval=config.flush_interval,
         max_queue_size=config.max_queue_size,

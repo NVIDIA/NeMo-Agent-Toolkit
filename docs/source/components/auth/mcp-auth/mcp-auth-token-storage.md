@@ -17,7 +17,7 @@ limitations under the License.
 
 # Secure Token Storage for Model Context Protocol (MCP) Authentication
 
-The NVIDIA NeMo Agent toolkit provides a configurable, secure token storage mechanism for Model Context Protocol (MCP) OAuth2 authentication. You can store tokens securely using the [object store](../../../build-workflows/object-store.md) infrastructure, which provides encryption at rest, access controls, and persistence across service restarts.
+The NVIDIA NeMo Agent Toolkit provides a configurable, secure token storage mechanism for Model Context Protocol (MCP) OAuth2 authentication. You can store tokens securely using the [object store](../../../build-workflows/object-store.md) infrastructure, which provides encryption at rest, access controls, and persistence across service restarts.
 
 ## Overview
 
@@ -53,13 +53,11 @@ authentication:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
     redirect_uri: http://localhost:8000/auth/redirect
-    default_user_id: ${CORPORATE_MCP_JIRA_URL}
-    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
 ```
 
 ### External Object Store Configuration
 
-For production environments, configure an external object store to persist tokens across restarts. The NeMo Agent toolkit supports S3-compatible storage (for example, MinIO and AWS S3), MySQL, and Redis backends.
+For production environments, configure an external object store to persist tokens across restarts. The NeMo Agent Toolkit supports S3-compatible storage (for example, MinIO and AWS S3), MySQL, and Redis backends.
 
 :::{note}
 For detailed object store setup instructions including MinIO, MySQL, and Redis installation and configuration examples, refer to the `examples/object_store/user_report/README.md` guide, under the **Choose an Object Store** section.
@@ -78,7 +76,7 @@ object_stores:
 
 function_groups:
   mcp_jira:
-    _type: mcp_client
+    _type: per_user_mcp_client
     server:
       transport: streamable-http
       url: ${CORPORATE_MCP_JIRA_URL}
@@ -89,8 +87,6 @@ authentication:
     _type: mcp_oauth2
     server_url: ${CORPORATE_MCP_JIRA_URL}
     redirect_uri: http://localhost:8000/auth/redirect
-    default_user_id: ${CORPORATE_MCP_JIRA_URL}
-    allow_default_user_id_for_tool_calls: ${ALLOW_DEFAULT_USER_ID_FOR_TOOL_CALLS:-true}
     token_storage_object_store: token_store
 
 llms:
@@ -101,7 +97,7 @@ llms:
     max_tokens: 1024
 
 workflow:
-  _type: react_agent
+  _type: per_user_react_agent
   tool_names:
     - mcp_jira
   llm_name: nim_llm
@@ -147,13 +143,13 @@ Example stored token:
 When a user first authenticates, the system completes the following steps:
 1. The OAuth2 flow completes and returns an access token.
 2. The token is serialized and stored using the configured storage backend.
-3. The token is associated with the user's session ID.
+3. The token is associated with the user's resolved user ID.
 
 ### Token Retrieval
 
 On subsequent requests, the system completes the following steps:
-1. The user's session ID is extracted from cookies.
-2. The stored token is retrieved from the storage backend.
+1. The user's identity is resolved from the authenticated request context.
+2. The stored token is retrieved from the storage backend using that user ID.
 3. The token expiration is checked.
 4. If expired, a token refresh is attempted.
 

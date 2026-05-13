@@ -40,7 +40,8 @@ class MCPServerConfig(BaseModel):
     streamable-http is the recommended default for HTTP-based connections.
     """
     transport: Literal["stdio", "sse", "streamable-http"] = Field(
-        ..., description="Transport type to connect to the MCP server (stdio, sse, or streamable-http)")
+        default="streamable-http",
+        description="Transport type to connect to the MCP server (stdio, sse, or streamable-http)")
     url: HttpUrl | None = Field(default=None,
                                 description="URL of the MCP server (for sse or streamable-http transport)")
     command: str | None = Field(default=None,
@@ -51,6 +52,13 @@ class MCPServerConfig(BaseModel):
     # Authentication configuration
     auth_provider: str | AuthenticationRef | None = Field(default=None,
                                                           description="Reference to authentication provider")
+
+    # Custom headers for streamable-http transport
+    custom_headers: dict[str, str] | None = Field(
+        default=None,
+        description="Custom HTTP headers to include in requests to the MCP server. "
+        "Only supported for streamable-http transport. "
+        "Useful for passing business context or correlation IDs to the MCP server.")
 
     @model_validator(mode="after")
     def validate_model(self):
@@ -63,6 +71,9 @@ class MCPServerConfig(BaseModel):
             # Auth is not supported for stdio transport
             if self.auth_provider is not None:
                 raise ValueError("Authentication is not supported for stdio transport")
+            # Custom headers not supported for stdio transport
+            if self.custom_headers is not None:
+                raise ValueError("custom_headers is not supported for stdio transport")
         elif self.transport == "sse":
             if self.command is not None or self.args is not None or self.env is not None:
                 raise ValueError("command, args, and env should not be set when using sse transport")
@@ -71,6 +82,9 @@ class MCPServerConfig(BaseModel):
             # Auth is not supported for SSE transport
             if self.auth_provider is not None:
                 raise ValueError("Authentication is not supported for SSE transport.")
+            # Custom headers not supported for SSE transport
+            if self.custom_headers is not None:
+                raise ValueError("custom_headers is not supported for SSE transport")
         elif self.transport == "streamable-http":
             if self.command is not None or self.args is not None or self.env is not None:
                 raise ValueError("command, args, and env should not be set when using streamable-http transport")

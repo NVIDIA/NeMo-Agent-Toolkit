@@ -23,7 +23,8 @@ import pytest
 
 from nat.data_models.intermediate_step import IntermediateStepType
 from nat.data_models.intermediate_step import LLMFrameworkEnum
-from nat.plugins.adk.adk_callback_handler import ADKProfilerHandler
+from nat.data_models.profiler_callback import BaseProfilerCallback
+from nat.plugins.adk.callback_handler import ADKProfilerHandler
 
 
 # ----------------------------
@@ -48,7 +49,7 @@ def reset_patches():
 @pytest.fixture
 def mock_context():
     """Mock context with intermediate step manager."""
-    with patch('nat.plugins.adk.adk_callback_handler.Context') as mock_context_class:
+    with patch('nat.plugins.adk.callback_handler.Context') as mock_context_class:
         mock_context_instance = MagicMock()
         mock_step_manager = MagicMock()
         mock_context_instance.intermediate_step_manager = mock_step_manager
@@ -325,7 +326,6 @@ async def test_llm_call_monkey_patch_with_multiple_messages(mock_acompletion, ha
 
 def test_handler_inheritance(handler):
     """Test that ADKProfilerHandler inherits from BaseProfilerCallback."""
-    from nat.profiler.callbacks.base_callback_class import BaseProfilerCallback
     assert isinstance(handler, BaseProfilerCallback)
 
 

@@ -17,9 +17,9 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit Workflow as an A2A Server
 
-[Agent-to-Agent (A2A) Protocol](https://a2aproject.org/) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. You can publish NeMo Agent toolkit [workflows](../build-workflows/about-building-workflows.md) as A2A [agents](../components/agents/index.md) so they can be discovered and called by other A2A clients.
+[Agent-to-Agent (A2A) Protocol](https://a2a-protocol.org) is an open standard from the Linux Foundation that enables agent-to-agent communication and collaboration. You can publish NeMo Agent Toolkit [workflows](../build-workflows/about-building-workflows.md) as A2A [agents](../components/agents/index.md) so they can be discovered and called by other A2A clients.
 
-This guide covers how to publish NeMo Agent toolkit workflows as A2A servers. For information on connecting to remote A2A agents, refer to [A2A Client](../build-workflows/a2a-client.md).
+This guide covers how to publish NeMo Agent Toolkit workflows as A2A servers. For information on connecting to remote A2A agents, refer to [A2A Client](../build-workflows/a2a-client.md).
 
 :::{note}
 **Read First**: This guide assumes familiarity with A2A client concepts. Please read [A2A Client](../build-workflows/a2a-client.md) first for foundational understanding.
@@ -73,6 +73,7 @@ general:
     description: "A calculator agent for mathematical operations"
     host: localhost
     port: 10000
+    public_base_url: "https://agents.example.com/calculator"  # Optional public URL for Agent Card
     version: "1.0.0"
 ```
 
@@ -102,6 +103,21 @@ You can get the complete list of configuration options and their schemas by runn
 ```bash
 nat info components -t front_end -q a2a
 ```
+
+### Kubernetes and Ingress Deployments
+
+In Kubernetes deployments, the server bind address (`host` and `port`) is often not the public address that clients use. Set `public_base_url` so the generated Agent Card advertises the external URL:
+
+```yaml
+general:
+  front_end:
+    _type: a2a
+    host: 0.0.0.0
+    port: 10000
+    public_base_url: ${NAT_PUBLIC_BASE_URL}
+```
+
+Use your deployment tooling (for example Helm values or environment injection) to provide `NAT_PUBLIC_BASE_URL` at runtime.
 
 ## How Workflows Map to A2A Agents
 
@@ -182,7 +198,7 @@ The product of 42 and 67 is 2814.0
 
 The following example demonstrates A2A server usage:
 
-- Math Assistant A2A Example - NeMo Agent toolkit workflow published as an A2A server. See `examples/A2A/math_assistant_a2a/README.md`.
+- Math Assistant A2A Example - NeMo Agent Toolkit workflow published as an A2A server. See `examples/A2A/math_assistant_a2a/README.md`.
 
 ## Troubleshooting
 

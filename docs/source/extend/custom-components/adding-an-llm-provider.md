@@ -17,14 +17,14 @@ limitations under the License.
 
 # Adding an LLM Provider to NVIDIA NeMo Agent Toolkit
 
-In NeMo Agent toolkit the set of configuration parameters needed to interact with an [LLM](../../build-workflows/llms/index.md) API (provider) is defined separately from the client which is tied to a given framework. To determine which LLM providers are included in the NeMo Agent toolkit installation, run the following command:
+In NeMo Agent Toolkit the set of configuration parameters needed to interact with an [LLM](../../build-workflows/llms/index.md) API (provider) is defined separately from the client which is tied to a given framework. To determine which LLM providers are included in the NeMo Agent Toolkit installation, run the following command:
 ```bash
 nat info components -t llm_provider
 ```
 
-In NeMo Agent toolkit there are LLM providers, like NIM and OpenAI, and there are frameworks which need to use those providers, such as LangChain/LangGraph LlamaIndex with a client defined for each. To add support, we need to cover the combinations of providers to clients.
+In NeMo Agent Toolkit there are LLM providers, like NIM and OpenAI, and there are frameworks which need to use those providers, such as LangChain/LangGraph LlamaIndex with a client defined for each. To add support, we need to cover the combinations of providers to clients.
 
-As an example, NeMo Agent toolkit contains multiple clients for interacting with the OpenAI API with different frameworks, each sharing the same provider configuration {class}`nat.llm.openai_llm.OpenAIModelConfig`. To view the full list of clients registered for the OpenAI LLM provider, run the following command:
+As an example, NeMo Agent Toolkit contains multiple clients for interacting with the OpenAI API with different frameworks, each sharing the same provider configuration {class}`nat.llm.openai_llm.OpenAIModelConfig`. To view the full list of clients registered for the OpenAI LLM provider, run the following command:
 
 ```bash
 nat info components -t llm_client -q openai
@@ -32,7 +32,7 @@ nat info components -t llm_client -q openai
 
 ## Provider Types
 
-In NeMo Agent toolkit, there are three provider types: `llm`, `embedder`, and `retreiver`. The three provider types are defined by their respective base configuration classes: {class}`nat.data_models.llm.LLMBaseConfig`, {class}`nat.data_models.embedder.EmbedderBaseConfig`, and {class}`nat.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an [embedder](../../build-workflows/embedders.md) or [retriever](../../build-workflows/retrievers.md) provider is similar.
+In NeMo Agent Toolkit, there are three provider types: `llm`, `embedder`, and `retriever`. The three provider types are defined by their respective base configuration classes: {class}`nat.data_models.llm.LLMBaseConfig`, {class}`nat.data_models.embedder.EmbedderBaseConfig`, and {class}`nat.data_models.retriever.RetrieverBaseConfig`. This guide focuses on adding an LLM provider. However, the process for adding an [embedder](../../build-workflows/embedders.md) or [retriever](../../build-workflows/retrievers.md) provider is similar.
 
 
 ## Defining an LLM Provider
@@ -118,7 +118,7 @@ class NIMModelConfig(LLMBaseConfig, ThinkingMixin, name="nim"):
 ```
 
 ### Registering the Provider
-An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
+An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent Toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
 
 :::{note}
 Registering an embedder or retriever provider is similar; however, the function should be decorated with  {py:deco}`nat.cli.register_workflow.register_embedder_provider` or  {py:deco}`nat.cli.register_workflow.register_retriever_provider`.
@@ -126,7 +126,7 @@ Registering an embedder or retriever provider is similar; however, the function 
 
 
 The `OpenAIModelConfig` from the previous section is registered as follows:
-`src/nat/llm/openai_llm.py`:
+`packages/nvidia_nat_core/src/nat/llm/openai_llm.py`:
 ```python
 @register_llm_provider(config_type=OpenAIModelConfig)
 async def openai_llm(config: OpenAIModelConfig, builder: Builder):
@@ -152,9 +152,9 @@ As previously mentioned, each LLM client is specific to both the LLM API and the
 Registering an embedder or retriever client is similar. However, the function should be decorated with {py:deco}`nat.cli.register_workflow.register_embedder_client` or {py:deco}`nat.cli.register_workflow.register_retriever_client`.
 :::
 
-The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`nat.builder.builder.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent toolkit.
+The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`nat.builder.builder.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent Toolkit.
 
-Since many frameworks provide clients for many of the common LLM APIs, in NeMo Agent toolkit, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain/LangGraph is as follows:
+Since many frameworks provide clients for many of the common LLM APIs, in NeMo Agent Toolkit, the client registration functions are often simple factory methods. For example, the OpenAI client registration function for LangChain/LangGraph is as follows:
 
 `packages/nvidia_nat_langchain/src/nat/plugins/langchain/llm.py`:
 ```python
@@ -205,9 +205,9 @@ Note: Since this test requires an API key, it's requesting the `nvidia_api_key` 
 
 ## Packaging the Provider and Client
 
-The provider and client will need to be bundled into a Python package, which in turn will be registered with NeMo Agent toolkit as a [plugin](../plugins.md). In the `pyproject.toml` file of the package the `project.entry-points.'nat.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
+The provider and client will need to be bundled into a Python package, which in turn will be registered with NeMo Agent Toolkit as a [plugin](../plugins.md). In the `pyproject.toml` file of the package the `project.entry-points.'nat.components'` section, defines a Python module as the entry point of the plugin. Details on how this is defined are found in the [Entry Point](../plugins.md#entry-point) section of the plugins document. By convention, the entry point module is named `register.py`, but this is not a requirement.
 
-In the entry point module it is important that the provider is defined first followed by the client, this ensures that the provider is added to the NeMo Agent toolkit registry before the client is registered. A hypothetical `register.py` file could be defined as follows:
+In the entry point module it is important that the provider is defined first followed by the client, this ensures that the provider is added to the NeMo Agent Toolkit registry before the client is registered. A hypothetical `register.py` file could be defined as follows:
 ```python
 # We need to ensure that the provider is registered prior to the client
 

@@ -15,6 +15,8 @@
 
 export SCRIPT_DIR=${SCRIPT_DIR:-"$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"}
 
+export SUPPORTED_PYTHON_VERSIONS=("3.11" "3.12" "3.13")
+
 # The root to the NAT repo
 export PROJECT_ROOT=${PROJECT_ROOT:-"$(realpath ${SCRIPT_DIR}/../..)"}
 
@@ -42,62 +44,6 @@ export PYTHON_FILE_REGEX='^(\.\/)?(?!\.|build|external).*\.(py|pyx|pxd)$'
 # Use these options to skip any of the checks
 export SKIP_COPYRIGHT=${SKIP_COPYRIGHT:-""}
 
-
-# Determine the merge base as the root to compare against. Optionally pass in a
-# result variable otherwise the output is printed to stdout
-function get_merge_base() {
-   local __resultvar=$1
-   local result=$(git merge-base ${BASE_SHA} ${COMMIT_SHA:-HEAD})
-
-   if [[ "$__resultvar" ]]; then
-      eval $__resultvar="'${result}'"
-   else
-      echo "${result}"
-   fi
-}
-
-# Determine the changed files. First argument is the (optional) regex filter on
-# the results. Second argument is the (optional) variable with the returned
-# results. Otherwise the output is printed to stdout. Result is an array
-function get_modified_files() {
-   local  __resultvar=$2
-
-   local GIT_DIFF_ARGS=${GIT_DIFF_ARGS:-"--name-only"}
-   local GIT_DIFF_BASE=${GIT_DIFF_BASE:-$(get_merge_base)}
-
-   # If invoked by a git-commit-hook, this will be populated
-   local result=( $(git diff ${GIT_DIFF_ARGS} ${GIT_DIFF_BASE} | grep -P ${1:-'.*'}) )
-
-   local files=()
-
-   for i in "${result[@]}"; do
-      if [[ -e "${i}" ]]; then
-         files+=(${i})
-      fi
-   done
-
-   if [[ "$__resultvar" ]]; then
-      eval $__resultvar="( ${files[@]} )"
-   else
-      echo "${files[@]}"
-   fi
-}
-
-# Determine a unified diff useful for clang-XXX-diff commands. First arg is
-# optional file regex. Second argument is the (optional) variable with the
-# returned results. Otherwise the output is printed to stdout
-function get_unified_diff() {
-   local  __resultvar=$2
-
-   local result=$(git diff --no-color --relative -U0 $(get_merge_base) -- $(get_modified_files $1))
-
-   if [[ "$__resultvar" ]]; then
-      eval $__resultvar="'${result}'"
-   else
-      echo "${result}"
-   fi
-}
-
 function get_num_proc() {
    NPROC_TOOL=`which nproc`
    NUM_PROC=${NUM_PROC:-`${NPROC_TOOL}`}
@@ -105,7 +51,7 @@ function get_num_proc() {
 }
 
 function set_versions() {
-   # Update internal dependencies to the current git tag
+   # Set the version for the wheels based on GIT_TAG / SCM
 
    if [[ "${CI_CRON_NIGHTLY}" == "1" || "${IS_TAGGED}" == "1" ]]; then
       # For tagged releases and nightly builds, use the git tag as the version as-is
@@ -117,19 +63,17 @@ function set_versions() {
       set -e
 
       if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
-         rapids-logger "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
+         echo "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
          exit ${SETUPTOOLS_SCM_RESULT}
       fi
    fi
 
    export SETUPTOOLS_SCM_PRETEND_VERSION="${NAT_VERSION}"
    export USE_FULL_VERSION="1"
-
-   SKIP_MD_UPDATE=1 ${PROJECT_ROOT}/ci/release/update-version.sh "${NAT_VERSION}"
 }
 
 function build_wheel() {
-    rapids-logger "Building Wheel for $1"
+    echo "Building Wheel for $1"
     uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
 }
 
@@ -138,40 +82,18 @@ function build_package_wheel()
     local pkg=$1
     pkg_dir_name="${pkg#packages/}"
     pkg_dir_name="${pkg#./packages/}"
-
-    # Remove compat/
-    pkg_dir_name="${pkg_dir_name/compat\/}"
-    build_wheel "${pkg}" "${pkg_dir_name}/${GIT_TAG}"
+    build_wheel "${pkg}" "${pkg_dir_name}"
 }
 
 function create_env() {
 
-    extras=()
-    for arg in "$@"; do
-        if [[ "${arg}" == "extra:all" ]]; then
-            extras+=("--all-extras")
-        elif [[ "${arg}" == "group:all" ]]; then
-            extras+=("--all-groups")
-        elif [[ "${arg}" == extra:* ]]; then
-            extras+=("--extra" "${arg#extra:}")
-        elif [[ "${arg}" == group:* ]]; then
-            extras+=("--group" "${arg#group:}")
-        else
-            # Error out if we don't know what to do with the argument
-            rapids-logger "Unknown argument to create_env: ${arg}. Must start with 'extra:' or 'group:'"
-            exit 1
-        fi
-    done
-
-    rapids-logger "Creating uv env"
+    echo "Creating uv env"
     VENV_DIR="${WORKSPACE_TMP}/.venv"
     uv venv --python=${PYTHON_VERSION} --seed ${VENV_DIR}
     source ${VENV_DIR}/bin/activate
 
-    rapids-logger "Creating Environment with extras: ${@}"
-
     set +e
-    UV_SYNC_STDERROUT=$(uv sync --active "${extras[@]}" 2>&1)
+    UV_SYNC_STDERROUT=$(uv sync --active --only-dev 2>&1)
     UV_RESULT=$?
     set -e
 
@@ -194,32 +116,53 @@ function create_env() {
         exit 1
     fi
 
-    rapids-logger "Final Environment"
+    echo "Final Environment"
     uv pip list
 }
 
-function install_rapids_gha_tools()
-{
-   echo "Installing Rapids GHA tools"
-   wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
-}
-
 function get_lfs_files() {
-    rapids-logger "Installing git-lfs from apt"
+    echo "Installing git-lfs from apt"
     apt update
     apt install --no-install-recommends -y git-lfs
 
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
-        rapids-logger "Using host git, skipping git-lfs install"
+        echo "Using host git, skipping git-lfs install"
     else
-        rapids-logger "Calling git lfs fetch"
+        echo "Calling git lfs fetch"
         git lfs fetch
-        rapids-logger "Calling git lfs pull"
+        echo "Calling git lfs pull"
         git lfs pull
     fi
 
-    rapids-logger "git lfs ls-files"
+    echo "git lfs ls-files"
     git lfs ls-files
+}
+
+function install_python_versions() {
+   # This is the version of python currently installed
+   local current_python_version=$(echo ${PYTHON_VERSION} | awk '{split($0, a, "."); print a[1]"."a[2]}')
+
+   # This is not normally needed as our containers contain the needed python version. This is only needed for CI stages
+   # which need to support multiple python versions in a single stage, such as the build_wheel stage.
+   for pyver in "${SUPPORTED_PYTHON_VERSIONS[@]}"; do
+      if [[ "${pyver}" == "${current_python_version}" ]]; then
+         continue
+      fi
+
+      set +e
+      # The managed python flag is needed since the OS's copy of python does not include C headers needed to build some
+      # dependencies, specifically ruamel-yaml-clibz which is needed for semantic-kernel
+      uv python find --managed-python "${pyver}" &> /dev/null
+      PYTHON_FIND_RESULT=$?
+      set -e
+      if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
+         echo "Downloading Python version ${pyver}"
+
+         # In common.sh we set this to never, we want to override that here
+         UV_PYTHON_DOWNLOADS="manual" uv python install --managed-python ${pyver}
+         echo "✓ Successfully installed Python ${pyver}"
+      fi
+   done
 }
 
 function cleanup {
@@ -235,4 +178,3 @@ pushd "${PROJECT_ROOT}" &> /dev/null
 
 NAT_EXAMPLES=($(find ./examples/ -maxdepth 4 -name "pyproject.toml" | sort | xargs dirname))
 NAT_PACKAGES=($(find ./packages/ -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))
-NAT_COMPAT_PACKAGES=($(find ./packages/compat -maxdepth 2 -name "pyproject.toml" | sort | xargs dirname))

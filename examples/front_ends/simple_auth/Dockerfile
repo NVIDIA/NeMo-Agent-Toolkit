@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Use the uv Python 3.11 slim base image
-FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+FROM ghcr.io/astral-sh/uv:0.9.28-python3.11-bookworm-slim
 
 # Set working directory
 WORKDIR /app

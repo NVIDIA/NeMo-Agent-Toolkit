@@ -17,19 +17,24 @@ limitations under the License.
 
 # Memory in NVIDIA NeMo Agent Toolkit
 
-The NeMo Agent toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful [LLM-based](./llms/index.md) applications that recall user-specific data or interactions across multiple steps.
+The NeMo Agent Toolkit Memory subsystem is designed to store and retrieve a user's conversation history, preferences, and other "long-term memory." This is especially useful for building stateful [LLM-based](./llms/index.md) applications that recall user-specific data or interactions across multiple steps.
 
-The memory module is designed to be extensible, allowing developers to create custom memory back-ends, providers in NeMo Agent toolkit terminology.
+The memory module is designed to be extensible, allowing developers to create custom memory back-ends, providers in NeMo Agent Toolkit terminology.
 
 ## Included Memory Modules
-The NeMo Agent toolkit includes three memory module providers, all of which are available as plugins:
+The NeMo Agent Toolkit includes four memory module providers, all of which are available as plugins:
 * [Mem0](https://mem0.ai/) which is provided by the [`nvidia-nat-mem0ai`](https://pypi.org/project/nvidia-nat-mem0ai/) plugin.
+* [MemMachine](https://memmachine.ai/) which is provided by the [`nvidia-nat-memmachine`](https://pypi.org/project/nvidia-nat-memmachine/) plugin (**Experimental; not recommended for production use**).
 * [Redis](https://redis.io/) which is provided by the [`nvidia-nat-redis`](https://pypi.org/project/nvidia-nat-redis/) plugin.
 * [Zep](https://www.getzep.com/) which is provided by the [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) plugin ([Zep NVIDIA NeMo documentation](https://help.getzep.com/nvidia-nemo)).
 
+## Third-Party Memory Plugins
+Additional memory backends are available as community plugins:
+* [Synap](https://maximem.ai) — managed memory layer with user and customer scoping, provided by the [`maximem-synap-nemo-agent-toolkit`](https://pypi.org/project/maximem-synap-nemo-agent-toolkit/) plugin. See `examples/memory/synap/` for usage. ([Open source integration package](https://github.com/maximem-ai/maximem_synap_sdk/tree/main/packages/integrations))
+
 ## Automatic Memory Wrapper Agent
 
-The NeMo Agent toolkit provides an [`auto_memory_agent`](../components/agents/auto-memory-wrapper/index.md) wrapper that adds automatic memory capture and retrieval to any agent without requiring the LLM to invoke memory tools explicitly.
+The NeMo Agent Toolkit provides an [`auto_memory_agent`](../components/agents/auto-memory-wrapper/index.md) wrapper that adds automatic memory capture and retrieval to any agent without requiring the LLM to invoke memory tools explicitly.
 
 ### Why Use Automatic Memory?
 
@@ -41,7 +46,7 @@ The NeMo Agent toolkit provides an [`auto_memory_agent`](../components/agents/au
 **Automatic memory wrapper agent:**
 - **Guaranteed capture**: User messages and agent responses are automatically stored
 - **Automatic retrieval**: Relevant context is injected before each agent call
-- **Memory backend agnostic**: Works with Zep, Mem0, Redis, or any `MemoryEditor`
+- **Memory backend agnostic**: Works with Zep, Mem0, MemMachine, Redis, or any `MemoryEditor`
 - **Universal compatibility**: Wraps any agent type (ReAct, ReWOO, Tool Calling, etc.)
 
 ### Quick Start
@@ -94,8 +99,9 @@ User ID is automatically extracted at runtime for memory isolation via:
 For detailed configuration and usage examples, refer to the `examples/agents/auto_memory_wrapper/README.md` guide.
 
 ## Examples
-The following examples in the [repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit) demonstrate how to use the memory module in the NeMo Agent toolkit:
+The following examples in the [repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit) demonstrate how to use the memory module in the NeMo Agent Toolkit:
 * `examples/agents/auto_memory_wrapper` - Automatic memory wrapper agent for any agent
+* `examples/memory/memmachine` - MemMachine server setup and example notebook
 * `examples/memory/redis` - Basic long-term memory using Redis
 * `examples/frameworks/semantic_kernel_demo` - Multi-agent system with long-term memory
 * `examples/RAG/simple_rag` - RAG system with Mem0 memory

@@ -17,6 +17,8 @@ limitations under the License.
 
 # Using Authentication in the NeMo Agent Toolkit
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates how to use the library's native support for authentication to allow agents to use tools that require
 authentication to use. Particularly, this example highlights how to use the `OAuth 2.0 Authorization Code Flow` to authenticate
 with a demonstrative `OAuth 2.0` provider and then return information from the authorization server's demonstrative `/api/me` endpoint

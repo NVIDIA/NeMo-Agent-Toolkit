@@ -33,39 +33,37 @@ limitations under the License.
 
 <div align="center">
 
-*NVIDIA NeMo Agent Toolkit is a flexible, lightweight, and unifying library that allows you to easily connect existing enterprise agents to data sources and tools across any framework.*
+*NVIDIA NeMo Agent Toolkit adds intelligence to AI agents across any framework—enhancing speed, accuracy, and decision-making through enterprise-grade instrumentation, observability, and continuous learning.*
 
 </div>
 
 ## 🔥 New Features
 
-- [**A2A Support**](./docs/source/components/integrations/a2a.md) NeMo Agent Toolkit now supports deploying and consuming agents using the A2A protocol.
-
-- [**Amazon Bedrock AgentCore and Strands Agents Support:**](./docs/source/components/integrations/frameworks.md#strands) NeMo Agent Toolkit now supports building agents using Strands Agents framework and deploying them securely on Amazon Bedrock AgentCore runtime.
-
-- [**LangChain Agent Automatic Wrapper:**](./examples/frameworks/auto_wrapper/langchain_deep_research/README.md) NeMo Agent Toolkit now supports automatic wrapping of existing LangChain/LangGraph Agents.
-
-- [**Microsoft AutoGen Support**](./docs/source/components/integrations/frameworks.md#autogen) NeMo Agent Toolkit now supports building agents using AutoGen framework.
-
-- [**Initial NVIDIA Dynamo Integration:**](https://docs.nvidia.com/dynamo/latest/) NeMo Agent Toolkit now has initial Dynamo support for end-to-end deployment acceleration of agentic workflows.
+- [**Dynamo Runtime Intelligence:**](./examples/dynamo_integration/latency_sensitivity_demo/README.md) Automatically infer per-request latency sensitivity from agent profiles and apply runtime hints for cache control, load-aware routing, and priority-aware serving.
+- [**Agent Performance Primitives (APP):**](https://docs.langchain.com/oss/python/integrations/providers/nvidia#install-2) Introduce framework-agnostic performance primitives that accelerate graph-based agent frameworks such as LangChain, CrewAI, and Agno with parallel execution, speculative branching, and node-level priority routing.
+- [**LangSmith Native Integration:**](./docs/source/run-workflows/observe/observe-workflow-with-langsmith.md) Observe end-to-end agent execution with native LangSmith tracing, run evaluation experiments, compare outcomes, and manage prompt versions across development and production workflows.
+- [**FastMCP Workflow Publishing:**](./docs/source/run-workflows/fastmcp-server.md) Publish NeMo Agent Toolkit workflows as MCP servers using the FastMCP server runtime to simplify MCP-native deployment and integration.
+- **Migration notice:** `1.5.0` simplifies package installation and dependency management. See the [Migration Guide](./docs/source/resources/migration-guide.md#v150).
 
 ## ✨ Key Features
 
-- 🧩 [**Framework Agnostic:**](./docs/source/components/integrations/frameworks.md) NeMo Agent Toolkit works side-by-side and around existing agentic frameworks, such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents. This allows you to use your current technology stack without replatforming. NeMo Agent Toolkit complements any existing agentic framework or memory tool you're using and isn't tied to any specific agentic framework, LLM provider, or data source.
-
-- 🔁 [**Reusability:**](./docs/source/components/sharing-components.md) Every agent, tool, and agentic workflow in this library exists as a function call that works together in complex software applications. The composability between these agents, tools, and workflows allows you to build once and reuse in different scenarios.
-
-- ⚡ [**Rapid Development:**](docs/source/get-started/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs. This allows you and your development teams to move quickly if you're already developing with agents.
-
-- 📈 [**Profiling:**](./docs/source/improve-workflows/profiler.md) Use the profiler to profile entire workflows down to the tool and agent level, track input/output tokens and timings, and identify bottlenecks. While we encourage you to wrap (decorate) every tool and agent to get the most out of the profiler, you have the freedom to integrate your tools, agents, and workflows to whatever level you want. You start small and go to where you believe you'll see the most value and expand from there.
-
-- 🔎 [**Observability:**](./docs/source/run-workflows/observe/observe.md) Monitor and debug your workflows with dedicated integrations for popular observability platforms such as Phoenix, Weave, and Langfuse, plus compatibility with OpenTelemetry-based observability platforms. Track performance, trace execution flows, and gain insights into your agent behaviors.
-
-- 🧪 [**Evaluation System:**](./docs/source/improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with built-in evaluation tools.
-
-- 💬 [**User Interface:**](./docs/source/run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
-
-- 🔗 [**Full MCP Support:**](./docs/source/build-workflows/mcp-client.md) Compatible with [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). You can use NeMo Agent Toolkit as an [MCP client](./docs/source/build-workflows/mcp-client.md) to connect to and use tools served by remote MCP servers. You can also use NeMo Agent Toolkit as an [MCP server](./docs/source/run-workflows/mcp-server.md) to publish tools via MCP.
+- 🛠️ **Building Agents**: Accelerate your agent development with tools that make it easier to get your agent into production.
+  - 🧩 [**Framework Agnostic:**](./docs/source/components/integrations/frameworks.md) Work side-by-side with agentic frameworks to add the instrumentation necessary for observing, profiling, and optimizing your agents. Use the toolkit with popular frameworks such as [LangChain](https://www.langchain.com/), [LlamaIndex](https://www.llamaindex.ai/), [CrewAI](https://www.crewai.com/), [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/), and [Google ADK](https://google.github.io/adk-docs/), as well as custom enterprise agentic frameworks and simple Python agents.
+  - 🔁 [**Reusability:**](./docs/source/components/sharing-components.md) Build components once and use them multiple times to maximize the value from development effort.
+  - ⚡ [**Customization:**](docs/source/get-started/tutorials/customize-a-workflow.md) Start with a pre-built agent, tool, or workflow, and customize it to your needs.
+  - 💬 [**Built-In User Interface:**](./docs/source/run-workflows/launching-ui.md) Use the NeMo Agent Toolkit UI chat interface to interact with your agents, visualize output, and debug workflows.
+- 📈 **Agent Insights:** Utilize NeMo Agent Toolkit instrumentation to better understand how your agents function at runtime.
+  - 📊 [**Profiling:**](./docs/source/improve-workflows/profiler.md) Profile entire workflows from the agent level all the way down to individual tokens to identify bottlenecks, analyze token efficiency, and guide developers in optimizing their agents.
+  - 🔎 [**Observability:**](./docs/source/run-workflows/observe/observe.md) Track performance, trace execution flows, and gain insights into your agent behaviors in production.
+- 🚀 **Agent Optimization:** Improve your agent's quality, accuracy, and performance with a suite of tools for all phases of the agent lifecycle.
+  - 🧪 [**Evaluation System:**](./docs/source/improve-workflows/evaluate.md) Validate and maintain accuracy of agentic workflows with a suite of tools for offline evaluation.
+  - 🎯 [**Hyper-Parameter and Prompt Optimizer:**](./docs/source/improve-workflows/optimizer.md) Automatically identify the best configuration and prompts to ensure you are getting the most out of your agent.
+  - 🧠 [**Fine-tuning with Reinforcement Learning:**](./docs/source/improve-workflows/finetuning/index.md) Fine-tune LLMs specifically for your agent and train intrinsic information about your workflow directly into the model.
+  - ⚡ [**NVIDIA Dynamo Integration:**](./examples/dynamo_integration/README.md) Use Dynamo and NeMo Agent Toolkit together to improve agent performance at scale.
+  - ⚙️ [**Agent Performance Primitives (APP):**](https://docs.langchain.com/oss/python/integrations/providers/nvidia#install-2) Accelerate graph-based agent frameworks such as LangChain, CrewAI, and Agno with parallel execution, speculative branching, and node-level priority routing.
+- 🔌 **Protocol Support:** Integrate with common protocols used to build agents.
+  - 🔗 [**Model Context Protocol (MCP):**](./docs/source/build-workflows/mcp-client.md) Integrate [MCP tools](./docs/source/build-workflows/mcp-client.md) into your agents or serve your tools and agents as an [MCP server](./docs/source/run-workflows/mcp-server.md) for others to consume.
+  - 🤝 [**Agent-to-Agent (A2A) Protocol:**](./docs/source/components/integrations/a2a.md) Build teams of distributed agents with full support for authentication.
 
 With NeMo Agent Toolkit, you can move quickly, experiment freely, and ensure reliability across all your agent-driven projects.
 
@@ -82,16 +80,10 @@ To install the latest stable version of NeMo Agent Toolkit from PyPI, run the fo
 pip install nvidia-nat
 ```
 
-NeMo Agent Toolkit has many optional dependencies which can be installed with the core package. Optional dependencies are grouped by framework and can be installed with the core package. For example, to install the LangChain/LangGraph plugin, run the following:
+NeMo Agent Toolkit has many optional dependencies that can be installed with the core package. Optional dependencies are grouped by framework. For example, to install the LangChain/LangGraph plugin, run the following:
 
 ```bash
 pip install "nvidia-nat[langchain]"
-```
-
-Or for **almost all** optional dependencies:
-
-```bash
-pip install "nvidia-nat[all]"
 ```
 
 Detailed installation instructions, including the full list of optional dependencies and their conflicts, can be found in the [Installation Guide](./docs/source/get-started/installation.md).
@@ -119,8 +111,10 @@ Before getting started, it's possible to run this simple workflow and many other
       # Tell NeMo Agent Toolkit which LLM to use for the agent
       nim_llm:
          _type: nim
-         model_name: meta/llama-3.1-70b-instruct
+         model_name: nvidia/nemotron-3-nano-30b-a3b
          temperature: 0.0
+         chat_template_kwargs:
+            enable_thinking: false
 
    workflow:
       # Use an agent that 'reasons' and 'acts'
@@ -151,7 +145,7 @@ Before getting started, it's possible to run this simple workflow and many other
 ## 📚 Additional Resources
 
 * 📖 [Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest): Explore the full documentation for NeMo Agent Toolkit.
-* 🧭 [Get Started Guide](./docs/source/get-started/installation.md): Set up your environment and start building with NeMo Agent toolkit.
+* 🧭 [Get Started Guide](./docs/source/get-started/installation.md): Set up your environment and start building with NeMo Agent Toolkit.
 * 🤝 [Contributing](./docs/source/resources/contributing/index.md): Learn how to contribute to NeMo Agent Toolkit and set up your development environment.
 * 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
 * 🛠️ [Create and Customize NeMo Agent Toolkit Workflows](docs/source/get-started/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent Toolkit workflows.
@@ -162,8 +156,62 @@ Before getting started, it's possible to run this simple workflow and many other
 ## 🛣️ Roadmap
 
 - [x] Automatic Reinforcement Learning (RL) to fine-tune LLMs for a specific agent.
-- [ ] Integration with [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) to secure any function in an agent workflow.
-- [x] End-to-end acceleration using intelligent integrations with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo).
+- [x] Integration with [NVIDIA Dynamo](https://github.com/ai-dynamo/dynamo) to reduce LLM latency at scale.
+- [x] Improve agent throughput with KV-Cache optimization.
+- [ ] Improved, standalone evaluation harness and migration to [ATIF](https://github.com/harbor-framework/harbor/blob/main/rfcs/0001-trajectory-format.md) for trajectory format.
+- [ ] Support for additional programming languages (TypeScript, Rust, Go, WASM) with compiled libraries.
+- [ ] Phasing out wrapping architecture to ease onboarding for more agents.
+- [ ] Support for adding skills and sandboxes to existing agents.
+- [ ] MCP authentication improvements.
+- [ ] Improved memory interface to support self-improving agents.
+
+## 📊 Telemetry
+
+The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation. Once you opt in (see below), events are sent to the shared NeMo Usage Telemetry ingest.
+
+### How consent works
+
+The first time you run an interactive `nat` command, you'll see a one-time consent prompt explaining what is collected and asking whether to allow it. The prompt defaults to **yes** (pressing Enter accepts); type `n` to opt out. Your decision is persisted to `~/.config/nat/telemetry.toml` and respected on every subsequent invocation.
+
+In **non-interactive contexts** (CI, cron, piped scripts, daemons), telemetry is **always off** unless you explicitly enable it via the environment variable below. We never send data when there's no opportunity to ask.
+
+You can change your decision anytime:
+
+```bash
+nat configure telemetry --enable     # opt in
+nat configure telemetry --disable    # opt out
+nat configure telemetry --status     # show the current effective state
+```
+
+Or override the persisted decision (and skip the prompt) via environment variable:
+
+```bash
+export NAT_TELEMETRY_ENABLED=false   # disable for this shell session
+export NAT_TELEMETRY_ENABLED=true    # enable for this shell session
+```
+
+The environment variable takes precedence over the persisted file. If both disagree, `nat configure telemetry --status` will tell you which one is winning.
+
+### What is collected
+
+For each `nat` command invocation, a single event is sent at exit containing:
+
+- The top-level command name, such as `run`, `serve`, or `evaluate`.
+- The second-level command name when applicable, such as `list-components` for `nat info list-components`.
+- The outcome: `success`, `failure`, or `interrupted`.
+- The wall-clock duration in milliseconds.
+- The process exit code.
+- The Python class name of the raised exception on failure (the message is not collected).
+- The Python runtime version, such as `3.11.7`.
+
+### What is not collected
+
+The following are never collected:
+
+- Command arguments or option values.
+- Workflow names, function names, model names, or any contents of configuration files.
+- File paths, hostnames, usernames, IP addresses, or any other identifying information.
+- The output of any command.
 
 ## 💬 Feedback
 

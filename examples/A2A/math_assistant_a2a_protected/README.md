@@ -16,9 +16,11 @@ limitations under the License.
 
 # OAuth2-Protected Math Assistant A2A Example
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates an end-to-end OAuth2-protected A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, with added OAuth2 authentication for secure per-user agent-to-agent communication:
-- **Protected A2A Server**: NeMo Agent toolkit calculator service requiring OAuth2 authentication
-- **OAuth2 A2A Client**: NeMo Agent toolkit math assistant with per-user OAuth2 credentials that connects to the protected A2A server
+- **Protected A2A Server**: NeMo Agent Toolkit calculator service requiring OAuth2 authentication
+- **OAuth2 A2A Client**: NeMo Agent Toolkit math assistant with per-user OAuth2 credentials that connects to the protected A2A server
 - **Authorization Server**: Keycloak authorization server for testing OAuth2-protected A2A communication
 
 ## Key Features
@@ -84,7 +86,7 @@ graph TB
    - Validates JWT tokens before processing requests
 
 3. **Keycloak (Authorization Server)**
-   - Example OAuth2 server for testing OAuth2-protected A2A servers in NeMo Agent toolkit
+   - Example OAuth2 server for testing OAuth2-protected A2A servers in NeMo Agent Toolkit
    - Provides OAuth2 endpoints for token exchange by the A2A client
    - Provides JWKS endpoint for token verification by the A2A server
 
@@ -140,13 +142,13 @@ sequenceDiagram
 ## Prerequisites
 
 - Docker installed and running
-- NeMo Agent toolkit development environment set up
+- NeMo Agent Toolkit development environment set up
 - No services running on ports 8080 or 10000
 - NVIDIA API key
 
 ## Installation
 
-From the root directory of the NeMo Agent toolkit library, install this example:
+From the root directory of the NeMo Agent Toolkit library, install this example:
 
 ```bash
 uv pip install -e examples/A2A/math_assistant_a2a_protected
@@ -230,7 +232,7 @@ Look for: `Listening on: http://0.0.0.0:8080`
    - `jwks_uri`: `http://localhost:8080/realms/master/protocol/openid-connect/certs`
    - `introspection_endpoint`: `http://localhost:8080/realms/master/protocol/openid-connect/token/introspect`
 
-   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NeMo Agent toolkit A2A client discovers these URLs automatically from the discovery endpoint.
+   **Note:** These endpoints use Keycloak's standard paths (`/protocol/openid-connect/*`), not generic `/oauth/*` paths. The NeMo Agent Toolkit A2A client discovers these URLs automatically from the discovery endpoint.
 
 ### Step 3: Register Math Assistant Client
 
@@ -249,7 +251,6 @@ You can register the client manually or use the dynamic client registration (DCR
    - **Authentication flow:**
      - ✓ Standard flow (authorization code)
      - ✓ Direct access grants
-     - ✓ Consent required
    - Click **Next**
 
 5. **Login settings:**
@@ -257,14 +258,19 @@ You can register the client manually or use the dynamic client registration (DCR
    - **Web origins**: `http://localhost:8000`
    - Click **Save**
 
-6. **Add client scope if not already added:**
+6. **Add client scope if not added by default:**
    - Go to **Client scopes** tab
    - Click **Add client scope**
    - Select `calculator_a2a_execute`
    - Choose **Optional**
    - Click **Add**
 
-7. **Get client credentials:**
+7. **Set Consent required**:
+   - Go to **Settings** tab
+   - Toggle **Consent required** to `On` (scroll down to the bottom of the page to see the setting)
+   - Click **Save**
+
+8. **Get client credentials:**
    - Go to **Credentials** tab
    - Copy the **Client secret**
    - Note the **Client ID**: `math-assistant-client`
@@ -319,6 +325,10 @@ The per-user architecture allows each user to have their own OAuth2 authenticati
 1. Start the math assistant as a server:
 ```bash
 # Terminal 2: Start the math assistant as a server
+# Make sure environment variables are set
+export CALCULATOR_CLIENT_ID="math-assistant-client"
+export CALCULATOR_CLIENT_SECRET="<your-client-secret>"
+
 nat serve --config_file examples/A2A/math_assistant_a2a_protected/configs/config-client.yml
 ```
 
@@ -349,6 +359,44 @@ Workflow Result:
 - Each new user session triggers its own OAuth2 authorization flow
 - Different users authenticate independently with their own Keycloak credentials
 - Each user maintains separate JWT tokens and workflow instances
+
+## Troubleshooting
+
+### Ensure all services are reachable
+Use the following checks to confirm each service is reachable. If you are running the services elsewhere, replace `localhost` with the appropriate host name and use `https` instead of `http` for public endpoints.
+
+#### Verify Keycloak
+```bash
+curl -sS http://localhost:8080/realms/master/.well-known/openid-configuration | python3 -m json.tool
+```
+
+#### Verify the Protected Calculator A2A Server
+
+```bash
+curl -sS http://localhost:10000/.well-known/agent-card.json | python3 -m json.tool
+```
+
+#### Verify the Math Assistant Client FastAPI Service
+
+If you started the math assistant with `nat serve`, verify the server is reachable:
+
+```bash
+curl -sS http://localhost:8000/openapi.json | python3 -m json.tool
+```
+
+If you prefer a quick HTTP status check, follow redirects:
+
+```bash
+curl -iL http://localhost:8000/
+```
+
+#### Verify the UI
+
+If you started the UI, confirm it is serving content:
+
+```bash
+curl -i http://localhost:3000/
+```
 
 ## Cleanup
 
@@ -384,6 +432,7 @@ This setup is for **development and testing only**. For production:
 
 ## References
 
+- [A2A Introduction](../../../docs/source/components/integrations/a2a.md)
 - [A2A Authentication Documentation](../../../docs/source/components/auth/a2a-auth.md)
 - [A2A Client Documentation](../../../docs/source/build-workflows/a2a-client.md)
 - [A2A Server Documentation](../../../docs/source/run-workflows/a2a-server.md)

@@ -200,6 +200,45 @@ def extract_per_request_tsq_scores(job_dir: Path) -> dict[int, dict] | None:
         return None
 
 
+def _build_empty_first_tokens(job_dir: Path) -> set[tuple[str, float]]:
+    """Scan profiler traces to find LLM_NEW_TOKEN events with empty chunk content.
+
+    Returns a set of (UUID, event_timestamp) pairs that should be skipped
+    when computing TTFT because they correspond to the empty SSE frame that
+    streaming APIs send before the real first token.
+    """
+    traces_path = job_dir / "all_requests_profiler_traces.json"
+    if not traces_path.exists():
+        return set()
+
+    try:
+        with open(traces_path) as f:
+            traces = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return set()
+
+    empty_tokens: set[tuple[str, float]] = set()
+    for entry in traces:
+        for step in entry.get("intermediate_steps", []):
+            payload = step.get("payload")
+            if not isinstance(payload, dict):
+                continue
+            if payload.get("event_type") != "LLM_NEW_TOKEN":
+                continue
+            data = payload.get("data")
+            if isinstance(data, dict):
+                chunk = data.get("chunk", "")
+                if not chunk or chunk == "None":
+                    uid = payload.get("UUID", "")
+                    ts = payload.get("event_timestamp")
+                    if uid and ts is not None:
+                        empty_tokens.add((uid, float(ts)))
+
+    if empty_tokens:
+        print(f"      Detected {len(empty_tokens)} empty-chunk token events (will skip for TTFT)")
+    return empty_tokens
+
+
 def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, dict] | None, list[dict] | None]:
     """
     Calculate throughput metrics from standardized_data_all.csv on a per-request basis.
@@ -229,6 +268,8 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
         print(f"    Warning: Error reading CSV {csv_path}: {e}")
         return None, None
 
+    empty_first_tokens = _build_empty_first_tokens(csv_path.parent)
+
     metrics_by_example = {}
     all_llm_call_data = []  # Per-LLM-call data for granular plotting
 
@@ -240,11 +281,13 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
         llm_calls = []
         all_itls = []
         current_start = None
+        current_uuid = None
         llm_call_idx = 0
 
         for _, row in example_df.iterrows():
             if row['event_type'] == 'LLM_START':
                 current_start = row['event_timestamp']
+                current_uuid = row.get('UUID', '')
 
             elif row['event_type'] == 'LLM_END' and current_start is not None:
                 tokens = example_df[(example_df['event_type'] == 'LLM_NEW_TOKEN')
@@ -258,11 +301,25 @@ def calculate_per_request_throughput_metrics(csv_path: Path) -> tuple[dict[int, 
                 if duration > 0 and num_tokens > 0:
                     tokens_per_sec = num_tokens / duration
                     token_times = tokens['event_timestamp'].values
-                    ttft = token_times[0] - current_start
+
+                    # Skip empty-chunk tokens at the start.  Streaming APIs
+                    # often emit an initial SSE frame (role / empty content)
+                    # before the real prefill completes.  These are identified
+                    # via the empty_first_tokens set built from the profiler
+                    # traces JSON (keyed by UUID+timestamp).
+                    ttft_idx = 0
+                    for ti in range(min(num_tokens, 3)):
+                        key = (current_uuid, float(token_times[ti]))
+                        if key in empty_first_tokens:
+                            ttft_idx = ti + 1
+                        else:
+                            break
+                    ttft_idx = min(ttft_idx, num_tokens - 1)
+                    ttft = token_times[ttft_idx] - current_start
 
                     call_itls = []
-                    if num_tokens > 1:
-                        call_itls = np.diff(token_times).tolist()
+                    if num_tokens - ttft_idx > 1:
+                        call_itls = np.diff(token_times[ttft_idx:]).tolist()
                         all_itls.extend(call_itls)
 
                     llm_calls.append({

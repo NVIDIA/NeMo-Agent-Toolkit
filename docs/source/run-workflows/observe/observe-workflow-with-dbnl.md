@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with DBNL
 
-This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using DBNL for tracing. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in a NeMo Agent Toolkit workflow using DBNL for tracing. By the end of this guide, you will have:
 
 - Configured telemetry in your workflow.
 - Ability to view traces in the DBNL platform.
@@ -49,14 +49,14 @@ export DBNL_API_TOKEN=<your_api_token>
 export DBNL_PROJECT_ID=<your_project_id>
 ```
 
-## Step 4: Install the NeMo Agent toolkit OpenTelemetry Subpackages
+## Step 4: Install the NeMo Agent Toolkit OpenTelemetry Subpackages
 
 ```bash
 # Install specific telemetry extras required for DBNL
-uv pip install -e '.[opentelemetry]'
+uv pip install -e ".[opentelemetry]"
 ```
 
-## Step 5: Modify NeMo Agent toolkit Workflow Configuration
+## Step 5: Modify NeMo Agent Toolkit Workflow Configuration
 
 Update your workflow configuration file to include the telemetry settings.
 
@@ -71,7 +71,7 @@ general:
 
 ## Step 6: Run the workflow
 
-From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
+From the root directory of the NeMo Agent Toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
 
 **Example:**
 

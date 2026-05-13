@@ -22,6 +22,7 @@ import typing
 from collections.abc import AsyncGenerator
 from collections.abc import Generator
 from pathlib import Path
+from unittest import mock
 
 import pytest
 import pytest_asyncio
@@ -31,6 +32,7 @@ if typing.TYPE_CHECKING:
     import galileo.projects
     import langsmith.client
 
+if typing.TYPE_CHECKING:
     from docker.client import DockerClient
 
 
@@ -143,10 +145,23 @@ def openai_api_key_fixture(fail_missing: bool):
     """
     Use for integration tests that require an Openai API key.
     """
+    yield require_env_variables(varnames=["OPENAI_API_KEY", "OPENAI_BASE_URL"],
+                                reason="openai integration tests require the `OPENAI_API_KEY` and " +
+                                "`OPENAI_BASE_URL` environment variables to be defined.",
+                                fail_missing=fail_missing)
+
+
+@pytest.fixture(name="oci_nemotron_endpoint", scope='session')
+def oci_nemotron_endpoint_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require an OCI-hosted Nemotron OpenAI-compatible endpoint.
+    """
     yield require_env_variables(
-        varnames=["OPENAI_API_KEY"],
-        reason="openai integration tests require the `OPENAI_API_KEY` environment variable to be defined.",
-        fail_missing=fail_missing)
+        varnames=["OCI_NEMOTRON_BASE_URL", "OCI_NEMOTRON_MODEL"],
+        reason="OCI Nemotron integration tests require the `OCI_NEMOTRON_BASE_URL` and "
+        "`OCI_NEMOTRON_MODEL` environment variables to be defined.",
+        fail_missing=fail_missing,
+    )
 
 
 @pytest.fixture(name="nvidia_api_key", scope='session')
@@ -228,6 +243,23 @@ def azure_openai_keys_fixture(fail_missing: bool):
         reason="Azure integration tests require the `AZURE_OPENAI_API_KEY` and `AZURE_OPENAI_ENDPOINT` environment "
         "variables to be defined.",
         fail_missing=fail_missing)
+
+
+@pytest.fixture(name="oci_genai", scope='session')
+def oci_genai_fixture(fail_missing: bool):
+    """
+    Use for integration tests that require OCI Generative AI credentials.
+    Required: OCI_COMPARTMENT_ID.
+    Optional: OCI_REGION (default: us-chicago-1), OCI_META_MODEL (default: meta.llama-3.3-70b-instruct),
+    OCI_GOOGLE_MODEL (default: google.gemini-2.5-flash).
+    Auth is read from ~/.oci/config using the DEFAULT profile.
+    """
+    yield require_env_variables(
+        varnames=["OCI_COMPARTMENT_ID"],
+        reason=
+        "OCI Generative AI integration tests require the `OCI_COMPARTMENT_ID` environment variable to be defined.",
+        fail_missing=fail_missing,
+    )
 
 
 @pytest.fixture(name="langfuse_keys", scope='session')
@@ -374,7 +406,8 @@ def catalyst_dataset_name_fixture(catalyst_project_name: str, project_name: str)
 
     from ragaai_catalyst import Dataset
     ds = Dataset(catalyst_project_name)
-    if dataset_name in ds.list_datasets():
+    datasets = ds.list_datasets()
+    if datasets and dataset_name in datasets:
         ds.delete_dataset(dataset_name)
 
 
@@ -539,7 +572,7 @@ def phoenix_url_fixture(fail_missing: bool) -> str:
     """
     To run these tests, a phoenix server must be running.
     The phoenix server can be started by running the following command:
-    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:latest
+    docker run -p 6006:6006 -p 4317:4317  arizephoenix/phoenix:13.22
     """
     import requests
 
@@ -888,3 +921,37 @@ def import_adk_early():
         import google.adk  # noqa: F401
     except ImportError:
         pass
+
+
+@pytest.fixture(name="mock_create_http_client")
+def mock_create_http_client_fixture() -> Generator[mock.MagicMock]:
+    from nat.llm.utils.http_client import _create_http_client as orig_create_http_client
+    with mock.patch('nat.llm.utils.http_client._create_http_client') as mock_create_http_client:
+        # Just capture the arguments
+        mock_create_http_client.side_effect = orig_create_http_client
+        yield mock_create_http_client
+
+
+@pytest.fixture(name="mock_httpx_async_client")
+def fixture_mock_async_httpx_client() -> Generator[mock.MagicMock]:
+    import httpx
+
+    with mock.patch.object(httpx, "AsyncClient") as mock_client:
+        mock_client.return_value = mock_client
+        mock_client.aclose = mock.AsyncMock()
+        yield mock_client
+
+
+@pytest.fixture(name="mock_httpx_sync_client")
+def fixture_mock_sync_httpx_client() -> Generator[mock.MagicMock]:
+    import httpx
+
+    with mock.patch.object(httpx, "Client") as mock_client:
+        mock_client.return_value = mock_client
+        yield mock_client
+
+
+@pytest.fixture
+def mock_builder() -> mock.MagicMock:
+    from nat.builder.builder import Builder
+    return mock.MagicMock(spec=Builder)

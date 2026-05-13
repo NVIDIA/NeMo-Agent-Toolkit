@@ -17,9 +17,9 @@ limitations under the License.
 
 # Object Stores in NVIDIA NeMo Agent Toolkit
 
-The NeMo Agent toolkit Object Store subsystem provides a standardized interface for storing and retrieving binary data with associated metadata. This is particularly useful for building applications that need to manage files, documents, images, or any other binary content within these workflows.
+The NeMo Agent Toolkit Object Store subsystem provides a standardized interface for storing and retrieving binary data with associated metadata. This is particularly useful for building applications that need to manage files, documents, images, or any other binary content within these workflows.
 
-The object store module is extensible, which allows developers to create custom object store backends. The providers in NeMo Agent toolkit terminology supports different storage systems.
+The object store module is extensible, which allows developers to create custom object store backends. The providers in NeMo Agent Toolkit terminology supports different storage systems.
 
 ## Features
 - **Standard Interface**: Object stores implement a standard key-value interface, allowing for compatibility across different storage implementations.
@@ -66,9 +66,9 @@ class ObjectStore(ABC):
 ```
 
 ## Included Object Stores
-The NeMo Agent toolkit includes several object store providers:
+The NeMo Agent Toolkit includes several object store providers:
 
-- **In-Memory Object Store**: In-memory storage for development and testing. See `src/nat/object_store/in_memory_object_store.py`
+- **In-Memory Object Store**: In-memory storage for development and testing. See `packages/nvidia_nat_core/src/nat/object_store/in_memory_object_store.py`
 - **S3 Object Store**: Amazon S3 and S3-compatible storage (like MinIO). See `packages/nvidia_nat_s3/src/nat/plugins/s3/s3_object_store.py`
 - **MySQL Object Store**: MySQL database-backed storage. See `packages/nvidia_nat_mysql/src/nat/plugins/mysql/mysql_object_store.py`
 - **Redis Object Store**: Redis key-value store. See `packages/nvidia_nat_redis/src/nat/plugins/redis/redis_object_store.py`
@@ -76,7 +76,7 @@ The NeMo Agent toolkit includes several object store providers:
 ## Usage
 
 ### Configuration
-Object stores are configured similarly to other NeMo Agent toolkit components. Each object store provider has a Pydantic config object that defines its configurable parameters. These parameters can then be configured in the config file under the `object_stores` section.
+Object stores are configured similarly to other NeMo Agent Toolkit components. Each object store provider has a Pydantic config object that defines its configurable parameters. These parameters can then be configured in the config file under the `object_stores` section.
 
 Example configuration for the in-memory object store:
 ```yaml
@@ -195,7 +195,7 @@ This enables HTTP endpoints for object store operations:
   ```
 
 ## Examples
-The following examples demonstrate how to use the object store module in the NeMo Agent toolkit:
+The following examples demonstrate how to use the object store module in the NeMo Agent Toolkit:
 * `examples/object_store/user_report` - A complete workflow that stores and retrieves user diagnostic reports using different object store backends
 
 ## Error Handling

@@ -14,13 +14,6 @@
 # limitations under the License.
 
 
-general:
-  telemetry:
-    tracing:
-      weave:
-        _type: weave
-        project: "nat-simple"
-
 functions:
   webpage_query:
     _type: webpage_query
@@ -37,11 +30,11 @@ llms:
     temperature: 0.0
   nim_rag_eval_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: meta/llama-3.3-70b-instruct
     max_tokens: 8
   nim_trajectory_eval_llm:
     _type: nim
-    model_name: meta/llama-3.1-70b-instruct
+    model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
     max_tokens: 1024
 

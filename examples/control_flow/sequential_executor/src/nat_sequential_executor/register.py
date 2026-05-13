@@ -21,7 +21,6 @@ from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
-from nat.control_flow.sequential_executor import SequentialExecutorExit
 from nat.data_models.function import FunctionBaseConfig
 
 logger = logging.getLogger(__name__)
@@ -43,7 +42,7 @@ async def text_processor_function(config: TextProcessorFunctionConfig, builder: 
     config : TextProcessorFunctionConfig
         Configuration for the text processor function
     builder : Builder
-        The NeMo Agent toolkit builder instance
+        The NeMo Agent Toolkit builder instance
 
     Returns
     -------
@@ -97,7 +96,7 @@ async def data_analyzer_function(config: DataAnalyzerFunctionConfig, builder: Bu
     config : DataAnalyzerFunctionConfig
         Configuration for the data analyzer function
     builder : Builder
-        The NeMo Agent toolkit builder instance
+        The NeMo Agent Toolkit builder instance
 
     Returns
     -------
@@ -157,6 +156,7 @@ async def data_analyzer_function(config: DataAnalyzerFunctionConfig, builder: Bu
 
         except json.JSONDecodeError:
             # Handle invalid JSON input - exit chain early
+            from nat.plugins.langchain.control_flow.sequential_executor import SequentialExecutorExit
             raise SequentialExecutorExit("Invalid input format - cannot proceed") from None
 
     yield FunctionInfo.from_fn(
@@ -179,7 +179,7 @@ async def report_generator_function(config: ReportGeneratorFunctionConfig, build
     config : ReportGeneratorFunctionConfig
         Configuration for the report generator function
     builder : Builder
-        The NeMo Agent toolkit builder instance
+        The NeMo Agent Toolkit builder instance
 
     Returns
     -------

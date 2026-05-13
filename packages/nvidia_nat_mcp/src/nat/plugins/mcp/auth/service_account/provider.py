@@ -107,7 +107,7 @@ class MCPServiceAccountProvider(AuthProviderBase[MCPServiceAccountProviderConfig
                 # Dynamic token from function
                 try:
                     # Pass configured kwargs to the function
-                    # Function can access runtime context via AIQContext.get() if needed
+                    # Function can access runtime context via Context.get() if needed
                     # Handle both sync and async functions
                     if asyncio.iscoroutinefunction(self._service_token_function):
                         result = await self._service_token_function(**self.config.service_token.kwargs)

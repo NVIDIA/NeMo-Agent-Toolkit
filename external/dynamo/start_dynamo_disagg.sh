@@ -36,12 +36,11 @@ CONTAINER_NAME="dynamo-sglang"
 PREFILL_GPUS="${DYNAMO_PREFILL_GPUS:-0,1}"
 DECODE_GPUS="${DYNAMO_DECODE_GPUS:-2,3}"
 TP_SIZE="${DYNAMO_TP_SIZE:-2}"
-HTTP_PORT="${DYNAMO_HTTP_PORT:-8099}"
-MODEL="/workspace/models/Llama-3.3-70B-Instruct"
-SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-llama-3.3-70b}"
+HTTP_PORT="${DYNAMO_HTTP_PORT:-8000}"
+SERVED_MODEL_NAME=""  # set after validation
 IMAGE="nvcr.io/nvidia/ai-dynamo/sglang-runtime:0.7.1"
 SHM_SIZE="${DYNAMO_SHM_SIZE:-16g}"
-WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-600}"
+WORKER_INIT_TIMEOUT_S="${DYNAMO_WORKER_INIT_TIMEOUT_S:-1800}"
 
 # Disaggregation configuration
 DISAGG_BOOTSTRAP_PORT="${DYNAMO_DISAGG_BOOTSTRAP_PORT:-12345}"
@@ -79,11 +78,13 @@ if [ -d "${DYNAMO_MODEL_DIR}" ]; then
         echo ""
         echo "This usually means incomplete/corrupted download. Try:"
         echo "  rm -rf ${DYNAMO_MODEL_DIR}"
-        echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
+        echo "  hf download meta-llama/Llama-3.3-70B-Instruct --local-dir ${DYNAMO_MODEL_DIR}"
         exit 1
     fi
 fi
-LOCAL_MODEL_DIR="${DYNAMO_MODEL_DIR}"
+LOCAL_MODEL_DIR="$(eval echo "${DYNAMO_MODEL_DIR}")"
+MODEL="/workspace/models/$(basename "$LOCAL_MODEL_DIR")"
+SERVED_MODEL_NAME="${DYNAMO_MODEL_NAME:-$(basename "$LOCAL_MODEL_DIR")}"
 
 echo "========================================================="
 echo "Dynamo SGLang FULL STACK (DISAGGREGATED MODE)"
@@ -213,7 +214,7 @@ if [ ! -d "$LOCAL_MODEL_DIR" ]; then
     echo "WARNING: Model directory not found at: $LOCAL_MODEL_DIR"
     echo ""
     echo "To download the model, run:"
-    echo "  huggingface-cli download meta-llama/Llama-3.3-70B-Instruct --local-dir $LOCAL_MODEL_DIR"
+    echo "  hf download meta-llama/Llama-3.3-70B-Instruct --local-dir $LOCAL_MODEL_DIR"
     echo ""
     read -p "Continue anyway (model will be downloaded from HuggingFace)? [y/N] " -n 1 -r
     echo
@@ -409,8 +410,8 @@ docker run -d \
     # Wait for BOTH workers to register (expects 2 workers in ETCD)
     echo \"Waiting for both workers to initialize in parallel...\"
     wait_for_workers_parallel() {
-        # local max_wait=300
-        local max_wait=${WORKER_INIT_TIMEOUT_S:-600}
+        # Use WORKER_INIT_TIMEOUT_S (defaults to 1800s / 30 min)
+        local max_wait=$WORKER_INIT_TIMEOUT_S
         local elapsed=0
         local poll_interval=5
 
@@ -602,8 +603,8 @@ if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
 
     # Wait for server to be ready (check /v1/models which only works when workers are discovered)
-    echo "Checking for API availability (timeout=15 minutes)..."
-    max_attempts=900
+    echo "Checking for API availability (timeout=${WORKER_INIT_TIMEOUT_S}s)..."
+    max_attempts=$WORKER_INIT_TIMEOUT_S
     attempt=0
 
     while [ $attempt -lt $max_attempts ]; do

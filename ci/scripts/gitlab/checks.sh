@@ -20,19 +20,19 @@ GITLAB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITLAB_SCRIPT_DIR}/common.sh
 
-create_env group:dev extra:examples
+create_env
 
 # Before running the checks, make sure we have no changes in the repo
 git reset --hard
 
 export PRE_COMMIT_HOME=${CI_PROJECT_DIR}/.cache/pre-commit
 
-rapids-logger "Running checks"
+echo "Running checks"
 ${SCRIPT_DIR}/checks.sh
 
-rapids-logger "Checking copyright headers"
+echo "Checking copyright headers"
 python ${SCRIPT_DIR}/copyright.py --verify-apache-v2
 
 
-rapids-logger "Runing Documentation checks"
+echo "Runing Documentation checks"
 ${SCRIPT_DIR}/documentation_checks.sh

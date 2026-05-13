@@ -197,6 +197,49 @@ class TestNeMoCustomizerTrainerAdapterConfig:
         """Test config is registered with correct name."""
         assert NeMoCustomizerTrainerAdapterConfig._typed_model_name == "nemo_customizer_trainer_adapter"
 
+    def test_max_consecutive_status_failures_default(self):
+        """Test default value for max_consecutive_status_failures."""
+        config = NeMoCustomizerTrainerAdapterConfig(
+            entity_host="https://nmp.example.com",
+            datastore_host="https://datastore.example.com",
+            namespace="test-namespace",
+            customization_config="meta/llama-3.2-1b-instruct@v1.0.0+A100",
+        )
+        assert config.max_consecutive_status_failures == 3
+
+    def test_max_consecutive_status_failures_custom(self):
+        """Test custom value for max_consecutive_status_failures."""
+        config = NeMoCustomizerTrainerAdapterConfig(
+            entity_host="https://nmp.example.com",
+            datastore_host="https://datastore.example.com",
+            namespace="test-namespace",
+            customization_config="meta/llama-3.2-1b-instruct@v1.0.0+A100",
+            max_consecutive_status_failures=5,
+        )
+        assert config.max_consecutive_status_failures == 5
+
+    def test_max_consecutive_status_failures_min_bound(self):
+        """Test min bound validation for max_consecutive_status_failures."""
+        with pytest.raises(ValueError):
+            NeMoCustomizerTrainerAdapterConfig(
+                entity_host="https://nmp.example.com",
+                datastore_host="https://datastore.example.com",
+                namespace="test-namespace",
+                customization_config="meta/llama-3.2-1b-instruct@v1.0.0+A100",
+                max_consecutive_status_failures=0,
+            )
+
+    def test_max_consecutive_status_failures_max_bound(self):
+        """Test max bound validation for max_consecutive_status_failures."""
+        with pytest.raises(ValueError):
+            NeMoCustomizerTrainerAdapterConfig(
+                entity_host="https://nmp.example.com",
+                datastore_host="https://datastore.example.com",
+                namespace="test-namespace",
+                customization_config="meta/llama-3.2-1b-instruct@v1.0.0+A100",
+                max_consecutive_status_failures=11,
+            )
+
 
 # =============================================================================
 # TrainerAdapter Tests
@@ -480,6 +523,163 @@ class TestNeMoCustomizerTrainerAdapter:
         assert log_entry["backend"] == "nemo-customizer"
         assert log_entry["status"] == "running"
         assert log_entry["progress"] == 50
+
+    async def test_wait_until_complete_transient_failure_recovery(self, adapter_config):
+        """Test that transient status check failures are retried and recover."""
+        adapter = NeMoCustomizerTrainerAdapter(adapter_config=adapter_config)
+        adapter._active_jobs["test-run"] = "job-123"
+        adapter._job_output_models["test-run"] = "output-model"
+
+        # Create mock statuses: first call fails, second succeeds
+        failure_status = TrainingJobStatus(
+            run_id="test-run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.FAILED,
+            message="Error getting status: Connection timeout",
+        )
+        success_status = TrainingJobStatus(
+            run_id="test-run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.COMPLETED,
+            progress=100.0,
+        )
+
+        with patch.object(adapter, "status", new_callable=AsyncMock) as mock_status:
+            mock_status.side_effect = [failure_status, success_status]
+
+            ref = TrainingJobRef(run_id="test-run", backend="nemo-customizer")
+            result = await adapter.wait_until_complete(ref, poll_interval=0.01)
+
+            assert result.status == TrainingStatusEnum.COMPLETED
+            assert mock_status.call_count == 2
+
+    async def test_wait_until_complete_max_failures_reached(self, adapter_config):
+        """Test that max consecutive failures triggers job failure."""
+        adapter = NeMoCustomizerTrainerAdapter(adapter_config=adapter_config)
+        adapter._active_jobs["test-run"] = "job-123"
+        adapter._job_output_models["test-run"] = "output-model"
+
+        # Create mock status that always fails
+        failure_status = TrainingJobStatus(
+            run_id="test-run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.FAILED,
+            message="Error getting status: Service unavailable",
+            progress=0.0,
+        )
+
+        with patch.object(adapter, "status", new_callable=AsyncMock) as mock_status:
+            mock_status.return_value = failure_status
+
+            ref = TrainingJobRef(run_id="test-run", backend="nemo-customizer")
+
+            # Should raise after max_consecutive_status_failures (default 3) attempts
+            with pytest.raises(RuntimeError, match="failed"):
+                await adapter.wait_until_complete(ref, poll_interval=0.01)
+
+            # Should have tried max_consecutive_status_failures times
+            assert mock_status.call_count == adapter_config.max_consecutive_status_failures
+
+    async def test_wait_until_complete_custom_max_failures(self):
+        """Test that custom max_consecutive_status_failures is respected."""
+        config = NeMoCustomizerTrainerAdapterConfig(
+            entity_host="https://nmp.example.com",
+            datastore_host="https://datastore.example.com",
+            namespace="test-namespace",
+            customization_config="meta/llama-3.2-1b-instruct@v1.0.0+A100",
+            max_consecutive_status_failures=5,
+        )
+        adapter = NeMoCustomizerTrainerAdapter(adapter_config=config)
+        adapter._active_jobs["test-run"] = "job-123"
+        adapter._job_output_models["test-run"] = "output-model"
+
+        failure_status = TrainingJobStatus(
+            run_id="test-run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.FAILED,
+            message="Error getting status: Service unavailable",
+            progress=0.0,
+        )
+
+        with patch.object(adapter, "status", new_callable=AsyncMock) as mock_status:
+            mock_status.return_value = failure_status
+
+            ref = TrainingJobRef(run_id="test-run", backend="nemo-customizer")
+
+            with pytest.raises(RuntimeError, match="failed"):
+                await adapter.wait_until_complete(ref, poll_interval=0.01)
+
+            # Should have tried 5 times (custom value)
+            assert mock_status.call_count == 5
+
+    async def test_wait_until_complete_failure_counter_resets(self, adapter_config):
+        """Test that failure counter resets after successful status check."""
+        adapter = NeMoCustomizerTrainerAdapter(adapter_config=adapter_config)
+        adapter._active_jobs["test-run"] = "job-123"
+        adapter._job_output_models["test-run"] = "output-model"
+
+        failure_status = TrainingJobStatus(
+            run_id="test-run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.FAILED,
+            message="Error getting status: Connection timeout",
+        )
+        running_status = TrainingJobStatus(
+            run_id="test-run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.RUNNING,
+            progress=50.0,
+        )
+        completed_status = TrainingJobStatus(
+            run_id="test-run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.COMPLETED,
+            progress=100.0,
+        )
+
+        # Sequence: fail, fail, succeed (running), fail, fail, succeed (completed)
+        # This tests that the counter resets after success
+        with patch.object(adapter, "status", new_callable=AsyncMock) as mock_status:
+            mock_status.side_effect = [
+                failure_status,  # fail 1
+                failure_status,  # fail 2
+                running_status,  # success - resets counter
+                failure_status,  # fail 1 (counter reset)
+                failure_status,  # fail 2
+                completed_status,  # success - completes
+            ]
+
+            ref = TrainingJobRef(run_id="test-run", backend="nemo-customizer")
+            result = await adapter.wait_until_complete(ref, poll_interval=0.01)
+
+            assert result.status == TrainingStatusEnum.COMPLETED
+            assert mock_status.call_count == 6
+
+    async def test_wait_until_complete_actual_job_failure_not_retried(self, adapter_config):
+        """Test that actual job failures (not status check errors) are not retried."""
+        adapter = NeMoCustomizerTrainerAdapter(adapter_config=adapter_config)
+        adapter._active_jobs["test-run"] = "job-123"
+        adapter._job_output_models["test-run"] = "output-model"
+
+        # This is an actual job failure, not a status check error
+        job_failure_status = TrainingJobStatus(
+            run_id="test-run",
+            backend="nemo-customizer",
+            status=TrainingStatusEnum.FAILED,
+            message="Training failed: Out of memory",
+            progress=50.0,
+        )
+
+        with patch.object(adapter, "status", new_callable=AsyncMock) as mock_status:
+            mock_status.return_value = job_failure_status
+
+            ref = TrainingJobRef(run_id="test-run", backend="nemo-customizer")
+
+            with pytest.raises(RuntimeError, match="failed"):
+                await adapter.wait_until_complete(ref, poll_interval=0.01)
+
+            # Should only be called once - actual job failures are not retried
+            assert mock_status.call_count == 1
 
 
 class TestTrainerAdapterIntegration:

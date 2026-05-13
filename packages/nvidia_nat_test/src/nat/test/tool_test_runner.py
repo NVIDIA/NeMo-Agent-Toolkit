@@ -303,12 +303,6 @@ class MockBuilder(Builder):
         """Mock implementation for object store config."""
         return ObjectStoreBaseConfig()
 
-    def get_user_manager(self):
-        """Mock implementation."""
-        mock_user = MagicMock()
-        mock_user.get_id = MagicMock(return_value="test_user")
-        return mock_user
-
     def get_function_dependencies(self, fn_name: str) -> FunctionDependencies:
         """Mock implementation."""
         return FunctionDependencies()
@@ -392,23 +386,21 @@ class ToolTestRunner:
     full workflow setup, LLMs, or complex dependencies.
 
     Usage:
-        runner = ToolTestRunner()
-
-        # Test a tool with minimal setup
-        result = await runner.test_tool(
-            config_type=MyToolConfig,
-            config_params={"param1": "value1"},
-            input_data="test input"
-        )
-
-        # Test a tool with mocked dependencies
-        async with runner.with_mocks() as mock_builder:
-            mock_builder.mock_llm("my_llm", "mocked response")
-            result = await runner.test_tool(
-                config_type=MyToolConfig,
-                config_params={"llm_name": "my_llm"},
-                input_data="test input"
-            )
+    >>> runner = ToolTestRunner()
+    >>> # Test a tool with minimal setup
+    >>> result = await runner.test_tool(
+    ...     config_type=MyToolConfig,
+    ...     config_params={"param1": "value1"},
+    ...     input_data="test input"
+    ... )
+    >>> # Test a tool with mocked dependencies
+    >>> async with runner.with_mocks() as mock_builder:
+    >>>     mock_builder.mock_llm("my_llm", "mocked response")
+    >>>     result = await runner.test_tool(
+    ...         config_type=MyToolConfig,
+    ...         config_params={"llm_name": "my_llm"},
+    ...         input_data="test input"
+    ...     )
     """
 
     def __init__(self):
@@ -505,13 +497,13 @@ class ToolTestRunner:
         Context manager that provides a mock builder for setting up dependencies.
 
         Usage:
-            async with runner.with_mocks() as mock_builder:
-                mock_builder.mock_llm("my_llm", "mocked response")
-                result = await runner.test_tool_with_builder(
-                    config_type=MyToolConfig,
-                    builder=mock_builder,
-                    input_data="test input"
-                )
+        >>> async with runner.with_mocks() as mock_builder:
+        >>>     mock_builder.mock_llm("my_llm", "mocked response")
+        >>>     result = await runner.test_tool_with_builder(
+        ...         config_type=MyToolConfig,
+        ...         builder=mock_builder,
+        ...         input_data="test input"
+        ...     )
         """
         mock_builder = MockBuilder()
         try:
@@ -599,13 +591,13 @@ async def with_mocked_dependencies():
     Convenience context manager for testing tools with mocked dependencies.
 
     Usage:
-        async with with_mocked_dependencies() as (runner, mock_builder):
-            mock_builder.mock_llm("my_llm", "mocked response")
-            result = await runner.test_tool_with_builder(
-                config_type=MyToolConfig,
-                builder=mock_builder,
-                input_data="test input"
-            )
+    >>> async with with_mocked_dependencies() as (runner, mock_builder):
+    >>>     mock_builder.mock_llm("my_llm", "mocked response")
+    ...     result = await runner.test_tool_with_builder(
+    ...         config_type=MyToolConfig,
+    ...         builder=mock_builder,
+    ...         input_data="test input"
+    ...     )
     """
     runner = ToolTestRunner()
     async with runner.with_mocks() as mock_builder:

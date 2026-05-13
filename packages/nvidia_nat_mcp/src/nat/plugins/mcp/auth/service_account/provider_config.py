@@ -41,7 +41,7 @@ class ServiceTokenConfig(BaseModel):
     If function returns ``tuple[str, str]``, it's interpreted as (header_name, token).
     If function returns ``str``, it's the token and header field is used for header name.
 
-    The function can access runtime context via AIQContext.get() if needed.
+    The function can access runtime context via Context.get() if needed.
     """
 
     # Static token approach
@@ -60,7 +60,7 @@ class ServiceTokenConfig(BaseModel):
         default=None,
         description=("Python function path that returns service token dynamically (mutually exclusive with token). "
                      "Function signature: async def func(\\**kwargs) -> str | tuple[str, str]. "
-                     "Access runtime context via AIQContext.get() if needed."),
+                     "Access runtime context via Context.get() if needed."),
     )
 
     kwargs: dict[str, typing.Any] = Field(

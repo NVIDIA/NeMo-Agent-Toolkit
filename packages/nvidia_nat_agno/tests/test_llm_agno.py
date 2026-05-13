@@ -20,7 +20,6 @@ from unittest.mock import patch
 import pydantic
 import pytest
 
-from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.nim_llm import NIMModelConfig
@@ -31,11 +30,6 @@ from nat.plugins.agno.llm import openai_agno
 
 class TestNimAgno:
     """Tests for the nim_agno function."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def nim_config(self):
@@ -137,14 +131,23 @@ class TestNimAgno:
                 mock_nvidia.assert_called_once()
                 assert nvidia_instance == mock_nvidia.return_value
 
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("agno.models.nvidia.Nvidia")
+    async def test_nim_agno_verify_ssl_passed_to_client(self,
+                                                        mock_nvidia,
+                                                        nim_config,
+                                                        mock_builder,
+                                                        mock_httpx_async_client,
+                                                        verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        nim_config.verify_ssl = verify_ssl
+        async with nim_agno(nim_config, mock_builder):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
 
 class TestOpenAIAgno:
     """Tests for the openai_agno function."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def openai_config(self):
@@ -244,3 +247,17 @@ class TestOpenAIAgno:
             # Should have 'id' field with the model name
             assert call_kwargs["id"] == "test-model"
             assert openai_instance == mock_openai_chat.return_value
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("agno.models.openai.OpenAIChat")
+    async def test_openai_agno_verify_ssl_passed_to_client(self,
+                                                           mock_openai_chat,
+                                                           openai_config,
+                                                           mock_builder,
+                                                           mock_httpx_async_client,
+                                                           verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        openai_config.verify_ssl = verify_ssl
+        async with openai_agno(openai_config, mock_builder):
+            mock_httpx_async_client.assert_called_once()
+            assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl

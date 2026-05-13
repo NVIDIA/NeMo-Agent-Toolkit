@@ -839,7 +839,7 @@ If you change `engine_args` after the ART server has already started vLLM, you m
 
 ## Further Reading
 
-- [NeMo Agent toolkit Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
-- [NeMo Agent toolkit Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
+- [NeMo Agent Toolkit Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md)
+- [NeMo Agent Toolkit Finetuning Extension Guide](../../../docs/source/extend/custom-components/finetuning.md)
 - [OpenPipe ART Integration](../../../docs/source/improve-workflows/finetuning/rl_with_openpipe.md)
 - [OpenPipe ART Documentation](https://art.openpipe.ai/)
