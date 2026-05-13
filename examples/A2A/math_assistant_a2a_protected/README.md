@@ -428,7 +428,6 @@ This setup is for **development and testing only**. For production:
 ## Related Examples
 
 - [Math Assistant A2A](../math_assistant_a2a/) - Unprotected A2A client example
-- [Currency Agent A2A](../currency_agent_a2a/) - External A2A service integration
 
 ## References
 
