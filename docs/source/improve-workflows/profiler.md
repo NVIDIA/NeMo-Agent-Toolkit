@@ -328,7 +328,7 @@ We will begin by creating a workflow to profile, explore some of the configurati
 
 ### Defining a Workflow
 For this guide, we will use a simple, but useful, workflow that analyzes the body of a given email to determine if it is a Phishing email. We will define a single tool that takes an email body as input and returns a response on
-whether the email is a Phishing email or not. We will then add that tool as the only tool available to the `tool_calling` agent pre-built in the NeMo Agent Toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/evaluation_and_profiling/email_phishing_analyzer/`.
+whether the email is a Phishing email or not. We will then add that tool as the only tool available to the agent pre-built in the NeMo Agent Toolkit library. Below is the implementation of the phishing tool. The source code for this example can be found at `examples/evaluation_and_profiling/email_phishing_analyzer/`.
 
 ### Configuring the Workflow
 The configuration file for the workflow is as follows. Here, pay close attention to how the `profiler` and `eval` sections are configured.
@@ -406,52 +406,55 @@ To run the profiler, simply run the `nat eval` command with the workflow configu
 nat eval --config_file examples/evaluation_and_profiling/email_phishing_analyzer/configs/<config_file>.yml
 ```
 
-Among other files, this will produce a `standardized_results_all.csv` file in the `output_dir` specified in the configuration file. This file will contain the profiling results of the workflow that we will use for the rest of the analysis.
+Among other files, this will produce a `standardized_data_all.csv` file in the `output_dir` specified in the configuration file. This file will contain the profiling results of the workflow that we will use for the rest of the analysis.
 
 ### Analyzing the Profiling Results
-The remainder of this guide will demonstrate how to perform a simple analysis of the profiling results using the `standardized_results_all.csv` file to compare the performance of various LLMs and evaluate the workflow's efficiency.
+The remainder of this guide will demonstrate how to perform a simple analysis of the profiling results using the `standardized_data_all.csv` file to compare the performance of various LLMs and evaluate the efficiency of the workflow.
 Ultimately, we will use the collected telemetry data to identify which LLM we think is the best fit for our workflow.
 
 Particularly, we evaluate the following models:
-- `meta-llama-3.1-8b-instruct`
-- `meta-llama-3.1-70b-instruct`
-- `mixtral-8x22b-instruct`
-- `phi-3-medium-4k-instruct`
-- `phi-3-mini-4k-instruct`
+- `meta/llama-3.1-8b-instruct`
+- `meta/llama-3.3-70b-instruct`
+- `mistralai/mistral-large-3-675b-instruct-2512`
+- `mistralai/mistral-small-4-119b-2603`
+- `nvidia/nemotron-3-nano-30b-a3b`
+- `nvidia/nemotron-3-super-120b-a12b`
 
-We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_results_all.csv` file to compare the performance of the LLMs.
+Each of the above models has an associated workflow in the `examples/evaluation_and_profiling/email_phishing_analyzer/configs` directory. We run evaluation of the workflow on a small dataset of emails and compare the performance of the LLMs based on the metrics provided by the profiler. Once we run `nat eval`, we can analyze the `standardized_data_all.csv` file to compare the performance of the LLMs.
 
-Henceforth, we assume that you have run the `nat eval` command and have the `standardized_results_all.csv` file in the `output_dir` specified in the configuration file. Please also take a moment to create a CSV file containing the concatenated results of the LLMs you wish to compare.
+Henceforth, we assume that you have run the `nat eval` command and have the `standardized_data_all.csv` file in the `output_dir` specified in the configuration file. Please also take a moment to create a CSV file containing the concatenated results of the LLMs you wish to compare.
 
 ### Plotting Prompt vs Completion Tokens for LLMs
-One of the first things we can do is to plot the prompt vs completion tokens for each LLM. This will give us an idea of how the LLMs are performing in terms of token usage. We can use the `standardized_results_all.csv` file to plot this data.
+One of the first things we can do is to plot the prompt vs completion tokens for each LLM. This will give us an idea of how the LLMs are performing in terms of token usage. We can use the `standardized_data_all.csv` file to plot this data.
 
 ```python
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-df = pd.read_csv("standardized_results_all.csv")
+df = pd.read_csv("standardized_data_all.csv")
 # Filter LLM_END events
 df_llm_end = df[df["event_type"] == "LLM_END"]
 
 # Plot scatter plot
-plt.figure(figsize=(10, 6))
+fig, ax = plt.subplots(figsize=(14, 6))
 sns.scatterplot(
     data=df_llm_end,
     x="prompt_tokens",
     y="completion_tokens",
     hue="llm_name",
     style="function_name",
-    s=100  # Marker size
+    s=100,  # Marker size
+    ax=ax
 )
 
 # Customize the plot
-plt.xlabel("Prompt Tokens", fontsize=12)
-plt.ylabel("Completion Tokens", fontsize=12)
-plt.title("Prompt Tokens vs Completion Tokens by LLM and Function", fontsize=14)
-plt.legend(title="LLM / Function", bbox_to_anchor=(1.05, 1), loc="upper left")
-plt.grid(True)
+ax.set_xlabel("Prompt Tokens", fontsize=12)
+ax.set_ylabel("Completion Tokens", fontsize=12)
+ax.set_title("Prompt Tokens vs Completion Tokens by LLM and Function", fontsize=14)
+ax.legend(title="LLM / Function", bbox_to_anchor=(1.02, 1), loc="upper left", borderaxespad=0)
+ax.grid(True)
+fig.subplots_adjust(right=0.65)
 plt.show()
 ```
 
@@ -460,11 +463,10 @@ Below is an example of what the plot might look like:
 
 ![Prompt vs Completion Tokens](../_static/profiler_token_scatter.png)
 
-We see from the image above that the `meta-llama-3.1-8b-instruct` LLM has the highest prompt token usage and takes many more turns than any other model, perhaps indicating that it fails at tool calling. We also note that none of the `phi-3-*` models succeed at any tool calling, as they have no completion tokens in the
-`email_phishing_analyzer` function. This could be due to the fact that the `phi-3-*` models are not well-suited for the task at hand.
+We see from the image above that the `llama-3.1-8b-instruct` and `llama-3.3-70b-instruct` LLMs have the highest prompt token usage, perhaps indicating that they fail at tool calling.
 
 ### Analyzing Workflow Runtimes
-Another important metric to analyze is the workflow runtime. We can use the `standardized_results_all.csv` file to plot the workflow runtime for each LLM. This will give us an idea of how long each LLM takes to complete the workflow and compare if some LLMs are more efficient than others.
+Another important metric to analyze is the workflow runtime. We can use the `standardized_data_all.csv` file to plot the workflow runtime for each LLM. This will give us an idea of how long each LLM takes to complete the workflow and compare if some LLMs are more efficient than others.
 
 ```python
 df["event_timestamp"] = pd.to_numeric(df["event_timestamp"])
@@ -481,11 +483,12 @@ df_runtime = df_llm.groupby(["example_number", "llm_name"]).agg(
 # Compute runtime
 df_runtime["runtime_seconds"] = df_runtime["end_time"] - df_runtime["start_time"]
 
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 8))
 sns.boxplot(
     data=df_runtime,
     x="llm_name",
-    y="runtime_seconds"
+    y="runtime_seconds",
+    hue="llm_name"
 )
 
 # Set log scale for y-axis
@@ -497,41 +500,32 @@ plt.ylabel("Runtime (log10 scale, seconds)", fontsize=12)
 plt.title("Example Runtime per LLM Model (Log Scale)", fontsize=14)
 plt.xticks(rotation=45)
 plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+plt.tight_layout()
 plt.show()
 ```
 
 We use the log scale for the y-axis to better visualize the runtime differences between the LLMs. The box plot will show the runtime of each LLM model for each example in the dataset. Below is an example of what the plot might look like:
 ![LLM Runtime](../_static/profiler_runtimes.png)
 
-From the image above, we see that the `mixtral-8x22b-instruct` LLM has the highest runtime, indicating that it takes the longest to complete the workflow. The `phi-3-mini-4k-instruct` LLM has the lowest runtime, ostensibly due to the fact that it does not call tools at all and is the smallest model.
-At the log scale, the `mixtral-8x22b-instruct` model take more than 10x longer than most other models.
+From the image above, we see that the `mistral-large-3-675b-instruct-2512` LLM has both the highest runtime and the widest range of runtimes. Indicating that in the worst-case takes the longest to complete the workflow.
 
 ### Analyzing Token Efficiency
-Let us collect one more piece of information from the `standardized_results_all.csv` file to compare the performance of the LLMs. We will look at the total prompt and completion tokens generated by each LLM to determine which LLM is the most efficient in terms of token usage.
+Let us collect one more piece of information from the `standardized_data_all.csv` file to compare the performance of the LLMs. We will look at the total prompt and completion tokens generated by each LLM to determine which LLM is the most efficient in terms of token usage.
 
 ```python
 # Aggregate total prompt and completion tokens per example and LLM
-df_tokens = df_llm_end.groupby(["example_number", "llm_name"]).agg(
-    total_prompt_tokens=("prompt_tokens", "sum"),
-    total_completion_tokens=("completion_tokens", "sum")
-).reset_index()
+df_tokens = df_llm_end.groupby(["example_number",
+                                "llm_name"]).agg(total_prompt_tokens=("prompt_tokens", "sum"),
+                                                 total_completion_tokens=("completion_tokens", "sum")).reset_index()
 
 # Reshape data for plotting
-df_tokens_melted = df_tokens.melt(
-    id_vars=["example_number", "llm_name"],
-    value_vars=["total_prompt_tokens", "total_completion_tokens"],
-    var_name="Token Type",
-    value_name="Token Count"
-)
+df_tokens_melted = df_tokens.melt(id_vars=["example_number", "llm_name"],
+                                  value_vars=["total_prompt_tokens", "total_completion_tokens"],
+                                  var_name="Token Type",
+                                  value_name="Token Count")
 
-plt.figure(figsize=(12, 6))
-sns.barplot(
-    data=df_tokens_melted,
-    x="llm_name",
-    y="Token Count",
-    hue="Token Type",
-    ci=None
-)
+fig, ax = plt.subplots(figsize=(14, 8))
+sns.barplot(data=df_tokens_melted, x="llm_name", y="Token Count", hue="Token Type", errorbar=None, ax=ax)
 
 # Set log scale for y-axis
 plt.yscale("log")
@@ -541,41 +535,122 @@ plt.xlabel("LLM Model", fontsize=12)
 plt.ylabel("Total Token Count per Example (log10 scale)", fontsize=12)
 plt.title("Total Prompt and Completion Tokens per Example by LLM Model (Log Scale)", fontsize=14)
 plt.xticks(rotation=45)
-plt.legend(title="Token Type")
+plt.legend(title="Token Type", loc="upper left", bbox_to_anchor=(1.01, 1), borderaxespad=0)
 plt.grid(axis="y", linestyle="--", linewidth=0.5, which="both")
+fig.tight_layout(rect=(0, 0, 0.88, 1))
+plt.savefig('profiler_token_efficiency.png', dpi=300, bbox_inches="tight")
 plt.show()
 ```
 
 The bar plot will show the total prompt and completion tokens generated by each LLM for each example in the dataset. Below is an example of what the plot might look like:
 ![Token Efficiency](../_static/profiler_token_efficiency.png)
 
-We see that the `llama-3.1-8b-instruct` LLM generates the most tokens, both prompt and completion, indicating that it is the most verbose model. The `phi-3-mini-4k-instruct` LLM generates the fewest tokens, indicating that it is the most efficient model in terms of token usage. `llama-3.1-70b-instruct` and `mixtral-8x22b-instruct` are in the middle in terms of token usage, indicating that they may be reasonable choices.
+We see that the `llama-3.3-70b-instruct` LLM generates the most tokens, indicating that it is the most verbose model. The `mistral-large-3-675b-instruct-2512` LLM generates the fewest tokens, indicating that it is the most efficient model in terms of token usage.
 
 ### Understanding Where the Models Spend Time
 We can also analyze the bottleneck analysis provided by the profiler to understand where the LLMs spend most of their time. This can help us identify potential bottlenecks in the workflow and optimize the LLMs accordingly.
-For example, we can explore why the `mixtral-8x22b-instruct` model has such a long runtime!. To do so, we can directly visualize the `Gantt charts` produced by the `nested stack analysis` in the `bottleneck_analysis` section of the profiler configuration for each model.
+For example, we can explore why the `mistral-large-3-675b-instruct-2512` model has such a long runtime in the worst-case scenario. To do so, we can directly visualize the `Gantt charts` produced by the `nested stack analysis` in the `bottleneck_analysis` section of the profiler configuration for each model.
 Let's look at one below:
 
-![ time chart one ](../_static/mixtral_gantt_chart.png)
+![ time chart one ](../_static/mistral-large-3-675b-instruct-2512_gantt_chart.png)
 
 It is interesting here that most of the latency comes from the initial invocation of the agent, wherein it reasons and decides on whether to call a tool. Subsequent steps take much less time in seconds, which is the axis of the `Gantt` chart.
-On the other hand, the `llama-3.3-70b-instruct` model has a much more balanced distribution of time across the workflow, indicating that it is more efficient in terms of time usage for a model of roughly equivalent size.
 
-![ time chart two ](../_static/llama3_70b_gantt_chart.png)
+On the other hand, the `nemotron-3-nano-30b-a3b` model has a more balanced distribution of time across the workflow, indicating that it is more time-efficient model.
 
-However, the `llama-3.3-70b-instruct` model fails to call the appropriate tool in the `email_phishing_analyzer` function, which may cause its responses to be less relevant our grounded. Let us explore those metrics below.
+![ time chart two ](../_static/nemotron-3-nano-30b-a3b_gantt_chart.png)
 
 ### Analyzing Ragas Metrics
-Finally, we can analyze the Ragas metrics provided by the profiler to evaluate the performance of the LLMs. We can use the output of the `eval` harness to compare the accuracy, groundedness, and relevance of the responses generated by each LLM.
+Finally, we can analyze the Ragas metrics provided by the profiler to evaluate the performance of the LLMs. We can use the output of the `eval` harness to compare the accuracy, relevance, and groundedness of the responses generated by each LLM.
 
-Below is plot visualizing the accuracy, groundedness, and relevance of the responses generated by each LLM:
+The accuracy, relevance, and groundedness metrics are stored in `accuracy_output.json`, `relevance_output.json`, and `groundedness_output.json` files in the output directory specified in the configuration file. We can read these files and plot the metrics for each LLM to compare their performance.
+
+```python
+import json
+import os
+from collections import OrderedDict
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+
+CUR_DIR = Path(os.getcwd())
+
+MODELS = ("llama-3.1-8b-instruct",
+          "llama-3.3-70b-instruct",
+          "mistral-large-3-675b-instruct-2512",
+          "mistral-small-4-119b-2603",
+          "nemotron-3-nano-30b-a3b",
+          "nemotron-3-super-120b-a12b")
+
+METRICS_FILE_NAMES = OrderedDict(Accuracy="accuracy_output.json",
+                                 Relevance="relevance_output.json",
+                                 Groundedness="groundedness_output.json")
+
+
+def gather_model_metrics(model_dir: Path) -> dict:
+    metrics = {}
+    for metric_name, file_name in METRICS_FILE_NAMES.items():
+        with open(model_dir / file_name, encoding="utf-8") as f:
+            json_data = json.load(f)
+
+        metrics[metric_name] = json_data["average_score"]
+
+    return metrics
+
+
+def gather_metrics() -> dict:
+    all_metrics = {metric: {} for metric in METRICS_FILE_NAMES}
+    for model_name in MODELS:
+        model_dir_path = CUR_DIR / "test_models" / model_name
+        try:
+            model_metrics = gather_model_metrics(model_dir_path)
+            for metric_name, score in model_metrics.items():
+                all_metrics[metric_name][model_name] = score
+        except Exception as e:
+            print(f"Problem gathering metrics for {model_name}: {e}. Skipping.")
+
+    return all_metrics
+
+
+def plot_metrics(all_metrics: dict):
+    df = pd.DataFrame(all_metrics)
+    df.reset_index(inplace=True)
+    df.rename(columns={"index": "model"}, inplace=True)
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+    sns.barplot(data=df.melt(id_vars="model", var_name="metric", value_name="score"),
+                x="model",
+                y="score",
+                hue="metric",
+                errorbar=None,
+                ax=ax)
+
+    plt.xlabel("LLM Model", fontsize=12)
+    plt.ylabel("Metric Score", fontsize=12)
+    plt.title("Accuracy, Relevance, and Groundedness per Model", fontsize=14)
+    plt.xticks(rotation=45)
+    plt.legend(title="Metric", loc="upper left", bbox_to_anchor=(1.02, 1), borderaxespad=0)
+    plt.grid(axis="y", linestyle="--", linewidth=0.5, which="both")
+    fig.tight_layout(rect=(0, 0, 0.84, 1))
+    plt.savefig('profiler_ragas_metrics.png', dpi=300, bbox_inches="tight")
+    plt.show()
+
+
+if __name__ == "__main__":
+    all_metrics = gather_metrics()
+    plot_metrics(all_metrics)
+```
+
+Below is plot visualizing the accuracy, relevance, and groundedness of the responses generated by each LLM:
 ![Ragas Metrics](../_static/profiler_ragas_metrics.png)
 
-Clearly, the `phi-3-*` models are not good fits given their `groundedness` and `relevance` are both 0, so we will not use them for this workflow. The `llama-3.3-70b-instruct` model has the highest `accuracy` also did not have high `groundedness` and `relevance`, so we will not use it either.
-The `mixtral-8x22b-instruct` model has a much higher runtime than the `llama-3.1-8b-instruct` model, so we will not use it either. The `llama-3.1-8b-instruct` model has the highest `groundedness` and `relevance`, so we will use it for our workflow.
+The Ragas metrics confirm that the `llama-3*` models are weak candidates for this workflow because their lower scores align with the tool-calling issues observed earlier. The two Nemotron models provide the best quality tradeoff, with strong `accuracy` and `groundedness` scores across the evaluation set. Of those, `nemotron-3-super-120b-a12b` is the strongest default choice because it preserves those quality scores, while slightly improving `relevance`. `nemotron-3-nano-30b-a3b` remains a good alternative when latency or cost is the higher priority.
+
 
 ### Conclusion
-In this guide, we walked through an end-to-end example of how to profile a NeMo Agent Toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the workflow's efficiency. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
+In this guide, we walked through an end-to-end example of how to profile a NeMo Agent Toolkit workflow using the profiler. We defined a simple workflow, configured the profiler, ran the profiler, and analyzed the profiling results to compare the performance of various LLMs and evaluate the efficiency of the workflow. We used the collected telemetry data to identify which LLM we think is the best fit for our workflow. We hope this guide has given you a good understanding of how to profile a workflow and analyze the results to make informed decisions about your workflow configuration.
 
 If you'd like to optimize further, we recommend exploring the `workflow_profiling_report.txt` file that was also created by the profiler. That has detailed information about workflow bottlenecks, and latency at various `concurrencies`, which can be helpful metrics when identifying performance issues in your workflow.
 

@@ -2071,7 +2071,12 @@ dependencies = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = "~=2.11" }]
+requires-dist = [
+    { name = "jsonschema", marker = "extra == 'full'", specifier = ">=4.0" },
+    { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
+    { name = "pydantic", specifier = "~=2.11" },
+]
+provides-extras = ["full", "test"]
 
 [[package]]
 name = "nvidia-nat-core"
