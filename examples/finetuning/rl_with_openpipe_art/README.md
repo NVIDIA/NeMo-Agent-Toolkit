@@ -19,6 +19,8 @@ limitations under the License.
 
 # Reinforcement Learning with OpenPipe ART: Tic-Tac-Toe Example
 
+**Complexity:** 🛑 Advanced
+
 This example demonstrates how to use the NeMo Agent Toolkit finetuning harness with [OpenPipe ART](https://art.openpipe.ai/) (Agent Reinforcement Trainer) to improve an LLM's performance at playing Tic-Tac-Toe through reinforcement learning.
 
 The model learns to play against a **random opponent**, receiving rewards based on game-theoretic position evaluation rather than simple win/loss outcomes. This continuous reward signal enables more effective learning than sparse binary rewards.
@@ -59,23 +61,38 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 3. **OpenPipe ART** installed in a **separate virtual environment**:
 
-   OpenPipe ART has specific dependency requirements that may conflict with NeMo Agent toolkit. We recommend installing it in an isolated environment:
+   OpenPipe ART has specific dependency requirements that conflict with NeMo Agent Toolkit. It must live in its own environment:
 
    ```bash
-   # Create a separate virtual environment for ART
-   uv venv art-env --python 3.13
+   # 1) Python 3.12 is required. The 0.9.2 vLLM ART needs pulls in
+   #    outlines-core==0.1.26, which has no Py3.13 wheel and requires Rust to build.
+   uv venv art-env --python 3.12
    source art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
-   # Install OpenPipe ART
-   uv pip install openpipe-art[backend]==0.4.11
 
-   # Verify installation
+   # 2) Install ART backend + pin vLLM exactly to 0.9.2.
+   #    The 0.4.11 extra allows up to vllm 0.10.0, but 0.10.0 hardens the
+   #    expandable_segments check and breaks the unsloth path.
+   uv pip install --no-cache 'openpipe-art[backend]==0.4.11' 'vllm==0.9.2'
+
+   # 3) Force gql >= 4.0.0. weave 0.52.39 (pulled transitively) imports
+   #    TransportConnectionFailed which only exists in gql 4+. Without this,
+   #    `art --help` fails with an ImportError before anything runs.
+   uv pip install --no-cache 'gql>=4.0.0'
+
+   # 4) Verify installation
    art --help
+   ```
+
+   If you previously created the venv on a different Python (e.g. 3.13), clear Triton's content-hashed but ABI-unaware kernel cache or you will hit `SystemError: PY_SSIZE_T_CLEAN macro must be defined for '#' formats` at first model load:
+
+   ```bash
+   rm -rf ~/.triton/cache /tmp/torchinductor_* ~/.cache/torch_inductor
    ```
 
    For detailed installation instructions, see the [OpenPipe ART Getting Started Guide](https://art.openpipe.ai/getting-started/about).
 
-4. **This example package**:
+4. **This example package in your NeMo Agent Toolkit environment**:
    ```bash
    uv pip install -e examples/finetuning/rl_with_openpipe_art
    ```
@@ -196,9 +213,11 @@ curl http://localhost:8000/v1/models
 
 ### 1.2 Run Pre-Training Evaluation
 
-In a **separate terminal** with your NeMo Agent toolkit environment activated:
+In a **separate terminal** with your NeMo Agent Toolkit environment activated:
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 # Run the pre-training evaluation
 nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_pre_train.yml --reps 3
 ```
@@ -215,7 +234,9 @@ Once the evaluation completes, stop the vLLM server (`Ctrl+C`) to free GPU memor
 
 ## Step 2: Starting the OpenPipe ART Training Server
 
-The ART server handles both inference and training. It runs vLLM for serving the model and TorchTune for GRPO weight updates.
+The ART server handles both inference and training. It runs vLLM for serving the model and Unsloth for GRPO weight updates using LoRA adapters by default.
+
+> **Note**: The default configuration uses **Unsloth LoRA finetuning**. Full-weight training requires additional TorchTune configuration through the `torchtune_args` field in the trainer adapter backend config. Refer to the [OpenPipe ART documentation](https://art.openpipe.ai/) for details.
 
 In your **ART virtual environment**:
 
@@ -224,11 +245,27 @@ In your **ART virtual environment**:
 source art-env/bin/activate
 export HF_TOKEN=<your_huggingface_token>
 
+# Make sure no legacy workarounds are inherited from earlier attempts.
+unset IMPORT_PEFT IMPORT_UNSLOTH
+
+# Prevent unsloth from setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True at
+# import time. vLLM 0.9+ uses torch.cuda.MemPool for model loading and refuses to
+# coexist with expandable_segments; without this you'll see
+# `RuntimeError: torch.cuda.MemPool doesn't currently support expandable_segments`
+# from inside _prepare_backend_for_training.
+export UNSLOTH_VLLM_STANDBY=1
+
+# When the training config enables sleep_mode, ART forces IMPORT_PEFT=1 on its
+# spawned model service, which then runs `os.environ["PYTORCH_CUDA_ALLOC_CONF"]`
+# without a default. The env var must exist (even as empty) or the child raises
+# KeyError before vLLM is even reached.
+export PYTORCH_CUDA_ALLOC_CONF=
+
 # Start the ART server
-uv run art --host 0.0.0.0 --port 7623
+art --host 0.0.0.0 --port 7623
 ```
 
-> **Note**: The ART server listens on port `7623` for training commands and starts vLLM internally on port `8000` for inference.
+> **Note**: The ART server listens on port `7623` for training commands and starts vLLM internally on port `8000` for inference. If you connect to a remote ART host, forward **both** ports (e.g. `ssh -L 7623:127.0.0.1:7623 -L 8000:127.0.0.1:8000 …`); the NAT-side health check and rollouts target `:8000` directly.
 
 Wait for the server to initialize. You should see output indicating:
 - Training server ready
@@ -255,7 +292,11 @@ The training configuration is in `src/rl_with_openpipe_art/configs/config.yml`:
 llms:
   openpipe_llm:
     _type: openai
-    model_name: Qwen/Qwen2.5-3B-Instruct
+    # With LoRA finetuning (default): model_name must match backend.name below
+    # so that inference routes to the latest LoRA checkpoint, not the base model.
+    # With full-weight training: model_name must match backend.base_model below
+    # as updated weights are loaded directly into vLLM under the base model name.
+    model_name: tic_tac_toe_training_run
     base_url: http://localhost:8000/v1
     api_key: default
     temperature: 0.4  # Some randomness for exploration
@@ -271,7 +312,7 @@ eval:
     output_dir: .tmp/nat/examples/rl_openpipe/eval/finetune
     dataset:
       _type: json
-      file_path: examples/finetuning/rl_with_openpipe_art/data/data.json
+      file_path: examples/finetuning/rl_with_openpipe_art/src/rl_with_openpipe_art/data/data.json
 
   evaluators:
     rl_accuracy:
@@ -288,7 +329,7 @@ trainer_adapters:
     backend:
       ip: "0.0.0.0"
       port: 7623
-      name: "tic_tac_toe_training"
+      name: "tic_tac_toe_training_run"
       project: "tic_tac_toe_project"
       base_model: "Qwen/Qwen2.5-3B-Instruct"
       api_key: "default"
@@ -298,7 +339,8 @@ trainer_adapters:
         gpu_memory_utilization: 0.9
         tensor_parallel_size: 1
     training:
-      learning_rate: 1e-6  # Conservative learning rate
+      learning_rate: 1e-5
+      beta: 0.1
 
 finetuning:
   enabled: true
@@ -307,15 +349,19 @@ finetuning:
   trainer_adapter: openpipe_trainer_adapter
   reward_function:
     name: rl_accuracy
-  num_epochs: 10
+  num_epochs: 8
   output_dir: ./.tmp/nat/finetuning/tic_tac_toe
 ```
 
+> **Important**: With LoRA finetuning (the default), the ART backend registers each LoRA adapter in vLLM under the training run name (`backend.name`). The `model_name` in the LLM config **must match** this name so that inference requests are routed to the latest LoRA checkpoint. If `model_name` points to the base model (`Qwen/Qwen2.5-3B-Instruct`), every epoch will evaluate the unchanged base model, and GRPO training will have no effect.
+
 ### 3.2 Start Training
 
-In your **NeMo Agent toolkit environment**:
+In your **NeMo Agent Toolkit environment**:
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 nat finetune --config_file examples/finetuning/rl_with_openpipe_art/configs/config.yml
 ```
 
@@ -569,10 +615,15 @@ The ART server continues serving the finetuned model weights. Do not restart it,
 ### 6.2 Run Post-Training Evaluation
 
 ```bash
+# This is a dummy key for local vLLM usage
+export OPENAI_API_KEY=default
 nat eval --config_file examples/finetuning/rl_with_openpipe_art/configs/config_post_train.yml --reps 3
 ```
 
 Compare the post-training win percentage against the pre-training baseline. You should see a notable improvement.
+
+> [!NOTE]
+> Due to the stochastic nature of reinforcement learning, you may notice a decrease in performance in some training attempts. Please try running the training again or follow the troubleshooting guide below.
 
 ---
 
@@ -641,13 +692,46 @@ finetuning:
 
 #### "Failed to connect to ART backend"
 
-**Cause**: ART server not running or wrong port.
+**Cause**: ART server not running, wrong port, or vLLM (`:8000`) unreachable from the NAT side.
 
 **Solution**:
 ```bash
-# Check if ART server is running
-curl http://localhost:7623/health
+# Confirm ART is up
+curl http://localhost:7623/healthcheck
+
+# Confirm vLLM (started by ART) is up — should respond, even with 401
+curl http://localhost:8000/v1/models
 ```
+
+If ART is running on a remote host, make sure your SSH tunnel forwards **both** ports: `ssh -L 7623:127.0.0.1:7623 -L 8000:127.0.0.1:8000 …`. The trainer adapter health check and all rollouts hit `:8000` directly.
+
+#### `Server error '500 Internal Server Error' for url '…/_prepare_backend_for_training'`
+
+**Cause**: The 500 always comes from the ART server's own vLLM/Unsloth startup. The wire-level message is generic — you have to inspect the ART server's stderr to see the real exception. Two very common shapes:
+
+1. `RuntimeError: torch.cuda.MemPool doesn't currently support expandable_segments.` — Unsloth sets `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` at import time and vLLM 0.9+ refuses to coexist with it. Restart `art` with `UNSLOTH_VLLM_STANDBY=1` and `PYTORCH_CUDA_ALLOC_CONF=` exported (see Step 2).
+2. `KeyError: 'PYTORCH_CUDA_ALLOC_CONF'` — ART's spawned model-service runs `os.environ["PYTORCH_CUDA_ALLOC_CONF"]` without a default. Export the key (empty value is fine) before launching `art` (see Step 2).
+
+#### `BadRequestError: Cannot request more than 0 logprobs`
+
+**Cause**: The trajectory builder needs token logprobs on assistant messages — without them it silently drops every trajectory and you'll see `Built 0 trajectories across 0 examples` epoch after epoch. vLLM defaults `max_logprobs=0`, which makes any client-side request for logprobs a 400.
+
+**Solution**: Make sure the LLM config requests logprobs **and** the ART backend launches vLLM with `max_logprobs >= 1`. Both are already wired up in `configs/config.yml`:
+
+```yaml
+llms:
+  openpipe_llm:
+    logprobs: true
+    top_logprobs: 1
+
+trainer_adapters:
+  openpipe_trainer_adapter:
+    backend:
+      engine_args:
+        max_logprobs: 5
+```
+
+If you change `engine_args` after the ART server has already started vLLM, you must restart the ART server — vLLM caches its config per registered model and won't pick up the new value otherwise.
 
 #### "CUDA out of memory"
 
