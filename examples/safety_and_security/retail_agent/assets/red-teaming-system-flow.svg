@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="650" height="140" viewBox="0 0 650 140">
+  <style>
+    .box { fill: #ffffff; stroke: #333333; stroke-width: 1.5; }
+    .text { font-family: Arial, sans-serif; font-size: 12px; fill: #111111; }
+    .arrow { stroke: #d62728; stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+  </style>
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#d62728"/>
+    </marker>
+  </defs>
+
+  <rect class="box" x="20" y="50" width="160" height="40" rx="4"/>
+  <text class="text" x="100" y="75" text-anchor="middle">RedTeamingRunner</text>
+
+  <rect class="box" x="210" y="50" width="180" height="40" rx="4"/>
+  <text class="text" x="300" y="75" text-anchor="middle">RedTeamingMiddleware</text>
+
+  <rect class="box" x="420" y="50" width="180" height="40" rx="4"/>
+  <text class="text" x="510" y="75" text-anchor="middle">RedTeamingEvaluator</text>
+
+  <line class="arrow" x1="180" y1="70" x2="210" y2="70"/>
+  <line class="arrow" x1="390" y1="70" x2="420" y2="70"/>
+</svg>

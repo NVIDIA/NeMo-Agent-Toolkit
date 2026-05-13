@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 4096
+
+functions:
+  mock_input_validator:
+    _type: mock_input_validator
+  mock_uppercase_converter:
+    _type: mock_uppercase_converter
+  mock_lowercase_converter:
+    _type: mock_lowercase_converter
+  text_processor:
+    _type: text_processor
+  data_analyzer:
+    _type: data_analyzer
+  report_generator:
+    _type: report_generator
+  mock_result_formatter:
+    _type: mock_result_formatter
+  fruit_advisor:
+    _type: mock_fruit_advisor
+  city_advisor:
+    _type: mock_city_advisor
+  
+  # Router Agent -> Sequential Executor
+  text_analysis_pipeline:
+    _type: sequential_executor
+    tool_list: [text_processor, data_analyzer, report_generator]
+    raise_type_incompatibility: false
+    description: "Processes text, analyzes it, and generates a report"
+  
+  # Router Agent -> Sequential Executor -> Router Agent
+  input_formatter:
+    _type: router_agent
+    branches: [mock_uppercase_converter, mock_lowercase_converter]
+    llm_name: nim_llm
+  
+  text_formatting_pipeline:
+    _type: sequential_executor
+    tool_list: [mock_input_validator, input_formatter, mock_result_formatter]
+    raise_type_incompatibility: false
+    description: "Formats text by converting to uppercase or lowercase"
+  
+  # Router Agent -> Router Agent
+  general_advisor:
+    _type: router_agent
+    branches: [fruit_advisor, city_advisor]
+    llm_name: nim_llm
+    description: "Provides advice about fruits or cities"
+
+workflow:
+  _type: router_agent
+  branches: [text_analysis_pipeline, text_formatting_pipeline, general_advisor]
+  llm_name: nim_llm
+  detailed_logs: true

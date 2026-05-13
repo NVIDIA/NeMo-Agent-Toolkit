@@ -38,11 +38,10 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
     import os
 
     from bs4 import BeautifulSoup
+    from langchain_core.messages import AIMessage
     from langchain_core.prompts import PromptTemplate
-    from pydantic import BaseModel
-    from pydantic import Field
 
-    api_token = os.getenv("NVIDIA_API_KEY")
+    api_token: str | None = os.getenv("NVIDIA_API_KEY")
 
     if not api_token:
         raise ValueError(
@@ -51,44 +50,32 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
     llm = await builder.get_llm(llm_name=tool_config.llm_name, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
     tavily_tool = await builder.get_tool(fn_name=tool_config.web_tool, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
 
-    async def web_search(topic: str) -> list[dict]:
+    async def web_search(topic: str) -> str:
         output = (await tavily_tool.ainvoke(topic))
         output = output.split("\n\n---\n\n")
 
         return output[0]
 
-    prompt_template = """
-    You are an expert of extracting topic from user query in order to search on web search engine on a
-    topic extracted from user input.
-    ------
-    {inputs}
-    ------
-    The output MUST use the following format :
-    '''
-    topic: a topic or one keyword to input into web search tool, you can extract ONLY ONE KEYWORD or TOPIC
-    '''
-    Begin!
-    [/INST]
-    """
-    prompt = PromptTemplate(
+    prompt_template: str = """Extract a single keyword or topic from the following user query \
+that can be used to search the web. Return ONLY the keyword or topic, nothing else.
+
+User query: {inputs}
+"""
+    prompt: PromptTemplate = PromptTemplate(
         input_variables=['inputs'],
         template=prompt_template,
     )
 
-    class TopicExtract(BaseModel):
-        topic: str = Field(description="most important keyword that can be used to search on web search engine")
-
-    llm_with_output_structure = llm.with_structured_output(TopicExtract)
-
-    async def execute_tool(out):
+    async def execute_tool(out: AIMessage) -> str:
+        topic: str = out.content.strip()
+        output_summary: str
         try:
-            topic = out.topic
             if topic is not None and topic not in ['', '\n']:
                 output_summary = (await web_search(topic))
                 # Clean HTML tags from the output
                 if isinstance(output_summary, str):
                     # Remove HTML tags using BeautifulSoup
-                    soup = BeautifulSoup(output_summary, 'html.parser')
+                    soup: BeautifulSoup = BeautifulSoup(output_summary, 'html.parser')
                     output_summary = soup.get_text()
                     # Clean up any extra whitespace
                     output_summary = re.sub(r'\s+', ' ', output_summary).strip()
@@ -98,11 +85,10 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
         except Exception as e:
             output_summary = f"this search on web search with topic:{topic} yield not results with an error:{e}"
             logger.exception("error in executing tool: %s", e)
-            pass
 
         return output_summary
 
-    research = (prompt | llm_with_output_structure | execute_tool)
+    research = (prompt | llm | execute_tool)
 
     async def _arun(inputs: str) -> str:
         """
@@ -110,7 +96,7 @@ async def langchain_research(tool_config: LangChainResearchConfig, builder: Buil
         Args:
             inputs : user input
         """
-        output = (await research.ainvoke(inputs))
+        output: str = await research.ainvoke(inputs)
         logger.info("output from langchain_research_tool: %s", output)
 
         return output

@@ -21,16 +21,21 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.data_models.llm import APITypeEnum
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
+from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.dynamo_llm import DynamoModelConfig
+from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.oci_llm import OCIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.plugins.langchain.llm import aws_bedrock_langchain
+from nat.plugins.langchain.llm import azure_openai_langchain
 from nat.plugins.langchain.llm import dynamo_langchain
+from nat.plugins.langchain.llm import litellm_langchain
 from nat.plugins.langchain.llm import nim_langchain
+from nat.plugins.langchain.llm import oci_langchain
 from nat.plugins.langchain.llm import openai_langchain
 
 # ---------------------------------------------------------------------------
@@ -40,10 +45,6 @@ from nat.plugins.langchain.llm import openai_langchain
 
 class TestNimLangChain:
     """Tests for the nim_langchain wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def nim_cfg(self):
@@ -73,6 +74,16 @@ class TestNimLangChain:
                 pass
         mock_chat.assert_not_called()
 
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("langchain_nvidia_ai_endpoints.ChatNVIDIA")
+    async def test_verify_ssl_passed_to_chat_nvidia(self, mock_chat, nim_cfg, mock_builder, verify_ssl):
+        """Test that verify_ssl is passed to ChatNVIDIA."""
+        nim_cfg.verify_ssl = verify_ssl
+        async with nim_langchain(nim_cfg, mock_builder):
+            pass
+        mock_chat.assert_called_once()
+        assert mock_chat.call_args.kwargs["verify_ssl"] is verify_ssl
+
 
 # ---------------------------------------------------------------------------
 # OpenAI → LangChain wrapper tests
@@ -81,10 +92,6 @@ class TestNimLangChain:
 
 class TestOpenAILangChain:
     """Tests for the openai_langchain wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def oa_cfg(self):
@@ -126,6 +133,161 @@ class TestOpenAILangChain:
         assert kwargs["temperature"] == 0.2
         assert kwargs["stream_usage"] is True
 
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_chat,
+                                               oa_cfg,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        mock_httpx_async_client.aclose = AsyncMock()
+        oa_cfg.verify_ssl = verify_ssl
+        async with openai_langchain(oa_cfg, mock_builder):
+            pass
+        mock_httpx_async_client.assert_called_once()
+        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+
+# ---------------------------------------------------------------------------
+# Azure OpenAI → LangChain wrapper tests
+# ---------------------------------------------------------------------------
+
+
+class TestAzureOpenAILangChain:
+    """Tests for the azure_openai_langchain wrapper."""
+
+    @pytest.fixture
+    def azure_cfg(self):
+        return AzureOpenAIModelConfig(
+            azure_deployment="gpt-4",
+            api_key="test-key",
+            azure_endpoint="https://test.openai.azure.com",
+            api_version="2024-02-01",
+        )
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("langchain_openai.AzureChatOpenAI")
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_chat,
+                                               azure_cfg,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        mock_httpx_async_client.aclose = AsyncMock()
+        azure_cfg.verify_ssl = verify_ssl
+        async with azure_openai_langchain(azure_cfg, mock_builder):
+            pass
+        mock_httpx_async_client.assert_called_once()
+        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+
+class TestOCILangChain:
+    """Tests for the oci_langchain wrapper."""
+
+    @pytest.fixture
+    def oci_cfg(self):
+        return OCIModelConfig(
+            model_name="nvidia/Llama-3.1-Nemotron-Nano-8B-v1",
+            compartment_id="ocid1.compartment.oc1..example",
+            region="us-chicago-1",
+            auth_profile="DEFAULT",
+            temperature=0.2,
+            top_p=0.9,
+            max_tokens=512,
+            seed=7,
+        )
+
+    @pytest.fixture
+    def oci_cfg_wrong_api(self):
+        return OCIModelConfig(
+            model_name="nvidia/Llama-3.1-Nemotron-Nano-8B-v1",
+            compartment_id="ocid1.compartment.oc1..example",
+            region="us-chicago-1",
+            api_type=APITypeEnum.RESPONSES,
+        )
+
+    @patch("oci.generative_ai_inference.GenerativeAiInferenceClient")
+    @patch("langchain_oci.common.auth.create_oci_client_kwargs")
+    @patch("nat.plugins.langchain.llm._get_langchain_oci_chat_model")
+    async def test_basic_creation(self,
+                                  mock_get_chat,
+                                  mock_create_client_kwargs,
+                                  mock_oci_client,
+                                  oci_cfg,
+                                  mock_builder):
+        mock_chat_class = MagicMock()
+        mock_get_chat.return_value = mock_chat_class
+        mock_create_client_kwargs.return_value = {
+            "config": {
+                "region": "us-chicago-1"
+            },
+            "service_endpoint": oci_cfg.endpoint,
+            "retry_strategy": object(),
+            "timeout": (10, 240),
+        }
+        oci_cfg.max_retries = 6
+        oci_cfg.request_timeout = 42.0
+
+        async with oci_langchain(oci_cfg, mock_builder) as client:
+            mock_create_client_kwargs.assert_called_once_with(
+                auth_type=oci_cfg.auth_type,
+                service_endpoint=oci_cfg.endpoint,
+                auth_file_location=oci_cfg.auth_file_location,
+                auth_profile=oci_cfg.auth_profile,
+            )
+            mock_oci_client.assert_called_once()
+            assert mock_oci_client.call_args.kwargs["timeout"] == (10, 42.0)
+            mock_chat_class.assert_called_once()
+            kwargs = mock_chat_class.call_args.kwargs
+            assert kwargs["client"] is mock_oci_client.return_value
+            assert kwargs["model_id"] == "nvidia/Llama-3.1-Nemotron-Nano-8B-v1"
+            assert kwargs["service_endpoint"] == "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com"
+            assert kwargs["compartment_id"] == "ocid1.compartment.oc1..example"
+            assert kwargs["auth_profile"] == "DEFAULT"
+            assert kwargs["model_kwargs"] == {
+                "temperature": 0.2,
+                "top_p": 0.9,
+                "max_tokens": 512,
+                "seed": 7,
+            }
+            assert client is mock_chat_class.return_value
+
+    @patch("oci.generative_ai_inference.GenerativeAiInferenceClient")
+    @patch("langchain_oci.common.auth.create_oci_client_kwargs")
+    @patch("nat.plugins.langchain.llm._get_langchain_oci_chat_model")
+    async def test_openai_provider_uses_max_completion_tokens(self,
+                                                              mock_get_chat,
+                                                              mock_create_client_kwargs,
+                                                              mock_oci_client,
+                                                              mock_builder):
+        mock_chat_class = MagicMock()
+        mock_get_chat.return_value = mock_chat_class
+        mock_create_client_kwargs.return_value = {"config": {}}
+
+        cfg = OCIModelConfig(
+            model_name="openai.gpt-5.4",
+            compartment_id="ocid1.compartment.oc1..example",
+            region="us-chicago-1",
+            provider="openai",
+            max_tokens=128,
+        )
+
+        async with oci_langchain(cfg, mock_builder) as _:
+            kwargs = mock_chat_class.call_args.kwargs
+            assert "max_completion_tokens" in kwargs["model_kwargs"]
+            assert "max_tokens" not in kwargs["model_kwargs"]
+            assert kwargs["model_kwargs"]["max_completion_tokens"] == 128
+
+    @patch("nat.plugins.langchain.llm._get_langchain_oci_chat_model")
+    async def test_api_type_validation(self, mock_get_chat, oci_cfg_wrong_api, mock_builder):
+        with pytest.raises(ValueError):
+            async with oci_langchain(oci_cfg_wrong_api, mock_builder):
+                pass
+        mock_get_chat.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # AWS Bedrock → LangChain wrapper tests
@@ -134,10 +296,6 @@ class TestOpenAILangChain:
 
 class TestBedrockLangChain:
     """Tests for the aws_bedrock_langchain wrapper."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def bedrock_cfg(self):
@@ -172,28 +330,24 @@ class TestDynamoLangChain:
     """Tests for the dynamo_langchain wrapper."""
 
     @pytest.fixture
-    def mock_builder(self):
-        return MagicMock(spec=Builder)
-
-    @pytest.fixture
     def dynamo_cfg_no_prefix(self):
-        """Dynamo config without prefix template (no header injection)."""
+        """Dynamo config with nvext hints disabled (no nvext request-body injection)."""
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
-            prefix_template=None,
         )
 
     @pytest.fixture
     def dynamo_cfg_with_prefix(self):
-        """Dynamo config with prefix template (enables header injection)."""
+        """Dynamo config with nvext hints enabled (injects nvext fields into the JSON request body)."""
         return DynamoModelConfig(
             model_name="test-model",
             base_url="http://localhost:8000/v1",
-            prefix_template="session-{uuid}",
-            prefix_total_requests=15,
-            prefix_osl="HIGH",
-            prefix_iat="LOW",
+            enable_nvext_hints=True,
+            nvext_prefix_id_template="session-{uuid}",
+            nvext_prefix_total_requests=15,
+            nvext_prefix_osl=2048,
+            nvext_prefix_iat=50,
             request_timeout=300.0,
         )
 
@@ -204,12 +358,13 @@ class TestDynamoLangChain:
             model_name="test-model",
             base_url="http://localhost:8000/v1",
             api_type=APITypeEnum.RESPONSES,
-            prefix_template="session-{uuid}",
+            enable_nvext_hints=True,
+            nvext_prefix_id_template="session-{uuid}",
         )
 
     @patch("langchain_openai.ChatOpenAI")
     async def test_basic_creation_without_prefix(self, mock_chat, dynamo_cfg_no_prefix, mock_builder):
-        """Wrapper should create ChatOpenAI without custom httpx client when no prefix template."""
+        """Wrapper should create ChatOpenAI with httpx client (no Dynamo transport when nvext hints disabled)."""
         async with dynamo_langchain(dynamo_cfg_no_prefix, mock_builder) as client:
             mock_chat.assert_called_once()
             kwargs = mock_chat.call_args.kwargs
@@ -217,50 +372,56 @@ class TestDynamoLangChain:
             assert kwargs["model"] == "test-model"
             assert kwargs["base_url"] == "http://localhost:8000/v1"
             assert kwargs["stream_usage"] is True
-            # Should NOT have custom httpx client
-            assert "http_async_client" not in kwargs
+            # Always passes an httpx client; when enable_nvext_hints=False it has no _DynamoTransport
+            assert "http_async_client" in kwargs
             assert client is mock_chat.return_value
 
-    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+    @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
     async def test_creation_with_prefix_template(self,
                                                  mock_chat,
                                                  mock_create_client,
                                                  dynamo_cfg_with_prefix,
-                                                 mock_builder):
-        """Wrapper should create ChatOpenAI with custom httpx client when prefix template is set."""
-        mock_httpx_client = MagicMock()
-        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
-        mock_create_client.return_value = mock_httpx_client
+                                                 mock_builder,
+                                                 mock_httpx_async_client):
+        """Wrapper should create ChatOpenAI with custom httpx client when nvext hints enabled."""
+
+        async def _aexit(*a, **k):
+            await mock_httpx_async_client.aclose()
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_httpx_async_client
+        mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+        mock_create_client.return_value = mock_cm
 
         async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder) as client:
-            # Verify httpx client was created with correct parameters
-            mock_create_client.assert_called_once_with(
-                prefix_template="session-{uuid}",
-                total_requests=15,
-                osl="HIGH",
-                iat="LOW",
-                timeout=300.0,
-            )
+            mock_create_client.assert_called_once_with(dynamo_cfg_with_prefix)
 
             # Verify ChatOpenAI was called with the custom httpx client
             mock_chat.assert_called_once()
             kwargs = mock_chat.call_args.kwargs
 
             assert kwargs["model"] == "test-model"
-            assert kwargs["http_async_client"] is mock_httpx_client
+            assert kwargs["http_async_client"] is mock_httpx_async_client
             assert client is mock_chat.return_value
 
         # Verify the httpx client was properly closed
-        mock_httpx_client.aclose.assert_awaited_once()
+        mock_httpx_async_client.aclose.assert_awaited_once()
 
-    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+    @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
     async def test_responses_api_branch(self, mock_chat, mock_create_client, dynamo_cfg_responses_api, mock_builder):
         """When APIType==RESPONSES, special flags should be added."""
         mock_httpx_client = MagicMock()
-        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
-        mock_create_client.return_value = mock_httpx_client
+        mock_httpx_client.aclose = AsyncMock()
+
+        async def _aexit(*a, **k):
+            await mock_httpx_client.aclose()
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_httpx_client
+        mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+        mock_create_client.return_value = mock_cm
 
         async with dynamo_langchain(dynamo_cfg_responses_api, mock_builder):
             pass
@@ -273,7 +434,7 @@ class TestDynamoLangChain:
         # Verify the httpx client was properly closed
         mock_httpx_client.aclose.assert_awaited_once()
 
-    @patch("nat.plugins.langchain.llm.create_httpx_client_with_dynamo_hooks")
+    @patch("nat.plugins.langchain.llm._create_httpx_client_with_dynamo_hooks")
     @patch("langchain_openai.ChatOpenAI")
     async def test_excludes_dynamo_specific_fields(self,
                                                    mock_chat,
@@ -282,20 +443,28 @@ class TestDynamoLangChain:
                                                    mock_builder):
         """Dynamo-specific fields should be excluded from ChatOpenAI kwargs.
 
-        DynamoModelConfig has fields (prefix_template, prefix_total_requests, prefix_osl,
-        prefix_iat, request_timeout) that are only used internally by NAT to configure
-        the custom httpx client for Dynamo header injection. These fields must NOT be
-        passed to ChatOpenAI because:
+        DynamoModelConfig has fields (enable_nvext_hints, nvext_prefix_id_template,
+        nvext_prefix_total_requests, nvext_prefix_osl, nvext_prefix_iat, request_timeout)
+        that are only used internally by NAT to configure the custom httpx client for
+        Dynamo nvext request-body injection (injects nvext.agent_hints / nvext.cache_control
+        into the JSON body). These fields must NOT be passed to ChatOpenAI because:
 
         1. ChatOpenAI doesn't understand them and would error or ignore them
-        2. They configure NAT's header injection behavior, not the LLM client itself
+        2. They configure NAT's nvext request-body injection behavior, not the LLM client itself
 
         This test ensures the `exclude` set in model_dump() properly filters these fields.
         If someone accidentally removes a field from the exclude set, this test will fail.
         """
         mock_httpx_client = MagicMock()
-        mock_httpx_client.aclose = AsyncMock()  # Make aclose awaitable
-        mock_create_client.return_value = mock_httpx_client
+        mock_httpx_client.aclose = AsyncMock()
+
+        async def _aexit(*a, **k):
+            await mock_httpx_client.aclose()
+
+        mock_cm = AsyncMock()
+        mock_cm.__aenter__.return_value = mock_httpx_client
+        mock_cm.__aexit__ = AsyncMock(side_effect=_aexit)
+        mock_create_client.return_value = mock_cm
 
         async with dynamo_langchain(dynamo_cfg_with_prefix, mock_builder):
             pass
@@ -303,14 +472,57 @@ class TestDynamoLangChain:
         kwargs = mock_chat.call_args.kwargs
 
         # These Dynamo-specific fields should NOT be passed to ChatOpenAI
-        assert "prefix_template" not in kwargs
-        assert "prefix_total_requests" not in kwargs
-        assert "prefix_osl" not in kwargs
-        assert "prefix_iat" not in kwargs
+        assert "nvext_prefix_id_template" not in kwargs
+        assert "nvext_prefix_total_requests" not in kwargs
+        assert "nvext_prefix_osl" not in kwargs
+        assert "nvext_prefix_iat" not in kwargs
+        assert "enable_nvext_hints" not in kwargs
         assert "request_timeout" not in kwargs
 
         # Verify the httpx client was properly closed
         mock_httpx_client.aclose.assert_awaited_once()
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("langchain_openai.ChatOpenAI")
+    async def test_verify_ssl_passed_to_client(self,
+                                               mock_chat,
+                                               dynamo_cfg_no_prefix,
+                                               mock_builder,
+                                               mock_httpx_async_client,
+                                               verify_ssl):
+        """Test that verify_ssl is passed to the underlying httpx.AsyncClient as verify."""
+        dynamo_cfg_no_prefix.verify_ssl = verify_ssl
+        async with dynamo_langchain(dynamo_cfg_no_prefix, mock_builder):
+            pass
+        mock_httpx_async_client.assert_called_once()
+        assert mock_httpx_async_client.call_args.kwargs["verify"] is verify_ssl
+
+
+# ---------------------------------------------------------------------------
+# LiteLLM → LangChain wrapper tests
+# ---------------------------------------------------------------------------
+
+
+class TestLiteLlmLangChain:
+    """Tests for the litellm_langchain wrapper."""
+
+    @pytest.fixture
+    def litellm_cfg(self):
+        return LiteLlmModelConfig(model_name="gpt-4", base_url="http://localhost:4000", api_key="test-key")
+
+    @pytest.mark.parametrize("verify_ssl", [True, False], ids=["verify_ssl_true", "verify_ssl_false"])
+    @patch("nat.llm.utils.http_client._handle_litellm_verify_ssl")
+    @patch("langchain_litellm.ChatLiteLLM")
+    async def test_verify_ssl_calls_handle_litellm_verify_ssl(self,
+                                                              mock_chat,
+                                                              mock_handle_verify_ssl,
+                                                              litellm_cfg,
+                                                              mock_builder,
+                                                              verify_ssl):
+        """Test that litellm_langchain calls _handle_litellm_verify_ssl with the config's verify_ssl value."""
+        litellm_cfg.verify_ssl = verify_ssl
+        async with litellm_langchain(litellm_cfg, mock_builder):
+            mock_handle_verify_ssl.assert_called_once_with(litellm_cfg)
 
 
 # ---------------------------------------------------------------------------
@@ -327,11 +539,13 @@ def test_decorator_registration(mock_global_registry):
     registry._llm_client_map = {
         (NIMModelConfig, LLMFrameworkEnum.LANGCHAIN): nim_langchain,
         (OpenAIModelConfig, LLMFrameworkEnum.LANGCHAIN): openai_langchain,
+        (OCIModelConfig, LLMFrameworkEnum.LANGCHAIN): oci_langchain,
         (AWSBedrockModelConfig, LLMFrameworkEnum.LANGCHAIN): aws_bedrock_langchain,
         (DynamoModelConfig, LLMFrameworkEnum.LANGCHAIN): dynamo_langchain,
     }
 
     assert registry._llm_client_map[(NIMModelConfig, LLMFrameworkEnum.LANGCHAIN)] is nim_langchain
     assert registry._llm_client_map[(OpenAIModelConfig, LLMFrameworkEnum.LANGCHAIN)] is openai_langchain
+    assert registry._llm_client_map[(OCIModelConfig, LLMFrameworkEnum.LANGCHAIN)] is oci_langchain
     assert registry._llm_client_map[(AWSBedrockModelConfig, LLMFrameworkEnum.LANGCHAIN)] is aws_bedrock_langchain
     assert registry._llm_client_map[(DynamoModelConfig, LLMFrameworkEnum.LANGCHAIN)] is dynamo_langchain

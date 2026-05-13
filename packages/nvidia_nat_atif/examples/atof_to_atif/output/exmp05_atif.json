@@ -1,0 +1,103 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "session_id": "agent-005",
+  "agent": {
+    "name": "gemini_assistant",
+    "version": "1.0.0",
+    "model_name": "gemini-2.0-flash"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-01-05T00:00:01Z",
+      "source": "user",
+      "message": "What time is it in Tokyo right now?"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-01-05T00:00:02Z",
+      "source": "agent",
+      "model_name": "gemini-2.0-flash",
+      "message": "Let me check the current time in Tokyo. ",
+      "tool_calls": [
+        {
+          "tool_call_id": "get_current_time__1",
+          "function_name": "get_current_time",
+          "arguments": {
+            "timezone": "Asia/Tokyo"
+          },
+          "extra": {
+            "ancestry": {
+              "function_id": "tool-005",
+              "function_name": "get_current_time",
+              "parent_id": "agent-005",
+              "parent_name": "gemini_assistant"
+            },
+            "invocation": {
+              "invocation_id": "get_current_time__1",
+              "framework": "nat",
+              "status": "completed",
+              "start_timestamp": 1767571203.0,
+              "end_timestamp": 1767571204.0
+            }
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "get_current_time__1",
+            "content": "2026-04-30T15:30:00+09:00"
+          }
+        ]
+      },
+      "extra": {
+        "ancestry": {
+          "function_id": "llm-005-1",
+          "function_name": "gemini-2.0-flash",
+          "parent_id": "agent-005",
+          "parent_name": "gemini_assistant"
+        },
+        "invocation": {
+          "invocation_id": "llm-005-1",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767571201.0,
+          "end_timestamp": 1767571202.0
+        },
+        "data_schema": {
+          "name": "gemini/generate-content",
+          "version": "1"
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2026-01-05T00:00:06Z",
+      "source": "agent",
+      "model_name": "gemini-2.0-flash",
+      "message": "It's currently 3:30 PM on April 30, 2026 in Tokyo (Japan Standard Time).",
+      "extra": {
+        "ancestry": {
+          "function_id": "llm-005-2",
+          "function_name": "gemini-2.0-flash",
+          "parent_id": "agent-005",
+          "parent_name": "gemini_assistant"
+        },
+        "invocation": {
+          "invocation_id": "llm-005-2",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767571205.0,
+          "end_timestamp": 1767571206.0
+        },
+        "data_schema": {
+          "name": "gemini/generate-content",
+          "version": "1"
+        }
+      },
+      "llm_call_count": 1
+    }
+  ]
+}

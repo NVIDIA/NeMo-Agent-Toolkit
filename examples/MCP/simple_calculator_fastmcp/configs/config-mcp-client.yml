@@ -1,0 +1,68 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This config file shows how to use MCP servers as NeMo Agent Toolkit tools.
+# It connects to a local MCP server with stdio transport and a FastMCP server
+# using streamable-http transport.
+
+# This config file shows -
+# 1. how to use a local MCP server to get the current date and time using stdio transport.
+# 2. how to access a FastMCP server using streamable-http transport for math operations.
+#
+# As the mcp_server_time is running locally ensure that the package "mcp_server_time" is installed
+# on your local machine. For example, if you are using pip, you can install it with:
+# uv pip install mcp-server-time
+
+function_groups:
+  mcp_time:
+    _type: mcp_client
+    server:
+      transport: stdio
+      command: "python"
+      args: ["-m", "mcp_server_time", "--local-timezone=America/Los_Angeles"]
+    tool_overrides:
+      # Optionally override the tool name and description from the MCP server
+      get_current_time:
+        alias: get_current_time_mcp_tool
+        description: "Returns the current date and time"
+
+  mcp_math:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      url: "http://localhost:9902/mcp"
+    include:
+      - calculator__add
+      - calculator__subtract
+      - calculator__multiply
+      - calculator__divide
+      - calculator__compare
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: react_agent
+  tool_names:
+    - mcp_time
+    - mcp_math
+  llm_name: nim_llm
+  verbose: true
+  retry_parsing_errors: true
+  max_retries: 3

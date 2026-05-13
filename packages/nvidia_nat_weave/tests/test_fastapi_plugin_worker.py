@@ -42,6 +42,8 @@ def fixture_setup_env() -> None:
 def fixture_mock_weave(monkeypatch):
     """Mock weave.init and weave client context to avoid authentication issues in unit tests."""
     mock_weave_client = MagicMock()
+    mock_weave_client.__enter__.return_value = mock_weave_client
+    mock_weave_client.__exit__.return_value = None
 
     # Mock weave.init
     monkeypatch.setattr("weave.init", lambda *args, **kwargs: mock_weave_client, raising=False)
@@ -98,8 +100,8 @@ async def test_feedback_endpoint_not_registered_without_weave() -> None:
         assert response.status_code == 404
 
 
-async def test_feedback_endpoint_requires_parameters() -> None:
-    """Test that the feedback endpoint validates required parameters."""
+async def test_feedback_endpoint_validates_payload() -> None:
+    """Test that the feedback endpoint validates the request payload."""
 
     config = Config(
         general=GeneralConfig(front_end=FastApiFrontEndConfig(),
@@ -114,7 +116,7 @@ async def test_feedback_endpoint_requires_parameters() -> None:
         response = await client.post("/feedback", json={"reaction_type": "👍"})
         assert response.status_code == 422
 
-        # Test with missing reaction_type
+        # Test with neither reaction_type nor comment provided
         response = await client.post("/feedback", json={"observability_trace_id": "test-trace-id"})
         assert response.status_code == 422
 

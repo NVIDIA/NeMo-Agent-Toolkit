@@ -16,15 +16,15 @@ limitations under the License.
 -->
 
 # WebSocket Message Schema
-This document defines the schema for WebSocket messages exchanged between the client and the NeMo Agent toolkit server. Its primary
-purpose is to guide users on how to interact with the NeMo Agent toolkit server via WebSocket connection. Users can reliably
+This document defines the schema for WebSocket messages exchanged between the client and the NeMo Agent Toolkit server. Its primary
+purpose is to guide users on how to interact with the NeMo Agent Toolkit server via WebSocket connection. Users can reliably
 send and receive data while ensuring compatibility with the web server’s expected format. Additionally, this schema
 provides flexibility for users to build and customize their own user interface by defining how different message types
 should be handled, displayed, and processed. With a clear understanding of the message structure, developers can
-seamlessly integrate their customized user interfaces with the NeMo Agent toolkit server.
+seamlessly integrate their customized user interfaces with the NeMo Agent Toolkit server.
 
 ## Overview
-The message schema described below facilitates transactional interactions with the NeMo Agent toolkit server. The messages follow a
+The message schema described below facilitates transactional interactions with the NeMo Agent Toolkit server. The messages follow a
 structured JSON format to ensure consistency in communication and can be categorized into two main types: `User Messages`
 and `System Messages`. User messages are sent from the client to the server. System messages are sent from the server
 to the client.
@@ -32,6 +32,8 @@ to the client.
 ## Explanation of Fields
 - `type`: Defines the category of the message.
     - Possible values:
+      - `auth_message`
+      - `auth_response_message`
       - `user_message`
       - `system_intermediate_message`
       - `system_response_message`
@@ -58,11 +60,79 @@ to the client.
     -   name: User name
     -   email: User email
     -   other info: Any other information
-- `security`: Stores security information such as `api_key`, auth token etc. - OPTIONAL
-    -   `api_key`: API key
-    - token: auth or access token
-- `error`: error information object
+- `error`: Error information object with `code` (string, see Error types), `message` (string), and `details` (string)
 - `schema_version`: schema version - `OPTIONAL`
+
+## Auth Message
+This message allows clients to authenticate over a WebSocket connection when header-based or
+cookie-based authentication is not feasible (e.g., browser WebSocket APIs that do not support custom headers).
+The server validates the credentials, resolves a user identity, and associates it with the current session.
+The server responds with an `auth_response_message` in both cases — with `status: "success"` and the resolved
+`user_id` on success, or `status: "error"` with structured error details on failure.
+
+### JWT Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "jwt",
+    "token": "<jwt-token>"
+  }
+}
+```
+
+### API Key Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "api_key",
+    "token": "<api-key>"
+  }
+}
+```
+
+### Basic Auth Message Example:
+```json
+{
+  "type": "auth_message",
+  "payload": {
+    "method": "basic",
+    "username": "<username>",
+    "password": "<password>"
+  }
+}
+```
+
+## Auth Response Message
+The server responds to an `auth_message` with an `auth_response_message` indicating success (with the resolved
+`user_id`) or failure (with structured error details).
+
+### Auth Success Response Example:
+```json
+{
+  "type": "auth_response_message",
+  "status": "success",
+  "user_id": "5a3f8e2b-1c4d-5e6f-7a8b-9c0d1e2f3a4b",
+  "payload": null,
+  "timestamp": "2025-01-13T10:00:00Z"
+}
+```
+
+### Auth Failure Response Example:
+```json
+{
+  "type": "auth_response_message",
+  "status": "error",
+  "user_id": null,
+  "payload": {
+    "code": "user_auth_error",
+    "message": "Authentication failed",
+    "details": "Could not resolve user identity from auth payload (method=jwt)"
+  },
+  "timestamp": "2025-01-13T10:00:00Z"
+}
+```
 
 ## User Message Examples
 ### User Message - (OpenAI compatible)
@@ -113,14 +183,10 @@ running workflow.
     "name": "string",
     "email": "string"
   },
-  "security": {
-    "api_key": "string",
-    "token": "string"
-  },
   "error": {
     "code": "string",
     "message": "string",
-    "details": "object"
+    "details": "string"
   },
   "schema_version": "string"
 }
@@ -154,10 +220,6 @@ Definition: This message contains the response content from the human in the loo
   "user": {
     "name": "string",
     "email": "string"
-  },
-  "security": {
-    "api_key": "string",
-    "token": "string"
   },
   "schema_version": "string"
 }
@@ -204,7 +266,7 @@ Definition: This message contains the final response content from a running work
 ```
 
 ### System Response Token Message, Type: `error_message`
-Definition: This message sends various types of error content to the client.
+Definition: This message sends various types of error content to the client. The `content` object matches the Error model: `code` is one of `unknown_error`, `workflow_error`, `invalid_message`, `invalid_message_type`, `invalid_user_message_content`, `invalid_data_content`, `user_auth_error`; `message` and `details` are strings.
 #### System Response Token Message Error Type Example:
 ```json
 {
@@ -214,18 +276,29 @@ Definition: This message sends various types of error content to the client.
   "parent_id": "id from user message",
   "conversation_id": "string",
   "content": {
-      "code": "111", "message": "ValidationError", "details": "The provided email format is invalid."
+    "code": "workflow_error",
+    "message": "The provided email format is invalid.",
+    "details": "ValidationError"
   },
   "status": "in_progress",
   "timestamp": "2025-01-13T10:00:02Z"
 }
-
 ```
 ## System Human Interaction Message
 System Human Interaction messages are sent from the server to the client containing Human Prompt content.
 
+Each interaction prompt `content` object supports the following optional fields:
+
+- `timeout`: Timeout in seconds for the prompt. Defaults to `null` (no timeout). When set, the frontend should display
+  a countdown timer. If the user does not respond within the specified duration, the frontend should dismiss the prompt
+  and display the `error` message. The server also enforces this timeout and raises a `TimeoutError` to the workflow.
+  The value is set per-prompt by the workflow code. See the
+  [Interactive Workflows Guide](../../build-workflows/advanced/interactive-workflows.md) for details.
+- `error`: Error message to display on the prompt if the timeout expires or another error occurs. Defaults to
+  `"This prompt is no longer available."`.
+
 ### Text Input Interaction
-#### Text Input Interaction Message Example:
+#### Text Input Interaction Message Example (Default, No Timeout):
 ```json
 {
   "type": "system_interaction_message",
@@ -237,7 +310,30 @@ System Human Interaction messages are sent from the server to the client contain
       "input_type": "text",
       "text": "Hello, how are you today?",
       "placeholder": "Ask anything.",
-      "required": true
+      "required": true,
+      "timeout": null,
+      "error": "This prompt is no longer available."
+  },
+  "status": "in_progress",
+  "timestamp": "2025-01-13T10:00:03Z"
+}
+```
+
+#### Text Input Interaction Message Example (With Timeout Configured):
+```json
+{
+  "type": "system_interaction_message",
+  "id": "interaction_303",
+  "thread_id": "thread_456",
+  "parent_id": "id from user message",
+  "conversation_id": "string",
+  "content": {
+      "input_type": "text",
+      "text": "Hello, how are you today?",
+      "placeholder": "Ask anything.",
+      "required": true,
+      "timeout": 300,
+      "error": "This prompt is no longer available."
   },
   "status": "in_progress",
   "timestamp": "2025-01-13T10:00:03Z"
@@ -264,7 +360,9 @@ System Human Interaction messages are sent from the server to the client contain
           "label": "Cancel",
           "value": "cancel",
       }],
-      "required": true
+      "required": true,
+      "timeout": null,
+      "error": "This prompt is no longer available."
   },
   "status": "in_progress",
   "timestamp": "2025-01-13T10:00:03Z"
@@ -303,7 +401,9 @@ System Human Interaction messages are sent from the server to the client contain
         "description": "Receive notifications via push"
       }
     ],
-    "required": true
+    "required": true,
+    "timeout": null,
+    "error": "This prompt is no longer available."
   },
   "status": "in_progress",
   "timestamp": "2025-01-13T10:00:03Z"
@@ -342,7 +442,9 @@ System Human Interaction messages are sent from the server to the client contain
         "description": "Receive notifications via push"
       }
     ],
-    "required": true
+    "required": true,
+    "timeout": null,
+    "error": "This prompt is no longer available."
   },
   "status": "in_progress",
   "timestamp": "2025-01-13T10:00:03Z"
@@ -381,7 +483,9 @@ System Human Interaction messages are sent from the server to the client contain
         "description": "Receive notifications via push"
       }
     ],
-    "required": true
+    "required": true,
+    "timeout": null,
+    "error": "This prompt is no longer available."
   },
   "status": "in_progress",
   "timestamp": "2025-01-13T10:00:03Z"

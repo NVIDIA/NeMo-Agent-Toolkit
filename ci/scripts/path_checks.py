@@ -41,10 +41,6 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/advanced_agents/alert_triage_agent/data/",
     ),
     (
-        r"^examples/advanced_agents/profiler_agent/README.md",
-        r"^examples/observability/simple_calculator_observability",
-    ),
-    (
         r"^examples/config_inheritance/README.md",
         r"^examples/getting_started/simple_calculator",
     ),
@@ -65,16 +61,16 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/evaluation_and_profiling/simple_calculator_eval/data/",
     ),
     (
-        r"^examples/evaluation_and_profiling/swe_bench/.*configs/",
-        r"^examples/evaluation_and_profiling/swe_bench/data/",
-    ),
-    (
         r"^examples/evaluation_and_profiling/simple_calculator_eval/.*configs/",
         r"^examples/getting_started/simple_calculator/data/simple_calculator.json",
     ),
     (
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*configs",
         r"^examples/evaluation_and_profiling/simple_web_query_eval/.*/workflow_to_csv.py",
+    ),
+    (
+        r"^examples/observability/simple_calculator_observability/.*configs/",
+        r"^examples/getting_started/simple_calculator/",
     ),
     (
         r"^examples/MCP/simple_calculator_mcp/README.md",
@@ -128,12 +124,18 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/frameworks/auto_wrapper/langchain_deep_research/configs/config_with_eval.yml",
         r"^examples/frameworks/auto_wrapper/langchain_deep_research/data/DeepConsult_top10.csv",
     ),
+    # Allow deploy README to reference memmachine configuration
+    (
+        r"^examples/deploy/README\.md",
+        r"^examples/memory/memmachine/",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
     "A/B",
     "and/or",
     "application/json",
+    "arizephoenix/phoenix",
     "CI/CD",
     "commit/push",
     "Continue/Cancel",
@@ -157,6 +159,8 @@ ALLOWLISTED_WORDS: set[str] = {
     "LangChain/LangGraph.",
     "LangChain/LangGraph-based",
     "LTE/5G",
+    "mistralai/mistral-large-3-675b-instruct-2512",
+    "mistralai/mistral-small-4-119b-2603",
     "N/A",
     "output/jobs/job_",
     "POST/PUT",
@@ -166,8 +170,10 @@ ALLOWLISTED_WORDS: set[str] = {
     "read/write",
     "run/host",
     "run/serve",
+    "start/stop",
     "search/edit/score/select",
     "size/time",
+    "SSL/TLS",
     "string/array",
     "string/object",
     "success/failure",
@@ -186,12 +192,15 @@ ALLOWLISTED_WORDS: set[str] = {
     r"\d+/\d+(/\d+)*",  #
     # LLM model names
     "meta/[Ll]lama.*",
-    "nvidia/([Ll]lama|[Nn][Vv]-).*",
+    "nvidia/([Nn][Vv][Ii][Dd][Ii][Aa]-)?([Ll]lama|[Nn][Vv]-|[Nn]emotron).*",
     "mistralai/[Mm]ixtral.*",
     "microsoft/[Pp]hi.*",
     "ssmits/[Qq]wen.*",
     "Qwen/Qwen.*",
-    "deepseek-ai/deepseek-.*",  #
+    "deepseek-ai/deepseek-.*",
+    "BAAI/bge.*",
+    "sentence-transformers/.*",
+    "meta-llama/.*",  #
     # MIME types
     "(application|text|image|video|audio|model|dataset|token|other)/.*",  #
     # Time zones
@@ -200,7 +209,7 @@ ALLOWLISTED_WORDS: set[str] = {
     # anything starting with nvcr.io
     "nvcr\\.io/.*",  # anything starting with default/
     "default/.*",  # Models with their prefixes
-    "(azure|openai|gcp|google)/.*",
+    "(azure|openai|gcp|google|anthropic|gemini)/.*",
 }
 
 IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
@@ -213,6 +222,10 @@ IGNORED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
     (
         r"^examples/notebooks/",
         r".*(configs|data|src).*",
+    ),
+    (
+        r"^examples/notebooks/mcp_setup_and_integration.ipynb",
+        r"^\./calculator.yml",
     ),
     (
         r"^examples/frameworks/haystack_deep_research_agent/README.md",

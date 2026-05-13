@@ -17,7 +17,9 @@ limitations under the License.
 
 # Report Tool for NVIDIA NeMo Agent Toolkit
 
-And example tool in the NeMo Agent toolkit that makes use of an Object Store to retrieve data.
+**Complexity:** 🟨 Intermediate
+
+And example tool in the NeMo Agent Toolkit that makes use of an Object Store to retrieve data.
 
 ## Table of Contents
 
@@ -41,7 +43,7 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 
 ## Key Features
 
-- **Function Group Implementation**: Demonstrates the new function groups feature in NeMo Agent toolkit for sharing configurations and resources across multiple functions.
+- **Function Group Implementation**: Demonstrates the new function groups feature in NeMo Agent Toolkit for sharing configurations and resources across multiple functions.
 - **Shared Configuration**: All user report functions share the same object store reference and configuration settings.
 - **Resource Sharing**: Functions within the group share the same object store client connection, reducing resource overhead.
 - **Object Store Integration:** Demonstrates comprehensive integration with object storage systems including AWS S3 and MinIO for storing and retrieving user report data.
@@ -52,7 +54,7 @@ And example tool in the NeMo Agent toolkit that makes use of an Object Store to 
 
 ## Function Groups Overview
 
-This example demonstrates using function groups in NeMo Agent toolkit. Function groups allow you to:
+This example demonstrates using function groups in NeMo Agent Toolkit. Function groups allow you to:
 
 - **Share configurations** across multiple related functions
 - **Share resources** such as database connections or API clients
@@ -103,11 +105,11 @@ workflow:
 ```
 
 ## Installation and Setup
-If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
+If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit, and follow the [Obtaining API Keys](../../../docs/source/get-started/quick-start.md#obtaining-api-keys) instructions to obtain an NVIDIA API key.
 
 ### Install this Workflow
 
-From the root directory of the NeMo Agent toolkit repository, run the following commands:
+From the root directory of the NeMo Agent Toolkit repository, run the following commands:
 
 ```bash
 uv pip install -e examples/object_store/user_report
@@ -230,7 +232,7 @@ If any of the loading scripts were run and the files are in the object store, ex
 
 ## Run the Workflow
 
-For each of the following examples, a command is provided to run the workflow with the specified input. Run the following command from the root of the NeMo Agent toolkit repo to execute the workflow.
+For each of the following examples, a command is provided to run the workflow with the specified input. Run the following command from the root of the NeMo Agent Toolkit repo to execute the workflow.
 
 You have three options for running the workflow:
 1. Using the S3-compatible object store (`config_s3.yml`)
@@ -257,7 +259,7 @@ Tool's input: {"user_id": "67890", "date": null}
 <snipped for brevity>
 
 Workflow Result:
-['The latest report of user 67890 is:\n\n{\n    "user_id": "67890",\n    "timestamp": "2025-04-21T15:40:00Z",\n    "system": {\n      "os": "macOS 14.1",\n      "cpu_usage": "43%",\n      "memory_usage": "8.1 GB / 16 GB",\n      "disk_space": "230 GB free of 512 GB"\n    },\n    "network": {\n      "latency_ms": 95,\n      "packet_loss": "0%",\n      "vpn_connected": true\n    },\n    "errors": [],\n    "recommendations": [\n      "System operating normally",\n      "No action required"\n    ]\n}']
+['The latest report of user 67890 is:\n\n{\n    "user_id": "35791",\n    "timestamp": "2025-05-02T14:27:45Z",\n    "system": {\n        "os": "Windows 11",\n        "cpu_usage": "73%",\n        "memory_usage": "9.2 GB / 16 GB",\n        "disk_space": "400 GB free of 500 GB"\n    },\n    "network": {\n        "latency_ms": 67,\n        "packet_loss": "0.0%",\n        "vpn_connected": false\n    },\n    "errors": [],\n    "recommendations": [\n        "Regular system check completed",\n        "All services running optimally"\n    ]\n}']
 ```
 
 In the case of a non-existent report, the workflow will return an error message.

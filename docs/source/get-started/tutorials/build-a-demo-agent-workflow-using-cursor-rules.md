@@ -17,13 +17,13 @@ limitations under the License.
 
 # Build a Demo Agent Workflow Using Cursor Rules for NVIDIA NeMo Agent Toolkit
 
-Learn how to use Cursor rules for NeMo Agent toolkit development to create and run a demo [agent](../../components/agents/index.md) [workflow](../../build-workflows/about-building-workflows.md).
+Learn how to use Cursor rules for NeMo Agent Toolkit development to create and run a demo [agent](../../components/agents/index.md) [workflow](../../build-workflows/about-building-workflows.md).
 
 ## About Cursor Rules
-Cursor rules in NeMo Agent toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
+Cursor rules in NeMo Agent Toolkit act as an intelligent development that offers structured assistance for developers at all experience levels. The key functionalities of Cursor rules are as follows:
 * Streamline workflow creation with intelligent prompts: You can build complete agent workflows, integrate functions, and configure [tools](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) through natural language commands. It allows you to transform complex development tasks into simple conversational interactions.
-* Accelerate development workflows: You can use Cursor rules to develop NeMo Agent toolkit efficiently and consistently as it provides streamlined workflows with established and tested patterns. It also enhances productivity by minimizing routine tasks, while applying best practices for coding, documentation, and configuration.
-* Learn and understand NeMo Agent toolkit quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering NeMo Agent toolkit through contextual assistance and comprehensive examples for typical development workflows.
+* Accelerate development workflows: You can use Cursor rules to develop NeMo Agent Toolkit efficiently and consistently as it provides streamlined workflows with established and tested patterns. It also enhances productivity by minimizing routine tasks, while applying best practices for coding, documentation, and configuration.
+* Learn and understand NeMo Agent Toolkit quickly and simply: For less experienced developers, Cursor rules provide an interactive approach to mastering NeMo Agent Toolkit through contextual assistance and comprehensive examples for typical development workflows.
 * Standardization: Ensures uniform development standards, such as formatting, type annotations, and documentation requirements, across development teams and projects. Thus, decreasing code review overhead during submissions.
 
 ## Common Prompts
@@ -32,12 +32,12 @@ The following are frequently used prompts to begin development:
 
 **Installing NeMo Agent Toolkit:**
 ```
-Install NeMo Agent toolkit with all dependencies and verify the installation is working correctly.
+Install NeMo Agent Toolkit with all dependencies and verify the installation is working correctly.
 ```
 
 **Environment setup:**
 ```
-Help me set up NeMo Agent toolkit development environment with all required dependencies and configurations.
+Help me set up NeMo Agent Toolkit development environment with all required dependencies and configurations.
 ```
 
 **Workflow creation:**
@@ -63,11 +63,11 @@ Follow the steps below for a comprehensive example that demonstrates creating an
 
 ### Install NeMo Agent Toolkit
 
-Before you begin, make sure you have cloned the NeMo Agent toolkit repository and opened the project in Cursor, by selecting `File > Open Workspace from File... > select the nat.code-workspace in the repository`.
+Before you begin, make sure you have cloned the NeMo Agent Toolkit repository and opened the project in Cursor, by selecting `File > Open Workspace from File... > select the nat.code-workspace in the repository`.
 
 Prompt:
 ```
-Install NeMo Agent toolkit with all required dependencies and verify the installation
+Install NeMo Agent Toolkit with all required dependencies and verify the installation
 ```
 
 The assistant will reference and apply the `.cursor/rules/nat-setup/nat-toolkit-installation.mdc` rule to validate prerequisites and install the toolkit, followed by installation verification.
@@ -80,7 +80,7 @@ The assistant will reference and apply the `.cursor/rules/nat-setup/nat-toolkit-
 
 Prompt:
 ```
-Find datetime-related functions and tools available in NeMo Agent toolkit
+Find datetime-related functions and tools available in NeMo Agent Toolkit
 ```
 The assistant will reference and apply the `.cursor/rules/nat-cli/nat-info.mdc` rule to discover available tools and functions.
 
@@ -149,7 +149,7 @@ Keep your prompts specific and concise. For instance, rather than stating "Creat
 
 ## Cursor Rules Organization
 
-NeMo Agent toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
+NeMo Agent Toolkit offers a comprehensive collection of Cursor rules organized into four primary categories:
 
 - **[Foundation Rules](../../resources/contributing/cursor/cursor-rules-reference.md#foundation-rules)**: Core code quality standards and cursor rules management
 - **[Setup and Installation Rules](../../resources/contributing/cursor/cursor-rules-reference.md#setup-and-installation-rules)**: Environment configuration and toolkit installation procedures

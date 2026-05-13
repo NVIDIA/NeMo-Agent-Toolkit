@@ -265,7 +265,8 @@ async def test_catalyst_full_workflow(config_dir: Path,
     await asyncio.sleep(5)
     deadline = time.time() + 10
     while not dataset_found and time.time() < deadline:
-        dataset_found = catalyst_dataset_name in ds.list_datasets()
+        datasets = ds.list_datasets()
+        dataset_found = datasets is not None and catalyst_dataset_name in datasets
         if not dataset_found:
             await asyncio.sleep(0.5)
 

@@ -1,0 +1,171 @@
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# SPDX-FileCopyrightText: Copyright (c) 2024-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: LicenseRef-NvidiaProprietary
+#
+# NVIDIA CORPORATION, its affiliates and licensors retain all intellectual
+# property and proprietary rights in and to this material, related
+# documentation and any modifications thereto. Any use, reproduction,
+# disclosure or distribution of this material and related documentation
+# without an express license agreement from NVIDIA CORPORATION or
+# its affiliates is strictly prohibited.
+
+import logging
+import sys
+import time
+
+import click
+import nest_asyncio2
+from dotenv import load_dotenv
+
+# Load .env BEFORE any ``nat.utils.telemetry`` import. The telemetry config
+# module snapshots NAT_TELEMETRY_ENABLED / NAT_TELEMETRY_ENDPOINT /
+# NAT_TELEMETRY_DRY_RUN / NAT_SESSION_PREFIX at import time. If ``.env``
+# loads after that import, the snapshot is taken with the wrong values:
+# ``maybe_prompt_for_consent`` then sees the post-load env (and short-
+# circuits the prompt) while ``config.TELEMETRY_ENABLED`` still reflects
+# the pre-load state — silent no-emit despite the user explicitly opting
+# in via ``.env``.
+load_dotenv()
+
+# Same hazard applies to plugin loading: a plugin module that imports
+# ``nat.utils.telemetry`` would trigger the snapshot. ``load_dotenv`` runs
+# above so we're safe regardless of load order below.
+from nat.utils.log_levels import LOG_LEVELS  # noqa: E402
+from nat.utils.log_utils import setup_logging as log_utils_setup_logging  # noqa: E402
+from nat.utils.telemetry import maybe_prompt_for_consent  # noqa: E402
+
+from .plugin_loader import discover_and_load_cli_plugins  # noqa: E402
+from .telemetry_hook import record_invocation_start  # noqa: E402
+
+# Apply at the beginning of the file to avoid issues with asyncio
+nest_asyncio2.apply()
+
+
+def setup_logging(log_level: str):
+    """Configure logging with the specified level"""
+    numeric_level = LOG_LEVELS.get(log_level.upper(), logging.INFO)
+    log_utils_setup_logging(numeric_level)
+    return numeric_level
+
+
+def get_version():
+    from importlib.metadata import PackageNotFoundError
+    from importlib.metadata import version
+    # prefer to inspect the core package first, then the meta package
+    for package in ["nvidia-nat-core", "nvidia-nat"]:
+        try:
+            return version(package)
+        except PackageNotFoundError:
+            pass
+
+    return "unknown"
+
+
+@click.group(name="nat", chain=False, invoke_without_command=True, no_args_is_help=True)
+@click.version_option(version=get_version())
+@click.option('--log-level',
+              type=click.Choice(LOG_LEVELS.keys(), case_sensitive=False),
+              default='INFO',
+              help='Set the logging level')
+@click.pass_context
+def cli(ctx: click.Context, log_level: str):
+    """Main entrypoint for the NAT CLI"""
+
+    ctx_dict = ctx.ensure_object(dict)
+
+    # Setup logging
+    numeric_level = setup_logging(log_level)
+
+    nat_logger = logging.getLogger("nat")
+    nat_logger.setLevel(numeric_level)
+
+    logger = logging.getLogger(__package__)
+
+    # Set the parent logger for all of the llm examples to use morpheus so we can take advantage of configure_logging
+    logger.parent = nat_logger
+    logger.setLevel(numeric_level)
+
+    ctx_dict["start_time"] = time.time()
+    ctx_dict["log_level"] = log_level
+
+    # Telemetry: prompt for first-run consent (TTY only, no persisted
+    # decision, no env-var override). Skip the prompt when the user is
+    # invoking ``nat configure telemetry [--enable|--disable|--status]``,
+    # since that subcommand exists for the user to *manage* the very
+    # decision the prompt asks about. Prompting them first would (a)
+    # break the read-only contract of ``--status`` and (b) interleave a
+    # default-yes prompt with an explicit ``--disable`` request.
+    #
+    # Bookkeeping (``record_invocation_start``) still runs unconditionally;
+    # it has no UX side effect, and it lets already-consented users emit a
+    # properly-tagged ``command="configure", subcommand="telemetry"``
+    # event on exit. Pre-consent users emit nothing because
+    # ``TELEMETRY_ENABLED`` is false at import time.
+    if not _is_invoking_configure_telemetry(ctx.invoked_subcommand):
+        maybe_prompt_for_consent()
+    record_invocation_start(ctx)
+
+
+def _is_invoking_configure_telemetry(invoked_subcommand: str | None) -> bool:
+    """True for ``nat configure telemetry [...]`` invocations.
+
+    Walks ``sys.argv`` past the ``configure`` token and checks whether the
+    next non-flag positional is ``telemetry``. Other ``nat configure
+    <something-else>`` paths still trigger the prompt as normal.
+    """
+    if invoked_subcommand != "configure":
+        return False
+    try:
+        idx = sys.argv.index("configure")
+    except ValueError:
+        return False
+    for token in sys.argv[idx + 1:]:
+        if token.startswith("-"):
+            continue
+        return token == "telemetry"
+    return False
+
+
+# Discover and load ALL CLI commands (core + plugins) via entry points
+discover_and_load_cli_plugins(cli)
+
+# Aliases - need to get start_command from the loaded commands
+start_cmd = cli.commands.get("start")
+if start_cmd and hasattr(start_cmd, "get_command"):
+    cli.add_command(start_cmd.get_command(None, "console"), name="run")  # type: ignore
+    cli.add_command(start_cmd.get_command(None, "fastapi"), name="serve")  # type: ignore
+
+
+@cli.result_callback()
+@click.pass_context
+def after_pipeline(ctx: click.Context, pipeline_start_time: float, *_, **__):
+    logger = logging.getLogger(__name__)
+
+    end_time = time.time()
+
+    ctx_dict = ctx.ensure_object(dict)
+
+    start_time = ctx_dict["start_time"]
+
+    # Reset the terminal colors, not using print to avoid an additional newline
+    for stream in (sys.stdout, sys.stderr):
+        stream.write("\x1b[0m")
+
+    logger.debug("Total time: %.2f sec", end_time - start_time)
+
+    if (pipeline_start_time is not None):
+        logger.debug("Pipeline runtime: %.2f sec", end_time - pipeline_start_time)

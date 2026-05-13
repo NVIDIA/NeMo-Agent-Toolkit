@@ -121,39 +121,62 @@ reviews:
           contain a README.md or file README.ipynb.
         - If an example contains Python code, it should be placed in a subdirectory named `src/` and should
           contain a `pyproject.toml` file. Optionally, it might also contain scripts in a `scripts/` directory.
+        - If an example contains a `pyproject.toml` file, it should be added to the `examples` list in the root `pyproject.toml` file.
+        - If an example contains a tests directory, it should contain a `pyproject.toml` file.
         - If an example contains YAML files, they should be placed in a subdirectory named `configs/`.
         - If an example contains sample data files, they should be placed in a subdirectory named `data/`, and should
           be checked into git-lfs.
 
-    - path: "src/aiq/**/*"
-      instructions: >-
-        This directory maintains backward compatibility with the previous version of the toolkit. It should almost
-        never be modified.
-
-    - path: "src/nat/**/*"
+    - path: "packages/nvidia_nat_core/src/nat/**/*"
       instructions: >-
         This directory contains the core functionality of the toolkit. Changes should prioritize backward compatibility.
 
+    - path: "packages/nvidia_nat_core/src/nat/eval/**/*"
+      instructions: >-
+        - This is a deprecated compatibility shim area and should not grow.
+        - Flag any PR that adds new files under this path as a blocking issue.
+        - New evaluation code should be added under `packages/nvidia_nat_eval/src/nat/plugins/eval/` instead.
+        - Changes in this path should be limited to compatibility-only fixes that are explicitly justified in PR notes.
+
     - path: "packages/**/*"
       instructions: >-
-        - This directory contains optional plugin packages for the toolkit, each should contain a `pyproject.toml` file.
-        - The `pyproject.toml` file should declare a dependency on `nvidia-nat` or another package with a name starting
-          with `nvidia-nat-`. This dependency should be declared using `~=<version>`, and the version should be a two
-          digit version (ex: `~=1.0`).
+        - This directory contains packages for the toolkit, each should contain a `pyproject.toml` file.
         - Not all packages contain Python code, if they do they should also contain their own set of tests, in a
           `tests/` directory at the same level as the `pyproject.toml` file.
+    - path: "packages/*/pyproject.toml"
+      instructions: >-
+        - The `pyproject.toml` file should never declare a dependency on the `nvidia-nat` meta package.
         - When adding a new package, that new package name (as defined in the `pyproject.toml` file) should
-          be added as a dependency to the nvidia-nat-all package in `packages/nvidia_nat_all/pyproject.toml`
+          probably be added as a dependency to the most extra in the root `pyproject.toml` file.
+        - `nvidia-nat-core` should likely be listed as a dependency.
+        - `nvidia-nat-test` should likely be listed as an optional dependency in the `test` extra
+        - A single dependency should be listed on each line and should always have a version specifier.
+        - All dependencies should be listed under the `[tool.setuptools_dynamic_dependencies]` section
+        - Any dependency that is an NVIDIA NeMo Agent Toolkit package should be declared with a version constraint of `== {version}`
 
-    - path: "tests/**/*.py"
+    - path: "packages/nvidia_nat_core/pyproject.toml"
+      instructions: >-
+        - This package is part of the thin-core strategy; default to minimizing direct dependencies.
+        - Treat any new dependency addition as high-risk and require explicit justification in PR review notes.
+        - Prefer moving framework-specific or optional capabilities into non-core plugin packages instead of adding dependencies here.
+        - If a new dependency is unavoidable, confirm it is required by core contracts/runtime and not by optional evaluators, exporters, profiling, or framework integrations.
+
+    - path: "packages/nvidia_nat_eval/pyproject.toml"
+      instructions: >-
+        - This package follows a thin-core eval strategy; prioritize keeping dependencies minimal.
+        - Treat any new dependency addition as high-risk and require explicit justification in PR review notes.
+        - Prefer package-affinity placement (framework/profiler/security/exporter packages) instead of adding dependencies here.
+        - If a new dependency is unavoidable, confirm it supports core harness/contracts only and is not better hosted in optional packages.
+
+    - path: "**/tests/**/*.py"
       instructions: >-
         - Ensure that tests are comprehensive, cover edge cases, and validate the functionality of the code.
         - Test functions should be named using the `test_` prefix, using snake_case.
         - Any frequently repeated code should be extracted into pytest fixtures.
         - Pytest fixtures should define the name argument when applying the pytest.fixture decorator. The fixture
-          function being decorated should be named using the `fixture_` prefix, using snake_case. Example:
-            @pytest.fixture(name="my_fixture")
-            def fixture_my_fixture():
+          function being decorated should be named using either a `fixture_` prefix or `_fixture` suffix, using snake_case. Example:
+            @pytest.fixture(name="my_custom_config")
+            def my_custom_config_fixture():
                 pass
         - Do NOT add `@pytest.mark.asyncio` to any test. Async tests are automatically detected and run by the
           async runner - the decorator is unnecessary clutter.
@@ -166,13 +189,11 @@ reviews:
         - Any removed examples should be removed from the README.md file.
         - Example entries should be categorized by the directory they are located in.
 
-    - path: "pyproject.toml"
+    - path: "**/pyproject.toml"
       instructions: >-
         # pyproject.toml example section review instructions
         - Ensure that for any examples that are added or removed, the examples list in the pyproject.toml file is updated accordingly.
           This is only necessary if the example added contains a pyproject.toml file (e.g. it is installable as a package)
-        - Any added examples should be added to the `examples` list in the pyproject.toml file.
-        - Any removed examples should be removed from the `examples` list in the pyproject.toml file.
         - All added examples must have a `nat_` prefix within the `uv.sources` name. The path to the example does NOT need to have this prefix. If the example does not have a `nat_` prefix, it should be added.
 
   auto_apply_labels: true

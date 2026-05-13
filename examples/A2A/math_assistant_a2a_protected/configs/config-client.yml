@@ -19,7 +19,6 @@ function_groups:
     _type: a2a_client
     url: http://localhost:10000
     auth_provider: calculator_oauth
-    task_timeout: 60
     include_skills_in_description: true
 
   # Local MCP server for time and date operations

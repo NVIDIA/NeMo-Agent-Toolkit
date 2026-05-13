@@ -23,7 +23,7 @@ source ${GITLAB_SCRIPT_DIR}/common.sh
 
 GIT_TAG=$(get_git_tag)
 IS_TAGGED=$(is_current_commit_release_tagged)
-rapids-logger "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
+echo "Git Version: ${GIT_TAG} - Is Tagged: ${IS_TAGGED}"
 
 # change this to ready to publish. this should be done programmatically once
 # the release process is finalized.
@@ -54,8 +54,8 @@ if [[ -z "${URM_USER}" || -z "${URM_API_KEY}" ]]; then
     exit 1
 fi
 
-if [[ -z "${AIQ_ARTIFACTORY_URL}" || -z "${AIQ_ARTIFACTORY_NAME}" ]]; then
-    echo "Error: AIQ_ARTIFACTORY_URL or AIQ_ARTIFACTORY_NAME is not set. Exiting."
+if [[ -z "${NAT_ARTIFACTORY_URL}" || -z "${NAT_ARTIFACTORY_NAME}" ]]; then
+    echo "Error: NAT_ARTIFACTORY_URL or NAT_ARTIFACTORY_NAME is not set. Exiting."
     exit 1
 fi
 
@@ -81,20 +81,11 @@ if [[ ! -d "$WHEELS_BASE_DIR" || -z "$(find "$WHEELS_BASE_DIR" -type f -name "*.
     exit 1
 fi
 
-# Function to install JFrog CLI if needed
-function install_jfrog_cli() {
-    if ! command -v jf &> /dev/null; then
-        echo "Installing JFrog CLI..."
-        curl -fL https://install-cli.jfrog.io | sh || { echo "JFrog CLI installation failed"; exit 1; }
-    fi
-}
-install_jfrog_cli
-
 # Upload wheels if enabled
 if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
     for NAT_COMPONENT_NAME  in ${NAT_COMPONENTS[@]}; do
         WHEELS_DIR="${WHEELS_BASE_DIR}/${NAT_COMPONENT_NAME}"
-        rapids-logger "NAT Component : ${NAT_COMPONENT_NAME} Dir : ${WHEELS_DIR}"
+        echo "NAT Component : ${NAT_COMPONENT_NAME} Dir : ${WHEELS_DIR}"
 
         for SUBDIR in $(find "${WHEELS_DIR}" -mindepth 1 -maxdepth 1 -type d); do
             SUBDIR_NAME=$(basename "${SUBDIR}")
@@ -113,26 +104,26 @@ if [[ "${UPLOAD_TO_ARTIFACTORY}" == "true" ]]; then
                 # as this is an already established path in artifactory
                 RELATIVE_PATH="${WHEEL_FILE#${WHEELS_BASE_DIR}/}"
                 RELATIVE_PATH=$(echo "${RELATIVE_PATH}" | sed -e 's|^nvidia-nat/|aiqtoolkit/|' | sed -e 's|^nat/|aiqtoolkit/|')
-                ARTIFACTORY_PATH="${AIQ_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
+                ARTIFACTORY_PATH="${NAT_ARTIFACTORY_NAME}/${RELATIVE_PATH}"
 
                 echo "Uploading ${WHEEL_FILE} to ${ARTIFACTORY_PATH}..."
 
-                CI=true jf rt u --fail-no-op --url="${AIQ_ARTIFACTORY_URL}" \
+                CI=true jf rt u --fail-no-op --url="${NAT_ARTIFACTORY_URL}" \
                     --user="${URM_USER}" --password="${URM_API_KEY}" \
                     --flat=false "${WHEEL_FILE}" "${ARTIFACTORY_PATH}" \
                     --target-props "arch=${NAT_ARCH};os=${NAT_OS};branch=${GIT_TAG};component_name=${ARTIFACTORY_COMPONENT_FIXED_NAME};version=${GIT_TAG};release_approver=${RELEASE_APPROVER};release_status=${RELEASE_STATUS}"
             done
         done
     done
-    rapids-logger "All wheels uploaded to Artifactory."
+    echo "All wheels uploaded to Artifactory."
 else
-    rapids-logger "UPLOAD_TO_ARTIFACTORY is set to 'false'. Skipping upload."
+    echo "UPLOAD_TO_ARTIFACTORY is set to 'false'. Skipping upload."
 fi
 
 # List Artifactory contents (disabled by default as the output is very verbose)
 if [[ "${LIST_ARTIFACTORY_CONTENTS}" == "true" ]]; then
-    echo "Listing contents of Artifactory (${AIQ_ARTIFACTORY_NAME}):"
-    CI=true jf rt s --url="${AIQ_ARTIFACTORY_URL}" \
+    echo "Listing contents of Artifactory (${NAT_ARTIFACTORY_NAME}):"
+    CI=true jf rt s --url="${NAT_ARTIFACTORY_URL}" \
         --user="${URM_USER}" --password="${URM_API_KEY}" \
-        "${AIQ_ARTIFACTORY_NAME}/*/${GIT_TAG}/" --recursive
+        "${NAT_ARTIFACTORY_NAME}/*/${GIT_TAG}/" --recursive
 fi

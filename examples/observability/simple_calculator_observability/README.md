@@ -17,11 +17,13 @@ limitations under the License.
 
 # Simple Calculator with Observability and Tracing
 
-This example demonstrates how to implement **observability and tracing capabilities** using the NVIDIA NeMo Agent toolkit. You'll learn to monitor, trace, and analyze your AI agent's behavior in real-time using the Simple Calculator workflow.
+**Complexity:** 🟨 Intermediate
+
+This example demonstrates how to implement **observability and tracing capabilities** using the NVIDIA NeMo Agent Toolkit. You'll learn to monitor, trace, and analyze your AI agent's behavior in real-time using the Simple Calculator workflow.
 
 ## Key Features
 
-- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Langfuse, LangSmith, Weave, Patronus, and RagaAI Catalyst for comprehensive monitoring options.
+- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Arize AX (hosted OTLP), Langfuse, LangSmith, Weave, Patronus, and RagaAI Catalyst for comprehensive monitoring options.
 - **Distributed Tracing Implementation:** Shows how to track agent execution flow across components with detailed trace visualization including agent reasoning, tool calls, and LLM interactions.
 - **Performance Monitoring:** Demonstrates capturing latency metrics, token usage, resource consumption, and error tracking for production-ready AI system monitoring.
 - **Development and Production Patterns:** Provides examples for both local development tracing (Phoenix) and production monitoring setups with various enterprise observability platforms.
@@ -39,9 +41,9 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 Before starting this example, you need:
 
-1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
-3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Langfuse, LangSmith, Weave, or Patronus)
+3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Arize AX, Langfuse, LangSmith, Weave, or Patronus)
 
 ## Installation
 
@@ -57,25 +59,19 @@ uv pip install -e examples/observability/simple_calculator_observability
 
 Phoenix provides local tracing capabilities perfect for development and testing.
 
-1. Install Phoenix:
+1. Start the Phoenix server in a separate terminal, for this example we will use the `arizephoenix/phoenix` Docker image:
 
     ```bash
-    uv pip install arize-phoenix
+    docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
     ```
 
-2. Start Phoenix in a separate terminal:
-
-    ```bash
-    phoenix serve
-    ```
-
-3. Run the workflow with tracing enabled:
+2. Run the workflow with tracing enabled:
 
     ```bash
     nat run --config_file examples/observability/simple_calculator_observability/configs/config-phoenix.yml --input "What is 2 * 4?"
     ```
 
-4. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
+3. Open your browser to `http://localhost:6006` to explore traces in the Phoenix UI.
 
 ### Phoenix Tracing with Nested Tool Calls
 
@@ -103,6 +99,26 @@ This configuration demonstrates **parent-child span tracking** for nested tool c
     ```
 
 This is useful for filtering out internal tool calls when analyzing agent behavior, allowing you to focus on only the tools the agent directly selected.
+
+### Arize AX (hosted OTLP)
+
+Send traces to [Arize AX](https://arize.com/docs/ax/) using the `arize_ax` exporter (`nvidia-nat[opentelemetry]`). This example uses the same OTLP metadata as [Arize OTel](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel).
+
+1. Set credentials (project name defaults to `simple_calculator` in `config-arize-ax.yml` if `ARIZE_PROJECT_NAME` is unset):
+
+    ```bash
+    export ARIZE_SPACE_ID="<your-space-id>"
+    export ARIZE_API_KEY="<your-api-key>"
+    export ARIZE_PROJECT_NAME="simple_calculator"
+    ```
+
+2. Run the workflow:
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-arize-ax.yml --input "What is 2 * 4?"
+    ```
+
+3. Open the Arize project matching your project name to view traces. For **EU** residency, set `use_eu_region: true` under `arize_ax` in the config file.
 
 ### File-Based Tracing
 
@@ -144,7 +160,7 @@ For simple local development and debugging, you can export traces directly to a 
     ```bash
     export LANGFUSE_PUBLIC_KEY=<your_key>
     export LANGFUSE_SECRET_KEY=<your_secret>
-    export LANGFUSE_HOST=<your_host>
+    export LANGFUSE_BASE_URL=<your_base_url>
     ```
 
 3. Run the workflow:
@@ -238,7 +254,7 @@ Transmit traces to RagaAI Catalyst.
 
 1. Get your Catalyst credentials and create a project:
 
-    1. Login to [RagaAI Catalyst](https://catalyst.raga.ai/) and navigate to the settings page.
+    1. Login to [RagaAI Catalyst](https://docs.raga.ai/ragaai-catalyst) and navigate to the settings page.
 
     2. Click on the "Authenticate" tab, then click on "Generate New Key". Take note of the Access Key and Secret Key as you will need them to run the workflow.
     3. Click on "Projects" in the left sidebar, then click on the "Create Project" button. Name your project `simple-calculator` and click "Create". Alternately another project name can be used, just ensure to update the project name in `examples/observability/simple_calculator_observability/configs/config-catalyst.yml` to match.
@@ -251,7 +267,7 @@ Transmit traces to RagaAI Catalyst.
     export CATALYST_SECRET_KEY=<your_secret_key>
     ```
 
-    Optionally set a custom endpoint (default is `https://catalyst.raga.ai/api`):
+    Optionally set a custom endpoint (default is documented in [RagaAI Catalyst](https://docs.raga.ai/ragaai-catalyst)):
 
     ```bash
     export CATALYST_ENDPOINT=<your_endpoint>
@@ -333,6 +349,7 @@ The example includes multiple configuration files for different observability pl
 |-------------------|----------|----------|
 | `config-phoenix.yml` | Phoenix | Tracing with Phoenix |
 | `config-phoenix-nested.yml` | Phoenix | Testing parent-child span tracking with nested tool calls |
+| `config-arize-ax.yml` | Arize AX | Hosted OTLP tracing to Arize AX (requires `ARIZE_*` environment variables) |
 | `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
 | `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |

@@ -1,7 +1,15 @@
 [
     {
-        "version": "1.5",
+        "version": "1.7",
         "preferred": true,
+        "url": "../1.7/"
+    },
+    {
+        "version": "1.6",
+        "url": "../1.6/"
+    },
+    {
+        "version": "1.5",
         "url": "../1.5/"
     },
     {

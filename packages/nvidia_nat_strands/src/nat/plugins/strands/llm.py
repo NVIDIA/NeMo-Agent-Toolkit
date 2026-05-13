@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""LLM provider wrappers for AWS Strands integration with NVIDIA NeMo Agent toolkit.
+"""LLM provider wrappers for AWS Strands integration with NVIDIA NeMo Agent Toolkit.
 
 This module provides Strands-compatible LLM client wrappers for the following providers:
 
@@ -25,9 +25,9 @@ Supported Providers
 Each wrapper:
 
 - Validates that Responses API features are disabled (Strands manages tool execution)
-- Patches clients with NeMo Agent toolkit retry logic from ``RetryMixin``
+- Patches clients with NeMo Agent Toolkit retry logic from ``RetryMixin``
 - Injects chain-of-thought prompts when ``ThinkingMixin`` is configured
-- Removes NeMo Agent toolkit-specific config keys before instantiating Strands clients
+- Removes NeMo Agent Toolkit-specific config keys before instantiating Strands clients
 
 Future Provider Support
 -----------------------
@@ -59,6 +59,7 @@ from nat.data_models.thinking_mixin import ThinkingMixin
 from nat.llm.aws_bedrock_llm import AWSBedrockModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import async_http_client
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -138,13 +139,13 @@ def _patch_llm_based_on_config(client: ModelType, llm_config: LLMBaseConfig) -> 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
 async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> AsyncGenerator[Any, None]:
-    """Build a Strands OpenAI client from an NVIDIA NeMo Agent toolkit configuration.
+    """Build a Strands OpenAI client from an NVIDIA NeMo Agent Toolkit configuration.
 
     The wrapper requires the ``nvidia-nat[strands]`` extra and a valid OpenAI-compatible
     API key. When ``llm_config.api_key`` is empty, the integration falls back to the
     ``OPENAI_API_KEY`` environment variable. Responses API features are disabled through
     ``validate_no_responses_api`` because Strands handles tool execution inside the
-    framework runtime. The yielded client is patched with NeMo Agent toolkit retry and
+    framework runtime. The yielded client is patched with NeMo Agent Toolkit retry and
     thinking hooks so that framework-level policies remain consistent.
 
     Args:
@@ -152,29 +153,53 @@ async def openai_strands(llm_config: OpenAIModelConfig, _builder: Builder) -> As
         _builder: Builder instance provided by the workflow factory (unused).
 
     Yields:
-        Strands ``OpenAIModel`` objects ready to stream responses with NeMo Agent toolkit
+        Strands ``OpenAIModel`` objects ready to stream responses with NeMo Agent Toolkit
         retry/thinking behaviors applied.
     """
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
+    from openai import AsyncOpenAI
+
     from strands.models.openai import OpenAIModel
 
     params = llm_config.model_dump(
-        exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking"},
-        by_alias=True,
-        exclude_none=True)
-
-    client = OpenAIModel(
-        client_args={
-            "api_key": get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY"),
-            "base_url": llm_config.base_url,
+        exclude={
+            "api_key",
+            "api_type",
+            "base_url",
+            "max_retries",
+            "model_name",
+            "request_timeout",
+            "thinking",
+            "type",
+            "verify_ssl",
         },
-        model_id=llm_config.model_name,
-        params=params,
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
     )
 
-    yield _patch_llm_based_on_config(client, llm_config)
+    api_key = get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")
+    base_url = llm_config.base_url or os.getenv("OPENAI_BASE_URL")
+
+    async with async_http_client(llm_config) as http_client:
+        client_args: dict[str, Any] = {
+            "api_key": api_key,
+            "base_url": base_url,
+            "http_client": http_client,
+        }
+        if llm_config.request_timeout is not None:
+            client_args["timeout"] = llm_config.request_timeout
+
+        oai_client = AsyncOpenAI(**client_args)
+        client = OpenAIModel(
+            client=oai_client,
+            model_id=llm_config.model_name,
+            params=params,
+        )
+
+        yield _patch_llm_based_on_config(client, llm_config)
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
@@ -184,7 +209,7 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     Install the ``nvidia-nat[strands]`` extra and provide a NIM API key either through
     ``llm_config.api_key`` or the ``NVIDIA_API_KEY`` environment variable. The wrapper
     uses the OpenAI-compatible Strands client so Strands can route tool calls while the
-    NeMo Agent toolkit continues to manage retries, timeouts, and optional thinking
+    NeMo Agent Toolkit continues to manage retries, timeouts, and optional thinking
     prompts. Responses API options are blocked to avoid conflicting execution models.
 
     Args:
@@ -199,6 +224,8 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
 
     # NIM is OpenAI compatible; use OpenAI model with NIM base_url and api_key
+    from openai import AsyncOpenAI
+
     from strands.models.openai import OpenAIModel
 
     # Create a custom OpenAI model that formats text content as strings for NIM compatibility
@@ -258,9 +285,20 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
             return formatted_messages
 
     params = llm_config.model_dump(
-        exclude={"type", "api_type", "api_key", "base_url", "model_name", "max_retries", "thinking"},
+        exclude={
+            "api_key",
+            "api_type",
+            "base_url",
+            "max_retries",
+            "model_name",
+            "thinking",
+            "type",
+            "verify_ssl",
+        },
         by_alias=True,
-        exclude_none=True)
+        exclude_none=True,
+        exclude_unset=True,
+    )
 
     # Determine base_url
     base_url = llm_config.base_url or "https://integrate.api.nvidia.com/v1"
@@ -271,21 +309,24 @@ async def nim_strands(llm_config: NIMModelConfig, _builder: Builder) -> AsyncGen
     if llm_config.base_url and llm_config.base_url.strip() and api_key is None:
         api_key = "dummy-api-key"
 
-    client = NIMCompatibleOpenAIModel(
-        client_args={
-            "api_key": api_key,
-            "base_url": base_url,
-        },
-        model_id=llm_config.model_name,
-        params=params,
-    )
+    async with async_http_client(llm_config) as http_client:
+        oai_client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            http_client=http_client,
+        )
+        client = NIMCompatibleOpenAIModel(
+            client=oai_client,
+            model_id=llm_config.model_name,
+            params=params,
+        )
 
-    yield _patch_llm_based_on_config(client, llm_config)
+        yield _patch_llm_based_on_config(client, llm_config)
 
 
 @register_llm_client(config_type=AWSBedrockModelConfig, wrapper_type=LLMFrameworkEnum.STRANDS)
 async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) -> AsyncGenerator[Any, None]:
-    """Build a Strands Bedrock client from an NVIDIA NeMo Agent toolkit configuration.
+    """Build a Strands Bedrock client from an NVIDIA NeMo Agent Toolkit configuration.
 
     The integration expects the ``nvidia-nat[strands]`` extra plus AWS credentials that
     can be resolved by ``boto3``. Credentials are loaded in the following priority:
@@ -308,7 +349,7 @@ async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) 
 
     Yields:
         Strands ``BedrockModel`` instances configured for the selected Bedrock
-        ``model_name`` and patched with NeMo Agent toolkit retry/thinking helpers.
+        ``model_name`` and patched with NeMo Agent Toolkit retry/thinking helpers.
     """
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.STRANDS)
@@ -317,18 +358,20 @@ async def bedrock_strands(llm_config: AWSBedrockModelConfig, _builder: Builder) 
 
     params = llm_config.model_dump(
         exclude={
-            "type",
             "api_type",
-            "model_name",
-            "region_name",
             "base_url",
-            "max_retries",
-            "thinking",
             "context_size",
             "credentials_profile_name",
+            "max_retries",
+            "model_name",
+            "region_name",
+            "thinking",
+            "type",
+            "verify_ssl",
         },
         by_alias=True,
         exclude_none=True,
+        exclude_unset=True,
     )
 
     region = None if llm_config.region_name in (None, "None") else llm_config.region_name

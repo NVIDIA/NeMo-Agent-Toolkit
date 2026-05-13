@@ -19,7 +19,9 @@ limitations under the License.
 
 # DPO Tic-Tac-Toe: Preference Learning with NeMo Customizer
 
-This example demonstrates how to use the NeMo Agent toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
+**Complexity:** 🛑 Advanced
+
+This example demonstrates how to use the NeMo Agent Toolkit Test Time Compute (TTC) pipeline to generate preference data for Direct Preference Optimization (DPO) training, and submit training jobs to NVIDIA NeMo Customizer.
 
 ## Table of Contents
 
@@ -49,6 +51,9 @@ Direct Preference Optimization (DPO) is a technique for aligning language models
 The model learns to prefer responses similar to the chosen examples while avoiding patterns in rejected examples.
 
 ## Prerequisites
+
+> [!IMPORTANT]
+> This example assumes you are already familiar with the NVIDIA NeMo Microservices platform and have it set up and running. If you're new to NeMo Microservices, please refer to the [NeMo Microservices Setup Guide](https://docs.nvidia.com/nemo/microservices/latest/index.html) first.
 
 ### 1. Python Environment
 
@@ -116,7 +121,7 @@ Set the following environment variables:
 # NGC API key for NeMo services
 export NGC_API_KEY="your-ngc-api-key"
 
-# HuggingFace token (if required by datastore)
+# Hugging Face token (if required by datastore)
 export HF_TOKEN="your-hf-token"
 
 # OpenAI-compatible API key for inference
@@ -271,10 +276,10 @@ For non-terminal positions without forced outcomes, the scorer uses these featur
 
 ## Installation
 
-This example is meant to be run using a NeMo Agent Toolkit installation from source. You 
+This example is meant to be run using a NeMo Agent Toolkit installation from source. You
 can follow the [NeMo Agent Toolkit Installation Guide](../../../docs/source/get-started/installation.md) to set up your environment.
 
-Then: 
+Then:
 
 ```bash
 uv pip install -e examples/finetuning/dpo_tic_tac_toe
@@ -682,7 +687,7 @@ trainer_adapters:
 
 **Cause**: Serialization issue with intermediate steps.
 
-**Solution**: Ensure you're using the latest NeMo Agent toolkit version with `SerializeAsAny` fix in `IntermediateStepPayload`.
+**Solution**: Ensure you're using the latest NeMo Agent Toolkit version with `SerializeAsAny` fix in `IntermediateStepPayload`.
 
 ### Debug Logging
 
@@ -705,6 +710,6 @@ logging.getLogger("nat.plugins.customizer").setLevel(logging.DEBUG)
 
 ## See Also
 
-- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NeMo Agent toolkit finetuning architecture
+- [Finetuning Concepts](../../../docs/source/improve-workflows/finetuning/concepts.md) - NeMo Agent Toolkit finetuning architecture
 - [Test Time Compute](../../../docs/source/improve-workflows/test-time-compute.md) - TTC pipeline reference
 - [RL with OpenPipe ART](../rl_with_openpipe_art/) - Alternative RL-based finetuning example

@@ -17,7 +17,7 @@ limitations under the License.
 
 # Cursor Rules Reference
 
-This document provides a comprehensive reference for all available Cursor rules in NeMo Agent toolkit. Each rule includes a purpose description, usage prompt, and practical examples.
+This document provides a comprehensive reference for all available Cursor rules in NeMo Agent Toolkit. Each rule includes a purpose description, usage prompt, and practical examples.
 
 ## Foundation Rules
 
@@ -29,7 +29,7 @@ This document provides a comprehensive reference for all available Cursor rules 
 **Prompt**:
 
 ```
-Create a new Python function with proper type hints, docstrings, and formatting that follows NeMo Agent toolkit coding standards.
+Create a new Python function with proper type hints, docstrings, and formatting that follows NeMo Agent Toolkit coding standards.
 ```
 
 **Capabilities**:
@@ -68,12 +68,12 @@ Create a new Cursor rule for creating a new NeMo Agent workflow
 ### General Setup Guidelines
 
 **Cursor Rule file**: `.cursor/rules/nat-setup/general.mdc`
-**Purpose**: Guidance for NeMo Agent toolkit installation, setup, and environment configuration.
+**Purpose**: Guidance for NeMo Agent Toolkit installation, setup, and environment configuration.
 
 **Prompt**:
 
 ```
-Help me set up NeMo Agent toolkit development environment with all required dependencies and configurations.
+Help me set up NeMo Agent Toolkit development environment with all required dependencies and configurations.
 ```
 
 **Capabilities**:
@@ -95,7 +95,7 @@ Help me set up NeMo Agent toolkit development environment with all required depe
 **Prompt**:
 
 ```
-Install NeMo Agent toolkit with all plugins and verify the installation is working correctly.
+Install NeMo Agent Toolkit with all plugins and verify the installation is working correctly.
 ```
 
 **Related Documentation**: [Installation Guide](../../../get-started/installation.md)

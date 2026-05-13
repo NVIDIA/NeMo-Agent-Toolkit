@@ -17,7 +17,7 @@ limitations under the License.
 
 # Agent-to-Agent Protocol (A2A)
 
-NVIDIA NeMo Agent toolkit [Agent-to-Agent Protocol (A2A)](https://a2aproject.org/) integration includes:
+NVIDIA NeMo Agent Toolkit [Agent-to-Agent Protocol (A2A)](https://a2a-protocol.org) integration includes:
 * An [A2A client](../../build-workflows/a2a-client.md) to connect to and interact with remote A2A [agents](../agents/index.md).
 * An [A2A server](../../run-workflows/a2a-server.md) to publish [workflows](../../build-workflows/about-building-workflows.md) as A2A agents that can be discovered and invoked by other A2A clients.
 
@@ -29,6 +29,23 @@ The Agent-to-Agent (A2A) Protocol is an open standard from the Linux Foundation 
 - **Discover capabilities** through Agent Cards
 - **Delegate tasks** to other agents
 - **Exchange information** using a common protocol
+
+## Why Use A2A?
+
+Multiple agents are useful when you want to:
+
+- Group logic by domain or function and keep responsibilities clear.
+- Reuse specialized agents without duplicating logic.
+- Scale or replace parts of the system independently.
+
+A2A makes multi-agent systems easier to manage by:
+
+- Discovering remote capabilities through Agent Cards.
+- Providing a consistent protocol for communication.
+- Delegating tasks to specialized agents across different stacks.
+- Enabling secure access through A2A authentication when your agents require it.
+
+If you already have a multi-agent use case, A2A provides a standard interface that keeps integrations predictable and easier to maintain. If you are exploring options, A2A is a good fit when you expect to add or swap agents over time.
 
 ## Key Concepts
 

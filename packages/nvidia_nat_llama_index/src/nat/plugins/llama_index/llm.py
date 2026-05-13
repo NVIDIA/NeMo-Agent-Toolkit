@@ -13,12 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from collections.abc import Sequence
 from typing import TypeVar
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.cli.register_workflow import register_llm_client
+from nat.data_models.common import get_secret_value
 from nat.data_models.llm import APITypeEnum
 from nat.data_models.llm import LLMBaseConfig
 from nat.data_models.retry_mixin import RetryMixin
@@ -28,6 +30,7 @@ from nat.llm.azure_openai_llm import AzureOpenAIModelConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
+from nat.llm.utils.http_client import http_clients
 from nat.llm.utils.thinking import BaseThinkingInjector
 from nat.llm.utils.thinking import FunctionArgumentWrapper
 from nat.llm.utils.thinking import patch_with_thinking
@@ -87,8 +90,10 @@ async def aws_bedrock_llama_index(llm_config: AWSBedrockModelConfig, _builder: B
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
 
     # LlamaIndex uses context_size instead of max_tokens
-    llm = Bedrock(**llm_config.model_dump(
-        exclude={"type", "top_p", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+    llm = Bedrock(**llm_config.model_dump(exclude={"api_type", "thinking", "top_p", "type", "verify_ssl"},
+                                          by_alias=True,
+                                          exclude_none=True,
+                                          exclude_unset=True))
 
     yield _patch_llm_based_on_config(llm, llm_config)
 
@@ -100,15 +105,22 @@ async def azure_openai_llama_index(llm_config: AzureOpenAIModelConfig, _builder:
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
 
-    llm = AzureOpenAI(
-        **llm_config.model_dump(exclude={"type", "thinking", "api_type", "api_version"},
-                                by_alias=True,
-                                exclude_none=True,
-                                exclude_unset=True),
-        api_version=llm_config.api_version,
-    )
+    config_dict = llm_config.model_dump(
+        exclude={"api_type", "api_version", "request_timeout", "thinking", "type", "verify_ssl"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True)
+    if llm_config.request_timeout is not None:
+        config_dict["timeout"] = llm_config.request_timeout
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+    async with http_clients(llm_config) as http_clients_dict:
+        config_dict.update(http_clients_dict)
+        llm = AzureOpenAI(
+            **config_dict,
+            api_version=llm_config.api_version,
+        )
+
+        yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=NIMModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -118,10 +130,23 @@ async def nim_llama_index(llm_config: NIMModelConfig, _builder: Builder):
 
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
 
-    llm = NVIDIA(**llm_config.model_dump(
-        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+    config_dict = llm_config.model_dump(
+        exclude={
+            "api_type",
+            "thinking",
+            "type",
+            "verify_ssl",
+        },
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+    async with http_clients(llm_config) as http_clients_dict:
+        config_dict.update(http_clients_dict)
+        llm = NVIDIA(**config_dict)
+
+        yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=OpenAIModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -130,14 +155,29 @@ async def openai_llama_index(llm_config: OpenAIModelConfig, _builder: Builder):
     from llama_index.llms.openai import OpenAI
     from llama_index.llms.openai import OpenAIResponses
 
-    if llm_config.api_type == APITypeEnum.RESPONSES:
-        llm = OpenAIResponses(**llm_config.model_dump(
-            exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
-    else:
-        llm = OpenAI(**llm_config.model_dump(
-            exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+    config_dict = llm_config.model_dump(
+        exclude={"api_key", "api_type", "base_url", "request_timeout", "thinking", "type", "verify_ssl"},
+        by_alias=True,
+        exclude_none=True,
+        exclude_unset=True,
+    )
 
-    yield _patch_llm_based_on_config(llm, llm_config)
+    if (api_key := get_secret_value(llm_config.api_key) or os.getenv("OPENAI_API_KEY")):
+        config_dict["api_key"] = api_key
+    if (base_url := llm_config.base_url or os.getenv("OPENAI_BASE_URL")):
+        # LlamaIndex's OpenAI wrapper expects "api_base" instead of "base_url"
+        config_dict["api_base"] = base_url
+    if llm_config.request_timeout is not None:
+        config_dict["timeout"] = llm_config.request_timeout
+
+    async with http_clients(llm_config) as http_clients_dict:
+        config_dict.update(http_clients_dict)
+        if llm_config.api_type == APITypeEnum.RESPONSES:
+            llm = OpenAIResponses(**config_dict)
+        else:
+            llm = OpenAI(**config_dict)
+
+        yield _patch_llm_based_on_config(llm, llm_config)
 
 
 @register_llm_client(config_type=LiteLlmModelConfig, wrapper_type=LLMFrameworkEnum.LLAMA_INDEX)
@@ -145,9 +185,15 @@ async def litellm_llama_index(llm_config: LiteLlmModelConfig, _builder: Builder)
 
     from llama_index.llms.litellm import LiteLLM
 
+    from nat.llm.utils.http_client import _handle_litellm_verify_ssl
+
+    _handle_litellm_verify_ssl(llm_config)
     validate_no_responses_api(llm_config, LLMFrameworkEnum.LLAMA_INDEX)
 
-    llm = LiteLLM(**llm_config.model_dump(
-        exclude={"type", "thinking", "api_type"}, by_alias=True, exclude_none=True, exclude_unset=True))
+    llm = LiteLLM(
+        **llm_config.model_dump(exclude={"api_type", "thinking", "type", "verify_ssl"},
+                                by_alias=True,
+                                exclude_none=True,
+                                exclude_unset=True), )
 
     yield _patch_llm_based_on_config(llm, llm_config)

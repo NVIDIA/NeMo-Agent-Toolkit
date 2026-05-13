@@ -19,6 +19,7 @@ import typing
 from pydantic import Field
 
 from nat.builder.builder import Builder
+from nat.cli.register_workflow import register_eval_callback
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 
@@ -78,3 +79,10 @@ async def weave_telemetry_exporter(config: WeaveTelemetryExporter, builder: Buil
                         entity=config.entity,
                         verbose=config.verbose,
                         attributes=config.attributes)
+
+
+@register_eval_callback(config_type=WeaveTelemetryExporter)
+def _build_weave_eval_callback(config: WeaveTelemetryExporter, **kwargs):
+    from nat.plugins.weave.weave_eval_callback import WeaveEvaluationCallback
+
+    return WeaveEvaluationCallback(project=config.project)

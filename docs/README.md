@@ -22,7 +22,7 @@ If you don't already have a uv environment setup, refer to the [Get Started](./s
 
 ## Install Documentation Dependencies
 ```bash
-uv sync --all-groups --all-extras
+uv sync --only-dev
 ```
 
 ## Build Documentation
@@ -54,6 +54,6 @@ make -C docs linkcheck
 **Note**: When viewing documentation locally, the version switcher in the navigation bar will redirect to the production documentation site (`https://docs.nvidia.com/nemo/agent-toolkit/`) when selecting a different version. This is expected behavior, as the version switcher uses absolute URLs to ensure proper page path preservation in production.
 
 ## Contributing
-Refer to the [Contributing to NeMo Agent toolkit](./source/resources/contributing/index.md) guide.
+Refer to the [Contributing to NeMo Agent Toolkit](./source/resources/contributing/index.md) guide.
 
 When you create your pull request, CI will perform a documentation build as part of the pipeline. If successful, the documentation will be available for download as an artifact.

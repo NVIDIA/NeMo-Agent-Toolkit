@@ -16,8 +16,9 @@
 llms:
   openpipe_llm:
     _type: openai
-    # Model name should be the same as the trainer adapter config base_model
-    model_name: Qwen/Qwen2.5-3B-Instruct
+    # Must match backend.name from training config to evaluate the LoRA adapter,
+    # not the base model.
+    model_name: tic_tac_toe_training_run
     base_url: http://localhost:8000/v1
     api_key: default
     temperature: 0.1

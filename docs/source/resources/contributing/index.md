@@ -17,11 +17,11 @@
 
 # Contributing to NVIDIA NeMo Agent Toolkit
 
-Contributions to NeMo Agent toolkit fall into the following three categories.
+Contributions to NeMo Agent Toolkit fall into the following three categories.
 
 * To report a bug, request a new feature, or report a problem with
    documentation, file a [bug](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues/new/choose)
-    describing in detail the problem or new feature. The NeMo Agent toolkit team evaluates
+    describing in detail the problem or new feature. The NeMo Agent Toolkit team evaluates
     and triages bugs and schedules them for a release. If you believe the
     bug needs priority attention, comment on the bug to notify the
     team.
@@ -34,7 +34,7 @@ Contributions to NeMo Agent toolkit fall into the following three categories.
     follow the [code contributions](#code-contributions) guide below. If you
     need more context on a particular issue, ask in a comment.
 
-As contributors and maintainers of NeMo Agent toolkit, you are expected to abide by the NeMo Agent toolkit code of conduct. More information can be found at: [Contributor Code of Conduct](./code-of-conduct.md).
+As contributors and maintainers of NeMo Agent Toolkit, you are expected to abide by the NeMo Agent Toolkit code of conduct. More information can be found at: [Contributor Code of Conduct](./code-of-conduct.md).
 
 ## Set Up Your Development Environment
 ### Prerequisites
@@ -44,14 +44,14 @@ As contributors and maintainers of NeMo Agent toolkit, you are expected to abide
 - Install [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - Install [Visual Studio Code](https://code.visualstudio.com/) (recommended)
 
-NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
+NeMo Agent Toolkit is a Python library that doesn’t require a GPU to run the workflow by default. You can deploy the core workflows using one of the following:
 - Ubuntu or other Linux distributions, including WSL, in a Python virtual environment.
 
 ### Creating the Environment
 
-1. Fork the NeMo Agent toolkit repository choosing **Fork** on the [NeMo Agent toolkit repository page](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
+1. Fork the NeMo Agent Toolkit repository choosing **Fork** on the [NeMo Agent Toolkit repository page](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
 
-1. Clone your personal fork of the NeMo Agent toolkit repository to your local machine.
+1. Clone your personal fork of the NeMo Agent Toolkit repository to your local machine.
     ```bash
     git clone <your fork url> nemo-agent-toolkit
     cd nemo-agent-toolkit
@@ -80,7 +80,8 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     ```bash
     uv venv --seed .venv
     source .venv/bin/activate
-    uv sync --all-groups --all-extras
+    # most contains almost all packages within the NeMo Agent Toolkit.
+    uv sync --all-groups --extra most
     ```
    :::{note}
    You may encounter `Too many open files (os error 24)`. This error occurs when your system’s file descriptor limit is too low.
@@ -96,19 +97,15 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
     ```
     **NOTE**: Running pre-commit for the first time will take longer than normal.
 
-1. Open the NeMo Agent toolkit Workspace in Visual Studio Code.
+1. Open the NeMo Agent Toolkit Workspace in Visual Studio Code.
     ```bash
     code ./nat.code-workspace
     ```
 
-### Install the NeMo Agent toolkit Library
+### Install the NeMo Agent Toolkit Library
 
-1. Install the NeMo Agent toolkit Examples by doing the following.
-   - Install NeMo Agent toolkit examples.
+1. Install the NeMo Agent Toolkit Examples by doing the following.
 
-     ```bash
-     uv sync --extra examples
-     ```
    - Install a single example by running `uv pip install -e ./examples/<example_name>`.
    For example, install the Simple Calculator example with the following command.
 
@@ -116,7 +113,7 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
      uv pip install -e ./examples/getting_started/simple_web_query
      ```
 
-1. Verify that you've installed the NeMo Agent toolkit library.
+1. Verify that you've installed the NeMo Agent Toolkit library.
 
      ```bash
      nat --help
@@ -125,20 +122,25 @@ NeMo Agent toolkit is a Python library that doesn’t require a GPU to run the w
 
      If the installation succeeded, the `nat` command will log the help message and its current version.
 
+### Testing
+
+Due to maintaining separate packages, some of which conflict with one another, there is a utility test script located under:
+
+`./ci/scripts/run_tests.py`
 
 ## Code contributions
 
 Please ensure that all new contributions adhere to the latest version notes within the [Migration Guide](../migration-guide.md).
 
 ### Example Workflow Contributions
-We welcome contributions of new example workflows in this repository and in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository. The difference is that examples in this repository are maintained, tested, and updated with each release of the NeMo Agent toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent toolkit, while examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent toolkit, and do not need to demonstrate a specific capability of the library.
+We welcome contributions of new example workflows in this repository and in the [NeMo-Agent-Toolkit-Examples](https://github.com/NVIDIA/NeMo-Agent-Toolkit-Examples) repository. The difference is that examples in this repository are maintained, tested, and updated with each release of the NeMo Agent Toolkit. These examples have high quality standards and demonstrate a capability of the NeMo Agent Toolkit, while examples in the NeMo-Agent-Toolkit-Examples repository are community contributed and are tied to a specific version of the NeMo Agent Toolkit, and do not need to demonstrate a specific capability of the library.
 
 ### Your first issue
 
 1. Find an issue to work on. The best way is to search for issues with the [good first issue](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues) label.
 1. Make sure that you can contribute your work to open source (no license and/or patent conflict is introduced by your code). You will need to [`sign`](#signing-your-work) your commit.
 1. Comment on the issue stating that you are going to work on it.
-1. [Fork the NeMo Agent toolkit repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit/fork)
+1. [Fork the NeMo Agent Toolkit repository](https://github.com/NVIDIA/NeMo-Agent-Toolkit/fork)
 1. Code!
     - Make sure to update existing unit tests!
     - Ensure the [license headers are set properly](./licensing.md).
@@ -156,7 +158,7 @@ We welcome contributions of new example workflows in this repository and in the 
 1. When done, [create your pull request](https://github.com/NVIDIA/NeMo-Agent-Toolkit/compare). Select `develop` as the `Target branch` of your pull request.
     - Ensure the body of the pull request references the issue you are working on in the form of `Closes #<issue number>`.
 1. Wait for other developers to review your code and update code as needed.
-1. Once reviewed and approved, a NeMo Agent toolkit developer will merge your pull request.
+1. Once reviewed and approved, a NeMo Agent Toolkit developer will merge your pull request.
 
 Remember, if you are unsure about anything, don't hesitate to comment on issues and ask for clarifications!
 
@@ -219,18 +221,18 @@ Remember, if you are unsure about anything, don't hesitate to comment on issues 
 Once you have gotten your feet wet and are more comfortable with the code, you can review the prioritized issues for our next release in our [project boards](https://github.com/NVIDIA/NeMo-Agent-Toolkit/projects).
 
 :::{tip}
-Always review the release board with the highest number for issues to work on. This is where NeMo Agent toolkit developers also focus their efforts.
+Always review the release board with the highest number for issues to work on. This is where NeMo Agent Toolkit developers also focus their efforts.
 :::
 
 Review the unassigned issues and choose an issue that you are comfortable contributing. Ensure you comment on the issue before you begin to inform others that you are working on it. If you have questions about implementing the issue, comment your questions in the issue instead of the PR.
 
-## Developing with NeMo Agent toolkit
+## Developing with NeMo Agent Toolkit
 
 Refer to the [Get Started](../../get-started/installation.md) guide to quickly begin development.
 
 ## Documentation
 
-All NeMo Agent toolkit documentation should be written in Markdown format.
+All NeMo Agent Toolkit documentation should be written in Markdown format.
 
 The documentation located under the `docs/source` directory is included in the documentation builds, and is built using [Sphinx](https://www.sphinx-doc.org/en/master/) with the [MyST parser](https://myst-parser.readthedocs.io/en/latest/). Refer to `docs/README.md` for information on how to build the documentation.
 
@@ -241,16 +243,16 @@ In addition to this, each example should contain a `README.md` file that describ
 The documentation in the `docs/source` directory is organized into the following categories. When adding new documentation, ensure that it is added to the appropriate category and sub-category:
 
 * **About** (`about`) - This should be limited to an overview, key features, concepts, and release notes documents.
-* **Get Started** (`get-started`) - Introductory documentation to help users get started with NeMo Agent toolkit.
+* **Get Started** (`get-started`) - Introductory documentation to help users get started with NeMo Agent Toolkit.
   * **Tutorials** (`get-started/tutorials`) - Step-by-step guides to help users learn how to use the toolkit to execute specific use cases.
 * **Build** (`build-workflows`) - Documentation on how to build workflows and workflow configuration. This includes information on the types of components (for example [LLMs](../../build-workflows/llms/index.md) and agents) that can be used as part of a workflow. However, documentation of specific component implementations (for example ReAct Agent, and the Code Execution tool) should be located in the Components category. Information about adding a remote MCP tool or A2A agent should be located here, however serving a workflow using MCP or A2A protocols should be located under the "Run Workflows" label.
 * **Run** (`run-workflows`) - Documentation on how to run workflows, including observing workflows and publishing workflows with MCP and A2A protocols.
 * **Improve** (`improve-workflows`) - Documentation on how to improve workflows such as evaluation and optimization guides.
 * **Components** (`components`) - Documentation on specific component implementations such as agents, tools, and connectors.
-* **Extend** (`extend`) - Documentation on how to write custom components, along with how to test those components. The documentation here should help users extend the toolkit to meet their needs, and while there is some overlap, this documentation should not focus on contributing to the core NeMo Agent toolkit library.
+* **Extend** (`extend`) - Documentation on how to write custom components, along with how to test those components. The documentation here should help users extend the toolkit to meet their needs, and while there is some overlap, this documentation should not focus on contributing to the core NeMo Agent Toolkit library.
 * **Reference** (`reference`) - This documentation should be limited to documenting the Python API, REST API, and CLI.
 * **Resources** (`resources`) - Documentation for the project as a whole such as contributing guidelines, code of conduct, licensing, and FAQs.
-  * **Contributing** (`resources/contributing`) - Documentation on how to contribute to the NeMo Agent toolkit project including setting up a development environment and running tests.
+  * **Contributing** (`resources/contributing`) - Documentation on how to contribute to the NeMo Agent Toolkit project including setting up a development environment and running tests.
 
 ### Checks
 All documentation is checked using [Vale](https://vale.sh/). In documentation the name of a command, variable, class, or function should be surrounded by backticks. For example referring `nat` should always be surrounded by backticks. Vale will not perform a check against anything surrounded by backticks or by a code block.
@@ -338,13 +340,13 @@ There is logic within the checker to support per-line checks. For example, withi
 
 If you are expanding the checker to support a new file type or adding a new per-line check, you can add a new file-type specific checker by adding a new function to the `ci/scripts/path_checks.py` file.
 
-### NVIDIA NeMo Agent toolkit Name Guidelines
+### NVIDIA NeMo Agent Toolkit Name Guidelines
 
-* Full Name: `NVIDIA NeMo Agent toolkit`  - Use for document titles, webpage headers, any public descriptions
+* Full Name: `NVIDIA NeMo Agent Toolkit`  - Use for document titles, webpage headers, any public descriptions
   - In situations where all words are capitalized (ex: document titles and headings), 'Toolkit' should be capitalized, in all other situations 'toolkit' should not be.
 
-* Short Name: `NeMo Agent toolkit`
-  - Use after `NVIDIA NeMo Agent toolkit` has been referenced in blogs, documents, and other public locations
+* Short Name: `NeMo Agent Toolkit`
+  - Use after `NVIDIA NeMo Agent Toolkit` has been referenced in blogs, documents, and other public locations
   - Note that the 't' is lowercase in toolkit unless used in a title or heading
 * Uppercase No Space: `NeMo-Agent-Toolkit`
   - Use for situations where capitalization will be preserved like the GitHub URL, directories, etc.

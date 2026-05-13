@@ -56,12 +56,12 @@ async def strands_demo(config: StrandsDemoConfig, builder: Builder) -> AsyncGene
     """
     Create a Strands agent workflow that queries documentation URLs.
 
-    This workflow demonstrates the Strands integration provided by the NeMo Agent toolkit by creating an agent that uses
+    This workflow demonstrates the Strands integration provided by the NeMo Agent Toolkit by creating an agent that uses
     a URL directory and HTTP request tool to answer questions about Strands documentation.
 
     Args:
         config: Configuration specifying LLM, tools, and system prompt
-        builder: NeMo Agent toolkit builder for resolving components
+        builder: NeMo Agent Toolkit builder for resolving components
 
     Yields:
         FunctionInfo wrapping the agent execution function that processes

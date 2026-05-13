@@ -28,11 +28,11 @@ from nat.builder.builder import EvalBuilder
 from nat.builder.evaluator import EvaluatorInfo
 from nat.cli.register_workflow import register_evaluator
 from nat.data_models.component_ref import LLMRef
+from nat.data_models.evaluator import EvalInput
+from nat.data_models.evaluator import EvalInputItem
 from nat.data_models.evaluator import EvaluatorBaseConfig
-from nat.eval.evaluator.evaluator_model import EvalInput
-from nat.eval.evaluator.evaluator_model import EvalInputItem
-from nat.eval.evaluator.evaluator_model import EvalOutput
-from nat.eval.evaluator.evaluator_model import EvalOutputItem
+from nat.plugins.eval.data_models.evaluator_io import EvalOutput
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 
 logger = logging.getLogger(__name__)
 

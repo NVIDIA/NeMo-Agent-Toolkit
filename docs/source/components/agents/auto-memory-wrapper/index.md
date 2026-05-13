@@ -19,7 +19,7 @@ limitations under the License.
 
 The `auto_memory_agent` wraps any NeMo Agent Toolkit agent to provide **automatic memory capture and retrieval** without requiring the LLM to invoke memory tools explicitly. Unlike traditional tool-based memory where LLMs may forget to call memory tools, this wrapper guarantees consistent memory operations on every interaction while maintaining full compatibility with any agent type (ReAct, ReWOO, Tool Calling, Reasoning, etc.).
 
-The agent uses the NVIDIA NeMo Agent toolkit core library to simplify development. Additionally, you can customize behavior through YAML config options for your specific needs.
+The agent uses the NVIDIA NeMo Agent Toolkit core library to simplify development. Additionally, you can customize behavior through YAML config options for your specific needs.
 
 To configure your automatic memory wrapper agent, refer to [Configure the Automatic Memory Wrapper Agent](./auto-memory-wrapper.md).
 

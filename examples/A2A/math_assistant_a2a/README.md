@@ -16,6 +16,8 @@ limitations under the License.
 
 # Math Assistant A2A Example
 
+**Complexity:** 🟨 Intermediate
+
 This example demonstrates an end-to-end A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, combining remote calculator operations with local time services and conditional evaluation tools.
 
 
@@ -58,11 +60,11 @@ flowchart LR
 
 ### Prerequisites
 
-Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent toolkit.
+Follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
 ### Install Dependencies
 
-From the root directory of the NeMo Agent toolkit library, install this example:
+From the root directory of the NeMo Agent Toolkit library, install this example:
 
 ```bash
 uv pip install -e examples/A2A/math_assistant_a2a
@@ -255,3 +257,7 @@ For production scenarios requiring authentication, see the [OAuth2 Protected Mat
 
 - [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) - OAuth2-protected A2A example
 - [Currency Agent A2A](../currency_agent_a2a/) - External A2A service integration example
+
+## References
+
+- [A2A Introduction](../../../docs/source/components/integrations/a2a.md)

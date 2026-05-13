@@ -22,7 +22,6 @@ from unittest.mock import patch
 
 import pytest
 
-from nat.builder.builder import Builder
 from nat.builder.function import LambdaFunction
 from nat.builder.function_info import FunctionInfo
 from nat.plugins.agno.tools.serp_api_tool import SerpApiToolConfig
@@ -46,11 +45,6 @@ mock_modules['agno.tools'].serpapi = mock_modules['agno.tools.serpapi']
 
 class TestSerpApiTool:
     """Tests for the serp_api_tool function."""
-
-    @pytest.fixture
-    def mock_builder(self):
-        """Create a mock Builder object."""
-        return MagicMock(spec=Builder)
 
     @pytest.fixture
     def tool_config(self):

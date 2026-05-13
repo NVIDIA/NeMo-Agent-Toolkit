@@ -15,27 +15,27 @@
 # <!-- path-check-skip-file -->
 
 # =============================================================================
-# PREDICTIVE PREFIX HEADER OPTIMIZATION
+# PREDICTIVE NVEXT HINTS OPTIMIZATION
 # =============================================================================
 # Purpose: Optimize Dynamo Predictive KV-Aware Cache router parameters
 # Run with: nat optimize --config_file configs/optimize_rethinking_full_test.yml
 #
-# This configuration tunes the prefix header parameters that control how the
+# This configuration tunes the nvext agent hints parameters that control how the
 # Thompson Sampling router makes worker assignment decisions:
 #
-# Dynamo Prefix Parameter Reference (from router.py):
+# Dynamo Nvext Parameter Reference (from router.py):
 # ─────────────────────────────────────────────────────────────────────────────
-# prefix_osl (Output Sequence Length):
+# nvext_prefix_osl (Output Sequence Length):
 #   - LOW    → decode_cost = 1.0 (short responses expected)
 #   - MEDIUM → decode_cost = 2.0 (typical responses)
 #   - HIGH   → decode_cost = 3.0 (long responses expected)
 #
-# prefix_iat (Inter-Arrival Time):
+# nvext_prefix_iat (Inter-Arrival Time):
 #   - LOW    → iat_factor = 1.5 (rapid requests, high stickiness)
 #   - MEDIUM → iat_factor = 1.0 (normal pacing)
 #   - HIGH   → iat_factor = 0.6 (slow requests, more exploration)
 #
-# prefix_total_requests:
+# nvext_prefix_total_requests:
 #   - Integer >= 1: How many requests expected for this prefix or conversation
 #   - Higher values increase worker stickiness and KV cache locality
 #   - Lower values allow more worker exploration and load balancing
@@ -43,8 +43,8 @@
 # Router Behavior Summary:
 #   - Higher reuse_budget + LOW iat → strong stickiness to same worker
 #   - Higher reuse_budget → switching penalty increases
-#   - prefix_total_requests affects reuse_budget calculation:
-#     reuse_budget = prefix_total_requests - requests_processed_so_far
+#   - nvext_prefix_total_requests affects reuse_budget calculation:
+#     reuse_budget = nvext_prefix_total_requests - requests_processed_so_far
 # =============================================================================
 
 functions:
@@ -139,34 +139,35 @@ llms:
     max_tokens: 8192
     stop: ["Observation:", "\nThought:"]
     
-    # Dynamo prefix configuration
-    # Note: Setting prefix_template enables dynamic prefix headers
-    prefix_template: "react-benchmark-{uuid}"
+    # Dynamo nvext hints configuration
+    # Note: Setting enable_nvext_hints enables nvext agent hints
+    enable_nvext_hints: true
+    nvext_prefix_id_template: "react-benchmark-{uuid}"
     # OPTIMIZABLE: Total expected requests per conversation or prefix
     # Default search space: low=1, high=20, step=5
-    prefix_total_requests: 10
+    nvext_prefix_total_requests: 10
     # OPTIMIZABLE: Output Sequence Length hint (LOW | MEDIUM | HIGH)
-    prefix_osl: MEDIUM
+    nvext_prefix_osl: MEDIUM
     # OPTIMIZABLE: Inter-Arrival Time hint (LOW | MEDIUM | HIGH)
-    prefix_iat: MEDIUM
+    nvext_prefix_iat: MEDIUM
     
     # =========================================================================
     # OPTIMIZER: Which parameters to optimize and their search spaces
     # =========================================================================
     optimizable_params:
-      - prefix_total_requests
-      - prefix_osl
-      - prefix_iat
+      - nvext_prefix_total_requests
+      - nvext_prefix_osl
+      - nvext_prefix_iat
     
     # Override default search spaces if needed
     search_space:
-      prefix_total_requests:
+      nvext_prefix_total_requests:
         low: 1
         high: 20
         step: 5
-      prefix_osl:
+      nvext_prefix_osl:
         values: ["LOW", "MEDIUM", "HIGH"]
-      prefix_iat:
+      nvext_prefix_iat:
         values: ["LOW", "MEDIUM", "HIGH"]
 
   # Secondary LLM for self-evaluation (not optimized)

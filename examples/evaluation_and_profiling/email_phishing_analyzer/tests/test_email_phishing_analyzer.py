@@ -40,7 +40,7 @@ async def test_run_full_workflow():
             "Dear [Customer], Thank you for your purchase on [Date]. We have processed a refund of $[Amount] to your "
             "account. Please provide your account and routing numbers so we can complete the transaction. Thank you, "
             "[Your Company]"),
-        expected_answer="likely")
+        expected_answer="phishing")
 
 
 @pytest.mark.skip(reason="This test gets rate limited potentially issue #842 and does not complete")
@@ -49,7 +49,7 @@ async def test_run_full_workflow():
 async def test_optimize_full_workflow(capsys):
     from nat.data_models.config import Config
     from nat.data_models.optimizer import OptimizerRunConfig
-    from nat.profiler.parameter_optimization.optimizer_runtime import optimize_config
+    from nat.plugins.config_optimizer.optimizer_runtime import optimize_config
     from nat_email_phishing_analyzer.register import EmailPhishingAnalyzerConfig
 
     config_file: Path = locate_example_config(EmailPhishingAnalyzerConfig, "config_optimizer.yml")

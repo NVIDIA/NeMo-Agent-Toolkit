@@ -1,0 +1,67 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Protected Calculator FastMCP Server Configuration
+# This configuration demonstrates OAuth2 protection for a FastMCP server via token introspection.
+#
+# Start the protected server:
+#   nat fastmcp server run --config_file examples/MCP/simple_calculator_fastmcp_protected/configs/config-server.yml
+
+general:
+  front_end:
+    _type: fastmcp
+    name: "Protected Calculator FastMCP"
+    description: "OAuth2-protected calculator FastMCP server for secure arithmetic operations"
+    version: "1.0.0"
+    port: 9902
+    host: localhost
+
+    # OAuth2 Resource Server Protection (RFC 7662)
+    server_auth:
+      # Keycloak issuer URL (required by the resource server config)
+      issuer_url: http://localhost:8080/realms/master
+
+      # Keycloak introspection endpoint
+      introspection_endpoint: http://localhost:8080/realms/master/protocol/openid-connect/token/introspect
+
+      # Client credentials used by the FastMCP server when calling the introspection endpoint
+      client_id: ${NAT_CALCULATOR_RESOURCE_CLIENT_ID:-"nat-mcp-resource-server"}
+      client_secret: ${NAT_CALCULATOR_RESOURCE_CLIENT_SECRET}
+
+      # Required scopes for calculator operations
+      scopes:
+        - calculator_mcp_execute
+
+      # Optional: override the client authentication method (default is client_secret_basic)
+      # client_auth_method: client_secret_post
+
+function_groups:
+  calculator:
+    _type: calculator
+    include: ["add", "subtract", "multiply", "divide", "compare"]
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: meta/llama-3.1-70b-instruct
+    temperature: 0.0
+    max_tokens: 1024
+
+workflow:
+  _type: react_agent
+  tool_names: [calculator]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

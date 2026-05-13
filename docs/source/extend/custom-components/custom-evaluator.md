@@ -18,13 +18,13 @@ limitations under the License.
 # Adding a Custom Evaluator
 
 :::{note}
-We recommend reading the [Evaluating NeMo Agent toolkit Workflows](../../improve-workflows/evaluate.md) guide before proceeding with this detailed documentation.
+We recommend reading the [Evaluating NeMo Agent Toolkit Workflows](../../improve-workflows/evaluate.md) guide before proceeding with this detailed documentation.
 :::
 
-NeMo Agent toolkit provides a set of evaluators to run and evaluate NeMo Agent toolkit workflows. In addition to the built-in evaluators, NeMo Agent toolkit provides a plugin system to add custom evaluators.
+NeMo Agent Toolkit provides a set of evaluators to run and evaluate NeMo Agent Toolkit workflows. In addition to the built-in evaluators, NeMo Agent Toolkit provides a plugin system to add custom evaluators.
 
 ## Summary
-This guide provides a step-by-step process to create and register a custom evaluator with NeMo Agent toolkit. The similarity evaluator is used as an example to demonstrate the process. The evaluator configuration, evaluator function, and evaluation results are explained in detail.
+This guide provides a step-by-step process to create and register a custom evaluator with NeMo Agent Toolkit. The similarity evaluator is used as an example to demonstrate the process. The evaluator configuration, evaluator function, and evaluation results are explained in detail.
 
 ## Existing Evaluators
 You can view the list of existing evaluators by running the following command:
@@ -34,9 +34,9 @@ nat info components -t evaluator
 `ragas` is an example of an existing evaluator. The `ragas` evaluator is used to evaluate the accuracy of a workflow output.
 
 ## Extending NeMo Agent Toolkit with Custom Evaluators
-To extend NeMo Agent toolkit with custom evaluators, you need to create an evaluator function and register it with NeMo Agent toolkit by using the `register_evaluator` decorator.
+To extend NeMo Agent Toolkit with custom evaluators, you need to create an evaluator function and register it with NeMo Agent Toolkit by using the `register_evaluator` decorator.
 
-This section provides a step-by-step guide to create and register a custom evaluator with NeMo Agent toolkit. A similarity evaluator is used as an example to demonstrate the process.
+This section provides a step-by-step guide to create and register a custom evaluator with NeMo Agent Toolkit. A similarity evaluator is used as an example to demonstrate the process.
 
 ### Evaluator Configuration
 The evaluator configuration defines the evaluator name and any evaluator-specific parameters. This configuration is paired with a registration function that yields an asynchronous evaluation method.
@@ -69,7 +69,7 @@ async def register_similarity_evaluator(config: SimilarityEvaluatorConfig, build
 ```
 
 - The `SimilarityEvaluatorConfig` class defines evaluator-specific settings, including the `similarity_type` parameter.
-- The `register_similarity_evaluator` function uses the `@register_evaluator` decorator to register the evaluator with NeMo Agent toolkit.
+- The `register_similarity_evaluator` function uses the `@register_evaluator` decorator to register the evaluator with NeMo Agent Toolkit.
 - The evaluator yields an `EvaluatorInfo` object, which binds the config, evaluation function, and a human-readable description.
 
 The evaluator logic is implemented in the `SimilarityEvaluator` class described in the [Similarity Evaluator](#similarity-evaluator-custom-evaluator-example) section.
@@ -82,7 +82,7 @@ from .evaluator_register import register_similarity_evaluator
 ```
 
 ### Understanding `EvalInputItem` and `EvalOutputItem`
-Custom evaluators in NeMo Agent toolkit implement an asynchronous `evaluate_item` method, which receives an `EvalInputItem` as input and returns an `EvalOutputItem` as output.
+Custom evaluators in NeMo Agent Toolkit implement an asynchronous `evaluate_item` method, which receives an `EvalInputItem` as input and returns an `EvalOutputItem` as output.
 
 **EvalInputItem**
 
@@ -103,7 +103,7 @@ An `EvalOutputItem` represents the result of evaluating a single item. It includ
 - `reasoning`: An explanation or trace of how the score was computed. This can contain any serializable structure (e.g., dictionary, string, list), and is often shown in logs or UI output for `interpretability`.
 
 ### Similarity Evaluator (Custom Evaluator Example)
-NeMo Agent toolkit provides a convenient `BaseEvaluator` class that simplifies writing custom evaluators. It handles common tasks such as:
+NeMo Agent Toolkit provides a convenient `BaseEvaluator` class that simplifies writing custom evaluators. It handles common tasks such as:
 - Asynchronous evaluation of input items
 - Concurrency control
 - Progress bar display using `tqdm`
@@ -120,8 +120,8 @@ from typing import override
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from nat.eval.evaluator.base_evaluator import BaseEvaluator
-from nat.eval.evaluator.evaluator_model import EvalInputItem, EvalOutputItem
+from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
+from nat.data_models.evaluator import EvalInputItem, EvalOutputItem
 
 class SimilarityEvaluator(BaseEvaluator):
     def __init__(self, similarity_type: str = "cosine", max_concurrency: int = 4):
@@ -147,6 +147,101 @@ class SimilarityEvaluator(BaseEvaluator):
         }
 
         return EvalOutputItem(id=item.id, score=similarity_score, reasoning=reasoning)
+```
+
+### ATIF-native custom evaluator (ATIF-only example)
+You can also author a custom evaluator that only implements ATIF-native scoring and does not provide `evaluate_fn`.
+When using `AtifBaseEvaluator`, implement `evaluate_atif_item` and reuse the built-in concurrent `evaluate_atif_fn`.
+This is useful when your scoring logic consumes canonical ATIF trajectories directly.
+
+This example uses evaluator registration (`@register_evaluator`) and therefore requires full runtime dependencies (`nvidia-nat-eval[full]`).
+Base `nvidia-nat-eval` is sufficient for standalone ATIF harness usage without workflow or plugin registration.
+
+The following example registers a minimal ATIF-only cosine-similarity evaluator:
+`examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/atif_only_evaluator_register.py`:
+```python
+import math
+from collections import Counter
+
+from pydantic import Field
+
+from nat.builder.builder import EvalBuilder
+from nat.builder.evaluator import EvaluatorInfo
+from nat.cli.register_workflow import register_evaluator
+from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
+from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
+from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
+
+
+class AtifCosineSimilarityEvaluatorConfig(EvaluatorBaseConfig, name="atif_cosine_similarity"):
+    normalize_case: bool = Field(default=True)
+
+
+class AtifCosineSimilarityEvaluator(AtifBaseEvaluator):
+    def __init__(self, normalize_case: bool = True, max_concurrency: int = 4):
+        super().__init__(max_concurrency=max_concurrency)
+        self.normalize_case = normalize_case
+
+    def _normalize(self, value: object) -> str:
+        text = str(value or "").strip()
+        return text.casefold() if self.normalize_case else text
+
+    def _cosine_similarity(self, text_a: str, text_b: str) -> float:
+        counts_a = Counter(text_a.split())
+        counts_b = Counter(text_b.split())
+        shared_tokens = set(counts_a) & set(counts_b)
+        numerator = sum(counts_a[token] * counts_b[token] for token in shared_tokens)
+        norm_a = math.sqrt(sum(value * value for value in counts_a.values()))
+        norm_b = math.sqrt(sum(value * value for value in counts_b.values()))
+        if norm_a == 0.0 or norm_b == 0.0:
+            return 0.0
+        return numerator / (norm_a * norm_b)
+
+    def _count_tool_calls(self, sample) -> int:
+        steps = getattr(sample.trajectory, "steps", None) or []
+        return sum(len(getattr(step, "tool_calls", None) or []) for step in steps)
+
+    async def evaluate_atif_item(self, sample: AtifEvalSample) -> EvalOutputItem:
+        expected = self._normalize(sample.expected_output_obj)
+        generated = self._normalize(sample.output_obj)
+        score = round(self._cosine_similarity(expected, generated), 2)
+        tool_call_count = self._count_tool_calls(sample)
+        return EvalOutputItem(
+            id=sample.item_id,
+            score=score,
+            reasoning={
+                "comparison": "cosine-similarity",
+                "trajectory_tool_call_count": tool_call_count,
+            },
+        )
+
+
+@register_evaluator(config_type=AtifCosineSimilarityEvaluatorConfig)
+async def register_atif_cosine_similarity_evaluator(config: AtifCosineSimilarityEvaluatorConfig, _builder: EvalBuilder):
+    evaluator = AtifCosineSimilarityEvaluator(
+        normalize_case=config.normalize_case,
+        max_concurrency=_builder.get_max_concurrency(),
+    )
+    evaluator_info = EvaluatorInfo(config=config, description="ATIF-only cosine similarity custom evaluator")
+    evaluator_info.evaluate_atif_fn = evaluator.evaluate_atif_fn
+    yield evaluator_info
+```
+
+Import the evaluator registration module in your package `register.py` so it is discovered at runtime:
+`examples/evaluation_and_profiling/simple_web_query_eval/src/nat_simple_web_query_eval/register.py`:
+```python
+from .atif_only_evaluator_register import register_atif_cosine_similarity_evaluator
+```
+
+Then add it to your evaluation config:
+`examples/evaluation_and_profiling/simple_web_query_eval/configs/eval_config_atif_custom_evaluator.yml`:
+```yaml
+eval:
+  evaluators:
+    atif_cosine_similarity_eval:
+      _type: atif_cosine_similarity
+      normalize_case: true
 ```
 
 ### Display all evaluators

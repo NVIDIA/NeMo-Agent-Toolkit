@@ -19,7 +19,7 @@ limitations under the License.
 
 Functions are reusable components that perform specific operations, such as web searches, API calls, or calculations.
 
-In NeMo Agent toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
+In NeMo Agent Toolkit, functions are a core abstraction that offer type-safe, asynchronous operations with support for both single and streaming outputs. They wrap callable objects (like Python functions or coroutines) and enhance them with:
 
 * Type validation and conversion
 * Schema-based input/output validation via Pydantic models
@@ -30,7 +30,7 @@ In NeMo Agent toolkit, functions are a core abstraction that offer type-safe, as
 
 In an [agentic](../../components/agents/index.md) workflow, a set of [tools](https://developer.nvidia.com/blog/introduction-to-llm-agents/#tools) are made available to the agent to use to perform a given task.
 
-In NeMo Agent toolkit, both agents and tools are implemented as functions, because of this, an agent can be used as a tool for another agent allowing for multi-agent workflows (refer to the `examples/agents/mixture_of_agents` example for more details).
+In NeMo Agent Toolkit, both agents and tools are implemented as functions, because of this, an agent can be used as a tool for another agent allowing for multi-agent workflows (refer to the `examples/agents/mixture_of_agents` example for more details).
 
 ## Included Functions
 For a complete list of functions run the following command:

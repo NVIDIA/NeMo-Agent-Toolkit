@@ -50,7 +50,7 @@ jobs:
       - prepare
       - ci_pipe
     secrets: inherit
-    uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@branch-25.04
+    uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@5fe52098676ca51435a73337131685e340658c51 # branch-25.04
 
   prepare:
     # Executes the get-pr-info action to determine if the PR has the skip-ci label, if the action fails we assume the
@@ -60,7 +60,7 @@ jobs:
     steps:
       - name: Get PR Info
         id: get-pr-info
-        uses: nv-gha-runners/get-pr-info@main
+        uses: nv-gha-runners/get-pr-info@090577647b8ddc4e06e809e264f7881650ecdccf # main
         if: ${{ startsWith(github.ref_name, 'pull-request/') }}
     outputs:
       is_pr: ${{ startsWith(github.ref_name, 'pull-request/') }}
@@ -79,10 +79,10 @@ jobs:
     if: ${{ ! fromJSON(needs.prepare.outputs.has_skip_ci_label) }}
     with:
       # CI container
-      container: ghcr.io/astral-sh/uv:python3.13-bookworm
-      py_11_container: ghcr.io/astral-sh/uv:python3.11-bookworm
-      py_12_container: ghcr.io/astral-sh/uv:python3.12-bookworm
-      py_13_container: ghcr.io/astral-sh/uv:python3.13-bookworm
+      container: ghcr.io/astral-sh/uv:0.9.28-python3.13-bookworm
+      py_11_container: ghcr.io/astral-sh/uv:0.9.28-python3.11-bookworm
+      py_12_container: ghcr.io/astral-sh/uv:0.9.28-python3.12-bookworm
+      py_13_container: ghcr.io/astral-sh/uv:0.9.28-python3.13-bookworm
       # Info about the PR. Empty for non PR branches. Useful for extracting PR number, title, etc.
       pr_info: ${{ needs.prepare.outputs.pr_info }}
       base_sha: ${{ needs.prepare.outputs.base_sha }}

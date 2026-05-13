@@ -25,7 +25,7 @@ limitations under the License.
 We recommend reading the [Streamlining API Authentication](../../components/auth/api-authentication.md) guide before proceeding with this detailed documentation.
 :::
 
-The NeMo Agent toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes
+The NeMo Agent Toolkit offers a set of built-in authentication providers for accessing API resources. Additionally, it includes
 a plugin system that allows developers to define and integrate custom authentication providers.
 
 ## Existing API Authentication Providers
@@ -35,7 +35,7 @@ nat info components -t auth_provider
 ```
 
 ## Provider Types
-In the NeMo Agent toolkit, the providers (credentials) required to authenticate with an API resource are defined separately
+In the NeMo Agent Toolkit, the providers (credentials) required to authenticate with an API resource are defined separately
 from the clients that facilitate the authentication process. Authentication providers, such as `APIKeyAuthProviderConfig` and
 `OAuth2AuthCodeFlowProviderConfig`, store the authentication credentials, while clients like `APIKeyAuthProvider` and
 `OAuth2AuthCodeFlowProvider` use those credentials to perform authentication.
@@ -70,7 +70,7 @@ class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth
 ```
 
 ### Registering the Provider
-An asynchronous function decorated with {py:func}`~nat.cli.register_workflow.register_auth_provider` is used to register the provider with NeMo Agent toolkit by yielding an instance of
+An asynchronous function decorated with {py:func}`~nat.cli.register_workflow.register_auth_provider` is used to register the provider with NeMo Agent Toolkit by yielding an instance of
 {py:class}`~nat.authentication.interfaces.AuthProviderBase`.
 
 The `OAuth2AuthCodeFlowProviderConfig` from the previous section is registered as follows:
@@ -86,7 +86,7 @@ async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowProviderConfi
 Each authentication provider should inherit from the {py:class}`~nat.authentication.interfaces.AuthProviderBase` class, and implement the required methods.
 
 ## Testing the new Provider
-After implementing a new authentication provider, it’s important to verify that the required functionality works as expected. This can be done by writing integration tests. It is important to minimize the amount of mocking in the tests to ensure that the provider behaves as expected in a real-world scenario. You can find examples of existing tests in the repository at `tests/nat/authentication`.
+After implementing a new authentication provider, it’s important to verify that the required functionality works as expected. This can be done by writing integration tests. It is important to minimize the amount of mocking in the tests to ensure that the provider behaves as expected in a real-world scenario. You can find examples of existing tests in the repository at `packages/nvidia_nat_core/tests/nat/authentication`.
 
 ## Packaging the Provider
 

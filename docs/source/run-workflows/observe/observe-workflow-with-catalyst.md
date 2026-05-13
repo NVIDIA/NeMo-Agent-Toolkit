@@ -17,24 +17,24 @@ limitations under the License.
 
 # Observing a Workflow with Catalyst
 
-This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Catalyst for tracing. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in a NeMo Agent Toolkit workflow using Catalyst for tracing. By the end of this guide, you will have:
 - Configured telemetry in your workflow.
 - Ability to view traces in the Catalyst platform.
 
-### Step 1: Sign up for Catalyst
-- Visit [https://catalyst.raga.ai/signup](https://catalyst.raga.ai/signup) to create your account.
+## Step 1: Sign up for Catalyst
+- Visit [RagaAI Catalyst documentation](https://docs.raga.ai/ragaai-catalyst/user-quickstart) to sign up and create your account.
 
-### Step 2: Create a Project
+## Step 2: Create a Project
 After logging in, create a new project.
 - Project Name: Choose any name.
 - Use Case: `Agentic Application`
 
-### Step 3: Generate API Credentials
-Go to your [profile](https://catalyst.raga.ai/settings/authenticate) settings to generate your:
+## Step 3: Generate API Credentials
+Go to your [profile settings](https://docs.raga.ai/ragaai-catalyst) in Catalyst to generate your:
 - Access Key
 - Secret Key
 
-### Step 4: Configure Your Environment
+## Step 4: Configure Your Environment
 Set the following environment variables in your terminal:
 ```bash
 export CATALYST_ACCESS_KEY=<your_access_key>
@@ -42,13 +42,13 @@ export CATALYST_SECRET_KEY=<your_secret_key>
 export CATALYST_ENDPOINT=https://catalyst.raga.ai/api
 ```
 
-### Step 5: Install the RagAI Subpackage
+## Step 5: Install the RagAI Subpackage
 
 ```bash
-uv pip install -e '.[ragaai]'
+uv pip install -e ".[ragaai]"
 ```
 
-### Step 6: Modify Workflow Configuration
+## Step 6: Modify Workflow Configuration
 
 Update your workflow configuration file to include the telemetry settings.
 
@@ -67,8 +67,8 @@ general:
         secret_key: ${CATALYST_SECRET_KEY}
 ```
 
-### Step 7: Run Your Workflow
-From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
+## Step 7: Run Your Workflow
+From the root directory of the NeMo Agent Toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
 
 **Example:**
 ```bash
@@ -81,8 +81,8 @@ nat run --config_file examples/observability/simple_calculator_observability/con
 ```
 As the workflow runs, telemetry data will start showing up in Catalyst.
 
-### Step 8: View Traces Data in Catalyst
-- Open your browser and navigate to [https://catalyst.raga.ai/projects](https://catalyst.raga.ai/projects).
+## Step 8: View Traces Data in Catalyst
+- Open your browser and navigate to the [Catalyst platform](https://docs.raga.ai/ragaai-catalyst) and open your projects.
 - Locate your workflow traces under your configured project name and dataset.
 - Inspect function execution details, latency, total tokens, request timelines and other info under Info and Attributes tabs of an individual trace.
 

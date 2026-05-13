@@ -17,7 +17,7 @@ Example service token functions for demonstration purposes.
 
 In production environments, these functions would:
 - Fetch tokens from secure vaults (e.g., HashiCorp Vault, AWS Secrets Manager)
-- Use AIQContext to access request metadata
+- Use Context to access request metadata
 - Implement token caching and refresh logic
 - Handle errors and retries appropriately
 """
@@ -51,11 +51,11 @@ async def get_jira_service_token(**kwargs) -> tuple[str, str]:
 
     Example production implementation:
         ```python
-        from nat.builder.context import AIQContext
+        from nat.builder.context import Context
 
         async def get_jira_service_token(vault_path: str = "secrets/jira", **kwargs):
             # Access runtime context if needed
-            context = AIQContext.get()
+            context = Context.get()
 
             # Fetch from secure vault
             token = await fetch_from_vault(vault_path)

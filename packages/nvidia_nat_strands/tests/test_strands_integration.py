@@ -248,12 +248,9 @@ class TestStrandsAgentE2ENIM:
         """Test NIM with NAT's ThinkingMixin for chain-of-thought reasoning (non-streaming)."""
         from strands.agent import Agent
 
-        # Enable thinking mixin with Nemotron model that supports thinking
+        # Using a model that supports thinking
         # Note: Thinking uses additional tokens, so we need a higher max_tokens
-        llm_config = NIMModelConfig(model_name="nvidia/llama-3.3-nemotron-super-49b-v1",
-                                    temperature=0.0,
-                                    max_tokens=1024,
-                                    thinking=True)
+        llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-nano-30b-a3b", temperature=0.0, max_tokens=1024)
 
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
 
@@ -279,12 +276,9 @@ class TestStrandsAgentE2ENIM:
         """Test NIM with NAT's ThinkingMixin using streaming mode."""
         from strands.agent import Agent
 
-        # Enable thinking mixin with Nemotron model that supports thinking
+        # Using a model that supports thinking
         # Note: Thinking uses additional tokens, so we need a higher max_tokens
-        llm_config = NIMModelConfig(model_name="nvidia/llama-3.3-nemotron-super-49b-v1",
-                                    temperature=0.0,
-                                    max_tokens=1024,
-                                    thinking=True)
+        llm_config = NIMModelConfig(model_name="nvidia/nemotron-3-nano-30b-a3b", temperature=0.0, max_tokens=1024)
 
         strands_tool = strands_tool_wrapper("echo", echo_function, builder)
 
@@ -423,7 +417,7 @@ class TestStrandsProfilerIntegration:
         """Test that profiler captures LLM call metrics."""
         from strands.agent import Agent
 
-        from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
+        from nat.plugins.strands.callback_handler import StrandsProfilerHandler
 
         llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
 
@@ -456,7 +450,7 @@ class TestStrandsProfilerIntegration:
         """Test that profiler captures tool call metrics."""
         from strands.agent import Agent
 
-        from nat.plugins.strands.strands_callback_handler import StrandsProfilerHandler
+        from nat.plugins.strands.callback_handler import StrandsProfilerHandler
 
         llm_config = OpenAIModelConfig(model_name="gpt-4o", temperature=0.0, max_tokens=64)
 

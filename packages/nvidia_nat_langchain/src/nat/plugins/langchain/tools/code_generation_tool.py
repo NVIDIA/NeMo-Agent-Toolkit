@@ -36,7 +36,7 @@ class CodeGenerationTool(FunctionBaseConfig, name="code_generation"):
                         "this tool!")
 
 
-@register_function(config_type=CodeGenerationTool)
+@register_function(config_type=CodeGenerationTool, framework_wrappers=[LLMFrameworkEnum.LANGCHAIN])
 async def code_generation_tool(config: CodeGenerationTool, builder: Builder):
     from langchain_core.prompts.chat import ChatPromptTemplate
 

@@ -15,18 +15,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
 
 # NVIDIA NeMo Agent Toolkit MCP Subpackage
-Subpackage for MCP integration in NeMo Agent toolkit.
+Subpackage for MCP integration in NeMo Agent Toolkit.
 
-This package provides MCP (Model Context Protocol) functionality, allowing NeMo Agent toolkit workflows to connect to external MCP servers and use their tools as functions.
+This package provides MCP (Model Context Protocol) functionality, allowing NeMo Agent Toolkit workflows to connect to external MCP servers and use their tools as functions.
 
 ## Features
 
 - Connect to MCP servers via streamable-http, SSE, or stdio transports
-- Wrap individual MCP tools as NeMo Agent toolkit functions
+- Wrap individual MCP tools as NeMo Agent Toolkit functions
 - Connect to MCP servers and dynamically discover available tools
 
-For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
+For more information about the NVIDIA NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

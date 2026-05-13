@@ -124,9 +124,9 @@ case $option in
         ;;
     6)
         print_header "Health Check"
-        echo "Testing: http://localhost:8099/health"
+        echo "Testing: http://localhost:8000/health"
         echo ""
-        http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8099/health 2>&1)
+        http_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health 2>&1)
         if [ "$http_code" == "200" ]; then
             print_status "ok" "Health check passed (HTTP $http_code)"
         else
@@ -135,9 +135,9 @@ case $option in
         ;;
     7)
         print_header "Test Basic Inference"
-        echo "Sending test request to http://localhost:8099/v1/chat/completions"
+        echo "Sending test request to http://localhost:8000/v1/chat/completions"
         echo ""
-        response=$(curl -s http://localhost:8099/v1/chat/completions \
+        response=$(curl -s http://localhost:8000/v1/chat/completions \
           -H "Content-Type: application/json" \
           -d '{
             "model": "llama-3.1-8b",

@@ -1,0 +1,71 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Prometheus configuration for Dynamo metrics collection
+#
+# Supports both SGLang and vLLM backends:
+#   - SGLang metrics use 'sglang:' prefix (e.g., sglang:cache_hit_rate)
+#   - vLLM metrics use 'vllm:' prefix (e.g., vllm:cache_hit_rate)
+#   - Grafana dashboard uses ${backend} variable to switch between them
+#
+# Metrics Endpoints (configurable via DYNAMO_* environment variables):
+#   - Frontend (DYNAMO_HTTP_PORT, default 8000): User-facing latency, throughput, tokens
+#   - Workers (DYNAMO_WORKER_METRICS_PORT, default 18081+): KV cache stats, NATS metrics
+#   - Router (DYNAMO_ROUTER_METRICS_PORT, default 18090): Thompson Sampling routing metrics
+#   - Processor (DYNAMO_PROCESSOR_METRICS_PORT, default 18091): Thompson Sampling KVE metrics
+#
+# Ports are substituted at container startup from environment variables.
+# See docker-compose.yml for the templating mechanism.
+#
+# Worker count is computed automatically from DYNAMO_GPU_DEVICES and DYNAMO_TP_SIZE.
+# Ports are sequential starting at DYNAMO_WORKER_METRICS_PORT (default 18081).
+
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+
+# Recording rules to create vLLM metric aliases that match the dashboard expectations
+# This allows the same dashboard queries to work for both SGLang and vLLM backends
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+scrape_configs:
+  # Dynamo Frontend metrics (user-facing latency, throughput)
+  - job_name: 'dynamo-frontend'
+    static_configs:
+      - targets: ['localhost:__FRONTEND_PORT__']
+    metrics_path: /metrics
+
+  # Dynamo Worker metrics (KV cache, internal stats)
+  # Works for both SGLang and vLLM backends - same ports, different metric prefixes
+  # Ports are sequential from DYNAMO_WORKER_METRICS_PORT (default 18081).
+  # Unused worker targets will show as "down" in Prometheus but cause no harm.
+  - job_name: 'dynamo-worker'
+    static_configs:
+      - targets:
+          - 'localhost:__WORKER_METRICS_PORT_0__'
+          - 'localhost:__WORKER_METRICS_PORT_1__'
+          - 'localhost:__WORKER_METRICS_PORT_2__'
+          - 'localhost:__WORKER_METRICS_PORT_3__'
+          - 'localhost:__WORKER_METRICS_PORT_4__'
+          - 'localhost:__WORKER_METRICS_PORT_5__'
+          - 'localhost:__WORKER_METRICS_PORT_6__'
+          - 'localhost:__WORKER_METRICS_PORT_7__'
+    metrics_path: /metrics
+
+  # Thompson Sampling Router metrics
+  - job_name: 'dynamo-router'
+    static_configs:
+      - targets: ['localhost:__ROUTER_METRICS_PORT__']
+    metrics_path: /metrics
+
+  # Thompson Sampling Processor metrics (KVE)
+  - job_name: 'dynamo-processor'
+    static_configs:
+      - targets: ['localhost:__PROCESSOR_METRICS_PORT__']
+    metrics_path: /metrics
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

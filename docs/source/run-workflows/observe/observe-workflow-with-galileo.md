@@ -17,7 +17,7 @@ limitations under the License.
 
 # Observing a Workflow with Galileo
 
-This guide provides a step-by-step process to enable observability in a NeMo Agent toolkit workflow using Galileo for tracing. By the end of this guide, you will have:
+This guide provides a step-by-step process to enable observability in a NeMo Agent Toolkit workflow using Galileo for tracing. By the end of this guide, you will have:
 
 - Configured telemetry in your workflow.
 - Ability to view traces in the Galileo platform.
@@ -44,7 +44,7 @@ You will need the following values:
 - `logstream` (log-stream name)
 
 
-### Step 4: Configure Your Environment
+## Step 4: Configure Your Environment
 Set the following environment variables in your terminal
 ```bash
 export GALILEO_API_KEY=<your_api_key>
@@ -53,7 +53,7 @@ export GALILEO_API_KEY=<your_api_key>
 ## Step 5: Install the OpenTelemetry Subpackage
 
 ```bash
-uv pip install '.[opentelemetry]'
+uv pip install ".[opentelemetry]"
 ```
 
 ## Step 6: Modify Workflow Configuration
@@ -81,7 +81,7 @@ general:
 
 ## Step 7: Run Your Workflow
 
-From the root directory of the NeMo Agent toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
+From the root directory of the NeMo Agent Toolkit library, install dependencies and run the pre-configured `simple_calculator_observability` example.
 
 **Example:**
 

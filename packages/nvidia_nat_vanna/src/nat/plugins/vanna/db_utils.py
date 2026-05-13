@@ -18,7 +18,7 @@ import json
 import logging
 import re
 import typing
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel
@@ -38,7 +38,7 @@ def _serialize_secret(v: SecretStr) -> str:
 RequiredSecretStr = typing.Annotated[SecretStr, PlainSerializer(_serialize_secret)]
 
 
-class SupportedDatabase(str, Enum):
+class SupportedDatabase(StrEnum):
     """Supported database types for Vanna text-to-SQL."""
 
     DATABRICKS = "databricks"

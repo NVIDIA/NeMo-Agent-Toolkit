@@ -17,11 +17,13 @@ limitations under the License.
 
 # Agent Toolkit User Interface Integration
 
-This example demonstrates how to integrate and use the web-based user interface of NVIDIA NeMo Agent toolkit for interactive workflow management. Learn to set up, configure, and customize the UI for seamless agent interaction through both HTTP and WebSocket connections.
+**Complexity:** 🛑 Advanced
+
+This example demonstrates how to integrate and use the web-based user interface of NVIDIA NeMo Agent Toolkit for interactive workflow management. Learn to set up, configure, and customize the UI for seamless agent interaction through both HTTP and WebSocket connections.
 
 ## Key Features
 
-- **Web-Based Interactive Interface:** Provides a complete web UI for interacting with NeMo Agent toolkit workflows through an intuitive chat interface with conversation history and real-time responses.
+- **Web-Based Interactive Interface:** Provides a complete web UI for interacting with NeMo Agent Toolkit workflows through an intuitive chat interface with conversation history and real-time responses.
 - **Multi-Connection Support:** Demonstrates both HTTP and WebSocket connection modes for different use cases, enabling both simple request-response patterns and real-time streaming interactions.
 - **Real-Time Streaming:** Shows how to enable intermediate step streaming for enhanced user experience, allowing users to see agent reasoning and tool execution in real-time.
 - **UI Customization Options:** Supports theme customization, endpoint configuration, and display options to match different deployment environments and user preferences.

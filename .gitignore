@@ -1,4 +1,5 @@
 ###### Place new entries directly below this line! ######
+/.codex
 
 # auto-generated chainlit stuff
 chainlit.md
@@ -30,6 +31,9 @@ public/
 # Explicitly ignore .vscode/. Shared settings should go in .code-workspace
 # and user settings will go in .vscode/
 .vscode/
+
+# Git worktrees
+.worktrees/
 
 ##### Do not alter the items below this line! #####
 ########## They are managed by a script! ##########
