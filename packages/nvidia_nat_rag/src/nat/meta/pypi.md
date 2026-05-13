@@ -15,13 +15,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent toolkit banner image")
+![NVIDIA NeMo Agent Toolkit](https://media.githubusercontent.com/media/NVIDIA/NeMo-Agent-Toolkit/refs/heads/main/docs/source/_static/banner.png "NeMo Agent Toolkit banner image")
 
 # NVIDIA NeMo Agent Toolkit RAG Library Subpackage
 
-Subpackage for NVIDIA RAG library integration in NeMo Agent toolkit.
+Subpackage for NVIDIA RAG library integration in NeMo Agent Toolkit.
 
-This package provides integration with the NVIDIA RAG Blueprint library, allowing NeMo Agent toolkit workflows to use retrieval-augmented generation capabilities with flexible configuration.
+This package provides integration with the NVIDIA RAG Blueprint library, allowing NeMo Agent Toolkit workflows to use retrieval-augmented generation capabilities with flexible configuration.
 
 ## Features
 
@@ -32,4 +32,4 @@ This package provides integration with the NVIDIA RAG Blueprint library, allowin
 - Multimodal support with VLM inference
 - Citation generation and guardrails
 
-For more information about the NVIDIA NeMo Agent toolkit, please visit the [NeMo Agent toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).
+For more information about the NVIDIA NeMo Agent Toolkit, please visit the [NeMo Agent Toolkit GitHub Repo](https://github.com/NVIDIA/NeMo-Agent-Toolkit).

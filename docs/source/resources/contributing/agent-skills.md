@@ -17,9 +17,9 @@ limitations under the License.
 
 # AI Coding Agent Skills
 
-The NeMo Agent toolkit repository includes reusable AI coding agent skills under `skills/`. The root `AGENTS.md` file provides the entry point and routes agents to focused skill folders for installation, workflow authoring, agent configuration, tools and functions, evaluation, optimization, telemetry, and serving.
+The NeMo Agent Toolkit repository includes reusable AI coding agent skills under `skills/`. The root `AGENTS.md` file provides the entry point and routes agents to focused skill folders for installation, workflow authoring, agent configuration, tools and functions, evaluation, optimization, telemetry, and serving.
 
-Use the skill when you want an AI coding agent to help with NeMo Agent toolkit development tasks such as writing workflow YAML, creating functions, configuring `nat eval`, or adding telemetry.
+Use the skill when you want an AI coding agent to help with NeMo Agent Toolkit development tasks such as writing workflow YAML, creating functions, configuring `nat eval`, or adding telemetry.
 
 ## Install the Skill
 
@@ -64,7 +64,7 @@ skills/nat-workflow-creation/
 
 Use prompts like the following after installing the skill:
 
-- "Use the NeMo Agent toolkit skill to scaffold a ReAct workflow that calls a custom support-ticket lookup function."
+- "Use the NeMo Agent Toolkit skill to scaffold a ReAct workflow that calls a custom support-ticket lookup function."
 - "Create an evaluation config for this workflow with a JSON dataset and a trajectory evaluator."
 - "Add OpenTelemetry tracing to this workflow and export spans to a local file."
 - "Run `nat info components` and fix this workflow YAML so every `_type` is registered."
@@ -72,7 +72,7 @@ Use prompts like the following after installing the skill:
 
 ## Skill Contents
 
-The NeMo Agent toolkit skills include:
+The NeMo Agent Toolkit skills include:
 
 - `skills/nat-user-rules/SKILL.md`: General behavior and cross-skill routing.
 - `skills/nat-installation/SKILL.md`: Installation and first workflow setup.

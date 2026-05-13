@@ -1,25 +1,8 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # MCP (Model Context Protocol) Integration
 
-Consuming MCP tools (`mcp_client`), exposing a NeMo Agent toolkit workflow as an MCP server, transport types, and troubleshooting.
+Consuming MCP tools (`mcp_client`), exposing a NeMo Agent Toolkit workflow as an MCP server, transport types, and troubleshooting.
 
-NeMo Agent toolkit supports MCP both as a client (consuming tools from an external MCP server) and as a server (exposing a workflow via MCP). Install the MCP extra:
+NeMo Agent Toolkit supports MCP both as a client (consuming tools from an external MCP server) and as a server (exposing a workflow via MCP). Install the MCP extra:
 
 ```bash
 uv add "nvidia-nat[mcp]"
@@ -49,7 +32,7 @@ All tools from the MCP server are automatically discovered and registered under 
 
 ### Complete example: MCP client with programmatic API
 
-This is a full working example — workflow YAML + main.py entry point. **Do not bypass the NeMo Agent toolkit framework by using the `mcp` library directly.** Always use `mcp_client` in the YAML config and `WorkflowBuilder.from_config()` in Python.
+This is a full working example — workflow YAML + main.py entry point. **Do not bypass the NeMo Agent Toolkit framework by using the `mcp` library directly.** Always use `mcp_client` in the YAML config and `WorkflowBuilder.from_config()` in Python.
 
 **workflow.yaml:**
 

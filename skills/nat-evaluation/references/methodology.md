@@ -1,23 +1,6 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # The Agent Evaluation Framework — 8-Step Methodology
 
-An 8-step mental model for evaluating any NeMo Agent toolkit agent. Use this guide alongside [`agent-eval-framework.md`](agent-eval-framework.md) (the conceptual framework) and the per-evaluator pages under [`evaluators/`](evaluators/).
+An 8-step mental model for evaluating any NeMo Agent Toolkit agent. Use this guide alongside [`agent-eval-framework.md`](agent-eval-framework.md) (the conceptual framework) and the per-evaluator pages under [`evaluators/`](evaluators/).
 
 This guidance is grounded in the Agent Evaluation Framework ([agent-eval-framework.md](agent-eval-framework.md)). The framework establishes:
 
@@ -47,21 +30,21 @@ Before writing any eval config, run `nat info components -t evaluator` to see th
 
 ### Evaluation surface and downstream consumers
 
-Before picking evaluator metrics, decide whether the user needs native legacy NeMo Agent toolkit evaluation (`IntermediateStep`), an ATIF output artifact, or ATIF-native evaluator execution. Read [evaluation-surfaces.md](evaluation-surfaces.md) when the task mentions ATIF, `workflow_output_atif.json`, `write_atif_workflow_output`, `enable_atif_evaluator`, canonical trace shape, evaluator support by lane, or possible metadata/state loss.
+Before picking evaluator metrics, decide whether the user needs native legacy NeMo Agent Toolkit evaluation (`IntermediateStep`), an ATIF output artifact, or ATIF-native evaluator execution. Read [evaluation-surfaces.md](evaluation-surfaces.md) when the task mentions ATIF, `workflow_output_atif.json`, `write_atif_workflow_output`, `enable_atif_evaluator`, canonical trace shape, evaluator support by lane, or possible metadata/state loss.
 
-ATIF is the canonical trajectory format NeMo Agent toolkit is moving toward, but ATIF state parity and evaluator coverage are still in flight. Prefer ATIF when the user or downstream consumer needs the canonical shape; prefer legacy (`IntermediateStep`) when current evaluator support or full legacy eval state matters more.
+ATIF is the canonical trajectory format NeMo Agent Toolkit is moving toward, but ATIF state parity and evaluator coverage are still in flight. Prefer ATIF when the user or downstream consumer needs the canonical shape; prefer legacy (`IntermediateStep`) when current evaluator support or full legacy eval state matters more.
 
 If evaluator results will also feed `nat optimize`, GA prompt optimization, finetuning reward/validation flows, red-team workflows, or profiler runtime objectives, read [evaluation-contract.md](evaluation-contract.md) for the score/name/reasoning contract before finalizing evaluator names and metrics.
 
 **From the codebase:**
 
-- Read NeMo Agent toolkit workflow config YAML for `workflow._type` (react_agent, router, sequential), tools (`functions:`), LLM config (`llms:`), and system prompt
+- Read NeMo Agent Toolkit workflow config YAML for `workflow._type` (react_agent, router, sequential), tools (`functions:`), LLM config (`llms:`), and system prompt
 - Check for existing `eval_config.yml`, datasets, or custom evaluators
 - Look at `register.py` for custom evaluator registrations
 - Check for existing output directories with previous eval results
 
 **From agent traces (if the user provides them):**
-Traces are the richest context source. If the user shares NeMo Agent toolkit output files (`workflow_output.json`, profiler data, or log files):
+Traces are the richest context source. If the user shares NeMo Agent Toolkit output files (`workflow_output.json`, profiler data, or log files):
 
 - Extract actual tool call sequences from `intermediate_steps`
 - Identify failure patterns — tool errors, empty retrievals, hallucinated responses, loops
@@ -78,7 +61,7 @@ Summarize your understanding in a brief context table. Only ask for what you can
 
 ### Agent Type Adaptations
 
-| Agent Type | NeMo Agent toolkit Config | Key Adaptations |
+| Agent Type | NeMo Agent Toolkit Config | Key Adaptations |
 | ---------- | ---------- | --------------- |
 | **RAG chatbot** | `react_agent` with `webpage_query` | Weight RAGAS AnswerAccuracy + ResponseGroundedness. Add ContextRelevance. Focus dataset on retrieval-heavy cases. |
 | **Multi-agent workflow** | `router` or `sequential` | Trajectory evaluation critical for delegation. Add routing accuracy evaluator. |
@@ -94,7 +77,7 @@ Identify 3-5 quality dimensions and set numeric thresholds. Infer reasonable def
 
 **Response Quality:**
 
-| Dimension | Description | NeMo Agent toolkit Evaluator |
+| Dimension | Description | NeMo Agent Toolkit Evaluator |
 | --------- | ----------- | ------------- |
 | Correctness | Factually accurate outputs matching ground truth | `ragas` / `AnswerAccuracy` |
 | Groundedness | Response grounded in retrieved context, no hallucination | `ragas` / `ResponseGroundedness` |
@@ -104,7 +87,7 @@ Identify 3-5 quality dimensions and set numeric thresholds. Infer reasonable def
 
 **Agent Behavior:**
 
-| Dimension | Description | NeMo Agent toolkit Evaluator |
+| Dimension | Description | NeMo Agent Toolkit Evaluator |
 | --------- | ----------- | ------------- |
 | Trajectory Quality | Correct tools in correct order, no wasted steps | `trajectory` evaluator |
 | Tool Accuracy | Selects and uses tools correctly | Custom rule-based evaluator |
@@ -113,7 +96,7 @@ Identify 3-5 quality dimensions and set numeric thresholds. Infer reasonable def
 
 **Safety & Compliance:**
 
-| Dimension | Description | NeMo Agent toolkit Evaluator |
+| Dimension | Description | NeMo Agent Toolkit Evaluator |
 | --------- | ----------- | ------------- |
 | Safety | No harmful, inappropriate, or leaked outputs | Custom `SafetyEvaluator` (rule-based) |
 | PII Protection | No exposure of personal information | Custom rule-based evaluator |
@@ -121,9 +104,9 @@ Identify 3-5 quality dimensions and set numeric thresholds. Infer reasonable def
 | Scope Adherence | Stays within designated capabilities | Custom rule-based evaluator |
 | Red-Team Robustness | Attack scenarios fail to induce unsafe tool use, leakage, or policy bypass | `red_teaming_evaluator` + red-team runner/middleware |
 
-**Operational (via NeMo Agent toolkit Profiler):**
+**Operational (via NeMo Agent Toolkit Profiler):**
 
-| Dimension | Description | NeMo Agent toolkit Feature |
+| Dimension | Description | NeMo Agent Toolkit Feature |
 | --------- | ----------- | ----------- |
 | Latency | Response time within SLA | `profiler.workflow_runtime_forecast` |
 | Token Efficiency | Reasonable token usage per task | `profiler.compute_llm_metrics` |
@@ -164,7 +147,7 @@ Document failure modes by severity based on what the agent does:
 
 ## Step 2: Build the Evaluation Golden Dataset
 
-Create a dataset for NeMo Agent toolkit evaluation. Start small (10-20 examples), cover all relevant categories:
+Create a dataset for NeMo Agent Toolkit evaluation. Start small (10-20 examples), cover all relevant categories:
 
 | Category | Purpose | When to Include |
 | -------- | ------- | --------------- |
@@ -179,9 +162,9 @@ Create a dataset for NeMo Agent toolkit evaluation. Start small (10-20 examples)
 
 ### Dataset Schema
 
-NeMo Agent toolkit uses the field names `question` and `answer` — but these are generic input/output fields, not limited to Q&A chatbots. Map them to whatever your agent does:
+NeMo Agent Toolkit uses the field names `question` and `answer` — but these are generic input/output fields, not limited to Q&A chatbots. Map them to whatever your agent does:
 
-| NeMo Agent toolkit Field | What It Represents | Examples Across Agent Types |
+| NeMo Agent Toolkit Field | What It Represents | Examples Across Agent Types |
 | --------- | ------------------ | --------------------------- |
 | **question** | The agent's input — any task, query, or instruction | A user question, a code review request, a data extraction task, a planning prompt |
 | **answer** | The expected reference output (optional but recommended) | A correct answer, expected code output, extracted schema, generated plan |
@@ -191,9 +174,9 @@ Think of `question` as **input** and `answer` as **expected output** — they wo
 
 > `nat eval` passes each `question` directly to the workflow with no preprocessing. If the agent preprocesses or reformats input before passing it to the workflow, the `question` field must already contain the preprocessed version.
 
-### NeMo Agent toolkit Dataset Formats
+### NeMo Agent Toolkit Dataset Formats
 
-NeMo Agent toolkit supports JSON (recommended), JSONL, CSV, Parquet, and XLS. For YAML snippets per format, custom parsers, filtering, and field-name remapping, see [`code-patterns.md § Dataset Config Options`](code-patterns.md#dataset-config-options). Generate the dataset file with examples tailored to this specific agent's tools and domain.
+NeMo Agent Toolkit supports JSON (recommended), JSONL, CSV, Parquet, and XLS. For YAML snippets per format, custom parsers, filtering, and field-name remapping, see [`code-patterns.md § Dataset Config Options`](code-patterns.md#dataset-config-options). Generate the dataset file with examples tailored to this specific agent's tools and domain.
 
 ### Building Your Dataset
 
@@ -215,7 +198,7 @@ NeMo Agent toolkit supports JSON (recommended), JSONL, CSV, Parquet, and XLS. Fo
 
 ## Step 3: Design the Evaluator Suite
 
-Map quality dimensions to concrete NeMo Agent toolkit evaluators using the Test Pyramid:
+Map quality dimensions to concrete NeMo Agent Toolkit evaluators using the Test Pyramid:
 
 ### The Agent Evaluation Test Pyramid
 
@@ -235,9 +218,9 @@ Map quality dimensions to concrete NeMo Agent toolkit evaluators using the Test 
               └─────────────────────────────┘
 ```
 
-### NeMo Agent toolkit Built-In Evaluator Types
+### NeMo Agent Toolkit Built-In Evaluator Types
 
-| NeMo Agent toolkit `_type` | Metric / Mode | What It Measures | Requires Reference? |
+| NeMo Agent Toolkit `_type` | Metric / Mode | What It Measures | Requires Reference? |
 | ----------- | ------------- | ---------------- | ------------------- |
 | `ragas` | `AnswerAccuracy` | Semantic accuracy vs. reference answer | Yes |
 | `ragas` | `ResponseGroundedness` | Response supported by retrieved context | No |
@@ -266,7 +249,7 @@ Beyond the three core metrics above, RAGAS exposes additional metrics — change
 
 > Available metrics depend on your `ragas` package version. Check [RAGAS docs](https://docs.ragas.io/) for the full list.
 
-**Discover evaluators available in the current NeMo Agent toolkit installation:**
+**Discover evaluators available in the current NeMo Agent Toolkit installation:**
 
 ```bash
 nat info components -t evaluator
@@ -285,7 +268,7 @@ For ATIF support, trajectory/reference requirements, and downstream suitability 
 
 ### Evaluation Strategy Matrix
 
-| What You Want to Measure | Evaluation Approach | NeMo Agent toolkit Evaluator(s) | Pyramid Level |
+| What You Want to Measure | Evaluation Approach | NeMo Agent Toolkit Evaluator(s) | Pyramid Level |
 | ------------------------ | ------------------- | ---------------- | ------------- |
 | Does the agent solve the task? | Final Response | `ragas` / `AnswerAccuracy` | L4 |
 | Does the agent pick the right tools? | Single Step | Custom rule-based tool selection check | L2 |
@@ -314,9 +297,9 @@ Stop decomposing when facets are not actually independent (e.g. one is a strict 
 
 ## Step 4: Build & Configure Evaluators
 
-Generate the NeMo Agent toolkit eval config and custom evaluator code. See [code-patterns.md](code-patterns.md) for all templates.
+Generate the NeMo Agent Toolkit eval config and custom evaluator code. See [code-patterns.md](code-patterns.md) for all templates.
 
-### NeMo Agent toolkit Evaluation Architecture
+### NeMo Agent Toolkit Evaluation Architecture
 
 | Layer | Config Section | What It Contains |
 | ----- | -------------- | ---------------- |
@@ -337,26 +320,26 @@ Do NOT shrink the dataset to reduce wall-clock. Raise parallelism first.
 
 ### Custom Evaluator Pattern
 
-NeMo Agent toolkit custom evaluators follow this structure:
+NeMo Agent Toolkit custom evaluators follow this structure:
 
 1. Config class extending `EvaluatorBaseConfig`
 2. Evaluator class extending `BaseEvaluator` with `evaluate_item(EvalInputItem) -> EvalOutputItem`
 3. Registration via `@register_evaluator` decorator
-4. Import in `register.py` for NeMo Agent toolkit discovery
+4. Import in `register.py` for NeMo Agent Toolkit discovery
 
-> **API note:** NeMo Agent toolkit is actively evolving. The import paths and class signatures in [code-patterns.md](code-patterns.md) are based on the current API. If you hit `ImportError` or signature mismatches, fetch the latest custom evaluator docs via the External Documentation links above — they are the source of truth for the current API.
+> **API note:** NeMo Agent Toolkit is actively evolving. The import paths and class signatures in [code-patterns.md](code-patterns.md) are based on the current API. If you hit `ImportError` or signature mismatches, fetch the latest custom evaluator docs via the External Documentation links above — they are the source of truth for the current API.
 
 Generate evaluators specific to the agent's domain. See [code-patterns.md](code-patterns.md) for safety evaluator, LLM-as-judge, and routing evaluator templates.
 
 ### External Evaluator Integration
 
-Custom evaluators have full Python capabilities inside `evaluate_item()` — you can call any external library. NeMo Agent toolkit also supports automatic evaluator discovery from external packages via its plugin system:
+Custom evaluators have full Python capabilities inside `evaluate_item()` — you can call any external library. NeMo Agent Toolkit also supports automatic evaluator discovery from external packages via its plugin system:
 
 | Integration Method | How It Works | When to Use |
 | ------------------ | ------------ | ----------- |
 | **`register.py` imports** | Import and register evaluators in a local `register.py` | Project-specific evaluators alongside agent code |
 | **Entry points** | External packages register via `nat.plugins` entry point in `pyproject.toml` | Sharing evaluators across teams or projects |
-| **Inside `evaluate_item()`** | Call any external Python library (LangChain, LangSmith, HTTP APIs) | Wrapping existing evaluation infrastructure into NeMo Agent toolkit |
+| **Inside `evaluate_item()`** | Call any external Python library (LangChain, LangSmith, HTTP APIs) | Wrapping existing evaluation infrastructure into NeMo Agent Toolkit |
 
 ```python
 # External package entry point (pyproject.toml)
@@ -390,7 +373,7 @@ nat eval --config_file=configs/eval_config.yml --skip_workflow --dataset output/
 
 > `nat eval` is a long-running command. Runtime depends on dataset size, workflow complexity, and number of reps. Run it with a generous timeout or none.
 
-### NeMo Agent toolkit Output Artifacts
+### NeMo Agent Toolkit Output Artifacts
 
 | File | Contents |
 | ---- | -------- |

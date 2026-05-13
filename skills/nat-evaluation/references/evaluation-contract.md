@@ -1,23 +1,6 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
+# NeMo Agent Toolkit Evaluation Contract
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
-# NeMo Agent toolkit Evaluation Contract
-
-Use this page when evaluator choice affects more than a one-off `nat eval` report. In NeMo Agent toolkit, `eval.evaluators` is a shared contract: the evaluator key, score shape, reasoning, and available input state can be consumed by other workflows.
+Use this page when evaluator choice affects more than a one-off `nat eval` report. In NeMo Agent Toolkit, `eval.evaluators` is a shared contract: the evaluator key, score shape, reasoning, and available input state can be consumed by other workflows.
 
 ## Who Should Care
 
@@ -65,6 +48,6 @@ Evaluator authors should make the contract obvious:
 
 ## Related Pages
 
-- [`evaluation-surfaces.md`](evaluation-surfaces.md) — choose legacy NeMo Agent toolkit eval (`IntermediateStep`), legacy plus ATIF artifact, or ATIF-native evaluator lane.
+- [`evaluation-surfaces.md`](evaluation-surfaces.md) — choose legacy NeMo Agent Toolkit eval (`IntermediateStep`), legacy plus ATIF artifact, or ATIF-native evaluator lane.
 - [`methodology.md`](methodology.md) — design datasets, metrics, and offline/online cycles.
 - [`../../nat-optimization/references/configuration.md`](../../nat-optimization/references/configuration.md) — wire evaluator names into optimizer objectives.

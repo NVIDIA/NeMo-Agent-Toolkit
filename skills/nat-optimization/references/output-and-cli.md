@@ -1,20 +1,3 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Optimizer Output, CLI, and Callbacks
 
 ## Output Files
@@ -46,12 +29,12 @@ nat optimize --config_file workflow.yaml --endpoint http://your-llm-endpoint
 | Flag | Default | Description |
 | --- | --- | --- |
 | `--config_file` | — | Path to the workflow YAML containing the `optimizer:` block |
-| `--dataset` | — | Override the dataset path (can cause type errors in some NeMo Agent toolkit versions — prefer setting it in the config) |
+| `--dataset` | — | Override the dataset path (can cause type errors in some NeMo Agent Toolkit versions — prefer setting it in the config) |
 | `--result_json_path` | `$` | JSONPath expression to extract the workflow result from the output |
 | `--endpoint` | — | Override the LLM endpoint for remote workflow execution |
 | `--endpoint_timeout` | `300` | Request timeout in seconds for endpoint calls |
 
-> Set the dataset path in the config (`eval.general.dataset`) rather than via `--dataset` — the CLI flag can cause type errors with some NeMo Agent toolkit versions.
+> Set the dataset path in the config (`eval.general.dataset`) rather than via `--dataset` — the CLI flag can cause type errors with some NeMo Agent Toolkit versions.
 >
 > `nat optimize` is a long-running command. Run it in the background with a generous timeout. See [`choosing-parameters.md`](choosing-parameters.md) for wall-clock scaling and the no-kill rule.
 

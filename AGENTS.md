@@ -15,16 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# AGENTS.md - NVIDIA NeMo Agent toolkit AI Agent Entry Point
+# AGENTS.md - NVIDIA NeMo Agent Toolkit AI Agent Entry Point
 
-AI agent skills for the NVIDIA NeMo Agent toolkit live in **`skills/`** at the repository root and use a **flat layout**. Read this file first, then choose skills from the task routing index below.
+AI agent skills for the NVIDIA NeMo Agent Toolkit live in **`skills/`** at the repository root and use a **flat layout**. Read this file first, then choose skills from the task routing index below.
 
 ## Mandatory Repository Rules
 
 - Preserve user changes. Check `git status` before editing and do not revert unrelated work.
 - Prefer existing project patterns, examples, and documentation over new abstractions.
 - Do not add dependencies, update lock files, or run package installation commands unless the task requires it.
-- Use the full product name "NVIDIA NeMo Agent toolkit" on first use in public documentation, then "NeMo Agent toolkit" or "the toolkit". Use `nat` only for the CLI, Python namespace, package metadata, and other technical identifiers.
+- Use the full product name "NVIDIA NeMo Agent Toolkit" on first use in public documentation, then "NeMo Agent Toolkit" or "the toolkit". Use `nat` only for the CLI, Python namespace, package metadata, and other technical identifiers.
 - Keep examples runnable from the repository root unless the surrounding file uses a different convention.
 - For ambiguous tasks, clarify the intended outcome or cover each plausible interpretation and report what you did.
 
@@ -48,7 +48,7 @@ Use the routing table before opening detailed references inside the skill.
 
 | Task | Skill and Reference |
 | --- | --- |
-| Installing or configuring NeMo Agent toolkit | `skills/nat-installation/SKILL.md` |
+| Installing or configuring NeMo Agent Toolkit | `skills/nat-installation/SKILL.md` |
 | Discovering registered component `_type` values | `skills/nat-workflow-creation/SKILL.md` |
 | Writing or editing workflow YAML | `skills/nat-workflow-creation/SKILL.md` |
 | Configuring LLMs | `skills/nat-workflow-creation/SKILL.md` |

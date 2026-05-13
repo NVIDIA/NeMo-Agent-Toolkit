@@ -1,25 +1,8 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Creating Custom Tools and Function Groups
 
 How to register individual tools (`register_function`, `FunctionInfo.from_fn`, the `Function` class) and function groups (`register_function_group`). Companion: [`../../nat-evaluation/references/code-patterns.md`](../../nat-evaluation/references/code-patterns.md) has copy-paste-ready code templates.
 
-NeMo Agent toolkit provides two mechanisms for registering tools: **individual functions** for standalone tools, and **function groups** for related tools that share configuration or resources.
+NeMo Agent Toolkit provides two mechanisms for registering tools: **individual functions** for standalone tools, and **function groups** for related tools that share configuration or resources.
 
 ## Individual Tool (register_function)
 
@@ -27,7 +10,7 @@ Define the tool in a separate module and **import it before calling `WorkflowBui
 
 ### Simple pattern using `FunctionInfo.from_fn()` (recommended)
 
-This is the pattern used by most production NeMo Agent toolkit projects. Yield a `FunctionInfo` wrapping a plain async function:
+This is the pattern used by most production NeMo Agent Toolkit projects. Yield a `FunctionInfo` wrapping a plain async function:
 
 ```python
 # tools/chitchat_tool.py
@@ -71,7 +54,7 @@ async def chitchat_tool(config: ChitchatToolConfig, builder: Builder):
 - **`LLMRef`**: Use `from nat.data_models.component_ref import LLMRef` for config fields that reference an LLM by name. In the YAML, this maps to `llm_name: my_llm`.
 - **`framework_wrappers=[LLMFrameworkEnum.LANGCHAIN]`**: Required on `@register_function` when the tool uses LangChain LLMs via `builder.get_llm()`.
 - **`builder.get_llm()`**: Access configured LLMs inside tools. Pass `wrapper_type=LLMFrameworkEnum.LANGCHAIN` to get a LangChain `BaseChatModel`.
-- **`FunctionInfo.from_fn()`**: Wraps a plain `async def` as a NeMo Agent toolkit function. Simpler than the `Function` class.
+- **`FunctionInfo.from_fn()`**: Wraps a plain `async def` as a NeMo Agent Toolkit function. Simpler than the `Function` class.
 - **Lazy imports**: Import heavy dependencies (LangChain, httpx) inside the function body, not at module top level.
 
 ### Advanced pattern using `Function` class
@@ -150,7 +133,7 @@ build-backend = "setuptools.build_meta"
 
 Without it, `uv sync` skips installing the local project, the entry point is inert, and a fresh subprocess (e.g. `nat eval`) won't find your custom `_type` even though the decorator is in your source.
 
-NeMo Agent toolkit auto-discovers entry points at startup — no manual imports needed.
+NeMo Agent Toolkit auto-discovers entry points at startup — no manual imports needed.
 
 Reference the tool in `workflow.yml` by its registered `_type`:
 

@@ -1,38 +1,20 @@
 ---
 name: nat-user-rules
-description: Use first for general NVIDIA NeMo Agent toolkit coding-agent behavior, task routing, naming conventions, component discovery rules, and cross-skill guidance.
-metadata:
-  version: "0.1.1"
-  status: initial
+description: Use first for general NVIDIA NeMo Agent Toolkit coding-agent behavior, task routing, naming conventions, component discovery rules, and cross-skill guidance.
+author: NVIDIA Corporation and Affiliates
+license: Apache-2.0
 ---
 
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
+# NeMo Agent Toolkit User Rules
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
-# NeMo Agent toolkit User Rules
-
-Use this skill first when working in the NeMo Agent toolkit repository. It routes tasks to focused skills and states rules that apply across all toolkit work.
+Use this skill first when working in the NeMo Agent Toolkit repository. It routes tasks to focused skills and states rules that apply across all toolkit work.
 
 ## Mandatory Rules
 
 - Discover registered component `_type` values with `nat info components` before writing workflow, evaluation, optimizer, logging, or tracing YAML.
 - Do not invent `_type` names or configuration keys from memory.
 - Use `nat` only for technical identifiers such as the CLI, package name, Python namespace, paths, and environment variables.
-- In prose, use "NVIDIA NeMo Agent toolkit" on first use, then "NeMo Agent toolkit" or "the toolkit".
+- In prose, use "NVIDIA NeMo Agent Toolkit" on first use, then "NeMo Agent Toolkit" or "the toolkit".
 - Prefer existing examples and docs before creating new patterns.
 - Keep generated examples runnable from the repository root unless the surrounding example uses another convention.
 

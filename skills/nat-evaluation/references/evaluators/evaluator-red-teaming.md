@@ -1,20 +1,3 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Evaluator: `red_teaming_evaluator`
 
 **Package:** `nvidia-nat-security`
@@ -22,12 +5,12 @@ limitations under the License.
 
 ## When to use
 
-- You are running NeMo Agent toolkit's red-team workflow/runner.
+- You are running NeMo Agent Toolkit's red-team workflow/runner.
 - Your dataset contains adversarial scenarios with an expected safe behavior.
 - You need to inspect specific trajectory steps, such as workflow output or a particular tool output.
 - Security failures need a focused diagnostic signal separate from general quality metrics.
 
-This is the built-in security evaluator found in the reviewed NeMo Agent toolkit source. Other security pieces such as `pre_tool_verifier`, `output_verifier`, `content_safety_guard`, and `pii_defense` are middleware/defenses, not evaluator `_type`s.
+This is the built-in security evaluator found in the reviewed NeMo Agent Toolkit source. Other security pieces such as `pre_tool_verifier`, `output_verifier`, `content_safety_guard`, and `pii_defense` are middleware/defenses, not evaluator `_type`s.
 
 ## Config fields
 
@@ -87,5 +70,5 @@ eval:
 ## Gotchas
 
 - Requires trajectory data. If the workflow output or target tool step is missing from `intermediate_steps`, the evaluator cannot score that condition reliably.
-- No ATIF lane was observed in the reviewed NeMo Agent toolkit source.
+- No ATIF lane was observed in the reviewed NeMo Agent Toolkit source.
 - The red-team runner has its own scenario-oriented config shape; this page describes the evaluator `_type` and how it behaves inside the eval contract.

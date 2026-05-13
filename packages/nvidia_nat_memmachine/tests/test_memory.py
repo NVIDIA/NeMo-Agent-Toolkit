@@ -78,7 +78,7 @@ async def test_memmachine_memory_client_success(config: MemMachineMemoryClientCo
             assert editor is not None
             # Verify client was initialized correctly
             mock_memmachine_client.get_or_create_project.assert_called_once_with(
-                org_id="test_org", project_id="test_project", description="NeMo Agent toolkit project: test_project")
+                org_id="test_org", project_id="test_project", description="NeMo Agent Toolkit project: test_project")
 
 
 async def test_memmachine_memory_client_minimal_config(config_minimal: MemMachineMemoryClientConfig,

@@ -1,23 +1,6 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Built-in Agent Types
 
-The nine built-in NeMo Agent toolkit agent types: when to pick which, key traits, and YAML examples. Companion: [`additional-agent-types.md`](additional-agent-types.md) lists the lesser-used types in detail.
+The nine built-in NeMo Agent Toolkit agent types: when to pick which, key traits, and YAML examples. Companion: [`additional-agent-types.md`](additional-agent-types.md) lists the lesser-used types in detail.
 
 **Classify the workflow shape before scaffolding:**
 
@@ -30,7 +13,7 @@ The nine built-in NeMo Agent toolkit agent types: when to pick which, key traits
 | ReAct | `react_agent` | Yes | Yes | Interleaved reason + act loop |
 | Reasoning | `reasoning_agent` | Yes (thinking-capable) | Via inner agent | Plan-then-delegate wrapper |
 | ReWOO | `rewoo_agent` | Yes | Yes | Separate plan / execute / solve phases |
-| Responses API | `responses_api_agent` | Yes (Responses API) | NeMo Agent toolkit + built-in + MCP | Direct LLM tool binding with MCP support |
+| Responses API | `responses_api_agent` | Yes (Responses API) | NeMo Agent Toolkit + built-in + MCP | Direct LLM tool binding with MCP support |
 | Router | `router_agent` | Yes | No (routes to branches) | LLM-based single-branch dispatch |
 | Tool Calling | `tool_calling_agent` | Yes | Yes | Standard tool-calling API, direct output |
 | Auto Memory Wrapper | `auto_memory_agent` | Yes | Via inner agent | Persistent memory across turns |
@@ -114,7 +97,7 @@ workflow:
 
 ## Running Agents Programmatically
 
-When you need a Python entry point that invokes a NeMo Agent toolkit workflow, use the programmatic API instead of shelling out:
+When you need a Python entry point that invokes a NeMo Agent Toolkit workflow, use the programmatic API instead of shelling out:
 
 ```python
 import asyncio

@@ -1,20 +1,3 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Evaluators: `langsmith` and `langsmith_custom`
 
 **Package:** `nvidia-nat[langchain]` — install with `uv pip install "nvidia-nat[langchain]"`
@@ -57,7 +40,7 @@ eval:
 ### Discover available evaluators
 
 ```bash
-# List all evaluators registered in your NeMo Agent toolkit installation
+# List all evaluators registered in your NeMo Agent Toolkit installation
 nat info components -t evaluator
 ```
 
@@ -71,7 +54,7 @@ python3 -c "import openevals; help(openevals)"
 
 ## `_type: langsmith_custom` — Custom LangSmith evaluator
 
-Use this when you have an **existing LangSmith-compatible evaluator function** you want to wire into NeMo Agent toolkit by dotted path — no need to rewrite it as a `BaseEvaluator`.
+Use this when you have an **existing LangSmith-compatible evaluator function** you want to wire into NeMo Agent Toolkit by dotted path — no need to rewrite it as a `BaseEvaluator`.
 
 ### When to use
 
@@ -102,7 +85,7 @@ The function at that path must be importable and follow one of the LangSmith eva
 
 ## Gotchas
 
-- `langsmith` resolves short names from openevals at registration time — if the name doesn't exist, NeMo Agent toolkit raises a `ValueError` listing available names
+- `langsmith` resolves short names from openevals at registration time — if the name doesn't exist, NeMo Agent Toolkit raises a `ValueError` listing available names
 - `langsmith_custom` auto-detects the calling convention — if detection fails, check that your function signature matches one of the three supported forms
 - `extra_fields` only works with `langsmith_custom` when the function uses the `(inputs, outputs, reference_outputs)` convention
 - Neither type requires a judge LLM in the config (unlike `langsmith_judge` and `tunable_rag_evaluator`)

@@ -1,23 +1,6 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
+# NeMo Agent Toolkit Evaluation Code Patterns
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
-# NeMo Agent toolkit Evaluation Code Patterns
-
-Reference file for the Evaluation portion of the `nat-user-rules` skill. Copy-paste-ready NeMo Agent toolkit config and Python code templates. Adapt to the user's specific agent, tools, and quality dimensions.
+Reference file for the Evaluation portion of the `nat-user-rules` skill. Copy-paste-ready NeMo Agent Toolkit config and Python code templates. Adapt to the user's specific agent, tools, and quality dimensions.
 
 ## Table of Contents
 
@@ -40,7 +23,7 @@ Reference file for the Evaluation portion of the `nat-user-rules` skill. Copy-pa
 
 ## Eval Config Template
 
-The central config for NeMo Agent toolkit evaluation. Adapt `llms`, `dataset`, and `evaluators` to the agent.
+The central config for NeMo Agent Toolkit evaluation. Adapt `llms`, `dataset`, and `evaluators` to the agent.
 
 ```yaml
 # configs/eval_config.yml
@@ -117,7 +100,7 @@ Don't use generic placeholder examples. Build the dataset from the agent's actua
 
 ### Dataset Structure
 
-NeMo Agent toolkit uses `question`/`answer` as field names, but treat them as generic **input/output** — they work for any agent type, not just Q&A chatbots.
+NeMo Agent Toolkit uses `question`/`answer` as field names, but treat them as generic **input/output** — they work for any agent type, not just Q&A chatbots.
 
 ```json
 [
@@ -458,7 +441,7 @@ class RoutingEvaluator(BaseEvaluator):
             return EvalOutputItem(id=item.id, score=1.0, reasoning="No expected tools")
 
         # Extract called tools from trajectory
-        # Note: .trajectory availability depends on NeMo Agent toolkit version — guard against missing data
+        # Note: .trajectory availability depends on NeMo Agent Toolkit version — guard against missing data
         called_tools = set()
         if hasattr(item, "trajectory") and item.trajectory:
             for step in item.trajectory:
@@ -527,7 +510,7 @@ async def register_pii_evaluator(config: PIIEvaluatorConfig, builder: EvalBuilde
 
 ## Evaluator Registration
 
-NeMo Agent toolkit discovers custom evaluators via `register.py`:
+NeMo Agent Toolkit discovers custom evaluators via `register.py`:
 
 ```python
 # register.py
@@ -622,7 +605,7 @@ async def my_tracker(config, builder):
 ```python
 #!/usr/bin/env python3
 # scripts/check_thresholds.py
-"""Check NeMo Agent toolkit evaluation results against deployment thresholds.
+"""Check NeMo Agent Toolkit evaluation results against deployment thresholds.
 Exit 0 = passed, Exit 1 = threshold breach.
 """
 import argparse, json, sys
@@ -649,8 +632,8 @@ def check(results_dir: str, thresholds: dict[str, float]) -> bool:
         print(f"  [{'PASS' if passed else 'FAIL'}]  {evaluator}: {avg:.4f}  (threshold: {min_score})")
         if not passed:
             all_passed = False
-            # Note: field names (entries, score, question) depend on NeMo Agent toolkit output format —
-            # verify against your NeMo Agent toolkit version's actual output schema
+            # Note: field names (entries, score, question) depend on NeMo Agent Toolkit output format —
+            # verify against your NeMo Agent Toolkit version's actual output schema
             entries = data.get("entries", data.get("results", []))
             worst = sorted(entries, key=lambda x: x.get("score", 0))[:3]
             for w in worst:
@@ -675,7 +658,7 @@ if __name__ == "__main__":
         "safety_compliance": args.min_safety,
     }
 
-    print("NeMo Agent toolkit — Deployment Threshold Check")
+    print("NeMo Agent Toolkit — Deployment Threshold Check")
     print("=" * 50)
     if check(args.results, thresholds):
         print("\nAll thresholds met.")
@@ -781,7 +764,7 @@ eval:
 ```text
 <agent>_eval/
 ├── configs/
-│   ├── workflow_config.yml      # NeMo Agent toolkit agent workflow config
+│   ├── workflow_config.yml      # NeMo Agent Toolkit agent workflow config
 │   ├── eval_config.yml          # Offline evaluation config
 │   └── online_eval_config.yml   # Online (production) eval config
 ├── data/
@@ -795,7 +778,7 @@ eval:
 ├── scripts/
 │   └── check_thresholds.py      # Deployment gate checker
 ├── register.py                  # Custom evaluator registration
-├── output/                      # NeMo Agent toolkit evaluation results
+├── output/                      # NeMo Agent Toolkit evaluation results
 └── .github/workflows/
     └── agent-eval.yml           # CI/CD evaluation gate
 ```

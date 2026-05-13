@@ -1,27 +1,9 @@
 ---
 name: skill-evolution
 description: Use when creating, refining, or maintaining AI coding agent skills in this repository, especially after user corrections, repeated failures, stale references, routing gaps, or reusable lessons learned.
-metadata:
-  version: "0.1.1"
-  status: initial
+author: NVIDIA Corporation and Affiliates
+license: Apache-2.0
 ---
-
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
 
 # Skill Evolution
 
@@ -47,8 +29,7 @@ Do not update skills for one-off user preferences, temporary local environment q
 3. Keep each `SKILL.md` concise and task-oriented.
 4. Move detailed examples or long reference material into that skill's `references/` directory.
 5. Update `AGENTS.md` when a new skill is added or task routing changes.
-6. Update `skills/CHANGELOG.md` when the skill set behavior, routing, or references change.
-7. Run Markdown link checks through pre-commit on the changed skill files.
+6. Run Markdown link checks through pre-commit on the changed skill files.
 
 ## Naming and Layout
 
@@ -70,13 +51,12 @@ Each skill folder must contain one `SKILL.md` with frontmatter:
 ---
 name: skill-name
 description: Use when ...
-metadata:
-  version: "0.1.1"
-  status: initial
+author: NVIDIA Corporation and Affiliates
+license: Apache-2.0
 ---
 ```
 
-Keep the `metadata.version` value aligned across all skill files. Bump every skill's version together when the routed skill set changes.
+Use `author` and `license` frontmatter instead of long license headers in `SKILL.md` files.
 
 Use specific names that describe the task surface. Avoid catch-all folders that hide routing information.
 
@@ -85,5 +65,5 @@ Use specific names that describe the task surface. Avoid catch-all folders that 
 - Skills should tell agents what to do, what to read next, and what to validate.
 - Prefer canonical repository docs over copied long-form explanations.
 - Keep cross-skill links relative and valid.
-- Use "NVIDIA NeMo Agent toolkit" on first prose use, then "NeMo Agent toolkit" or "the toolkit".
+- Use "NVIDIA NeMo Agent Toolkit" on first prose use, then "NeMo Agent Toolkit" or "the toolkit".
 - Use `nat` only for technical identifiers such as the CLI, package name, Python namespace, paths, and environment variables.

@@ -418,7 +418,7 @@ The `nvidia_nat_rag` package orchestrates a multi-stage retrieval pipeline with 
 
 ### Integration with NeMo Agent Toolkit Components
 
-The `nvidia_nat_rag` package integrates with standard NeMo Agent toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The library references these components by name:
+The `nvidia_nat_rag` package integrates with standard NeMo Agent Toolkit components. You configure `llms`, `embedders`, and `retrievers` sections as usual. The library references these components by name:
 
 ```yaml
 function_groups:
@@ -429,11 +429,11 @@ function_groups:
     retriever: cuda_retriever # References retrievers.cuda_retriever
 ```
 
-This means you can reuse existing NeMo Agent toolkit infrastructure definitions and swap in the RAG library without changing your LLM, embedder, or retriever configurations.
+This means you can reuse existing NeMo Agent Toolkit infrastructure definitions and swap in the RAG library without changing your LLM, embedder, or retriever configurations.
 
 ### RAG-Specific Configuration
 
-The library adds configuration specific to the RAG pipeline. These fields differ from a standard NeMo Agent toolkit retriever setup:
+The library adds configuration specific to the RAG pipeline. These fields differ from a standard NeMo Agent Toolkit retriever setup:
 
 | Field | Purpose |
 |-------|---------|

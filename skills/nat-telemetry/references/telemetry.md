@@ -1,25 +1,8 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
 # Telemetry & Observability
 
 Logging and tracing under `general.telemetry`: OTel collector, Langfuse, LangSmith, Weave, plus a programmatic-API path for writing OTel traces to local files.
 
-NeMo Agent toolkit's telemetry system lives under `general.telemetry` and supports two subsystems: **logging** (structured log output) and **tracing** (distributed traces). Multiple providers can be active simultaneously.
+NeMo Agent Toolkit's telemetry system lives under `general.telemetry` and supports two subsystems: **logging** (structured log output) and **tracing** (distributed traces). Multiple providers can be active simultaneously.
 
 ## Logging
 
@@ -169,7 +152,7 @@ Requires `nvidia-nat[data-flywheel]`. **Currently supports LangChain / LangGraph
 
 ### Dynatrace
 
-Dynatrace is consumed via the OTel Collector path — point an OTel Collector at Dynatrace's OTLP API and have NeMo Agent toolkit export to that collector with `_type: otelcollector` (see the **OTel Collector** section above). The Dynatrace API token needs the `openTelemetryTrace.ingest` scope.
+Dynatrace is consumed via the OTel Collector path — point an OTel Collector at Dynatrace's OTLP API and have NeMo Agent Toolkit export to that collector with `_type: otelcollector` (see the **OTel Collector** section above). The Dynatrace API token needs the `openTelemetryTrace.ingest` scope.
 
 ### Patronus
 

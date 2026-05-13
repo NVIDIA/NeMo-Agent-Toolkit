@@ -1,23 +1,6 @@
-<!--
-SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-SPDX-License-Identifier: Apache-2.0
+# Additional NeMo Agent Toolkit Agent Types
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
--->
-
-# Additional NeMo Agent toolkit Agent Types
-
-These agent types are available in NeMo Agent toolkit but are less frequently used in practice compared to ReAct and Sequential Executor.
+These agent types are available in NeMo Agent Toolkit but are less frequently used in practice compared to ReAct and Sequential Executor.
 
 ## Reasoning Agent (`reasoning_agent`)
 
@@ -71,7 +54,7 @@ workflow:
 
 ## Responses API Agent (`responses_api_agent`)
 
-Uses the OpenAI Responses API to bind tools directly to the LLM. Supports three tool categories simultaneously: NeMo Agent toolkit tools, built-in LLM tools (e.g. code interpreter), and remote MCP tools.
+Uses the OpenAI Responses API to bind tools directly to the LLM. Supports three tool categories simultaneously: NeMo Agent Toolkit tools, built-in LLM tools (e.g. code interpreter), and remote MCP tools.
 
 **Use when:** The model supports the Responses API; you need built-in tools like code execution or remote MCP integrations.
 
