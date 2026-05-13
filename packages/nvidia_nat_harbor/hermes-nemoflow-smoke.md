@@ -29,7 +29,7 @@ smoke:
 - Raw ATOF JSONL from the NeMo-Flow observability plugin.
 - ATOF-derived ATIF from the Toolkit ATOF-to-ATIF converter.
 
-Direct gateway/plugin ATIF outputs may also be created during a run, but they
+Direct gateway or plugin ATIF outputs may also be created during a run, but they
 are diagnostic files only for this smoke. Do not use them as evidence for the
 trajectory comparison until their message shape is strict-compatible with the
 Toolkit ATIF parser.
@@ -71,10 +71,12 @@ One Hermes run should create these primary trajectory artifacts:
   comparison target.
 <!-- path-check-skip-end -->
 
+<!-- path-check-skip-begin -->
 The run may also create direct ATIF diagnostics under
 `agent/nemo-flow-gateway-atif/` and `agent/nemo-flow-plugin-atif/`. Treat those
 as optional implementation diagnostics, not as the basis for this smoke's
 analysis.
+<!-- path-check-skip-end -->
 
 ## Prerequisites
 
