@@ -60,6 +60,7 @@ except ImportError as _jsonschema_import_err:  # pragma: no cover
                       "    uv pip install nvidia-nat-atif[full]") from _jsonschema_import_err
 
 from nat.atif.agent import Agent
+from nat.atif.final_metrics import FinalMetrics
 from nat.atif.step import Step
 from nat.atif.tool_call import ToolCall
 from nat.atif.trajectory import Trajectory
@@ -231,6 +232,151 @@ def _build_invocation_info(start_micros: int | None, end_micros: int | None, inv
     return info
 
 
+def _event_metadata(event: Event) -> dict[str, Any]:
+    """Return event metadata when it is object-shaped."""
+    return event.metadata if isinstance(event.metadata, dict) else {}
+
+
+def _agent_name_from_event(event: Event) -> str:
+    """Prefer producer-provided agent identity over generic gateway scope names."""
+    metadata = _event_metadata(event)
+    agent_name = metadata.get("agent")
+    if isinstance(agent_name, str) and agent_name:
+        return agent_name
+    return event.name or "unknown"
+
+
+def _cached_tokens_from_usage(usage: dict[str, Any]) -> int | None:
+    """Extract cached-token counts from OpenAI-compatible usage payloads."""
+    direct = usage.get("cached_tokens")
+    if isinstance(direct, int):
+        return direct
+
+    prompt_details = usage.get("prompt_tokens_details")
+    if isinstance(prompt_details, dict):
+        cached = prompt_details.get("cached_tokens")
+        if isinstance(cached, int):
+            return cached
+
+    return None
+
+
+def _metrics_from_usage(usage: Any) -> dict[str, Any] | None:
+    """Map OpenAI-compatible ``usage`` payloads to ATIF step metrics."""
+    if not isinstance(usage, dict) or not usage:
+        return None
+
+    metrics: dict[str, Any] = {}
+    prompt_tokens = usage.get("prompt_tokens")
+    completion_tokens = usage.get("completion_tokens")
+    cached_tokens = _cached_tokens_from_usage(usage)
+
+    if isinstance(prompt_tokens, int):
+        metrics["prompt_tokens"] = prompt_tokens
+    if isinstance(completion_tokens, int):
+        metrics["completion_tokens"] = completion_tokens
+    if cached_tokens is not None:
+        metrics["cached_tokens"] = cached_tokens
+
+    extra = {k: v for k, v in usage.items() if k not in {"prompt_tokens", "completion_tokens", "cached_tokens"}}
+    if extra:
+        metrics["extra"] = extra
+
+    return metrics or None
+
+
+def _build_final_metrics(steps: list[Step]) -> FinalMetrics | None:
+    """Aggregate ATIF final metrics from per-step metrics."""
+    total_prompt_tokens = 0
+    total_completion_tokens = 0
+    total_cached_tokens = 0
+    total_tokens = 0
+    has_prompt_tokens = False
+    has_completion_tokens = False
+    has_cached_tokens = False
+    has_total_tokens = False
+
+    for step in steps:
+        metrics = step.metrics
+        if metrics is None:
+            continue
+        if metrics.prompt_tokens is not None:
+            has_prompt_tokens = True
+            total_prompt_tokens += metrics.prompt_tokens
+        if metrics.completion_tokens is not None:
+            has_completion_tokens = True
+            total_completion_tokens += metrics.completion_tokens
+        if metrics.cached_tokens is not None:
+            has_cached_tokens = True
+            total_cached_tokens += metrics.cached_tokens
+        extra_total = (metrics.extra or {}).get("total_tokens")
+        if isinstance(extra_total, int):
+            has_total_tokens = True
+            total_tokens += extra_total
+
+    extra: dict[str, Any] = {}
+    if has_total_tokens:
+        extra["total_tokens"] = total_tokens
+
+    if not any((has_prompt_tokens, has_completion_tokens, has_cached_tokens, has_total_tokens)):
+        return None
+
+    return FinalMetrics(
+        total_prompt_tokens=total_prompt_tokens if has_prompt_tokens else None,
+        total_completion_tokens=total_completion_tokens if has_completion_tokens else None,
+        total_cached_tokens=total_cached_tokens if has_cached_tokens else None,
+        total_steps=len(steps),
+        extra=extra or None,
+    )
+
+
+def _tool_observation_key(message: dict[str, Any]) -> tuple[str | None, str]:
+    """Stable de-duplication key for cumulative OpenAI chat histories."""
+    content = message.get("content")
+    if isinstance(content, str):
+        serialized = content
+    else:
+        serialized = json.dumps(content, sort_keys=True, separators=(",", ":"))
+    tool_call_id = message.get("tool_call_id")
+    return (tool_call_id if isinstance(tool_call_id, str) else None, serialized)
+
+
+def _extract_tool_observations_from_messages(
+    messages: list[dict[str, Any]],
+    seen_tool_observations: set[tuple[str | None, str]],
+    explicit_tool_call_ids: set[str],
+) -> list[dict]:
+    """Recover tool results from OpenAI-compatible cumulative chat history.
+
+    Sidecar gateway ATOF currently captures model traffic, not first-class
+    tool spans. OpenAI-compatible request histories still carry completed tool
+    results as ``{"role": "tool", "tool_call_id": ..., "content": ...}``.
+    Treat newly observed tool messages as observations for the preceding
+    assistant step.
+    """
+    observations: list[dict] = []
+    for message in messages:
+        if message.get("role") != "tool":
+            continue
+        tool_call_id = message.get("tool_call_id")
+        if isinstance(tool_call_id, str) and tool_call_id in explicit_tool_call_ids:
+            continue
+        key = _tool_observation_key(message)
+        if key in seen_tool_observations:
+            continue
+        seen_tool_observations.add(key)
+
+        content = message.get("content")
+        if not isinstance(content, str):
+            content = json.dumps(content, separators=(",", ":"))
+
+        obs_entry: dict = {"content": content}
+        if isinstance(tool_call_id, str) and tool_call_id:
+            obs_entry["source_call_id"] = tool_call_id
+        observations.append(obs_entry)
+    return observations
+
+
 def _serialize_root_data(data: Any) -> str | None:
     """Tier-1 boundary-step message serializer.
 
@@ -390,6 +536,18 @@ def _events_to_step_dicts(
     # each NEW role=user / role=system message in an LLM's input seed a
     # new step, which naturally models multi-turn conversations.
     seen_input_messages: dict[tuple[str | None, str], set[str]] = {}
+    seen_tool_observations: set[tuple[str | None, str]] = set()
+    completed_llm_uuids = {
+        event.uuid
+        for event in sorted_events if _is_scope_end(event) and isinstance(event, ScopeEvent) and event.category == "llm"
+    }
+    explicit_tool_call_ids = {
+        tool_call_id
+        for event in sorted_events
+        if _is_scope_end(event) and isinstance(event, ScopeEvent) and event.category == "tool"
+        for tool_call_id in [(event.category_profile or {}).get("tool_call_id")]
+        if isinstance(tool_call_id, str) and tool_call_id
+    }
 
     def flush_observations() -> None:
         """Attach buffered observations to the preceding agent step (R4 drain).
@@ -456,14 +614,16 @@ def _events_to_step_dicts(
     # Main event loop
     for event in sorted_events:
         if _is_scope_start(event) and event.category == "llm":
-            flush_observations()
-
             # R2/R3 (multi-turn aware): emit user/system steps for every NEW
             # role=user or role=system message in the LLM's input. A
             # continuation LLM call under the same agent where the user has
             # said nothing new emits no step; a follow-up user turn (new
             # content) emits one. System prompts surface as source=system
             # steps the first time they appear.
+            if event.uuid not in completed_llm_uuids:
+                logger.debug("Skipping incomplete LLM start event without matching end: %s", event.uuid)
+                continue
+
             data = event.data if isinstance(event.data, dict) else {}
             llm_extractor = resolve_llm_extractor(event.data_schema)
             messages = llm_extractor.extract_input_messages(data)
@@ -474,6 +634,19 @@ def _events_to_step_dicts(
                     data_schema=event.data_schema,
                     data_keys=sorted(data.keys()),
                 )
+
+            recovered_observations = _extract_tool_observations_from_messages(
+                messages,
+                seen_tool_observations,
+                explicit_tool_call_ids,
+            )
+            if recovered_observations:
+                pending_observations.extend(recovered_observations)
+                if pending_obs_timestamp is None:
+                    pending_obs_timestamp = event.timestamp
+
+            flush_observations()
+
             for m in messages:
                 role = m.get("role")
                 content = m.get("content")
@@ -577,10 +750,12 @@ def _events_to_step_dicts(
             # orchestrator steps (R13, llm_call_count=0) — model_name on a
             # deterministic dispatch step is meaningless per spec.
             step_model_name = (event.category_profile or {}).get("model_name") or event.name
+            has_explicit_tool_scopes = any(
+                call.get("tool_call_id") in explicit_tool_call_ids for call in tool_call_dicts)
 
             step_dict: dict = {
                 "source": "agent",
-                "message": agent_msg,
+                "message": agent_msg or ("[tool call]" if tool_call_dicts and not has_explicit_tool_scopes else ""),
                 "timestamp": event.timestamp,
                 "model_name": step_model_name,
                 "llm_call_count": 1,
@@ -588,6 +763,9 @@ def _events_to_step_dicts(
             }
             if tool_call_dicts:
                 step_dict["tool_calls"] = tool_call_dicts
+            metrics = _metrics_from_usage(raw_data.get("usage"))
+            if metrics:
+                step_dict["metrics"] = metrics
 
             step_dicts.append(step_dict)
             current_agent_step_idx = len(step_dicts) - 1
@@ -923,36 +1101,37 @@ def _convert_impl(events: list[Event], explicit_root_uuid: str | None) -> Trajec
     if explicit_root_uuid is not None:
         for event in events:
             if _is_scope_start(event) and event.uuid == explicit_root_uuid:
-                agent_name = event.name
+                agent_name = _agent_name_from_event(event)
                 root_agent_uuid = event.uuid
-                if event.metadata and isinstance(event.metadata, dict):
-                    v = event.metadata.get("version")
-                    if isinstance(v, str):
-                        agent_version = v
-                    s = event.metadata.get("session_id")
-                    if isinstance(s, str):
-                        session_id = s
+                metadata = _event_metadata(event)
+                v = metadata.get("version")
+                if isinstance(v, str):
+                    agent_version = v
+                s = metadata.get("session_id")
+                if isinstance(s, str):
+                    session_id = s
                 break
     else:
         # R1: outermost agent scope with parent_uuid None
         for event in main_events:
-            if _is_scope_start(event) and event.category == "agent" and event.parent_uuid is None:
-                agent_name = event.name
+            if (_is_scope_start(event) and event.category == "agent"
+                    and (event.parent_uuid is None or event.parent_uuid not in parent_map)):
+                agent_name = _agent_name_from_event(event)
                 root_agent_uuid = event.uuid
-                if event.metadata and isinstance(event.metadata, dict):
-                    v = event.metadata.get("version")
-                    if isinstance(v, str):
-                        agent_version = v
-                    s = event.metadata.get("session_id")
-                    if isinstance(s, str):
-                        session_id = s
+                metadata = _event_metadata(event)
+                v = metadata.get("version")
+                if isinstance(v, str):
+                    agent_version = v
+                s = metadata.get("session_id")
+                if isinstance(s, str):
+                    session_id = s
                 break
 
         # Tier-1 fallback
         if agent_name is None:
             for event in main_events:
                 if _is_scope_start(event) and event.parent_uuid is None:
-                    agent_name = event.name
+                    agent_name = _agent_name_from_event(event)
                     root_agent_uuid = event.uuid
                     break
 
@@ -992,6 +1171,7 @@ def _convert_impl(events: list[Event], explicit_root_uuid: str | None) -> Trajec
         trajectory_id=trajectory_id,
         agent=Agent(name=agent_name, version=agent_version, model_name=model_name),
         steps=steps,
+        final_metrics=_build_final_metrics(steps),
         subagent_trajectories=subagent_trajectories or None,
     )
 
