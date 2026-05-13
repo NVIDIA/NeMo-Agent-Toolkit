@@ -126,6 +126,7 @@ async def test_install_can_use_prebuilt_nemo_flow(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+
     async def fake_hermes_install(self: HermesNeMoFlow, environment: AsyncMock) -> None:
         return None
 

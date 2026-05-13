@@ -216,18 +216,16 @@ class HermesNeMoFlow(Hermes):
         )
 
     def _validate_prebuilt_cli_command(self) -> str:
-        return (
-            'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"; '
-            "command -v nemo-flow >/dev/null || "
-            "{ echo 'Error: prebuilt image does not provide nemo-flow on PATH' >&2; exit 1; }; "
-            "nemo-flow --help >/dev/null; "
-            "nemo-flow run --help | grep -q -- '--atif-dir' || "
-            "{ echo 'Error: nemo-flow run does not support --atif-dir' >&2; exit 1; }; "
-            "nemo-flow run --help | grep -q -- '--plugin-config' || "
-            "{ echo 'Error: nemo-flow run does not support --plugin-config' >&2; exit 1; }; "
-            "nemo-flow hook-forward --help | grep -q -- '--atif-dir' || "
-            "{ echo 'Error: nemo-flow hook-forward does not support --atif-dir' >&2; exit 1; }"
-        )
+        return ('export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"; '
+                "command -v nemo-flow >/dev/null || "
+                "{ echo 'Error: prebuilt image does not provide nemo-flow on PATH' >&2; exit 1; }; "
+                "nemo-flow --help >/dev/null; "
+                "nemo-flow run --help | grep -q -- '--atif-dir' || "
+                "{ echo 'Error: nemo-flow run does not support --atif-dir' >&2; exit 1; }; "
+                "nemo-flow run --help | grep -q -- '--plugin-config' || "
+                "{ echo 'Error: nemo-flow run does not support --plugin-config' >&2; exit 1; }; "
+                "nemo-flow hook-forward --help | grep -q -- '--atif-dir' || "
+                "{ echo 'Error: nemo-flow hook-forward does not support --atif-dir' >&2; exit 1; }")
 
     @with_prompt_template
     async def run(
@@ -453,27 +451,26 @@ class HermesNeMoFlow(Hermes):
 
     def _build_observability_plugin_config(self) -> dict[str, Any]:
         return {
-            "version": 1,
-            "components": [
-                {
-                    "kind": "observability",
-                    "enabled": True,
-                    "config": {
-                        "version": 1,
-                        "atof": {
-                            "enabled": True,
-                            "output_directory": self._atof_dir,
-                            "filename": "events.jsonl",
-                            "mode": "overwrite",
-                        },
-                        "atif": {
-                            "enabled": True,
-                            "output_directory": self._plugin_atif_dir,
-                            "filename_template": "trajectory-{session_id}.atif.json",
-                        },
+            "version":
+                1,
+            "components": [{
+                "kind": "observability",
+                "enabled": True,
+                "config": {
+                    "version": 1,
+                    "atof": {
+                        "enabled": True,
+                        "output_directory": self._atof_dir,
+                        "filename": "events.jsonl",
+                        "mode": "overwrite",
                     },
-                }
-            ],
+                    "atif": {
+                        "enabled": True,
+                        "output_directory": self._plugin_atif_dir,
+                        "filename_template": "trajectory-{session_id}.atif.json",
+                    },
+                },
+            }],
         }
 
     def _build_child_script(self, route: _ProviderRoute) -> str:

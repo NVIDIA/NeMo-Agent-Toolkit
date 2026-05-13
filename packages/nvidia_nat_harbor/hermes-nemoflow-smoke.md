@@ -26,7 +26,7 @@ The validation pass can use two NeMo-Flow sidecar artifacts:
 
 - Direct gateway ATIF from the existing `--atif-dir` path.
 - Raw ATOF JSONL from the PR #89 observability plugin, converted to ATIF with
-  the NAT ATOF-to-ATIF converter.
+  the NeMo Agent Toolkit ATOF-to-ATIF converter.
 
 The ATOF-derived ATIF is the primary NeMo-Flow comparison target for this pass.
 The direct gateway ATIF remains useful as a baseline while we validate whether
@@ -44,7 +44,7 @@ flowchart TD
 
   run --> gatewayHooks[Hermes hooks + nemo-flow gateway]
   gatewayHooks --> atof[agent/nemo-flow-atof/events.jsonl<br/>raw ATOF JSONL]
-  atof --> converter[NAT ATOF-to-ATIF converter]
+  atof --> converter[the Toolkit ATOF-to-ATIF converter]
   converter --> nfAtif[agent/nemo-flow-atof-atif/trajectory.json<br/>ATOF-derived ATIF]
   gatewayHooks --> gatewayAtif[agent/nemo-flow-gateway-atif/trajectory.json<br/>legacy gateway-emitted ATIF]
   gatewayHooks --> pluginAtif[agent/nemo-flow-plugin-atif/trajectory.json<br/>plugin direct ATIF]
@@ -52,7 +52,7 @@ flowchart TD
   harbor --> swe[SWE-bench verifier<br/>patch + task tests]
   swe --> result[result.json<br/>reward/resolved]
 
-  nativeAtif --> compare[Trajectory comparison<br/>tool sequence + NAT evaluators + Phoenix]
+  nativeAtif --> compare[Trajectory comparison<br/>tool sequence + the Toolkit evaluators + Phoenix]
   nfAtif --> compare
   gatewayAtif -. baseline .-> compare
   result --> outcome[Outcome sanity check<br/>successful/resolved run]
@@ -64,7 +64,7 @@ One Hermes run emits these trajectory artifacts:
   `agent/trajectory.json`. This is Harbor's native Hermes trajectory and is
   produced independently of the NeMo-Flow gateway.
 - ATOF-derived ATIF: PR #89 plugin ATOF export writes
-  `agent/nemo-flow-atof/events.jsonl`, then the NAT converter writes
+  `agent/nemo-flow-atof/events.jsonl`, then the Toolkit converter writes
   `agent/nemo-flow-atof-atif/trajectory.json`. This is the primary NeMo-Flow
   comparison target.
 - Gateway-emitted ATIF: Hermes hooks and routed model traffic -> NeMo-Flow CLI
@@ -77,7 +77,7 @@ One Hermes run emits these trajectory artifacts:
 ## Prerequisites
 
 - Docker is running.
-- NAT is checked out to a branch containing
+- The Toolkit is checked out to a branch containing
   `nat_harbor.agents.installed.hermes_nemoflow:HermesNeMoFlow`.
 - Harbor is installed from the source branch used by the Harbor integration.
 - NeMo-Flow is checked out to a revision that contains PR #88, PR #89, and the
@@ -171,7 +171,7 @@ cp "$NEMO_FLOW_REPO"/Cargo.toml \
 cp -R "$NEMO_FLOW_REPO"/crates "$PREBUILT_CONTEXT"/
 ```
 
-Create the prebuilt-image Dockerfile:
+Create the prebuilt-image `Dockerfile`:
 
 ```bash
 cat > .tmp/harbor/nemo-flow-prebuilt.Dockerfile <<'EOF'
@@ -285,7 +285,7 @@ curl http://localhost:11434/v1/models
 
 ## Run the Smoke
 
-Create a local env file for the Docker task environment. Do not commit this
+Create a local environment file for the Docker task environment. Do not commit this
 file.
 
 <!-- path-check-skip-begin -->
@@ -352,9 +352,9 @@ ATOF-derived tool-sequence match.
 
 | Artifact | Path | Status from run |
 | --- | --- | --- |
-| Native Hermes ATIF | `agent/trajectory.json` | Valid NAT ATIF, `ATIF-v1.2`, 30 steps. |
-| NeMo-Flow ATOF-derived ATIF | `agent/nemo-flow-atof-atif/trajectory.json` | Valid NAT ATIF, `ATIF-v1.7`, 33 steps. Primary comparison target. |
-| NeMo-Flow gateway direct ATIF | `agent/nemo-flow-gateway-atif/trajectory.json` | Emitted, but not strict NAT-schema-valid yet because direct exporter messages contain raw OpenAI payloads. Diagnostic baseline only. |
+| Native Hermes ATIF | `agent/trajectory.json` | Valid ATIF for the Toolkit parser, `ATIF-v1.2`, 30 steps. |
+| NeMo-Flow ATOF-derived ATIF | `agent/nemo-flow-atof-atif/trajectory.json` | Valid ATIF for the Toolkit parser, `ATIF-v1.7`, 33 steps. Primary comparison target. |
+| NeMo-Flow gateway direct ATIF | `agent/nemo-flow-gateway-atif/trajectory.json` | Emitted, but not strict schema-valid for the Toolkit yet because direct exporter messages contain raw OpenAI payloads. Diagnostic baseline only. |
 | NeMo-Flow plugin direct ATIF | `agent/nemo-flow-plugin-atif/trajectory.json` | Emitted, but has the same direct-exporter message-shape issue as gateway direct ATIF. Diagnostic baseline only. |
 
 The raw ATOF reference for the same run is:
@@ -375,7 +375,7 @@ TRIAL=$(find "$HARBOR_JOBS_DIR/$JOB_NAME" -maxdepth 1 -type d -name 'django__dja
 test -n "$TRIAL"
 ```
 
-Check artifact presence and strict NAT ATIF parser compatibility. The direct
+Check artifact presence and strict compatibility with the Toolkit ATIF parser. The direct
 gateway/plugin ATIF artifacts are still useful diagnostics, but may fail strict
 schema validation until direct-exporter message normalization is fixed.
 
@@ -456,7 +456,7 @@ The ATOF-derived comparison is the primary check. If it is still missing tool
 semantics, inspect `agent/nemo-flow-atof/events.jsonl` before changing the ATIF
 exporter because the raw event stream will show whether the data was captured.
 Direct ATIF comparisons are diagnostic and are expected to be poorer until the
-direct exporter emits strict NAT-compatible ATIF messages.
+direct exporter emits strict ATIF messages compatible with the Toolkit.
 
 ## Post-Run Trajectory Scoring
 
@@ -511,7 +511,7 @@ ENDPOINT=http://localhost:6006/v1/traces
 
 Open `http://localhost:6006` and compare the projects. Export direct
 gateway/plugin ATIF only after the quick artifact check reports them as strict
-NAT-schema-valid.
+schema-valid for the Toolkit.
 
 ## Known Limitations
 
@@ -531,11 +531,11 @@ NAT-schema-valid.
   should require `agent/nemo-flow-atof/events.jsonl`; use
   `fail_missing_nemoflow_atof=false` only when running against older
   direct-ATIF-only gateway branches.
-- The NAT ATOF-to-ATIF conversion is initially best-effort in this smoke
+- The Toolkit ATOF-to-ATIF conversion is initially best-effort in this smoke
   (`fail_nemoflow_atof_conversion=false`) so raw ATOF can still be inspected if
   reconstruction fails. Flip it to `true` once the converter result is stable.
 - In the reference run above, the direct gateway/plugin ATIF files were emitted
-  but did not validate with the strict NAT ATIF parser because `message` fields
+  but did not validate with the strict Toolkit ATIF parser because `message` fields
   contained raw OpenAI request/response payloads. The ATOF-derived ATIF file did
   validate and matched the native Hermes tool sequence exactly.
 - Complete LLM lifecycle telemetry requires Hermes model traffic to use the
