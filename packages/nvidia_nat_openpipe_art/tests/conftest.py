@@ -41,7 +41,6 @@ def mock_art_library():
     mock_art.dev.InternalModelConfig = MagicMock()
     mock_art.dev.InitArgs = MagicMock()
     mock_art.dev.EngineArgs = MagicMock()
-    mock_art.dev.TorchtuneArgs = MagicMock()
     mock_art.dev.TrainerArgs = MagicMock()
     mock_art.dev.OpenAIServerConfig = MagicMock()
 

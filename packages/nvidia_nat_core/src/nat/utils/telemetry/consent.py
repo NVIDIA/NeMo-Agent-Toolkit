@@ -221,7 +221,7 @@ def render_prompt() -> str:
     """
     return ("\n"
             "===========================================================\n"
-            "  NeMo Agent toolkit — anonymous telemetry\n"
+            "  NeMo Agent Toolkit — anonymous telemetry\n"
             "===========================================================\n"
             "  We collect aggregate, anonymous CLI usage data to help us\n"
             "  prioritize features and fix bugs.\n"
