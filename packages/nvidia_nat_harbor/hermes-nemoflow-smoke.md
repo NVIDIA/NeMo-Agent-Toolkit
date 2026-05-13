@@ -25,7 +25,7 @@ is available.
 The validation pass can use two NeMo-Flow sidecar artifacts:
 
 - Direct gateway ATIF from the existing `--atif-dir` path.
-- Raw ATOF JSONL from the PR #89 observability plugin, converted to ATIF with
+- Raw ATOF JSONL from the NeMo-Flow observability plugin, converted to ATIF with
   the NeMo Agent Toolkit ATOF-to-ATIF converter.
 
 The ATOF-derived ATIF is the primary NeMo-Flow comparison target for this pass.
@@ -64,14 +64,14 @@ One Hermes run emits these trajectory artifacts:
 - Native path: Hermes session export -> Harbor Hermes adapter ->
   `agent/trajectory.json`. This is Harbor's native Hermes trajectory and is
   produced independently of the NeMo-Flow gateway.
-- ATOF-derived ATIF: PR #89 plugin ATOF export writes
+- ATOF-derived ATIF: NeMo-Flow observability plugin ATOF export writes
   `agent/nemo-flow-atof/events.jsonl`, then the Toolkit converter writes
   `agent/nemo-flow-atof-atif/trajectory.json`. This is the primary NeMo-Flow
   comparison target.
 - Gateway-emitted ATIF: Hermes hooks and routed model traffic -> NeMo-Flow CLI
   gateway -> `agent/nemo-flow-gateway-atif/trajectory.json`. This is the legacy
   direct-ATIF baseline.
-- Plugin direct ATIF: PR #89 plugin ATIF export ->
+- Plugin direct ATIF: NeMo-Flow observability plugin ATIF export ->
   `agent/nemo-flow-plugin-atif/trajectory.json`. This is a secondary debugging
   artifact for comparing plugin direct ATIF against legacy direct ATIF.
 <!-- path-check-skip-end -->
@@ -82,10 +82,10 @@ One Hermes run emits these trajectory artifacts:
 - The Toolkit is checked out to a branch containing
   `nat_harbor.agents.installed.hermes_nemoflow:HermesNeMoFlow`.
 - Harbor is installed from the source branch used by the Harbor integration.
-- NeMo-Flow is checked out to a revision that contains PR #88, PR #89, and the
-  temporary sidecar bridge that activates `--plugin-config` in the CLI gateway.
-  The published binary is `nemo-flow`, the published Cargo package is
-  `nemo-flow-cli`, and Hermes gateway ATIF export uses `--atif-dir`.
+- NeMo-Flow `>= v0.2` is checked out. This version requirement covers CLI ATOF
+  export, observability plugin activation through `--plugin-config`, and direct
+  gateway ATIF export through `--atif-dir`. The published binary is
+  `nemo-flow`, and the published Cargo package is `nemo-flow-cli`.
 
 <!-- path-check-skip-begin -->
 ```bash
@@ -101,10 +101,11 @@ if [ ! -d external/nemo-flow/.git ]; then
   git clone https://github.com/NVIDIA/NeMo-Flow.git external/nemo-flow
 fi
 git -C external/nemo-flow fetch origin
-git -C external/nemo-flow checkout bbednarski/validate-pr89-sidecar-plugin-bridge
+git -C external/nemo-flow checkout "${NEMO_FLOW_REF:-main}"
 ```
 
-If the temporary bridge branch is in your working NeMo-Flow checkout instead of
+Set `NEMO_FLOW_REF` to a NeMo-Flow `v0.2` or newer release tag, branch, or
+commit when you do not want to use `main`. If your `>= v0.2` checkout is outside
 `external/nemo-flow`, point `NEMO_FLOW_REPO` at that checkout in the build step
 below.
 
@@ -537,9 +538,9 @@ schema-valid for the Toolkit.
   default 360 second agent setup timeout before Hermes starts. If the trial log
   stops at the NeMo-Flow CLI build command, no model endpoint has been reached
   yet. The prebuilt image avoids that trial-startup cost.
-- The ATOF path requires a NeMo-Flow branch that activates PR #89 plugin config
-  in the CLI gateway. The `enable_nemoflow_observability_plugin=true` smoke
-  should require `agent/nemo-flow-atof/events.jsonl`; use
+- The ATOF path requires NeMo-Flow `>= v0.2` observability plugin activation in
+  the CLI gateway. The `enable_nemoflow_observability_plugin=true` smoke should
+  require `agent/nemo-flow-atof/events.jsonl`; use
   `fail_missing_nemoflow_atof=false` only when running against older
   direct-ATIF-only gateway branches.
 - The Toolkit ATOF-to-ATIF conversion is initially best-effort in this smoke
