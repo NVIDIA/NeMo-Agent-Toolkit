@@ -2,7 +2,7 @@
 name: nat-agent-configuration
 description: Use when selecting, configuring, composing, or troubleshooting NeMo Agent toolkit agents and control-flow components, including ReAct, tool-calling, ReWOO, reasoning, router, sequential, parallel, and sub-agent patterns.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 

@@ -2,7 +2,7 @@
 name: nat-evaluation
 description: Use when designing, configuring, running, or troubleshooting NeMo Agent toolkit evaluations, datasets, evaluator selection, ATIF surfaces, quality gates, custom evaluators, and `nat eval`.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 

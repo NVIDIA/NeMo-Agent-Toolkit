@@ -83,6 +83,7 @@ The NeMo Agent toolkit skills include:
 - `skills/nat-optimization/SKILL.md`: Optimizer configuration and output interpretation.
 - `skills/nat-telemetry/SKILL.md`: Logging, tracing, profiling, and telemetry exporters.
 - `skills/nat-mcp-and-serving/SKILL.md`: MCP and serving workflows.
+- `skills/nat-path-checks/SKILL.md`: Documentation path-check failures and Markdown escaping guidance.
 - `skills/skill-evolution/SKILL.md`: Skill maintenance, routing changes, and reusable lessons learned.
 
 For the top-level task routing table, see `AGENTS.md`.

@@ -39,6 +39,7 @@ AI agent skills for the NVIDIA NeMo Agent toolkit live in **`skills/`** at the r
 - `skills/nat-optimization/` - `nat optimize`, optimizer configuration, parameter selection, and output interpretation.
 - `skills/nat-telemetry/` - Logging, tracing, profiling, OpenTelemetry, and telemetry exporters.
 - `skills/nat-mcp-and-serving/` - MCP clients and servers, FastAPI, and workflow serving.
+- `skills/nat-path-checks/` - Documentation path-check failures, Markdown escaping, and slash-delimited token fixes.
 - `skills/skill-evolution/` - Creating, refining, and maintaining AI coding agent skills.
 
 ## Task Routing
@@ -60,6 +61,7 @@ Use the routing table before opening detailed references inside the skill.
 | Designing an evaluation suite | `skills/nat-evaluation/SKILL.md` |
 | Choosing an evaluator | `skills/nat-evaluation/SKILL.md` |
 | Running `nat optimize` | `skills/nat-optimization/SKILL.md` |
+| Fixing documentation path-check failures | `skills/nat-path-checks/SKILL.md` |
 | Creating or improving skills | `skills/skill-evolution/SKILL.md` |
 
 ## Skill Evolution

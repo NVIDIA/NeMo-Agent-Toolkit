@@ -2,7 +2,7 @@
 name: nat-telemetry
 description: Use when adding, configuring, or troubleshooting NeMo Agent toolkit logging, tracing, telemetry exporters, OpenTelemetry, Langfuse, LangSmith, Weave, Phoenix, profiling, or observability provider integrations.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 

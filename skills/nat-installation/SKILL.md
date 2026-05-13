@@ -2,7 +2,7 @@
 name: nat-installation
 description: Use when installing or configuring NVIDIA NeMo Agent toolkit, verifying the `nat` CLI, setting up optional extras, or creating a first hello-world workflow.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 

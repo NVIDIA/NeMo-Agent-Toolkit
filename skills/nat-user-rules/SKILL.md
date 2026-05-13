@@ -2,7 +2,7 @@
 name: nat-user-rules
 description: Use first for general NVIDIA NeMo Agent toolkit coding-agent behavior, task routing, naming conventions, component discovery rules, and cross-skill guidance.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 
@@ -48,6 +48,7 @@ Use this skill first when working in the NeMo Agent toolkit repository. It route
 | Running optimizer workflows | `skills/nat-optimization/SKILL.md` |
 | Adding tracing, logging, profiling, or telemetry exporters | `skills/nat-telemetry/SKILL.md` |
 | Serving workflows or wiring MCP | `skills/nat-mcp-and-serving/SKILL.md` |
+| Fixing documentation path-check failures | `skills/nat-path-checks/SKILL.md` |
 | Creating or improving skills | `skills/skill-evolution/SKILL.md` |
 
 ## Discovery Commands

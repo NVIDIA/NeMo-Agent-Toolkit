@@ -2,7 +2,7 @@
 name: nat-optimization
 description: Use when configuring or running NeMo Agent toolkit optimization with `nat optimize`, including Optuna parameter tuning, prompt evolution, optimizer sizing, output interpretation, and optimizer datasets.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 

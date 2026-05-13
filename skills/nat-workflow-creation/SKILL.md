@@ -2,7 +2,7 @@
 name: nat-workflow-creation
 description: Use when creating, editing, validating, running, or troubleshooting NeMo Agent toolkit workflow YAML, component discovery, LLM configuration, and common `nat` CLI commands.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 

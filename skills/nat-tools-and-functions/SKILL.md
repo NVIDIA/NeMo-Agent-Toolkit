@@ -2,7 +2,7 @@
 name: nat-tools-and-functions
 description: Use when authoring, registering, composing, or testing custom NeMo Agent toolkit tools, functions, function groups, Python components, custom agents, custom evaluators, or advanced extension patterns.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 

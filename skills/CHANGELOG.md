@@ -21,6 +21,13 @@ All notable changes to the NeMo Agent toolkit AI coding agent skills are documen
 
 The skills use a shared version because they are intended to work together as one routed skill set from `AGENTS.md`.
 
+## [0.1.1] - 2026-05-13
+
+### Added
+
+- Added `nat-path-checks` skill for resolving documentation path-check failures with correct Markdown escaping, prose rewrites, and real path fixes.
+- Added task routing for documentation path-check failures in `AGENTS.md` and `nat-user-rules`.
+
 ## [0.1.0] - 2026-05-12
 
 ### Added

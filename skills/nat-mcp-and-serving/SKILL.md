@@ -2,7 +2,7 @@
 name: nat-mcp-and-serving
 description: Use when serving NeMo Agent toolkit workflows, exposing workflows through FastAPI, configuring MCP clients or servers, or troubleshooting transport and server setup.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 

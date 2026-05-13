@@ -2,7 +2,7 @@
 name: skill-evolution
 description: Use when creating, refining, or maintaining AI coding agent skills in this repository, especially after user corrections, repeated failures, stale references, routing gaps, or reusable lessons learned.
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 
@@ -71,7 +71,7 @@ Each skill folder must contain one `SKILL.md` with frontmatter:
 name: skill-name
 description: Use when ...
 metadata:
-  version: "0.1.0"
+  version: "0.1.1"
   status: initial
 ---
 ```
