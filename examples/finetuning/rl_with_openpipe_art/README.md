@@ -84,7 +84,7 @@ The model learns to play against a **random opponent**, receiving rewards based 
    art --help
    ```
 
-   If you previously created the venv on a different Python (e.g. 3.13), clear Triton's content-hashed but ABI-unaware kernel cache or you will hit `SystemError: PY_SSIZE_T_CLEAN macro must be defined for '#' formats` at first model load:
+   If you previously created the `art-env` virtual environment on a different Python (e.g. 3.13), clear Triton's content-hashed but ABI-unaware kernel cache or you will hit `SystemError: PY_SSIZE_T_CLEAN macro must be defined for '#' formats` at first model load:
 
    ```bash
    rm -rf ~/.triton/cache /tmp/torchinductor_* ~/.cache/torch_inductor
@@ -263,7 +263,7 @@ export PYTORCH_CUDA_ALLOC_CONF=
 art --host 0.0.0.0 --port 7623
 ```
 
-> **Note**: The ART server listens on port `7623` for training commands and starts vLLM internally on port `8000` for inference. If you connect to a remote ART host, forward **both** ports (e.g. `ssh -L 7623:127.0.0.1:7623 -L 8000:127.0.0.1:8000 …`); the NAT-side health check and rollouts target `:8000` directly.
+> **Note**: The ART server listens on port `7623` for training commands and starts vLLM internally on port `8000` for inference. If you connect to a remote ART host, forward **both** ports (e.g. `ssh -L 7623:127.0.0.1:7623 -L 8000:127.0.0.1:8000 …`); the NeMo Agent Toolkit-side health check and rollouts target `:8000` directly.
 
 Wait for the server to initialize. You should see output indicating:
 - Training server ready
@@ -690,7 +690,7 @@ finetuning:
 
 #### "Failed to connect to ART backend"
 
-**Cause**: ART server not running, wrong port, or vLLM (`:8000`) unreachable from the NAT side.
+**Cause**: ART server not running, wrong port, or vLLM (`:8000`) unreachable from the NeMo Agent Toolkit side.
 
 **Solution**:
 ```bash
