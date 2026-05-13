@@ -74,7 +74,7 @@ class TicTacToeGame:
         self.history = []
         self.step_manager: IntermediateStepManager = Context.get().intermediate_step_manager
 
-    def play(self) -> int:
+    async def play(self) -> int:
         """Run the full game loop until win or draw."""
 
         current_player = self.player_x
@@ -91,7 +91,7 @@ class TicTacToeGame:
                 logger.debug("\n" + board_to_str(self.board))
 
                 # Ask LLM for a move (with retries)
-                row, col, raw = current_player.choose_move(self.board)
+                row, col, raw = await current_player.choose_move(self.board)
 
                 # Apply move
                 self.board[row, col] = current_player.value
@@ -237,7 +237,7 @@ async def rl_with_openpipe_art_function(config: RlWithOpenpipeArtFunctionConfig,
             )
 
         game = TicTacToeGame(player_x=player_x, player_o=player_o, role=role)
-        winner = game.play()
+        winner = await game.play()
 
         if role == "X":
             if winner == 1:

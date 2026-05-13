@@ -5847,12 +5847,12 @@ requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "test"], 
 name = "nat-rl-with-openpipe-art"
 source = { editable = "examples/finetuning/rl_with_openpipe_art" }
 dependencies = [
-    { name = "nvidia-nat", extra = ["eval", "langchain", "test"] },
+    { name = "nvidia-nat", extra = ["eval", "langchain", "profiler", "test"] },
     { name = "nvidia-nat", extra = ["openpipe-art"], marker = "extra == 'extra-10-nvidia-nat-openpipe-art' or (extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-rag') or (extra == 'extra-10-nvidia-nat-most' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-ragaai' and extra == 'extra-10-nvidia-nat-strands') or (extra == 'extra-10-nvidia-nat-adk' and extra == 'extra-10-nvidia-nat-autogen' and extra == 'extra-10-nvidia-nat-ragaai') or (extra == 'extra-10-nvidia-nat-adk' and extra != 'extra-10-nvidia-nat-most' and extra != 'extra-10-nvidia-nat-openpipe-art' and extra == 'extra-10-nvidia-nat-ragaai')" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "openpipe-art", "test"], editable = "." }]
+requires-dist = [{ name = "nvidia-nat", extras = ["eval", "langchain", "openpipe-art", "profiler", "test"], editable = "." }]
 
 [[package]]
 name = "nat-router-agent"

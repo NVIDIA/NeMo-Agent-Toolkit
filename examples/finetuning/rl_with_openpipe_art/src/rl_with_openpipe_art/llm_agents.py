@@ -79,7 +79,7 @@ class LLMTicTacToePlayer:
     messages: list = field(default_factory=list)
     steps = 0
 
-    def choose_move(self, board) -> tuple[int, int, str]:
+    async def choose_move(self, board) -> tuple[int, int, str]:
         """
         Ask the LLM for a move and return (row, col, raw_response_text).
 
@@ -112,7 +112,7 @@ class LLMTicTacToePlayer:
             else:
                 self.messages.append(HumanMessage(content=board_str))
 
-            raw_response = self.chain.invoke({
+            raw_response = await self.chain.ainvoke({
                 "messages": self.messages,
             })
 
