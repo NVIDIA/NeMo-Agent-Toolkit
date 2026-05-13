@@ -31,6 +31,7 @@ from langchain_core.messages import ToolMessage
 from langchain_core.messages.utils import convert_to_openai_messages
 from langchain_core.runnables import Runnable
 from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables.config import merge_configs
 from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import DEFAULT_RUNTIME
@@ -110,7 +111,10 @@ class BaseAgent(ABC):
         self._runnable_config = RunnableConfig(callbacks=self.callbacks,
                                                configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
-    async def _stream_llm(self, runnable: Any, inputs: dict[str, Any]) -> AIMessage:
+    async def _stream_llm(self,
+                          runnable: Any,
+                          inputs: dict[str, Any],
+                          config: RunnableConfig | None = None) -> AIMessage:
         """
         Stream from LLM runnable. Retry logic is handled automatically by the underlying LLM client.
 
@@ -119,20 +123,27 @@ class BaseAgent(ABC):
         ``AIMessage`` via ``_chunk_to_message``. This ensures that native tool calling
         (``use_native_tool_calling=True``) works correctly with the ReAct agent.
 
+        When a LangGraph runtime config is provided (for example, from an injected node config),
+        it is merged with the local runnable config so that both LangGraph's streaming callbacks
+        and the profiler callbacks fire together.
+
         Parameters
         ----------
         runnable : Any
             The LLM runnable (prompt | llm or similar)
         inputs : Dict[str, Any]
             The inputs to pass to the runnable
+        config : RunnableConfig | None
+            Optional LangGraph runtime config to merge with the local runnable config.
 
         Returns
         -------
         AIMessage
             The LLM response, including any tool_calls from native tool calling.
         """
+        effective_config = merge_configs(self._runnable_config, config) if config is not None else self._runnable_config
         chunks: list[AIMessageChunk] = []
-        async for chunk in runnable.astream(inputs, config=self._runnable_config):
+        async for chunk in runnable.astream(inputs, config=effective_config):
             chunks.append(chunk)
 
         if not chunks:
