@@ -1762,7 +1762,6 @@ requires-dist = [
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "../../advanced_agents/alert_triage_agent" },
     { name = "nat-autogen-demo", marker = "extra == 'examples'", editable = "../../frameworks/nat_autogen_demo" },
     { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "." },
-    { name = "nat-currency-agent-a2a", marker = "extra == 'examples'", editable = "../../A2A/currency_agent_a2a" },
     { name = "nat-documentation-guides", marker = "extra == 'examples'", editable = "../../documentation_guides" },
     { name = "nat-dpo-tic-tac-toe", marker = "extra == 'examples'", editable = "../../finetuning/dpo_tic_tac_toe" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "../../evaluation_and_profiling/email_phishing_analyzer" },

@@ -40,6 +40,7 @@ dependencies = [
   "opensearch-haystack~=4.2",
   "pypdf~=6.5",
   "trafilatura~=2.0",
+  "urllib3>=2.7.0,<3.0.0",
 ]
 
 [tool.uv.sources]
