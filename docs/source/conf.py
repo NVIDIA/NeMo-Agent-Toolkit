@@ -513,7 +513,7 @@ redirects = {
         '/build-workflows/workflow-configuration.html',  # End of v1.3 -> v1.4 documentation restructuring redirects
 
     # Removing vanna documentation since the project has been archived
-    'components/functions/text-to-sql.html':
+    'components/functions/text-to-sql':
         '/index.html'
 }
 
