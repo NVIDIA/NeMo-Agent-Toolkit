@@ -36,7 +36,9 @@ def _llm_start(uuid: str, timestamp: str, messages: list[dict[str, Any]]) -> Sco
         name="openai.chat_completions",
         category="llm",
         category_profile={"model_name": "qwen3.6:35b"},
-        data={"content": {"messages": messages, "model": "qwen3.6:35b"}},
+        data={"content": {
+            "messages": messages, "model": "qwen3.6:35b"
+        }},
     )
 
 
@@ -75,12 +77,16 @@ def _sidecar_stream_without_tool_scopes() -> list[ScopeEvent]:
     system = {"role": "system", "content": "You are Hermes Agent."}
     user = {"role": "user", "content": "Find the answer."}
     assistant_tool = {
-        "role": "assistant",
-        "content": "",
+        "role":
+            "assistant",
+        "content":
+            "",
         "tool_calls": [{
             "id": "call_1",
             "type": "function",
-            "function": {"name": "search_files", "arguments": '{"pattern":"needle"}'},
+            "function": {
+                "name": "search_files", "arguments": '{"pattern":"needle"}'
+            },
         }],
     }
     tool_result = {
@@ -99,7 +105,9 @@ def _sidecar_stream_without_tool_scopes() -> list[ScopeEvent]:
             timestamp="2026-05-12T22:00:00Z",
             name="gateway",
             category="agent",
-            metadata={"agent": "hermes-nemoflow", "session_id": "gateway-gateway", "source": "harbor"},
+            metadata={
+                "agent": "hermes-nemoflow", "session_id": "gateway-gateway", "source": "harbor"
+            },
         ),
         _llm_start("llm-001", "2026-05-12T22:00:01Z", [system, user]),
         _llm_end(
@@ -107,14 +115,18 @@ def _sidecar_stream_without_tool_scopes() -> list[ScopeEvent]:
             "2026-05-12T22:00:02Z",
             content="",
             tool_calls=assistant_tool["tool_calls"],
-            usage={"prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12},
+            usage={
+                "prompt_tokens": 10, "completion_tokens": 2, "total_tokens": 12
+            },
         ),
         _llm_start("llm-002", "2026-05-12T22:00:03Z", [system, user, assistant_tool, tool_result]),
         _llm_end(
             "llm-002",
             "2026-05-12T22:00:04Z",
             content="Done.",
-            usage={"prompt_tokens": 20, "completion_tokens": 3, "total_tokens": 23},
+            usage={
+                "prompt_tokens": 20, "completion_tokens": 3, "total_tokens": 23
+            },
         ),
         _llm_start("llm-orphan", "2026-05-12T22:00:05Z", [system, user, assistant_tool, tool_result, orphan_user]),
         ScopeEvent(
@@ -124,7 +136,9 @@ def _sidecar_stream_without_tool_scopes() -> list[ScopeEvent]:
             timestamp="2026-05-12T22:00:06Z",
             name="gateway",
             category="agent",
-            metadata={"agent": "hermes-nemoflow", "session_id": "gateway-gateway", "source": "harbor"},
+            metadata={
+                "agent": "hermes-nemoflow", "session_id": "gateway-gateway", "source": "harbor"
+            },
         ),
     ]
 
