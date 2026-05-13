@@ -1,0 +1,27 @@
+# Example workflow configuration for a simple hello world agent
+
+functions:
+  # Add a simple tool to get current datetime
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  # Configure the LLM to use your LLM
+  base_llm:
+    _type: openai
+    model_name: <your_model_name>
+    base_url: <your_base_url>
+    temperature: 0.0
+    api_key: <your_api_key>
+
+workflow:
+  # Use a ReAct agent (Reasoning and Acting)
+  _type: react_agent
+  # Give it access to our datetime tool
+  tool_names: [current_datetime]
+  # Tell it which LLM to use
+  llm_name: base_llm
+  # Make it verbose
+  verbose: true
+  # Retry up to 3 times
+  parse_agent_response_max_retries: 3
