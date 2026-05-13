@@ -33,5 +33,4 @@ nat info components -t function_group
 :titlesonly:
 
 ./code-execution.md
-./text-to-sql.md
 ```

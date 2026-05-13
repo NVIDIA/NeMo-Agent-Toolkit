@@ -213,7 +213,6 @@ triages
 [Uu]psert
 URIs
 uv
-Vanna
 [Vv]alidator(s)
 VectorDB
 vLLM
