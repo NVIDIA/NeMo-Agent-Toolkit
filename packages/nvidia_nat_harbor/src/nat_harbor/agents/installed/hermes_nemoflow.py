@@ -261,7 +261,7 @@ class HermesNeMoFlow(Hermes):
         if skills_command:
             await self.exec_as_agent(environment, command=skills_command, env=env, timeout_sec=10)
 
-        run_cmd = self._build_gateway_run_command(route)
+        run_cmd = self._build_gateway_run_command(route, instruction)
         await self.exec_as_agent(environment, command=run_cmd, env=env)
 
     def populate_context_post_run(self, context: AgentContext) -> None:
@@ -279,9 +279,6 @@ class HermesNeMoFlow(Hermes):
         if self._fail_missing_nemoflow_atof and not atof_path.exists():
             raise FileNotFoundError(f"Missing NeMo-Flow ATOF JSONL artifact: {atof_path}")
 
-        if self._fail_missing_nemoflow_atif and not atif_files:
-            raise FileNotFoundError(f"Missing NeMo-Flow gateway ATIF artifact under: {gateway_dir}")
-
         if self._convert_nemoflow_atof and atof_path.exists():
             try:
                 self._convert_atof_to_atif(atof_path, converted_atif_path)
@@ -289,6 +286,11 @@ class HermesNeMoFlow(Hermes):
                 self.logger.exception("Failed to convert NeMo-Flow ATOF artifact to ATIF")
                 if self._fail_nemoflow_atof_conversion:
                     raise RuntimeError(f"Failed to convert NeMo-Flow ATOF artifact to ATIF: {atof_path}") from exc
+
+        if self._fail_missing_nemoflow_atif and not (atif_files or plugin_atif_files or converted_atif_path.exists()):
+            raise FileNotFoundError(
+                "Missing NeMo-Flow ATIF artifact; checked gateway, plugin, and ATOF-derived outputs under: "
+                f"{self.logs_dir}")
 
         if self._canonicalize_nemoflow_atif and atif_files:
             self._write_canonical_gateway_atif(atif_files[0], canonical_path)
@@ -324,10 +326,6 @@ class HermesNeMoFlow(Hermes):
             "HERMES_HOME": self._HERMES_HOME,
             "TERMINAL_ENV": "local",
             "HARBOR_INSTRUCTION": instruction,
-            # ATOF dir env is preserved for a future Hermes gateway path built
-            # on PR #88's exporter APIs. The current `nemo-flow` CLI does not
-            # consume it for Hermes; harmless to export.
-            "NEMO_FLOW_ATOF_DIR": self._atof_dir,
             "NEMO_FLOW_ATIF_DIR": self._gateway_atif_dir,
         }
         api_key_env = self._first_available_env(route.api_key_envs)
@@ -420,7 +418,7 @@ class HermesNeMoFlow(Hermes):
                 f"--atif-dir {shlex.quote(self._gateway_atif_dir)} "
                 "--gateway-mode passthrough")
 
-    def _build_gateway_run_command(self, route: _ProviderRoute) -> str:
+    def _build_gateway_run_command(self, route: _ProviderRoute, instruction: str) -> str:
         args = [
             "nemo-flow",
             "run",
@@ -443,11 +441,18 @@ class HermesNeMoFlow(Hermes):
         else:
             args.extend(["--openai-base-url", self._upstream_base_url(route)])
 
-        child_script = self._build_child_script(route)
-        args.extend(["--", "/bin/bash", "-lc", child_script])
+        args.extend(["--", *self._hermes_chat_args(route, instruction)])
+        status_file = "/tmp/hermes-nemoflow-status"
+        post_run_script = self._build_post_run_script()
+        run_segment = " ".join(shlex.quote(arg) for arg in args)
         return ('export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH" && '
-                f"{' '.join(shlex.quote(arg) for arg in args)} "
-                "2>&1 | stdbuf -oL tee /logs/agent/hermes.txt")
+                f"status_file={shlex.quote(status_file)}; "
+                f"rm -f \"$status_file\"; "
+                f"({run_segment}; printf '%s' \"$?\" > \"$status_file\") "
+                "2>&1 | stdbuf -oL tee /logs/agent/hermes.txt; "
+                "status=$(cat \"$status_file\" 2>/dev/null || printf '1'); "
+                f"{post_run_script}; "
+                'exit "$status"')
 
     def _build_observability_plugin_config(self) -> dict[str, Any]:
         return {
@@ -473,25 +478,19 @@ class HermesNeMoFlow(Hermes):
             }],
         }
 
-    def _build_child_script(self, route: _ProviderRoute) -> str:
-        cli_parts = [
-            'export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"',
-            "set +e",
-            self._hermes_chat_command(route),
-            "status=$?",
-            ("hermes sessions export /logs/agent/hermes-session.jsonl --source cli 2>/dev/null || true"),
+    def _build_post_run_script(self) -> str:
+        return "; ".join([
+            "hermes sessions export /logs/agent/hermes-session.jsonl --source cli 2>/dev/null || true",
             self._synthetic_finalize_command(),
-            'exit "$status"',
-        ]
-        return "; ".join(cli_parts)
+        ])
 
-    def _hermes_chat_command(self, route: _ProviderRoute) -> str:
+    def _hermes_chat_args(self, route: _ProviderRoute, instruction: str) -> list[str]:
         parts = [
-            "hermes",
             "--yolo",
+            "--accept-hooks",
             "chat",
             "-q",
-            "$HARBOR_INSTRUCTION",
+            instruction,
             "-Q",
             "--model",
             route.cli_model,
@@ -501,8 +500,7 @@ class HermesNeMoFlow(Hermes):
         toolsets_flag = self._resolved_flags.get("toolsets")
         if toolsets_flag:
             parts.extend(["--toolsets", str(toolsets_flag)])
-        return " ".join(
-            shlex.quote(part) if part != "$HARBOR_INSTRUCTION" else '"$HARBOR_INSTRUCTION"' for part in parts)
+        return parts
 
     def _synthetic_finalize_command(self) -> str:
         session_id_expr = ("import json,pathlib;"

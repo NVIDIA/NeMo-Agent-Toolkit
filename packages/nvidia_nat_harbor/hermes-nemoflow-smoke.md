@@ -22,15 +22,17 @@ NeMo-Flow CLI gateway enabled. It validates the first available non-patching
 Hermes instrumentation path before the upstream Hermes native middleware path
 is available.
 
-The validation pass can use two NeMo-Flow sidecar artifacts:
+The validation pass is based on three reference artifacts captured from the
+smoke:
 
-- Direct gateway ATIF from the existing `--atif-dir` path.
-- Raw ATOF JSONL from the NeMo-Flow observability plugin, converted to ATIF with
-  the NeMo Agent Toolkit ATOF-to-ATIF converter.
+- Native Hermes ATIF from Harbor's Hermes adapter.
+- Raw ATOF JSONL from the NeMo-Flow observability plugin.
+- ATOF-derived ATIF from the Toolkit ATOF-to-ATIF converter.
 
-The ATOF-derived ATIF is the primary NeMo-Flow comparison target for this pass.
-The direct gateway ATIF remains useful as a baseline while we validate whether
-raw event reconstruction fixes the earlier direct-ATIF inconsistencies.
+Direct gateway/plugin ATIF outputs may also be created during a run, but they
+are diagnostic files only for this smoke. Do not use them as evidence for the
+trajectory comparison until their message shape is strict-compatible with the
+Toolkit ATIF parser.
 
 ## Pipeline
 
@@ -46,19 +48,18 @@ flowchart TD
   gatewayHooks --> atof[agent/nemo-flow-atof/events.jsonl<br/>raw ATOF JSONL]
   atof --> converter[the Toolkit ATOF-to-ATIF converter]
   converter --> nfAtif[agent/nemo-flow-atof-atif/trajectory.json<br/>ATOF-derived ATIF]
-  gatewayHooks --> gatewayAtif[agent/nemo-flow-gateway-atif/trajectory.json<br/>legacy gateway-emitted ATIF]
-  gatewayHooks --> pluginAtif[agent/nemo-flow-plugin-atif/trajectory.json<br/>plugin direct ATIF]
+  gatewayHooks -. optional diagnostic .-> gatewayAtif[agent/nemo-flow-gateway-atif/trajectory.json<br/>direct gateway ATIF]
+  gatewayHooks -. optional diagnostic .-> pluginAtif[agent/nemo-flow-plugin-atif/trajectory.json<br/>plugin direct ATIF]
 
   harbor --> swe[SWE-bench verifier<br/>patch + task tests]
   swe --> result[result.json<br/>reward/resolved]
 
   nativeAtif --> compare[Trajectory comparison<br/>tool sequence + the Toolkit evaluators + Phoenix]
   nfAtif --> compare
-  gatewayAtif -. baseline .-> compare
-  result --> outcome[Outcome sanity check<br/>successful/resolved run]
+  result --> outcome[Run completion check<br/>exceptions/reward]
 ```
 
-One Hermes run emits these trajectory artifacts:
+One Hermes run should create these primary trajectory artifacts:
 
 <!-- path-check-skip-begin -->
 - Native path: Hermes session export -> Harbor Hermes adapter ->
@@ -68,13 +69,12 @@ One Hermes run emits these trajectory artifacts:
   `agent/nemo-flow-atof/events.jsonl`, then the Toolkit converter writes
   `agent/nemo-flow-atof-atif/trajectory.json`. This is the primary NeMo-Flow
   comparison target.
-- Gateway-emitted ATIF: Hermes hooks and routed model traffic -> NeMo-Flow CLI
-  gateway -> `agent/nemo-flow-gateway-atif/trajectory.json`. This is the legacy
-  direct-ATIF baseline.
-- Plugin direct ATIF: NeMo-Flow observability plugin ATIF export ->
-  `agent/nemo-flow-plugin-atif/trajectory.json`. This is a secondary debugging
-  artifact for comparing plugin direct ATIF against legacy direct ATIF.
 <!-- path-check-skip-end -->
+
+The run may also create direct ATIF diagnostics under
+`agent/nemo-flow-gateway-atif/` and `agent/nemo-flow-plugin-atif/`. Treat those
+as optional implementation diagnostics, not as the basis for this smoke's
+analysis.
 
 ## Prerequisites
 
@@ -337,43 +337,62 @@ set +a
   --ak fail_nemoflow_atof_conversion=false
 ```
 
-Expected artifacts under the trial directory:
+A completed run may create these files under the trial directory.
+
+Primary evidence artifacts:
+
+```text
+agent/trajectory.json
+agent/nemo-flow-atof/events.jsonl
+agent/nemo-flow-atof-atif/trajectory.json
+```
+
+Additional files to look for when checking run completion or debugging:
 
 ```text
 agent/hermes.txt
 agent/hermes-session.jsonl
-agent/trajectory.json
 agent/nemo-flow-gateway-atif/trajectory.json
 agent/nemo-flow-plugin-atif/trajectory.json
-agent/nemo-flow-atof/events.jsonl
-agent/nemo-flow-atof-atif/trajectory.json
 result.json
 verifier/report.json
 ```
 
-## Example Trajectories From Previous Run
+The additional files are useful for confirming that the run completed and that
+diagnostic exporters ran. They are not used as evidence in this smoke.
 
-Reference run:
+## Reference Artifacts
+
+Reference artifacts from a completed smoke are checked in under:
 
 ```text
-.tmp/harbor/hermes-nemoflow-smoke/hermes-nemoflow-pr89-plugin-atof-smoke-20260512-145959/django__django-13741__7dQBUQM
+packages/nvidia_nat_harbor/data/hermes-nemoflow-smoke/
 ```
 
-The run completed with `reward=1.0`, `0` exceptions, and an exact native vs
-ATOF-derived tool-sequence match.
+These files are the stable evidence set for this smoke:
 
-| Artifact | Path | Status from run |
+| Evidence | Checked-in fixture | Status |
 | --- | --- | --- |
-| Native Hermes ATIF | `agent/trajectory.json` | Valid ATIF for the Toolkit parser, `ATIF-v1.2`, 30 steps. |
-| NeMo-Flow ATOF-derived ATIF | `agent/nemo-flow-atof-atif/trajectory.json` | Valid ATIF for the Toolkit parser, `ATIF-v1.7`, 33 steps. Primary comparison target. |
-| NeMo-Flow gateway direct ATIF | `agent/nemo-flow-gateway-atif/trajectory.json` | Emitted, but not strict schema-valid for the Toolkit yet because direct exporter messages contain raw OpenAI payloads. Diagnostic baseline only. |
-| NeMo-Flow plugin direct ATIF | `agent/nemo-flow-plugin-atif/trajectory.json` | Emitted, but has the same direct-exporter message-shape issue as gateway direct ATIF. Diagnostic baseline only. |
+| Native Hermes ATIF | `native-hermes-trajectory.json` | Valid ATIF for the Toolkit parser, `ATIF-v1.2`, 32 steps, `total_steps=32`. |
+| NeMo-Flow raw ATOF | `nemo-flow-atof-events.jsonl` | 228 ATOF events captured through the NeMo-Flow observability plugin. |
+| NeMo-Flow ATOF-derived ATIF | `nemo-flow-atof-atif-trajectory.json` | Valid ATIF for the Toolkit parser, `ATIF-v1.7`, 36 steps, `total_prompt_tokens=887910`, `total_completion_tokens=8071`, `total_tokens=895981`. |
 
-The raw ATOF reference for the same run is:
+The reference fixture comparison produced an exact native vs ATOF-derived tool
+sequence match:
 
 ```text
-agent/nemo-flow-atof/events.jsonl
+Native tools (32): execute_code=9, patch=6, read_file=6, search_files=5, terminal=6
+Candidate tools (32): execute_code=9, patch=6, read_file=6, search_files=5, terminal=6
 ```
+
+The native Hermes ATIF fixture is still a multi-step trajectory even though it
+does not currently produce a rich Phoenix span tree. It has 32 ATIF steps and
+32 tool calls, but its steps do not include the `extra` ancestry/invocation
+metadata that the ATIF-to-Phoenix exporter uses to create child LLM and tool
+spans. When exported to Phoenix, this native trajectory is expected to appear
+as a single workflow span with root input/output. Use it as the native
+trajectory and tool-sequence baseline, not as the span-level observability
+baseline.
 
 ## Quick Artifact Check
 
@@ -387,9 +406,9 @@ TRIAL=$(find "$HARBOR_JOBS_DIR/$JOB_NAME" -maxdepth 1 -type d -name 'django__dja
 test -n "$TRIAL"
 ```
 
-Check artifact presence and strict compatibility with the Toolkit ATIF parser. The direct
-gateway/plugin ATIF artifacts are still useful diagnostics, but may fail strict
-schema validation until direct-exporter message normalization is fixed.
+Check that the run created the evidence files. Additional run-completion and
+diagnostic files are reported if present, but this smoke does not use them as
+trajectory evidence.
 
 ```bash
 .venv/bin/python - <<'PY'
@@ -401,25 +420,33 @@ from nat_harbor.verifier.evaluator_adapter import load_atif_samples
 
 trial = Path(os.environ["TRIAL"])
 agent = trial / "agent"
-required = (
-    "hermes.txt",
-    "hermes-session.jsonl",
+evidence = (
     "trajectory.json",
-    "nemo-flow-gateway-atif/trajectory.json",
-    "nemo-flow-plugin-atif/trajectory.json",
     "nemo-flow-atof/events.jsonl",
     "nemo-flow-atof-atif/trajectory.json",
 )
-for rel in required:
+run_outputs = (
+    "hermes.txt",
+    "hermes-session.jsonl",
+)
+diagnostic = (
+    "nemo-flow-gateway-atif/trajectory.json",
+    "nemo-flow-plugin-atif/trajectory.json",
+)
+for rel in evidence:
     path = agent / rel
     if not path.exists():
         raise SystemExit(f"Missing {path}")
-    print("ok", rel, path.stat().st_size)
+    print("evidence", rel, path.stat().st_size)
+for rel in run_outputs:
+    path = agent / rel
+    print("run-output", rel, "present" if path.exists() else "missing")
+for rel in diagnostic:
+    path = agent / rel
+    print("diagnostic", rel, "present" if path.exists() else "missing")
 
 for rel in (
     "trajectory.json",
-    "nemo-flow-gateway-atif/trajectory.json",
-    "nemo-flow-plugin-atif/trajectory.json",
     "nemo-flow-atof-atif/trajectory.json",
 ):
     path = agent / rel
@@ -447,28 +474,9 @@ Compare the native and ATOF-derived tool sequences:
   --candidate "$TRIAL/agent/nemo-flow-atof-atif/trajectory.json"
 ```
 
-Also compare the native and direct gateway-emitted tool sequences as the
-baseline:
-
-```bash
-.venv/bin/python -m nat_harbor.smoke.compare_atif_tools \
-  --native "$TRIAL/agent/trajectory.json" \
-  --candidate "$TRIAL/agent/nemo-flow-gateway-atif/trajectory.json"
-```
-
-Compare plugin direct ATIF as a secondary diagnostic:
-
-```bash
-.venv/bin/python -m nat_harbor.smoke.compare_atif_tools \
-  --native "$TRIAL/agent/trajectory.json" \
-  --candidate "$TRIAL/agent/nemo-flow-plugin-atif/trajectory.json"
-```
-
-The ATOF-derived comparison is the primary check. If it is still missing tool
-semantics, inspect `agent/nemo-flow-atof/events.jsonl` before changing the ATIF
-exporter because the raw event stream will show whether the data was captured.
-Direct ATIF comparisons are diagnostic and are expected to be poorer until the
-direct exporter emits strict ATIF messages compatible with the Toolkit.
+If the ATOF-derived comparison is missing tool semantics, inspect
+`agent/nemo-flow-atof/events.jsonl` before changing the ATIF exporter because
+the raw event stream shows whether the data was captured.
 
 ## Post-Run Trajectory Scoring
 
@@ -521,9 +529,15 @@ ENDPOINT=http://localhost:6006/v1/traces
   --project harbor-hermes-nemoflow-atof
 ```
 
-Open `http://localhost:6006` and compare the projects. Export direct
-gateway/plugin ATIF only after the quick artifact check reports them as strict
-schema-valid for the Toolkit.
+Open `http://localhost:6006` and compare the two evidence projects. Export
+direct gateway/plugin ATIF only for debugging, not as smoke evidence, until
+those files are strict-compatible with the Toolkit ATIF parser.
+
+In Phoenix, expect `harbor-hermes-native` to show one root workflow span with
+input/output. That does not mean the native ATIF fixture only has one step; it
+means the native fixture lacks the span-construction metadata needed by the
+ATIF-to-Phoenix exporter. The richer span tree should come from
+`harbor-hermes-nemoflow-atof`, which is built from the ATOF-derived ATIF.
 
 ## Known Limitations
 
@@ -546,10 +560,9 @@ schema-valid for the Toolkit.
 - The Toolkit ATOF-to-ATIF conversion is initially best-effort in this smoke
   (`fail_nemoflow_atof_conversion=false`) so raw ATOF can still be inspected if
   reconstruction fails. Flip it to `true` once the converter result is stable.
-- In the reference run above, the direct gateway/plugin ATIF files were emitted
-  but did not validate with the strict Toolkit ATIF parser because `message` fields
-  contained raw OpenAI request/response payloads. The ATOF-derived ATIF file did
-  validate and matched the native Hermes tool sequence exactly.
+- Direct gateway/plugin ATIF files may be emitted, but they are diagnostic
+  outputs for this smoke. Base the analysis on the checked-in native Hermes
+  ATIF, raw ATOF JSONL, and ATOF-derived ATIF fixtures.
 - Complete LLM lifecycle telemetry requires Hermes model traffic to use the
   NeMo-Flow gateway. This wrapper configures that path for `nvidia`, `openai`,
   `openrouter`, and `anthropic` model prefixes.

@@ -161,13 +161,14 @@ async def test_run_uses_gateway_wrapper(tmp_path: Path) -> None:
     commands = [call.kwargs["command"] for call in mock_env.exec.call_args_list]
     # Use a token boundary to avoid matching "nemo-flow run" as a substring of
     # any other command (defensive against future log/tee changes).
-    run_command = next(command for command in commands if " nemo-flow run " in f" {command} ")
+    run_command = next(command for command in commands if "nemo-flow run " in command)
     assert "--agent hermes" in run_command
     assert "--atif-dir /logs/agent/nemo-flow-gateway-atif" in run_command
     assert "--atof-dir" not in run_command
     assert "--plugin-config" not in run_command
     assert "--openai-base-url https://nvidia.example/v1" in run_command
-    assert "hermes --yolo chat" in run_command
+    assert "-- --yolo --accept-hooks chat -q 'solve the task'" in run_command
+    assert "/bin/bash" not in run_command
     assert "tee /logs/agent/hermes.txt" in run_command
     assert "on_session_finalize" in run_command
     assert "read_text(encoding=" in run_command
@@ -188,7 +189,7 @@ def test_gateway_run_can_enable_observability_plugin_config(tmp_path: Path) -> N
     )
     route = agent._build_provider_route("nvidia", "opus-frontier")
 
-    command = agent._build_gateway_run_command(route)
+    command = agent._build_gateway_run_command(route, "solve the task")
 
     nemo_flow_segment = command.split("&& ", 1)[1].split(" 2>&1", 1)[0]
     args = shlex.split(nemo_flow_segment)
@@ -283,20 +284,6 @@ def test_populate_context_can_use_plugin_atif_when_atof_is_absent(tmp_path: Path
         }),
         encoding="utf-8",
     )
-    gateway_dir = agent.logs_dir / "nemo-flow-gateway-atif"
-    gateway_dir.mkdir(parents=True)
-    (gateway_dir / "session-1.atif.json").write_text(
-        json.dumps({
-            "schema_version": "ATIF-v1.6",
-            "final_metrics": {
-                "total_prompt_tokens": 1,
-                "total_completion_tokens": 1,
-            },
-            "steps": [],
-        }),
-        encoding="utf-8",
-    )
-
     context = AgentContext()
     agent.populate_context_post_run(context)
 
@@ -338,11 +325,11 @@ def test_populate_context_raises_when_atof_required_and_missing(tmp_path: Path) 
         agent.populate_context_post_run(AgentContext())
 
 
-def test_populate_context_raises_when_gateway_atif_missing_by_default(tmp_path: Path) -> None:
-    """Gateway ATIF is the canonical artifact today; missing is fatal by default."""
+def test_populate_context_raises_when_all_nemoflow_atif_outputs_missing_by_default(tmp_path: Path) -> None:
+    """At least one NeMo-Flow ATIF artifact is required by default."""
     agent = _make_agent(tmp_path)
 
-    with pytest.raises(FileNotFoundError, match="Missing NeMo-Flow gateway ATIF"):
+    with pytest.raises(FileNotFoundError, match="Missing NeMo-Flow ATIF artifact"):
         agent.populate_context_post_run(AgentContext())
 
 

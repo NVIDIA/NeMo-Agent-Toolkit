@@ -549,6 +549,20 @@ def _events_to_step_dicts(
         if isinstance(tool_call_id, str) and tool_call_id
     }
 
+    def is_lossy_llm_summary(event: Event) -> bool:
+        metadata = event.metadata or {}
+        if metadata.get("provider_payload_exact") is False:
+            return True
+        if metadata.get("fidelity_source") == "hermes_api_hooks":
+            return True
+        data = event.data if isinstance(event.data, dict) else {}
+        content = data.get("content")
+        if isinstance(content, dict):
+            fidelity = content.get("fidelity")
+            if isinstance(fidelity, dict) and fidelity.get("provider_payload_exact") is False:
+                return True
+        return False
+
     def flush_observations() -> None:
         """Attach buffered observations to the preceding agent step (R4 drain).
 
@@ -628,6 +642,8 @@ def _events_to_step_dicts(
             llm_extractor = resolve_llm_extractor(event.data_schema)
             messages = llm_extractor.extract_input_messages(data)
             if data and not messages:
+                if is_lossy_llm_summary(event):
+                    continue
                 raise ShapeMismatchError(
                     kind="llm_input",
                     uuid=event.uuid,
@@ -717,13 +733,17 @@ def _events_to_step_dicts(
             # would drop the producer's response entirely. A payload with
             # only tool_calls (no content) or only content (no tool_calls)
             # is legitimate and not an error.
+            metrics = _metrics_from_usage(raw_data.get("usage"))
             if raw_data and not agent_msg and not tool_call_dicts:
-                raise ShapeMismatchError(
-                    kind="llm_output",
-                    uuid=event.uuid,
-                    data_schema=event.data_schema,
-                    data_keys=sorted(raw_data.keys()),
-                )
+                if is_lossy_llm_summary(event):
+                    continue
+                if metrics is None:
+                    raise ShapeMismatchError(
+                        kind="llm_output",
+                        uuid=event.uuid,
+                        data_schema=event.data_schema,
+                        data_keys=sorted(raw_data.keys()),
+                    )
             function_ancestry = _build_ancestry(event.uuid, event.name, event.parent_uuid, name_map)
 
             start_micros = start_ts_map.get(event.uuid)
@@ -763,7 +783,6 @@ def _events_to_step_dicts(
             }
             if tool_call_dicts:
                 step_dict["tool_calls"] = tool_call_dicts
-            metrics = _metrics_from_usage(raw_data.get("usage"))
             if metrics:
                 step_dict["metrics"] = metrics
 
