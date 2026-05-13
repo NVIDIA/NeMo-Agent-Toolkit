@@ -16,7 +16,11 @@
 import datetime
 import logging
 from collections.abc import AsyncIterator
+from urllib.error import URLError
 from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfoNotFoundError
+
+from pydantic import Field
 
 from nat.builder.builder import Builder
 from nat.builder.framework_enum import LLMFrameworkEnum
@@ -24,15 +28,44 @@ from nat.builder.function_info import FunctionInfo
 from nat.cli.register_workflow import register_function
 from nat.data_models.function import FunctionBaseConfig
 
+from .location import DEFAULT_GEOCODING_URL
+from .location import DEFAULT_TIMEOUT_SECONDS
+from .location import CityLocation
+from .location import geocode_city
+
 logger = logging.getLogger(__name__)
 
 
 class TimeMCPToolConfig(FunctionBaseConfig, name="get_city_time_tool"):
     """Configuration for the get_city_time tool."""
 
+    geocoding_url: str = Field(default=DEFAULT_GEOCODING_URL, description="Open-Meteo geocoding API URL.")
+    timeout_seconds: float = Field(default=DEFAULT_TIMEOUT_SECONDS, gt=0, description="HTTP request timeout.")
+
+
+def _format_city_time(location: CityLocation, now: datetime.datetime) -> str:
+    return f"The current time in {location.display_name} is {now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}."
+
+
+async def get_time_for_city(city: str, config: TimeMCPToolConfig) -> str:
+    """Get the local time for a city using geocoding metadata."""
+
+    try:
+        location = await geocode_city(city, config.geocoding_url, config.timeout_seconds)
+        if location is None:
+            return f"Sorry, I don't have timezone information for {city} because the city could not be found."
+
+        now = datetime.datetime.now(ZoneInfo(location.timezone))
+    except (TimeoutError, URLError, ValueError, OSError) as ex:
+        return f"Sorry, I could not retrieve timezone information for {city}: {ex}"
+    except ZoneInfoNotFoundError:
+        return f"Sorry, I don't have usable timezone information for {city}."
+
+    return _format_city_time(location, now)
+
 
 @register_function(config_type=TimeMCPToolConfig, framework_wrappers=[LLMFrameworkEnum.ADK])
-async def get_city_time(_config: TimeMCPToolConfig, _builder: Builder) -> AsyncIterator[FunctionInfo]:
+async def get_city_time(config: TimeMCPToolConfig, _builder: Builder) -> AsyncIterator[FunctionInfo]:
     """
     Register a get_city_time(city: str) -> str tool for ADK.
 
@@ -52,10 +85,6 @@ async def get_city_time(_config: TimeMCPToolConfig, _builder: Builder) -> AsyncI
             str: The current time in the specified city or an error message if the city is not recognized.
         """
 
-        if city.strip().casefold() not in {"new york", "new york city", "nyc"}:
-            return f"Sorry, I don't have timezone information for {city}."
-
-        now = datetime.datetime.now(ZoneInfo("America/New_York"))
-        return f"The current time in {city} is {now.strftime('%Y-%m-%d %H:%M:%S %Z%z')}"
+        return await get_time_for_city(city, config)
 
     yield FunctionInfo.from_fn(_get_city_time, description=_get_city_time.__doc__)
