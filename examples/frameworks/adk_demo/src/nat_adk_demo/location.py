@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Shared location lookup helpers for the ADK demo tools."""
 
 import asyncio
@@ -104,8 +103,7 @@ async def geocode_city(city: str,
             continue
 
         payload = await asyncio.to_thread(fetch_json,
-                                          geocoding_url,
-                                          {
+                                          geocoding_url, {
                                               "name": candidate_query,
                                               "count": 1,
                                               "language": "en",

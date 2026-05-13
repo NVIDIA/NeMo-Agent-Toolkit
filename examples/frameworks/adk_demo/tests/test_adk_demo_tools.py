@@ -39,15 +39,13 @@ async def test_geocode_city_resolves_locations(monkeypatch, city: str, expected_
         assert timeout_seconds == 1
         city_name = str(params["name"]).split(",", maxsplit=1)[0]
         return {
-            "results": [
-                {
-                    "name": city_name,
-                    "country": "United Kingdom" if city_name == "London" else "Japan",
-                    "latitude": 51.5072 if city_name == "London" else 35.6895,
-                    "longitude": -0.1276 if city_name == "London" else 139.6917,
-                    "timezone": expected_timezone,
-                }
-            ]
+            "results": [{
+                "name": city_name,
+                "country": "United Kingdom" if city_name == "London" else "Japan",
+                "latitude": 51.5072 if city_name == "London" else 35.6895,
+                "longitude": -0.1276 if city_name == "London" else 139.6917,
+                "timezone": expected_timezone,
+            }]
         }
 
     monkeypatch.setattr("nat_adk_demo.location.fetch_json", mock_fetch_json)
@@ -109,15 +107,13 @@ async def test_geocode_city_retries_comma_qualified_query(monkeypatch):
         if params["name"] == "Tokyo, Japan":
             return {}
         return {
-            "results": [
-                {
-                    "name": "Tokyo",
-                    "country": "Japan",
-                    "latitude": 35.6895,
-                    "longitude": 139.6917,
-                    "timezone": "Asia/Tokyo",
-                }
-            ]
+            "results": [{
+                "name": "Tokyo",
+                "country": "Japan",
+                "latitude": 35.6895,
+                "longitude": 139.6917,
+                "timezone": "Asia/Tokyo",
+            }]
         }
 
     monkeypatch.setattr("nat_adk_demo.location.fetch_json", mock_fetch_json)
@@ -130,11 +126,7 @@ async def test_geocode_city_retries_comma_qualified_query(monkeypatch):
 
 
 async def test_get_time_for_city_uses_resolved_timezone(monkeypatch):
-    tokyo = CityLocation(name="Tokyo",
-                         country="Japan",
-                         latitude=35.6895,
-                         longitude=139.6917,
-                         timezone="Asia/Tokyo")
+    tokyo = CityLocation(name="Tokyo", country="Japan", latitude=35.6895, longitude=139.6917, timezone="Asia/Tokyo")
 
     async def mock_geocode_city(city, geocoding_url, timeout_seconds):
         assert city == "Tokyo, Japan"
