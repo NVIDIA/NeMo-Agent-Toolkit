@@ -236,8 +236,6 @@ Once the evaluation completes, stop the vLLM server (`Ctrl+C`) to free GPU memor
 
 The ART server handles both inference and training. It runs vLLM for serving the model and Unsloth for GRPO weight updates using LoRA adapters by default.
 
-> **Note**: The default configuration uses **Unsloth LoRA finetuning**. Full-weight training requires additional TorchTune configuration through the `torchtune_args` field in the trainer adapter backend config. Refer to the [OpenPipe ART documentation](https://art.openpipe.ai/) for details.
-
 In your **ART virtual environment**:
 
 ```bash
