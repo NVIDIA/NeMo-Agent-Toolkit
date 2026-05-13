@@ -60,6 +60,7 @@ flowchart TD
 
 One Hermes run emits these trajectory artifacts:
 
+<!-- path-check-skip-begin -->
 - Native path: Hermes session export -> Harbor Hermes adapter ->
   `agent/trajectory.json`. This is Harbor's native Hermes trajectory and is
   produced independently of the NeMo-Flow gateway.
@@ -73,6 +74,7 @@ One Hermes run emits these trajectory artifacts:
 - Plugin direct ATIF: PR #89 plugin ATIF export ->
   `agent/nemo-flow-plugin-atif/trajectory.json`. This is a secondary debugging
   artifact for comparing plugin direct ATIF against legacy direct ATIF.
+<!-- path-check-skip-end -->
 
 ## Prerequisites
 
@@ -173,6 +175,7 @@ cp -R "$NEMO_FLOW_REPO"/crates "$PREBUILT_CONTEXT"/
 
 Create the prebuilt-image `Dockerfile`:
 
+<!-- path-check-skip-begin -->
 ```bash
 cat > .tmp/harbor/nemo-flow-prebuilt.Dockerfile <<'EOF'
 FROM swebench/sweb.eval.x86_64.django_1776_django-13741:latest
@@ -209,9 +212,11 @@ RUN set -eux; \
 WORKDIR /testbed
 EOF
 ```
+<!-- path-check-skip-end -->
 
 Build and validate the image:
 
+<!-- path-check-skip-begin -->
 ```bash
 /usr/bin/time -p docker build \
   --platform linux/amd64 \
@@ -222,10 +227,15 @@ Build and validate the image:
 docker run --rm --platform linux/amd64 "$PREBUILT_NEMO_FLOW_IMAGE" \
   bash -lc 'command -v nemo-flow && nemo-flow run --help | grep -q -- --atif-dir && nemo-flow run --help | grep -q -- --plugin-config'
 ```
+<!-- path-check-skip-end -->
+
+The Linux AMD64 platform option is intentional for SWE-bench image
+compatibility, especially when running Docker from an Apple Silicon host.
 
 Create a prebuilt-image copy of the SWE-bench task by adding
 `docker_image = "$PREBUILT_NEMO_FLOW_IMAGE"` to its `[environment]` section.
 
+<!-- path-check-skip-begin -->
 ```bash
 export SOURCE_SWEBENCH_TASK=external/harbor/datasets/swebench-opencode-smoke/django__django-13741
 export SWEBENCH_TASK=.tmp/harbor/datasets/swebench-hermes-nemoflow-prebuilt/django__django-13741
@@ -252,6 +262,7 @@ else:
 task.write_text(text)
 PY
 ```
+<!-- path-check-skip-end -->
 
 This smoke can use a local Ollama model through its OpenAI-compatible endpoint.
 When the agent runs inside Docker on macOS, point the container at the host via
