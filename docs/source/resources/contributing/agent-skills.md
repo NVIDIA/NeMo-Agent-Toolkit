@@ -23,7 +23,7 @@ Use the skill when you want an AI coding agent to help with NeMo Agent toolkit d
 
 ## Install the Skill
 
-Copy the root `AGENTS.md` file and the `skills/` directory into the repository or skill directory used by your coding agent. Restart the agent session after copying the skills so the agent can discover each `SKILL.md`.
+Use `AGENTS.md` from the repository root as the coding-agent entry point. If you install the skills into another workspace, copy `AGENTS.md` to that workspace root, then copy every directory under `skills/` into the skill directory used by your coding agent. Restart the agent session after copying the skills so the agent can discover each `SKILL.md`.
 
 ### Claude Code
 
@@ -31,14 +31,14 @@ For a user-level install:
 
 ```bash
 mkdir -p ~/.claude/skills
-cp -r skills/nat-* ~/.claude/skills/
+cp -r skills/* ~/.claude/skills/
 ```
 
 For a project-level install:
 
 ```bash
 mkdir -p .claude/skills
-cp -r skills/nat-* .claude/skills/
+cp -r skills/* .claude/skills/
 ```
 
 ### Codex
@@ -47,12 +47,12 @@ For a user-level install:
 
 ```bash
 mkdir -p ~/.codex/skills
-cp -r skills/nat-* ~/.codex/skills/
+cp -r skills/* ~/.codex/skills/
 ```
 
 ### Other Coding Agents
 
-Copy the relevant `skills/nat-*` folders into the skills or rules directory supported by your agent. Each skill follows the common `SKILL.md` directory pattern:
+Copy the relevant folders from `skills/` into the skills or rules directory supported by your agent. Each skill follows the common `SKILL.md` directory pattern:
 
 ```text
 skills/nat-workflow-creation/
