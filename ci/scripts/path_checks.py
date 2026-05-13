@@ -256,6 +256,8 @@ IGNORED_FILES: set[str] = {
     r"docker-compose([A-Za-z0-9_\-\.]+)?\.ya?ml$",  #
     # top-level markdown files with no related content
     r"(CHANGELOG|CONTRIBUTING|LICENSE|SECURITY)\.md",
+    # agent skill reference files contain illustrative paths for target projects
+    r"^skills/",
     r"^manifest.yaml$",  #
     # files located within data directories
     r"data/.*$",  #
@@ -279,6 +281,7 @@ IGNORED_PATHS: set[str] = {
     r"^outputs/line_chart_\d+\.png$",  #
     # virtual environment directories
     r"(\.[a-z_]*env$|^\.[a-z_]*env)",
+    r"^\.claude/",  # coding-agent project configuration directories
 }
 
 ALLOWLISTED_FILE_PATH_PAIRS_REGEX = list(

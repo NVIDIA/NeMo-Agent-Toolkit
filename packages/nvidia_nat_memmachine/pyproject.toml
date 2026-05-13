@@ -33,7 +33,7 @@ root = "../.."
 name = "nvidia-nat-memmachine"
 dynamic = ["version", "dependencies", "optional-dependencies"]
 requires-python = ">=3.11,<3.14"
-description = "Subpackage for MemMachine integration in NeMo Agent toolkit. Requires a cfg.yml configuration file with database and AI model settings."
+description = "Subpackage for MemMachine integration in NeMo Agent Toolkit. Requires a cfg.yml configuration file with database and AI model settings."
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "agents", "memory"]
 license = { text = "Apache-2.0" }

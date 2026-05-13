@@ -16,8 +16,9 @@
 
 set +e
 
-# Intentionally excluding CHANGELOG.md as it immutable
-DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '(^|/)(CHANGELOG|LICENSE)\.md$')
+# Intentionally excluding CHANGELOG.md as it immutable. Agent skills are
+# instruction/reference material for coding agents, not published docs.
+DOC_FILES=$(git ls-files "*.md" "*.rst" | grep -v -E '(^|/)(CHANGELOG|LICENSE)\.md$|^skills/')
 NOTEBOOK_FILES=$(git ls-files "*.ipynb")
 
 if [[ -z "${WORKSPACE_TMP}" ]]; then

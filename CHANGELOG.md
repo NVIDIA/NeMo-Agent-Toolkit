@@ -41,7 +41,7 @@ All notable changes to this project will be documented in this file.
 * Add ATIF-only custom evaluator example and docs by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1766
 * feat(profiler): ATIF-native profiler by @afourniernv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1751
 * Add pre-tool verifier defense middleware for input instruction violation detection by @lidan-capsule in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1605
-* Add MemMachine memory integration for NeMo Agent toolkit by @Charlie-Yi-2002 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1460
+* Add MemMachine memory integration for NeMo Agent Toolkit by @Charlie-Yi-2002 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1460
 * Nested ATIF lineage by @AnuradhaKaruppiah in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1814
 ### 🔧 Improvements
 * Forward-merge release/1.5 into develop by @willkill07 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1676
@@ -83,7 +83,7 @@ All notable changes to this project will be documented in this file.
 * fix(middleware): improve pre-tool middleware guarding logic by @cparadis-nvidia in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1824
 ### 📝 Documentation Updates
 * Add notebooks demonstrating standalone ATIF evaluation via Python API by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1752
-* Add notebook demonstrating end-to-end interoperability between third-party agent frameworks and the NeMo Agent toolkit evaluation harness by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1799
+* Add notebook demonstrating end-to-end interoperability between third-party agent frameworks and the NeMo Agent Toolkit evaluation harness by @yczhang-nv in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1799
 * docs: add LangSmith to list of supported observability platforms by @abhisawa-Nvidia in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1825
 * Fix license header in memmachine's README.md by @Charlie-Yi-2002 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1831
 * add memmachine into docs/ by @Charlie-Yi-2002 in https://github.com/NVIDIA/NeMo-Agent-Toolkit/pull/1839
