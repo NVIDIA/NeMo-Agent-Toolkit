@@ -59,6 +59,7 @@ dependencies = [
   "pandas~=2.0",
   "pymilvus[model]~=2.6",
   "sqlglot~=26.33",
+  "thrift>=0.22.0,<1.0.0",
   "vanna[chromadb]>=2.0.1,<3.0.0",
 ]
 
