@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """OTel file exporter — writes raw OtelSpan JSON, one span per line.
 
 Copy to your project directory and import before WorkflowBuilder.from_config():
