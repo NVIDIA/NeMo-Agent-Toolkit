@@ -2264,7 +2264,7 @@ wheels = [
 
 [[package]]
 name = "nltk"
-version = "3.9.2"
+version = "3.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -2272,9 +2272,9 @@ dependencies = [
     { name = "regex" },
     { name = "tqdm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/76/3a5e4312c19a028770f86fd7c058cf9f4ec4321c6cf7526bab998a5b683c/nltk-3.9.2.tar.gz", hash = "sha256:0f409e9b069ca4177c1903c3e843eef90c7e92992fa4931ae607da6de49e1419", size = 2887629, upload-time = "2025-10-01T07:19:23.764Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/74/a1/b3b4adf15585a5bc4c357adde150c01ebeeb642173ded4d871e89468767c/nltk-3.9.4.tar.gz", hash = "sha256:ed03bc098a40481310320808b2db712d95d13ca65b27372f8a403949c8b523d0", size = 2946864, upload-time = "2026-03-24T06:13:40.641Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/60/90/81ac364ef94209c100e12579629dc92bf7a709a84af32f8c551b02c07e94/nltk-3.9.2-py3-none-any.whl", hash = "sha256:1e209d2b3009110635ed9709a67a1a3e33a10f799490fa71cf4bec218c11c88a", size = 1513404, upload-time = "2025-10-01T07:19:21.648Z" },
+    { url = "https://files.pythonhosted.org/packages/9d/91/04e965f8e717ba0ab4bdca5c112deeab11c9e750d94c4d4602f050295d39/nltk-3.9.4-py3-none-any.whl", hash = "sha256:f2fa301c3a12718ce4a0e9305c5675299da5ad9e26068218b69d692fda84828f", size = 1552087, upload-time = "2026-03-24T06:13:38.47Z" },
 ]
 
 [[package]]
@@ -2375,7 +2375,6 @@ requires-dist = [
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "../../advanced_agents/alert_triage_agent" },
     { name = "nat-autogen-demo", marker = "extra == 'examples'", editable = "../nat_autogen_demo" },
     { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "../../custom_functions/automated_description_generation" },
-    { name = "nat-currency-agent-a2a", marker = "extra == 'examples'", editable = "../../A2A/currency_agent_a2a" },
     { name = "nat-documentation-guides", marker = "extra == 'examples'", editable = "../../documentation_guides" },
     { name = "nat-dpo-tic-tac-toe", marker = "extra == 'examples'", editable = "../../finetuning/dpo_tic_tac_toe" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "../../evaluation_and_profiling/email_phishing_analyzer" },
@@ -2418,8 +2417,6 @@ requires-dist = [
     { name = "nat-user-report", marker = "extra == 'examples'", editable = "../../object_store/user_report" },
     { name = "nvidia-nat-a2a", marker = "extra == 'a2a'", editable = "../../../packages/nvidia_nat_a2a" },
     { name = "nvidia-nat-a2a", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_a2a" },
-    { name = "nvidia-nat-a365", marker = "extra == 'a365'", editable = "../../../packages/nvidia_nat_a365" },
-    { name = "nvidia-nat-a365", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_a365" },
     { name = "nvidia-nat-adk", marker = "extra == 'adk'", editable = "../../../packages/nvidia_nat_adk" },
     { name = "nvidia-nat-adk", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_adk" },
     { name = "nvidia-nat-agno", marker = "extra == 'agno'", editable = "../../../packages/nvidia_nat_agno" },
@@ -2483,15 +2480,13 @@ requires-dist = [
     { name = "nvidia-nat-strands", marker = "extra == 'strands'", editable = "../../../packages/nvidia_nat_strands" },
     { name = "nvidia-nat-test", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_test" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
-    { name = "nvidia-nat-vanna", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_vanna" },
-    { name = "nvidia-nat-vanna", marker = "extra == 'vanna'", editable = "../../../packages/nvidia_nat_vanna" },
     { name = "nvidia-nat-weave", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_weave" },
     { name = "nvidia-nat-weave", marker = "extra == 'weave'", editable = "../../../packages/nvidia_nat_weave" },
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_zep_cloud" },
     { name = "nvidia-nat-zep-cloud", marker = "extra == 'zep-cloud'", editable = "../../../packages/nvidia_nat_zep_cloud" },
     { name = "text-file-ingest", marker = "extra == 'examples'", editable = "../../documentation_guides/workflows/text_file_ingest" },
 ]
-provides-extras = ["a2a", "a365", "adk", "agno", "app", "autogen", "atif", "config-optimizer", "core", "crewai", "data-flywheel", "eval", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "memmachine", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragas", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "vanna", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "most", "examples"]
+provides-extras = ["a2a", "adk", "agno", "app", "autogen", "atif", "config-optimizer", "core", "crewai", "data-flywheel", "eval", "fastmcp", "langchain", "llama-index", "mcp", "mem0ai", "memmachine", "nemo-customizer", "openpipe-art", "opentelemetry", "phoenix", "profiler", "rag", "ragas", "ragaai", "mysql", "redis", "s3", "security", "semantic-kernel", "strands", "test", "weave", "zep-cloud", "async-endpoints", "gunicorn", "pii-defense", "most", "examples"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -2707,6 +2702,7 @@ dependencies = [
     { name = "llama-index-llms-nvidia" },
     { name = "llama-index-llms-openai" },
     { name = "llama-index-readers-file" },
+    { name = "nltk" },
     { name = "nvidia-nat-core" },
 ]
 
@@ -2723,6 +2719,7 @@ requires-dist = [
     { name = "llama-index-llms-nvidia", specifier = ">=0.4.4,<1.0.0" },
     { name = "llama-index-llms-openai", specifier = ">=0.6.12,<1.0.0" },
     { name = "llama-index-readers-file", specifier = ">=0.5.6,<1.0.0" },
+    { name = "nltk", specifier = ">=3.9.4,<4.0.0" },
     { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
 ]

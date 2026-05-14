@@ -39,6 +39,7 @@ limitations under the License.
 
 ## 🔥 New Features
 
+- [**AI Coding Agent Skills:**](./AGENTS.md) Use focused NeMo Agent Toolkit skills to give coding agents task-specific guidance for building, evaluating, optimizing, and observing workflows.
 - [**Dynamo Runtime Intelligence:**](./examples/dynamo_integration/latency_sensitivity_demo/README.md) Automatically infer per-request latency sensitivity from agent profiles and apply runtime hints for cache control, load-aware routing, and priority-aware serving.
 - [**Agent Performance Primitives (APP):**](https://docs.langchain.com/oss/python/integrations/providers/nvidia#install-2) Introduce framework-agnostic performance primitives that accelerate graph-based agent frameworks such as LangChain, CrewAI, and Agno with parallel execution, speculative branching, and node-level priority routing.
 - [**LangSmith Native Integration:**](./docs/source/run-workflows/observe/observe-workflow-with-langsmith.md) Observe end-to-end agent execution with native LangSmith tracing, run evaluation experiments, compare outcomes, and manage prompt versions across development and production workflows.
@@ -149,6 +150,7 @@ Before getting started, it's possible to run this simple workflow and many other
 * 🤝 [Contributing](./docs/source/resources/contributing/index.md): Learn how to contribute to NeMo Agent Toolkit and set up your development environment.
 * 🧪 [Examples](./examples/README.md): Explore examples of NeMo Agent Toolkit workflows located in the [`examples`](./examples) directory of the source repository.
 * 🛠️ [Create and Customize NeMo Agent Toolkit Workflows](docs/source/get-started/tutorials/customize-a-workflow.md): Learn how to create and customize NeMo Agent Toolkit workflows.
+* 🤖 [AI Coding Agent Skill](./docs/source/resources/contributing/agent-skills.md): Install the NeMo Agent Toolkit skill and use example prompts for agent-assisted development.
 * 🎯 [Evaluate with NeMo Agent Toolkit](./docs/source/improve-workflows/evaluate.md): Learn how to evaluate your NeMo Agent Toolkit workflows.
 * 🆘 [Troubleshooting](./docs/source/resources/troubleshooting.md): Get help with common issues.
 

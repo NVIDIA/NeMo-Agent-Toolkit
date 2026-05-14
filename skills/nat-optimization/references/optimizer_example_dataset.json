@@ -1,0 +1,26 @@
+[
+  {
+    "question": "Do you offer free shipping?",
+    "answer": "Free standard shipping is available on all orders over $50. Orders under $50 have a flat $5.99 shipping fee.",
+    "metadata": {
+      "category": "shipping",
+      "difficulty": "easy"
+    }
+  },
+  {
+    "question": "Is there a warranty on your products?",
+    "answer": "All products come with a 1-year manufacturer warranty covering defects in materials and workmanship. Extended warranty plans (2 or 3 years) are available for purchase.",
+    "metadata": {
+      "category": "warranty",
+      "difficulty": "medium"
+    }
+  },
+  {
+    "question": "Can I return a sale item?",
+    "answer": "Sale items marked as 'Final Sale' cannot be returned or exchanged. All other sale items follow the standard 30-day return policy.",
+    "metadata": {
+      "category": "returns",
+      "difficulty": "hard"
+    }
+  }
+]

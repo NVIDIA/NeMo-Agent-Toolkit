@@ -57,7 +57,7 @@ dependencies = [
   # Keep sorted!!!
   "watchfiles~=1.1",
   "nvidia-nat-core == {version}",
-  "fastmcp>=3.0.0b1",
+  "fastmcp>=3.2.4",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
