@@ -467,27 +467,25 @@ class HermesNeMoFlow(Hermes):
                 'exit "$status"')
 
     def _build_observability_plugin_toml(self) -> str:
-        return (
-            "version = 1\n"
-            "\n"
-            "[[components]]\n"
-            "kind = \"observability\"\n"
-            "enabled = true\n"
-            "\n"
-            "[components.config]\n"
-            "version = 1\n"
-            "\n"
-            "[components.config.atof]\n"
-            "enabled = true\n"
-            f"output_directory = {json.dumps(self._atof_dir)}\n"
-            "filename = \"events.jsonl\"\n"
-            "mode = \"overwrite\"\n"
-            "\n"
-            "[components.config.atif]\n"
-            "enabled = true\n"
-            f"output_directory = {json.dumps(self._plugin_atif_dir)}\n"
-            "filename_template = \"trajectory-{session_id}.atif.json\"\n"
-        )
+        return ("version = 1\n"
+                "\n"
+                "[[components]]\n"
+                "kind = \"observability\"\n"
+                "enabled = true\n"
+                "\n"
+                "[components.config]\n"
+                "version = 1\n"
+                "\n"
+                "[components.config.atof]\n"
+                "enabled = true\n"
+                f"output_directory = {json.dumps(self._atof_dir)}\n"
+                "filename = \"events.jsonl\"\n"
+                "mode = \"overwrite\"\n"
+                "\n"
+                "[components.config.atif]\n"
+                "enabled = true\n"
+                f"output_directory = {json.dumps(self._plugin_atif_dir)}\n"
+                "filename_template = \"trajectory-{session_id}.atif.json\"\n")
 
     def _build_post_run_script(self) -> str:
         return "; ".join([

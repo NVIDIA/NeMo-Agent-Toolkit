@@ -288,9 +288,7 @@ def test_sidecar_openai_conversion_ignores_agent_end_tool_cleanup() -> None:
     trajectory = convert(events)
 
     source_call_ids = [
-        result.source_call_id
-        for step in trajectory.steps
-        if step.observation is not None
+        result.source_call_id for step in trajectory.steps if step.observation is not None
         for result in step.observation.results
     ]
     assert "call_1" in source_call_ids
@@ -330,9 +328,10 @@ def test_sidecar_openai_conversion_skips_empty_assistant_noop_turn() -> None:
     events = _sidecar_stream_without_tool_scopes()
     events.insert(
         -1,
-        _llm_start("llm-noop", "2026-05-12T22:00:05.500Z", [{
-            "role": "assistant", "content": "Previous assistant message."
-        }]),
+        _llm_start("llm-noop",
+                   "2026-05-12T22:00:05.500Z", [{
+                       "role": "assistant", "content": "Previous assistant message."
+                   }]),
     )
     events.insert(
         -1,
@@ -344,7 +343,9 @@ def test_sidecar_openai_conversion_skips_empty_assistant_noop_turn() -> None:
             name="openai.chat_completions",
             category="llm",
             category_profile={"model_name": "qwen3.6:35b"},
-            data={"role": "assistant", "content": None},
+            data={
+                "role": "assistant", "content": None
+            },
         ),
     )
 
