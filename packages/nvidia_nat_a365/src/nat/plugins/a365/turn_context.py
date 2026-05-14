@@ -86,12 +86,11 @@ def _call_if_callable(obj: Any, name: str) -> Any:
             # Method exists but threw -- surface it so silent fallback to static config is
             # observable. Including the exception type in the log message (in addition to
             # exc_info) makes log-search by failure mode possible without parsing tracebacks.
-            logger.warning(
+            logger.exception(
                 "A365 turn-identity extraction: %s.%s() raised %s; falling back to None",
                 type(obj).__name__,
                 name,
                 type(e).__name__,
-                exc_info=True,
             )
             return None
     return None
@@ -178,12 +177,11 @@ def extract_identity_from_activity(activity: Any) -> A365TurnIdentity | None:
         try:
             agentic = bool(is_agentic_method())
         except Exception as e:
-            logger.warning(
+            logger.exception(
                 "A365 turn-identity extraction: %s.is_agentic_request() raised %s; "
                 "treating as non-agentic",
                 type(activity).__name__,
                 type(e).__name__,
-                exc_info=True,
             )
             agentic = False
     else:

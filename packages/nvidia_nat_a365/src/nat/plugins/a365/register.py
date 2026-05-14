@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Register the A365 plugin side effects for discovery."""
+
 # flake8: noqa
 # isort:skip_file
-
-# Main entry point for A365 plugin - imports all submodules to ensure registration
 
 # Import front-end components (must be imported to register @register_front_end decorator)
 from .front_end import register as _front_end_register

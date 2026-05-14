@@ -22,9 +22,9 @@ from nat.plugins.a365.exceptions import A365SDKError
 from nat.plugins.a365.exceptions import A365WorkflowExecutionError
 
 __all__ = [
-    "A365Error",
     "A365AuthenticationError",
     "A365ConfigurationError",
-    "A365WorkflowExecutionError",
+    "A365Error",
     "A365SDKError",
+    "A365WorkflowExecutionError",
 ]

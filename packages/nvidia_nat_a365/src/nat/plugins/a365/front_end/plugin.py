@@ -196,6 +196,12 @@ class A365FrontEndPlugin(FrontEndBase[A365FrontEndConfig]):
         MCP / A2A front-ends): last segment is the class, everything before is the module.
         """
         if self.front_end_config.runner_class:
+            if "." not in self.front_end_config.runner_class:
+                raise A365SDKError(
+                    "Invalid runner_class. Expected dotted path 'module.path.ClassName', "
+                    f"got {self.front_end_config.runner_class!r}",
+                    sdk_component="runner_class",
+                )
             module_name, class_name = self.front_end_config.runner_class.rsplit(".", 1)
             module = importlib.import_module(module_name)
             worker_cls = getattr(module, class_name)

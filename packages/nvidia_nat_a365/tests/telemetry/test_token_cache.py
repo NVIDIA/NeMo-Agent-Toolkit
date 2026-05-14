@@ -23,6 +23,8 @@ from nat.plugins.a365.telemetry.register import _AgentTokenCache
 
 KEY_A = ("agent-A", "tenant-A")
 KEY_B = ("agent-B", "tenant-B")
+TOKEN_A = "token-A"
+TOKEN_B = "token-B"
 
 
 class TestAgentTokenCache:
@@ -35,15 +37,15 @@ class TestAgentTokenCache:
         cache = _AgentTokenCache()
         expires = datetime.now(UTC) + timedelta(minutes=10)
 
-        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
+        cache.update_token(*KEY_A, token=TOKEN_A, expires_at=expires)
 
-        assert cache.get_token(*KEY_A) == "token-A"
+        assert cache.get_token(*KEY_A) == TOKEN_A
 
     def test_get_returns_none_when_token_expired(self):
         cache = _AgentTokenCache()
         expires = datetime.now(UTC) - timedelta(minutes=1)
 
-        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
+        cache.update_token(*KEY_A, token=TOKEN_A, expires_at=expires)
 
         assert cache.get_token(*KEY_A) is None
 
@@ -51,33 +53,33 @@ class TestAgentTokenCache:
         cache = _AgentTokenCache()
         expires = datetime.now(UTC) + timedelta(minutes=3)
 
-        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
+        cache.update_token(*KEY_A, token=TOKEN_A, expires_at=expires)
 
         assert cache.get_token(*KEY_A) is None
 
     def test_get_returns_token_when_no_expiration_set(self):
         cache = _AgentTokenCache()
 
-        cache.update_token(*KEY_A, token="token-A", expires_at=None)
+        cache.update_token(*KEY_A, token=TOKEN_A, expires_at=None)
 
-        assert cache.get_token(*KEY_A) == "token-A"
+        assert cache.get_token(*KEY_A) == TOKEN_A
 
     def test_keys_are_independent(self):
         cache = _AgentTokenCache()
         long = datetime.now(UTC) + timedelta(minutes=10)
         short = datetime.now(UTC) - timedelta(minutes=1)
 
-        cache.update_token(*KEY_A, token="token-A", expires_at=long)
-        cache.update_token(*KEY_B, token="token-B", expires_at=short)
+        cache.update_token(*KEY_A, token=TOKEN_A, expires_at=long)
+        cache.update_token(*KEY_B, token=TOKEN_B, expires_at=short)
 
-        assert cache.get_token(*KEY_A) == "token-A"
+        assert cache.get_token(*KEY_A) == TOKEN_A
         assert cache.get_token(*KEY_B) is None  # B is expired, A is not
 
     def test_is_expiring_soon_true_when_within_buffer(self):
         cache = _AgentTokenCache()
         expires = datetime.now(UTC) + timedelta(minutes=3)
 
-        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
+        cache.update_token(*KEY_A, token=TOKEN_A, expires_at=expires)
 
         assert cache.is_expiring_soon(*KEY_A) is True
 
@@ -85,14 +87,14 @@ class TestAgentTokenCache:
         cache = _AgentTokenCache()
         expires = datetime.now(UTC) + timedelta(minutes=10)
 
-        cache.update_token(*KEY_A, token="token-A", expires_at=expires)
+        cache.update_token(*KEY_A, token=TOKEN_A, expires_at=expires)
 
         assert cache.is_expiring_soon(*KEY_A) is False
 
     def test_is_expiring_soon_false_when_no_expiration(self):
         cache = _AgentTokenCache()
 
-        cache.update_token(*KEY_A, token="token-A", expires_at=None)
+        cache.update_token(*KEY_A, token=TOKEN_A, expires_at=None)
 
         assert cache.is_expiring_soon(*KEY_A) is False
 

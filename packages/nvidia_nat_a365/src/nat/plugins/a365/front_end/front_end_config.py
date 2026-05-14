@@ -98,6 +98,8 @@ class A365FrontEndConfig(FrontEndBaseConfig, name="a365"):
             return []
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
         return value
 
     @field_validator("allowed_audiences", mode="after")

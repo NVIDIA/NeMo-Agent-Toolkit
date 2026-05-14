@@ -19,4 +19,4 @@ from .register import a365_mcp_tooling_function_group
 from .service import A365ToolingService
 from .tooling_config import A365MCPToolingConfig
 
-__all__ = ["A365ToolingService", "A365MCPToolingConfig", "a365_mcp_tooling_function_group"]
+__all__ = ["A365MCPToolingConfig", "A365ToolingService", "a365_mcp_tooling_function_group"]

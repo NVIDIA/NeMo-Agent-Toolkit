@@ -26,12 +26,12 @@ from .plugin import A365FrontEndPlugin
 from .worker import A365FrontEndPluginWorker
 
 __all__ = [
+    "A365AuthenticationError",
+    "A365ConfigurationError",
+    "A365Error",
     "A365FrontEndConfig",
     "A365FrontEndPlugin",
     "A365FrontEndPluginWorker",
-    "A365Error",
-    "A365AuthenticationError",
-    "A365ConfigurationError",
-    "A365WorkflowExecutionError",
     "A365SDKError",
+    "A365WorkflowExecutionError",
 ]

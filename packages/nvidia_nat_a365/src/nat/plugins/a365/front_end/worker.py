@@ -335,14 +335,16 @@ class A365FrontEndPluginWorker:
                 await context.send_activity(result)
 
             except A365WorkflowExecutionError as e:
-                logger.error(f"Error executing workflow from {notification_type} notification: {e.workflow_type}",
-                             exc_info=True)
+                logger.exception("Error executing workflow from %s notification: %s",
+                                 notification_type,
+                                 e.workflow_type)
                 await context.send_activity(
                     f"I encountered an error processing the {notification_type} notification. Please try again.")
             except Exception as e:
                 error_msg = str(e).lower()
-                logger.error(f"Error executing workflow from {notification_type} notification: {type(e).__name__}",
-                             exc_info=True)
+                logger.exception("Error executing workflow from %s notification: %s",
+                                 notification_type,
+                                 type(e).__name__)
 
                 if "timeout" in error_msg:
                     user_message = f"The {notification_type} notification timed out. Please try again."
@@ -448,11 +450,11 @@ class A365FrontEndPluginWorker:
                 await context.send_activity(result)
 
             except A365WorkflowExecutionError as e:
-                logger.error(f"Error executing workflow from message: {e.workflow_type}", exc_info=True)
+                logger.exception("Error executing workflow from message: %s", e.workflow_type)
                 await context.send_activity("I encountered an error processing your message. Please try again.")
             except Exception as e:
                 error_msg = str(e).lower()
-                logger.error(f"Error handling message: {type(e).__name__}", exc_info=True)
+                logger.exception("Error handling message: %s", type(e).__name__)
 
                 if "timeout" in error_msg:
                     user_message = "Your message timed out. Please try again."
@@ -477,7 +479,7 @@ class A365FrontEndPluginWorker:
         async def on_error(context: TurnContext, error: Exception):
             """Handle unhandled errors in the AgentApplication."""
             # Log full error details server-side for debugging
-            logger.error(f"Unhandled error in Agent 365 front-end: {type(error).__name__}: {error}", exc_info=True)
+            logger.exception("Unhandled error in Agent 365 front-end: %s: %s", type(error).__name__, error)
 
             # Provide user-friendly error message without exposing internals
             # Check for our custom exception types first for better error handling

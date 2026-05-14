@@ -33,8 +33,8 @@ from nat.runtime.loader import discover_and_register_plugins
 from nat.test.functions import EchoFunctionConfig
 
 
-@pytest.fixture(autouse=True)
-def discover_plugins():
+@pytest.fixture(name="_discover_plugins", autouse=True)
+def discover_plugins_fixture():
     """Discover and register all plugins before each test."""
     discover_and_register_plugins(PluginTypes.ALL)
 

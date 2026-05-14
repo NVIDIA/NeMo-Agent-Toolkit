@@ -22,9 +22,10 @@ from nat.plugins.a365.telemetry.register import A365TelemetryExporter
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
 
+TEST_TOKEN_RESOLVER = "test_auth"
 
-@pytest.fixture(autouse=True)
-def discover_plugins():
+@pytest.fixture(name="_discover_plugins", autouse=True)
+def discover_plugins_fixture():
     """Discover and register all plugins before each test."""
     discover_and_register_plugins(PluginTypes.ALL)
 
@@ -54,15 +55,15 @@ def test_a365_telemetry_exporter_config_accepts_auth_ref():
     config1 = A365TelemetryExporter(
         agent_id="test-agent",
         tenant_id="test-tenant",
-        token_resolver="test_auth",  # String is coerced to AuthenticationRef
+        token_resolver=TEST_TOKEN_RESOLVER,  # String is coerced to AuthenticationRef
     )
     assert isinstance(config1.token_resolver, AuthenticationRef)
-    assert str(config1.token_resolver) == "test_auth"
+    assert str(config1.token_resolver) == TEST_TOKEN_RESOLVER
 
     config2 = A365TelemetryExporter(
         agent_id="test-agent",
         tenant_id="test-tenant",
-        token_resolver=AuthenticationRef("test_auth"),  # Explicit AuthenticationRef
+        token_resolver=AuthenticationRef(TEST_TOKEN_RESOLVER),  # Explicit AuthenticationRef
     )
     assert isinstance(config2.token_resolver, AuthenticationRef)
-    assert str(config2.token_resolver) == "test_auth"
+    assert str(config2.token_resolver) == TEST_TOKEN_RESOLVER

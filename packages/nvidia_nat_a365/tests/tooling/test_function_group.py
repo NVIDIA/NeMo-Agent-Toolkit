@@ -25,13 +25,15 @@ from nat.builder.function import FunctionGroup
 from nat.plugins.a365.tooling import A365MCPToolingConfig
 from nat.plugins.a365.tooling.register import A365MCPToolingFunctionGroup
 
+TEST_AUTH_TOKEN = "test-token"
+
 
 @pytest.fixture(name="base_config")
 def base_config_fixture():
     """Base config for tests."""
     return A365MCPToolingConfig(
         agentic_app_id="test-agent",
-        auth_token="test-token",
+        auth_token=TEST_AUTH_TOKEN,
     )
 
 
