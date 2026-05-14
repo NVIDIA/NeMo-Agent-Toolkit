@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 # Primary deployed A365 worker example:
-# Teams / Azure Bot front end + local MCP tools + A365 telemetry.
+# Teams / Azure Bot front end + A365 telemetry.
 # Run with:
 #   nat start a365 --config_file configs/a365_worker.yml
 # Required runtime env:
@@ -42,13 +42,7 @@ authentication:
     raw_key: ${A365_BEARER_TOKEN}
     auth_scheme: Bearer
 
-function_groups:
-  graph_mail:
-    _type: mcp_client
-    server:
-      transport: streamable-http
-      # Local demo MCP service, typically deployed separately from the worker.
-      url: ${GRAPH_MAIL_MCP_URL}
+function_groups: {}
 functions:
   current_datetime:
     _type: current_datetime
@@ -64,7 +58,7 @@ llms:
 
 workflow:
   _type: react_agent
-  tool_names: [current_datetime, graph_mail]
+  tool_names: [current_datetime]
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3

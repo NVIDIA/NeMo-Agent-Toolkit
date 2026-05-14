@@ -18,7 +18,6 @@ That config represents the deployed Teams-triggered worker bot with:
 
 - A365 front end
 - A365 telemetry
-- the local `graph_mail` MCP client
 
 Other included front-end lanes:
 
@@ -29,6 +28,10 @@ Other included front-end lanes:
 
 Treat the email-notification config as an included reference lane, not a
 primary validated deployment path.
+
+This example intentionally does not include a custom MCP service deployment.
+If you want to integrate managed tooling in a future phase, see
+[MCP.md](./MCP.md) for the Work IQ / managed-tooling direction.
 
 ## Runtime Secrets
 
@@ -95,5 +98,4 @@ Real deployment validation should include:
 
 1. successful web app startup
 2. successful Teams bot round-trip
-3. expected MCP tool registration in logs
-4. expected telemetry export behavior
+3. expected telemetry export behavior

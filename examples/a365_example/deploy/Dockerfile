@@ -8,9 +8,9 @@
 #   docker build --platform linux/amd64 -f examples/a365_example/deploy/Dockerfile -t nat-a365-bot:latest .
 #
 # Run (inject secrets at runtime; never bake into the image):
-#   Bot + Graph Mail MCP + Phoenix telemetry (default CMD):
-#     docker run --rm -e A365_APP_ID=... -e A365_APP_PASSWORD=... -e GRAPH_MAIL_MCP_URL=... -e PHOENIX_ENDPOINT=... -p 3978:3978 nat-a365-bot:latest
-#   Bot only (no MCP): override CMD to use a365_frontend.yml — no A365_BEARER_TOKEN required.
+#   Worker + A365 telemetry (default CMD):
+#     docker run --rm -e A365_APP_ID=... -e A365_APP_PASSWORD=... -e A365_BEARER_TOKEN=... -p 3978:3978 nat-a365-bot:latest
+#   Front-end only: override CMD to use a365_frontend.yml — no A365_BEARER_TOKEN required.
 
 FROM python:3.11-slim-bookworm
 
@@ -36,7 +36,6 @@ COPY packages /workspace/packages
 COPY examples/a365_example/pyproject.toml /workspace/examples/a365_example/pyproject.toml
 COPY examples/a365_example/README.md /workspace/examples/a365_example/README.md
 COPY examples/a365_example/configs /workspace/examples/a365_example/configs
-COPY examples/a365_example/src /workspace/examples/a365_example/src
 
 WORKDIR /workspace/examples/a365_example
 

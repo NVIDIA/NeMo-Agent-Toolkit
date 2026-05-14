@@ -31,14 +31,19 @@ Check:
 The worker lane can legitimately use the blueprint ID as `A365_APP_ID` while
 accepting the bot app ID as an allowed audience for inbound Teams traffic.
 
-## Graph Mail MCP Is Unreachable
+## Work IQ / Managed Tooling Questions
 
 Check:
 
-1. `GRAPH_MAIL_MCP_URL`
-2. the Graph mail MCP service is running and reachable
-3. `GRAPH_MAIL_TOKEN` if your deployment requires delegated Graph auth at the MCP layer
-4. worker logs for MCP registration or connection failures
+1. whether you are trying to reproduce the smaller worker example in this repo
+   or the broader managed-tooling path advertised by Microsoft
+2. whether your tenant has the relevant Work IQ / tooling-server capabilities
+3. Microsoft’s current tooling-server documentation and preview limitations
+
+This repo example intentionally does not stand up a custom MCP server anymore.
+The custom `graph_mail` example was pruned so the example does not imply that a
+production A365 deployment requires self-hosted MCP implementations for
+Microsoft workloads.
 
 ## Notifications
 
@@ -68,8 +73,7 @@ Validate failures in this order:
 
 1. route health at `/api/messages`
 2. workflow execution
-3. MCP tool registration
-4. telemetry ingestion
+3. telemetry ingestion
 
 It is normal for these layers to fail independently. A healthy route does not
 prove Teams works, and a working workflow does not prove telemetry is accepted.

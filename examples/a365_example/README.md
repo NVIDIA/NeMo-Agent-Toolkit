@@ -14,8 +14,7 @@ The validated shape is:
 1. A Microsoft Agent 365 blueprint and Azure Bot are created in the tenant.
 2. The NAT worker is deployed behind `/api/messages`.
 3. Teams sends traffic through the Azure Bot into `nat start a365`.
-4. The workflow calls a local MCP-backed tool, `graph_mail`.
-5. NAT emits A365 telemetry through the configured exporter.
+4. NAT emits A365 telemetry through the configured exporter.
 
 The canonical deployed config is
 [configs/a365_worker.yml](./configs/a365_worker.yml).
@@ -24,7 +23,6 @@ The canonical deployed config is
 
 - A365 front-end config for a Teams / Azure Bot worker
 - A365 telemetry config for the worker lane
-- local MCP client wiring for the `graph_mail` demo tool
 - deployment notes and helper scripts
 - sanitized setup notes for rebuilding the tenant-side shape
 
@@ -40,7 +38,7 @@ Use this order:
    values.
 5. Deploy or run the worker with
    [configs/a365_worker.yml](./configs/a365_worker.yml).
-6. Validate the path in layers: route health, Teams turn, MCP tools, telemetry.
+6. Validate the path in layers: route health, Teams turn, and telemetry.
 
 The setup guide also includes the set of relevant licenses observed in the
 working tenant so reviewers can see the approximate Microsoft 365 / Agent 365
@@ -95,8 +93,7 @@ Before expecting a Teams round-trip to work, confirm all of these:
    JWT audiences differ from `A365_APP_ID`.
 5. The bot is installed or made available to the intended Teams users.
 
-The current demo is Teams-triggered. `graph_mail` is a workflow tool, not the
-trigger path.
+The current demo is Teams-triggered.
 
 ## Manifest Files
 
@@ -115,7 +112,7 @@ This example involves one manifest concept that sits outside the repo:
 - [configs/a365_frontend.yml](./configs/a365_frontend.yml)
   smaller Azure Bot / front-end reference
 - [configs/a365_email_notifications.yml](./configs/a365_email_notifications.yml)
-  email-notification trigger example, included as an unvalidated reference lane
+  email-notification trigger example, included as a reference lane
 - [configs/a365_telemetry.yml](./configs/a365_telemetry.yml)
   local telemetry smoke path
 
@@ -125,7 +122,8 @@ This example involves one manifest concept that sits outside the repo:
   Azure resources, and the rebuild sequence.
 - [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) explains image build, worker
   deployment, and the smaller front-end reference lane.
-- [docs/MCP.md](./docs/MCP.md) explains the local Graph mail MCP server.
+- [docs/MCP.md](./docs/MCP.md) explains the current Work IQ / managed-tooling
+  direction and why custom MCP servers were pruned from this example.
 - [docs/TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md) covers common 401/403,
   audience, Teams, and notification issues.
 
@@ -133,5 +131,3 @@ This example involves one manifest concept that sits outside the repo:
 
 - Email notification routing exists in plugin code but is not the primary
   validated demo path for this example.
-- The main end-to-end tool path uses a local or separately deployed Graph mail
-  MCP service.

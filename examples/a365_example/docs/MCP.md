@@ -4,38 +4,44 @@ All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 -->
 
-# A365 MCP
+# A365 Tooling
 
-This example keeps MCP scope intentionally narrow.
+This example no longer includes a custom MCP server.
 
-## Graph Mail MCP Server Used By The Demo
+The original draft example carried a self-hosted `graph_mail` MCP server to
+demonstrate tool wiring. That custom server was intentionally pruned from the
+committed example so the repo does not imply that Microsoft Agent 365
+deployments require bespoke MCP implementations for Microsoft workloads.
 
-The strongest end-to-end demo path uses a local or separately deployed Graph
-mail MCP server owned by this example:
+## Current Direction
 
-- `graph_mail`
+For the A365 / tenant-managed tooling path, prefer Microsoft’s current Work IQ
+tooling documentation:
 
-Those are wired directly into the main deployment config:
+- Work IQ MCP overview:
+  <https://learn.microsoft.com/en-us/microsoft-agent-365/tooling-servers-overview>
+- Work IQ / tooling setup guidance:
+  <https://learn.microsoft.com/en-us/microsoft-agent-365/developer/tooling>
+- A365 CLI setup reference:
+  <https://learn.microsoft.com/en-us/microsoft-agent-365/developer/reference/cli/setup>
 
-- [../configs/a365_worker.yml](../configs/a365_worker.yml)
+## What This Example Covers
 
-This is the path the Teams-triggered worker demo uses today.
+This repo example is intentionally narrower. It covers:
 
-In a real deployment, point the worker config at your own Graph mail MCP
-endpoint, for example:
+- Teams / Azure Bot front-end wiring
+- worker deployment shape
+- telemetry configuration
+- setup and troubleshooting surfaces
 
-- `https://<graph-mail-mcp-host>/mcp`
+It does not attempt to demonstrate the full Work IQ / managed-tooling path in
+this PR.
 
-## What To Validate
+## If You Need Managed Tooling
 
-On startup, look for log lines such as:
+Treat managed tooling / Work IQ support as a follow-up track:
 
-- `Registered MCP server`
-- `graph_mail`
-
-For the local MCP path, also confirm the configured function groups and the
-workflow tool names line up with the available server endpoints.
-
-Keep this example intentionally narrow. If you want to add more MCP tools,
-start from the same `mcp_client` pattern used by `graph_mail` and add them only
-after the primary worker + Teams + telemetry + mail-tool path is working.
+- verify the services available in your tenant
+- verify the required permissions and licensing
+- verify the NAT configuration and documentation needed to consume those
+  services cleanly
