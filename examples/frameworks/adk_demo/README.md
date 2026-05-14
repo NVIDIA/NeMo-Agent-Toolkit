@@ -19,7 +19,8 @@ limitations under the License.
 
 **Complexity:** 🟢 Beginner
 
-A minimal example using Agent Development Kit showcasing a simple weather and time agent that can call multiple tools.
+A minimal example using Agent Development Kit showcasing a simple weather and time agent that can call multiple
+tools. The tools resolve city metadata and current weather through the Open-Meteo APIs.
 
 ## Installation and Setup
 
@@ -52,6 +53,8 @@ Run the workflow with the `nat run` command:
 
 ```bash
 nat run --config_file examples/frameworks/adk_demo/configs/config.yml --input "What is the weather and time in New York today?"
+nat run --config_file examples/frameworks/adk_demo/configs/config.yml --input "What is the weather and local time in London today?"
+nat run --config_file examples/frameworks/adk_demo/configs/config.yml --input "Tell me the current weather and time in Tokyo, Japan."
 ```
 
 Optionally if you would prefer to run with an OpenAI model:
@@ -82,6 +85,8 @@ Number of Authentication Providers: 0
 
 --------------------------------------------------
 Workflow Result:
-['Here’s the latest for New York:\n- Weather: Sunny, around 25°C (77°F)\n- Time: 2025-09-25 12:27:26 EDT (UTC-4)']
+The current weather in New York, United States is overcast, with 19.1 degrees Celsius, feels like 14.4 degrees Celsius, 44% humidity, 0 mm precipitation, 26.4 km/h wind.
+
+The current time in New York is 2026-05-13 18:25:52 EDT-0400.
 --------------------------------------------------
 ```
