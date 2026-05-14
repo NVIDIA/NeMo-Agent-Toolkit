@@ -563,6 +563,34 @@ def _events_to_step_dicts(
                 return True
         return False
 
+    def is_empty_assistant_message(event: Event) -> bool:
+        data = event.data if isinstance(event.data, dict) else {}
+        role = data.get("role")
+        if role not in {"assistant", "model"}:
+            return False
+        if data.get("content") not in {None, ""}:
+            return False
+
+        for key, value in data.items():
+            if key in {"role", "content"}:
+                continue
+            if key == "tool_calls" and (value is None or value == ()):
+                continue
+            if key == "tool_calls" and isinstance(value, list) and not value:
+                continue
+            if key == "usage" and not value:
+                continue
+            return False
+        return True
+
+    def is_synthetic_tool_cleanup(event: Event) -> bool:
+        metadata = event.metadata or {}
+        if metadata.get("status") == "closed_by_agent_end":
+            return True
+        if isinstance(event.data, dict) and event.data.get("status") == "closed_by_agent_end":
+            return True
+        return False
+
     def flush_observations() -> None:
         """Attach buffered observations to the preceding agent step (R4 drain).
 
@@ -737,6 +765,8 @@ def _events_to_step_dicts(
             if raw_data and not agent_msg and not tool_call_dicts:
                 if is_lossy_llm_summary(event):
                     continue
+                if metrics is None and is_empty_assistant_message(event):
+                    continue
                 if metrics is None:
                     raise ShapeMismatchError(
                         kind="llm_output",
@@ -790,6 +820,8 @@ def _events_to_step_dicts(
             current_agent_step_idx = len(step_dicts) - 1
 
         elif _is_scope_end(event) and event.category == "tool":
+            if is_synthetic_tool_cleanup(event):
+                continue
             tool_call_id = (event.category_profile or {}).get("tool_call_id")
             if pending_obs_timestamp is None:
                 pending_obs_timestamp = event.timestamp

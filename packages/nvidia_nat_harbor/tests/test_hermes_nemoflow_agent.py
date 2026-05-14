@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import json
-import shlex
+import tomllib
 from pathlib import Path
 from unittest.mock import AsyncMock
 
@@ -85,9 +85,9 @@ def test_build_config_yaml_includes_gateway_hooks(tmp_path: Path) -> None:
     assert config["model"]["api_key"] == "${OPENAI_API_KEY}"
     hook_command = config["hooks"]["pre_api_request"][0]["command"]
     assert hook_command.startswith("nemo-flow hook-forward hermes")
-    assert "--atif-dir /logs/agent/nemo-flow-gateway-atif" in hook_command
-    # The PR #89 observability plugin is process-global and belongs on
+    # Observability plugin config is process-global and belongs on
     # `nemo-flow run`, not on per-hook `hook-forward` calls.
+    assert "--atif-dir" not in hook_command
     assert "--atof-dir" not in hook_command
     assert "--plugin-config" not in hook_command
     assert "--sidecar-url" not in hook_command
@@ -140,7 +140,7 @@ async def test_install_can_use_prebuilt_nemo_flow(
 
     commands = [call.kwargs["command"] for call in mock_env.exec.call_args_list]
     assert any("command -v nemo-flow" in command for command in commands)
-    assert any("nemo-flow run --help" in command for command in commands)
+    assert any("nemo-flow plugins edit --help" in command for command in commands)
     assert all("cargo build" not in command for command in commands)
 
 
@@ -162,10 +162,13 @@ async def test_run_uses_gateway_wrapper(tmp_path: Path) -> None:
     # Use a token boundary to avoid matching "nemo-flow run" as a substring of
     # any other command (defensive against future log/tee changes).
     run_command = next(command for command in commands if "nemo-flow run " in command)
+    setup_command = commands[0]
+    assert ".nemo-flow/plugins.toml" not in setup_command
     assert "--agent hermes" in run_command
-    assert "--atif-dir /logs/agent/nemo-flow-gateway-atif" in run_command
+    assert "--atif-dir" not in run_command
     assert "--atof-dir" not in run_command
     assert "--plugin-config" not in run_command
+    assert "cd /testbed" in run_command
     assert "--openai-base-url https://nvidia.example/v1" in run_command
     assert "-- --yolo --accept-hooks chat -q 'solve the task'" in run_command
     assert "/bin/bash" not in run_command
@@ -176,7 +179,8 @@ async def test_run_uses_gateway_wrapper(tmp_path: Path) -> None:
     assert "gateway-gateway" in run_command
 
 
-def test_gateway_run_can_enable_observability_plugin_config(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_run_can_enable_project_observability_plugin_config(tmp_path: Path) -> None:
     agent = _make_agent(
         tmp_path,
         enable_nemoflow_observability_plugin=True,
@@ -187,14 +191,19 @@ def test_gateway_run_can_enable_observability_plugin_config(tmp_path: Path) -> N
             "NVIDIA_BASE_URL": "https://nvidia.example/v1",
         },
     )
-    route = agent._build_provider_route("nvidia", "opus-frontier")
+    mock_env = AsyncMock()
+    mock_env.exec.return_value = AsyncMock(return_code=0, stdout="", stderr="")
 
-    command = agent._build_gateway_run_command(route, "solve the task")
+    await agent.run("solve the task", mock_env, AsyncMock())
 
-    nemo_flow_segment = command.split("&& ", 1)[1].split(" 2>&1", 1)[0]
-    args = shlex.split(nemo_flow_segment)
-    plugin_index = args.index("--plugin-config")
-    plugin_config = json.loads(args[plugin_index + 1])
+    commands = [call.kwargs["command"] for call in mock_env.exec.call_args_list]
+    setup_command = commands[0]
+    run_command = next(command for command in commands if "nemo-flow run " in command)
+    assert "cat > /testbed/.nemo-flow/plugins.toml" in setup_command
+    assert "--plugin-config" not in run_command
+    assert "cd /testbed" in run_command
+
+    plugin_config = tomllib.loads(agent._build_observability_plugin_toml())
     observability = plugin_config["components"][0]
     assert observability["kind"] == "observability"
     assert observability["config"]["atof"] == {
@@ -298,7 +307,7 @@ def test_populate_context_can_use_plugin_atif_when_atof_is_absent(tmp_path: Path
 
 
 def test_populate_context_default_does_not_raise_when_atof_missing(tmp_path: Path) -> None:
-    """ATOF is best-effort/optional until Hermes gateway events are wired into PR #88."""
+    """ATOF remains optional unless the smoke explicitly requires it."""
     agent = _make_agent(tmp_path)
     gateway_dir = agent.logs_dir / "nemo-flow-gateway-atif"
     gateway_dir.mkdir(parents=True)

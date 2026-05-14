@@ -247,6 +247,56 @@ def test_sidecar_openai_conversion_ignores_lossy_hermes_hook_summaries() -> None
     assert trajectory.final_metrics.total_completion_tokens == 5
 
 
+def test_sidecar_openai_conversion_ignores_agent_end_tool_cleanup() -> None:
+    events = _sidecar_stream_without_tool_scopes()
+    events.extend([
+        ScopeEvent(
+            scope_category="start",
+            uuid="fallback-tool-001",
+            parent_uuid="gateway-001",
+            timestamp="2026-05-12T22:00:05.200Z",
+            name="patch",
+            category="tool",
+            category_profile={"tool_call_id": "tool-fallback-001"},
+            data={
+                "path": "/testbed/file.py",
+                "old_string": "before",
+                "new_string": "after",
+            },
+            metadata={
+                "hook_event_name": "pre_tool_call",
+                "tool_correlation_status": "agent_fallback",
+            },
+        ),
+        ScopeEvent(
+            scope_category="end",
+            uuid="fallback-tool-001",
+            parent_uuid="gateway-001",
+            timestamp="2026-05-12T22:00:05.800Z",
+            name="patch",
+            category="tool",
+            category_profile={"tool_call_id": "tool-fallback-001"},
+            data={"status": "closed_by_agent_end"},
+            metadata={
+                "hook_event_name": "pre_tool_call",
+                "status": "closed_by_agent_end",
+                "tool_correlation_status": "agent_fallback",
+            },
+        ),
+    ])
+
+    trajectory = convert(events)
+
+    source_call_ids = [
+        result.source_call_id
+        for step in trajectory.steps
+        if step.observation is not None
+        for result in step.observation.results
+    ]
+    assert "call_1" in source_call_ids
+    assert "tool-fallback-001" not in source_call_ids
+
+
 def test_sidecar_openai_conversion_keeps_usage_only_empty_assistant_turn() -> None:
     events = _sidecar_stream_without_tool_scopes()
     events.insert(
@@ -274,3 +324,36 @@ def test_sidecar_openai_conversion_keeps_usage_only_empty_assistant_turn() -> No
     assert trajectory.steps[-1].metrics is not None
     assert trajectory.steps[-1].metrics.prompt_tokens == 7
     assert trajectory.steps[-1].metrics.completion_tokens == 1
+
+
+def test_sidecar_openai_conversion_skips_empty_assistant_noop_turn() -> None:
+    events = _sidecar_stream_without_tool_scopes()
+    events.insert(
+        -1,
+        _llm_start("llm-noop", "2026-05-12T22:00:05.500Z", [{
+            "role": "assistant", "content": "Previous assistant message."
+        }]),
+    )
+    events.insert(
+        -1,
+        ScopeEvent(
+            scope_category="end",
+            uuid="llm-noop",
+            parent_uuid="gateway-001",
+            timestamp="2026-05-12T22:00:05.900Z",
+            name="openai.chat_completions",
+            category="llm",
+            category_profile={"model_name": "qwen3.6:35b"},
+            data={"role": "assistant", "content": None},
+        ),
+    )
+
+    trajectory = convert(events)
+
+    assert [step.source for step in trajectory.steps] == ["system", "user", "agent", "agent"]
+    assert [step.message for step in trajectory.steps] == [
+        "You are Hermes Agent.",
+        "Find the answer.",
+        "[tool call]",
+        "Done.",
+    ]

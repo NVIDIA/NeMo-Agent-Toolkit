@@ -29,8 +29,8 @@ smoke:
 - Raw ATOF JSONL from the NeMo-Flow observability plugin.
 - ATOF-derived ATIF from the Toolkit ATOF-to-ATIF converter.
 
-Direct gateway or plugin ATIF outputs may also be created during a run, but they
-are diagnostic files only for this smoke. Do not use them as evidence for the
+Direct plugin ATIF outputs may also be created during a run, but they are
+diagnostic files only for this smoke. Do not use them as evidence for the
 trajectory comparison until their message shape is strict-compatible with the
 Toolkit ATIF parser.
 
@@ -48,7 +48,6 @@ flowchart TD
   gatewayHooks --> atof[agent/nemo-flow-atof/events.jsonl<br/>raw ATOF JSONL]
   atof --> converter[the Toolkit ATOF-to-ATIF converter]
   converter --> nfAtif[agent/nemo-flow-atof-atif/trajectory.json<br/>ATOF-derived ATIF]
-  gatewayHooks -. optional diagnostic .-> gatewayAtif[agent/nemo-flow-gateway-atif/trajectory.json<br/>direct gateway ATIF]
   gatewayHooks -. optional diagnostic .-> pluginAtif[agent/nemo-flow-plugin-atif/trajectory.json<br/>plugin direct ATIF]
 
   harbor --> swe[SWE-bench verifier<br/>patch + task tests]
@@ -73,9 +72,8 @@ One Hermes run should create these primary trajectory artifacts:
 
 <!-- path-check-skip-begin -->
 The run may also create direct ATIF diagnostics under
-`agent/nemo-flow-gateway-atif/` and `agent/nemo-flow-plugin-atif/`. Treat those
-as optional implementation diagnostics, not as the basis for this smoke's
-analysis.
+`agent/nemo-flow-plugin-atif/`. Treat those as optional implementation
+diagnostics, not as the basis for this smoke's analysis.
 <!-- path-check-skip-end -->
 
 ## Prerequisites
@@ -84,9 +82,9 @@ analysis.
 - The Toolkit is checked out to a branch containing
   `nat_harbor.agents.installed.hermes_nemoflow:HermesNeMoFlow`.
 - Harbor is installed from the source branch used by the Harbor integration.
-- NeMo-Flow `>= v0.2` is checked out. This version requirement covers CLI ATOF
-  export, observability plugin activation through `--plugin-config`, and direct
-  gateway ATIF export through `--atif-dir`. The published binary is
+- NeMo-Flow `>= v0.2` is checked out. This version requirement covers
+  project-scoped `.nemo-flow/plugins.toml` activation, which configures ATOF and
+  ATIF export for the CLI gateway. The published binary is
   `nemo-flow`, and the published Cargo package is `nemo-flow-cli`.
 
 <!-- path-check-skip-begin -->
@@ -208,9 +206,8 @@ RUN set -eux; \
     cargo build -p nemo-flow-cli --release; \
     install -m 0755 target/release/nemo-flow /usr/local/bin/nemo-flow; \
     nemo-flow --help >/dev/null; \
-    nemo-flow run --help | grep -q -- '--atif-dir'; \
-    nemo-flow run --help | grep -q -- '--plugin-config'; \
-    nemo-flow hook-forward --help | grep -q -- '--atif-dir'
+    nemo-flow plugins edit --help >/dev/null; \
+    nemo-flow hook-forward --help >/dev/null
 
 WORKDIR /testbed
 EOF
@@ -228,7 +225,7 @@ Build and validate the image:
   "$PREBUILT_CONTEXT"
 
 docker run --rm --platform linux/amd64 "$PREBUILT_NEMO_FLOW_IMAGE" \
-  bash -lc 'command -v nemo-flow && nemo-flow run --help | grep -q -- --atif-dir && nemo-flow run --help | grep -q -- --plugin-config'
+  bash -lc 'command -v nemo-flow && nemo-flow plugins edit --help >/dev/null && nemo-flow hook-forward --help >/dev/null'
 ```
 <!-- path-check-skip-end -->
 
@@ -339,6 +336,11 @@ set +a
   --ak fail_nemoflow_atof_conversion=false
 ```
 
+The wrapper writes a project-scoped plugin config to
+`/testbed/.nemo-flow/plugins.toml` before starting `nemo-flow run`. That keeps
+the smoke aligned with the current plugin file discovery path without mutating
+global or user NeMo-Flow config.
+
 A completed run may create these files under the trial directory.
 
 Primary evidence artifacts:
@@ -354,7 +356,6 @@ Additional files to look for when checking run completion or debugging:
 ```text
 agent/hermes.txt
 agent/hermes-session.jsonl
-agent/nemo-flow-gateway-atif/trajectory.json
 agent/nemo-flow-plugin-atif/trajectory.json
 result.json
 verifier/report.json
@@ -432,7 +433,6 @@ run_outputs = (
     "hermes-session.jsonl",
 )
 diagnostic = (
-    "nemo-flow-gateway-atif/trajectory.json",
     "nemo-flow-plugin-atif/trajectory.json",
 )
 for rel in evidence:
@@ -531,9 +531,9 @@ ENDPOINT=http://localhost:6006/v1/traces
   --project harbor-hermes-nemoflow-atof
 ```
 
-Open `http://localhost:6006` and compare the two evidence projects. Export
-direct gateway/plugin ATIF only for debugging, not as smoke evidence, until
-those files are strict-compatible with the Toolkit ATIF parser.
+Open `http://localhost:6006` and compare the two evidence projects. Export the
+direct plugin ATIF only for debugging, not as smoke evidence, until that file is
+strict-compatible with the Toolkit ATIF parser.
 
 In Phoenix, expect `harbor-hermes-native` to show one root workflow span with
 input/output. That does not mean the native ATIF fixture only has one step; it
@@ -557,14 +557,14 @@ ATIF-to-Phoenix exporter. The richer span tree should come from
 - The ATOF path requires NeMo-Flow `>= v0.2` observability plugin activation in
   the CLI gateway. The `enable_nemoflow_observability_plugin=true` smoke should
   require `agent/nemo-flow-atof/events.jsonl`; use
-  `fail_missing_nemoflow_atof=false` only when running against older
-  direct-ATIF-only gateway branches.
+  `fail_missing_nemoflow_atof=false` only when running against older local
+  validation branches that do not emit ATOF.
 - The Toolkit ATOF-to-ATIF conversion is initially best-effort in this smoke
   (`fail_nemoflow_atof_conversion=false`) so raw ATOF can still be inspected if
   reconstruction fails. Flip it to `true` once the converter result is stable.
-- Direct gateway/plugin ATIF files may be emitted, but they are diagnostic
-  outputs for this smoke. Base the analysis on the checked-in native Hermes
-  ATIF, raw ATOF JSONL, and ATOF-derived ATIF fixtures.
+- Direct plugin ATIF files may be emitted, but they are diagnostic outputs for
+  this smoke. Base the analysis on the checked-in native Hermes ATIF, raw ATOF
+  JSONL, and ATOF-derived ATIF fixtures.
 - Complete LLM lifecycle telemetry requires Hermes model traffic to use the
   NeMo-Flow gateway. This wrapper configures that path for `nvidia`, `openai`,
   `openrouter`, and `anthropic` model prefixes.
