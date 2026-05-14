@@ -1,0 +1,53 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# A365 telemetry-only smoke test (no A365 front-end). Use for local run to verify spans reach A365.
+# Run: A365_BEARER_TOKEN=<token> A365_TENANT_ID=<tenant-id> A365_RUNTIME_AGENT_ID=<runtime-agent-id> nat serve --config_file configs/a365_telemetry.yml
+# Then trigger a request (e.g. via console prompt) and check A365 observability for spans.
+# agent_id: use the runtime Agent 365 agent instance ID that matches the observability token.
+# (not the app registration Application (client) ID used for MSAL).
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+    tracing:
+      a365:
+        _type: a365
+        agent_id: ${A365_RUNTIME_AGENT_ID}
+        tenant_id: ${A365_TENANT_ID}
+        token_resolver: "a365_auth"
+        cluster_category: "prod"
+  front_end:
+    _type: console
+
+authentication:
+  a365_auth:
+    _type: api_key
+    raw_key: ${A365_BEARER_TOKEN}
+    auth_scheme: Bearer
+
+function_groups: {}
+
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 256
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: react_agent
+  tool_names: [current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

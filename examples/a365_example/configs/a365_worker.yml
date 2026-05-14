@@ -1,0 +1,70 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Primary deployed A365 worker example:
+# Teams / Azure Bot front end + local MCP tools + A365 telemetry.
+# Run with:
+#   nat start a365 --config_file configs/a365_worker.yml
+# Required runtime env:
+#   A365_APP_ID, A365_APP_PASSWORD, A365_BEARER_TOKEN, A365_TENANT_ID, A365_RUNTIME_AGENT_ID
+# Common additional env:
+#   A365_ALLOWED_AUDIENCES
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+    tracing:
+      a365:
+        _type: a365
+        agent_id: ${A365_RUNTIME_AGENT_ID}
+        tenant_id: ${A365_TENANT_ID}
+        token_resolver: "a365_auth"
+        cluster_category: "prod"
+        use_s2s_endpoint: true
+  front_end:
+    _type: a365
+    host: "0.0.0.0"
+    port: 3978
+    app_id: ${A365_APP_ID}
+    app_password: ${A365_APP_PASSWORD}
+    # Optional when inbound Teams / Bot Framework audience differs from A365_APP_ID.
+    tenant_id: ${A365_TENANT_ID}
+    # Notification handlers are intentionally disabled in the primary demo path.
+    enable_notifications: false
+
+authentication:
+  a365_auth:
+    _type: api_key
+    raw_key: ${A365_BEARER_TOKEN}
+    auth_scheme: Bearer
+
+function_groups:
+  graph_mail:
+    _type: mcp_client
+    server:
+      transport: streamable-http
+      # Local demo MCP service, typically deployed separately from the worker.
+      url: ${GRAPH_MAIL_MCP_URL}
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: react_agent
+  tool_names: [current_datetime, graph_mail]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3

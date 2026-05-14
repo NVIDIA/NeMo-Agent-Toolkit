@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Experimental A365 email-notification example:
+# Enables the notification handlers so inbound A365 email events can trigger
+# the default NAT workflow.
+#
+# This path is included as a reference config, not as a primary validated lane.
+# Known caveat: the microsoft-agents-a365-notifications package and runtime path
+# were unstable during the main demo effort, which is why the primary deployed
+# example keeps notifications disabled.
+#
+# Run with:
+#   nat start a365 --config_file configs/a365_email_notifications.yml
+# Required runtime env:
+#   A365_APP_ID, A365_APP_PASSWORD, A365_TENANT_ID
+# Common additional env:
+#   A365_ALLOWED_AUDIENCES
+
+general:
+  telemetry:
+    logging:
+      console:
+        _type: console
+        level: INFO
+  front_end:
+    _type: a365
+    host: "0.0.0.0"
+    port: 3978
+    app_id: ${A365_APP_ID}
+    app_password: ${A365_APP_PASSWORD}
+    tenant_id: ${A365_TENANT_ID}
+    enable_notifications: true
+    # Optional. If you define a separate entry function for notification turns,
+    # set it here. When unset, notifications use the default workflow.
+    notification_workflow:
+
+authentication: {}
+
+function_groups: {}
+
+functions:
+  current_datetime:
+    _type: current_datetime
+
+llms:
+  nim_llm:
+    _type: nim
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.0
+    max_tokens: 256
+    chat_template_kwargs:
+      enable_thinking: false
+
+workflow:
+  _type: react_agent
+  tool_names: [current_datetime]
+  llm_name: nim_llm
+  verbose: true
+  parse_agent_response_max_retries: 3
