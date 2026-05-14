@@ -19,6 +19,100 @@ The example assumes a tenant with:
 - admin ability to grant Entra / Agent 365 permissions
 - access to the Azure subscription and resource group hosting the worker
 
+## Portal Entry Points
+
+The setup for this example spans several Microsoft admin surfaces. In practice,
+you will move between these pages repeatedly while wiring identities, bot
+registration, permissions, Teams packaging, and deployment.
+
+### Core URLs
+
+- Microsoft Entra admin center: <https://entra.microsoft.com/>
+- Azure portal: <https://portal.azure.com/>
+- Microsoft 365 admin center: <https://admin.cloud.microsoft/>
+- Teams Developer Portal: <https://dev.teams.microsoft.com/apps>
+- Teams client / web app: <https://teams.microsoft.com/>
+
+### Microsoft Entra Admin Center
+
+Use <https://entra.microsoft.com/> for identity, blueprint, and permission
+setup.
+
+- `Entra ID -> App registrations`
+  supporting app registration setup, secrets, API permissions, and application
+  ID URI
+- `Agents -> Agent blueprints`
+  create or inspect the Agent 365 blueprint used by the NAT worker lane
+- `Agents -> Agent blueprints -> <your blueprint> -> Granted permissions`
+  verify blueprint-side runtime permissions
+- `Agents -> Agent blueprints -> <your blueprint> -> Credentials`
+  inspect or rotate the blueprint credential material used by the worker lane
+- `Agents -> Agent identities`
+  inspect linked runtime / Entra agent identities
+- `Enterprise apps`
+  useful when tracing service principals created by the app registration or
+  blueprint setup
+- `ID Governance -> Privileged Identity Management`
+  activate any tenant roles or groups required to manage Agent 365 resources
+
+### Azure Portal
+
+Use <https://portal.azure.com/> for deployed worker infrastructure and Azure
+Bot wiring.
+
+- `App Services -> <your worker app>`
+  verify hostname, deployment target, environment variables, and identity
+- `App Services -> <your worker app> -> Environment variables`
+  inspect runtime configuration such as `A365_APP_ID`, `A365_ALLOWED_AUDIENCES`,
+  and token-related settings
+- `App Services -> <your worker app> -> Identity`
+  inspect the managed identity if your deployment uses one
+- `Azure Bot -> <your bot> -> Configuration`
+  verify the `/api/messages` messaging endpoint and app/tenant binding
+- `Resource groups`
+  locate the worker app, bot, and supporting deployment resources together
+
+### Microsoft 365 Admin Center
+
+Use <https://admin.cloud.microsoft/> for licensing and published-agent views.
+
+- `Billing -> Licenses`
+  confirm the Agent 365 / M365 license footprint for the tenant
+- `Agents -> All agents`
+  inspect the published NAT worker agent record after deployment
+- `Agents -> All agents -> <your agent>`
+  verify the published agent metadata, channel, and blueprint linkage
+
+### Teams Developer Portal
+
+Use <https://dev.teams.microsoft.com/apps> to build and publish the Teams app
+package for the validated chat-triggered lane.
+
+- `Apps -> <your app> -> Configure -> App package editor`
+  edit the Teams app manifest JSON
+- `Apps -> <your app> -> Configure -> Basic information`
+  verify app metadata and versioning
+- `Apps -> <your app> -> Configure -> Single sign-on`
+  check SSO wiring if your manifest uses `webApplicationInfo`
+- `Apps -> <your app> -> Publish -> App validation`
+  run Developer Portal validation before distributing the package
+- `Apps -> <your app> -> Publish -> Publish to org`
+  publish the Teams app to the tenant
+- `Preview in Teams` / `Distribute`
+  install or export the package for testing
+
+### Teams Client
+
+Use <https://teams.microsoft.com/> to install and exercise the app once it is
+published.
+
+- `Apps`
+  locate the custom app after publication
+- team / chat install surfaces
+  confirm the app is available to the intended test users
+- direct chat with the bot
+  validate the Teams-triggered workflow path end to end
+
 ## Observed Relevant Licenses
 
 The working tenant used during setup showed these likely relevant Microsoft 365

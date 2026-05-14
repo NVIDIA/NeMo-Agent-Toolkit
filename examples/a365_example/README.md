@@ -119,14 +119,6 @@ This example involves one manifest concept that sits outside the repo:
 - [configs/a365_telemetry.yml](./configs/a365_telemetry.yml)
   local telemetry smoke path
 
-## Validated Vs Included
-
-| Path | Status |
-| --- | --- |
-| Teams-triggered worker + local `graph_mail` MCP tool | Validated demo path |
-| Local telemetry-only smoke | Included for local validation |
-| Email notifications | Included as an unvalidated reference lane |
-
 ## Documentation
 
 - [docs/SETUP.md](./docs/SETUP.md) explains identities, permissions, licenses,
@@ -143,5 +135,3 @@ This example involves one manifest concept that sits outside the repo:
   validated demo path for this example.
 - The main end-to-end tool path uses a local or separately deployed Graph mail
   MCP service.
-- Do not commit `.env`, generated secrets, token dumps, local logs, or
-  generated `a365` config artifacts.
