@@ -30,6 +30,9 @@ see [`harbor-library-mode.md`](./harbor-library-mode.md).
 This package provides:
 
 - A NeMo Agent Toolkit-backed Harbor agent (`NemoAgent`)
+- Experimental coding-agent smoke wrappers for NeMo-Flow instrumentation, including
+  [`OpenCodeNeMoFlow`](./opencode-nemoflow-smoke.md) and
+  [`HermesNeMoFlow`](./hermes-nemoflow-smoke.md)
 - A host-local Harbor environment implementation (`LocalEnvironment`)
 - An inline ATIF verifier class for Harbor verifier import hooks (`ATIFInlineVerifier`)
 - ATIF verifier bridge utilities for script-based compatibility (`nat_harbor.verifier.bridge_runner`)
