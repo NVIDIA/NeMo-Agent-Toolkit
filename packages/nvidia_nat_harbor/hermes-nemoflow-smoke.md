@@ -83,6 +83,7 @@ diagnostics, not as the basis for this smoke's analysis.
   `nat_harbor.agents.installed.hermes_nemoflow:HermesNeMoFlow`.
 - Harbor is installed from the source branch used by the Harbor integration.
 - NeMo-Flow `>= v0.2` is checked out. This version requirement covers
+  <!-- path-check-skip-next-line -->
   project-scoped `.nemo-flow/plugins.toml` activation, which configures ATOF and
   ATIF export for the CLI gateway. The published binary is
   `nemo-flow`, and the published Cargo package is `nemo-flow-cli`.
