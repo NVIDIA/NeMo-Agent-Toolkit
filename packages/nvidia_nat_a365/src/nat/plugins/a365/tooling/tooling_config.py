@@ -19,6 +19,7 @@ from datetime import timedelta
 from typing import Literal
 
 from pydantic import Field
+from pydantic import SecretStr
 from pydantic import model_validator
 
 from nat.data_models.component_ref import AuthenticationRef
@@ -52,7 +53,7 @@ class A365MCPToolingConfig(FunctionGroupBaseConfig, name="a365_mcp_tooling"):
     """
 
     agentic_app_id: str = Field(..., description="Agent 365 agentic app ID")
-    auth_token: str | AuthenticationRef = Field(
+    auth_token: SecretStr | AuthenticationRef = Field(
         ..., description="Authentication token or reference to auth provider for A365 tooling gateway")
     tool_call_timeout: timedelta = Field(
         default=timedelta(seconds=60),

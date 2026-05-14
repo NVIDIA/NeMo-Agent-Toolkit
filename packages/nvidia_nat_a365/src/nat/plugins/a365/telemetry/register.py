@@ -133,8 +133,7 @@ class _AgentTokenCache:
             return None
         if expires_at.tzinfo is not None:
             return expires_at
-        local_tz = datetime.now().astimezone().tzinfo
-        return expires_at.replace(tzinfo=local_tz).astimezone(UTC)
+        return expires_at.replace(tzinfo=UTC)
 
     def get_token(self, agent_id: str | None, tenant_id: str | None) -> str | None:
         """Return cached token for the key if still valid (5 min buffer), else None."""

@@ -21,14 +21,15 @@ from unittest.mock import patch
 import pytest
 
 from nat.cli.type_registry import GlobalTypeRegistry
+from nat.data_models.common import get_secret_value
 from nat.plugins.a365.tooling import A365MCPToolingConfig
 from nat.runtime.loader import PluginTypes
 from nat.runtime.loader import discover_and_register_plugins
 from nat.utils.optional_imports import OptionalImportError
 
 
-@pytest.fixture(autouse=True)
-def discover_plugins():
+@pytest.fixture(name="_discover_plugins", autouse=True)
+def discover_plugins_fixture():
     """Discover and register all plugins before each test."""
     discover_and_register_plugins(PluginTypes.ALL)
 
@@ -108,7 +109,7 @@ class TestA365ToolingFunctionGroupDiscovery:
         )
 
         assert config.agentic_app_id == "test-agent-123"
-        assert config.auth_token == "test-token-456"
+        assert get_secret_value(config.auth_token) == "test-token-456"
 
     def test_config_class_with_optional_fields(self):
         """Test that A365MCPToolingConfig accepts optional fields."""

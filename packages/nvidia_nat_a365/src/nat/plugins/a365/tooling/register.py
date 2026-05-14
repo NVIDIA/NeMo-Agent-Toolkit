@@ -25,6 +25,8 @@ from contextlib import AsyncExitStack
 from typing import NoReturn
 from urllib.parse import urlparse
 
+from pydantic import SecretStr
+
 from nat.builder.builder import Builder
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
@@ -315,7 +317,8 @@ async def a365_mcp_tooling_function_group(config: A365MCPToolingConfig, builder:
                 f"No bearer token found in auth provider credentials. "
                 f"Found credential types: {[type(c).__name__ for c in auth_result.credentials]}")
     else:
-        auth_token_str = config.auth_token
+        auth_token_str = config.auth_token.get_secret_value() if isinstance(config.auth_token,
+                                                                            SecretStr) else str(config.auth_token)
 
     service = A365ToolingService()
     logger.info(f"Discovering MCP servers for agent {config.agentic_app_id}")

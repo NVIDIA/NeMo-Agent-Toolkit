@@ -32,7 +32,7 @@ root = "../.."
 [project]
 name = "nvidia-nat-a365"
 dynamic = ["version", "dependencies", "optional-dependencies"]
-    requires-python = ">=3.11,<3.13"  # Temporarily exclude 3.13 until nvidia-nat-mcp dev builds support it
+requires-python = ">=3.11,<3.13"  # Temporarily exclude 3.13 until nvidia-nat-mcp dev builds support it
 description = "Subpackage for Microsoft Agent 365 integration in NeMo Agent Toolkit (telemetry, tooling, notifications)"
 readme = "src/nat/meta/pypi.md"
 keywords = ["ai", "observability", "agent365", "azure", "microsoft", "teams", "office365"]
