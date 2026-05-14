@@ -13,10 +13,6 @@ requires = ["setuptools>=64", "setuptools-scm>=8"]
 git_describe_command = "git describe --long --first-parent"
 root = "../.."
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["nat_a365_example*"]
-
 [project]
 name = "nat_a365_example"
 version = "0.1.0"
