@@ -167,6 +167,165 @@ Before getting started, it's possible to run this simple workflow and many other
 - [ ] MCP authentication improvements.
 - [ ] Improved memory interface to support self-improving agents.
 
+## ❓ Frequently Asked Questions (FAQ)
+
+### What is NVIDIA NeMo Agent Toolkit?
+
+NVIDIA NeMo Agent Toolkit (NAT) is an enterprise-grade toolkit that adds intelligence to AI agents across any framework—enhancing speed, accuracy, and decision-making through instrumentation, observability, and continuous learning. It works side-by-side with popular frameworks like LangChain, LlamaIndex, CrewAI, Microsoft Semantic Kernel, and Google ADK.
+
+### How is NeMo Agent Toolkit different from LangChain or CrewAI?
+
+NeMo Agent Toolkit is **framework-agnostic** and works **alongside** these frameworks, not as a replacement:
+- **LangChain/CrewAI** provide agent orchestration and workflow logic
+- **NeMo Agent Toolkit** adds instrumentation, profiling, evaluation, optimization, and fine-tuning capabilities
+- You can use NAT with LangChain, CrewAI, LlamaIndex, Semantic Kernel, Google ADK, or custom agents
+
+### What LLM providers are supported?
+
+NeMo Agent Toolkit supports:
+- **NVIDIA NIMs** (nvidia/nemotron models, llama models, etc.)
+- **OpenAI** (GPT-4, GPT-4o, etc.)
+- **Anthropic** (Claude models)
+- **Google Gemini**
+- **Azure OpenAI**
+- **AWS Bedrock**
+- **Local models** via vLLM, Ollama, and other OpenAI-compatible endpoints
+
+### How do I install NeMo Agent Toolkit?
+
+```bash
+pip install nvidia-nat
+```
+
+For framework-specific integrations:
+```bash
+pip install "nvidia-nat[langchain]"  # LangChain/LangGraph integration
+pip install "nvidia-nat[crewai]"     # CrewAI integration
+pip install "nvidia-nat[llama_index]" # LlamaIndex integration
+```
+
+### What is the Profiler and how does it help?
+
+The [Profiler](./docs/source/improve-workflows/profiler.md) provides:
+- **Agent-level profiling** — trace entire agent execution flows
+- **Token-level profiling** — analyze token efficiency and costs
+- **Bottleneck identification** — find slow nodes, redundant calls, expensive operations
+- **Performance optimization guidance** — actionable recommendations
+
+### What is the Evaluation System?
+
+The [Evaluation System](./docs/source/improve-workflows/evaluate.md) helps:
+- **Validate agent accuracy** — test outputs against expected results
+- **Maintain workflow quality** — regression testing for agent changes
+- **Offline evaluation** — evaluate without production deployment
+- **Multi-dimensional metrics** — accuracy, latency, cost, user satisfaction
+
+### What is Hyper-Parameter and Prompt Optimizer?
+
+The [Optimizer](./docs/source/improve-workflows/optimizer.md) automatically:
+- **Tunes hyper-parameters** — temperature, max_tokens, top_p, etc.
+- **Optimizes prompts** — finds the best prompt templates
+- **Runs experiments** — systematic search across configuration space
+- **Reports best configurations** — recommendations for optimal performance
+
+### Can I fine-tune LLMs for my specific agent?
+
+Yes! [Fine-tuning with Reinforcement Learning](./docs/source/improve-workflows/finetuning/index.md) allows:
+- **Train intrinsic workflow knowledge** into the model
+- **Improve agent-specific performance** — better reasoning for your domain
+- **Reduce hallucinations** — more accurate outputs
+- **Lower inference costs** — smaller models can perform better after fine-tuning
+
+### What is Dynamo Runtime Intelligence?
+
+[Dynamo Runtime Intelligence](./examples/dynamo_integration/latency_sensitivity_demo/README.md) provides:
+- **Latency sensitivity inference** — automatically detect per-request latency requirements
+- **Cache control hints** — intelligent KV-cache optimization
+- **Load-aware routing** — route requests to optimal servers
+- **Priority-aware serving** — prioritize latency-sensitive requests
+
+### What is Agent Performance Primitives (APP)?
+
+[Agent Performance Primitives (APP)](https://docs.langchain.com/oss/python/integrations/providers/nvidia#install-2) accelerate graph-based agent frameworks:
+- **Parallel execution** — run independent nodes simultaneously
+- **Speculative branching** — precompute likely future paths
+- **Node-level priority routing** — prioritize critical nodes
+- Works with **LangChain, CrewAI, Agno** and other graph-based frameworks
+
+### Does NeMo Agent Toolkit support MCP?
+
+Yes! NAT provides full [Model Context Protocol (MCP)](./docs/source/build-workflows/mcp-client.md) support:
+- **MCP Client** — integrate MCP tools into your agents
+- **MCP Server** — serve your tools and agents as MCP servers
+- [FastMCP Workflow Publishing](./docs/source/run-workflows/fastmcp-server.md) — publish workflows as MCP servers
+
+### Does NeMo Agent Toolkit support A2A Protocol?
+
+Yes! NAT supports the [Agent-to-Agent (A2A) Protocol](./docs/source/components/integrations/a2a.md) for:
+- **Distributed agent teams** — multiple agents working together
+- **Authentication support** — secure inter-agent communication
+- **Cross-framework collaboration** — agents from different frameworks can cooperate
+
+### Is there a UI for interacting with agents?
+
+Yes! The [Built-In User Interface](./docs/source/run-workflows/launching-ui.md) provides:
+- **Chat interface** — interact with your agents
+- **Visual output** — see execution results
+- **Workflow debugging** — inspect intermediate steps
+- **Real-time monitoring** — observe agent behavior
+
+### How do I observe agent execution in production?
+
+NeMo Agent Toolkit provides multiple [Observability](./docs/source/run-workflows/observe/observe.md) options:
+- **Native LangSmith Integration** — trace execution, run experiments, compare outcomes
+- **OpenTelemetry** — standard observability signals
+- **Phoenix** — Arize AI observability platform
+- **Custom exporters** — integrate with your monitoring stack
+
+### What telemetry does NeMo Agent Toolkit collect?
+
+See [Telemetry](#-telemetry) section for details. NAT collects:
+- **Anonymous usage statistics** — feature adoption, workflow success rates
+- **Performance metrics** — latency, token efficiency
+- **Error classification** — failure categories
+- **No sensitive data** — prompts, outputs, file paths, config values are never collected
+
+### Can I disable telemetry?
+
+Yes. Set the environment variable:
+```bash
+export NAT_TELEMETRY_ENABLED=false
+```
+
+### What Python versions are supported?
+
+NeMo Agent Toolkit requires **Python 3.11, 3.12, or 3.13**.
+
+### Where can I find examples?
+
+See the [Examples](./examples/README.md) directory for:
+- Hello World workflow
+- LangChain integration examples
+- CrewAI integration examples
+- Dynamo integration demos
+- MCP server/client examples
+- Evaluation and optimization tutorials
+
+### How do I get help?
+
+- **Documentation**: [docs.nvidia.com/nemo/agent-toolkit](https://docs.nvidia.com/nemo/agent-toolkit/latest)
+- **Troubleshooting**: [docs/resources/troubleshooting.md](./docs/source/resources/troubleshooting.md)
+- **GitHub Issues**: [NVIDIA/NeMo-Agent-Toolkit/issues](https://github.com/NVIDIA/NeMo-Agent-Toolkit/issues)
+- **Examples**: [examples/](./examples/README.md)
+
+### How can I contribute?
+
+See [Contributing Guide](./docs/source/resources/contributing/index.md) for:
+- Development environment setup
+- Code style guidelines
+- PR submission process
+- Testing requirements
+
 ## 📊 Telemetry
 
 The NeMo Agent Toolkit includes runtime telemetry hooks for the `nat` command-line tool to help guide improvements. Telemetry is best-effort and never blocks or fails a CLI invocation. Once you opt in (see below), events are sent to the shared NeMo Usage Telemetry ingest.
