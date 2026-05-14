@@ -113,6 +113,85 @@ published.
 - direct chat with the bot
   validate the Teams-triggered workflow path end to end
 
+## Portal Verification Checklist
+
+Use this section as a final pass once the worker has been provisioned and the
+Teams app is ready to test.
+
+### Agent Blueprint
+
+In Microsoft Entra admin center, verify:
+
+- the blueprint exists and is active
+- the blueprint application ID has been recorded for worker configuration
+- the blueprint object / principal identifiers are available for troubleshooting
+- linked agent identities look correct
+- granted permissions are present on the blueprint, not only on the supporting
+  app registration
+- the credentials page shows the expected active credential material
+
+### Supporting App Registration
+
+In `Entra ID -> App registrations`, verify:
+
+- the application (client) ID is the one used for standalone minting or setup
+  flows
+- the application ID URI matches the Teams SSO wiring if applicable
+- the required API permissions are granted
+- any secret or credential material used for token minting is current
+
+### Azure Bot
+
+In Azure portal, verify:
+
+- the bot registration exists
+- the Microsoft App ID and tenant ID match the expected Teams / bot wiring
+- the messaging endpoint points to `https://<worker-hostname>/api/messages`
+- the bot is configured for the intended tenant scope
+- Teams is enabled as a usable channel if your tenant requires explicit channel
+  setup
+
+### Worker Host
+
+In Azure portal, verify:
+
+- the worker hostname is correct
+- the deployment target or container image is the intended one
+- required environment variables are present
+- the managed identity configuration matches your deployment design
+- logs and runtime health can be inspected from the App Service surfaces
+
+### Teams Developer Portal
+
+In <https://dev.teams.microsoft.com/apps>, verify:
+
+- the Teams app package entry exists
+- the manifest `id` is stable for the app package lifecycle
+- `bots[].botId` matches the bot/app-registration identity the Teams app uses
+- the declared scopes match how you plan to install the app (`personal`,
+  `groupChat`, team, or equivalent)
+- `webApplicationInfo.id` and `webApplicationInfo.resource` match your SSO
+  wiring if SSO is enabled
+- app versioning and branding assets are up to date before publishing
+- `App validation` passes before `Publish to org`
+
+### Microsoft 365 Admin Center
+
+In <https://admin.cloud.microsoft/>, verify:
+
+- the necessary licenses are present in the tenant
+- the published NAT worker agent appears under `Agents -> All agents`
+- the visible channel / availability state looks correct
+- the published agent record reflects the expected blueprint linkage
+
+### Privileged Access
+
+If expected surfaces are missing or actions are unexpectedly denied, verify:
+
+- the required Entra / Agent 365 roles are activated through PIM
+- any group-based access required for Agent 365 administration is active before
+  debugging app or deployment configuration
+
 ## Observed Relevant Licenses
 
 The working tenant used during setup showed these likely relevant Microsoft 365
