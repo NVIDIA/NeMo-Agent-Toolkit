@@ -16,14 +16,18 @@
 
 import asyncio
 import json
+import logging
 from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlencode
+from urllib.parse import urlparse
 from urllib.request import Request
 from urllib.request import urlopen
 
 DEFAULT_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 DEFAULT_TIMEOUT_SECONDS = 10.0
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -51,6 +55,10 @@ def fetch_json(url: str, params: dict[str, str | int | float], timeout_seconds: 
     """Fetch a JSON object using only the Python standard library."""
 
     request_url = f"{url}?{urlencode(params)}"
+    parsed_url = urlparse(request_url)
+    if parsed_url.scheme.lower() != "https":
+        raise ValueError(f"Only HTTPS URLs are supported: {url}")
+
     request = Request(request_url, headers={"User-Agent": "nat-adk-demo/1.0"})
 
     with urlopen(request, timeout=timeout_seconds) as response:
@@ -102,14 +110,19 @@ async def geocode_city(city: str,
         if not candidate_query:
             continue
 
-        payload = await asyncio.to_thread(fetch_json,
-                                          geocoding_url, {
-                                              "name": candidate_query,
-                                              "count": 1,
-                                              "language": "en",
-                                              "format": "json",
-                                          },
-                                          timeout_seconds)
+        try:
+            payload = await asyncio.to_thread(fetch_json,
+                                              geocoding_url, {
+                                                  "name": candidate_query,
+                                                  "count": 1,
+                                                  "language": "en",
+                                                  "format": "json",
+                                              },
+                                              timeout_seconds)
+        except Exception as ex:
+            logger.warning("Failed to geocode city query %r: %s", candidate_query, ex)
+            continue
+
         results = payload.get("results")
         if not isinstance(results, list):
             continue

@@ -18,6 +18,7 @@ import datetime
 import pytest
 
 from nat_adk_demo.location import CityLocation
+from nat_adk_demo.location import fetch_json
 from nat_adk_demo.location import geocode_city
 from nat_adk_demo.nat_time_tool import TimeMCPToolConfig
 from nat_adk_demo.nat_time_tool import get_time_for_city
@@ -123,6 +124,38 @@ async def test_geocode_city_retries_comma_qualified_query(monkeypatch):
     assert seen_queries == ["Tokyo, Japan", "Tokyo"]
     assert location is not None
     assert location.display_name == "Tokyo, Japan"
+
+
+def test_fetch_json_requires_https():
+    with pytest.raises(ValueError, match="Only HTTPS URLs are supported"):
+        fetch_json("http://example.test/geocode", {"name": "London"}, 1)
+
+
+async def test_geocode_city_continues_after_query_error(monkeypatch, caplog):
+    seen_queries = []
+
+    def mock_fetch_json(url, params, timeout_seconds):
+        seen_queries.append(params["name"])
+        if params["name"] == "Tokyo, Japan":
+            raise TimeoutError("request timed out")
+        return {
+            "results": [{
+                "name": "Tokyo",
+                "country": "Japan",
+                "latitude": 35.6895,
+                "longitude": 139.6917,
+                "timezone": "Asia/Tokyo",
+            }]
+        }
+
+    monkeypatch.setattr("nat_adk_demo.location.fetch_json", mock_fetch_json)
+
+    location = await geocode_city("Tokyo, Japan", "https://example.test/geocode", 1)
+
+    assert seen_queries == ["Tokyo, Japan", "Tokyo"]
+    assert location is not None
+    assert location.timezone == "Asia/Tokyo"
+    assert "Failed to geocode city query 'Tokyo, Japan'" in caplog.text
 
 
 async def test_get_time_for_city_uses_resolved_timezone(monkeypatch):
