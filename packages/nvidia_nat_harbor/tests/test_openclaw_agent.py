@@ -136,6 +136,27 @@ def test_compose_config_patch_mcp(agent: OpenClaw, tmp_path: Path) -> None:
     assert cfg["mcp"]["servers"]["demo"]["args"] == ["--stdio"]
 
 
+def test_failover_retries_kwarg_overrides_openclaw_config(tmp_path: Path) -> None:
+    a = OpenClaw(
+        logs_dir=tmp_path,
+        model_name="openai/gpt-4.1",
+        failover_retries=7,
+        openclaw_config={"auth": {"cooldowns": {"rateLimitedProfileRotations": 1}}},
+    )
+    cfg = a._build_full_openclaw_config()
+    assert cfg["auth"]["cooldowns"]["rateLimitedProfileRotations"] == 7
+
+
+def test_failover_retries_kwarg_sets_auth_cooldowns(tmp_path: Path) -> None:
+    a = OpenClaw(
+        logs_dir=tmp_path,
+        model_name="openai/gpt-4.1",
+        failover_retries=4,
+    )
+    cfg = a._build_full_openclaw_config()
+    assert cfg["auth"]["cooldowns"]["rateLimitedProfileRotations"] == 4
+
+
 def test_nvidia_base_url_from_env_in_uploaded_config(tmp_path: Path) -> None:
     inference = "https://inference-api.nvidia.com/v1"
     a = OpenClaw(

@@ -201,9 +201,6 @@ set +a
   --agent-kwarg enable_nemo_flow=true
 ```
 
-
-<!-- path-check-skip-end -->
-
 ## Quick artifact check
 
 ### Terminal-Bench
@@ -252,6 +249,116 @@ test -n "$PLUGIN_TRAJ"
   --native "$TRIAL/agent/trajectory.json" \
   --candidate "$PLUGIN_TRAJ"
 ```
+
+### SWE-bench: validate ATIF and session shape
+
+Loads Harbor `trajectory.json` with the Toolkit ATIF parser and prints session /
+plugin file sizes (mirrors the OpenCode / Hermes smoke checks):
+
+```bash
+.venv/bin/python - <<'PY'
+import json
+import os
+from pathlib import Path
+
+from nat_harbor.verifier.evaluator_adapter import load_atif_samples
+
+trial = Path(os.environ["TRIAL"])
+agent = trial / "agent"
+for rel in (
+    "openclaw.txt",
+    "openclaw.session.jsonl",
+    "trajectory.json",
+    "instruction.txt",
+):
+    path = agent / rel
+    if not path.exists():
+        raise SystemExit(f"Missing {path}")
+    print("ok", rel, path.stat().st_size)
+
+traj_path = agent / "trajectory.json"
+samples = load_atif_samples(traj_path)
+trajectory = samples[0].trajectory
+raw = json.loads(traj_path.read_text())
+fm = raw.get("final_metrics") or {}
+print(
+    "trajectory",
+    trajectory.schema_version,
+    len(trajectory.steps),
+    "final_metrics",
+    fm,
+)
+
+atifs = sorted(agent.glob("nemo-flow-atif/*.json"))
+print("nemo-flow-atif json files", len(atifs))
+for path in atifs[:3]:
+    data = json.loads(path.read_text())
+    ev = (data.get("extra") or {}).get("observed_events") or []
+    print(" ", path.name, path.stat().st_size, "observed_events", len(ev))
+PY
+```
+
+## Reference artifacts
+
+Sample outputs from a completed SWE-bench smoke are checked in under:
+
+```text
+packages/nvidia_nat_harbor/data/openclaw-nemoflow-smoke/
+```
+
+| Evidence | Checked-in fixture | Notes |
+| --- | --- | --- |
+| Harbor ATIF (from session replay) | `native-openclaw-trajectory.json` | `ATIF-v1.7`, 62 steps; `final_metrics` includes aggregate token fields from the trial. |
+| Session log (prefix) | `openclaw-session-head.jsonl` | First 40 lines only; full `openclaw.session.jsonl` stays in the Harbor trial tree. |
+| NeMo Flow plugin export | `nemo-flow-plugin-atif-sample.json` | Single plugin JSON under `agent/nemo-flow-atif/` from the same run; embeds `observed_events` (193 events in the captured run). |
+
+### Sample results (captured run)
+
+| Artifact | Result |
+| --- | --- |
+| Harbor reward | `1.0` |
+| Model | `nvidia/qwen/qwen3.5-122b-a10b` (trial `result.json`) |
+| Native OpenClaw ATIF | `ATIF-v1.7`, 62 steps; `total_prompt_tokens=2812657`, `total_completion_tokens=8247`, `total_cached_tokens=919173` |
+| Plugin observability | One JSON under `agent/nemo-flow-atif/`, ~193 `observed_events` entries |
+| `compare_atif_tools` vs plugin JSON | `match (poorer)` — plugin file is not an ATIF trajectory for the tool sequence extractor (see `data/openclaw-nemoflow-smoke/atif-tool-compare.md`) |
+
+## Post-run trajectory scoring (optional)
+
+Unlike OpenCode + NeMo Flow, this smoke does not emit
+`agent/nemo-flow-atof-atif/trajectory.json`. You can still run the deterministic
+parts of the scorer on the native trajectory to verify artifact discovery:
+
+```bash
+export HARBOR_JOBS_DIR=.tmp/harbor/openclaw-nemoflow-swebench
+export JOB_NAME=openclaw-nemoflow-swebench-smoke-1
+
+.venv/bin/python -m nat_harbor.smoke.score_atif_trajectories \
+  --job-dir "$HARBOR_JOBS_DIR/$JOB_NAME" \
+  --candidate-rel agent/trajectory.json \
+  --output-dir "$HARBOR_JOBS_DIR/$JOB_NAME/post-run-scores" \
+  --no-llm
+```
+
+For an LLM judge pass, install `nvidia_nat_langchain` (same as the OpenCode
+smoke) and point `OPENAI_BASE_URL` / `NAT_HARBOR_TRAJECTORY_JUDGE_MODEL` at your
+endpoint. Sample scorer row placeholders live next to the fixtures in
+`atif-trajectory-scores.md` / `atif-trajectory-scores.csv`.
+
+## Phoenix inspection (optional)
+
+If Phoenix is running at `http://localhost:6006`, export the native ATIF:
+
+```bash
+ENDPOINT=http://localhost:6006/v1/traces
+
+.venv/bin/python -m nat.plugins.phoenix.scripts.export_trajectory_to_phoenix.export_atif_trajectory_to_phoenix \
+  "$TRIAL/agent/trajectory.json" \
+  --endpoint "$ENDPOINT" \
+  --project harbor-openclaw-native
+```
+
+Treat the plugin JSON as a debugging export unless a future plugin version
+writes strict ATIF compatible with the Toolkit parser.
 
 <!-- path-check-skip-end -->
 

@@ -381,6 +381,10 @@ class OpenClaw(BaseInstalledAgent):
     prefers "openclaw.session.jsonl" via "openclaw_session_jsonl_to_atif_steps"; otherwise
     the summarized CLI envelope is used.
 
+    "failover_retries": optional non-negative int merged into
+    "auth.cooldowns.rateLimitedProfileRotations" in the uploaded OpenClaw config.
+    Applied after "openclaw_config" so this kwarg wins.
+
     Trial caps all of "install()": (360s or "override_setup_timeout_sec") times
     ("agent_setup_timeout_multiplier" or "timeout_multiplier"). Trials CLI:
     "--agent-setup-timeout SEC". Jobs CLI: no seconds flag; use
@@ -423,6 +427,12 @@ class OpenClaw(BaseInstalledAgent):
         override_setup_timeout_sec = kwargs.pop("override_setup_timeout_sec", None)
         self._enable_nemo_flow = bool(kwargs.pop("enable_nemo_flow", True))
         self._use_openclaw_session_jsonl_for_steps = bool(kwargs.pop("use_openclaw_session_jsonl_for_steps", True))
+        raw_fr = kwargs.pop("failover_retries", None)
+        self._failover_retries: int | None = None
+        if raw_fr is not None:
+            self._failover_retries = int(raw_fr)
+            if self._failover_retries < 0:
+                raise ValueError("failover_retries must be non-negative")
         self._install_exec_timeout_sec = int(override_setup_timeout_sec or OPENCLAW_AGENT_SETUP_TIMEOUT_SEC)
         super().__init__(*args, **kwargs)
         self._openclaw_config: dict[str, Any] = openclaw_config or {}
@@ -672,6 +682,10 @@ class OpenClaw(BaseInstalledAgent):
         self._merge_harbor_headless_tool_denies(cfg)
         if include_nemo_flow_plugin:
             self._merge_nemo_flow_plugin(cfg)
+        if self._failover_retries is not None:
+            auth = cfg.setdefault("auth", {})
+            cooldowns = auth.setdefault("cooldowns", {})
+            cooldowns["rateLimitedProfileRotations"] = self._failover_retries
 
         return cfg
 
