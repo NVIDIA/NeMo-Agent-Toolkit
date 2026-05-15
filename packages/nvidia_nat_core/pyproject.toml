@@ -77,7 +77,8 @@ dependencies = [
   "platformdirs~=4.3",
   "pydantic~=2.11",
   "pyjwt~=2.11",
-  "pymilvus>=2.6.13,<3.0.0",
+  # Pinning to 2.6.9 to work-around https://github.com/langchain-ai/langchain-milvus/issues/130
+  "pymilvus==2.6.9",
   "python-dotenv>=1.1.1,<2.0.0",
   "python-multipart>=0.0.21",
   "PyYAML~=6.0",
