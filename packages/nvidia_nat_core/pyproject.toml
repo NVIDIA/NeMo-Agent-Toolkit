@@ -87,6 +87,7 @@ dependencies = [
   "tzlocal~=5.3",
   "uvicorn[standard]~=0.38",
   # transitive dependencies
+  "cryptography>=46.0.6,<47",
   "urllib3>=2.6.3,<3.0.0",
 ]
 

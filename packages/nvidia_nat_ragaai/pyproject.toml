@@ -60,6 +60,8 @@ dependencies = [
   "ragaai-catalyst~=2.2",
   # ragaai-catalyst depends on the deprecated pkg_resources module which was removed in setuptools 82
   "setuptools>=64,<82",
+  # Transitive dependencies
+  "pyopenssl>=26.0.0,<27.0.0",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
