@@ -24,6 +24,13 @@ requires = ["setuptools>=64", "setuptools-scm>=8"]
 git_describe_command = "git describe --long --first-parent"
 root = "../.."
 
+[tool.setuptools]
+# This example ships only configs/, deploy/, docs/, and scripts/ — there is no
+# importable Python package here (all logic lives in the nvidia-nat-a365 package).
+# Disable setuptools' auto-discovery so it doesn't trip on the multiple top-level
+# directories under a flat layout.
+packages = []
+
 [project]
 name = "nat_a365_example"
 version = "0.1.0"
