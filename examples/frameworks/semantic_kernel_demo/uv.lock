@@ -2506,6 +2506,7 @@ name = "nvidia-nat-semantic-kernel"
 source = { editable = "../../../packages/nvidia_nat_semantic_kernel" }
 dependencies = [
     { name = "azure-ai-agents" },
+    { name = "azure-identity" },
     { name = "nvidia-nat-core" },
     { name = "pyopenssl" },
     { name = "ruamel-yaml-clibz" },
@@ -2516,6 +2517,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "azure-ai-agents", specifier = ">=1.2.0b3" },
+    { name = "azure-identity", specifier = ">=1.14,<2.0.0" },
     { name = "nvidia-nat-core", editable = "../../../packages/nvidia_nat_core" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "../../../packages/nvidia_nat_test" },
     { name = "pyopenssl", specifier = ">=26.0.0,<27.0.0" },
