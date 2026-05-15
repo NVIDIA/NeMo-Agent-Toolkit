@@ -72,10 +72,10 @@ def _raise_classified_discovery_error(error: Exception) -> NoReturn:
     """Classify a discovery error as auth vs. SDK and raise the matching A365 exception.
 
     Preference order:
+
     1. ``aiohttp.ClientResponseError`` with status 401/403 -> ``A365AuthenticationError``.
-    2. Substring match on the error message ("authentication" / "unauthorized" /
-       "forbidden") -> ``A365AuthenticationError`` (covers SDK wrappers that hide the
-       underlying HTTP status from us).
+    2. Substring match on the error message ("authentication" / "unauthorized" / "forbidden")
+       -> ``A365AuthenticationError`` (covers SDK wrappers that hide the underlying HTTP status from us).
     3. Everything else -> ``A365SDKError`` with a WARN that lets ops detect when the
        substring matcher is missing real failure types in production.
     """
@@ -184,8 +184,7 @@ class A365MCPToolingFunctionGroup(FunctionGroup):
         Args:
             config: The A365 MCP tooling configuration
             mcp_groups: List of MCP FunctionGroups to aggregate
-            skipped_servers: List of ``(server_name, error_repr)`` for servers that
-                failed registration under a tolerant policy. Empty under ``fail_fast``.
+            skipped_servers: ``(name, error_repr)`` tuples recorded under tolerant policies; empty under ``fail_fast``.
         """
         super().__init__(config=config, instance_name="a365_mcp_tooling")
         self._mcp_groups = mcp_groups

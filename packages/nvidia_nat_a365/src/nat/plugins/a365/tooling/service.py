@@ -56,8 +56,7 @@ class A365ToolingService:
 
         Raises:
             ValueError: If required parameters are invalid or empty.
-            Exception: If there's an error communicating with the tooling gateway
-                or reading the manifest file.
+            Exception: If there's an error communicating with the tooling gateway or reading the manifest file.
 
         Example:
 
