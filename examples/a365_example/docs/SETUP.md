@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 # A365 Setup
 
-This document captures the sanitized setup state behind the NAT A365 worker
+This document captures the sanitized setup state behind the NeMo Agent Toolkit A365 worker
 example.
 
 ## What This Example Assumes
@@ -72,13 +72,13 @@ The deployed worker lane uses multiple identities that should not be confused:
 | --- | --- |
 | Tenant ID | The Microsoft Entra tenant hosting the worker |
 | Supporting Entra app registration client ID | The app-registration-side client used for bootstrap and token minting |
-| Agent blueprint app ID | The Agent 365 blueprint identity used by the NAT worker lane |
+| Agent blueprint app ID | The Agent 365 blueprint identity used by the NeMo Agent Toolkit worker lane |
 | Runtime / Entra agent ID | The effective runtime agent identity used in the observability path |
 | Bot app ID | The Azure Bot / bot registration identity |
 | Agent blueprint principal object ID | The service principal object created for the blueprint |
 | App Service managed identity principal ID | The managed identity of the deployed worker host, if used |
 
-### How NAT Uses These IDs
+### How NeMo Agent Toolkit Uses These IDs
 
 - `A365_APP_ID` in the deployed worker config points at the blueprint app ID.
 - `A365_ALLOWED_AUDIENCES` should include the Azure Bot app ID when Teams
@@ -169,8 +169,8 @@ From the captured Entra app-registration view, that app had a broad Agent Tools
 / MCP-oriented delegated permission set, including examples such as:
 
 - Agent blueprint create / delete permissions
-- MCP server list / publish / unpublish permissions
-- Dataverse environment listing permissions
+- MCP server list / publish / revoke permissions
+- `Dataverse` environment listing permissions
 - multiple MCP server delegated scopes such as planner, calendar, files,
   Graph admin, and related Agent Tools capabilities
 
@@ -273,7 +273,7 @@ the narrower telemetry / front-end validation paths in this repo example.
 ## Teams Alignment Rules
 
 For the API-based worker path, keep the Teams manifest identity fields separate
-from the NAT worker identity fields.
+from the NeMo Agent Toolkit worker identity fields.
 
 In a working Teams Developer Portal setup, record and verify:
 
@@ -282,7 +282,7 @@ In a working Teams Developer Portal setup, record and verify:
 - Teams manifest `webApplicationInfo.id`: the SSO application ID
 - Teams manifest `webApplicationInfo.resource`: the SSO resource URI
 
-At the same time, the NAT worker lane still uses:
+At the same time, the NeMo Agent Toolkit worker lane still uses:
 
 - `A365_APP_ID` = the blueprint app ID
 - `A365_APP_PASSWORD` = the matching blueprint credential
@@ -414,7 +414,7 @@ https://<worker-hostname>/api/messages
 Then make sure the Teams manifest `botId` matches the Azure Bot Microsoft App
 ID.
 
-### 8. Configure NAT Runtime Environment
+### 8. Configure NeMo Agent Toolkit Runtime Environment
 
 Populate the worker deployment environment with:
 

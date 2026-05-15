@@ -19,6 +19,6 @@ guide. It covers:
 
 This folder then provides the assets referenced by that guide:
 
-- [Dockerfile](./Dockerfile)
+- [`Dockerfile`](./Dockerfile)
 - [build_and_push.sh](./build_and_push.sh)
 - [deploy_phoenix.sh](./deploy_phoenix.sh)

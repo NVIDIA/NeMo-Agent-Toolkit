@@ -6,15 +6,15 @@ SPDX-License-Identifier: Apache-2.0
 
 # A365 Worker Example
 
-This example captures the current NAT + Microsoft Agent 365 worker setup used
+This example captures the current NeMo Agent Toolkit + Microsoft Agent 365 worker setup used
 for the Teams-triggered demo path.
 
 The validated shape is:
 
 1. A Microsoft Agent 365 blueprint and Azure Bot are created in the tenant.
-2. The NAT worker is deployed behind `/api/messages`.
+2. The Toolkit worker is deployed behind `/api/messages`.
 3. Teams sends traffic through the Azure Bot into `nat start a365`.
-4. NAT emits A365 telemetry through the configured exporter.
+4. NeMo Agent Toolkit emits A365 telemetry through the configured exporter.
 
 The canonical deployed config is
 [configs/a365_worker.yml](./configs/a365_worker.yml).
@@ -105,7 +105,7 @@ This example involves one manifest concept that sits outside the repo:
    align with the app-registration and Azure Bot wiring you publish through
    Teams Developer Portal.
 
-## Included Configs
+## Included Configuration Files
 
 - [configs/a365_worker.yml](./configs/a365_worker.yml)
   primary validated Teams-triggered worker lane

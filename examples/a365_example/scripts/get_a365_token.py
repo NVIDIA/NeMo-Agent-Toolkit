@@ -80,9 +80,7 @@ def _request_token(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Client-credentials access token for Azure AD (A365 / smoke tests)."
-    )
+    parser = argparse.ArgumentParser(description="Client-credentials access token for Azure AD (A365 / smoke tests).")
     parser.add_argument(
         "--decode",
         action="store_true",

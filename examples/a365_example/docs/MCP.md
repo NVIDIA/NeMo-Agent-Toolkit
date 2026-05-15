@@ -43,5 +43,5 @@ Treat managed tooling / Work IQ support as a follow-up track:
 
 - verify the services available in your tenant
 - verify the required permissions and licensing
-- verify the NAT configuration and documentation needed to consume those
+- verify the NeMo Agent Toolkit configuration and documentation needed to consume those
   services cleanly

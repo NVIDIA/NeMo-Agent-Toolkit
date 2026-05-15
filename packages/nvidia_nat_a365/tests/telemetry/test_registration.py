@@ -24,6 +24,7 @@ from nat.runtime.loader import discover_and_register_plugins
 
 TEST_TOKEN_RESOLVER = "test_auth"
 
+
 @pytest.fixture(name="_discover_plugins", autouse=True)
 def discover_plugins_fixture():
     """Discover and register all plugins before each test."""

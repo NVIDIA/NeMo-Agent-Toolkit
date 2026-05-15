@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 
 This document describes the intended Azure deployment path for the example.
 
-## Canonical Deployment Config
+## Canonical Deployment Configuration
 
 Use:
 
