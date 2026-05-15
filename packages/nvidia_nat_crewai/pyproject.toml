@@ -56,8 +56,8 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
-  "crewai>=0.193.2,<1.0.0",
-  "litellm>=1.74,<1.82.7",  # pin to known-good version
+  "crewai>=1.0.0,<2.0.0",
+  "litellm>=1.83.0,<1.85.0",
 ]
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
