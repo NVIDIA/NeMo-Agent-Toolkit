@@ -1290,7 +1290,7 @@ requires-dist = [
     { name = "presidio-anonymizer", marker = "extra == 'pii-defense'" },
     { name = "pydantic", specifier = "~=2.11" },
     { name = "pyjwt", specifier = "~=2.11" },
-    { name = "pymilvus", specifier = ">=2.6.13,<3.0.0" },
+    { name = "pymilvus", specifier = "==2.6.9" },
     { name = "python-dotenv", specifier = ">=1.1.1,<2.0.0" },
     { name = "python-multipart", specifier = ">=0.0.21" },
     { name = "pyyaml", specifier = "~=6.0" },
@@ -1787,7 +1787,7 @@ crypto = [
 
 [[package]]
 name = "pymilvus"
-version = "2.6.14"
+version = "2.6.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
@@ -1796,12 +1796,11 @@ dependencies = [
     { name = "pandas" },
     { name = "protobuf" },
     { name = "python-dotenv" },
-    { name = "requests" },
     { name = "setuptools" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/8c/ad0277685b6f7bc63a626ab77973e31f38e77e0d8a2af99733cf6b6cf138/pymilvus-2.6.14.tar.gz", hash = "sha256:078fb16731569b2fd8b82436e295f70ee2a682c8892ed0e9c919c9cbc9d0dfbd", size = 1604893, upload-time = "2026-05-15T14:11:47.052Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/0c/92adff800a04cd3e9b3f17c06fa972c8d590846b1e0bac0ccf39e054b596/pymilvus-2.6.9.tar.gz", hash = "sha256:c53a3d84ff15814e251be13edda70a98a1c8a6090d7597a908387cbb94a9504a", size = 1493560, upload-time = "2026-02-10T11:01:27.415Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/df/0e/2807bf330edb41537caabf483fa4128e429b8fa5bcfa9bf67effcafa722e/pymilvus-2.6.14-py3-none-any.whl", hash = "sha256:01694978c2bbbf4bcc5ef29dc788e480245154a38eae32da7184959ea4b501fb", size = 340221, upload-time = "2026-05-15T14:11:45.052Z" },
+    { url = "https://files.pythonhosted.org/packages/6a/56/ab7f0a5aba6fc06dc210a059d6f6d2ee1f3371d40e2b4366a409576554b8/pymilvus-2.6.9-py3-none-any.whl", hash = "sha256:3e14e8072f6429dcd79d52a24dc021c594cb80841ddd76cb974bc539d1f4cdda", size = 301225, upload-time = "2026-02-10T11:01:25.796Z" },
 ]
 
 [[package]]
