@@ -38,4 +38,5 @@ dependencies = [
 ]
 
 [tool.uv.sources]
+[tool.uv.sources]
 nvidia-nat = { path = "../..", editable = true }
