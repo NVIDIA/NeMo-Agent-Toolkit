@@ -1,0 +1,519 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION & AFFILIATES.
+# All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Worker for Microsoft Agent 365 front-end plugin.
+
+This worker encapsulates the Microsoft Agents SDK integration logic,
+allowing for extensibility and better separation of concerns.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
+from nat.data_models.common import get_secret_value
+from nat.data_models.config import Config
+from nat.plugins.a365.exceptions import A365AuthenticationError
+from nat.plugins.a365.exceptions import A365ConfigurationError
+from nat.plugins.a365.exceptions import A365SDKError
+from nat.plugins.a365.exceptions import A365WorkflowExecutionError
+from nat.plugins.a365.front_end.front_end_config import A365FrontEndConfig
+from nat.plugins.a365.turn_context import extract_identity_from_activity
+from nat.plugins.a365.turn_context import set_turn_identity
+from nat.runtime.session import SessionManager
+
+if TYPE_CHECKING:
+    from microsoft_agents.hosting.aiohttp import CloudAdapter
+    from microsoft_agents.hosting.core import AgentApplication
+    from microsoft_agents.hosting.core import AgentAuthConfiguration
+    from microsoft_agents.hosting.core import TurnState
+    from microsoft_agents.hosting.core.authorization import Connections
+    from microsoft_agents.hosting.core.storage import Storage
+
+logger = logging.getLogger(__name__)
+
+
+class A365FrontEndPluginWorker:
+    """Worker that handles Microsoft Agents SDK setup and configuration.
+
+    This class encapsulates the implementation details of integrating NAT workflows
+    with the Microsoft Agents SDK, allowing for extensibility through subclassing
+    and better separation of concerns from the plugin orchestration logic.
+    """
+
+    def __init__(self, config: Config):
+        """Initialize the A365 worker with configuration.
+
+        Args:
+            config: The full NAT configuration
+        """
+        self.full_config = config
+        self.front_end_config: A365FrontEndConfig = config.general.front_end  # type: ignore
+
+    def _get_storage(self) -> Storage:
+        """Get the storage instance for the AgentApplication.
+
+        Uses dependency injection pattern - returns Storage Protocol implementation.
+        Defaults to MemoryStorage, but can be overridden for custom storage (e.g., BlobStorage, CosmosDbStorage).
+
+        Returns:
+            Storage: A Storage Protocol implementation (default: MemoryStorage)
+        """
+        from microsoft_agents.hosting.core import MemoryStorage
+        return MemoryStorage()
+
+    def _build_connection_configurations(
+            self, service_connection: AgentAuthConfiguration) -> dict[str, AgentAuthConfiguration]:
+        """Build SDK connection configs, including optional JWT audience aliases.
+
+        The Microsoft Agents SDK validates inbound JWT audiences via
+        ``AgentAuthConfiguration._jwt_patch_is_valid_aud`` (a private SDK method, as
+        indicated by the ``_jwt_patch_`` prefix). ``MsalConnectionManager.__init__``
+        cross-populates ``AgentAuthConfiguration._connections`` on every config in
+        ``connections_configurations`` (the "# JWT-patch" loop in 0.8.0 wheels), so
+        adding alias entries here is enough to make Bot Framework / Teams tokens with
+        non-``app_id`` audiences pass JWT validation.
+
+        SECURITY NOTE: alias entries are constructed as fully-functional
+        ``AgentAuthConfiguration`` objects carrying the bot's real ``client_secret``.
+        Today the SDK only consults aliases on the inbound audience-validation path,
+        but each alias is also registered as an outbound ``MsalAuth`` provider keyed
+        by the alias ``client_id``. If a future SDK feature (e.g. ``connections_map``)
+        routes outbound token acquisition through an alias, MSAL will attempt to mint
+        a token for ``client_id=<alias_audience>`` using the bot's secret -- which
+        Azure AD will reject. This is not a credential-leak vector but it does mean
+        the secret is now copied into N+1 in-memory ``MsalAuth`` instances. Worth
+        revisiting if/when the SDK exposes an audience-only validation API.
+
+        STABILITY NOTE: the underlying mechanism depends on SDK private members
+        (``_connections``, ``_jwt_patch_is_valid_aud``). A test in
+        ``tests/front_end/test_integration.py`` exercises the SDK end-to-end so
+        regressions surface before shipping.
+        """
+        from microsoft_agents.hosting.core import AgentAuthConfiguration
+
+        connections = {"SERVICE_CONNECTION": service_connection}
+
+        # Dereference the secret once (rather than per-alias) to limit how often we
+        # pierce the SecretStr abstraction.
+        app_secret = get_secret_value(self.front_end_config.app_password)
+
+        # Dedup case-insensitively across all aliases AND against the service
+        # connection's CLIENT_ID. Reserve the service CLIENT_ID up-front so even an
+        # explicit duplicate of ``app_id`` in ``allowed_audiences`` is skipped.
+        seen_audiences: set[str] = {service_connection.CLIENT_ID.lower()}
+        for audience in self.front_end_config.allowed_audiences:
+            lowered = audience.lower()
+            if lowered in seen_audiences:
+                continue
+            seen_audiences.add(lowered)
+
+            # 1-based index reflects the number of unique aliases admitted so far,
+            # so gap-free numbering survives duplicate inputs.
+            alias_index = len(seen_audiences) - 1
+            alias_name = f"AUDIENCE_ALIAS_{alias_index}"
+            connections[alias_name] = AgentAuthConfiguration(
+                client_id=audience,
+                client_secret=app_secret,
+                auth_type=service_connection.AUTH_TYPE,
+                connection_name=alias_name,
+                tenant_id=self.front_end_config.tenant_id,
+            )
+
+        return connections
+
+    def _get_connection_manager(self, service_connection: AgentAuthConfiguration) -> Connections:
+        """Get the connection manager instance for the AgentApplication.
+
+        Defaults to MsalConnectionManager with a single ``SERVICE_CONNECTION`` entry
+        (required by the Microsoft Agents SDK 0.8+ MSAL integration).
+
+        Args:
+            service_connection: Auth configuration for the bot's service connection.
+
+        Returns:
+            Connections: A Connections implementation (default: MsalConnectionManager)
+        """
+        from microsoft_agents.authentication.msal import MsalConnectionManager
+
+        connections = self._build_connection_configurations(service_connection)
+
+        # Surface which JWT audiences are actually accepted on the inbound path.
+        # Operators debugging 401s on Teams/Bot Framework can grep this single line
+        # to confirm the alias they configured was installed.
+        accepted = ", ".join(f"{name}={cfg.CLIENT_ID}" for name, cfg in connections.items())
+        logger.info("A365 front-end accepting JWT audiences: %s", accepted)
+
+        return MsalConnectionManager(connections_configurations=connections)
+
+    async def create_agent_application(self, ) -> tuple[AgentApplication[TurnState], Connections, CloudAdapter]:
+        """Create and initialize Microsoft Agents SDK application.
+
+        Returns:
+            Initialized ``AgentApplication``, ``Connections`` (MSAL manager), and aiohttp
+            ``CloudAdapter`` (used by the HTTP server and ``AgentApplication`` options).
+
+        Raises:
+            A365ConfigurationError: If configuration is invalid (missing fields, wrong types)
+            A365SDKError: If SDK component initialization fails
+        """
+        from microsoft_agents.hosting.aiohttp import CloudAdapter
+        from microsoft_agents.hosting.core import AgentApplication
+        from microsoft_agents.hosting.core import AgentAuthConfiguration
+        from microsoft_agents.hosting.core import TurnState
+        from microsoft_agents.hosting.core.app.app_error import ApplicationError
+        from microsoft_agents.hosting.core.app.app_options import ApplicationOptions
+        from microsoft_agents.hosting.core.app.oauth import Authorization
+        from microsoft_agents.hosting.core.authorization.auth_types import AuthTypes
+
+        service_connection = AgentAuthConfiguration(
+            client_id=self.front_end_config.app_id,
+            client_secret=get_secret_value(self.front_end_config.app_password),
+            auth_type=AuthTypes.client_secret,
+            connection_name="SERVICE_CONNECTION",
+            tenant_id=self.front_end_config.tenant_id,
+        )
+
+        # Initialize components sequentially, catching errors with context
+        # This pattern matches A2A and MCP plugins: sequential initialization with
+        # specific error handling for configuration vs. general SDK errors
+
+        # Get storage instance (uses dependency injection pattern - defaults to MemoryStorage)
+        # Users can override _get_storage() in a subclass to use custom storage (e.g., BlobStorage, CosmosDbStorage).
+        # Wrap to honor the documented contract: storage failures from overrides surface as
+        # A365ConfigurationError / A365SDKError instead of leaking raw backend exceptions.
+        try:
+            storage = self._get_storage()
+        except Exception as e:
+            raise A365SDKError(
+                f"Failed to initialize storage: {str(e)}",
+                sdk_component="Storage",
+                original_error=e,
+            ) from e
+
+        # Get connection manager instance (uses dependency injection pattern - defaults to MsalConnectionManager)
+        # Users can override _get_connection_manager() in a subclass to use custom connection managers
+        try:
+            connection_manager = self._get_connection_manager(service_connection)
+        except (ValueError, TypeError) as e:
+            # ValueError/TypeError from connection manager initialization indicate configuration issues
+            # (missing required fields, wrong parameter types, invalid values)
+            raise A365ConfigurationError(
+                f"Invalid configuration for connection manager: {str(e)}. "
+                f"Please check that app_id, app_password, and tenant_id are properly configured.",
+                original_error=e) from e
+        except ApplicationError as e:
+            # ApplicationError from SDK indicates missing or misconfigured SDK components
+            raise A365SDKError(f"Failed to initialize connection manager: {str(e)}",
+                               sdk_component="ConnectionManager",
+                               original_error=e) from e
+        except Exception as e:
+            raise A365SDKError(f"Failed to initialize connection manager: {str(e)}",
+                               sdk_component="ConnectionManager",
+                               original_error=e) from e
+
+        try:
+            adapter = CloudAdapter(connection_manager=connection_manager)
+        except Exception as e:
+            raise A365SDKError(f"Failed to initialize CloudAdapter: {str(e)}",
+                               sdk_component="CloudAdapter",
+                               original_error=e) from e
+
+        try:
+            authorization = Authorization(
+                storage=storage,
+                connection_manager=connection_manager,
+            )
+        except (ValueError, TypeError) as e:
+            # ValueError/TypeError from Authorization initialization indicate configuration issues
+            # (missing storage, unrecognized auth types, missing handlers)
+            raise A365ConfigurationError(
+                f"Invalid configuration for Authorization: {str(e)}. "
+                f"Please check that app_id, app_password, and tenant_id are properly configured.",
+                original_error=e) from e
+        except ApplicationError as e:
+            # ApplicationError from SDK indicates missing or misconfigured SDK components
+            raise A365SDKError(f"Failed to initialize Authorization: {str(e)}",
+                               sdk_component="Authorization",
+                               original_error=e) from e
+        except Exception as e:
+            raise A365SDKError(f"Failed to initialize Authorization: {str(e)}",
+                               sdk_component="Authorization",
+                               original_error=e) from e
+
+        try:
+            options = ApplicationOptions(
+                storage=storage,
+                adapter=adapter,
+                bot_app_id=self.front_end_config.app_id,
+            )
+            agent_app = AgentApplication[TurnState](
+                options=options,
+                connection_manager=connection_manager,
+                authorization=authorization,
+            )
+        except ApplicationError as e:
+            # ApplicationError from SDK indicates missing required components (storage, adapter, auth)
+            raise A365SDKError(f"Failed to create AgentApplication: {str(e)}",
+                               sdk_component="AgentApplication",
+                               original_error=e) from e
+        except (ValueError, TypeError) as e:
+            # ValueError/TypeError from AgentApplication initialization indicate configuration issues
+            raise A365ConfigurationError(f"Invalid configuration for AgentApplication: {str(e)}",
+                                         original_error=e) from e
+        except RuntimeError as e:
+            # RuntimeError from SDK indicates runtime issues (not typically raised during initialization)
+            raise A365SDKError(f"Failed to create AgentApplication: {str(e)}",
+                               sdk_component="AgentApplication",
+                               original_error=e) from e
+        except Exception as e:
+            raise A365SDKError(f"Failed to create AgentApplication: {str(e)}",
+                               sdk_component="AgentApplication",
+                               original_error=e) from e
+
+        return agent_app, connection_manager, adapter
+
+    async def setup_notification_handlers(self, agent_app: AgentApplication, session_manager: SessionManager) -> None:
+        """Set up A365 notification handlers.
+
+        Args:
+            agent_app: The Microsoft Agents SDK AgentApplication instance
+            session_manager: SessionManager for executing NAT workflows
+        """
+        try:
+            from microsoft_agents_a365.notifications import AgentNotification
+            from microsoft_agents_a365.notifications.models import AgentNotificationActivity
+        except ModuleNotFoundError as e:
+            # Only swallow the "package not installed" case. A broken/incompatible
+            # ``microsoft_agents_a365.notifications`` (e.g. a transitive ImportError from
+            # version skew) must propagate instead of silently disabling notifications.
+            logger.warning("A365 notifications package not available. Notification handlers will be disabled. "
+                           f"Install with: uv pip install microsoft-agents-a365-notifications. Error: {e}")
+            return
+
+        from microsoft_agents.hosting.core import TurnContext
+
+        notification = AgentNotification(agent_app)
+
+        async def execute_workflow_from_notification(context: TurnContext,
+                                                     activity: AgentNotificationActivity,
+                                                     notification_type: str) -> None:
+            """Execute NAT workflow with notification data."""
+            try:
+                # Extract text/content from notification using typed properties when available
+                # Email notifications have typed email data
+                if activity.email and activity.email.html_body:
+                    query = activity.email.html_body
+                # Word/Excel/PowerPoint comments - use activity text (WpxComment doesn't contain text directly)
+                elif activity.wpx_comment:
+                    query = context.activity.text or context.activity.summary or "Document comment notification"
+                # Lifecycle events and other notifications - use generic activity text
+                else:
+                    query = context.activity.text or context.activity.summary or f"Notification: {notification_type}"
+
+                from nat.data_models.api_server import ChatRequest
+                payload = ChatRequest.from_string(query)
+
+                identity = extract_identity_from_activity(context.activity)
+                with set_turn_identity(identity):
+                    async with session_manager.run(payload) as runner:
+                        result = await runner.result(to_type=str)
+
+                await context.send_activity(result)
+
+            except A365WorkflowExecutionError as e:
+                logger.exception("Error executing workflow from %s notification: %s",
+                                 notification_type,
+                                 e.workflow_type)
+                await context.send_activity(
+                    f"I encountered an error processing the {notification_type} notification. Please try again.")
+            except Exception as e:
+                error_msg = str(e).lower()
+                logger.exception("Error executing workflow from %s notification: %s",
+                                 notification_type,
+                                 type(e).__name__)
+
+                if "timeout" in error_msg:
+                    user_message = f"The {notification_type} notification timed out. Please try again."
+                elif "validation" in error_msg or "invalid" in error_msg:
+                    user_message = (f"Invalid input in {notification_type} notification. "
+                                    "Please check the content and try again.")
+                else:
+                    user_message = (f"I encountered an error processing the {notification_type} "
+                                    "notification. Please try again.")
+
+                await context.send_activity(user_message)
+
+        def _log_notification_received(kind: str, context: TurnContext) -> None:
+            """Log notification arrival without leaking user-supplied content.
+
+            We deliberately log only non-content metadata (length, conversation id) at
+            INFO so production log aggregators don't accumulate PII (email bodies,
+            document comments, etc.). Operators who need the content for debugging
+            can enable DEBUG on this logger.
+            """
+            text = context.activity.text or context.activity.summary or ""
+            conversation_id = getattr(getattr(context.activity, "conversation", None), "id", None)
+            logger.info(
+                "Received %s notification (text_len=%d, conversation_id=%s)",
+                kind,
+                len(text),
+                conversation_id,
+            )
+            if logger.isEnabledFor(logging.DEBUG) and text:
+                logger.debug("%s notification text (truncated): %s", kind, text[:100])
+
+        # Email notification handler
+        @notification.on_email()
+        async def on_email(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
+            _log_notification_received("email", context)
+            await execute_workflow_from_notification(context, activity, "email")
+
+        # Word document notification handler
+        @notification.on_word()
+        async def on_word(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
+            _log_notification_received("Word", context)
+            await execute_workflow_from_notification(context, activity, "Word")
+
+        # Excel notification handler
+        @notification.on_excel()
+        async def on_excel(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
+            _log_notification_received("Excel", context)
+            await execute_workflow_from_notification(context, activity, "Excel")
+
+        # PowerPoint notification handler
+        @notification.on_powerpoint()
+        async def on_powerpoint(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
+            _log_notification_received("PowerPoint", context)
+            await execute_workflow_from_notification(context, activity, "PowerPoint")
+
+        # Lifecycle handlers
+        @notification.on_user_created()
+        async def on_user_created(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
+            logger.info("User created lifecycle event received")
+            await execute_workflow_from_notification(context, activity, "user_created")
+
+        @notification.on_user_deleted()
+        async def on_user_deleted(context: TurnContext, state: TurnState, activity: AgentNotificationActivity):
+            logger.info("User deleted lifecycle event received")
+            await execute_workflow_from_notification(context, activity, "user_deleted")
+
+        logger.info("A365 notification handlers registered")
+
+    async def setup_message_handlers(self, agent_app: AgentApplication, session_manager: SessionManager) -> None:
+        """Set up message handlers for regular chat messages.
+
+        Args:
+            agent_app: The Microsoft Agents SDK AgentApplication instance
+            session_manager: SessionManager for executing NAT workflows
+        """
+        from microsoft_agents.hosting.core import TurnContext
+
+        @agent_app.activity("message")
+        async def on_message(context: TurnContext, state: TurnState):
+            """Handle regular chat messages."""
+            try:
+                query = context.activity.text or ""
+
+                if not query:
+                    await context.send_activity("I didn't receive any message. Please try again.")
+                    return
+
+                # Non-content INFO line: keep operational signal without logging the user's message body.
+                # Body content is only emitted when DEBUG is enabled for this logger.
+                conversation_id = getattr(getattr(context.activity, "conversation", None), "id", None)
+                logger.info("Received chat message (text_len=%d, conversation_id=%s)", len(query), conversation_id)
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug("Chat message text (truncated): %s", query[:100])
+
+                from nat.data_models.api_server import ChatRequest
+                payload = ChatRequest.from_string(query)
+
+                identity = extract_identity_from_activity(context.activity)
+                with set_turn_identity(identity):
+                    async with session_manager.run(payload) as runner:
+                        result = await runner.result(to_type=str)
+
+                await context.send_activity(result)
+
+            except A365WorkflowExecutionError as e:
+                logger.exception("Error executing workflow from message: %s", e.workflow_type)
+                await context.send_activity("I encountered an error processing your message. Please try again.")
+            except Exception as e:
+                error_msg = str(e).lower()
+                logger.exception("Error handling message: %s", type(e).__name__)
+
+                if "timeout" in error_msg:
+                    user_message = "Your message timed out. Please try again."
+                elif "validation" in error_msg or "invalid" in error_msg:
+                    user_message = "Invalid message format. Please check your input and try again."
+                else:
+                    user_message = "I encountered an error processing your message. Please try again."
+
+                await context.send_activity(user_message)
+
+        logger.info("Message handlers registered")
+
+    def setup_error_handlers(self, agent_app: AgentApplication) -> None:
+        """Set up error handlers for the AgentApplication.
+
+        Args:
+            agent_app: The Microsoft Agents SDK AgentApplication instance
+        """
+        from microsoft_agents.hosting.core import TurnContext
+
+        @agent_app.error
+        async def on_error(context: TurnContext, error: Exception):
+            """Handle unhandled errors in the AgentApplication."""
+            # Log full error details server-side for debugging
+            logger.exception("Unhandled error in Agent 365 front-end: %s: %s", type(error).__name__, error)
+
+            # Provide user-friendly error message without exposing internals
+            # Check for our custom exception types first for better error handling
+            if isinstance(error, A365AuthenticationError):
+                user_message = "Authentication failed. Please verify your credentials and try again."
+            elif isinstance(error, A365SDKError):
+                # SDK errors might be configuration issues
+                if "port" in str(error).lower() or "address" in str(error).lower():
+                    user_message = "Server configuration error. Please contact your administrator."
+                else:
+                    user_message = "A system error occurred. Please try again later."
+            elif isinstance(error, A365WorkflowExecutionError):
+                user_message = "I encountered an error processing your request. Please try again."
+            else:
+                error_msg = str(error).lower()
+                if "authentication" in error_msg or "unauthorized" in error_msg:
+                    user_message = "Authentication failed. Please verify your credentials and try again."
+                elif "timeout" in error_msg:
+                    user_message = "The request timed out. Please try again."
+                elif "connection" in error_msg or "network" in error_msg:
+                    user_message = "Connection error occurred. Please check your network connection and try again."
+                else:
+                    user_message = "I encountered an error processing your request. Please try again."
+
+            await context.send_activity(user_message)
+
+        logger.info("Error handlers registered")
+
+    async def cleanup(self) -> None:
+        """Clean up any resources managed by the worker.
+
+        Currently, the worker doesn't manage any resources that need explicit cleanup,
+        but this method is provided for consistency with other workers and future extensibility.
+        """
+        # No resources to clean up currently, but this provides an extension point
+        # for subclasses that might manage resources (e.g., HTTP clients, connections)
+        pass

@@ -67,6 +67,7 @@ DB(s?)
 Dynatrace
 [Ee]mbedder(s?)
 [Ee]ngineerable
+Entra
 etcd
 [Ee]val
 [Ee]xfiltration
