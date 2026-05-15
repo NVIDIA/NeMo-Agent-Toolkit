@@ -37,6 +37,7 @@ from nat.data_models.function import FunctionGroupBaseConfig
 from nat.middleware.function_middleware import FunctionMiddlewareChain
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import Middleware
+from nat.utils.type_utils import DecomposedType
 
 _InvokeFnT = Callable[[InputT], Awaitable[SingleOutputT]]
 _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]
@@ -44,6 +45,13 @@ _StreamFnT = Callable[[InputT], AsyncGenerator[StreamingOutputT]]
 _T = typing.TypeVar("_T")
 
 logger = logging.getLogger(__name__)
+
+
+def _needs_conversion(value: typing.Any, to_type: type | None) -> bool:
+    if to_type is None:
+        return False
+
+    return not DecomposedType(to_type).is_instance(value)
 
 
 class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
@@ -192,7 +200,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
 
                 result = await invoke_callable(converted_input)
 
-                if to_type is not None and not isinstance(result, to_type):
+                if _needs_conversion(result, to_type):
                     result = self.convert(result, to_type)
 
                 manager.set_output(result)
@@ -286,7 +294,7 @@ class Function(FunctionBase[InputT, StreamingOutputT, SingleOutputT], ABC):
                 stream_callable = self._middlewared_stream or self._astream
 
                 async for data in stream_callable(converted_input):
-                    if to_type is not None and not isinstance(data, to_type):
+                    if _needs_conversion(data, to_type):
                         converted_data = self.convert(data, to_type=to_type)
                         final_output.append(converted_data)
                         yield converted_data

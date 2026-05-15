@@ -136,6 +136,9 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
             The python type of the input type
         """
 
+        if (self.input_type is typing.Any):
+            return object
+
         input_origin = typing.get_origin(self.input_type)
 
         if (input_origin is None):
@@ -221,6 +224,9 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
             The python type of the output type
         """
 
+        if (self.streaming_output_type is typing.Any):
+            return object
+
         output_origin = typing.get_origin(self.streaming_output_type)
 
         if (output_origin is None):
@@ -294,6 +300,9 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
             The python type of the output type
         """
 
+        if (self.single_output_type is typing.Any):
+            return object
+
         output_origin = typing.get_origin(self.single_output_type)
 
         if (output_origin is None):
@@ -351,7 +360,7 @@ class FunctionBase(typing.Generic[InputT, StreamingOutputT, SingleOutputT], ABC)
         return True
 
     def _convert_input(self, value: typing.Any) -> InputT:
-        if (isinstance(value, self.input_class)):
+        if (DecomposedType(self.input_type).is_instance(value)):
             return value
 
         # No converter, try to convert to the input schema
