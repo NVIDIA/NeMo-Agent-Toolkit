@@ -466,7 +466,7 @@ function_groups:
       default_confidence_threshold: 0.25
       ranking:
         enable_reranker: true
-        model_name: nvidia/llama-3.2-nv-rerankqa-1b-v2
+        model_name: nvidia/llama-nemotron-rerank-1b-v2
       query_rewriter:
         enabled: true
 ```
