@@ -606,6 +606,28 @@ async def test_ainvoke_output_type_conversion_failure():
             await fn_obj.ainvoke("test", to_type=IncompatibleType)
 
 
+async def test_ainvoke_accepts_any_input_and_output_type():
+    """Test that Any input/output annotations do not get passed to isinstance."""
+
+    @register_function(config_type=DummyConfig)
+    async def _register(config: DummyConfig, b: Builder):
+
+        async def _inner(message: typing.Any) -> typing.Any:
+            return {"message": message}
+
+        yield _inner
+
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
+
+        assert fn_obj.input_type is typing.Any
+        assert fn_obj.input_class is object
+        assert fn_obj.single_output_type is typing.Any
+        assert fn_obj.single_output_class is object
+        assert await fn_obj.ainvoke("test", to_type=typing.Any) == {"message": "test"}
+
+
 async def test_astream_output_type_conversion_failure():
     """Test that astream raises an exception when output cannot be converted to the specified to_type."""
 
@@ -637,6 +659,31 @@ async def test_astream_output_type_conversion_failure():
         with pytest.raises(ValueError, match="Cannot convert type .* to .* No match found"):
             async for output in fn_obj.astream("test", to_type=IncompatibleType):
                 pass  # The exception should be raised during the first iteration
+
+
+async def test_astream_accepts_any_output_type():
+    """Test that Any stream output annotations do not get passed to isinstance."""
+
+    @register_function(config_type=DummyConfig)
+    async def _register(config: DummyConfig, b: Builder):
+
+        async def _stream_inner(message: str) -> AsyncGenerator[typing.Any]:
+            yield {"message": message}
+
+        yield _stream_inner
+
+    async with WorkflowBuilder() as builder:
+
+        fn_obj = await builder.add_function(name="test_function", config=DummyConfig())
+
+        assert fn_obj.streaming_output_type is typing.Any
+        assert fn_obj.streaming_output_class is object
+
+        result = None
+        async for output in fn_obj.astream("test", to_type=typing.Any):
+            result = output
+
+        assert result == {"message": "test"}
 
 
 async def test_ainvoke_primitive_type_conversion_failure():
