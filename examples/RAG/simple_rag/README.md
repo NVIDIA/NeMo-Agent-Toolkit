@@ -398,12 +398,12 @@ uv pip install -e packages/nvidia_nat_rag
 ### Bootstrap Data
 
 > [!IMPORTANT]
-> The NVIDIA RAG Library example uses a different embedding model (`nvidia/llama-3.2-nv-embedqa-1b-v2`) than the basic quickstart. If you have an existing `cuda_docs` collection from the quickstart, drop and re-ingest with the correct embedding model:
+> The NVIDIA RAG Library example uses a different embedding model (`nvidia/llama-nemotron-embed-1b-v2`) than the basic quickstart. If you have an existing `cuda_docs` collection from the quickstart, drop and re-ingest with the correct embedding model:
 
 ```bash
 python scripts/langchain_web_ingest.py \
     -n cuda_docs \
-    -e nvidia/llama-3.2-nv-embedqa-1b-v2 \
+    -e nvidia/llama-nemotron-embed-1b-v2 \
     --drop_collection
 ```
 
