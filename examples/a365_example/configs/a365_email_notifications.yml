@@ -22,7 +22,7 @@
 # were unstable during the main demo effort, which is why the primary deployed
 # example keeps notifications disabled.
 #
-# Run with:
+# Run with (path-check-skip-next-line):
 #   nat start a365 --config_file configs/a365_email_notifications.yml
 # Required runtime env:
 #   A365_APP_ID, A365_APP_PASSWORD, A365_TENANT_ID

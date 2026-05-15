@@ -15,7 +15,7 @@
 #
 # Primary deployed A365 worker example:
 # Teams / Azure Bot front end + A365 telemetry.
-# Run with:
+# Run with (path-check-skip-next-line):
 #   nat start a365 --config_file configs/a365_worker.yml
 # Required runtime env:
 #   A365_APP_ID, A365_APP_PASSWORD, A365_BEARER_TOKEN, A365_TENANT_ID, A365_RUNTIME_AGENT_ID

@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 # A365 telemetry-only smoke test (no A365 front-end). Use for local run to verify spans reach A365.
+# path-check-skip-next-line
 # Run: A365_BEARER_TOKEN=<token> A365_TENANT_ID=<tenant-id> A365_RUNTIME_AGENT_ID=<runtime-agent-id> nat serve --config_file configs/a365_telemetry.yml
 # Then trigger a request (e.g. via console prompt) and check A365 observability for spans.
 # agent_id: use the runtime Agent 365 agent instance ID that matches the observability token.

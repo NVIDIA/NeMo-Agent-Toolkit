@@ -16,6 +16,7 @@
 # A365 Bot front-end for container / Azure (bind all interfaces).
 # Set A365_APP_ID, A365_APP_PASSWORD, A365_TENANT_ID, and optionally A365_ALLOWED_AUDIENCES
 # via env / Key Vault.
+# path-check-skip-next-line
 # Run: nat start a365 --config_file configs/a365_frontend.yml
 #
 # Azure Bot messaging endpoint: https://<your-ingress-host>/api/messages

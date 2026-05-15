@@ -129,6 +129,11 @@ ALLOWLISTED_FILE_PATH_PAIRS: set[tuple[str, str]] = {
         r"^examples/deploy/README\.md",
         r"^examples/memory/memmachine/",
     ),
+    # Allow a365_example docs to reference sibling deploy/ scripts and Dockerfile
+    (
+        r"^examples/a365_example/docs/",
+        r"^examples/a365_example/deploy/",
+    ),
 }
 
 ALLOWLISTED_WORDS: set[str] = {
