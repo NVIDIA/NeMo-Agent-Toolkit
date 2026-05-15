@@ -47,7 +47,7 @@ source = "https://github.com/NVIDIA/NeMo-Agent-Toolkit"
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "harbor==0.5.0",
+  "harbor==0.6.6",
   "nvidia-nat-atif[full] == {version}",
   "nvidia-nat-core == {version}",
   "nvidia-nat-eval == {version}",

@@ -1,0 +1,1018 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""OpenClaw installed agent (Harbor integration).
+
+Upstreaming note:
+    This module tracks Harbor's installed OpenClaw agent so "nvidia-nat-harbor"
+    can register it via "--agent-import-path" before OpenClaw lands in the
+    Harbor release you depend on.
+
+    Upstream baseline:
+        "harbor/src/harbor/agents/installed/openclaw.py"
+"""
+
+import copy
+import inspect
+import json
+import shlex
+from pathlib import Path
+from typing import Any
+
+from harbor.agents.installed.base import BaseInstalledAgent
+from harbor.agents.installed.base import CliFlag
+from harbor.agents.installed.base import with_prompt_template
+from harbor.environments.base import BaseEnvironment
+from harbor.models.agent.context import AgentContext
+from harbor.models.agent.name import AgentName
+from harbor.models.trajectories import Agent
+from harbor.models.trajectories import FinalMetrics
+from harbor.models.trajectories import Metrics
+from harbor.models.trajectories import Observation
+from harbor.models.trajectories import ObservationResult
+from harbor.models.trajectories import Step
+from harbor.models.trajectories import ToolCall
+from harbor.models.trajectories import Trajectory
+from harbor.utils.trajectory_utils import format_trajectory_json
+
+OPENCLAW_AGENT_SETUP_TIMEOUT_SEC = 1200.0
+
+_NEMO_FLOW_PLUGIN_MANIFEST_ID = "nemo-flow"
+# Published OpenClaw integration ("npm:nemo-flow-openclaw"); pin for reproducible trials.
+_NEMO_FLOW_OPENCLAW_NPM_VERSION = "0.2.0-rc.3"
+
+# ATIF JSON lands under the trial agent logs mount so it is collected with other logs.
+_NEMO_FLOW_ATIF_OUTPUT_DIR = "/logs/agent/nemo-flow-atif"
+# Shape must match NeMo-Flow "integrations/openclaw/openclaw.plugin.json" "configSchema".
+_NEMO_FLOW_PLUGIN_ENTRY_DEFAULTS: dict[str, Any] = {
+    "enabled": True,
+    "hooks": {"allowConversationAccess": True},
+    "config": {
+        "enabled": True,
+        "backend": "hooks",
+        "plugins": {
+            "version": 1,
+            "components": [
+                {
+                    "kind": "observability",
+                    "enabled": True,
+                    "config": {
+                        "version": 1,
+                        "atif": {
+                            "enabled": True,
+                            "agent_name": "openclaw",
+                            "output_directory": _NEMO_FLOW_ATIF_OUTPUT_DIR,
+                        },
+                        "opentelemetry": {
+                            "enabled": False,
+                            "transport": "http_binary",
+                            "endpoint": "http://localhost:4318/v1/traces",
+                            "service_name": "openclaw-nemo-flow",
+                        },
+                        "openinference": {
+                            "enabled": False,
+                            "transport": "http_binary",
+                            "endpoint": "http://localhost:6006/v1/traces",
+                            "service_name": "openclaw-nemo-flow",
+                        },
+                    },
+                }
+            ],
+        },
+        "capture": {
+            "includePrompts": True,
+            "includeResponses": True,
+            "stripToolArgs": True,
+            "stripToolResults": True,
+        },
+        "correlation": {
+            "llmOutputGraceMs": 250,
+            "recordTtlMs": 600000,
+            "maxRecordsPerKey": 32,
+        },
+    },
+}
+
+
+def openclaw_session_jsonl_to_atif_steps(
+    path: Path | str,
+    *,
+    instruction: str,
+    model_name: str,
+) -> list[Step] | None:
+    """Map "openclaw.session.jsonl" message lines to ATIF "Step" objects (optional).
+
+    Call this when you want a multi-step view instead of the summarized OpenClaw CLI
+    JSON envelope. Returns "None" if the file is missing, unreadable, or has no
+    usable "type: message" rows. Does not validate against the full ATIF schema beyond
+    "Step" construction.
+    """
+    path = Path(path)
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return None
+
+    def _text_from_content(content: Any) -> str:
+        if isinstance(content, str):
+            return content
+        if not isinstance(content, list):
+            return ""
+        return "".join(
+            p["text"]
+            for p in content
+            if isinstance(p, dict) and p.get("type") == "text" and isinstance(p.get("text"), str)
+        )
+
+    def _assistant_parts(content: Any) -> tuple[str, list[ToolCall]]:
+        if not isinstance(content, list):
+            return "", []
+        texts: list[str] = []
+        tools: list[ToolCall] = []
+        for p in content:
+            if not isinstance(p, dict):
+                continue
+            if p.get("type") == "text" and isinstance(p.get("text"), str):
+                texts.append(p["text"])
+            elif p.get("type") == "toolCall" and isinstance(p.get("name"), str):
+                raw = p.get("arguments", "")
+                if isinstance(raw, str):
+                    try:
+                        args: dict[str, Any] = json.loads(raw) if raw.strip() else {}
+                    except json.JSONDecodeError:
+                        args = {"raw": raw}
+                elif isinstance(raw, dict):
+                    args = raw
+                else:
+                    args = {}
+                cid = p.get("id")
+                tools.append(
+                    ToolCall(
+                        tool_call_id=str(cid) if cid is not None else "",
+                        function_name=p["name"],
+                        arguments=args,
+                    )
+                )
+        return "".join(texts), tools
+
+    def _usage_metrics(usage: Any) -> Metrics | None:
+        if not isinstance(usage, dict):
+            return None
+        inp = int(usage.get("input") or 0)
+        out = int(usage.get("output") or 0)
+        cr = int(usage.get("cacheRead") or 0)
+        cw = int(usage.get("cacheWrite") or 0)
+        if not (inp or out or cr):
+            return None
+        return Metrics(
+            prompt_tokens=inp + cr or None,
+            completion_tokens=out or None,
+            cached_tokens=cr or None,
+            extra=({"cache_write_tokens": cw} if cw else None),
+        )
+
+    rows: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if rec.get("type") != "message":
+            continue
+        inner = rec.get("message")
+        if not isinstance(inner, dict):
+            continue
+        role = inner.get("role")
+        if role in ("user", "assistant", "toolResult"):
+            rows.append((rec, inner))
+
+    if not rows:
+        return None
+
+    steps: list[Step] = []
+    sid = 0
+    first_user = True
+    i = 0
+    while i < len(rows):
+        rec, msg = rows[i]
+        ts = rec.get("timestamp") if isinstance(rec.get("timestamp"), str) else None
+        role = msg.get("role")
+
+        if role == "user":
+            body = _text_from_content(msg.get("content"))
+            user_msg = instruction.strip() if (first_user and instruction.strip()) else body
+            first_user = False
+            sid += 1
+            steps.append(
+                Step(
+                    step_id=sid,
+                    source="user",
+                    message=user_msg or "(empty user message)",
+                    timestamp=ts,
+                )
+            )
+            i += 1
+            continue
+
+        if role == "assistant":
+            text, tools = _assistant_parts(msg.get("content"))
+            err = msg.get("errorMessage")
+            if text.strip():
+                agent_msg = text.strip()
+            elif isinstance(err, str) and err.strip():
+                agent_msg = f"(error) {err.strip()}"
+            else:
+                agent_msg = "(no assistant text)"
+
+            j = i + 1
+            pending = {t.tool_call_id for t in tools if t.tool_call_id}
+            ob: list[ObservationResult] = []
+            while j < len(rows) and rows[j][1].get("role") == "toolResult":
+                tr = rows[j][1]
+                cid = str(tr.get("toolCallId") or "")
+                if cid not in pending:
+                    break
+                details = tr.get("details")
+                body_t = ""
+                if isinstance(details, dict):
+                    agg = details.get("aggregated")
+                    if isinstance(agg, str) and agg.strip():
+                        body_t = agg
+                if not body_t:
+                    body_t = _text_from_content(tr.get("content"))
+                ob.append(ObservationResult(source_call_id=cid or None, content=body_t or None))
+                pending.discard(cid)
+                j += 1
+                if not pending:
+                    break
+
+            sid += 1
+            steps.append(
+                Step(
+                    step_id=sid,
+                    source="agent",
+                    message=agent_msg,
+                    timestamp=ts,
+                    model_name=model_name,
+                    tool_calls=tools or None,
+                    observation=Observation(results=ob) if ob else None,
+                    metrics=_usage_metrics(msg.get("usage")),
+                )
+            )
+            i = j
+            continue
+
+        i += 1
+
+    if len(steps) < 2:
+        return None
+    return steps
+
+
+def _openclaw_decode_last_json_dict_suffix(raw: str):
+    """Parse the last top-level JSON object in *raw* when it consumes the rest of the string.
+
+    Host-side helper for parsing openclaw.txt's last JSON object.
+    """
+    text = raw.strip()
+    if not text:
+        return None
+    dec = json.JSONDecoder()
+    for start in range(len(text) - 1, -1, -1):
+        if text[start] != "{":
+            continue
+        try:
+            obj, consumed = dec.raw_decode(text[start:])
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if not isinstance(obj, dict):
+            continue
+        if text[start + consumed :].strip():
+            continue
+        return obj
+    return None
+
+
+def _openclaw_container_copy_session_transcript() -> None:
+    """
+    Stdlib-only logic run inside the agent container ("python3 -c").
+    Serialized via "inspect.getsource" as a **single** self-contained function.
+    Parse "openclaw.txt" by finding the last JSON object that consumes the file suffix,
+    then copy "agentMeta.sessionFile".
+    """
+    import json
+    import shutil
+    import sys
+    from pathlib import Path
+
+    log_path = Path("/logs/agent/openclaw.txt")
+    if not log_path.is_file():
+        sys.exit(0)
+    raw = log_path.read_text(encoding="utf-8", errors="replace")
+    text = raw.strip()
+    if not text:
+        sys.exit(0)
+    dec = json.JSONDecoder()
+    envelope = None
+    for start in range(len(text) - 1, -1, -1):
+        if text[start] != "{":
+            continue
+        try:
+            obj, consumed = dec.raw_decode(text[start:])
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if not isinstance(obj, dict):
+            continue
+        if text[start + consumed :].strip():
+            continue
+        envelope = obj
+        break
+    if not envelope:
+        sys.exit(0)
+    meta = envelope.get("meta")
+    if not isinstance(meta, dict):
+        sys.exit(0)
+    agent_meta = meta.get("agentMeta")
+    if not isinstance(agent_meta, dict):
+        sys.exit(0)
+    session_file = agent_meta.get("sessionFile")
+    if not isinstance(session_file, str) or not session_file.strip():
+        sys.exit(0)
+    src = Path(session_file)
+    if not src.is_file():
+        sys.exit(0)
+    dst = Path("/logs/agent") / "openclaw.session.jsonl"
+    shutil.copy2(src, dst)
+
+
+def _nvm22(cmd: str) -> str:
+    return f". ~/.nvm/nvm.sh && nvm use 22 && {cmd}"
+
+
+class OpenClaw(BaseInstalledAgent):
+    """
+    OpenClaw in Harbor: "openclaw agent --local --json" (stdout is one JSON object).
+
+    Host writes merged config as "openclaw.upload.json"; after "openclaw setup" it is
+    copied to "~/.openclaw/openclaw.json". Session JSONL is copied to
+    "/logs/agent/openclaw.session.jsonl" when available.
+
+    "nvidia/*": "NVIDIA_BASE_URL" and provider schema come from env / "--model" if
+    missing. Headless runs append "message" to "tools.deny".
+
+    NeMo Flow: "openclaw plugins install npm:nemo-flow-openclaw@…" (pinned); disable with
+    "enable_nemo_flow: false" or override "plugins" in "openclaw_config".
+
+    "use_openclaw_session_jsonl_for_steps": when true (default), "populate_context_post_run"
+    prefers "openclaw.session.jsonl" via "openclaw_session_jsonl_to_atif_steps"; otherwise
+    the summarized CLI envelope is used.
+
+    Trial caps all of "install()": (360s or "override_setup_timeout_sec") times
+    ("agent_setup_timeout_multiplier" or "timeout_multiplier"). Trials CLI:
+    "--agent-setup-timeout SEC". Jobs CLI: no seconds flag; use
+    "--agent-setup-timeout-multiplier", "--timeout-multiplier", or YAML
+    "override_setup_timeout_sec" on the agent.
+
+    https://github.com/openclaw/openclaw - Node 22.16+ or 24.
+    """
+
+    SUPPORTS_ATIF: bool = True
+
+    # Host-written full config; trial mounts logs here as /logs/agent - copied into ~/.openclaw/
+    _UPLOAD_CONFIG_FILENAME = "openclaw.upload.json"
+    _CONTAINER_LOGS_AGENT = "/logs/agent"
+
+    # Minimal shape matching "openclaw setup --workspace ." (see OpenClaw setupCommand).
+    _SETUP_BASELINE: dict[str, Any] = {
+        "agents": {"defaults": {"workspace": "."}},
+        "gateway": {"mode": "local"},
+    }
+
+    CLI_FLAGS = [
+        # OpenClaw's embedded CLI requires a session target; default install uses agent "main".
+        CliFlag("openclaw_agent_id", cli="--agent", type="str", default="main"),
+        CliFlag("thinking", cli="--thinking", type="str", default="high"),
+        CliFlag("timeout", cli="--timeout", type="int"),
+    ]
+
+    _DEFAULT_CONFIG: dict[str, Any] = {}
+
+    # OpenClaw tool ids to deny in Harbor (no messaging channel in "--local" runs).
+    _HEADLESS_TOOL_DENY: tuple[str, ...] = ("message",)
+
+    def __init__(
+        self,
+        *args,
+        openclaw_config: dict[str, Any] | None = None,
+        **kwargs,
+    ):
+        override_setup_timeout_sec = kwargs.pop("override_setup_timeout_sec", None)
+        self._enable_nemo_flow = bool(kwargs.pop("enable_nemo_flow", True))
+        self._use_openclaw_session_jsonl_for_steps = bool(kwargs.pop("use_openclaw_session_jsonl_for_steps", True))
+        self._install_exec_timeout_sec = int(override_setup_timeout_sec or OPENCLAW_AGENT_SETUP_TIMEOUT_SEC)
+        super().__init__(*args, **kwargs)
+        self._openclaw_config: dict[str, Any] = openclaw_config or {}
+
+    @staticmethod
+    def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+        for key, value in override.items():
+            if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                OpenClaw._deep_merge(base[key], value)
+            else:
+                base[key] = value
+        return base
+
+    @classmethod
+    def _merge_harbor_headless_tool_denies(cls, cfg: dict[str, Any]) -> None:
+        """Append Harbor headless denies to "tools.deny" without dropping user entries."""
+        raw_tools = cfg.get("tools")
+        if not isinstance(raw_tools, dict):
+            cfg["tools"] = {"deny": list(cls._HEADLESS_TOOL_DENY)}
+            return
+        deny = raw_tools.get("deny")
+        if deny is None:
+            raw_tools["deny"] = list(cls._HEADLESS_TOOL_DENY)
+            return
+        if not isinstance(deny, list):
+            raw_tools["deny"] = list(cls._HEADLESS_TOOL_DENY)
+            return
+        seen: set[str] = set()
+        merged: list[str] = []
+        for item in deny:
+            if isinstance(item, str) and item not in seen:
+                seen.add(item)
+                merged.append(item)
+        for name in cls._HEADLESS_TOOL_DENY:
+            if name not in seen:
+                seen.add(name)
+                merged.append(name)
+        raw_tools["deny"] = merged
+
+    def _merge_nemo_flow_plugin(self, cfg: dict[str, Any]) -> None:
+        """Allow and configure the NeMo Flow OpenClaw plugin; user "openclaw_config" wins."""
+        if not self._enable_nemo_flow:
+            return
+        pid = _NEMO_FLOW_PLUGIN_MANIFEST_ID
+        plugins = cfg.get("plugins")
+        if not isinstance(plugins, dict):
+            cfg["plugins"] = {}
+            plugins = cfg["plugins"]
+
+        if "bundledDiscovery" not in plugins:
+            plugins["bundledDiscovery"] = "compat"
+
+        allow = plugins.get("allow")
+        if allow is None:
+            plugins["allow"] = [pid]
+        elif isinstance(allow, list):
+            if pid not in allow:
+                plugins["allow"] = [*allow, pid]
+        else:
+            plugins["allow"] = [pid]
+
+        entries = plugins.get("entries")
+        if not isinstance(entries, dict):
+            plugins["entries"] = {}
+            entries = plugins["entries"]
+
+        existing = entries.get(pid)
+        merged_entry = copy.deepcopy(_NEMO_FLOW_PLUGIN_ENTRY_DEFAULTS)
+        if isinstance(existing, dict):
+            OpenClaw._deep_merge(merged_entry, existing)
+        entries[pid] = merged_entry
+
+    @staticmethod
+    def _shell_copy_openclaw_session_to_logs() -> str:
+        """Container command: parse "openclaw.txt" JSON, copy "agentMeta.sessionFile" to logs."""
+        body = inspect.getsource(_openclaw_container_copy_session_transcript)
+        script = body + "\n_openclaw_container_copy_session_transcript()\n"
+        return "python3 -c " + shlex.quote(script)
+
+    async def _copy_openclaw_session_file_to_agent_logs(
+        self, environment: BaseEnvironment, env: dict[str, str]
+    ) -> None:
+        """Copy OpenClaw session JSONL into the trial agent logs mount (best-effort)."""
+        try:
+            await self.exec_as_agent(
+                environment,
+                command=self._shell_copy_openclaw_session_to_logs(),
+                env=env,
+            )
+        except Exception:
+            self.logger.warning(
+                "Could not copy OpenClaw session file to "
+                f"{self._CONTAINER_LOGS_AGENT}/openclaw.session.jsonl (non-fatal)",
+                exc_info=True,
+            )
+
+    @staticmethod
+    def name() -> str:
+        return AgentName.OPENCLAW.value
+
+    def get_version_command(self) -> str | None:
+        return _nvm22("openclaw --version")
+
+    async def install(self, environment: BaseEnvironment) -> None:
+        root_pkgs = "curl ca-certificates"
+        await self.exec_as_root(
+            environment,
+            command=(f"apt-get update && apt-get install -y --no-install-recommends {root_pkgs}"),
+            env={"DEBIAN_FRONTEND": "noninteractive"},
+        )
+        timeout = self._install_exec_timeout_sec
+        await self.exec_as_agent(
+            environment,
+            command=(
+                "set -o pipefail; curl -fsSL --retry 5 --retry-delay 2 "
+                "--retry-all-errors "
+                "https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh "
+                "| bash"
+            ),
+            timeout_sec=timeout,
+        )
+        await self.exec_as_agent(
+            environment,
+            command=('export NVM_DIR="${NVM_DIR:-$HOME/.nvm}" && . "$NVM_DIR/nvm.sh" && nvm install 22'),
+            timeout_sec=timeout,
+        )
+        await self.exec_as_agent(
+            environment,
+            command=_nvm22("node -v && npm -v"),
+            timeout_sec=timeout,
+        )
+        version_spec = f"@{self._version}" if self._version else "@latest"
+        oc_pkg = shlex.quote(f"openclaw{version_spec}")
+        await self.exec_as_agent(
+            environment,
+            command=_nvm22(
+                f"npm install -g {oc_pkg} "
+                "--fetch-retries=5 --fetch-retry-mintimeout=20000 "
+                "--fetch-retry-maxtimeout=120000"
+            ),
+            timeout_sec=timeout,
+        )
+        await self.exec_as_agent(
+            environment,
+            command=_nvm22("openclaw --version"),
+            timeout_sec=timeout,
+        )
+        if self._enable_nemo_flow:
+            plugin_ref = f"npm:nemo-flow-openclaw@{_NEMO_FLOW_OPENCLAW_NPM_VERSION}"
+            await self.exec_as_agent(
+                environment,
+                command=_nvm22(f"openclaw plugins install {shlex.quote(plugin_ref)} --force"),
+                timeout_sec=timeout,
+            )
+
+    @staticmethod
+    def _load_json_object(raw: str) -> dict[str, Any] | None:
+        text = raw.strip()
+        if not text:
+            return None
+        try:
+            parsed = json.loads(text)
+            return parsed if isinstance(parsed, dict) else None
+        except json.JSONDecodeError:
+            pass
+        return _openclaw_decode_last_json_dict_suffix(text)
+
+    def _parse_stdout(self) -> dict[str, Any] | None:
+        output_path = self.logs_dir / "openclaw.txt"
+        if not output_path.exists():
+            return None
+        return self._load_json_object(output_path.read_text())
+
+    def _merge_nvidia_base_url_from_env(self, cfg: dict[str, Any]) -> None:
+        """Apply "NVIDIA_BASE_URL" to "models.providers.nvidia" if not already configured."""
+        if not self.model_name or not self.model_name.startswith("nvidia/"):
+            return
+        base = (self._get_env("NVIDIA_BASE_URL") or "").strip()
+        if not base:
+            return
+        models = cfg.setdefault("models", {})
+        providers = models.setdefault("providers", {})
+        nvidia = providers.setdefault("nvidia", {})
+        if isinstance(nvidia, dict) and "baseUrl" not in nvidia:
+            nvidia["baseUrl"] = base
+
+    _NVIDIA_DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
+
+    def _normalize_nvidia_models_provider(self, cfg: dict[str, Any]) -> None:
+        """Align "models.providers.nvidia" with OpenClaw's provider schema ("baseUrl", "models")."""
+        models_root = cfg.get("models")
+        if not isinstance(models_root, dict):
+            return
+        providers = models_root.get("providers")
+        if not isinstance(providers, dict):
+            return
+        nvidia = providers.get("nvidia")
+        if not isinstance(nvidia, dict):
+            return
+
+        raw_models = nvidia.get("models")
+        if not isinstance(raw_models, list):
+            nvidia["models"] = []
+
+        base_url = nvidia.get("baseUrl")
+        if not isinstance(base_url, str) or not base_url.strip():
+            env_base = (self._get_env("NVIDIA_BASE_URL") or "").strip()
+            nvidia["baseUrl"] = env_base or self._NVIDIA_DEFAULT_BASE_URL
+
+        if len(nvidia["models"]) == 0 and self.model_name and self.model_name.startswith("nvidia/"):
+            mid = self.model_name
+            nvidia["models"] = [{"id": mid, "name": mid}]
+
+    def _build_full_openclaw_config(self, *, include_nemo_flow_plugin: bool = True) -> dict[str, Any]:
+        """Full "openclaw.json" content: setup baseline + task/job overlays."""
+        cfg = copy.deepcopy(self._SETUP_BASELINE)
+        self._deep_merge(cfg, copy.deepcopy(self._DEFAULT_CONFIG))
+        self._deep_merge(cfg, copy.deepcopy(self._openclaw_config))
+        if self.mcp_servers:
+            servers: dict[str, dict[str, Any]] = {}
+            for server in self.mcp_servers:
+                if server.transport == "stdio":
+                    entry: dict[str, Any] = {}
+                    if server.command:
+                        entry["command"] = server.command
+                    if server.args:
+                        entry["args"] = server.args
+                    servers[server.name] = entry
+                elif server.transport == "sse":
+                    servers[server.name] = {
+                        "url": server.url,
+                        "transport": "sse",
+                    }
+                else:
+                    servers[server.name] = {
+                        "url": server.url,
+                        "transport": "streamable-http",
+                    }
+            mcp_patch = cfg.setdefault("mcp", {})
+            existing = mcp_patch.get("servers")
+            merged_servers: dict[str, Any] = dict(existing) if isinstance(existing, dict) else {}
+            merged_servers.update(servers)
+            mcp_patch["servers"] = merged_servers
+
+        self._merge_nvidia_base_url_from_env(cfg)
+        self._normalize_nvidia_models_provider(cfg)
+        self._merge_harbor_headless_tool_denies(cfg)
+        if include_nemo_flow_plugin:
+            self._merge_nemo_flow_plugin(cfg)
+
+        return cfg
+
+    def _trajectory_from_envelope_with_steps(self, envelope: dict[str, Any], steps: list[Step]) -> Trajectory | None:
+        """ATIF shell from CLI envelope meta + caller-supplied steps (e.g. session JSONL)."""
+        meta = envelope.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+        agent_meta = meta.get("agentMeta")
+        session_id = (
+            agent_meta.get("sessionId")
+            if isinstance(agent_meta, dict) and isinstance(agent_meta.get("sessionId"), str)
+            else None
+        ) or "unknown"
+        usage_fm: dict[str, Any] | None = None
+        if isinstance(agent_meta, dict):
+            u2 = agent_meta.get("usage")
+            if isinstance(u2, dict):
+                usage_fm = u2
+        input_tok_fm = int(usage_fm.get("input") or 0) if usage_fm else 0
+        output_tok_fm = int(usage_fm.get("output") or 0) if usage_fm else 0
+        cache_read_fm = int(usage_fm.get("cacheRead") or 0) if usage_fm else 0
+        prompt_fm = input_tok_fm + cache_read_fm
+        final_metrics = FinalMetrics(
+            total_prompt_tokens=prompt_fm or None,
+            total_completion_tokens=output_tok_fm or None,
+            total_cached_tokens=cache_read_fm or None,
+            total_steps=len(steps),
+        )
+        return Trajectory(
+            schema_version="ATIF-v1.7",
+            session_id=session_id,
+            agent=Agent(
+                name="openclaw",
+                version=self.version() or "unknown",
+                model_name=self.model_name,
+            ),
+            steps=steps,
+            final_metrics=final_metrics,
+        )
+
+    def _convert_envelope_to_trajectory(self, envelope: dict[str, Any], instruction: str) -> Trajectory | None:
+        """Map OpenClaw CLI JSON (embedded "--local" run) to ATIF."""
+        meta = envelope.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+
+        agent_meta = meta.get("agentMeta")
+        session_id = (
+            agent_meta.get("sessionId")
+            if isinstance(agent_meta, dict) and isinstance(agent_meta.get("sessionId"), str)
+            else None
+        ) or "unknown"
+
+        payloads = envelope.get("payloads")
+        if not isinstance(payloads, list):
+            payloads = []
+
+        text_parts: list[str] = []
+        reasoning_parts: list[str] = []
+        for item in payloads:
+            if not isinstance(item, dict):
+                continue
+            t = item.get("text")
+            if not isinstance(t, str) or not t.strip():
+                continue
+            if item.get("isReasoning") is True:
+                reasoning_parts.append(t.strip())
+            else:
+                text_parts.append(t.strip())
+
+        assistant_text = "\n\n".join(text_parts) if text_parts else ""
+        if not assistant_text and isinstance(meta.get("finalAssistantVisibleText"), str):
+            assistant_text = meta["finalAssistantVisibleText"].strip()
+
+        tool_calls: list[ToolCall] | None = None
+        pending = meta.get("pendingToolCalls")
+        if isinstance(pending, list):
+            calls: list[ToolCall] = []
+            for c in pending:
+                if not isinstance(c, dict):
+                    continue
+                name = c.get("name")
+                if not isinstance(name, str):
+                    continue
+                args_raw = c.get("arguments", "")
+                if isinstance(args_raw, str):
+                    try:
+                        args: dict[str, Any] = json.loads(args_raw) if args_raw.strip() else {}
+                    except json.JSONDecodeError:
+                        args = {"raw": args_raw}
+                elif isinstance(args_raw, dict):
+                    args = args_raw
+                else:
+                    args = {}
+                cid = c.get("id")
+                calls.append(
+                    ToolCall(
+                        tool_call_id=str(cid) if cid is not None else "",
+                        function_name=name,
+                        arguments=args,
+                    )
+                )
+            if calls:
+                tool_calls = calls
+
+        usage: dict[str, Any] | None = None
+        if isinstance(agent_meta, dict):
+            u = agent_meta.get("usage")
+            if isinstance(u, dict):
+                usage = u
+
+        input_tok = int(usage.get("input") or 0) if usage else 0
+        output_tok = int(usage.get("output") or 0) if usage else 0
+        cache_read = int(usage.get("cacheRead") or 0) if usage else 0
+        cache_write = int(usage.get("cacheWrite") or 0) if usage else 0
+
+        prompt_for_metrics = input_tok + cache_read
+        step_metrics: Metrics | None = None
+        if input_tok or output_tok or cache_read:
+            step_metrics = Metrics(
+                prompt_tokens=prompt_for_metrics or None,
+                completion_tokens=output_tok or None,
+                cached_tokens=cache_read or None,
+                extra=({"cache_write_tokens": cache_write} if cache_write else None),
+            )
+
+        steps: list[Step] = [
+            Step(
+                step_id=1,
+                source="user",
+                message=instruction,
+            ),
+        ]
+        agent_step_kwargs: dict[str, Any] = {
+            "step_id": 2,
+            "source": "agent",
+            "message": assistant_text or "(no assistant text in JSON output)",
+            "model_name": self.model_name,
+        }
+        if reasoning_parts:
+            agent_step_kwargs["reasoning_content"] = "\n\n".join(reasoning_parts)
+        if tool_calls:
+            agent_step_kwargs["tool_calls"] = tool_calls
+        if step_metrics:
+            agent_step_kwargs["metrics"] = step_metrics
+        steps.append(Step(**agent_step_kwargs))
+
+        final_metrics = FinalMetrics(
+            total_prompt_tokens=prompt_for_metrics or None,
+            total_completion_tokens=output_tok or None,
+            total_cached_tokens=cache_read or None,
+            total_steps=len(steps),
+        )
+
+        return Trajectory(
+            # Harbor 0.5.x "Trajectory" allows ATIF-v1.6 max; match until deps add v1.7.
+            schema_version="ATIF-v1.6",
+            session_id=session_id,
+            agent=Agent(
+                name="openclaw",
+                version=self.version() or "unknown",
+                model_name=self.model_name,
+            ),
+            steps=steps,
+            final_metrics=final_metrics,
+        )
+
+    def populate_context_post_run(self, context: AgentContext) -> None:
+        envelope = self._parse_stdout()
+        if not envelope:
+            return
+
+        instruction_path = self.logs_dir / "instruction.txt"
+        instruction = ""
+        try:
+            if instruction_path.exists():
+                instruction = instruction_path.read_text()
+        except OSError:
+            pass
+
+        try:
+            trajectory = None
+            if self._use_openclaw_session_jsonl_for_steps:
+                session_path = self.logs_dir / "openclaw.session.jsonl"
+                session_steps = openclaw_session_jsonl_to_atif_steps(
+                    session_path,
+                    instruction=instruction,
+                    model_name=self.model_name or "",
+                )
+                if session_steps:
+                    trajectory = self._trajectory_from_envelope_with_steps(envelope, session_steps)
+            if trajectory is None:
+                trajectory = self._convert_envelope_to_trajectory(envelope, instruction)
+        except Exception:
+            self.logger.exception("Failed to convert OpenClaw JSON to trajectory")
+            return
+
+        if not trajectory:
+            return
+
+        trajectory_path = self.logs_dir / "trajectory.json"
+        try:
+            trajectory_path.write_text(format_trajectory_json(trajectory.to_json_dict()))
+            self.logger.debug(f"Wrote OpenClaw trajectory to {trajectory_path}")
+        except OSError as exc:
+            self.logger.debug(f"Failed to write trajectory file {trajectory_path}: {exc}")
+
+        if trajectory.final_metrics:
+            fm = trajectory.final_metrics
+            context.cost_usd = fm.total_cost_usd
+            context.n_input_tokens = fm.total_prompt_tokens or 0
+            context.n_output_tokens = fm.total_completion_tokens or 0
+            context.n_cache_tokens = fm.total_cached_tokens or 0
+
+    def _build_register_skills_command(self) -> str | None:
+        if not self.skills_dir:
+            return None
+        return (
+            f"mkdir -p ~/.openclaw/skills && "
+            f"cp -r {shlex.quote(self.skills_dir)}/* "
+            f"~/.openclaw/skills/ 2>/dev/null || true"
+        )
+
+    @with_prompt_template
+    async def run(
+        self,
+        instruction: str,
+        environment: BaseEnvironment,
+        context: AgentContext,
+    ) -> None:
+        escaped_instruction = shlex.quote(instruction)
+
+        if not self.model_name or "/" not in self.model_name:
+            raise ValueError("Model name must be in the format provider/model_name")
+
+        provider, _ = self.model_name.split("/", 1)
+
+        env: dict[str, str] = {}
+        keys: list[str] = []
+
+        if provider == "amazon-bedrock":
+            keys.extend(["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION"])
+        elif provider == "anthropic":
+            keys.append("ANTHROPIC_API_KEY")
+        elif provider == "azure":
+            keys.extend(["AZURE_RESOURCE_NAME", "AZURE_API_KEY"])
+        elif provider == "deepseek":
+            keys.append("DEEPSEEK_API_KEY")
+        elif provider == "github-copilot":
+            keys.append("GITHUB_TOKEN")
+        elif provider == "google":
+            keys.extend(
+                [
+                    "GEMINI_API_KEY",
+                    "GOOGLE_GENERATIVE_AI_API_KEY",
+                    "GOOGLE_APPLICATION_CREDENTIALS",
+                    "GOOGLE_CLOUD_PROJECT",
+                    "GOOGLE_CLOUD_LOCATION",
+                    "GOOGLE_GENAI_USE_VERTEXAI",
+                    "GOOGLE_API_KEY",
+                ]
+            )
+        elif provider == "groq":
+            keys.append("GROQ_API_KEY")
+        elif provider == "huggingface":
+            keys.append("HF_TOKEN")
+        elif provider == "llama":
+            keys.append("LLAMA_API_KEY")
+        elif provider == "mistral":
+            keys.append("MISTRAL_API_KEY")
+        elif provider == "nvidia":
+            keys.extend(["NVIDIA_API_KEY", "NVIDIA_BASE_URL"])
+        elif provider == "openai":
+            keys.extend(["OPENAI_API_KEY", "OPENAI_BASE_URL"])
+        elif provider == "opencode":
+            keys.append("OPENCODE_API_KEY")
+        elif provider == "xai":
+            keys.append("XAI_API_KEY")
+        elif provider == "openrouter":
+            keys.append("OPENROUTER_API_KEY")
+        else:
+            raise ValueError(
+                f"Unknown provider {provider}. If you believe this provider "
+                "should be supported, please contact the maintainers."
+            )
+
+        for key in keys:
+            val = self._get_env(key)
+            if val:
+                env[key] = val
+            else:
+                self.logger.debug("Missing optional env key for OpenClaw run: %s", key)
+
+        upload_path = self.logs_dir / self._UPLOAD_CONFIG_FILENAME
+        upload_path.write_text(
+            json.dumps(
+                self._build_full_openclaw_config(include_nemo_flow_plugin=self._enable_nemo_flow),
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        try:
+            instruction_path = self.logs_dir / "instruction.txt"
+            instruction_path.write_text(instruction)
+        except OSError:
+            pass
+
+        await self.exec_as_agent(
+            environment,
+            command=_nvm22("openclaw setup --workspace ."),
+            env=env,
+        )
+
+        copy_upload = (
+            "mkdir -p ~/.openclaw && cp "
+            f"{shlex.quote(f'{self._CONTAINER_LOGS_AGENT}/{self._UPLOAD_CONFIG_FILENAME}')} "
+            "~/.openclaw/openclaw.json"
+        )
+        await self.exec_as_agent(
+            environment,
+            command=copy_upload,
+            env=env,
+        )
+
+        skills_command = self._build_register_skills_command()
+        if skills_command:
+            await self.exec_as_agent(environment, command=skills_command, env=env)
+
+        cli_flags = self.build_cli_flags()
+        cli_flags_arg = (cli_flags + " ") if cli_flags else ""
+        command = (
+            ". ~/.nvm/nvm.sh && nvm use 22 && "
+            f"openclaw agent --local --json {cli_flags_arg}"
+            f"--model {shlex.quote(self.model_name)} "
+            f"--message {escaped_instruction} "
+            f"2>&1 </dev/null | stdbuf -oL tee /logs/agent/openclaw.txt"
+        )
+        self.logger.debug("OpenClaw agent env keys: %s", sorted(env))
+        self.logger.debug("OpenClaw agent command: %s", command)
+        await self.exec_as_agent(environment, command, env=env)
+        await self._copy_openclaw_session_file_to_agent_logs(environment, env)
