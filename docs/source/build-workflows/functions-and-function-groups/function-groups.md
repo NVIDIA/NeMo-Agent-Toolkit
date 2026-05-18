@@ -365,7 +365,7 @@ This will return a list of all accessible functions in the function group that a
 
 Functions inside a group are automatically namespaced by the group instance name. This creates a clear hierarchy and prevents naming conflicts.
 
-To maintain compatibility with third-party libraries, the namespace separator switched from `.` (period) to `__` (double underscore).
+Function groups expose functions with fully qualified names that use `__` (double underscore) between the group instance name and the function name. This keeps names compatible with third-party frameworks that reject or reinterpret `.` in tool names.
 
 **Pattern**: `instance_name__function_name`
 
