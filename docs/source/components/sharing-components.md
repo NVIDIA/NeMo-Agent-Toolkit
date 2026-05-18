@@ -58,7 +58,7 @@ requirements.
 ```python
 from pydantic import Field
 
-from nat.data_models.function import FunctionBaseConfig
+from nat.plugin_api import FunctionBaseConfig
 
 class MyFnConfig(FunctionBaseConfig, name="my_fn_name"):  # includes a name
     """The docstring should provide a description of the components utility."""  # includes a docstring

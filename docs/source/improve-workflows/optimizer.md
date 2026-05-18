@@ -196,7 +196,7 @@ Here's how you can define optimizable fields in your workflow's data models:
 ```python
 from pydantic import BaseModel
 
-from nat.data_models.function import FunctionBaseConfig
+from nat.plugin_api import FunctionBaseConfig
 from nat.data_models.optimizable import OptimizableField, SearchSpace, OptimizableMixin
 
 class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_image_agent_config"):
@@ -700,7 +700,7 @@ Callbacks are registered via the `@register_optimizer_callback(config_type=...)`
 For example, a provider registers its callback by decorating a factory function:
 
 ```python
-from nat.cli.register_workflow import register_optimizer_callback
+from nat.plugin_api import register_optimizer_callback
 
 @register_optimizer_callback(config_type=MyTelemetryExporter)
 def _build_my_optimizer_callback(config, *, dataset_name=None, **kwargs):

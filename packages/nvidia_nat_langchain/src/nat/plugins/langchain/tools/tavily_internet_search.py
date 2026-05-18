@@ -28,7 +28,7 @@ from nat.data_models.function import FunctionBaseConfig
 # Internet Search tool
 class TavilyInternetSearchToolConfig(FunctionBaseConfig, name="tavily_internet_search"):
     """
-    Tool that retrieves relevant contexts from web search (using Tavily) for the given question.
+    LangChain-backed tool that retrieves relevant contexts from Tavily web search for the given question.
     Requires a TAVILY_API_KEY.
     """
     max_results: int = 3
@@ -91,7 +91,7 @@ async def tavily_internet_search(tool_config: TavilyInternetSearchToolConfig, bu
                     return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
                 await asyncio.sleep(2**attempt)
 
-    # Create a Generic NAT tool that can be used with any supported LLM framework
+    # Create a NAT function backed by the LangChain Tavily tool.
     yield FunctionInfo.from_fn(
         _tavily_internet_search,
         description=_tavily_internet_search.__doc__,

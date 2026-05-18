@@ -231,6 +231,7 @@ Sharing Components <./components/sharing-components.md>
 :caption: Extend
 
 Plugins <./extend/plugins.md>
+Plugin API <./extend/plugin-api.md>
 Custom Components <./extend/custom-components/index.md>
 ./extend/testing/index.md
 ```

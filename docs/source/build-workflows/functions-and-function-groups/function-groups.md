@@ -206,7 +206,7 @@ workflow:
 
 - **Multiple functions need the same connection** (database, API client, cache)
 - **Functions share configuration** (credentials, endpoints, settings)
-- **You want to namespace related functions** (`math.add`, `math.multiply`)
+- **You want to namespace related functions** (`math__add`, `math__multiply`)
 - **Functions need to share state** (session data, counters, caches)
 - **You have a family of operations** (CRUD operations, data transformations)
 
@@ -495,7 +495,7 @@ workflow:
   llm_name: my_llm
 ```
 
-All functions in the `math` group (`math.add`, `math.multiply`) become available as tools for the agent.
+All functions in the `math` group (`math__add`, `math__multiply`) become available as tools for the agent.
 
 #### Example 2: Including Specific Functions
 
@@ -602,7 +602,7 @@ async with WorkflowBuilder() as builder:
 To wrap all accessible functions in a group for a specific agent framework:
 
 ```python
-from nat.data_models.component_ref import FunctionGroupRef
+from nat.plugin_api import FunctionGroupRef
 from nat.builder.framework_enum import LLMFrameworkEnum
 
 async with WorkflowBuilder() as builder:
@@ -640,7 +640,7 @@ async with WorkflowBuilder() as builder:
     
     # Now only "add" functions are accessible
     accessible = await math_group.get_accessible_functions()
-    # Returns: ["math.add"]
+    # Returns: ["math__add"]
 ```
 
 #### Per-Function Filters
@@ -758,11 +758,11 @@ Instance names become part of function names, so keep them concise:
 ```python
 # Good
 group = FunctionGroup(config=config, instance_name="db")
-# Results in: db.query, db.insert
+# Results in: db__query, db__insert
 
 # Less ideal
 group = FunctionGroup(config=config, instance_name="database_operations")
-# Results in: database_operations.query, database_operations.insert
+# Results in: database_operations__query, database_operations__insert
 ```
 
 #### Use Environment Variables for Secrets

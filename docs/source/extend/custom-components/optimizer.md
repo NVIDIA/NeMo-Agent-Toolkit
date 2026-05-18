@@ -35,7 +35,7 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
    - {py:class}`~nat.plugins.config_optimizer.parameters.base.BaseParameterOptimizer`: Abstract base class for parameter optimization strategies. Requires implementing an async `run()` method that returns an optimized `Config`.
 
 * **Registration**
-   - {py:deco}`~nat.cli.register_workflow.register_optimizer`: Decorator that registers an optimizer strategy with the global type registry so the optimizer runtime can resolve the strategy from the type of `cfg.optimizer.numeric` or `cfg.optimizer.prompt`.
+   - {py:deco}`~nat.plugin_api.register_optimizer`: Decorator that registers an optimizer strategy with the global type registry so the optimizer runtime can resolve the strategy from the type of `cfg.optimizer.numeric` or `cfg.optimizer.prompt`.
 
 ## Adding a Custom Prompt Optimizer
 
@@ -96,10 +96,10 @@ The `run()` method receives:
 
 ### 3. Register the Optimizer
 
-Use the {py:deco}`~nat.cli.register_workflow.register_optimizer` decorator to register your strategy:
+Use the {py:deco}`~nat.plugin_api.register_optimizer` decorator to register your strategy:
 
 ```python
-from nat.cli.register_workflow import register_optimizer
+from nat.plugin_api import register_optimizer
 
 
 @register_optimizer(config_type=IterativeRefinementPromptConfig)
@@ -194,7 +194,7 @@ class RandomSearchOptimizer(BaseParameterOptimizer):
 ### 3. Register and Configure
 
 ```python
-from nat.cli.register_workflow import register_optimizer
+from nat.plugin_api import register_optimizer
 
 
 @register_optimizer(config_type=RandomSearchConfig)

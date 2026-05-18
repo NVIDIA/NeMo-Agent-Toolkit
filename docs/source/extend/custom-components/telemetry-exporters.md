@@ -88,8 +88,8 @@ Want to get started quickly? Here's a minimal working example that creates a con
 ```python
 from pydantic import Field
 
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_telemetry_exporter
+from nat.plugin_api import Builder
+from nat.plugin_api import register_telemetry_exporter
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.exporter.raw_exporter import RawExporter
 from nat.data_models.intermediate_step import IntermediateStep
@@ -469,8 +469,8 @@ Create a registration function using the `@register_telemetry_exporter` decorato
 ```python
 import logging
 
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_telemetry_exporter
+from nat.plugin_api import Builder
+from nat.plugin_api import register_telemetry_exporter
 
 logger = logging.getLogger(__name__)
 
@@ -537,9 +537,9 @@ class MyCustomExporter(SpanExporter[Span, dict]):
 ```python
 from pydantic import Field
 
-from nat.cli.register_workflow import register_telemetry_exporter
+from nat.plugin_api import register_telemetry_exporter
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from nat.builder.builder import Builder
+from nat.plugin_api import Builder
 
 # Configuration class can be in the same file as registration
 class MyTelemetryExporter(TelemetryExporterBaseConfig, name="my_exporter"):
@@ -1423,8 +1423,8 @@ Here's a complete example of a custom telemetry exporter:
 import logging
 from pydantic import Field
 import aiohttp
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_telemetry_exporter
+from nat.plugin_api import Builder
+from nat.plugin_api import register_telemetry_exporter
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.observability.exporter.base_exporter import IsolatedAttribute

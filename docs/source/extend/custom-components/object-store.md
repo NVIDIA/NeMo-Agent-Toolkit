@@ -153,8 +153,8 @@ In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_mod
 
 3. **Register your object store with NeMo Agent Toolkit** using the `@register_object_store` decorator:
    ```python
-   from nat.builder.builder import Builder
-   from nat.cli.register_workflow import register_object_store
+   from nat.plugin_api import Builder
+   from nat.plugin_api import register_object_store
 
    @register_object_store(config_type=MyCustomObjectStoreConfig)
    async def my_custom_object_store(config: MyCustomObjectStoreConfig, _builder: Builder):

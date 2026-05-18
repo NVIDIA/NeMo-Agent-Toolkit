@@ -244,8 +244,8 @@ Key benefits of extending `DynamicFunctionMiddleware`:
 Create a registration module following the idiomatic pattern:
 
 ```python
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_middleware
+from nat.plugin_api import Builder
+from nat.plugin_api import register_middleware
 from .logging_middleware import LoggingMiddleware, LoggingMiddlewareConfig
 
 
@@ -289,8 +289,8 @@ functions:
 Register your function without needing to specify middleware in the decorator:
 
 ```python
-from nat.cli.register_workflow import register_function
-from nat.builder.builder import Builder
+from nat.plugin_api import register_function
+from nat.plugin_api import Builder
 
 
 @register_function(config_type=MyAPIFunctionConfig)
@@ -521,9 +521,9 @@ function_groups:
 ```
 
 ```python
-from nat.cli.register_workflow import register_function_group
-from nat.builder.function import FunctionGroup
-from nat.data_models.function import FunctionGroupBaseConfig
+from nat.plugin_api import register_function_group
+from nat.plugin_api import FunctionGroup
+from nat.plugin_api import FunctionGroupBaseConfig
 
 
 class WeatherAPIGroupConfig(FunctionGroupBaseConfig, name="weather_api_group"):
@@ -828,7 +828,7 @@ Solution: Ensure the register module is imported. NeMo Agent Toolkit automatical
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareChain`: Chain management
 - {py:class}`~nat.middleware.cache.cache_middleware_config.CacheMiddlewareConfig`: Cache configuration
 - {py:class}`~nat.middleware.cache.cache_middleware.CacheMiddleware`: Cache implementation
-- {py:func}`~nat.cli.register_workflow.register_middleware`: Registration decorator
+- {py:func}`~nat.plugin_api.register_middleware`: Registration decorator
 
 ## See Also
 

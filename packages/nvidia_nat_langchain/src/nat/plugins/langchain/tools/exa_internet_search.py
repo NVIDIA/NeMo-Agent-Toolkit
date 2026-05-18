@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 # Internet Search tool
 class ExaInternetSearchToolConfig(FunctionBaseConfig, name="exa_internet_search"):
     """
-    Tool that retrieves relevant contexts from web search (using Exa) for the given question.
+    LangChain-backed tool that retrieves relevant contexts from Exa web search for the given question.
     Requires an EXA_API_KEY.
     """
     max_results: int = Field(default=5, ge=1, description="Maximum number of search results to return.")
@@ -118,7 +118,7 @@ async def exa_internet_search(tool_config: ExaInternetSearchToolConfig, builder:
                 await asyncio.sleep(2**attempt)
         return f"Web search failed after {tool_config.max_retries} attempts for: {question}"
 
-    # Create a Generic NAT tool that can be used with any supported LLM framework
+    # Create a NAT function backed by the LangChain Exa tool.
     yield FunctionInfo.from_fn(
         _exa_internet_search,
         description=_exa_internet_search.__doc__,

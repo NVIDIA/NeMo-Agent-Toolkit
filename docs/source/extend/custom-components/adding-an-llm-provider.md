@@ -118,10 +118,10 @@ class NIMModelConfig(LLMBaseConfig, ThinkingMixin, name="nim"):
 ```
 
 ### Registering the Provider
-An asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_provider` is used to register the provider with NeMo Agent Toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
+An asynchronous function decorated with {py:deco}`nat.plugin_api.register_llm_provider` is used to register the provider with NeMo Agent Toolkit by yielding an instance of {class}`nat.builder.llm.LLMProviderInfo`.
 
 :::{note}
-Registering an embedder or retriever provider is similar; however, the function should be decorated with  {py:deco}`nat.cli.register_workflow.register_embedder_provider` or  {py:deco}`nat.cli.register_workflow.register_retriever_provider`.
+Registering an embedder or retriever provider is similar; however, the function should be decorated with  {py:deco}`nat.plugin_api.register_embedder_provider` or  {py:deco}`nat.plugin_api.register_retriever_provider`.
 :::
 
 
@@ -146,10 +146,10 @@ async def openai_llm(config: OpenAIModelConfig, builder: Builder):
 ```
 
 ## LLM Clients
-As previously mentioned, each LLM client is specific to both the LLM API and the framework being used. The LLM client is registered by defining an asynchronous function decorated with {py:deco}`nat.cli.register_workflow.register_llm_client`. The `register_llm_client` decorator receives two required parameters: `config_type`, which is the configuration class of the provider, and `wrapper_type`, which identifies the framework being used.
+As previously mentioned, each LLM client is specific to both the LLM API and the framework being used. The LLM client is registered by defining an asynchronous function decorated with {py:deco}`nat.plugin_api.register_llm_client`. The `register_llm_client` decorator receives two required parameters: `config_type`, which is the configuration class of the provider, and `wrapper_type`, which identifies the framework being used.
 
 :::{note}
-Registering an embedder or retriever client is similar. However, the function should be decorated with {py:deco}`nat.cli.register_workflow.register_embedder_client` or {py:deco}`nat.cli.register_workflow.register_retriever_client`.
+Registering an embedder or retriever client is similar. However, the function should be decorated with {py:deco}`nat.plugin_api.register_embedder_client` or {py:deco}`nat.plugin_api.register_retriever_client`.
 :::
 
 The wrapped function in turn receives two required positional arguments: an instance of the configuration class of the provider, and an instance of {class}`nat.builder.builder.Builder`. The function should then yield a client suitable for the given provider and framework. The exact type is dictated by the framework itself and not by NeMo Agent Toolkit.

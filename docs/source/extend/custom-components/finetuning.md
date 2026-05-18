@@ -171,8 +171,8 @@ Implement the `TrajectoryBuilder` interface's methods.
 Create a registration module:
 
 ```python
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_trajectory_builder
+from nat.plugin_api import Builder
+from nat.plugin_api import register_trajectory_builder
 
 from .my_trajectory_builder import MyTrajectoryBuilder, MyTrajectoryBuilderConfig
 
@@ -297,8 +297,8 @@ Implement the `TrainerAdapter` interface's methods.
 #### Step 3: Register the Component
 
 ```python
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_trainer_adapter
+from nat.plugin_api import Builder
+from nat.plugin_api import register_trainer_adapter
 
 from .my_trainer_adapter import MyTrainerAdapter, MyTrainerAdapterConfig
 
@@ -411,8 +411,8 @@ define configuration, implement methods, and register the component.
 Once you have your `MyTrainer` and `MyTrainerConfig` implemented, register it as follows:
 
 ```python
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_trainer
+from nat.plugin_api import Builder
+from nat.plugin_api import register_trainer
 
 from .my_trainer import MyTrainer, MyTrainerConfig
 

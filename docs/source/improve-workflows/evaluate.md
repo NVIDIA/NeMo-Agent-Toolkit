@@ -507,7 +507,7 @@ Callbacks are registered via the `@register_eval_callback(config_type=...)` deco
 For example, a provider registers its callback by decorating a factory function:
 
 ```python
-from nat.cli.register_workflow import register_eval_callback
+from nat.plugin_api import register_eval_callback
 
 @register_eval_callback(config_type=MyTelemetryExporter)
 def _build_my_eval_callback(config, **kwargs):

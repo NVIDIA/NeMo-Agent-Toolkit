@@ -70,7 +70,7 @@ class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth
 ```
 
 ### Registering the Provider
-An asynchronous function decorated with {py:func}`~nat.cli.register_workflow.register_auth_provider` is used to register the provider with NeMo Agent Toolkit by yielding an instance of
+An asynchronous function decorated with {py:func}`~nat.plugin_api.register_auth_provider` is used to register the provider with NeMo Agent Toolkit by yielding an instance of
 {py:class}`~nat.authentication.interfaces.AuthProviderBase`.
 
 The `OAuth2AuthCodeFlowProviderConfig` from the previous section is registered as follows:
