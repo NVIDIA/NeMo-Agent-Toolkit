@@ -32,7 +32,7 @@ from nat.plugins.adk.llm import openai_adk
 @pytest.fixture
 def litellm_config():
     """Sample LiteLLM configuration for testing."""
-    return OpenAIModelConfig(model_name="gpt-3.5-turbo",
+    return OpenAIModelConfig(model_name="gpt-5.4-mini",
                              temperature=0.7,
                              api_key="test-api-key",
                              base_url="https://api.openai.com/v1")
@@ -60,7 +60,7 @@ async def test_litellm_adk_with_full_config(mock_litellm_class, litellm_config, 
         result_llm = llm
 
     # Verify LiteLlm was instantiated with correct parameters
-    mock_litellm_class.assert_called_once_with('gpt-3.5-turbo',
+    mock_litellm_class.assert_called_once_with('gpt-5.4-mini',
                                                temperature=0.7,
                                                api_key='test-api-key',
                                                api_base='https://api.openai.com/v1')
@@ -72,7 +72,7 @@ async def test_litellm_adk_with_full_config(mock_litellm_class, litellm_config, 
 @patch('google.adk.models.lite_llm.LiteLlm')
 async def test_litellm_adk_config_exclusion(mock_litellm_class, mock_builder):
     """Test that 'type' field is excluded from config when creating LiteLlm."""
-    config_with_type = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.5)
+    config_with_type = OpenAIModelConfig(model_name="gpt-5.4-mini", temperature=0.5)
     # Manually add a 'type' field to test exclusion
     config_with_type.__dict__['type'] = 'test_type'
 
@@ -92,7 +92,7 @@ async def test_litellm_adk_config_exclusion(mock_litellm_class, mock_builder):
     assert 'type' not in call_kwargs
 
     # Verify expected parameters are present
-    assert call_args[0] == "gpt-3.5-turbo"  # model name as first positional arg
+    assert call_args[0] == "gpt-5.4-mini"  # model name as first positional arg
     assert call_kwargs['temperature'] == 0.5
 
     # Verify the returned LLM instance
