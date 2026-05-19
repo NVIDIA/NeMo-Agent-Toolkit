@@ -84,7 +84,7 @@ Create a configuration class inheriting from `DynamicMiddlewareConfig`:
 
 ```python
 from pydantic import Field
-    from nat.plugin_api import DynamicMiddlewareConfig
+from nat.plugin_api import DynamicMiddlewareConfig
 
 
 class LoggingMiddlewareConfig(DynamicMiddlewareConfig, name="logging_middleware"):

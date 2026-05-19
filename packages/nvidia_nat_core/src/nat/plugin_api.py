@@ -36,28 +36,19 @@ from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
 from nat.cli.register_workflow import register_eval_callback
 from nat.cli.register_workflow import register_evaluator
-from nat.cli.register_workflow import register_front_end
 from nat.cli.register_workflow import register_function
 from nat.cli.register_workflow import register_function_group
 from nat.cli.register_workflow import register_llm_client
 from nat.cli.register_workflow import register_llm_provider
-from nat.cli.register_workflow import register_logging_method
 from nat.cli.register_workflow import register_memory
 from nat.cli.register_workflow import register_middleware
 from nat.cli.register_workflow import register_object_store
-from nat.cli.register_workflow import register_optimizer
-from nat.cli.register_workflow import register_optimizer_callback
 from nat.cli.register_workflow import register_per_user_function
 from nat.cli.register_workflow import register_per_user_function_group
-from nat.cli.register_workflow import register_registry_handler
 from nat.cli.register_workflow import register_retriever_client
 from nat.cli.register_workflow import register_retriever_provider
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.cli.register_workflow import register_tool_wrapper
-from nat.cli.register_workflow import register_trainer
-from nat.cli.register_workflow import register_trainer_adapter
-from nat.cli.register_workflow import register_trajectory_builder
-from nat.cli.register_workflow import register_ttc_strategy
 from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.common import SerializableSecretStr
@@ -73,33 +64,20 @@ from nat.data_models.component_ref import MemoryRef
 from nat.data_models.component_ref import MiddlewareRef
 from nat.data_models.component_ref import ObjectStoreRef
 from nat.data_models.component_ref import RetrieverRef
-from nat.data_models.component_ref import TrainerAdapterRef
-from nat.data_models.component_ref import TrainerRef
-from nat.data_models.component_ref import TrajectoryBuilderRef
-from nat.data_models.component_ref import TTCStrategyRef
 from nat.data_models.dataset_handler import EvalDatasetBaseConfig
 from nat.data_models.embedder import EmbedderBaseConfig
 from nat.data_models.evaluator import EvaluatorBaseConfig
-from nat.data_models.finetuning import TrainerAdapterConfig
-from nat.data_models.finetuning import TrainerConfig
-from nat.data_models.finetuning import TrajectoryBuilderConfig
-from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.data_models.llm import LLMBaseConfig
-from nat.data_models.logging import LoggingBaseConfig
 from nat.data_models.memory import MemoryBaseConfig
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
 from nat.data_models.middleware import MiddlewareBaseConfig
 from nat.data_models.object_store import KeyAlreadyExistsError
 from nat.data_models.object_store import NoSuchKeyError
 from nat.data_models.object_store import ObjectStoreBaseConfig
-from nat.data_models.optimizer import OptimizerStrategyBaseConfig
-from nat.data_models.optimizer import PromptOptimizationConfig
-from nat.data_models.registry_handler import RegistryHandlerBaseConfig
 from nat.data_models.retriever import RetrieverBaseConfig
 from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
 from nat.memory.interfaces import MemoryEditor
 from nat.memory.interfaces import MemoryManager
 from nat.memory.interfaces import MemoryReader
@@ -130,7 +108,6 @@ __all__ = [
     "EvalDatasetBaseConfig",
     "EvaluatorBaseConfig",
     "EvaluatorInfo",
-    "FrontEndBaseConfig",
     "Function",
     "FunctionBaseConfig",
     "FunctionGroup",
@@ -147,7 +124,6 @@ __all__ = [
     "LLMFrameworkEnum",
     "LLMProviderInfo",
     "LLMRef",
-    "LoggingBaseConfig",
     "MemoryBaseConfig",
     "MemoryEditor",
     "MemoryItem",
@@ -162,23 +138,12 @@ __all__ = [
     "ObjectStoreRef",
     "ObjectStoreItem",
     "ObjectStoreBaseConfig",
-    "OptimizerStrategyBaseConfig",
     "OptionalSecretStr",
-    "PromptOptimizationConfig",
-    "RegistryHandlerBaseConfig",
     "RetrieverBaseConfig",
     "RetrieverProviderInfo",
     "RetrieverRef",
     "SerializableSecretStr",
     "TelemetryExporterBaseConfig",
-    "TTCStrategyRef",
-    "TTCStrategyBaseConfig",
-    "TrainerAdapterConfig",
-    "TrainerAdapterRef",
-    "TrainerConfig",
-    "TrainerRef",
-    "TrajectoryBuilderConfig",
-    "TrajectoryBuilderRef",
     "get_secret_value",
     "register_auth_provider",
     "register_dataset_loader",
@@ -186,27 +151,18 @@ __all__ = [
     "register_embedder_provider",
     "register_eval_callback",
     "register_evaluator",
-    "register_front_end",
     "register_function",
     "register_function_group",
     "register_llm_client",
     "register_llm_provider",
-    "register_logging_method",
     "register_memory",
     "register_middleware",
     "register_object_store",
-    "register_optimizer",
-    "register_optimizer_callback",
     "register_per_user_function",
     "register_per_user_function_group",
-    "register_registry_handler",
     "register_retriever_client",
     "register_retriever_provider",
     "register_telemetry_exporter",
     "register_tool_wrapper",
-    "register_trainer",
-    "register_trainer_adapter",
-    "register_trajectory_builder",
-    "register_ttc_strategy",
     "set_secret_from_env",
 ]

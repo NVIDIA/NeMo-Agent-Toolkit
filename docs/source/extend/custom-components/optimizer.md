@@ -26,8 +26,8 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
 ## Key Interfaces
 
 * **Configuration Base Classes**
-   - {py:class}`~nat.plugin_api.OptimizerStrategyBaseConfig`: Base class that all optimizer strategy configuration models must extend. Provides an `enabled` field and integrates with the NeMo Agent Toolkit type registry.
-   - {py:class}`~nat.plugin_api.PromptOptimizationConfig`: Base for prompt optimization strategy configuration models. Adds `prompt_population_init_function` and `prompt_recombination_function` fields.
+   - {py:class}`~nat.data_models.optimizer.OptimizerStrategyBaseConfig`: Base class that all optimizer strategy configuration models must extend. Provides an `enabled` field and integrates with the NeMo Agent Toolkit type registry.
+   - {py:class}`~nat.data_models.optimizer.PromptOptimizationConfig`: Base for prompt optimization strategy configuration models. Adds `prompt_population_init_function` and `prompt_recombination_function` fields.
    - {py:class}`~nat.data_models.optimizer.OptunaParameterOptimizationConfig`: Built-in config for Optuna-based numeric parameter optimization.
 
 * **Optimizer ABCs**
@@ -35,18 +35,18 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
    - {py:class}`~nat.plugins.config_optimizer.parameters.base.BaseParameterOptimizer`: Abstract base class for parameter optimization strategies. Requires implementing an async `run()` method that returns an optimized `Config`.
 
 * **Registration**
-   - {py:deco}`~nat.plugin_api.register_optimizer`: Decorator that registers an optimizer strategy with the global type registry so the optimizer runtime can resolve the strategy from the type of `cfg.optimizer.numeric` or `cfg.optimizer.prompt`.
+   - {py:deco}`~nat.cli.register_workflow.register_optimizer`: Decorator that registers an optimizer strategy with the global type registry so the optimizer runtime can resolve the strategy from the type of `cfg.optimizer.numeric` or `cfg.optimizer.prompt`.
 
 ## Adding a Custom Prompt Optimizer
 
 ### 1. Define a config class
 
-Create a config class extending {py:class}`~nat.plugin_api.PromptOptimizationConfig` with a unique `name`:
+Create a config class extending {py:class}`~nat.data_models.optimizer.PromptOptimizationConfig` with a unique `name`:
 
 ```python
 from pydantic import Field
 
-from nat.plugin_api import PromptOptimizationConfig
+from nat.data_models.optimizer import PromptOptimizationConfig
 
 
 class IterativeRefinementPromptConfig(PromptOptimizationConfig, name="iterative"):
@@ -96,10 +96,10 @@ The `run()` method receives:
 
 ### 3. Register the Optimizer
 
-Use the {py:deco}`~nat.plugin_api.register_optimizer` decorator to register your strategy:
+Use the {py:deco}`~nat.cli.register_workflow.register_optimizer` decorator to register your strategy:
 
 ```python
-from nat.plugin_api import register_optimizer
+from nat.cli.register_workflow import register_optimizer
 
 
 @register_optimizer(config_type=IterativeRefinementPromptConfig)
@@ -152,7 +152,7 @@ The pattern is the same, but parameter optimizers extend {py:class}`~nat.plugins
 ```python
 from pydantic import Field
 
-from nat.plugin_api import OptimizerStrategyBaseConfig
+from nat.data_models.optimizer import OptimizerStrategyBaseConfig
 
 
 class RandomSearchConfig(OptimizerStrategyBaseConfig, name="random_search"):
@@ -194,7 +194,7 @@ class RandomSearchOptimizer(BaseParameterOptimizer):
 ### 3. Register and Configure
 
 ```python
-from nat.plugin_api import register_optimizer
+from nat.cli.register_workflow import register_optimizer
 
 
 @register_optimizer(config_type=RandomSearchConfig)

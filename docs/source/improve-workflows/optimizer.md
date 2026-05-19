@@ -700,7 +700,7 @@ Callbacks are registered via the `@register_optimizer_callback(config_type=...)`
 For example, a provider registers its callback by decorating a factory function:
 
 ```python
-from nat.plugin_api import register_optimizer_callback
+from nat.cli.register_workflow import register_optimizer_callback
 
 @register_optimizer_callback(config_type=MyTelemetryExporter)
 def _build_my_optimizer_callback(config, *, dataset_name=None, **kwargs):

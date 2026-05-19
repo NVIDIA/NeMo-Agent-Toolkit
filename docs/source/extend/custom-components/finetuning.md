@@ -72,7 +72,7 @@ from typing import Any
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
 from nat.data_models.evaluator import EvalOutputItem
 from nat.data_models.finetuning import FinetuneConfig, TrajectoryCollection
-from nat.plugin_api import TrajectoryBuilderConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 
 
 class TrajectoryBuilder(ABC):
@@ -138,7 +138,7 @@ Create a configuration class that inherits from `TrajectoryBuilderConfig`:
 
 ```python
 from pydantic import Field
-from nat.plugin_api import TrajectoryBuilderConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
 
 
 class MyTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="my_traj_builder"):
@@ -173,7 +173,7 @@ Create a registration module:
 
 ```python
 from nat.plugin_api import Builder
-from nat.plugin_api import register_trajectory_builder
+from nat.cli.register_workflow import register_trajectory_builder
 
 from .my_trajectory_builder import MyTrajectoryBuilder, MyTrajectoryBuilderConfig
 
@@ -203,7 +203,7 @@ The `TrainerAdapter` bridges the gap between NeMo Agent Toolkit and external tra
 from abc import ABC, abstractmethod
 from typing import Any
 
-from nat.plugin_api import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
 from nat.data_models.finetuning import (
     FinetuneConfig,
     TrainingJobRef,
@@ -264,7 +264,7 @@ class TrainerAdapter(ABC):
 
 ```python
 from pydantic import BaseModel, Field
-from nat.plugin_api import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
 
 
 class MyBackendConfig(BaseModel):
@@ -299,7 +299,7 @@ Implement the `TrainerAdapter` interface's methods.
 
 ```python
 from nat.plugin_api import Builder
-from nat.plugin_api import register_trainer_adapter
+from nat.cli.register_workflow import register_trainer_adapter
 
 from .my_trainer_adapter import MyTrainerAdapter, MyTrainerAdapterConfig
 
@@ -320,7 +320,7 @@ The `Trainer` orchestrates the complete finetuning workflow, coordinating the tr
 from abc import ABC, abstractmethod
 from typing import Any
 
-from nat.plugin_api import TrainerConfig
+from nat.data_models.finetuning import TrainerConfig
 from nat.data_models.finetuning import (
     FinetuneConfig,
     FinetuneRunConfig,
@@ -413,7 +413,7 @@ Once you have your `MyTrainer` and `MyTrainerConfig` implemented, register it as
 
 ```python
 from nat.plugin_api import Builder
-from nat.plugin_api import register_trainer
+from nat.cli.register_workflow import register_trainer
 
 from .my_trainer import MyTrainer, MyTrainerConfig
 
