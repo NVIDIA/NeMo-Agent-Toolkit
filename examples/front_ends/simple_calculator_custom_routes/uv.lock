@@ -1741,7 +1741,6 @@ requires-dist = [
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "../../evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "../../frameworks/haystack_deep_research_agent" },
     { name = "nat-hybrid-control-flow", marker = "extra == 'examples'", editable = "../../control_flow/hybrid_control_flow" },
-    { name = "nat-kaggle-mcp", marker = "extra == 'examples'", editable = "../../MCP/kaggle_mcp" },
     { name = "nat-latency-sensitivity-demo", marker = "extra == 'examples'", editable = "../../dynamo_integration/latency_sensitivity_demo" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "../../A2A/math_assistant_a2a" },
     { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "../../A2A/math_assistant_a2a_protected" },

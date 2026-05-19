@@ -156,7 +156,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`simple_calculator_fastmcp_protected`](MCP/simple_calculator_fastmcp_protected/README.md)**: FastMCP frontend variant of `simple_calculator_mcp_protected` that publishes an MCP server using the FastMCP server. Demonstrates the use of per-user workflows to securely access the protected MCP server **[🟨 Intermediate]**
 - **[`simple_auth_mcp`](MCP/simple_auth_mcp/README.md)**: Demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party MCP server that requires authentication using OAuth2 flows **[🟨 Intermediate]**
 - **[`service_account_auth_mcp`](MCP/service_account_auth_mcp/README.md)**: Demonstrates how to use the NVIDIA NeMo Agent Toolkit with third-party MCP servers that support service account authentication **[🟨 Intermediate]**
-- **[`kaggle_mcp`](MCP/kaggle_mcp/README.md)**: Demonstrates how to use the Kaggle MCP server with NVIDIA NeMo Agent Toolkit to interact with Kaggle's datasets, notebooks, models, and competitions **[🟨 Intermediate]**
 
 ### Agent2Agent Protocol (A2A)
 - **[`math_assistant_a2a`](./A2A/math_assistant_a2a/README.md)**: Demonstrates an end-to-end A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, combining remote calculator operations with local time services and conditional evaluation tools **[🟨 Intermediate]**
