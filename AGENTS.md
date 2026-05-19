@@ -66,6 +66,8 @@ Use the routing table before opening detailed references inside the skill.
 
 ## Skill Evolution
 
+Before creating, editing, or deciding whether to update any file under `skills/`, read `skills/skill-evolution/SKILL.md` first. Then read the target skill and make the smallest warranted change.
+
 When a user corrects your approach, a command fails and you recover, or you discover a generalizable gotcha, finish the task first and then read `skills/skill-evolution/SKILL.md` to decide whether the skills should be updated.
 
 ## Quick Commands
