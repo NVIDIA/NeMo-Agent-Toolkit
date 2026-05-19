@@ -465,6 +465,8 @@ class SessionManager:
         token_user_authentication = None
         token_workflow_parent_id = None
         token_workflow_parent_name = None
+        token_conversation_id = None
+        token_user_message_id = None
         token_user_id = None
 
         builder_info: PerUserBuilderInfo | None = None
@@ -477,6 +479,12 @@ class SessionManager:
 
             if user_authentication_callback is not None:
                 token_user_authentication = self._context_state.user_auth_callback.set(user_authentication_callback)
+
+            if conversation_id is not None or http_connection is not None:
+                token_conversation_id = self._context_state.conversation_id.set(conversation_id)
+
+            if user_message_id is not None or http_connection is not None:
+                token_user_message_id = self._context_state.user_message_id.set(user_message_id)
 
             if isinstance(http_connection, WebSocket):
                 if user_id is None:
@@ -539,6 +547,10 @@ class SessionManager:
                 self._context_state.workflow_parent_id.reset(token_workflow_parent_id)
             if token_user_id is not None:
                 self._context_state.user_id.reset(token_user_id)
+            if token_user_message_id is not None:
+                self._context_state.user_message_id.reset(token_user_message_id)
+            if token_conversation_id is not None:
+                self._context_state.conversation_id.reset(token_conversation_id)
             if token_user_input is not None:
                 self._context_state.user_input_callback.reset(token_user_input)
             if token_user_authentication is not None:

@@ -462,6 +462,32 @@ class TestSessionManagerSession:
         # After exit, should be reset
         assert ctx_state.user_input_callback.get() == original_callback
 
+    @patch('nat.cli.type_registry.GlobalTypeRegistry')
+    @pytest.mark.asyncio
+    async def test_session_sets_direct_conversation_and_message_ids(self, mock_registry):
+        """Test direct session metadata is available in context and reset on exit."""
+        mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
+
+        sm = SessionManager(config=create_mock_config(),
+                            shared_builder=MockWorkflowBuilder(),
+                            entry_function=None,
+                            shared_workflow=MockWorkflow())
+
+        ctx_state = ContextState.get()
+        token_conversation_id = ctx_state.conversation_id.set(None)
+        token_user_message_id = ctx_state.user_message_id.set(None)
+
+        try:
+            async with sm.session(conversation_id="conversation-123", user_message_id="message-456"):
+                assert ctx_state.conversation_id.get() == "conversation-123"
+                assert ctx_state.user_message_id.get() == "message-456"
+
+            assert ctx_state.conversation_id.get() is None
+            assert ctx_state.user_message_id.get() is None
+        finally:
+            ctx_state.user_message_id.reset(token_user_message_id)
+            ctx_state.conversation_id.reset(token_conversation_id)
+
 
 class TestSessionManagerCleanup:
     """Tests for SessionManager per-user builder cleanup."""
