@@ -145,8 +145,9 @@ def get_catalog_models(api_key: str) -> set[str]:
         return set()
 
 
-def _nim_post(endpoint: str, payload: bytes, api_key: str) -> tuple[int, str]:
-    """POST *payload* to NIM_API_BASE/*endpoint* and return (status, detail)."""
+def _nim_post(endpoint: str, payload: bytes, api_key: str) -> tuple[int, str, str]:
+    """POST *payload* to NIM_API_BASE/*endpoint* and return (status, detail, deprecation)."""
+
     req = urllib.request.Request(
         f"{NIM_API_BASE}/{endpoint}",
         data=payload,
@@ -158,21 +159,24 @@ def _nim_post(endpoint: str, payload: bytes, api_key: str) -> tuple[int, str]:
     ctx = ssl.create_default_context()
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT, context=ctx) as resp:
-            return resp.status, ""
+            print(f"    Received response: HTTP {resp.status}")
+            deprecated = resp.headers.get("Deprecation", "")
+            return resp.status, "", deprecated
     except urllib.error.HTTPError as e:
+        print(f"    Received response: HTTP {e.code}")
         detail = ""
         try:
             body = json.loads(e.read().decode())
             detail = body.get("detail", str(body))
         except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError):
             detail = str(e)
-        return e.code, detail
+        return e.code, detail, ""
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        return 0, f"Connection error: {e}"
+        return 0, f"Connection error: {e}", ""
 
 
-def check_model(model: str, api_key: str) -> tuple[int, str]:
-    """Make a minimal chat/completions call and return (status_code, detail)."""
+def check_model(model: str, api_key: str) -> tuple[int, str, str]:
+    """Make a minimal chat/completions call and return (status_code, detail, deprecation)."""
     payload = json.dumps({
         "model": model,
         "messages": [{
@@ -183,7 +187,7 @@ def check_model(model: str, api_key: str) -> tuple[int, str]:
     return _nim_post("chat/completions", payload, api_key)
 
 
-def check_embedder(model: str, api_key: str) -> tuple[int, str]:
+def check_embedder(model: str, api_key: str) -> tuple[int, str, str]:
     """Make a minimal embeddings call and return (status_code, detail)."""
     payload = json.dumps({
         "model": model,
@@ -285,6 +289,7 @@ def main() -> int:
     if llm_to_test or embedder_to_test:
         print("Pass 2: inference check on catalog-listed models...")
     down: list[tuple[str, int, str]] = []
+    deprecation: list[tuple[str, str]] = []
     call_count = 0
 
     for model in llm_to_test:
@@ -292,11 +297,14 @@ def main() -> int:
             time.sleep(INTER_REQUEST_DELAY)
         call_count += 1
 
-        status, detail = check_model(model, api_key)
+        status, detail, deprecation_detail = check_model(model, api_key)
         if status in (401, 403):
             print(f"\n  ERROR: API key is invalid or expired (HTTP {status}): {detail}", file=sys.stderr)
             return 1
-        if status == 200:
+        elif deprecation_detail != "":
+            print(f"  Deprecation: {deprecation_detail}")
+            deprecation.append((model, deprecation_detail))
+        elif status == 200:
             print(f"  OK      {model}")
         else:
             label = f"HTTP {status}" if status > 0 else "ERROR"
@@ -308,11 +316,14 @@ def main() -> int:
             time.sleep(INTER_REQUEST_DELAY)
         call_count += 1
 
-        status, detail = check_embedder(model, api_key)
+        status, detail, deprecation_detail = check_embedder(model, api_key)
         if status in (401, 403):
             print(f"\n  ERROR: API key is invalid or expired (HTTP {status}): {detail}", file=sys.stderr)
             return 1
-        if status == 200:
+        elif deprecation_detail != "":
+            print(f"  Deprecation: {deprecation_detail}")
+            deprecation.append((model, deprecation_detail))
+        elif status == 200:
             print(f"  OK      {model}  (embedder)")
         else:
             label = f"HTTP {status}" if status > 0 else "ERROR"
@@ -322,12 +333,20 @@ def main() -> int:
     print()
 
     # -- Summary -------------------------------------------------------------
-    has_failures = bool(removed) or bool(down)
+    has_failures = bool(removed) or bool(down) or bool(deprecation)
 
     if removed:
         print(f"{len(removed)} model(s) REMOVED from catalog (need config update):\n")
         for model in removed:
             print(f"  {model}")
+            for f in sorted(set(all_configs[model])):
+                print(f"    - {f}")
+            print()
+
+    if deprecation:
+        print(f"{len(deprecation)} model(s) DEPRECATED (in catalog but deprecated):\n")
+        for model, detail in deprecation:
+            print(f"  {model} ({detail})")
             for f in sorted(set(all_configs[model])):
                 print(f"    - {f}")
             print()
@@ -359,6 +378,12 @@ def main() -> int:
                 "detail": d,
                 "configs": sorted(set(all_configs[m])),
             } for m, s, d in down],
+            "deprecation": [{
+                "model": m,
+                "type": "embedder" if m in embedder_models else "llm",
+                "detail": d,
+                "configs": sorted(set(all_configs[m])),
+            } for m, d in deprecation],
             "ok": [{
                 "model": m,
                 "type": "embedder" if m in embedder_models else "llm",
