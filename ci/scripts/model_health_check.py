@@ -69,7 +69,11 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
     llm_models: dict[str, list[str]] = {}
     embedder_models: dict[str, list[str]] = {}
 
-    for config_path in sorted(examples_dir.rglob("config*.yml")):
+    config_paths = []
+    for pattern in ("*.yml", "*.yaml"):
+        config_paths.extend(examples_dir.rglob(pattern))
+
+    for config_path in sorted(config_paths):
         with open(config_path, encoding="utf-8") as f:
             try:
                 cfg = yaml.safe_load(f)
@@ -229,11 +233,9 @@ def main() -> int:
     llm_models, embedder_models = find_nim_models(args.examples_dir)
 
     # Merge into a single lookup for config file references
-    all_configs: dict[str, list[str]] = {}
-    for m, files in llm_models.items():
-        all_configs.setdefault(m, []).extend(files)
-    for m, files in embedder_models.items():
-        all_configs.setdefault(m, []).extend(files)
+    all_configs: dict[str, list[str]] = llm_models.copy()
+    # Assume that LLMs and embedders are distinct sets of models
+    all_configs.update(embedder_models)
 
     if not all_configs:
         print("No NIM models found in config files")
@@ -246,10 +248,12 @@ def main() -> int:
         for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
             if not section:
                 continue
-            print(f"  {label}:")
-            for model, files in sorted(section.items()):
-                print(f"    {model}")
+            model_by_usage = sorted(((len(files), model) for model, files in section.items()), reverse=True)
+            print(f"  {label}: Usage count")
+            for count, model in model_by_usage:
+                print(f"    {model}: {count}")
                 if args.verbose:
+                    files = section[model]
                     for f in sorted(set(files)):
                         print(f"      - {f}")
         return 0
