@@ -463,7 +463,6 @@ class TestSessionManagerSession:
         assert ctx_state.user_input_callback.get() == original_callback
 
     @patch('nat.cli.type_registry.GlobalTypeRegistry')
-     async def test_session_sets_direct_conversation_and_message_ids(self, mock_registry):
     async def test_session_sets_direct_conversation_and_message_ids(self, mock_registry):
         """Test direct session metadata is available in context and reset on exit."""
         mock_registry.get.return_value.get_function.return_value = create_mock_function_registration(is_per_user=False)
