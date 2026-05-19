@@ -23,6 +23,8 @@ llms:
     base_url: http://localhost:8000/v1
     api_key: default
     temperature: 0.4
+    logprobs: true
+    top_logprobs: 1
 
 workflow:
   _type: rl_with_openpipe_art
@@ -68,6 +70,7 @@ trainer_adapters:
       engine_args:
         gpu_memory_utilization: 0.9
         tensor_parallel_size: 1
+        max_logprobs: 5
     # Training Arguments
     # Adjust these arguments based on GPU size
     training:

@@ -28,6 +28,10 @@ The NeMo Agent Toolkit includes four memory module providers, all of which are a
 * [Redis](https://redis.io/) which is provided by the [`nvidia-nat-redis`](https://pypi.org/project/nvidia-nat-redis/) plugin.
 * [Zep](https://www.getzep.com/) which is provided by the [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) plugin ([Zep NVIDIA NeMo documentation](https://help.getzep.com/nvidia-nemo)).
 
+## Third-Party Memory Plugins
+Additional memory backends are available as community plugins:
+* [Synap](https://maximem.ai) — managed memory layer with user and customer scoping, provided by the [`maximem-synap-nemo-agent-toolkit`](https://pypi.org/project/maximem-synap-nemo-agent-toolkit/) plugin. See `examples/memory/synap/` for usage. ([Open source integration package](https://github.com/maximem-ai/maximem_synap_sdk/tree/main/packages/integrations))
+
 ## Automatic Memory Wrapper Agent
 
 The NeMo Agent Toolkit provides an [`auto_memory_agent`](../components/agents/auto-memory-wrapper/index.md) wrapper that adds automatic memory capture and retrieval to any agent without requiring the LLM to invoke memory tools explicitly.

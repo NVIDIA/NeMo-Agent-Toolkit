@@ -144,7 +144,7 @@ async def test_llm_call_monkey_patch(mock_acompletion, handler, mock_context):
     wrapped_func = litellm.acompletion
 
     # Prepare test arguments
-    test_kwargs = {'model': 'gpt-3.5-turbo', 'messages': [{'content': 'Hello, world!'}]}
+    test_kwargs = {'model': 'gpt-5.4-mini', 'messages': [{'content': 'Hello, world!'}]}
 
     # Call the wrapped function
     result = await wrapped_func(**test_kwargs)
@@ -159,14 +159,14 @@ async def test_llm_call_monkey_patch(mock_acompletion, handler, mock_context):
     start_call = mock_context.push_intermediate_step.call_args_list[0][0][0]
     assert start_call.event_type == IntermediateStepType.LLM_START
     assert start_call.framework == LLMFrameworkEnum.ADK
-    assert start_call.name == 'gpt-3.5-turbo'
+    assert start_call.name == 'gpt-5.4-mini'
     assert start_call.data.input == 'Hello, world!'
 
     # Verify end event
     end_call = mock_context.push_intermediate_step.call_args_list[1][0][0]
     assert end_call.event_type == IntermediateStepType.LLM_END
     assert end_call.framework == LLMFrameworkEnum.ADK
-    assert end_call.name == 'gpt-3.5-turbo'
+    assert end_call.name == 'gpt-5.4-mini'
     assert end_call.data.output == 'Test response'
 
     # Verify response is returned

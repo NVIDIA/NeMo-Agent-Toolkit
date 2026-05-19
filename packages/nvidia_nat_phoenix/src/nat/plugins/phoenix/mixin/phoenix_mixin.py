@@ -43,15 +43,22 @@ class PhoenixMixin:
                 super().__init__(endpoint=endpoint, project=project, **kwargs)
     """
 
-    def __init__(self, *args, endpoint: str, project: str, timeout: float = 60.0, **kwargs):
+    def __init__(self,
+                 *args,
+                 endpoint: str,
+                 project: str,
+                 timeout: float = 60.0,
+                 headers: dict[str, str] | None = None,
+                 **kwargs):
         """Initialize the Phoenix exporter.
 
         Args:
             endpoint: Phoenix service endpoint URL.
             project: Phoenix project name for trace grouping.
             timeout: Timeout in seconds for HTTP requests to Phoenix server.
+            headers: HTTP headers for authentication and metadata.
         """
-        self._exporter = HTTPSpanExporter(endpoint=endpoint, timeout=timeout)
+        self._exporter = HTTPSpanExporter(endpoint=endpoint, timeout=timeout, headers=headers)
         self._project = project
 
         # Add Phoenix project name to resource attributes

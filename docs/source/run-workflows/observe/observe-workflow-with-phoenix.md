@@ -72,6 +72,9 @@ general:
         _type: phoenix
         endpoint: http://localhost:6006/v1/traces
         project: simple_calculator
+        # Optional, for Phoenix servers with authentication enabled.
+        # You can also set PHOENIX_API_KEY instead.
+        api_key: ${PHOENIX_API_KEY}
 ```
 This setup enables tracing through Phoenix at `http://localhost:6006/v1/traces`, with traces grouped into the `simple_calculator` project.
 

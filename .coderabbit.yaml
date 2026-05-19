@@ -115,6 +115,15 @@ reviews:
         3. Using remote MCP tools or A2A agents should be placed in `build-workflows/`
         4. Serving workflows via MCP/A2A should be placed in `run-workflows/`
 
+    - path: "skills/**/*"
+      instructions: >-
+        This directory contains portable AI coding agent skills and reference material, not published documentation or
+        runtime package code. Treat `SKILL.md` frontmatter with `author: NVIDIA Corporation and Affiliates` and
+        `license: Apache-2.0` as the license signal; do not request full Apache license headers in skill files.
+        Allow concise, agent-facing wording and illustrative placeholder paths in references. Only flag path-like text
+        when it is misleading for an agent or when a cross-skill reference is actually broken. Enforce the official
+        product name `NeMo Agent Toolkit` in prose.
+
     - path: "examples/**/*"
       instructions: >-
         - This directory contains example code and usage scenarios for the toolkit, at a minimum an example should

@@ -159,7 +159,6 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`kaggle_mcp`](MCP/kaggle_mcp/README.md)**: Demonstrates how to use the Kaggle MCP server with NVIDIA NeMo Agent Toolkit to interact with Kaggle's datasets, notebooks, models, and competitions **[🟨 Intermediate]**
 
 ### Agent2Agent Protocol (A2A)
-- **[`currency_agent_a2a`](./A2A/currency_agent_a2a/README.md)**: Demonstrates a NVIDIA NeMo Agent Toolkit workflow connecting to a third-party A2A server, the LangGraph-based currency agent. The workflow acts as an A2A client to perform currency conversions and financial queries with time-based context **[🟢 Beginner]**
 - **[`math_assistant_a2a`](./A2A/math_assistant_a2a/README.md)**: Demonstrates an end-to-end A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, combining remote calculator operations with local time services and conditional evaluation tools **[🟨 Intermediate]**
 - **[`math_assistant_a2a_protected`](./A2A/math_assistant_a2a_protected/README.md)**: Demonstrates an end-to-end OAuth2-protected A2A workflow with NVIDIA NeMo Agent Toolkit functioning as both A2A client and server. The workflow performs mathematical calculations integrated with time queries and logical reasoning, with added OAuth2 authentication for secure per-user agent-to-agent communication **[🟨 Intermediate]**
 

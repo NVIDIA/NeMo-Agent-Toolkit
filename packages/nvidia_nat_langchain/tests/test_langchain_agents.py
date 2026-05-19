@@ -61,7 +61,7 @@ async def test_openai_langchain_agent():
     """
     prompt = ChatPromptTemplate.from_messages([("system", "You are a helpful AI assistant."), ("human", "{input}")])
 
-    llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0)
+    llm_config = OpenAIModelConfig(model_name="gpt-5.4-mini", temperature=0.0)
 
     async with WorkflowBuilder() as builder:
         await builder.add_llm("openai_llm", llm_config)

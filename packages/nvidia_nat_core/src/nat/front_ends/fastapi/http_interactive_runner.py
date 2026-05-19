@@ -78,6 +78,30 @@ class HTTPInteractiveRunner:
         self._store = execution_store
         self._session_manager = session_manager
         self._http_flow_handler = http_flow_handler
+        self._stream_cleanup_tasks: set[asyncio.Task[None]] = set()
+
+    async def _await_stream_task_cleanup(self, task: asyncio.Task[None], error_log_message: str) -> None:
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            logger.exception("%s during cancellation cleanup", error_log_message)
+
+    def _cleanup_stream_task(self, task: asyncio.Task[None], error_log_message: str) -> None:
+        task.cancel()
+        if task.done():
+            try:
+                task.result()
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                logger.exception("%s during cancellation cleanup", error_log_message)
+            return
+
+        cleanup_task = asyncio.create_task(self._await_stream_task_cleanup(task, error_log_message))
+        self._stream_cleanup_tasks.add(cleanup_task)
+        cleanup_task.add_done_callback(self._stream_cleanup_tasks.discard)
 
     # ------------------------------------------------------------------
     # HITL callback (used as ``user_input_callback``)
@@ -285,11 +309,7 @@ class HTTPInteractiveRunner:
                 else:
                     yield f"data: {item}\n\n"
         finally:
-            task.cancel()
-            try:
-                await task
-            except asyncio.CancelledError:
-                pass
+            self._cleanup_stream_task(task, error_log_message)
 
     async def streaming_generator(
         self,
