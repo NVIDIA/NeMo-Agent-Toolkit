@@ -1,13 +1,13 @@
 ---
 name: skill-evolution
-description: Use when creating, refining, or maintaining AI coding agent skills in this repository, especially after user corrections, repeated failures, stale references, routing gaps, or reusable lessons learned.
+description: Use before creating, editing, or deciding whether to update any AI coding agent skill in this repository, including corrections to existing skill behavior, references, or routing.
 author: NVIDIA Corporation and Affiliates
 license: Apache-2.0
 ---
 
 # Skill Evolution
 
-Use this skill when a workflow, command, reference, or user correction reveals a reusable improvement for the repository's AI coding agent skills.
+Use this skill before creating, editing, or deciding whether to update any AI coding agent skill in this repository.
 
 ## When to Update Skills
 
