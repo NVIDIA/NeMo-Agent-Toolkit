@@ -69,7 +69,7 @@ def fixture_mock_inner_agent() -> Mock:
 def fixture_mock_context() -> Mock:
     """Create a mock Context for testing."""
     context = Mock(spec=Context)
-    context.user_manager = None
+    context.user_id = None
     context.metadata = None
     return context
 
@@ -144,6 +144,14 @@ class TestAutoMemoryWrapperGraph:
         """Test user ID extraction defaults to 'default_user'."""
         user_id = wrapper_graph._get_user_id_from_context()
         assert user_id == "default_user"
+
+    def test_get_user_id_from_context(self, wrapper_graph, mock_context):
+        """Test user ID extraction from Context.user_id."""
+        mock_context.user_id = "user-from-context"
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+            wrapper_graph._context = mock_context
+            user_id = wrapper_graph._get_user_id_from_context()
+        assert user_id == "user-from-context"
 
     def test_get_user_id_from_header(self, wrapper_graph, mock_context):
         """Test user ID extraction from X-User-ID header."""

@@ -50,7 +50,7 @@ functions:
 llms:
   openai_llm:
     _type: openai
-    model_name: gpt-3.5-turbo
+    model_name: gpt-5.4-mini
     temperature: 0.0
 
 workflow:

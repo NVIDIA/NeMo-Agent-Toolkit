@@ -473,6 +473,93 @@ def test_nested_anyof_in_object_properties():
     assert m2.user.age_or_name == "John"
 
 
+def test_schema_generation_reuses_equivalent_nested_model_classes():
+    """Equivalent MCP schemas should accept nested model instances generated earlier."""
+    schema = {
+        "type": "object",
+        "properties": {
+            "request": {
+                "type": "object",
+                "properties": {
+                    "search": {
+                        "type": "string"
+                    },
+                    "page": {
+                        "type": "integer"
+                    },
+                },
+                "required": [],
+            }
+        },
+        "required": ["request"],
+    }
+
+    first_model = model_from_mcp_schema("search_datasets", schema)
+    second_model = model_from_mcp_schema("search_datasets", schema)
+
+    assert second_model is first_model
+    assert second_model.model_fields["request"].annotation is first_model.model_fields["request"].annotation
+
+    first_payload = first_model.model_validate({"request": {"search": "IMDB"}})
+    second_payload = second_model.model_validate({"request": first_payload.request})
+
+    assert second_payload.model_dump(exclude_none=True, mode="json") == {"request": {"search": "IMDB"}}
+
+
+def test_schema_generation_normalizes_order_insensitive_arrays():
+    """Required and enum ordering should not affect generated model identity."""
+    first_schema = {
+        "type": "object",
+        "properties": {
+            "request": {
+                "type": "object",
+                "properties": {
+                    "search": {
+                        "type": "string"
+                    },
+                    "sort_by": {
+                        "type": "string",
+                        "enum": ["updated", "hottest"],
+                    },
+                },
+                "required": ["search", "sort_by"],
+            },
+            "include_votes": {
+                "type": "boolean"
+            },
+        },
+        "required": ["request", "include_votes"],
+    }
+    second_schema = {
+        "type": "object",
+        "properties": {
+            "request": {
+                "type": "object",
+                "properties": {
+                    "search": {
+                        "type": "string"
+                    },
+                    "sort_by": {
+                        "type": "string",
+                        "enum": ["hottest", "updated"],
+                    },
+                },
+                "required": ["sort_by", "search"],
+            },
+            "include_votes": {
+                "type": "boolean"
+            },
+        },
+        "required": ["include_votes", "request"],
+    }
+
+    first_model = model_from_mcp_schema("search_datasets_with_sort", first_schema)
+    second_model = model_from_mcp_schema("search_datasets_with_sort", second_schema)
+
+    assert second_model is first_model
+    assert second_model.model_fields["request"].annotation is first_model.model_fields["request"].annotation
+
+
 def test_anyof_array_with_anyof_items():
     """Test anyOf containing an array whose items also have anyOf"""
     schema = {

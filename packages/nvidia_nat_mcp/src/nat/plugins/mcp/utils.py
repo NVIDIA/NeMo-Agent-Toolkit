@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 from enum import Enum
 from functools import cache
 from typing import Any
@@ -20,6 +21,8 @@ from typing import Any
 from pydantic import BaseModel
 from pydantic import Field
 from pydantic import create_model
+
+_ORDER_INSENSITIVE_SCHEMA_ARRAY_KEYS = frozenset({"enum", "required"})
 
 
 @cache
@@ -43,6 +46,23 @@ def _get_or_create_enum(name: str, values: frozenset[str]) -> type[Enum]:
     return Enum(name, {item: item for item in values})
 
 
+def _schema_cache_sort_key(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _normalize_schema_for_cache(value: Any, key: str | None = None) -> Any:
+    if isinstance(value, dict):
+        return {item_key: _normalize_schema_for_cache(item_value, item_key) for item_key, item_value in value.items()}
+
+    if isinstance(value, list):
+        normalized_values = [_normalize_schema_for_cache(item) for item in value]
+        if key in _ORDER_INSENSITIVE_SCHEMA_ARRAY_KEYS:
+            return sorted(normalized_values, key=_schema_cache_sort_key)
+        return normalized_values
+
+    return value
+
+
 def truncate_session_id(session_id: str, max_length: int = 10) -> str:
     """
     Truncate a session ID for logging purposes.
@@ -63,6 +83,17 @@ def model_from_mcp_schema(name: str, mcp_input_schema: dict) -> type[BaseModel]:
     """
     Create a pydantic model from the input schema of the MCP tool
     """
+    normalized_schema = _normalize_schema_for_cache(mcp_input_schema)
+    schema_json = json.dumps(normalized_schema, sort_keys=True, separators=(",", ":"))
+    return _model_from_mcp_schema(name, schema_json)
+
+
+@cache
+def _model_from_mcp_schema(name: str, mcp_input_schema_json: str) -> type[BaseModel]:
+    """
+    Create or retrieve a cached pydantic model from a normalized MCP input schema.
+    """
+    mcp_input_schema = json.loads(mcp_input_schema_json)
     _type_map = {
         "string": str,
         "number": float,
