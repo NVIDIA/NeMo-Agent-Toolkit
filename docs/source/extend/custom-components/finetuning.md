@@ -70,8 +70,9 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from nat.data_models.evaluate_runtime import EvaluationRunOutput
-from nat.data_models.finetuning import FinetuneConfig, TrajectoryBuilderConfig, TrajectoryCollection
 from nat.data_models.evaluator import EvalOutputItem
+from nat.data_models.finetuning import FinetuneConfig, TrajectoryCollection
+from nat.plugin_api import TrajectoryBuilderConfig
 
 
 class TrajectoryBuilder(ABC):
@@ -137,7 +138,7 @@ Create a configuration class that inherits from `TrajectoryBuilderConfig`:
 
 ```python
 from pydantic import Field
-from nat.data_models.finetuning import TrajectoryBuilderConfig
+from nat.plugin_api import TrajectoryBuilderConfig
 
 
 class MyTrajectoryBuilderConfig(TrajectoryBuilderConfig, name="my_traj_builder"):
@@ -202,9 +203,9 @@ The `TrainerAdapter` bridges the gap between NeMo Agent Toolkit and external tra
 from abc import ABC, abstractmethod
 from typing import Any
 
+from nat.plugin_api import TrainerAdapterConfig
 from nat.data_models.finetuning import (
     FinetuneConfig,
-    TrainerAdapterConfig,
     TrainingJobRef,
     TrainingJobStatus,
     TrajectoryCollection,
@@ -263,7 +264,7 @@ class TrainerAdapter(ABC):
 
 ```python
 from pydantic import BaseModel, Field
-from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.plugin_api import TrainerAdapterConfig
 
 
 class MyBackendConfig(BaseModel):
@@ -319,10 +320,10 @@ The `Trainer` orchestrates the complete finetuning workflow, coordinating the tr
 from abc import ABC, abstractmethod
 from typing import Any
 
+from nat.plugin_api import TrainerConfig
 from nat.data_models.finetuning import (
     FinetuneConfig,
     FinetuneRunConfig,
-    TrainerConfig,
     TrainingJobRef,
     TrainingJobStatus,
     TrajectoryCollection,

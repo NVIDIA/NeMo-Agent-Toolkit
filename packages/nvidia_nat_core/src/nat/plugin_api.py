@@ -21,10 +21,15 @@ modules such as ``nat.cli.register_workflow`` or ``nat.builder.function`` direct
 
 from nat.builder.builder import Builder
 from nat.builder.builder import EvalBuilder
+from nat.builder.dataset_loader import DatasetLoaderInfo
+from nat.builder.embedder import EmbedderProviderInfo
+from nat.builder.evaluator import EvaluatorInfo
 from nat.builder.framework_enum import LLMFrameworkEnum
 from nat.builder.function import Function
 from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
+from nat.builder.llm import LLMProviderInfo
+from nat.builder.retriever import RetrieverProviderInfo
 from nat.cli.register_workflow import register_auth_provider
 from nat.cli.register_workflow import register_dataset_loader
 from nat.cli.register_workflow import register_embedder_client
@@ -53,6 +58,7 @@ from nat.cli.register_workflow import register_trainer
 from nat.cli.register_workflow import register_trainer_adapter
 from nat.cli.register_workflow import register_trajectory_builder
 from nat.cli.register_workflow import register_ttc_strategy
+from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.common import SerializableSecretStr
 from nat.data_models.common import get_secret_value
@@ -71,15 +77,60 @@ from nat.data_models.component_ref import TrainerAdapterRef
 from nat.data_models.component_ref import TrainerRef
 from nat.data_models.component_ref import TrajectoryBuilderRef
 from nat.data_models.component_ref import TTCStrategyRef
+from nat.data_models.dataset_handler import EvalDatasetBaseConfig
+from nat.data_models.embedder import EmbedderBaseConfig
+from nat.data_models.evaluator import EvaluatorBaseConfig
+from nat.data_models.finetuning import TrainerAdapterConfig
+from nat.data_models.finetuning import TrainerConfig
+from nat.data_models.finetuning import TrajectoryBuilderConfig
+from nat.data_models.front_end import FrontEndBaseConfig
 from nat.data_models.function import FunctionBaseConfig
 from nat.data_models.function import FunctionGroupBaseConfig
+from nat.data_models.llm import LLMBaseConfig
+from nat.data_models.logging import LoggingBaseConfig
+from nat.data_models.memory import MemoryBaseConfig
+from nat.data_models.middleware import FunctionMiddlewareBaseConfig
+from nat.data_models.middleware import MiddlewareBaseConfig
+from nat.data_models.object_store import KeyAlreadyExistsError
+from nat.data_models.object_store import NoSuchKeyError
+from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.data_models.optimizer import OptimizerStrategyBaseConfig
+from nat.data_models.optimizer import PromptOptimizationConfig
+from nat.data_models.registry_handler import RegistryHandlerBaseConfig
+from nat.data_models.retriever import RetrieverBaseConfig
+from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.data_models.ttc_strategy import TTCStrategyBaseConfig
+from nat.memory.interfaces import MemoryEditor
+from nat.memory.interfaces import MemoryManager
+from nat.memory.interfaces import MemoryReader
+from nat.memory.interfaces import MemoryWriter
+from nat.memory.models import MemoryItem
+from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
+from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
+from nat.middleware.function_middleware import FunctionMiddleware
+from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.middleware.middleware import InvocationContext
+from nat.object_store.interfaces import ObjectStore
+from nat.object_store.models import ObjectStoreItem
 
+# Public contract: keep this list exact and update docs/source/extend/plugin-api.md plus
+# packages/nvidia_nat_core/tests/nat/test_plugin_api.py whenever symbols are added or removed.
 __all__ = [
+    "AuthProviderBaseConfig",
     "AuthenticationRef",
     "Builder",
     "ComponentRef",
+    "DatasetLoaderInfo",
+    "DynamicFunctionMiddleware",
+    "DynamicMiddlewareConfig",
+    "EmbedderBaseConfig",
+    "EmbedderProviderInfo",
     "EmbedderRef",
     "EvalBuilder",
+    "EvalDatasetBaseConfig",
+    "EvaluatorBaseConfig",
+    "EvaluatorInfo",
+    "FrontEndBaseConfig",
     "Function",
     "FunctionBaseConfig",
     "FunctionGroup",
@@ -87,17 +138,46 @@ __all__ = [
     "FunctionGroupRef",
     "FunctionInfo",
     "FunctionRef",
+    "FunctionMiddleware",
+    "FunctionMiddlewareBaseConfig",
+    "FunctionMiddlewareContext",
+    "InvocationContext",
+    "KeyAlreadyExistsError",
+    "LLMBaseConfig",
     "LLMFrameworkEnum",
+    "LLMProviderInfo",
     "LLMRef",
+    "LoggingBaseConfig",
+    "MemoryBaseConfig",
+    "MemoryEditor",
+    "MemoryItem",
+    "MemoryManager",
+    "MemoryReader",
     "MemoryRef",
+    "MemoryWriter",
+    "MiddlewareBaseConfig",
     "MiddlewareRef",
+    "NoSuchKeyError",
+    "ObjectStore",
     "ObjectStoreRef",
+    "ObjectStoreItem",
+    "ObjectStoreBaseConfig",
+    "OptimizerStrategyBaseConfig",
     "OptionalSecretStr",
+    "PromptOptimizationConfig",
+    "RegistryHandlerBaseConfig",
+    "RetrieverBaseConfig",
+    "RetrieverProviderInfo",
     "RetrieverRef",
     "SerializableSecretStr",
+    "TelemetryExporterBaseConfig",
     "TTCStrategyRef",
+    "TTCStrategyBaseConfig",
+    "TrainerAdapterConfig",
     "TrainerAdapterRef",
+    "TrainerConfig",
     "TrainerRef",
+    "TrajectoryBuilderConfig",
     "TrajectoryBuilderRef",
     "get_secret_value",
     "register_auth_provider",

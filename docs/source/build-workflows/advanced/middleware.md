@@ -84,7 +84,7 @@ Create a configuration class inheriting from `DynamicMiddlewareConfig`:
 
 ```python
 from pydantic import Field
-from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareConfig
+    from nat.plugin_api import DynamicMiddlewareConfig
 
 
 class LoggingMiddlewareConfig(DynamicMiddlewareConfig, name="logging_middleware"):
@@ -168,8 +168,8 @@ Create the middleware class inheriting from `DynamicFunctionMiddleware`:
 ```python
 import logging
 
-from nat.middleware.dynamic.dynamic_function_middleware import DynamicFunctionMiddleware
-from nat.middleware.middleware import InvocationContext
+from nat.plugin_api import DynamicFunctionMiddleware
+from nat.plugin_api import InvocationContext
 
 logger = logging.getLogger(__name__)
 
@@ -429,6 +429,9 @@ async def caching_middleware(config: CachingMiddlewareConfig, builder: Builder):
 Final middleware can short-circuit execution:
 
 ```python
+from nat.plugin_api import FunctionMiddleware
+from nat.plugin_api import FunctionMiddlewareBaseConfig
+
 class ValidationMiddlewareConfig(FunctionMiddlewareBaseConfig, name="validation"):
     strict_mode: bool = Field(default=True)
 
@@ -603,7 +606,8 @@ Test middleware in isolation:
 ```python
 import pytest
 from unittest.mock import MagicMock
-from nat.middleware.middleware import FunctionMiddlewareContext, InvocationContext
+from nat.plugin_api import FunctionMiddlewareContext
+from nat.plugin_api import InvocationContext
 
 
 @pytest.mark.asyncio
@@ -823,8 +827,8 @@ Solution: Ensure the register module is imported. NeMo Agent Toolkit automatical
 
 ## API Reference
 
-- {py:class}`~nat.middleware.function_middleware.FunctionMiddleware`: Base class
-- {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareContext`: Context info
+- {py:class}`~nat.plugin_api.FunctionMiddleware`: Base class
+- {py:class}`~nat.plugin_api.FunctionMiddlewareContext`: Context info
 - {py:class}`~nat.middleware.function_middleware.FunctionMiddlewareChain`: Chain management
 - {py:class}`~nat.middleware.cache.cache_middleware_config.CacheMiddlewareConfig`: Cache configuration
 - {py:class}`~nat.middleware.cache.cache_middleware.CacheMiddleware`: Cache implementation

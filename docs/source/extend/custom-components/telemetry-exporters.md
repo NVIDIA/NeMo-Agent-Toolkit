@@ -89,8 +89,8 @@ Want to get started quickly? Here's a minimal working example that creates a con
 from pydantic import Field
 
 from nat.plugin_api import Builder
+from nat.plugin_api import TelemetryExporterBaseConfig
 from nat.plugin_api import register_telemetry_exporter
-from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.exporter.raw_exporter import RawExporter
 from nat.data_models.intermediate_step import IntermediateStep
 
@@ -329,7 +329,7 @@ Create a configuration class that inherits from `TelemetryExporterBaseConfig`:
 ```python
 from pydantic import Field
 
-from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.plugin_api import TelemetryExporterBaseConfig
 
 class CustomTelemetryExporter(TelemetryExporterBaseConfig, name="custom"):
     """A simple custom telemetry exporter for sending traces to a custom service."""
@@ -537,9 +537,9 @@ class MyCustomExporter(SpanExporter[Span, dict]):
 ```python
 from pydantic import Field
 
-from nat.plugin_api import register_telemetry_exporter
-from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.plugin_api import Builder
+from nat.plugin_api import TelemetryExporterBaseConfig
+from nat.plugin_api import register_telemetry_exporter
 
 # Configuration class can be in the same file as registration
 class MyTelemetryExporter(TelemetryExporterBaseConfig, name="my_exporter"):
@@ -1424,8 +1424,8 @@ import logging
 from pydantic import Field
 import aiohttp
 from nat.plugin_api import Builder
+from nat.plugin_api import TelemetryExporterBaseConfig
 from nat.plugin_api import register_telemetry_exporter
-from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.data_models.span import Span

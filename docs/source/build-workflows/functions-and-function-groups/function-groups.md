@@ -603,7 +603,7 @@ To wrap all accessible functions in a group for a specific agent framework:
 
 ```python
 from nat.plugin_api import FunctionGroupRef
-from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.plugin_api import LLMFrameworkEnum
 
 async with WorkflowBuilder() as builder:
     await builder.add_function_group("math", MathGroupConfig(include=["add", "multiply"]))

@@ -26,8 +26,8 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
 ## Key Interfaces
 
 * **Configuration Base Classes**
-   - {py:class}`~nat.data_models.optimizer.OptimizerStrategyBaseConfig`: Base class that all optimizer strategy configuration models must extend. Provides an `enabled` field and integrates with the NeMo Agent Toolkit type registry.
-   - {py:class}`~nat.data_models.optimizer.PromptOptimizationConfig`: Base for prompt optimization strategy configuration models. Adds `prompt_population_init_function` and `prompt_recombination_function` fields.
+   - {py:class}`~nat.plugin_api.OptimizerStrategyBaseConfig`: Base class that all optimizer strategy configuration models must extend. Provides an `enabled` field and integrates with the NeMo Agent Toolkit type registry.
+   - {py:class}`~nat.plugin_api.PromptOptimizationConfig`: Base for prompt optimization strategy configuration models. Adds `prompt_population_init_function` and `prompt_recombination_function` fields.
    - {py:class}`~nat.data_models.optimizer.OptunaParameterOptimizationConfig`: Built-in config for Optuna-based numeric parameter optimization.
 
 * **Optimizer ABCs**
@@ -41,12 +41,12 @@ NeMo Agent Toolkit provides a pluggable optimizer system for tuning workflow par
 
 ### 1. Define a config class
 
-Create a config class extending {py:class}`~nat.data_models.optimizer.PromptOptimizationConfig` with a unique `name`:
+Create a config class extending {py:class}`~nat.plugin_api.PromptOptimizationConfig` with a unique `name`:
 
 ```python
 from pydantic import Field
 
-from nat.data_models.optimizer import PromptOptimizationConfig
+from nat.plugin_api import PromptOptimizationConfig
 
 
 class IterativeRefinementPromptConfig(PromptOptimizationConfig, name="iterative"):
@@ -152,7 +152,7 @@ The pattern is the same, but parameter optimizers extend {py:class}`~nat.plugins
 ```python
 from pydantic import Field
 
-from nat.data_models.optimizer import OptimizerStrategyBaseConfig
+from nat.plugin_api import OptimizerStrategyBaseConfig
 
 
 class RandomSearchConfig(OptimizerStrategyBaseConfig, name="random_search"):

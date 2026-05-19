@@ -41,6 +41,11 @@ class Retriever(ABC):
 Next, create the config for the provider and register it with NeMo Agent Toolkit:
 
 ```python
+from nat.plugin_api import Builder
+from nat.plugin_api import RetrieverBaseConfig
+from nat.plugin_api import RetrieverProviderInfo
+from nat.plugin_api import register_retriever_provider
+
 class ExampleRetrieverConfig(RetrieverBaseConfig, name="example_retriever"):
     """
     Configuration for a Retriever provider. The parameters will depend on the particular provider. These are examples.
@@ -61,6 +66,9 @@ async def example_retriever(retriever_config: ExampleRetrieverConfig, builder: B
 Lastly, implement and register the retriever client:
 
 ```python
+from nat.plugin_api import Builder
+from nat.plugin_api import register_retriever_client
+
 @register_retriever_client(config_type=ExampleRetrieverConfig, wrapper_type=None)
 async def nemo_retriever_client(config: ExampleRetrieverConfig, builder: Builder):
     from example_plugin.retriever import ExampleRetriever

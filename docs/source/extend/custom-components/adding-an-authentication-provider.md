@@ -42,12 +42,14 @@ from the clients that facilitate the authentication process. Authentication prov
 
 ## Extending an API Authentication Provider
 The first step in adding an authentication provider is to create a configuration model that inherits from the
-{py:class}`~nat.data_models.authentication.AuthProviderBaseConfig` class and define the credentials required to
+{py:class}`~nat.plugin_api.AuthProviderBaseConfig` class and define the credentials required to
 authenticate with the target API resource.
 
 The following example shows how to define and register a custom evaluator and can be found here:
 {py:class}`~nat.authentication.oauth2.oauth2_auth_code_flow_provider_config.OAuth2AuthCodeFlowProviderConfig` class:
 ```python
+from nat.plugin_api import AuthProviderBaseConfig
+
 class OAuth2AuthCodeFlowProviderConfig(AuthProviderBaseConfig, name="oauth2_auth_code_flow"):
 
     client_id: str = Field(description="The client ID for OAuth 2.0 authentication.")
@@ -75,6 +77,9 @@ An asynchronous function decorated with {py:func}`~nat.plugin_api.register_auth_
 
 The `OAuth2AuthCodeFlowProviderConfig` from the previous section is registered as follows:
 ```python
+from nat.plugin_api import Builder
+from nat.plugin_api import register_auth_provider
+
 @register_auth_provider(config_type=OAuth2AuthCodeFlowProviderConfig)
 async def oauth2_client(authentication_provider: OAuth2AuthCodeFlowProviderConfig, builder: Builder):
     from nat.authentication.oauth2.oauth2_auth_code_flow_provider import OAuth2AuthCodeFlowProvider

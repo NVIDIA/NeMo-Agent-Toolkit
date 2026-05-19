@@ -49,9 +49,9 @@ The following example shows how to define and register a custom evaluator. The c
 from pydantic import Field
 
 from nat.plugin_api import EvalBuilder
-from nat.builder.evaluator import EvaluatorInfo
+from nat.plugin_api import EvaluatorBaseConfig
+from nat.plugin_api import EvaluatorInfo
 from nat.plugin_api import register_evaluator
-from nat.data_models.evaluator import EvaluatorBaseConfig
 
 
 class SimilarityEvaluatorConfig(EvaluatorBaseConfig, name="similarity"):
@@ -166,9 +166,9 @@ from collections import Counter
 from pydantic import Field
 
 from nat.plugin_api import EvalBuilder
-from nat.builder.evaluator import EvaluatorInfo
+from nat.plugin_api import EvaluatorBaseConfig
+from nat.plugin_api import EvaluatorInfo
 from nat.plugin_api import register_evaluator
-from nat.data_models.evaluator import EvaluatorBaseConfig
 from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
 from nat.plugins.eval.evaluator.atif_base_evaluator import AtifBaseEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import AtifEvalSample
@@ -308,4 +308,3 @@ The results of each evaluator is stored in a separate file with name `<keyword>_
 }
 ```
 The contents of the file have been `snipped` for brevity.
-
