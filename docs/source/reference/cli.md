@@ -235,8 +235,15 @@ Options:
   --override <TEXT TEXT>...  Override config values using dot notation (e.g.,
                              --override llms.nim_llm.temperature 0.7)
   --input TEXT               A single input to submit the the workflow.
-  --input_file FILE          Path to a json file of inputs to submit to the
-                             workflow.
+  --input_file FILE          Path to a plain text file containing a single
+                             input to submit to the workflow. For batch
+                             evaluation of multiple inputs, use 'nat eval'
+                             instead.
+  --user_id TEXT             User ID to use for the workflow session. Defaults
+                             to 'nat_run_user_id' for single-user CLI
+                             execution.
+  --conversation_id TEXT     Conversation ID to use for the workflow session.
+                             Set this to isolate memory-backed CLI runs.
   --help                     Show this message and exit.
 ```
 

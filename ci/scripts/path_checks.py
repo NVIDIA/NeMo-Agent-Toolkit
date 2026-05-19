@@ -175,6 +175,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "read/write",
     "run/host",
     "run/serve",
+    "runtime/front-end",
     "start/stop",
     "search/edit/score/select",
     "size/time",

@@ -336,6 +336,38 @@ class TestAutoMemoryWrapperGraph:
         graph = wrapper_graph.build_graph()
         assert graph is not None
 
+    async def test_build_graph_retrieves_before_capturing_current_user_message(self,
+                                                                               mock_inner_agent,
+                                                                               mock_memory_editor,
+                                                                               mock_context):
+        """Test graph retrieves existing memory before storing the current user query."""
+        calls = []
+
+        async def _search(**kwargs):
+            calls.append(("search", kwargs["query"]))
+            return [MemoryItem(conversation=[], memory="Stored fact", user_id="default_user")]
+
+        async def _add_items(items, **kwargs):
+            calls.append(("add", items[0].conversation[0]["content"]))
+
+        mock_memory_editor.search.side_effect = _search
+        mock_memory_editor.add_items.side_effect = _add_items
+
+        with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):
+            wrapper = AutoMemoryWrapperGraph(inner_agent_fn=mock_inner_agent,
+                                             memory_editor=mock_memory_editor,
+                                             save_user_messages=True,
+                                             retrieve_memory=True,
+                                             save_ai_responses=True)
+
+        graph = wrapper.build_graph()
+        await graph.ainvoke(AutoMemoryWrapperState(messages=[HumanMessage(content="What do you remember?")]))
+
+        assert calls[:2] == [("search", "What do you remember?"), ("add", "What do you remember?")]
+        chat_request = mock_inner_agent.ainvoke.call_args[0][0]
+        assert "Stored fact" in chat_request.messages[0].content
+        assert chat_request.messages[1].content == "What do you remember?"
+
     def test_build_graph_minimal_features(self, mock_inner_agent, mock_memory_editor, mock_context):
         """Test build_graph with minimal features."""
         with patch('nat.plugins.langchain.agent.auto_memory_wrapper.agent.Context.get', return_value=mock_context):

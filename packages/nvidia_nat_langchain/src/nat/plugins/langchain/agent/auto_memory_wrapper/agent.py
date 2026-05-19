@@ -269,17 +269,17 @@ class AutoMemoryWrapperGraph:
         if self.save_ai_responses:
             workflow.add_node("capture_ai_response", self.capture_ai_response_node)
 
-        # Connect nodes based on enabled features
-        workflow.set_entry_point("capture_user_message" if self.save_user_messages else "memory_retrieve" if self.
-                                 retrieve_memory else "inner_agent")
+        # Retrieve before storing the current user message so recall queries are not added to memory before search.
+        workflow.set_entry_point("memory_retrieve" if self.retrieve_memory else "capture_user_message" if self.
+                                 save_user_messages else "inner_agent")
 
-        if self.save_user_messages and self.retrieve_memory:
-            workflow.add_edge("capture_user_message", "memory_retrieve")
-            workflow.add_edge("memory_retrieve", "inner_agent")
-        elif self.save_user_messages:
+        if self.retrieve_memory and self.save_user_messages:
+            workflow.add_edge("memory_retrieve", "capture_user_message")
             workflow.add_edge("capture_user_message", "inner_agent")
         elif self.retrieve_memory:
             workflow.add_edge("memory_retrieve", "inner_agent")
+        elif self.save_user_messages:
+            workflow.add_edge("capture_user_message", "inner_agent")
 
         if self.save_ai_responses:
             workflow.add_edge("inner_agent", "capture_ai_response")
