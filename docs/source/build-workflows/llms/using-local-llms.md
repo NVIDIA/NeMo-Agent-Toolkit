@@ -141,7 +141,7 @@ vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getti
 If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. It is recommended to use a **separate** virtual environment for vLLM due to potential conflicts with NeMo Agent Toolkit dependencies.
 
 <!-- path-check-skip-next-line -->
-Similar to the previous example we will be using the [`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16`](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16) LLM which is the `bfloat16` variant on Huggingface of the same model used in the previous example. However for embedding we will be using the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) model.
+Similar to the previous example we will be using the [`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16`](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16) LLM which is the `bfloat16` variant on Hugging Face of the same model used in the previous example. However for embedding we will be using the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) model.
 
 ### Install the Simple Web Query Example
 
