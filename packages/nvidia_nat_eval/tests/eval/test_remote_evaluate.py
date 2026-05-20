@@ -22,7 +22,9 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient
 from aiohttp.test_utils import TestServer
 
+from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.evaluate_runtime import EndpointRetryConfig
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.plugins.eval.runtime.remote_workflow import EvaluationRemoteWorkflowHandler
@@ -414,3 +416,122 @@ async def test_max_retries_lower_bound_validation(invalid_value: int) -> None:
     error = exc_info.value.errors()[0]
     assert error["type"] == "greater_than_equal"
     assert error["loc"] == ("max_retries", )
+
+
+# -- Producer/consumer wire-format compatibility ------------------------------
+#
+# Two paired fixes that ride together so ``nat eval --endpoint`` produces
+# correct output regardless of how a workflow chunks its response:
+#
+# 1. **Producer side** (``ResponsePayloadOutput.get_stream_data()``) emits
+#    ``data: {"value": "<str>"}\n\n`` for every payload type — the canonical
+#    shape ``test_remote_evaluate.py``'s server fixture has always documented.
+#    Before this fix, ``ChatResponseChunk`` payloads (yielded by
+#    ``react_agent``'s ``_stream_fn`` after PR #1851) were emitted as the
+#    chunk's full OpenAI envelope with no top-level ``value`` field, so the
+#    eval client extracted ``None`` for every line.
+#
+# 2. **Consumer side** (``EvaluationRemoteWorkflowHandler``) accumulates
+#    ``value`` chunks into a list and joins at the end instead of overwriting
+#    on each chunk. Pre-fix, the handler kept only the *last* ``value``,
+#    which silently truncated multi-chunk responses (e.g. NAT 1.7's
+#    per-token ``react_agent`` streams) to the final fragment.
+#
+# Together these restore NAT 1.6 end-to-end behavior for both single-chunk
+# (``FunctionInfo.from_fn``-derived) and multi-chunk (token-streaming)
+# workflows.
+
+
+@pytest.mark.parametrize("payload_factory",
+                         [
+                             pytest.param(lambda answer: answer, id="str-payload"),
+                             pytest.param(ChatResponseChunk.create_streaming_chunk, id="chat-response-chunk-payload"),
+                         ])
+async def test_remote_eval_consumes_response_payload_output(rag_eval_input, payload_factory):
+    """Production ``ResponsePayloadOutput.get_stream_data()`` lines round-trip
+    through the eval client. Covers bare-string and ``ChatResponseChunk``
+    payloads (the streaming-agent regression path from PR #1851).
+    """
+    item = rag_eval_input.eval_input_items[0]
+    expected_answer = "the answer is 21"
+
+    async def stream_response(request):
+        resp = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream"})
+        await resp.prepare(request)
+        sse_line = ResponsePayloadOutput(payload=payload_factory(expected_answer)).get_stream_data()
+        await resp.write(sse_line.encode("utf-8"))
+        await resp.write_eof()
+        return resp
+
+    app = web.Application()
+    app.router.add_post("/generate/full", stream_response)
+    server = TestServer(app)
+    await server.start_server()
+    client = TestClient(server)
+    await client.start_server()
+
+    handler = EvaluationRemoteWorkflowHandler(
+        config=EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                   endpoint_timeout=5,
+                                   config_file=Path(__file__),
+                                   dataset=None,
+                                   result_json_path="",
+                                   skip_workflow=False,
+                                   skip_completed_entries=False,
+                                   reps=1),
+        max_concurrency=2,
+    )
+
+    async with client.session as session:
+        await handler.run_workflow_remote_single(session, item)
+
+    await client.close()
+    await server.close()
+
+    assert item.output_obj == expected_answer
+
+
+async def test_remote_eval_accumulates_multi_chunk_value_stream(rag_eval_input):
+    """Multi-chunk ``data: {"value": "<token>"}`` streams must be reconstructed
+    by joining all ``value`` fields in order. The empty-string token also
+    exercises the presence check (``value is not None`` vs. ``if value:``).
+    """
+    item = rag_eval_input.eval_input_items[0]
+    tokens = ["The ", "answer ", "", "is ", "21", "."]
+    expected_answer = "".join(tokens)
+
+    async def stream_response(request):
+        resp = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream"})
+        await resp.prepare(request)
+        for token in tokens:
+            chunk = ChatResponseChunk.create_streaming_chunk(token)
+            await resp.write(ResponsePayloadOutput(payload=chunk).get_stream_data().encode("utf-8"))
+        await resp.write_eof()
+        return resp
+
+    app = web.Application()
+    app.router.add_post("/generate/full", stream_response)
+    server = TestServer(app)
+    await server.start_server()
+    client = TestClient(server)
+    await client.start_server()
+
+    handler = EvaluationRemoteWorkflowHandler(
+        config=EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                   endpoint_timeout=5,
+                                   config_file=Path(__file__),
+                                   dataset=None,
+                                   result_json_path="",
+                                   skip_workflow=False,
+                                   skip_completed_entries=False,
+                                   reps=1),
+        max_concurrency=2,
+    )
+
+    async with client.session as session:
+        await handler.run_workflow_remote_single(session, item)
+
+    await client.close()
+    await server.close()
+
+    assert item.output_obj == expected_answer
