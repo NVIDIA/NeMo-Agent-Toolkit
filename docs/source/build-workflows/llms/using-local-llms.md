@@ -17,13 +17,10 @@ limitations under the License.
 
 # Using Local LLMs
 
-NeMo Agent Toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
+NeMo Agent Toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple web query example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
 
 ## Using NIM
-<!-- path-check-skip-next-line -->
-In the NeMo Agent Toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`nvidia/nemotron-3-nano-30b-a3b`](https://build.nvidia.com/nvidia/nemotron-3-nano-30b-a3b) which is more likely to be runnable on a local workstation.
-
-Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
+For the purposes of this guide we will deploy the same models used in the simple web query example locally. However, regardless of the model you choose, the process is the same for downloading the Docker container for the model from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `Downloadable` tag, the exact commands will be specified on the `Deploy` tab for the model, then `Self-Hosted Deployments`.
 
 ### Requirements
 - An NVIDIA GPU with CUDA support (exact requirements depend on the model you are using)
@@ -60,6 +57,8 @@ docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:latest
 
 
 ### Running the NIM Containers
+
+When the container starts, the NIM entrypoint selects the appropriate internal model variant for your system automatically.
 
 :::{note}
 The `--gpus` flag is used to specify the GPUs to use for the LLM and embedding model. The following commands assume the system is equipped with at least two GPUs, one for each model. Each user's setup may vary, so adjust the commands to suit the system.
@@ -113,7 +112,7 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: nvidia/nemotron-3-nano-30b-a3b
+    model_name: nvidia/nemotron-3-nano
 
 embedders:
   nv-embedqa-e5-v5:
@@ -143,8 +142,15 @@ vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getti
 
 If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. It is recommended to use a **separate** virtual environment for vLLM due to potential conflicts with NeMo Agent Toolkit dependencies.
 
+For this example we will be downloading the model from Hugging Face. Unlike NIM, Hugging Face + vLLM requires selecting a specific checkpoint variant explicitly. For example:
+* [NVIDIA-Nemotron-3-Nano-30B-A3B-BF16](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16)
+* [NVIDIA-Nemotron-3-Nano-30B-A3B-FP8](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-FP8)
+* [NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4)
+
 <!-- path-check-skip-next-line -->
-Similar to the previous example we will be using the same model [`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16`](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
+For this example we will be using the [`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16`](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16) variant.
+
+For embedding we will be using the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) model.
 
 ### Install the Simple Web Query Example
 
