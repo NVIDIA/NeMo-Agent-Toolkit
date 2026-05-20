@@ -787,6 +787,65 @@ async def test_chat_response_chunk_to_websocket_message():
     assert isinstance(nat_chat_repsonse_chunk_to_system_response, WebSocketSystemResponseTokenMessage)
 
 
+# -- ResponsePayloadOutput.get_stream_data() wire-format contract -------------
+#
+# Pins the SSE shape ``/generate/full`` emits. The eval client at
+# ``nat.plugins.eval.runtime.remote_workflow`` extracts the final answer via
+# ``chunk_data.get("value")``, so every payload type wrapped in
+# ``ResponsePayloadOutput`` must serialize to ``data: {"value": <str>}\n\n``.
+# This regressed when ``react_agent`` gained a ``_stream_fn`` (PR #1851):
+# ``ChatResponseChunk`` payloads were emitted as raw OpenAI envelopes with no
+# top-level ``value`` field, so the eval client extracted ``None`` and every
+# eval run scored zero.
+
+
+@pytest.mark.parametrize(
+    "payload, expected_value",
+    [
+        pytest.param("21", "21", id="str"),
+        pytest.param(21, "21", id="int-stringified"),
+        pytest.param(ChatResponseChunk.create_streaming_chunk("21"), "21", id="chat-response-chunk"),
+        pytest.param(
+            ChatResponseChunk.create_streaming_chunk("", finish_reason="stop"), "",
+            id="chat-response-chunk-keepalive",
+        ),
+        pytest.param(
+            ChatResponse(id="x", object="chat.completion", created=datetime.datetime.now(datetime.UTC),
+                         choices=[ChatResponseChoice(index=0, message=ChoiceMessage(content="42", role="assistant"),
+                                                     finish_reason="stop")],
+                         usage=Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0)),
+            "42", id="chat-response",
+        ),
+    ],
+)
+def test_response_payload_output_emits_value_envelope(payload, expected_value):
+    """Each supported payload type serializes to ``data: {"value": <str>}\\n\\n``.
+
+    Covers strings, primitives (stringified), ``ChatResponseChunk`` (the
+    streaming-agent regression case introduced by PR #1851, including
+    role-only/finish-only keepalive chunks), and ``ChatResponse``.
+    """
+    sse = ResponsePayloadOutput(payload=payload).get_stream_data()
+    assert sse.startswith("data: ") and sse.endswith("\n\n")
+    assert json.loads(sse[len("data: "):-2]) == {"value": expected_value}
+
+
+def test_response_payload_output_other_basemodel_serializes_to_json_string():
+    """Arbitrary ``BaseModel`` payloads are JSON-encoded into ``value`` so the
+    wire shape stays uniformly ``{"value": <str>}`` while preserving the full
+    payload — consumers that need the structured form ``json.loads(value)``.
+    """
+
+    class Custom(BaseModel):
+        answer: int
+        explanation: str
+
+    sse = ResponsePayloadOutput(payload=Custom(answer=21, explanation="3*7")).get_stream_data()
+    decoded = json.loads(sse[len("data: "):-2])
+    assert set(decoded.keys()) == {"value"}
+    assert json.loads(decoded["value"]) == {"answer": 21, "explanation": "3*7"}
+
+
 async def test_nat_intermediate_step_to_websocket_message():
     """Tests ResponseIntermediateStep can be converted to a WebSocketSystemIntermediateStepMessage"""
     message_validator = MessageValidator()

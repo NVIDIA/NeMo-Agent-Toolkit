@@ -15,6 +15,7 @@
 
 import abc
 import datetime
+import json
 import typing
 import uuid
 from abc import abstractmethod
@@ -520,15 +521,61 @@ class ResponseObservabilityTrace(BaseModel, ResponseSerializable):
 
 
 class ResponsePayloadOutput(BaseModel, ResponseSerializable):
+    """SSE wrapper for the workflow's output on the ``/generate/full`` endpoint.
+
+    The wire contract for ``/generate/full`` is::
+
+        data: {"value": "<answer string>"}
+
+    paired with ``intermediate_data: ...`` lines for step events. Consumers
+    (notably ``nat.plugins.eval.runtime.remote_workflow``) rely on the
+    ``value`` key to extract the workflow's final answer; see the test
+    fixture in ``packages/nvidia_nat_eval/tests/eval/test_remote_evaluate.py``
+    which simulates the server emitting exactly this shape.
+
+    ``payload`` accepts whatever the workflow yields from its single-output
+    function or stream chunks: a primitive (``str``, ``int``, ...), a
+    Pydantic ``BaseModel`` (e.g. ``ChatResponseChunk`` for ReAct-style
+    workflows that opt into token streaming), or any JSON-serializable
+    object. ``get_stream_data`` normalizes that to a string answer and
+    emits the canonical ``{"value": ...}`` envelope so the wire shape stays
+    stable across workflow types.
+    """
 
     payload: typing.Any
 
+    def _payload_as_value(self) -> str:
+        """Coerce ``payload`` into the string answer that goes in ``value``.
+
+        - ``ChatResponseChunk`` (used by streaming agent workflows like
+          ``react_agent``): take the first choice's ``delta.content``,
+          falling back to an empty string for keep-alive chunks that carry
+          only a role or finish_reason.
+        - ``ChatResponse`` (single-shot chat completions): take the first
+          choice's ``message.content``.
+        - Other ``BaseModel`` payloads: serialize to JSON. Consumers that
+          want structured output can json-decode the ``value`` string.
+        - Primitives / non-Pydantic objects: ``str()``.
+        """
+        payload = self.payload
+
+        if isinstance(payload, ChatResponseChunk):
+            if payload.choices:
+                return payload.choices[0].delta.content or ""
+            return ""
+
+        if isinstance(payload, ChatResponse):
+            if payload.choices:
+                return payload.choices[0].message.content or ""
+            return ""
+
+        if isinstance(payload, BaseModel):
+            return payload.model_dump_json()
+
+        return str(payload)
+
     def get_stream_data(self) -> str:
-
-        if (isinstance(self.payload, BaseModel)):
-            return f"data: {self.payload.model_dump_json()}\n\n"
-
-        return f"data: {self.payload}\n\n"
+        return f"data: {json.dumps({'value': self._payload_as_value()})}\n\n"
 
 
 class ResponseATIFStep(BaseModel, ResponseSerializable):

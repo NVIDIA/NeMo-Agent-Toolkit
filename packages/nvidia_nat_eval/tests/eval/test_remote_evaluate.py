@@ -22,7 +22,9 @@ from aiohttp import web
 from aiohttp.test_utils import TestClient
 from aiohttp.test_utils import TestServer
 
+from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import ResponseIntermediateStep
+from nat.data_models.api_server import ResponsePayloadOutput
 from nat.data_models.evaluate_runtime import EndpointRetryConfig
 from nat.data_models.evaluate_runtime import EvaluationRunConfig
 from nat.plugins.eval.runtime.remote_workflow import EvaluationRemoteWorkflowHandler
@@ -414,3 +416,64 @@ async def test_max_retries_lower_bound_validation(invalid_value: int) -> None:
     error = exc_info.value.errors()[0]
     assert error["type"] == "greater_than_equal"
     assert error["loc"] == ("max_retries", )
+
+
+# -- Producer/consumer wire-format compatibility ------------------------------
+#
+# The fixtures above hand-craft ``data: {"value": ...}`` lines to match the
+# eval client's contract. The test below pins the *other* end of the contract:
+# lines emitted by the production ``ResponsePayloadOutput`` wrapper used by
+# ``/generate/full`` must round-trip through the eval client. PR #1851
+# (``feat: token streaming support for ReAct Agent``) regressed exactly this
+# compatibility — ``react_agent`` started yielding ``ChatResponseChunk`` from
+# its new ``_stream_fn``, the wrapper serialized it as the chunk's full OpenAI
+# envelope, and the client's ``chunk_data.get("value")`` returned ``None``
+# because there was no top-level ``value`` field.
+
+
+@pytest.mark.parametrize("payload_factory", [
+    pytest.param(lambda answer: answer, id="str-payload"),
+    pytest.param(ChatResponseChunk.create_streaming_chunk, id="chat-response-chunk-payload"),
+])
+async def test_remote_eval_consumes_response_payload_output(rag_eval_input, payload_factory):
+    """Production ``ResponsePayloadOutput.get_stream_data()`` lines round-trip
+    through the eval client. Covers bare-string and ``ChatResponseChunk``
+    payloads (the streaming-agent regression path from PR #1851).
+    """
+    item = rag_eval_input.eval_input_items[0]
+    expected_answer = "the answer is 21"
+
+    async def stream_response(request):
+        resp = web.StreamResponse(status=200, headers={"Content-Type": "text/event-stream"})
+        await resp.prepare(request)
+        sse_line = ResponsePayloadOutput(payload=payload_factory(expected_answer)).get_stream_data()
+        await resp.write(sse_line.encode("utf-8"))
+        await resp.write_eof()
+        return resp
+
+    app = web.Application()
+    app.router.add_post("/generate/full", stream_response)
+    server = TestServer(app)
+    await server.start_server()
+    client = TestClient(server)
+    await client.start_server()
+
+    handler = EvaluationRemoteWorkflowHandler(
+        config=EvaluationRunConfig(endpoint=str(server.make_url("")).rstrip("/"),
+                                   endpoint_timeout=5,
+                                   config_file=Path(__file__),
+                                   dataset=None,
+                                   result_json_path="",
+                                   skip_workflow=False,
+                                   skip_completed_entries=False,
+                                   reps=1),
+        max_concurrency=2,
+    )
+
+    async with client.session as session:
+        await handler.run_workflow_remote_single(session, item)
+
+    await client.close()
+    await server.close()
+
+    assert item.output_obj == expected_answer
