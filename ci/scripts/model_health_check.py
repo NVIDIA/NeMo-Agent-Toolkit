@@ -61,10 +61,9 @@ REQUEST_TIMEOUT = 30
 INTER_REQUEST_DELAY = 1.0
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
-EXCLUDE_YAMLS = [
+EXCLUDE_YAMLS = (
     "examples/documentation_guides/locally_hosted_llms/nim_config.yml",
-    "examples/documentation_guides/locally_hosted_llms/vllm_config.yml",
-]
+)
 
 
 def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
