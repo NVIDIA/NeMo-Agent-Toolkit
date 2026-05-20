@@ -15,6 +15,7 @@
 
 import abc
 import datetime
+import json
 import typing
 import uuid
 from abc import abstractmethod
@@ -520,15 +521,52 @@ class ResponseObservabilityTrace(BaseModel, ResponseSerializable):
 
 
 class ResponsePayloadOutput(BaseModel, ResponseSerializable):
+    """SSE wrapper for the workflow's output on the ``/generate/full`` endpoint.
+
+    The wire contract for ``/generate/full`` is::
+
+        data: {"value": "<answer string>"}
+
+    paired with ``intermediate_data: ...`` lines for step events. Consumers
+    (notably ``nat.plugins.eval.runtime.remote_workflow``) rely on the
+    ``value`` key to extract the workflow's final answer; see the test
+    fixture in ``packages/nvidia_nat_eval/tests/eval/test_remote_evaluate.py``
+    which simulates the server emitting exactly this shape.
+
+    ``payload`` accepts whatever the workflow yields from its single-output
+    function or stream chunks: a primitive (``str``, ``int``, ...), a
+    Pydantic ``BaseModel`` (e.g. ``ChatResponseChunk`` for ReAct-style
+    workflows that opt into token streaming), or any JSON-serializable
+    object. ``get_stream_data`` normalizes that to a string answer and
+    emits the canonical ``{"value": ...}`` envelope so the wire shape stays
+    stable across workflow types.
+    """
 
     payload: typing.Any
 
     def get_stream_data(self) -> str:
+        payload = self.payload
 
-        if (isinstance(self.payload, BaseModel)):
-            return f"data: {self.payload.model_dump_json()}\n\n"
+        if isinstance(payload, ChatResponseChunk):
+            content = payload.choices[0].delta.content or "" if payload.choices else ""
+            return f"data: {json.dumps({'value': content})}\n\n"
 
-        return f"data: {self.payload}\n\n"
+        if isinstance(payload, ChatResponse):
+            content = payload.choices[0].message.content or "" if payload.choices else ""
+            return f"data: {json.dumps({'value': content})}\n\n"
+
+        if isinstance(payload, BaseModel):
+            # If the payload already exposes a ``value`` field it is already in
+            # the canonical envelope shape (e.g. NAT's auto-derived
+            # ``OutputArgsSchema`` from ``DecomposedType.get_pydantic_schema``,
+            # or any user model that opts into the wire contract). Emit the
+            # model's dump as-is so we don't double-wrap into
+            # ``{"value": "{\"value\": ...}"}``.
+            if "value" in type(payload).model_fields:
+                return f"data: {payload.model_dump_json()}\n\n"
+            return f"data: {json.dumps({'value': payload.model_dump_json()})}\n\n"
+
+        return f"data: {json.dumps({'value': str(payload)})}\n\n"
 
 
 class ResponseATIFStep(BaseModel, ResponseSerializable):
