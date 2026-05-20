@@ -17,10 +17,10 @@ limitations under the License.
 
 # Using Local LLMs
 
-NeMo Agent Toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
+NeMo Agent Toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple web query example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
 
 ## Using NIM
-For the purposes of this guide we will deploy those same models locally. However, regardless of the model you choose, the process is the same for downloading the Docker container for the model from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `Downloadable` tag, the exact commands will be specified on the `Deploy` tab for the model, then `Self-Hosted Deployments`.
+For the purposes of this guide we will deploy the same models used in the simple web query example locally. However, regardless of the model you choose, the process is the same for downloading the Docker container for the model from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `Downloadable` tag, the exact commands will be specified on the `Deploy` tab for the model, then `Self-Hosted Deployments`.
 
 ### Requirements
 - An NVIDIA GPU with CUDA support (exact requirements depend on the model you are using)
