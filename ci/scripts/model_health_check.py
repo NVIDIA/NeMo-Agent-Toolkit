@@ -188,7 +188,7 @@ def check_model(model: str, api_key: str) -> tuple[int, str, str]:
 
 
 def check_embedder(model: str, api_key: str) -> tuple[int, str, str]:
-    """Make a minimal embeddings call and return (status_code, detail)."""
+    """Make a minimal embeddings call and return (status_code, detail, deprecation)."""
     payload = json.dumps({
         "model": model,
         "input": ["hi"],
