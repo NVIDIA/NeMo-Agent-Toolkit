@@ -162,6 +162,7 @@ ALLOWLISTED_WORDS: set[str] = {
     "mistralai/mistral-large-3-675b-instruct-2512",
     "mistralai/mistral-small-4-119b-2603",
     "N/A",
+    "nvidia/nemotron-3-nano-30b-a3b",
     "output/jobs/job_",
     "POST/PUT",
     "predictions/forecasts",
