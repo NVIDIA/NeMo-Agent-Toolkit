@@ -21,7 +21,7 @@ NeMo Agent Toolkit has the ability to interact with locally hosted LLMs, in this
 
 ## Using NIM
 <!-- path-check-skip-next-line -->
-In the NeMo Agent Toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://build.nvidia.com/nvidia/llama-3_1-nemotron-nano-4b-v1_1/) which is more likely to be runnable on a local workstation.
+In the NeMo Agent Toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`nvidia/nemotron-3-nano-30b-a3b`](https://build.nvidia.com/nvidia/nemotron-3-nano-30b-a3b) which is more likely to be runnable on a local workstation.
 
 Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
 
@@ -50,7 +50,7 @@ Password: <PASTE_API_KEY_HERE>
 
 Download the container for the LLM:
 ```bash
-docker pull nvcr.io/nim/nvidia/llama3.1-nemotron-nano-4b-v1.1:latest
+docker pull nvcr.io/nim/nvidia/nemotron-3-nano:latest
 ```
 
 Download the container for the embedding Model:
@@ -71,14 +71,12 @@ export NGC_API_KEY=<PASTE_API_KEY_HERE>
 export LOCAL_NIM_CACHE=~/.cache/nim
 mkdir -p "$LOCAL_NIM_CACHE"
 docker run -it --rm \
-    --runtime=nvidia \
     --gpus '"device=0"' \
     --shm-size=16GB \
     -e NGC_API_KEY \
     -v "$LOCAL_NIM_CACHE:/opt/nim/.cache" \
-    -u $(id -u) \
     -p 8000:8000 \
-    nvcr.io/nim/nvidia/llama3.1-nemotron-nano-4b-v1.1:latest
+    nvcr.io/nim/nvidia/nemotron-3-nano:latest
 ```
 
 Open a new terminal and run the embedding model container, listening on port 8001:
@@ -115,7 +113,7 @@ llms:
   nim_llm:
     _type: nim
     base_url: "http://localhost:8000/v1"
-    model_name: nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
+    model_name: nvidia/nemotron-3-nano-30b-a3b
 
 embedders:
   nv-embedqa-e5-v5:
@@ -146,7 +144,7 @@ vLLM provides an [OpenAI-Compatible Server](https://docs.vllm.ai/en/latest/getti
 If you have not already done so, install vLLM following the [Quickstart](https://docs.vllm.ai/en/latest/getting_started/quickstart.html) guide. It is recommended to use a **separate** virtual environment for vLLM due to potential conflicts with NeMo Agent Toolkit dependencies.
 
 <!-- path-check-skip-next-line -->
-Similar to the previous example we will be using the same [`nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1`](https://huggingface.co/nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
+Similar to the previous example we will be using the same model [`nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16`](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16) LLM model. Along with the [`ssmits/Qwen2-7B-Instruct-embed-base`](https://huggingface.co/ssmits/Qwen2-7B-Instruct-embed-base) embedding model.
 
 ### Install the Simple Web Query Example
 
@@ -168,7 +166,7 @@ The `CUDA_VISIBLE_DEVICES` environment variable is used to specify the GPUs to u
 
 In a terminal from within the vLLM environment, run the following command to serve the LLM:
 ```bash
-CUDA_VISIBLE_DEVICES=0 vllm serve nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
+CUDA_VISIBLE_DEVICES=0 vllm serve nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
 ```
 
 In a second terminal also from within the vLLM environment, run the following command to serve the embedding model:
@@ -200,7 +198,7 @@ llms:
     _type: openai
     api_key: "EMPTY"
     base_url: "http://localhost:8000/v1"
-    model_name: nvidia/Llama-3.1-Nemotron-Nano-4B-v1.1
+    model_name: nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16
 
 embedders:
   vllm_embedder:

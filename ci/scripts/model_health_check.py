@@ -15,7 +15,7 @@
 # limitations under the License.
 """Check that NIM model endpoints referenced in example configs are reachable.
 
-Scans config*.yml files under examples/ for LLM and embedder blocks with
+Scans YAML files under examples/ for LLM and embedder blocks with
 _type: nim, extracts model references (including optimizer search_space),
 and checks each model in two passes:
 
@@ -69,7 +69,11 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
     llm_models: dict[str, list[str]] = {}
     embedder_models: dict[str, list[str]] = {}
 
-    for config_path in sorted(examples_dir.rglob("config*.yml")):
+    config_paths = []
+    for pattern in ("*.yml", "*.yaml"):
+        config_paths.extend(examples_dir.rglob(pattern))
+
+    for config_path in sorted(config_paths):
         with open(config_path, encoding="utf-8") as f:
             try:
                 cfg = yaml.safe_load(f)
@@ -141,8 +145,9 @@ def get_catalog_models(api_key: str) -> set[str]:
         return set()
 
 
-def _nim_post(endpoint: str, payload: bytes, api_key: str) -> tuple[int, str]:
-    """POST *payload* to NIM_API_BASE/*endpoint* and return (status, detail)."""
+def _nim_post(endpoint: str, payload: bytes, api_key: str) -> tuple[int, str, str]:
+    """POST *payload* to NIM_API_BASE/*endpoint* and return (status, detail, deprecation)."""
+
     req = urllib.request.Request(
         f"{NIM_API_BASE}/{endpoint}",
         data=payload,
@@ -154,21 +159,24 @@ def _nim_post(endpoint: str, payload: bytes, api_key: str) -> tuple[int, str]:
     ctx = ssl.create_default_context()
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT, context=ctx) as resp:
-            return resp.status, ""
+            print(f"    Received response: HTTP {resp.status}")
+            deprecated = resp.headers.get("Deprecation", "")
+            return resp.status, "", deprecated
     except urllib.error.HTTPError as e:
+        print(f"    Received response: HTTP {e.code}")
         detail = ""
         try:
             body = json.loads(e.read().decode())
             detail = body.get("detail", str(body))
         except (json.JSONDecodeError, UnicodeDecodeError, KeyError, TypeError):
             detail = str(e)
-        return e.code, detail
+        return e.code, detail, ""
     except (urllib.error.URLError, TimeoutError, OSError) as e:
-        return 0, f"Connection error: {e}"
+        return 0, f"Connection error: {e}", ""
 
 
-def check_model(model: str, api_key: str) -> tuple[int, str]:
-    """Make a minimal chat/completions call and return (status_code, detail)."""
+def check_model(model: str, api_key: str) -> tuple[int, str, str]:
+    """Make a minimal chat/completions call and return (status_code, detail, deprecation)."""
     payload = json.dumps({
         "model": model,
         "messages": [{
@@ -179,8 +187,8 @@ def check_model(model: str, api_key: str) -> tuple[int, str]:
     return _nim_post("chat/completions", payload, api_key)
 
 
-def check_embedder(model: str, api_key: str) -> tuple[int, str]:
-    """Make a minimal embeddings call and return (status_code, detail)."""
+def check_embedder(model: str, api_key: str) -> tuple[int, str, str]:
+    """Make a minimal embeddings call and return (status_code, detail, deprecation)."""
     payload = json.dumps({
         "model": model,
         "input": ["hi"],
@@ -229,11 +237,9 @@ def main() -> int:
     llm_models, embedder_models = find_nim_models(args.examples_dir)
 
     # Merge into a single lookup for config file references
-    all_configs: dict[str, list[str]] = {}
-    for m, files in llm_models.items():
-        all_configs.setdefault(m, []).extend(files)
-    for m, files in embedder_models.items():
-        all_configs.setdefault(m, []).extend(files)
+    all_configs: dict[str, list[str]] = llm_models.copy()
+    # Assume that LLMs and embedders are distinct sets of models
+    all_configs.update(embedder_models)
 
     if not all_configs:
         print("No NIM models found in config files")
@@ -246,10 +252,12 @@ def main() -> int:
         for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
             if not section:
                 continue
-            print(f"  {label}:")
-            for model, files in sorted(section.items()):
-                print(f"    {model}")
+            model_by_usage = sorted(((len(files), model) for model, files in section.items()), reverse=True)
+            print(f"  {label}: Usage count")
+            for count, model in model_by_usage:
+                print(f"    {model}: {count}")
                 if args.verbose:
+                    files = section[model]
                     for f in sorted(set(files)):
                         print(f"      - {f}")
         return 0
@@ -281,6 +289,7 @@ def main() -> int:
     if llm_to_test or embedder_to_test:
         print("Pass 2: inference check on catalog-listed models...")
     down: list[tuple[str, int, str]] = []
+    deprecation: list[tuple[str, str]] = []
     call_count = 0
 
     for model in llm_to_test:
@@ -288,11 +297,14 @@ def main() -> int:
             time.sleep(INTER_REQUEST_DELAY)
         call_count += 1
 
-        status, detail = check_model(model, api_key)
+        status, detail, deprecation_detail = check_model(model, api_key)
         if status in (401, 403):
             print(f"\n  ERROR: API key is invalid or expired (HTTP {status}): {detail}", file=sys.stderr)
             return 1
-        if status == 200:
+        elif deprecation_detail != "":
+            print(f"  Deprecation: {deprecation_detail}")
+            deprecation.append((model, deprecation_detail))
+        elif status == 200:
             print(f"  OK      {model}")
         else:
             label = f"HTTP {status}" if status > 0 else "ERROR"
@@ -304,11 +316,14 @@ def main() -> int:
             time.sleep(INTER_REQUEST_DELAY)
         call_count += 1
 
-        status, detail = check_embedder(model, api_key)
+        status, detail, deprecation_detail = check_embedder(model, api_key)
         if status in (401, 403):
             print(f"\n  ERROR: API key is invalid or expired (HTTP {status}): {detail}", file=sys.stderr)
             return 1
-        if status == 200:
+        elif deprecation_detail != "":
+            print(f"  Deprecation: {deprecation_detail}")
+            deprecation.append((model, deprecation_detail))
+        elif status == 200:
             print(f"  OK      {model}  (embedder)")
         else:
             label = f"HTTP {status}" if status > 0 else "ERROR"
@@ -318,12 +333,20 @@ def main() -> int:
     print()
 
     # -- Summary -------------------------------------------------------------
-    has_failures = bool(removed) or bool(down)
+    has_failures = bool(removed) or bool(down) or bool(deprecation)
 
     if removed:
         print(f"{len(removed)} model(s) REMOVED from catalog (need config update):\n")
         for model in removed:
             print(f"  {model}")
+            for f in sorted(set(all_configs[model])):
+                print(f"    - {f}")
+            print()
+
+    if deprecation:
+        print(f"{len(deprecation)} model(s) DEPRECATED (in catalog but deprecated):\n")
+        for model, detail in deprecation:
+            print(f"  {model} ({detail})")
             for f in sorted(set(all_configs[model])):
                 print(f"    - {f}")
             print()
@@ -342,6 +365,7 @@ def main() -> int:
 
     if args.output_json:
         down_models = {m for m, _s, _d in down}
+        deprecated_models = {m for m, _d in deprecation}
         report = {
             "removed": [{
                 "model": m,
@@ -355,11 +379,18 @@ def main() -> int:
                 "detail": d,
                 "configs": sorted(set(all_configs[m])),
             } for m, s, d in down],
+            "deprecation": [{
+                "model": m,
+                "type": "embedder" if m in embedder_models else "llm",
+                "detail": d,
+                "configs": sorted(set(all_configs[m])),
+            } for m, d in deprecation],
             "ok": [{
                 "model": m,
                 "type": "embedder" if m in embedder_models else "llm",
                 "configs": sorted(set(all_configs[m])),
-            } for m in sorted(all_model_names) if m not in removed and m not in down_models],
+            } for m in sorted(all_model_names)
+                   if m not in removed and m not in down_models and m not in deprecated_models],
         }
         with open(args.output_json, "w", encoding="utf-8") as jf:
             json.dump(report, jf, indent=2)
