@@ -61,5 +61,15 @@ repos:
         args: ["-q", "--config", "ci/markdown-link-check-config.json"]
         exclude: "^(packages/nvidia_nat_core/src/nat/meta/pypi\\.md|CHANGELOG\\.md)$"
 
+  - repo: local
+    hooks:
+      - id: generate-models-list
+        name: Generate Models List
+        entry: python ./ci/scripts/model_health_check.py --log-level=WARNING --dry-run --output-json ci/.nim_models_used.json
+        language: python
+        files: "^examples/.*\\.(yml|yaml)$"
+        pass_filenames: false
+        additional_dependencies: ["pyyaml"]
+
 default_language_version:
   python: python3
