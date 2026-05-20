@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import logging
 
 from zep_cloud import NotFoundError
@@ -46,13 +45,8 @@ class ZepEditor(MemoryEditor):
         """
         self._client = zep_client
 
-    @staticmethod
-    def _default_thread_id(user_id: str) -> str:
-        user_hash = hashlib.sha256(user_id.encode("utf-8")).hexdigest()[:32]
-        return f"default_zep_thread_{user_hash}"
-
     def _get_thread_id(self, user_id: str) -> str:
-        return Context.get().conversation_id or self._default_thread_id(user_id)
+        return Context.get().conversation_id or "default_zep_thread"
 
     async def _ensure_user_exists(self, user_id: str) -> None:
         """
@@ -230,9 +224,18 @@ class ZepEditor(MemoryEditor):
                                })
                 ]
 
+            context_string = ""
             # Use Zep v3 thread.get_user_context - returns pre-formatted context
-            memory_response = await self._client.thread.get_user_context(thread_id=thread_id, mode=mode)
-            context_string = memory_response.context or ""
+            try:
+                memory_response = await self._client.thread.get_user_context(thread_id=thread_id, mode=mode)
+                context_string = memory_response.context or ""
+            except ApiError as e:
+                if e.status_code == 404:
+                    logger.debug("Zep thread not found - 404 (thread_id=%s), returning empty context", thread_id)
+                else:
+                    logger.error("Failed fetching Zep thread context (thread_id=%s): %s", thread_id,
+                                 str(e))  # noqa: TRY400
+                    raise
 
             # Return as a single MemoryItem with the formatted context
             if context_string:
@@ -250,9 +253,6 @@ class ZepEditor(MemoryEditor):
         except NotFoundError:
             # Thread doesn't exist or no context available
             return []
-        except ApiError as e:
-            logger.error("get_user_context failed (thread_id=%s): %s", thread_id, str(e))  # noqa: TRY400
-            raise
 
     async def remove_items(self, **kwargs) -> None:
         """

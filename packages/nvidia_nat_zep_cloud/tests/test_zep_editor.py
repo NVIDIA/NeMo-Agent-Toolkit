@@ -30,8 +30,8 @@ def test_get_thread_id_uses_context_conversation_id():
         assert editor._get_thread_id("user-123") == "conversation-123"
 
 
-def test_get_thread_id_defaults_to_isolated_user_thread():
-    """Missing conversation IDs should not collapse every user into one Zep thread."""
+def test_get_thread_id_defaults_to_default_zep_thread():
+    """Missing conversation IDs should preserve the default Zep thread."""
     editor = ZepEditor(zep_client=Mock())
     context = Mock()
     context.conversation_id = None
@@ -40,10 +40,8 @@ def test_get_thread_id_defaults_to_isolated_user_thread():
         thread_a = editor._get_thread_id("user-a")
         thread_b = editor._get_thread_id("user-b")
 
-    assert thread_a.startswith("default_zep_thread_")
-    assert thread_b.startswith("default_zep_thread_")
-    assert thread_a != thread_b
-    assert "user-a" not in thread_a
+    assert thread_a == "default_zep_thread"
+    assert thread_b == "default_zep_thread"
 
 
 async def test_search_uses_graph_search_with_query():
