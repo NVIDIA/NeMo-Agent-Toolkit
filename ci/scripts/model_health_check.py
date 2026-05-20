@@ -15,7 +15,7 @@
 # limitations under the License.
 """Check that NIM model endpoints referenced in example configs are reachable.
 
-Scans config*.yml files under examples/ for LLM and embedder blocks with
+Scans YAML files under examples/ for LLM and embedder blocks with
 _type: nim, extracts model references (including optimizer search_space),
 and checks each model in two passes:
 
@@ -365,6 +365,7 @@ def main() -> int:
 
     if args.output_json:
         down_models = {m for m, _s, _d in down}
+        deprecated_models = {m for m, _d in deprecation}
         report = {
             "removed": [{
                 "model": m,
@@ -388,7 +389,7 @@ def main() -> int:
                 "model": m,
                 "type": "embedder" if m in embedder_models else "llm",
                 "configs": sorted(set(all_configs[m])),
-            } for m in sorted(all_model_names) if m not in removed and m not in down_models],
+            } for m in sorted(all_model_names) if m not in removed and m not in down_models and m not in deprecated_models],
         }
         with open(args.output_json, "w", encoding="utf-8") as jf:
             json.dump(report, jf, indent=2)
