@@ -425,7 +425,7 @@ def main() -> int:
                 "detail": d,
                 "configs": sorted(set(all_configs[m])),
             } for m, s, d in down],
-            "deprecation": [{
+            "deprecated": [{
                 "model": m,
                 "type": "embedder" if m in embedder_models else "llm",
                 "detail": d,
