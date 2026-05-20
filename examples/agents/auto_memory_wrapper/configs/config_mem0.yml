@@ -27,9 +27,11 @@ general:
 llms:
   nim_llm:
     _type: nim
-    model_name: meta/llama-3.3-70b-instruct
-    temperature: 0.7
+    model_name: nvidia/nemotron-3-nano-30b-a3b
+    temperature: 0.5
     max_tokens: 1024
+    chat_template_kwargs:
+      enable_thinking: false
 
 # Memory backend configuration
 memory:
