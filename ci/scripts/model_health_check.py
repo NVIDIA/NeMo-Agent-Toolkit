@@ -215,25 +215,24 @@ def _handle_dry_run(llm_models: dict[str, list[str]],
                     output_file: Path | None,
                     verbose: bool) -> int:
     try:
+        report: dict[str, list[dict[str, str | int]]] = {}
         for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
             if not section:
                 continue
 
+            report_rows: list[dict[str, str | int]] = []
             model_by_usage = sorted(((len(files), model) for model, files in section.items()), reverse=True)
             _logger.info("  %s: Usage count", label)
             for count, model in model_by_usage:
                 _logger.info("    %s: %s", model, count)
+                report_rows.append({"model": model, "usage_count": count})
                 if verbose:
                     files = section[model]
                     for f in sorted(set(files)):
                         _logger.info("      - %s", f)
 
+            report[label.lower()] = report_rows
         if output_file is not None:
-            report = {}
-            for label, section in (("llms", llm_models), ("embedders", embedder_models)):
-                report[label] = []
-                for model, files in section.items():
-                    report[label].append({"model": model, "num_configs": len(files)})
             write_json_report(output_file=output_file, report=report)
 
         return 0
