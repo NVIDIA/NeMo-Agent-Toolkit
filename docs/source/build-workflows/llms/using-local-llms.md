@@ -20,10 +20,7 @@ limitations under the License.
 NeMo Agent Toolkit has the ability to interact with locally hosted LLMs, in this guide we will demonstrate how to adapt the simple example (`examples/getting_started/simple_web_query`) to use locally hosted LLMs using two different approaches using [NVIDIA NIM](https://docs.nvidia.com/nim/) and [vLLM](https://docs.vllm.ai/), though any locally hosted LLM with an OpenAI-compatible API can be used.
 
 ## Using NIM
-<!-- path-check-skip-next-line -->
-In the NeMo Agent Toolkit simple example the [`meta/llama-3.1-70b-instruct`](https://build.nvidia.com/meta/llama-3_1-70b-instruct) model was used. For the purposes of this guide we will be using a smaller model, the [`nvidia/nemotron-3-nano-30b-a3b`](https://build.nvidia.com/nvidia/nemotron-3-nano-30b-a3b) which is more likely to be runnable on a local workstation.
-
-Regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `RUN ANYWHERE` tag, the exact commands will be specified on the `Deploy` tab for the model.
+For the purposes of this guide we will deploy those same models locally. However, regardless of the model you choose, the process is the same for downloading the model's container from [`build.nvidia.com`](https://build.nvidia.com/). Navigate to the model you wish to run locally, if it is able to be downloaded it will be labeled with the `Downloadable` tag, the exact commands will be specified on the `Deploy` tab for the model, then `Self-Hosted Deployments`.
 
 ### Requirements
 - An NVIDIA GPU with CUDA support (exact requirements depend on the model you are using)
