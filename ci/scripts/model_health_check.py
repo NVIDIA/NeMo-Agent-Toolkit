@@ -99,7 +99,6 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
         if not isinstance(cfg, dict):
             continue
 
-
         for section_key, target in (("llms", llm_models), ("embedders", embedder_models)):
             section = cfg.get(section_key)
             if not isinstance(section, dict):
@@ -211,11 +210,10 @@ def write_json_report(output_file: Path, report: dict) -> None:
     _logger.info("Results written to %s", output_file)
 
 
-def _handle_dry_run(
-        llm_models: dict[str, list[str]],
-        embedder_models: dict[str, list[str]],
-        output_file: Path | None,
-        verbose: bool) -> int:
+def _handle_dry_run(llm_models: dict[str, list[str]],
+                    embedder_models: dict[str, list[str]],
+                    output_file: Path | None,
+                    verbose: bool) -> int:
     try:
         for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
             if not section:
@@ -235,10 +233,7 @@ def _handle_dry_run(
             for label, section in (("llms", llm_models), ("embedders", embedder_models)):
                 report[label] = []
                 for model, files in section.items():
-                    report[label].append({
-                        "model": model,
-                        "num_configs": len(files)
-                    })
+                    report[label].append({"model": model, "num_configs": len(files)})
             write_json_report(output_file=output_file, report=report)
 
         return 0
