@@ -389,7 +389,8 @@ def main() -> int:
                 "model": m,
                 "type": "embedder" if m in embedder_models else "llm",
                 "configs": sorted(set(all_configs[m])),
-            } for m in sorted(all_model_names) if m not in removed and m not in down_models and m not in deprecated_models],
+            } for m in sorted(all_model_names)
+                   if m not in removed and m not in down_models and m not in deprecated_models],
         }
         with open(args.output_json, "w", encoding="utf-8") as jf:
             json.dump(report, jf, indent=2)
