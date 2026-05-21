@@ -55,10 +55,10 @@ LLM_CONFIGS: dict[str, NIMModelConfig] = {
 }
 
 EMBEDDER_CONFIGS: dict[str, NIMEmbedderModelConfig] = {
-    # nvidia/llama-3.2-nv-embedqa-1b-v2: supports dimensions parameter
+    # nvidia/llama-nemotron-embed-1b-v2: supports dimensions parameter
     "nim_embedder":
         NIMEmbedderModelConfig(
-            model_name="nvidia/llama-3.2-nv-embedqa-1b-v2",
+            model_name="nvidia/llama-nemotron-embed-1b-v2",
             base_url="https://integrate.api.nvidia.com/v1",
         ),  # nvidia/nv-embedqa-e5-v5: REJECTS dimensions param
     "nim_embedder_e5":

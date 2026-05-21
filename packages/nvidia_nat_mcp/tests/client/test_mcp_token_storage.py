@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
 from datetime import UTC
 from datetime import datetime
 from datetime import timedelta
@@ -338,6 +339,7 @@ class TestTokenStorageIntegration:
             token_url="https://auth.example.com/token",  # type: ignore
         )
         provider._cached_credentials = OAuth2Credentials(client_id="test", client_secret="secret")
+        provider._credentials_cache_time = time.time()  # A non-none value to indicate credentials are "cached"
 
         # Trigger authentication which should resolve the object store
         with patch('nat.authentication.oauth2.oauth2_auth_code_flow_provider.OAuth2AuthCodeFlowProvider'

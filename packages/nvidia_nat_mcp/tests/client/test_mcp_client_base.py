@@ -136,7 +136,6 @@ async def mcp_client_fixture(request: pytest.FixtureRequest, unused_tcp_port_fac
 async def test_mcp_client_base_methods(mcp_client: MCPBaseClient):
 
     async with mcp_client:
-
         # Test get_tools
         tools = await mcp_client.get_tools()
         assert len(tools) == 2
@@ -158,7 +157,6 @@ async def test_mcp_client_base_methods(mcp_client: MCPBaseClient):
 @pytest.mark.skip(reason="Temporarily disabled while debugging MCP server hang")
 async def test_error_handling(mcp_client: MCPBaseClient):
     async with mcp_client:
-
         tool = await mcp_client.get_tool("throw_error")
 
         with pytest.raises(RuntimeError) as e:
@@ -199,9 +197,8 @@ class MockAsyncContextManager:
     async def __aenter__(self):
         self.client.connect_call_count += 1
         # Only fail during reconnect attempts, not initial connection for most tests
-        if (self.client.connect_should_fail and self.client.connect_call_count > 1
-                and  # Allow first connection to succeed
-                self.client.connect_call_count <= self.client.connect_failure_count + 1):
+        if (self.client.connect_should_fail and self.client.connect_call_count > 1  # Allow first connection to succeed
+                and self.client.connect_call_count <= self.client.connect_failure_count + 1):
             raise ConnectionError(f"Mock connection failure #{self.client.connect_call_count}")
 
         # Return a mock session
@@ -224,13 +221,58 @@ class MockAsyncContextManager:
         pass
 
 
+class TaskBoundMockMCPClient(MCPBaseClient):
+    """Mock client whose transport context must be exited by the task that entered it."""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.connect_call_count = 0
+        self.list_tools_call_count = 0
+        self.contexts: list[TaskBoundAsyncContextManager] = []
+
+    def connect_to_server(self):  # type: ignore
+        return TaskBoundAsyncContextManager(self)
+
+
+class TaskBoundAsyncContextManager:
+    """Context manager that mimics AnyIO task-bound transport cleanup."""
+
+    def __init__(self, client: TaskBoundMockMCPClient):
+        self.client = client
+        self.enter_task: asyncio.Task | None = None
+        self.exit_task: asyncio.Task | None = None
+
+    async def __aenter__(self):
+        self.enter_task = asyncio.current_task()
+        self.client.connect_call_count += 1
+        self.client.contexts.append(self)
+
+        mock_session = AsyncMock(spec=ClientSession)
+
+        async def mock_list_tools():
+            self.client.list_tools_call_count += 1
+            if self.client.list_tools_call_count == 1:
+                raise ConnectionError("Connection lost")
+            return MagicMock(tools=[])
+
+        mock_session.list_tools.side_effect = mock_list_tools
+        return mock_session
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.exit_task = asyncio.current_task()
+        if self.exit_task is not self.enter_task:
+            raise RuntimeError("Attempted to exit a cancel scope that isn't the current task's current cancel scope")
+
+
 async def test_reconnect_configuration():
     """Test that reconnect configuration parameters are properly set."""
-    client = MockMCPClient(transport="streamable-http",
-                           reconnect_enabled=False,
-                           reconnect_max_attempts=5,
-                           reconnect_initial_backoff=1.0,
-                           reconnect_max_backoff=100.0)
+    client = MockMCPClient(
+        transport="streamable-http",
+        reconnect_enabled=False,
+        reconnect_max_attempts=5,
+        reconnect_initial_backoff=1.0,
+        reconnect_max_backoff=100.0,
+    )
     assert client._reconnect_enabled is False
     assert client._reconnect_max_attempts == 5
     assert client._reconnect_initial_backoff == 1.0
@@ -271,7 +313,8 @@ async def test_reconnect_success_after_failure():
         reconnect_enabled=True,
         reconnect_max_attempts=2,
         reconnect_initial_backoff=0.01,  # Fast for testing
-        reconnect_max_backoff=0.02)
+        reconnect_max_backoff=0.02,
+    )
 
     # Mock the session to fail once, then succeed
     call_count = 0
@@ -294,13 +337,34 @@ async def test_reconnect_success_after_failure():
         assert call_count == 2
 
 
+async def test_reconnect_exits_transport_stack_in_lifecycle_task():
+    """Reconnect from a request task should not exit task-bound transports in that request task."""
+    client = TaskBoundMockMCPClient(
+        transport="stdio",
+        reconnect_enabled=True,
+        reconnect_max_attempts=2,
+        reconnect_initial_backoff=0.01,
+        reconnect_max_backoff=0.02,
+    )
+
+    async with client:
+        result = await asyncio.create_task(client.get_tools())
+
+    assert result == {}
+    assert client.connect_call_count == 2
+    assert client.list_tools_call_count == 2
+    assert all(context.exit_task is context.enter_task for context in client.contexts)
+
+
 async def test_reconnect_max_attempts_exceeded():
     """Test that reconnect gives up after max attempts."""
-    client = MockMCPClient(transport="streamable-http",
-                           reconnect_enabled=True,
-                           reconnect_max_attempts=2,
-                           reconnect_initial_backoff=0.01,
-                           reconnect_max_backoff=0.02)
+    client = MockMCPClient(
+        transport="streamable-http",
+        reconnect_enabled=True,
+        reconnect_max_attempts=2,
+        reconnect_initial_backoff=0.01,
+        reconnect_max_backoff=0.02,
+    )
 
     # Configure client to fail connection attempts during reconnect
     client.connect_should_fail = True
@@ -320,11 +384,13 @@ async def test_reconnect_max_attempts_exceeded():
 @pytest.mark.skip(reason="This test might fail in CI due to race conditions")
 async def test_reconnect_backoff_timing():
     """Test that reconnect backoff timing works correctly."""
-    client = MockMCPClient(transport="streamable-http",
-                           reconnect_enabled=True,
-                           reconnect_max_attempts=3,
-                           reconnect_initial_backoff=0.1,
-                           reconnect_max_backoff=0.5)
+    client = MockMCPClient(
+        transport="streamable-http",
+        reconnect_enabled=True,
+        reconnect_max_attempts=3,
+        reconnect_initial_backoff=0.1,
+        reconnect_max_backoff=0.5,
+    )
 
     # Track timing of reconnect attempts
     attempt_times = []
@@ -350,7 +416,7 @@ async def test_reconnect_backoff_timing():
 
     client.list_tools_side_effect = mock_list_tools
 
-    with patch('asyncio.sleep', mock_sleep):
+    with patch("asyncio.sleep", mock_sleep):
         async with client:
             # Should eventually succeed
             await client.get_tools()
@@ -369,7 +435,7 @@ async def test_reconnect_max_backoff_limit():
         reconnect_enabled=True,
         reconnect_max_attempts=4,
         reconnect_initial_backoff=0.2,
-        reconnect_max_backoff=0.3  # Low max for testing
+        reconnect_max_backoff=0.3,  # Low max for testing
     )
 
     attempt_times = []
@@ -388,7 +454,7 @@ async def test_reconnect_max_backoff_limit():
 
     client.list_tools_side_effect = always_fail
 
-    with patch('asyncio.sleep', mock_sleep):
+    with patch("asyncio.sleep", mock_sleep):
         async with client:
             with pytest.raises(MCPConnectionError):
                 await client.get_tools()
@@ -598,11 +664,13 @@ class TestMCPToolClient:
         input_schema = {"type": "object", "properties": {"arg1": {"type": "string"}, "arg2": {"type": "number"}}}
 
         # Create MCPToolClient instance
-        tool_client = MCPToolClient(session=mock_session,
-                                    parent_client=mock_parent_client,
-                                    tool_name="test_tool",
-                                    tool_description="Test tool",
-                                    tool_input_schema=input_schema)
+        tool_client = MCPToolClient(
+            session=mock_session,
+            parent_client=mock_parent_client,
+            tool_name="test_tool",
+            tool_description="Test tool",
+            tool_input_schema=input_schema,
+        )
 
         # Verify input schema is processed
         assert tool_client.input_schema is not None
@@ -616,10 +684,12 @@ class TestMCPToolClient:
         mock_parent_client = MagicMock()
 
         # Create MCPToolClient instance
-        tool_client = MCPToolClient(session=mock_session,
-                                    parent_client=mock_parent_client,
-                                    tool_name="test_tool",
-                                    tool_description="Original description")
+        tool_client = MCPToolClient(
+            session=mock_session,
+            parent_client=mock_parent_client,
+            tool_name="test_tool",
+            tool_description="Original description",
+        )
 
         # Override description
         tool_client.set_description("New description")
@@ -712,8 +782,8 @@ class TestMCPStreamableHTTPClientSessionIdAndHeaders:
         async def mock_streamable_client(*args, **kwargs):
             yield (AsyncMock(), AsyncMock(), mock_session_id_callback)
 
-        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
-            with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
+        with patch("nat.plugins.mcp.client.client_base.streamable_http_client", mock_streamable_client):
+            with patch("nat.plugins.mcp.client.client_base.ClientSession") as MockClientSession:
                 mock_session_cm = AsyncMock()
                 mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
                 mock_session_cm.__aexit__ = AsyncMock(return_value=None)
@@ -739,14 +809,14 @@ class TestMCPStreamableHTTPClientSessionIdAndHeaders:
         @asynccontextmanager
         async def mock_streamable_client(*args, **kwargs):
             nonlocal captured_http_client
-            captured_http_client = kwargs.get('http_client')
+            captured_http_client = kwargs.get("http_client")
             yield (AsyncMock(), AsyncMock(), MagicMock(return_value=None))
 
         mock_session = AsyncMock()
         mock_session.initialize = AsyncMock()
 
-        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
-            with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
+        with patch("nat.plugins.mcp.client.client_base.streamable_http_client", mock_streamable_client):
+            with patch("nat.plugins.mcp.client.client_base.ClientSession") as MockClientSession:
                 mock_session_cm = AsyncMock()
                 mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
                 mock_session_cm.__aexit__ = AsyncMock(return_value=None)
@@ -770,14 +840,14 @@ class TestMCPStreamableHTTPClientSessionIdAndHeaders:
         @asynccontextmanager
         async def mock_streamable_client(*args, **kwargs):
             nonlocal captured_http_client
-            captured_http_client = kwargs.get('http_client')
+            captured_http_client = kwargs.get("http_client")
             yield (AsyncMock(), AsyncMock(), MagicMock(return_value=None))
 
         mock_session = AsyncMock()
         mock_session.initialize = AsyncMock()
 
-        with patch('nat.plugins.mcp.client.client_base.streamable_http_client', mock_streamable_client):
-            with patch('nat.plugins.mcp.client.client_base.ClientSession') as MockClientSession:
+        with patch("nat.plugins.mcp.client.client_base.streamable_http_client", mock_streamable_client):
+            with patch("nat.plugins.mcp.client.client_base.ClientSession") as MockClientSession:
                 mock_session_cm = AsyncMock()
                 mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
                 mock_session_cm.__aexit__ = AsyncMock(return_value=None)
@@ -825,9 +895,16 @@ class TestMCPServerConfigCustomHeaders:
 
         assert config.custom_headers is None
 
+    def test_transport_defaults_to_streamable_http(self):
+        """Test that transport defaults to streamable-http when omitted."""
+        from nat.plugins.mcp.client.client_config import MCPServerConfig
+
+        config = MCPServerConfig(url="http://localhost:8080/mcp")
+
+        assert config.transport == "streamable-http"
+
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="MCP Server")
     parser.add_argument("--transport", type=str, default="stdio", help="Transport to use for the server")
 

@@ -34,6 +34,7 @@ from nat.data_models.finetuning import TrajectoryCollection
 from nat.finetuning.interfaces.trainer_adapter import TrainerAdapter
 
 from .config import ARTTrainerAdapterConfig
+from .remote_backend import RemoteBackend
 
 logger = logging.getLogger(__name__)
 
@@ -48,13 +49,12 @@ class ARTTrainerAdapter(TrainerAdapter):
 
         self.adapter_config: ARTTrainerAdapterConfig = adapter_config
 
-        self.remote_backend: art.Backend = art.Backend(
+        self.remote_backend: art.Backend = RemoteBackend(
             base_url=f"http://{adapter_config.backend.ip}:{adapter_config.backend.port}")
 
         self._model_internal_config: art.dev.InternalModelConfig = art.dev.InternalModelConfig(
             init_args=self.adapter_config.backend.init_args,
             engine_args=self.adapter_config.backend.engine_args,
-            torchtune_args=self.adapter_config.backend.torchtune_args,
             trainer_args=self.adapter_config.training)
 
         self.model: art.TrainableModel = art.TrainableModel(

@@ -70,6 +70,7 @@ workflow:
   llm_name: prompt_optimizer
   verbose: true
   parse_agent_response_max_retries: 3
+  additional_instructions: The final response should indicate that the email is either "phishing" or "benign".
 
 eval:
   general:
@@ -120,4 +121,3 @@ optimizer:
     ga_population_size: 3
     ga_diversity_lambda: 0.3
     ga_parallel_evaluations: 1
-

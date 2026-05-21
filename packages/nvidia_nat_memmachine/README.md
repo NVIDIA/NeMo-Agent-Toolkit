@@ -17,14 +17,14 @@ limitations under the License.
 
 # NVIDIA NeMo Agent Toolkit - MemMachine Integration
 
-This package provides integration with MemMachine for memory management in NeMo Agent toolkit.
+This package provides integration with MemMachine for memory management in NeMo Agent Toolkit.
 
 > [!WARNING]
 > **Experimental**: The `nvidia-nat-memmachine` plugin is Experimental and is not recommended for production use. Behavior may change without notice.
 
 ## Overview
 
-MemMachine is a unified memory management system that supports both episodic and semantic memory through a single interface. This integration allows you to use MemMachine as a memory backend for your NeMo Agent toolkit workflows.
+MemMachine is a unified memory management system that supports both episodic and semantic memory through a single interface. This integration allows you to use MemMachine as a memory backend for your NeMo Agent Toolkit workflows.
 
 ## Prerequisites
 
@@ -76,7 +76,7 @@ docker compose -f examples/deploy/docker-compose.memmachine.yml down
 
 For more details, see the [MemMachine Documentation](https://docs.memmachine.ai/).
 
-## Usage in NeMo Agent toolkit
+## Usage in NeMo Agent Toolkit
 
 Add MemMachine memory to your workflow configuration:
 
@@ -92,5 +92,5 @@ memory:
 
 - [Example Notebook](../../examples/memory/memmachine/memmachine_memory_example.ipynb)
 - [MemMachine Documentation](https://docs.memmachine.ai/)
-- [NeMo Agent toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/)
+- [NeMo Agent Toolkit Documentation](https://docs.nvidia.com/nemo/agent-toolkit/latest/)
 

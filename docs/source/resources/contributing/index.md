@@ -361,6 +361,7 @@ If you are expanding the checker to support a new file type or adding a new per-
 
 Code of Conduct <./code-of-conduct.md>
 ./licensing.md
+AI Coding Agent Skills <./agent-skills.md>
 ./cursor/index.md
 ./testing/index.md
 ```

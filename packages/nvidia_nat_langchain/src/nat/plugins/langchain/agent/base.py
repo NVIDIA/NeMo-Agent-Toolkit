@@ -25,15 +25,42 @@ from colorama import Fore
 from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import ToolMessage
+from langchain_core.messages.utils import convert_to_openai_messages
 from langchain_core.runnables import Runnable
 from langchain_core.runnables import RunnableConfig
+from langchain_core.runnables.config import merge_configs
 from langchain_core.tools import BaseTool
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.runtime import DEFAULT_RUNTIME
 
 logger = logging.getLogger(__name__)
+
+
+def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
+    """Convert an accumulated AIMessageChunk into an AIMessage, preserving tool_calls.
+
+    When streaming chunks are accumulated via ``+``, the result has ``tool_calls``
+    but ``additional_kwargs["tool_calls"]`` (the OpenAI wire format) is left empty.
+    LLM providers read the wire format when the message is sent back in conversation
+    history, so we reconstruct it here using ``convert_to_openai_messages``.
+    """
+    additional_kwargs = dict(chunk.additional_kwargs)
+    if chunk.tool_calls and not additional_kwargs.get("tool_calls"):
+        openai_msg = convert_to_openai_messages([chunk])[0]
+        if "tool_calls" in openai_msg:
+            additional_kwargs["tool_calls"] = openai_msg["tool_calls"]
+
+    return AIMessage(
+        content=chunk.content,
+        additional_kwargs=additional_kwargs,
+        response_metadata=chunk.response_metadata,
+        id=chunk.id,
+        usage_metadata=chunk.usage_metadata,
+    )
+
 
 TOOL_NOT_FOUND_ERROR_MESSAGE = "There is no tool named {tool_name}. Tool must be one of {tools}."
 INPUT_SCHEMA_MESSAGE = ". Arguments must be provided as a valid JSON object following this format: {schema}"
@@ -84,9 +111,21 @@ class BaseAgent(ABC):
         self._runnable_config = RunnableConfig(callbacks=self.callbacks,
                                                configurable={"__pregel_runtime": DEFAULT_RUNTIME})
 
-    async def _stream_llm(self, runnable: Any, inputs: dict[str, Any]) -> AIMessage:
+    async def _stream_llm(self,
+                          runnable: Any,
+                          inputs: dict[str, Any],
+                          config: RunnableConfig | None = None) -> AIMessage:
         """
         Stream from LLM runnable. Retry logic is handled automatically by the underlying LLM client.
+
+        Accumulates streamed chunks using LangChain's ``+`` operator which preserves
+        ``tool_calls`` and ``tool_call_chunks``, then converts the result to an
+        ``AIMessage`` via ``_chunk_to_message``. This ensures that native tool calling
+        (``use_native_tool_calling=True``) works correctly with the ReAct agent.
+
+        When a LangGraph runtime config is provided (for example, from an injected node config),
+        it is merged with the local runnable config so that both LangGraph's streaming callbacks
+        and the profiler callbacks fire together.
 
         Parameters
         ----------
@@ -94,27 +133,28 @@ class BaseAgent(ABC):
             The LLM runnable (prompt | llm or similar)
         inputs : Dict[str, Any]
             The inputs to pass to the runnable
+        config : RunnableConfig | None
+            Optional LangGraph runtime config to merge with the local runnable config.
 
         Returns
         -------
         AIMessage
-            The LLM response
+            The LLM response, including any tool_calls from native tool calling.
         """
-        content_parts = []
-        reasoning_parts = []
-        async for event in runnable.astream(inputs, config=self._runnable_config):
-            content_parts.append(event.content)
-            extra = getattr(event, 'additional_kwargs', None)
-            if isinstance(extra, dict):
-                reasoning = extra.get('reasoning_content', '')
-                if reasoning:
-                    reasoning_parts.append(reasoning)
+        effective_config = merge_configs(self._runnable_config, config) if config is not None else self._runnable_config
+        chunks: list[AIMessageChunk] = []
+        async for chunk in runnable.astream(inputs, config=effective_config):
+            chunks.append(chunk)
 
-        additional_kwargs: dict[str, Any] = {}
-        if reasoning_parts:
-            additional_kwargs['reasoning_content'] = "".join(reasoning_parts)
+        if not chunks:
+            return AIMessage(content="")
 
-        return AIMessage(content="".join(content_parts), additional_kwargs=additional_kwargs)
+        # Accumulate using LangChain's + operator (preserves tool_call_chunks)
+        accumulated = chunks[0]
+        for c in chunks[1:]:
+            accumulated = accumulated + c
+
+        return _chunk_to_message(accumulated)
 
     async def _call_llm(self, llm: Runnable, inputs: dict[str, Any]) -> AIMessage:
         """

@@ -50,7 +50,7 @@ jobs:
       - prepare
       - ci_pipe
     secrets: inherit
-    uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@branch-25.04
+    uses: rapidsai/shared-workflows/.github/workflows/pr-builder.yaml@5fe52098676ca51435a73337131685e340658c51 # branch-25.04
 
   prepare:
     # Executes the get-pr-info action to determine if the PR has the skip-ci label, if the action fails we assume the
@@ -60,7 +60,7 @@ jobs:
     steps:
       - name: Get PR Info
         id: get-pr-info
-        uses: nv-gha-runners/get-pr-info@main
+        uses: nv-gha-runners/get-pr-info@090577647b8ddc4e06e809e264f7881650ecdccf # main
         if: ${{ startsWith(github.ref_name, 'pull-request/') }}
     outputs:
       is_pr: ${{ startsWith(github.ref_name, 'pull-request/') }}

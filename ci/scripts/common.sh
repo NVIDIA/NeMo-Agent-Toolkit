@@ -44,62 +44,6 @@ export PYTHON_FILE_REGEX='^(\.\/)?(?!\.|build|external).*\.(py|pyx|pxd)$'
 # Use these options to skip any of the checks
 export SKIP_COPYRIGHT=${SKIP_COPYRIGHT:-""}
 
-
-# Determine the merge base as the root to compare against. Optionally pass in a
-# result variable otherwise the output is printed to stdout
-function get_merge_base() {
-   local __resultvar=$1
-   local result=$(git merge-base ${BASE_SHA} ${COMMIT_SHA:-HEAD})
-
-   if [[ "$__resultvar" ]]; then
-      eval $__resultvar="'${result}'"
-   else
-      echo "${result}"
-   fi
-}
-
-# Determine the changed files. First argument is the (optional) regex filter on
-# the results. Second argument is the (optional) variable with the returned
-# results. Otherwise the output is printed to stdout. Result is an array
-function get_modified_files() {
-   local  __resultvar=$2
-
-   local GIT_DIFF_ARGS=${GIT_DIFF_ARGS:-"--name-only"}
-   local GIT_DIFF_BASE=${GIT_DIFF_BASE:-$(get_merge_base)}
-
-   # If invoked by a git-commit-hook, this will be populated
-   local result=( $(git diff ${GIT_DIFF_ARGS} ${GIT_DIFF_BASE} | grep -P ${1:-'.*'}) )
-
-   local files=()
-
-   for i in "${result[@]}"; do
-      if [[ -e "${i}" ]]; then
-         files+=(${i})
-      fi
-   done
-
-   if [[ "$__resultvar" ]]; then
-      eval $__resultvar="( ${files[@]} )"
-   else
-      echo "${files[@]}"
-   fi
-}
-
-# Determine a unified diff useful for clang-XXX-diff commands. First arg is
-# optional file regex. Second argument is the (optional) variable with the
-# returned results. Otherwise the output is printed to stdout
-function get_unified_diff() {
-   local  __resultvar=$2
-
-   local result=$(git diff --no-color --relative -U0 $(get_merge_base) -- $(get_modified_files $1))
-
-   if [[ "$__resultvar" ]]; then
-      eval $__resultvar="'${result}'"
-   else
-      echo "${result}"
-   fi
-}
-
 function get_num_proc() {
    NPROC_TOOL=`which nproc`
    NUM_PROC=${NUM_PROC:-`${NPROC_TOOL}`}
@@ -119,7 +63,7 @@ function set_versions() {
       set -e
 
       if [[ ${SETUPTOOLS_SCM_RESULT} -ne 0 ]]; then
-         rapids-logger "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
+         echo "Error, setuptools_scm failed to determine the version: ${NAT_VERSION}"
          exit ${SETUPTOOLS_SCM_RESULT}
       fi
    fi
@@ -129,7 +73,7 @@ function set_versions() {
 }
 
 function build_wheel() {
-    rapids-logger "Building Wheel for $1"
+    echo "Building Wheel for $1"
     uv build --wheel --no-progress --out-dir "${WHEELS_DIR}/$2" --directory $1
 }
 
@@ -143,7 +87,7 @@ function build_package_wheel()
 
 function create_env() {
 
-    rapids-logger "Creating uv env"
+    echo "Creating uv env"
     VENV_DIR="${WORKSPACE_TMP}/.venv"
     uv venv --python=${PYTHON_VERSION} --seed ${VENV_DIR}
     source ${VENV_DIR}/bin/activate
@@ -172,31 +116,25 @@ function create_env() {
         exit 1
     fi
 
-    rapids-logger "Final Environment"
+    echo "Final Environment"
     uv pip list
 }
 
-function install_rapids_gha_tools()
-{
-   echo "Installing Rapids GHA tools"
-   wget https://github.com/rapidsai/gha-tools/releases/latest/download/tools.tar.gz -O - | tar -xz -C /usr/local/bin
-}
-
 function get_lfs_files() {
-    rapids-logger "Installing git-lfs from apt"
+    echo "Installing git-lfs from apt"
     apt update
     apt install --no-install-recommends -y git-lfs
 
     if [[ "${USE_HOST_GIT}" == "1" ]]; then
-        rapids-logger "Using host git, skipping git-lfs install"
+        echo "Using host git, skipping git-lfs install"
     else
-        rapids-logger "Calling git lfs fetch"
+        echo "Calling git lfs fetch"
         git lfs fetch
-        rapids-logger "Calling git lfs pull"
+        echo "Calling git lfs pull"
         git lfs pull
     fi
 
-    rapids-logger "git lfs ls-files"
+    echo "git lfs ls-files"
     git lfs ls-files
 }
 
@@ -218,11 +156,11 @@ function install_python_versions() {
       PYTHON_FIND_RESULT=$?
       set -e
       if [[ ${PYTHON_FIND_RESULT} -ne 0 ]]; then
-         rapids-logger "Downloading Python version ${pyver}"
+         echo "Downloading Python version ${pyver}"
 
          # In common.sh we set this to never, we want to override that here
          UV_PYTHON_DOWNLOADS="manual" uv python install --managed-python ${pyver}
-         rapids-logger "✓ Successfully installed Python ${pyver}"
+         echo "✓ Successfully installed Python ${pyver}"
       fi
    done
 }

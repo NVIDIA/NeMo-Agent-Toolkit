@@ -37,6 +37,7 @@ from nat.llm.huggingface_inference_llm import HuggingFaceInferenceLLMConfig
 from nat.llm.huggingface_llm import HuggingFaceConfig
 from nat.llm.litellm_llm import LiteLlmModelConfig
 from nat.llm.nim_llm import NIMModelConfig
+from nat.llm.oci_llm import OCIModelConfig
 from nat.llm.openai_llm import OpenAIModelConfig
 from nat.llm.utils.hooks import _create_metadata_injection_client
 from nat.llm.utils.thinking import BaseThinkingInjector
@@ -52,6 +53,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 ModelType = TypeVar("ModelType")
+
+
+def _get_langchain_oci_chat_model():
+    from langchain_oci import ChatOCIGenAI
+
+    return ChatOCIGenAI
 
 
 def _patch_llm_based_on_config(client: ModelType, llm_config: "LLMBaseConfig") -> ModelType:
@@ -242,6 +249,57 @@ async def openai_langchain(llm_config: OpenAIModelConfig, _builder: Builder):
             del client.model_kwargs["http_async_client"]
 
         yield _patch_llm_based_on_config(client, llm_config)
+
+
+@register_llm_client(config_type=OCIModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)
+async def oci_langchain(llm_config: OCIModelConfig, _builder: Builder):
+    import oci
+    from langchain_oci.common.auth import create_oci_client_kwargs
+
+    validate_no_responses_api(llm_config, LLMFrameworkEnum.LANGCHAIN)
+
+    ChatOCIGenAI = _get_langchain_oci_chat_model()
+
+    model_kwargs: dict[str, Any] = {}
+    if llm_config.temperature is not None:
+        model_kwargs["temperature"] = llm_config.temperature
+    if llm_config.top_p is not None:
+        model_kwargs["top_p"] = llm_config.top_p
+    if llm_config.max_tokens is not None:
+        if llm_config.provider and llm_config.provider.lower() == "openai":
+            model_kwargs["max_completion_tokens"] = llm_config.max_tokens
+        else:
+            model_kwargs["max_tokens"] = llm_config.max_tokens
+    if llm_config.seed is not None:
+        model_kwargs["seed"] = llm_config.seed
+
+    client_kwargs = create_oci_client_kwargs(
+        auth_type=llm_config.auth_type,
+        service_endpoint=llm_config.endpoint,
+        auth_file_location=llm_config.auth_file_location,
+        auth_profile=llm_config.auth_profile,
+    )
+    client_kwargs["retry_strategy"] = oci.retry.RetryStrategyBuilder(
+        max_attempts=llm_config.max_retries + 1  # OCI SDK counts total attempts (initial + retries)
+    ).get_retry_strategy()
+    if llm_config.request_timeout is not None:
+        client_kwargs["timeout"] = (10, llm_config.request_timeout)
+    oci_client = oci.generative_ai_inference.GenerativeAiInferenceClient(**client_kwargs)
+
+    client = ChatOCIGenAI(
+        client=oci_client,
+        model_id=llm_config.model_name,
+        service_endpoint=llm_config.endpoint,
+        compartment_id=llm_config.compartment_id,
+        auth_type=llm_config.auth_type,
+        auth_profile=llm_config.auth_profile,
+        auth_file_location=llm_config.auth_file_location,
+        provider=llm_config.provider,
+        is_stream=getattr(llm_config, "stream", False),
+        model_kwargs=model_kwargs or None,
+    )
+
+    yield _patch_llm_based_on_config(client, llm_config)
 
 
 @register_llm_client(config_type=DynamoModelConfig, wrapper_type=LLMFrameworkEnum.LANGCHAIN)

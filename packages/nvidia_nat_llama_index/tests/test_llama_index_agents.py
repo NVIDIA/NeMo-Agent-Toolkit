@@ -78,7 +78,7 @@ async def test_nim_minimal_agent():
 @pytest.mark.usefixtures("openai_api_key")
 async def test_openai_minimal_agent():
     """Test OpenAI LLM with minimal LlamaIndex agent. Requires OPENAI_API_KEY to be set."""
-    llm_config = OpenAIModelConfig(model_name="gpt-3.5-turbo", temperature=0.0)
+    llm_config = OpenAIModelConfig(model_name="gpt-5.4-mini", temperature=0.0)
     agent = await create_minimal_agent("openai_llm", llm_config)
 
     response = await agent.run("What is 1+2?")

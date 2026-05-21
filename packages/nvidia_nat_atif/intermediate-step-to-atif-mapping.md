@@ -18,9 +18,14 @@ limitations under the License.
 
 # IntermediateStep to ATIF Mapping
 
-This document explains how IntermediateStep event streams are mapped to ATIF trajectories.
+This document explains how IntermediateStep event streams are mapped to ATIF
+trajectories.
 
-It is intentionally generic and applies to the current conversion path used by the toolkit.
+It is intentionally generic and applies to the current conversion path used by
+the toolkit. Mappings reflect the **ATIF v1.7** layout where ancestry and
+per-invocation timing live inside `extra` rather than as typed top-level
+fields. See `atif-step-extra-guide.md` for the full `Step.extra` /
+`ToolCall.extra` contract.
 
 ## ID Mappings
 
@@ -28,10 +33,11 @@ It is intentionally generic and applies to the current conversion path used by t
 |---|---|---|---|
 | `payload.UUID` | `tool_calls[*].tool_call_id` | `tool_call_id = "call_" + payload.UUID` | Invocation occurrence identity |
 | `payload.UUID` | `observation.results[*].source_call_id` | `source_call_id = tool_call_id` | Observation links to invocation |
-| `payload.UUID` | `extra.tool_invocations[*].invocation_id` | `invocation_id = tool_call_id` | Timing row identity for same invocation |
-| `function_ancestry.function_id` | `extra.tool_ancestry[*].function_id` | Direct match | Callable lineage node identity |
-| `function_ancestry.parent_id` | `extra.tool_ancestry[*].parent_id` | Direct match | Parent callable lineage node identity |
-| `function_ancestry.function_id` (step context) | `extra.ancestry.function_id` | Direct match | Step-level callable context |
+| `payload.UUID` | `tool_calls[*].extra.invocation.invocation_id` | `invocation_id = tool_call_id` | Per-tool timing row identity |
+| `function_ancestry.function_id` (tool context) | `tool_calls[*].extra.ancestry.function_id` | Direct match | Per-tool callable lineage node identity |
+| `function_ancestry.parent_id` (tool context) | `tool_calls[*].extra.ancestry.parent_id` | Direct match | Per-tool parent callable identity |
+| `function_ancestry.function_id` (step context) | `step.extra.ancestry.function_id` | Direct match | Step-level callable context |
+| `function_ancestry.parent_id` (step context) | `step.extra.ancestry.parent_id` | Direct match | Step-level parent callable context |
 | Not applicable | `step_id` | Generated ATIF sequence counter | Not derived from IntermediateStep UUID |
 
 ## Name Mappings
@@ -39,17 +45,22 @@ It is intentionally generic and applies to the current conversion path used by t
 | IntermediateStep | ATIF | Mapping Rule | Notes |
 |---|---|---|---|
 | `payload.name` (tool, function, or LLM by event type) | `tool_calls[*].function_name` or `model_name` | Context dependent | IntermediateStep name is polymorphic by event type |
-| `function_ancestry.function_name` | `extra.tool_ancestry[*].function_name` | Direct match | Callable lineage node name |
-| `function_ancestry.parent_name` | `extra.tool_ancestry[*].parent_name` | Direct match | Parent callable lineage node name |
-| `function_ancestry.function_name` (step context) | `extra.ancestry.function_name` | Direct match | Step-level lineage name |
+| `function_ancestry.function_name` (tool context) | `tool_calls[*].extra.ancestry.function_name` | Direct match | Per-tool callable lineage name |
+| `function_ancestry.parent_name` (tool context) | `tool_calls[*].extra.ancestry.parent_name` | Direct match | Per-tool parent callable name |
+| `function_ancestry.function_name` (step context) | `step.extra.ancestry.function_name` | Direct match | Step-level lineage name |
+| `function_ancestry.parent_name` (step context) | `step.extra.ancestry.parent_name` | Direct match | Step-level parent name |
 
 ## Event-to-Step Mapping
 
 - `WORKFLOW_START` maps to an ATIF user step (`source = "user"`).
 - `LLM_END` starts an ATIF agent turn candidate step.
-- `TOOL_END` and `FUNCTION_END` are accumulated into the pending ATIF step as observed invocations.
-- `WORKFLOW_END` may emit a terminal ATIF agent step when final output is present and not redundant.
-- `LLM_NEW_TOKEN` and other non-terminal chunk events are not directly emitted as standalone ATIF steps.
+- `TOOL_END` and `FUNCTION_END` are accumulated into the pending ATIF step as
+  observed invocations. Their ancestry / timing attaches to the matching
+  `tool_call.extra` (not to the parent step's `extra`).
+- `WORKFLOW_END` may emit a terminal ATIF agent step when final output is
+  present and not redundant.
+- `LLM_NEW_TOKEN` and other non-terminal chunk events are not directly emitted
+  as standalone ATIF steps.
 
 ## Identity Semantics
 
@@ -65,25 +76,38 @@ It is intentionally generic and applies to the current conversion path used by t
 - IntermediateStep end events commonly use:
   - `event_timestamp` as end timestamp,
   - `span_event_timestamp` as start timestamp.
-- ATIF timing is represented in:
-  - `extra.invocation.start_timestamp` and `extra.invocation.end_timestamp` (step-level),
-  - `extra.tool_invocations[*].start_timestamp` and `extra.tool_invocations[*].end_timestamp` (per invocation).
+- ATIF v1.7 timing is represented per record:
+  - **Step-level**: `step.extra.invocation.start_timestamp` and
+    `step.extra.invocation.end_timestamp`.
+  - **Per-tool-call**: `tool_calls[i].extra.invocation.start_timestamp` and
+    `tool_calls[i].extra.invocation.end_timestamp`.
+
+  Per-tool timing was an aligned-by-index list at `step.extra.tool_invocations[i]`
+  in the pre-v1.7 layout; v1.7 co-locates each invocation with its `tool_call`
+  via `tool_call.extra.invocation`.
 
 ## Practical Validation Checklist
 
-- Verify `tool_call_id == source_call_id == invocation_id` for each ATIF invocation row.
-- Verify `tool_call_id == "call_" + payload.UUID` for mapped tool or function end events.
-- Verify callable lineage consistency:
-  - `function_ancestry.function_id <-> extra.tool_ancestry[*].function_id`
-  - `function_ancestry.parent_id <-> extra.tool_ancestry[*].parent_id`
-- Verify name consistency:
-  - `function_ancestry.function_name <-> extra.tool_ancestry[*].function_name`
-  - `function_ancestry.parent_name <-> extra.tool_ancestry[*].parent_name`
+- Verify `tool_call_id == source_call_id == tool_calls[i].extra.invocation.invocation_id`
+  for each invocation row.
+- Verify `tool_call_id == "call_" + payload.UUID` for mapped tool or function
+  end events.
+- Verify per-tool callable lineage consistency:
+  - `function_ancestry.function_id <-> tool_calls[i].extra.ancestry.function_id`
+  - `function_ancestry.parent_id <-> tool_calls[i].extra.ancestry.parent_id`
+- Verify per-tool name consistency:
+  - `function_ancestry.function_name <-> tool_calls[i].extra.ancestry.function_name`
+  - `function_ancestry.parent_name <-> tool_calls[i].extra.ancestry.parent_name`
+- Verify step-level lineage consistency:
+  - `function_ancestry.function_id <-> step.extra.ancestry.function_id`
+  - `function_ancestry.parent_id <-> step.extra.ancestry.parent_id`
 
 ## Additional Identifiers Worth Tracking
 
 - IntermediateStep structural parent linkage: `parent_id`
 - Event semantics: `payload.event_type`
 - Time surfaces: `event_timestamp`, `span_event_timestamp`, ATIF `timestamp`
-- Session scope: ATIF `session_id`
-- Framework or provider run IDs when present in metadata (for example, model framework trace IDs)
+- Session scope: ATIF `session_id` (run-scoped) and `trajectory_id`
+  (per-document, ATIF v1.7+)
+- Framework or provider run IDs when present in metadata (for example, model
+  framework trace IDs)

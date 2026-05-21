@@ -58,7 +58,7 @@ def test_nat_chat_request_openai_fields():
 
     # Test with all OpenAI fields
     request = ChatRequest(messages=[Message(content="Hello", role="user")],
-                          model="gpt-3.5-turbo",
+                          model="gpt-5.4-mini",
                           frequency_penalty=0.5,
                           logit_bias={"token1": 0.1},
                           logprobs=True,
@@ -84,7 +84,7 @@ def test_nat_chat_request_openai_fields():
                           user="user123")
 
     # Verify all fields are set correctly
-    assert request.model == "gpt-3.5-turbo"
+    assert request.model == "gpt-5.4-mini"
     assert request.frequency_penalty == 0.5
     assert request.logit_bias == {"token1": 0.1}
     assert request.logprobs is True
