@@ -21,6 +21,7 @@ This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 ## Release v1.7.0
 ### Summary
 
+* Add AI coding agent skills for NeMo Agent Toolkit
 * Add ATIF trajectory exporter for Phoenix visualization and debugging
 * Add Exa Search API support as internet search tool
 * Add OCI LangChain support for hosted Nemotron workflows
