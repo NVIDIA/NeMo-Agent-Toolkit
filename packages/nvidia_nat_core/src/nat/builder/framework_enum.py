@@ -25,3 +25,4 @@ class LLMFrameworkEnum(StrEnum):
     ADK = "adk"
     STRANDS = "strands"
     AUTOGEN = "autogen"
+    AG2 = "ag2"  # AG2 (formerly AutoGen) — separate from Microsoft AutoGen
