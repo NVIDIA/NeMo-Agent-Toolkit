@@ -34,6 +34,7 @@ import json
 import logging
 import os
 import ssl
+import subprocess
 import sys
 import time
 import urllib.error
@@ -65,6 +66,18 @@ SCHEMA_VERSION = "1.0"
 EXCLUDE_YAMLS = ("examples/documentation_guides/locally_hosted_llms/nim_config.yml", )
 
 
+def get_git_files() -> frozenset[str]:
+    """Return the set of files tracked by git."""
+    result = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    return frozenset(result.stdout.splitlines())
+
+
 def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
     """Scan example configs for NIM model references in both llms and embedders.
 
@@ -81,10 +94,16 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
     for pattern in ("*.yml", "*.yaml"):
         config_paths.extend(examples_dir.rglob(pattern))
 
+    git_files = get_git_files()
+
     for config_path in sorted(config_paths):
         relative_path = str(config_path.resolve().relative_to(REPO))
         if relative_path in EXCLUDE_YAMLS:
             _logger.debug("Skipping excluded config: %s", relative_path)
+            continue
+
+        if relative_path not in git_files:
+            _logger.warning("Skipping untracked config: %s", relative_path)
             continue
 
         with open(config_path, encoding="utf-8") as f:

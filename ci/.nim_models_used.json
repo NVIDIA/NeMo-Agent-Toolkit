@@ -3,15 +3,15 @@
   "llms": [
     {
       "model": "meta/llama-3.1-70b-instruct",
-      "num_configs": 59
+      "num_configs": 53
     },
     {
       "model": "nvidia/nemotron-3-nano-30b-a3b",
-      "num_configs": 43
+      "num_configs": 40
     },
     {
       "model": "meta/llama-3.3-70b-instruct",
-      "num_configs": 28
+      "num_configs": 26
     },
     {
       "model": "nvidia/nemotron-3-super-120b-a12b",
@@ -19,7 +19,7 @@
     },
     {
       "model": "meta/llama-3.1-8b-instruct",
-      "num_configs": 7
+      "num_configs": 5
     },
     {
       "model": "nvidia/llama-3.3-nemotron-super-49b-v1",
@@ -49,7 +49,7 @@
   "embedders": [
     {
       "model": "nvidia/nv-embedqa-e5-v5",
-      "num_configs": 32
+      "num_configs": 23
     },
     {
       "model": "nvidia/llama-nemotron-embed-1b-v2",
