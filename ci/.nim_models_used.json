@@ -1,58 +1,59 @@
 {
+  "schema_version": "1.0",
   "llms": [
     {
       "model": "meta/llama-3.1-70b-instruct",
-      "usage_count": 74
+      "num_configs": 74
     },
     {
       "model": "nvidia/nemotron-3-nano-30b-a3b",
-      "usage_count": 69
+      "num_configs": 69
     },
     {
       "model": "meta/llama-3.3-70b-instruct",
-      "usage_count": 47
+      "num_configs": 47
     },
     {
       "model": "nvidia/nemotron-3-super-120b-a12b",
-      "usage_count": 24
+      "num_configs": 24
     },
     {
       "model": "meta/llama-3.1-8b-instruct",
-      "usage_count": 11
+      "num_configs": 11
     },
     {
       "model": "nvidia/llama-3.3-nemotron-super-49b-v1",
-      "usage_count": 4
+      "num_configs": 4
     },
     {
       "model": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-      "usage_count": 3
+      "num_configs": 3
     },
     {
       "model": "nvidia/nvidia-nemotron-nano-9b-v2",
-      "usage_count": 1
+      "num_configs": 1
     },
     {
       "model": "nvidia/llama-3.1-nemotron-safety-guard-8b-v3",
-      "usage_count": 1
+      "num_configs": 1
     },
     {
       "model": "mistralai/mistral-small-4-119b-2603",
-      "usage_count": 1
+      "num_configs": 1
     },
     {
       "model": "mistralai/mistral-large-3-675b-instruct-2512",
-      "usage_count": 1
+      "num_configs": 1
     }
   ],
   "embedders": [
     {
       "model": "nvidia/nv-embedqa-e5-v5",
-      "usage_count": 32
+      "num_configs": 32
     },
     {
       "model": "nvidia/llama-nemotron-embed-1b-v2",
-      "usage_count": 1
+      "num_configs": 1
     }
   ]
 }

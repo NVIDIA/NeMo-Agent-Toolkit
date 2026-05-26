@@ -60,6 +60,7 @@ NIM_API_BASE = "https://integrate.api.nvidia.com/v1"
 REQUEST_TIMEOUT = 30
 INTER_REQUEST_DELAY = 1.0
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+SCHEMA_VERSION = "1.0"
 
 EXCLUDE_YAMLS = ("examples/documentation_guides/locally_hosted_llms/nim_config.yml", )
 
@@ -212,7 +213,7 @@ def _handle_dry_run(llm_models: dict[str, list[str]],
                     output_file: Path | None,
                     verbose: bool) -> int:
     try:
-        report: dict[str, list[dict[str, str | int]]] = {}
+        report = {"schema_version": SCHEMA_VERSION}
         for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
             if not section:
                 continue
@@ -222,13 +223,14 @@ def _handle_dry_run(llm_models: dict[str, list[str]],
             _logger.info("  %s: Usage count", label)
             for count, model in model_by_usage:
                 _logger.info("    %s: %s", model, count)
-                report_rows.append({"model": model, "usage_count": count})
+                report_rows.append({"model": model, "num_configs": count})
                 if verbose:
                     files = section[model]
                     for f in sorted(set(files)):
                         _logger.info("      - %s", f)
 
             report[label.lower()] = report_rows
+
         if output_file is not None:
             write_json_report(output_file=output_file, report=report)
 
