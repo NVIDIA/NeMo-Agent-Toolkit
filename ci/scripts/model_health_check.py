@@ -82,7 +82,7 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
         config_paths.extend(examples_dir.rglob(pattern))
 
     for config_path in sorted(config_paths):
-        relative_path = str(config_path.relative_to(REPO))
+        relative_path = str(config_path.resolve().relative_to(REPO))
         if relative_path in EXCLUDE_YAMLS:
             _logger.debug("Skipping excluded config: %s", relative_path)
             continue
@@ -110,7 +110,7 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
 
                 model = block.get("model_name") or block.get("model")
                 if model:
-                    target.setdefault(model, []).append(relative_path)
+                    target.setdefault(model, set()).add(relative_path)
 
                 search_space = block.get("search_space", {})
                 if isinstance(search_space, dict):
@@ -119,7 +119,7 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
                         if isinstance(space_entry, dict):
                             for val in space_entry.get("values", []):
                                 if isinstance(val, str):
-                                    target.setdefault(val, []).append(relative_path)
+                                    target.setdefault(val, set()).add(relative_path)
 
     return llm_models, embedder_models
 
