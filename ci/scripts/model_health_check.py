@@ -215,9 +215,6 @@ def _handle_dry_run(llm_models: dict[str, list[str]],
     try:
         report = {"schema_version": SCHEMA_VERSION}
         for label, section in (("LLMs", llm_models), ("Embedders", embedder_models)):
-            if not section:
-                continue
-
             report_rows: list[dict[str, str | int]] = []
             model_by_usage = sorted(((len(files), model) for model, files in section.items()), reverse=True)
             _logger.info("  %s: Usage count", label)
