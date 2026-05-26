@@ -108,7 +108,7 @@ async def text_file_ingest_function(config: TextFileIngestFunctionConfig, builde
 ```
 
 
-Examining the `webquery_tool` function (`examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`), you can observe that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://python.langchain.com/docs/integrations/document_loaders/web_base) class.
+Examining the `webquery_tool` function (`examples/getting_started/simple_web_query/src/nat_simple_web_query/register.py`), you can observe that at the heart of the tool is the [`langchain_community.document_loaders.WebBaseLoader`](https://reference.langchain.com/python/langchain-community/document_loaders/web_base/WebBaseLoader) class.
 
 ```python
     loader = WebBaseLoader(config.webpage_url)
