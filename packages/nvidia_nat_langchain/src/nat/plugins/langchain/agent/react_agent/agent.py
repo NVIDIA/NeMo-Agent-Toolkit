@@ -267,10 +267,10 @@ class ReActAgentGraph(DualNodeAgent):
                         # Convert tool args to JSON string for consistency with text parsing
                         tool_input_str = json.dumps(tool_args) if isinstance(tool_args, dict) else str(tool_args)
 
-                        agent_output = AgentAction(
-                            tool=tool_name,
-                            tool_input=tool_input_str,
-                            log=_format_agent_thoughts_for_log(output_message) or f"Calling {tool_name}")
+                        agent_output = AgentAction(tool=tool_name,
+                                                   tool_input=tool_input_str,
+                                                   log=_format_agent_thoughts_for_log(output_message)
+                                                   or f"Calling {tool_name}")
                         logger.debug("%s Native tool call detected: %s", AGENT_LOG_PREFIX, tool_name)
                         state.agent_scratchpad += [agent_output]
                         return state
