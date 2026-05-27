@@ -223,9 +223,10 @@ class ReActAgentGraph(DualNodeAgent):
                     output_message = await self._stream_llm(self.agent, inputs, config=config)  # type: ignore
                     if isinstance(output_message.content, str):
                         output_message.content = remove_r1_think_tags(output_message.content)
+                    agent_thoughts = _format_agent_thoughts_for_log(output_message)
 
                     if self.detailed_logs:
-                        logger.info(AGENT_CALL_LOG_MESSAGE, question, _format_agent_thoughts_for_log(output_message))
+                        logger.info(AGENT_CALL_LOG_MESSAGE, question, agent_thoughts)
                 else:
                     # ReAct Agents require agentic cycles
                     # in an agentic cycle, preserve the agent's thoughts from the previous cycles,
@@ -246,9 +247,10 @@ class ReActAgentGraph(DualNodeAgent):
                     output_message = await self._stream_llm(self.agent, inputs, config=config)  # type: ignore
                     if isinstance(output_message.content, str):
                         output_message.content = remove_r1_think_tags(output_message.content)
+                    agent_thoughts = _format_agent_thoughts_for_log(output_message)
 
                     if self.detailed_logs:
-                        logger.info(AGENT_CALL_LOG_MESSAGE, question, _format_agent_thoughts_for_log(output_message))
+                        logger.info(AGENT_CALL_LOG_MESSAGE, question, agent_thoughts)
                         logger.debug("%s The agent's scratchpad (with tool result) was:\n%s",
                                      AGENT_LOG_PREFIX,
                                      agent_scratchpad)
@@ -269,8 +271,7 @@ class ReActAgentGraph(DualNodeAgent):
 
                         agent_output = AgentAction(tool=tool_name,
                                                    tool_input=tool_input_str,
-                                                   log=_format_agent_thoughts_for_log(output_message)
-                                                   or f"Calling {tool_name}")
+                                                   log=agent_thoughts or f"Calling {tool_name}")
                         logger.debug("%s Native tool call detected: %s", AGENT_LOG_PREFIX, tool_name)
                         state.agent_scratchpad += [agent_output]
                         return state
