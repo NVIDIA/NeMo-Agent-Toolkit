@@ -38,6 +38,7 @@ from nat.plugins.langchain.agent.base import AGENT_CALL_LOG_MESSAGE
 from nat.plugins.langchain.agent.base import AGENT_LOG_PREFIX
 from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.base import _chunk_to_message
+from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
 from nat.plugins.langchain.agent.dual_node import DualNodeAgent
 
 if typing.TYPE_CHECKING:
@@ -148,7 +149,7 @@ class ToolCallAgentGraph(DualNodeAgent):
 
             if self.detailed_logs:
                 agent_input = "\n".join(str(message.content) for message in state.messages)
-                logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, response)
+                logger.info(AGENT_CALL_LOG_MESSAGE, agent_input, _format_agent_thoughts_for_log(response))
 
             state.messages += [response]
             return state

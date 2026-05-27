@@ -27,6 +27,7 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 
 from nat.plugins.langchain.agent.base import BaseAgent
+from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
 
 
 class MockBaseAgent(BaseAgent):
@@ -188,6 +189,13 @@ class TestStreamLLM:
         assert effective is not base_agent._runnable_config, "merged config should be a new object"
         assert "internal" in effective.get("tags", [])
         assert "external" in effective.get("tags", [])
+
+
+def test_format_agent_thoughts_for_log_uses_reasoning_when_content_empty():
+    """Reasoning metadata should be logged without dumping the whole AIMessage repr."""
+    message = AIMessage(content="\n", additional_kwargs={"reasoning_content": "thinking through the tool choice"})
+
+    assert _format_agent_thoughts_for_log(message) == "thinking through the tool choice"
 
 
 class TestCallLLM:
