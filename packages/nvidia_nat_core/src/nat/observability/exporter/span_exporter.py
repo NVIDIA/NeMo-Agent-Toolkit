@@ -28,6 +28,7 @@ from nat.data_models.span import MimeTypes
 from nat.data_models.span import Span
 from nat.data_models.span import SpanAttributes
 from nat.data_models.span import SpanContext
+from nat.data_models.span import SpanKind
 from nat.data_models.span import event_type_to_span_kind
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.observability.exporter.processing_exporter import ProcessingExporter
@@ -210,6 +211,11 @@ class SpanExporter(ProcessingExporter[InputSpanT, OutputSpanT], SerializeMixin):
 
         span_kind = event_type_to_span_kind(event.event_type)
         sub_span.set_attribute(f"{self._span_prefix}.span.kind", span_kind.value)
+        if span_kind == SpanKind.LLM:
+            if event.payload.name:
+                sub_span.set_attribute(SpanAttributes.LLM_MODEL_NAME.value, event.payload.name)
+            if event.payload.framework:
+                sub_span.set_attribute(SpanAttributes.LLM_PROVIDER.value, event.payload.framework.value)
 
         # Enable session grouping by setting session.id from conversation_id
         try:
