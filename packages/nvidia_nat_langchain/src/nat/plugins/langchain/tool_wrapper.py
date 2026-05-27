@@ -39,8 +39,10 @@ def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):
     def _normalize_messages(messages: list) -> list:
         normalized_messages = []
         for message in messages:
-            if isinstance(message, dict) and isinstance(message.get("content"), dict):
-                message = {**message, "content": [message["content"]]}
+            if isinstance(message, dict):
+                content = message.get("content")
+                if isinstance(content, dict):
+                    message = {**message, "content": [content]}
             normalized_messages.append(message)
         return normalized_messages
 
