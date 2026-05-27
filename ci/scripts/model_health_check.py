@@ -251,8 +251,8 @@ def _handle_dry_run(llm_models: dict[str, list[str]],
             write_json_report(output_file=output_file, report=report)
 
         return 0
-    except Exception as e:
-        _logger.error("ERROR during dry run: %s", e)
+    except Exception:
+        _logger.exception("ERROR during dry run")
         return 1
 
 
