@@ -115,6 +115,23 @@ async def test_malformed_agent_output_after_max_retries(mock_react_agent_no_rais
     assert '\nQuestion: hi\n' in response.content
 
 
+async def test_reasoning_content_is_not_promoted_to_react_final_answer(mock_react_agent_no_raise):
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    mock_response = AIMessage(content="\n", additional_kwargs={"reasoning_content": "I should call a tool next."})
+    mock_state = ReActGraphState(messages=[HumanMessage(content="test question")])
+
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        response = await mock_react_agent_no_raise.agent_node(mock_state)
+
+    response = response.messages[-1]
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
+    assert "I should call a tool next." not in response.content
+
+
 async def test_agent_node_parse_agent_action(mock_react_agent):
     mock_react_agent_output = 'Thought:not_many\nAction:Tool A\nAction Input: hello, world!\nObservation:'
     mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
@@ -1422,6 +1439,36 @@ async def test_agent_node_native_tool_calling_with_dict_args(mock_config_react_a
         assert parsed["query"] == "search term"
         assert parsed["limit"] == 10
         assert parsed["nested"]["key"] == "value"
+
+
+async def test_agent_node_native_tool_calling_uses_reasoning_for_tool_log(mock_config_react_agent, mock_llm, mock_tool):
+    """Provider reasoning metadata should be preserved as tool-call log text without becoming parser content."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+    mock_response = AIMessage(content="\n",
+                              additional_kwargs={"reasoning_content": "I should call Tool A."},
+                              tool_calls=[{
+                                  "name": "Tool A",
+                                  "args": {
+                                      "query": "test query"
+                                  },
+                                  "id": "call_123",
+                                  "type": "tool_call",
+                              }])
+    state = ReActGraphState(messages=[HumanMessage(content="test question")])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        result_state = await agent.agent_node(state)
+
+    agent_action = result_state.agent_scratchpad[0]
+    assert agent_action.tool == "Tool A"
+    assert agent_action.log == "I should call Tool A."
 
 
 # =============================================================================

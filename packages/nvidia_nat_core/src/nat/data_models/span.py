@@ -93,6 +93,8 @@ class SpanAttributes(Enum):
     NAT_SPAN_KIND = f"{_SPAN_PREFIX}.span.kind"
     INPUT_VALUE = "input.value"
     INPUT_MIME_TYPE = "input.mime_type"
+    LLM_MODEL_NAME = "llm.model_name"
+    LLM_PROVIDER = "llm.provider"
     LLM_TOKEN_COUNT_PROMPT = "llm.token_count.prompt"
     LLM_TOKEN_COUNT_COMPLETION = "llm.token_count.completion"
     LLM_TOKEN_COUNT_TOTAL = "llm.token_count.total"

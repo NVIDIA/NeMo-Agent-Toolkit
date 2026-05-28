@@ -92,9 +92,12 @@ The automatic memory wrapper agent supports several configuration parameters:
 ### Multi-Tenant Memory Isolation
 
 User ID is automatically extracted at runtime for memory isolation via:
-1. `user_manager.get_id()` - For production with custom auth middleware (recommended)
+1. `SessionManager.session(user_id=...)` - For production with custom auth middleware (recommended)
 2. `X-User-ID` HTTP header - For testing without middleware
-3. `"default_user"` - Fallback for local development
+3. Console front end `user_id` - Defaults to `"nat_run_user_id"` for `nat run`
+
+Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
+For `nat run`, pass `--conversation_id` when testing independent memory conversations from the CLI.
 
 For detailed configuration and usage examples, refer to the `examples/agents/auto_memory_wrapper/README.md` guide.
 

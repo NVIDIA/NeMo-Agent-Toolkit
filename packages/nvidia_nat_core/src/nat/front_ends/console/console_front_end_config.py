@@ -35,3 +35,6 @@ class ConsoleFrontEndConfig(FrontEndBaseConfig, name="console"):
     user_id: str = Field(default="nat_run_user_id",
                          description="User ID to use for the workflow session. "
                          "Defaults to 'nat_run_user_id' for single-user CLI execution.")
+    conversation_id: str | None = Field(
+        default=None,
+        description="Conversation ID to use for the workflow session. Set this to isolate memory-backed CLI runs.")
