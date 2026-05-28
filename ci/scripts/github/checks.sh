@@ -23,5 +23,5 @@ get_lfs_files
 
 create_env
 
-rapids-logger "Running checks"
+echo "Running checks"
 ${SCRIPT_DIR}/checks.sh

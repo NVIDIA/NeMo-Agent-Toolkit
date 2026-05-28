@@ -20,18 +20,18 @@ GITHUB_SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd 
 
 source ${GITHUB_SCRIPT_DIR}/common.sh
 
-rapids-logger "Installing non-pip deps"
+echo "Installing non-pip deps"
 get_lfs_files
 
 create_env
 
-rapids-logger "Building documentation"
+echo "Building documentation"
 pushd ${PROJECT_ROOT}/docs
 make html
 
 DOCS_TAR=${WORKSPACE_TMP}/docs.tar.bz2
-rapids-logger "Archiving documentation to ${DOCS_TAR}"
+echo "Archiving documentation to ${DOCS_TAR}"
 tar cvfj ${DOCS_TAR} build/html
 popd
 
-rapids-logger "Documentation build completed"
+echo "Documentation build completed"

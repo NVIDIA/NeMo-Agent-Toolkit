@@ -14,15 +14,13 @@
 # limitations under the License.
 
 import numpy as np
-import pandas as pd
 
 from nat.data_models.evaluate_runtime import WorkflowRuntimeMetrics
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.plugins.profiler.utils import create_standardized_dataframe
 
 
-def compute_workflow_runtime_metrics(
-    all_steps: list[list[IntermediateStep]] | pd.DataFrame, ) -> WorkflowRuntimeMetrics:
+def compute_workflow_runtime_metrics(all_steps: list[list[IntermediateStep]]) -> WorkflowRuntimeMetrics:
     """
     Computes the p90, p95, and p99 of workflow runtime for each example_number.
 
@@ -44,10 +42,7 @@ def compute_workflow_runtime_metrics(
     WorkflowRuntimeMetrics
         A Pydantic model with 'p90', 'p95', and 'p99' attributes.
     """
-    if isinstance(all_steps, pd.DataFrame):
-        df = all_steps
-    else:
-        df = create_standardized_dataframe(all_steps)
+    df = create_standardized_dataframe(all_steps)
     required_cols = {"example_number", "event_timestamp"}
     missing = required_cols - set(df.columns)
     if missing:

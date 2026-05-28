@@ -27,10 +27,50 @@ logger = logging.getLogger(__name__)
 def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):
 
     import asyncio
+    import json
+    import typing
 
     from langchain_core.tools.structured import StructuredTool
 
+    from nat.data_models.api_server import ChatRequest
+
     assert fn.input_schema is not None, "Tool must have input schema"
+
+    def _normalize_messages(messages: list) -> list:
+        normalized_messages = []
+        for message in messages:
+            if isinstance(message, dict):
+                content = message.get("content")
+                if isinstance(content, dict):
+                    message = {**message, "content": [content]}
+            normalized_messages.append(message)
+        return normalized_messages
+
+    class NATStructuredTool(StructuredTool):
+
+        def _parse_input(self, tool_input: str | dict, tool_call_id: str | None) -> str | dict:
+            if isinstance(tool_input, str):
+                schema = self.args_schema
+                if schema is not None and "input_message" in getattr(schema, "model_fields", {}):
+                    tool_input = {"input_message": tool_input}
+                elif isinstance(schema, type) and issubclass(schema, ChatRequest):
+                    tool_input = ChatRequest.from_string(tool_input).model_dump(exclude_none=True)
+            elif isinstance(tool_input, dict):
+                schema = self.args_schema
+                if schema is not None and "messages" in getattr(schema, "model_fields", {}):
+                    messages = tool_input.get("messages")
+                    if isinstance(messages, str):
+                        try:
+                            parsed_messages = json.loads(messages)
+                        except json.JSONDecodeError:
+                            pass
+                        else:
+                            if isinstance(parsed_messages, list):
+                                tool_input = {**tool_input, "messages": _normalize_messages(parsed_messages)}
+                    elif isinstance(messages, list):
+                        tool_input = {**tool_input, "messages": _normalize_messages(messages)}
+
+            return typing.cast(str | dict, super()._parse_input(tool_input, tool_call_id))
 
     loop = asyncio.get_running_loop()
 
@@ -45,8 +85,8 @@ def langchain_tool_wrapper(name: str, fn: Function, builder: Builder):
                        fn.instance_name)
         _sync_fn.__doc__ = fn.instance_name
 
-    return StructuredTool.from_function(coroutine=fn.acall_invoke,
-                                        func=_sync_fn,
-                                        name=name,
-                                        description=fn.description,
-                                        args_schema=fn.input_schema)
+    return NATStructuredTool.from_function(coroutine=fn.acall_invoke,
+                                           func=_sync_fn,
+                                           name=name,
+                                           description=fn.description,
+                                           args_schema=fn.input_schema)

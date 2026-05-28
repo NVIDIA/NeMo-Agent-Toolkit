@@ -510,8 +510,11 @@ redirects = {
     'workflows/sizing-calc':
         '/improve-workflows/sizing-calc.html',
     'workflows/workflow-configuration':
-        '/build-workflows/workflow-configuration.html'
-    # End of v1.3 -> v1.4 documentation restructuring redirects
+        '/build-workflows/workflow-configuration.html',  # End of v1.3 -> v1.4 documentation restructuring redirects
+
+    # Removing vanna documentation since the project has been archived
+    'components/functions/text-to-sql':
+        '/index.html'
 }
 
 if build_api_docs:

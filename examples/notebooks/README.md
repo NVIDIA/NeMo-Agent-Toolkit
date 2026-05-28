@@ -34,6 +34,8 @@ We recommend opening these notebooks in a Jupyter Lab environment or Google Cola
 
 We also have a set of notebooks that are designed to be run in a Brev environment. See the [Brev Launchables](./launchables/README.md) for more details.
 
+> **Note on telemetry:** these tutorial notebooks set `NAT_TELEMETRY_ENABLED=false` near the top of each cell sequence so example invocations don't appear in your NeMo Agent Toolkit CLI usage telemetry. Tutorial runs aren't useful analytics signal, and the explicit opt-out keeps notebooks safe even if the headless auto-detection ever regresses. If you're specifically testing the telemetry feature itself, override by exporting `NAT_TELEMETRY_ENABLED=true` before launching Jupyter — the cells use `os.environ.setdefault` so an explicit override wins.
+
 ## Google Colab
 
 To open these notebooks in a Google Colab environment, you can click the following link: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NVIDIA/NeMo-Agent-Toolkit/)

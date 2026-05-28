@@ -15,6 +15,7 @@
 
 import datetime
 import json
+import logging
 import typing
 from unittest.mock import AsyncMock
 from unittest.mock import patch
@@ -241,6 +242,30 @@ async def test_agent_node(mock_tool_agent):
     assert response.content == 'mock tool call'
 
 
+async def test_agent_node_logs_reasoning_content_without_message_repr(mock_tool_agent, caplog):
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='needs a tool')])
+    mock_response = AIMessage(content="\n",
+                              additional_kwargs={"reasoning_content": "I should call Tool A."},
+                              tool_calls=[{
+                                  "name": "Tool A",
+                                  "args": {
+                                      "query": "mock query"
+                                  },
+                                  "id": "Tool A",
+                                  "type": "tool_call",
+                              }])
+
+    with patch.object(mock_tool_agent, '_invoke_llm', new_callable=AsyncMock) as mock_invoke_llm:
+        mock_invoke_llm.return_value = mock_response
+
+        with caplog.at_level(logging.INFO, logger="nat.plugins.langchain.agent.tool_calling_agent.agent"):
+            await mock_tool_agent.agent_node(mock_state)
+
+    assert "I should call Tool A." in caplog.text
+    assert "additional_kwargs" not in caplog.text
+    assert "tool_calls=[" not in caplog.text
+
+
 async def test_conditional_edge_no_input(mock_tool_agent):
     end = await mock_tool_agent.conditional_edge(ToolCallAgentGraphState())
     assert end == AgentDecision.END
@@ -365,6 +390,43 @@ async def test_graph_astream_yields_message_chunks(mock_tool_graph):
     assert len(agent_messages) > 0, "Expected at least one message from the agent node via stream_mode='messages'"
     combined_content = "".join(m.content for m in agent_messages if m.content)
     assert len(combined_content) > 0, "Expected non-empty content from streamed agent messages"
+
+
+async def test_stream_fn_no_duplicate_content(mock_tool_graph):
+    """Regression: streaming must not duplicate the previous assistant message as a final chunk.
+
+    When stream=true, _stream_fn uses graph.astream(stream_mode="messages") which emits
+    both AIMessageChunk (incremental tokens) and AIMessage (state update). Accepting
+    AIMessage causes the accumulated response to appear twice in the output. The fix
+    filters to AIMessageChunk only. This test exercises the same graph.astream path and
+    asserts that the filtering logic in _stream_fn would prevent duplicates.
+    """
+    from langchain_core.messages import AIMessageChunk
+
+    prior_reply = "Hi there!"
+    mock_state = ToolCallAgentGraphState(messages=[
+        HumanMessage(content="hello"),
+        AIMessage(content=prior_reply),
+        HumanMessage(content="what can you do?"),
+    ])
+
+    chunk_contents = []
+    full_contents = []
+    async for msg, metadata in mock_tool_graph.astream(
+            mock_state, config={"recursion_limit": 5}, stream_mode="messages"):
+        if metadata.get("langgraph_node") != "agent":
+            continue
+        if isinstance(msg, AIMessageChunk) and isinstance(msg.content, str) and msg.content:
+            chunk_contents.append(msg.content)
+        if hasattr(msg, "content") and isinstance(msg.content, str) and msg.content:
+            full_contents.append(msg.content)
+
+    chunk_response = "".join(chunk_contents)
+    full_response = "".join(full_contents)
+
+    assert prior_reply in full_response, ("AIMessage state update with prior reply should appear in unfiltered stream")
+    assert prior_reply not in chunk_response, (
+        f"AIMessageChunk-only stream must not contain prior assistant reply: {chunk_response!r}")
 
 
 def test_tool_call_chunk_serialization():

@@ -69,6 +69,7 @@ nat info components -t tracing
 
 Examples of existing telemetry exporters include:
 
+- **Arize AX**: Exports traces to Arize AX using OTLP (``arize_ax``)
 - **File**: Exports traces to local files
 - **Phoenix**: Exports traces to Arize Phoenix for visualization
 - **Weave**: Exports traces to Weights & Biases Weave
@@ -245,7 +246,7 @@ Specialized for OpenTelemetry-compatible services with many pre-built options:
 - **Use case**: OTLP-compatible backends, standard observability tools
 - **Base class**: `OtelSpanExporter`
 - **Data flow**: `IntermediateStep` → `Span` → [Processing Pipeline] → `OtelSpan` → Export
-- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave, DBNL
+- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Arize AX, Phoenix, RagaAI, Weave, DBNL
 
 #### Advanced Custom Exporters
 
@@ -270,6 +271,7 @@ Before creating a custom exporter, check if your observability service is alread
 
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
+| **Arize AX** | `arize_ax` | `pip install "nvidia-nat[opentelemetry]"` | Arize space ID, API key, project name, optional US or EU endpoint and HTTP or gRPC |
 | **DBNL** | `dbnl` | `pip install "nvidia-nat[opentelemetry]"` | API URL + API token + project id |
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
@@ -294,6 +296,23 @@ general:
         public_key: ${LANGFUSE_PUBLIC_KEY}
         secret_key: ${LANGFUSE_SECRET_KEY}
 ```
+
+[Arize AX](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel) uses the same OTLP metadata as the ``arize-otel`` package (``authorization``, ``arize-space-id``, and related keys). Example:
+
+```yaml
+general:
+  telemetry:
+    tracing:
+      arize_ax:
+        _type: arize_ax
+        project: my-nat-workflow
+        space_id: ${ARIZE_SPACE_ID}
+        api_key: ${ARIZE_API_KEY}
+        protocol: grpc
+        use_eu_region: false
+```
+
+You can omit ``space_id``, ``api_key``, or ``project`` when the ``ARIZE_SPACE_ID``, ``ARIZE_API_KEY``, and ``ARIZE_PROJECT_NAME`` environment variables are set. Override ``endpoint`` to use a custom OTLP URL; otherwise the default US or EU collector is selected from ``protocol`` and ``use_eu_region``.
 
 :::{tip}
 **Most services use OTLP**. If your service supports OpenTelemetry Protocol (OTLP), you can often subclass `OtelSpanExporter` or use the generic `otelcollector` type with appropriate headers.

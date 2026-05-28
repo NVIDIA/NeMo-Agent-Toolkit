@@ -65,7 +65,14 @@ class EvaluationRemoteWorkflowHandler:
 
                     response.raise_for_status()
 
-                    final_response: str | None = None
+                    # Workflows that opt into token streaming (e.g. ``react_agent``'s
+                    # ``_stream_fn`` after PR #1851) emit one ``data: {"value": "<token>"}``
+                    # line per chunk. Accumulating into a list and joining at the end
+                    # reconstructs the full answer regardless of how the producer
+                    # chunks the response — a single ``data: {"value": "<full>"}`` line
+                    # (the NAT 1.6 / single-fn workflow shape) still works correctly
+                    # because the list contains exactly one element.
+                    response_chunks: list[str] = []
                     intermediate_steps: list[IntermediateStep] = []
 
                     async for line in response.content:
@@ -76,8 +83,9 @@ class EvaluationRemoteWorkflowHandler:
                         if line.startswith(DATA_PREFIX):
                             try:
                                 chunk_data: dict = json.loads(line[len(DATA_PREFIX):])
-                                if chunk_data.get("value"):
-                                    final_response = chunk_data.get("value")
+                                value = chunk_data.get("value")
+                                if value is not None:
+                                    response_chunks.append(value)
                             except json.JSONDecodeError:
                                 logger.exception("Failed to parse generate response chunk")
                                 continue
@@ -99,7 +107,7 @@ class EvaluationRemoteWorkflowHandler:
                                 logger.exception("Failed to parse intermediate step")
                                 continue
 
-                item.output_obj = final_response
+                item.output_obj = "".join(response_chunks) if response_chunks else None
                 item.trajectory = intermediate_steps
                 return
 

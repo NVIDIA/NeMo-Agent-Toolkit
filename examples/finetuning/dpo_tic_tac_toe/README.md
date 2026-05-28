@@ -53,7 +53,7 @@ The model learns to prefer responses similar to the chosen examples while avoidi
 ## Prerequisites
 
 > [!IMPORTANT]
-> This example assumes you are already familiar with the NVIDIA NeMo Microservices platform and have it set up and running. If you're new to NeMo Microservices, please refer to the [NeMo Microservices Setup Guide](https://docs.nvidia.com/nemo/microservices/latest/get-started/setup/index.html) first.
+> This example assumes you are already familiar with the NVIDIA NeMo Microservices platform and have it set up and running. If you're new to NeMo Microservices, please refer to the [NeMo Microservices Setup Guide](https://docs.nvidia.com/nemo/microservices/latest/index.html) first.
 
 ### 1. Python Environment
 
@@ -276,10 +276,10 @@ For non-terminal positions without forced outcomes, the scorer uses these featur
 
 ## Installation
 
-This example is meant to be run using a NeMo Agent Toolkit installation from source. You 
+This example is meant to be run using a NeMo Agent Toolkit installation from source. You
 can follow the [NeMo Agent Toolkit Installation Guide](../../../docs/source/get-started/installation.md) to set up your environment.
 
-Then: 
+Then:
 
 ```bash
 uv pip install -e examples/finetuning/dpo_tic_tac_toe

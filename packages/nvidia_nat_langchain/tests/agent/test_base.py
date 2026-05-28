@@ -20,12 +20,14 @@ from unittest.mock import patch
 
 import pytest
 from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessageChunk
 from langchain_core.messages import HumanMessage
 from langchain_core.messages import ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
 
 from nat.plugins.langchain.agent.base import BaseAgent
+from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
 
 
 class MockBaseAgent(BaseAgent):
@@ -65,14 +67,10 @@ class TestStreamLLM:
     async def test_successful_streaming(self, base_agent):
         """Test successful streaming without retries."""
         mock_runnable = Mock()
-        mock_event1 = Mock()
-        mock_event1.content = "Hello "
-        mock_event2 = Mock()
-        mock_event2.content = "world!"
 
         async def mock_astream(inputs, **kwargs):
-            for event in [mock_event1, mock_event2]:
-                yield event
+            yield AIMessageChunk(content="Hello ")
+            yield AIMessageChunk(content="world!")
 
         mock_runnable.astream = mock_astream
 
@@ -101,11 +99,9 @@ class TestStreamLLM:
     async def test_streaming_empty_content(self, base_agent):
         """Test streaming with empty content."""
         mock_runnable = Mock()
-        mock_event = Mock()
-        mock_event.content = ""
 
         async def mock_astream(inputs, **kwargs):
-            yield mock_event
+            yield AIMessageChunk(content="")
 
         mock_runnable.astream = mock_astream
 
@@ -115,6 +111,91 @@ class TestStreamLLM:
 
         assert isinstance(result, AIMessage)
         assert result.content == ""
+
+    async def test_streaming_preserves_tool_calls(self, base_agent):
+        """Test that tool_calls from native tool calling are preserved."""
+        mock_runnable = Mock()
+
+        async def mock_astream(inputs, **kwargs):
+            yield AIMessageChunk(
+                content="I'll check the time.",
+                tool_call_chunks=[{
+                    "name": "get_time",
+                    "args": '{"tz": "UTC"}',
+                    "id": "call_123",
+                    "index": 0,
+                    "type": "tool_call_chunk",
+                }],
+            )
+
+        mock_runnable.astream = mock_astream
+
+        inputs = {"messages": [HumanMessage(content="test")]}
+        result = await base_agent._stream_llm(mock_runnable, inputs)
+
+        assert isinstance(result, AIMessage)
+        assert result.content == "I'll check the time."
+        assert len(result.tool_calls) == 1
+        assert result.tool_calls[0]["name"] == "get_time"
+
+    async def test_streaming_no_chunks_returns_empty(self, base_agent):
+        """Test that empty stream returns empty AIMessage."""
+        mock_runnable = Mock()
+
+        async def mock_astream(inputs, **kwargs):
+            return
+            yield  # makes this an async generator
+
+        mock_runnable.astream = mock_astream
+
+        inputs = {"messages": [HumanMessage(content="test")]}
+        result = await base_agent._stream_llm(mock_runnable, inputs)
+
+        assert isinstance(result, AIMessage)
+        assert result.content == ""
+
+    async def test_stream_llm_uses_runnable_config_by_default(self, base_agent):
+        """Test that _stream_llm passes self._runnable_config to astream when config=None."""
+        captured: dict = {}
+        base_agent._runnable_config = RunnableConfig(tags=["internal"])
+
+        async def mock_astream(inputs, **kwargs):
+            captured["config"] = kwargs.get("config")
+            yield AIMessageChunk(content="hello")
+
+        mock_runnable = Mock()
+        mock_runnable.astream = mock_astream
+
+        await base_agent._stream_llm(mock_runnable, {})
+
+        assert captured["config"] is base_agent._runnable_config
+
+    async def test_stream_llm_merges_external_config(self, base_agent):
+        """Test that an external config is merged with _runnable_config before passing to astream."""
+        captured: dict = {}
+        base_agent._runnable_config = RunnableConfig(tags=["internal"])
+        external_config = RunnableConfig(tags=["external"])
+
+        async def mock_astream(inputs, **kwargs):
+            captured["config"] = kwargs.get("config")
+            yield AIMessageChunk(content="hello")
+
+        mock_runnable = Mock()
+        mock_runnable.astream = mock_astream
+
+        await base_agent._stream_llm(mock_runnable, {}, config=external_config)
+
+        effective = captured["config"]
+        assert effective is not base_agent._runnable_config, "merged config should be a new object"
+        assert "internal" in effective.get("tags", [])
+        assert "external" in effective.get("tags", [])
+
+
+def test_format_agent_thoughts_for_log_uses_reasoning_when_content_empty():
+    """Reasoning metadata should be logged without dumping the whole AIMessage repr."""
+    message = AIMessage(content="\n", additional_kwargs={"reasoning_content": "thinking through the tool choice"})
+
+    assert _format_agent_thoughts_for_log(message) == "thinking through the tool choice"
 
 
 class TestCallLLM:

@@ -23,13 +23,10 @@ from nat.data_models.evaluate_config import EvalConfig
 from nat.data_models.intermediate_step import IntermediateStep
 from nat.data_models.intermediate_step import IntermediateStepPayload
 from nat.data_models.intermediate_step import IntermediateStepType as WorkflowEventEnum
-from nat.data_models.intermediate_step import UsageInfo
 from nat.data_models.invocation_node import InvocationNode
 from nat.data_models.profiler import ProfilerConfig
-from nat.data_models.token_usage import TokenUsageBaseModel
 from nat.plugins.profiler.data_frame_row import DataFrameRow
 from nat.plugins.profiler.profile_runner import ProfilerRunner
-from nat.utils.atif_converter import IntermediateStepToATIFConverter
 
 
 @pytest.fixture(name="minimal_eval_config")
@@ -188,9 +185,7 @@ async def test_average_workflow_runtime(minimal_eval_config):
                 payload=IntermediateStepPayload(
                     event_type=WorkflowEventEnum.LLM_END,
                     event_timestamp=105.0,
-                    span_event_timestamp=100.0,
                     framework=LLMFrameworkEnum.LANGCHAIN,
-                    usage_info=UsageInfo(token_usage=TokenUsageBaseModel(prompt_tokens=10, completion_tokens=5)),
                 ),
             ),
         ],
@@ -210,9 +205,7 @@ async def test_average_workflow_runtime(minimal_eval_config):
                 payload=IntermediateStepPayload(
                     event_type=WorkflowEventEnum.LLM_END,
                     event_timestamp=206.0,
-                    span_event_timestamp=200.0,
                     framework=LLMFrameworkEnum.LLAMA_INDEX,
-                    usage_info=UsageInfo(token_usage=TokenUsageBaseModel(prompt_tokens=10, completion_tokens=5)),
                 ),
             ),
         ],
@@ -223,8 +216,8 @@ async def test_average_workflow_runtime(minimal_eval_config):
                             minimal_eval_config.general.output_dir,
                             write_output=True)
 
-    trajectories = [IntermediateStepToATIFConverter().convert(steps) for steps in events]
-    await runner.run(trajectories)
+    # Run
+    await runner.run(events)
 
     # The runner writes 'inference_metrics.json' in output_dir
     # Let's parse it and check the "workflow_run_time_confidence_intervals" "mean"
@@ -270,9 +263,7 @@ async def test_average_llm_latency(minimal_eval_config):
                 payload=IntermediateStepPayload(
                     event_type=WorkflowEventEnum.LLM_END,
                     event_timestamp=55.5,
-                    span_event_timestamp=50.0,
                     framework=LLMFrameworkEnum.LANGCHAIN,
-                    usage_info=UsageInfo(token_usage=TokenUsageBaseModel(prompt_tokens=10, completion_tokens=5)),
                 ),
             ),
         ],
@@ -292,9 +283,7 @@ async def test_average_llm_latency(minimal_eval_config):
                 payload=IntermediateStepPayload(
                     event_type=WorkflowEventEnum.LLM_END,
                     event_timestamp=66.0,
-                    span_event_timestamp=60.0,
                     framework=LLMFrameworkEnum.LLAMA_INDEX,
-                    usage_info=UsageInfo(token_usage=TokenUsageBaseModel(prompt_tokens=10, completion_tokens=5)),
                 ),
             ),
         ],
@@ -303,8 +292,7 @@ async def test_average_llm_latency(minimal_eval_config):
     runner = ProfilerRunner(minimal_eval_config.general.profiler,
                             minimal_eval_config.general.output_dir,
                             write_output=True)
-    trajectories = [IntermediateStepToATIFConverter().convert(steps) for steps in events]
-    await runner.run(trajectories)
+    await runner.run(events)
 
     metrics_path = os.path.join(minimal_eval_config.general.output_dir, "inference_optimization.json")
     assert os.path.exists(metrics_path), "ProfilerRunner did not produce an simple_inference_metrics.json file."

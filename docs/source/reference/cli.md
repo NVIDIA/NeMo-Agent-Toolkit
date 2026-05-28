@@ -235,8 +235,15 @@ Options:
   --override <TEXT TEXT>...  Override config values using dot notation (e.g.,
                              --override llms.nim_llm.temperature 0.7)
   --input TEXT               A single input to submit the the workflow.
-  --input_file FILE          Path to a json file of inputs to submit to the
-                             workflow.
+  --input_file FILE          Path to a plain text file containing a single
+                             input to submit to the workflow. For batch
+                             evaluation of multiple inputs, use 'nat eval'
+                             instead.
+  --user_id TEXT             User ID to use for the workflow session. Defaults
+                             to 'nat_run_user_id' for single-user CLI
+                             execution.
+  --conversation_id TEXT     Conversation ID to use for the workflow session.
+                             Set this to isolate memory-backed CLI runs.
   --help                     Show this message and exit.
 ```
 
@@ -289,12 +296,18 @@ Options:
   --timeout INTEGER               Timeout in seconds for ping request
                                   [default: 60]
   --json-output                   Output ping result in JSON format
+  --auth                          Enable OAuth2 authentication with default
+                                  settings (streamable-http only)
   --auth-redirect-uri TEXT        OAuth2 redirect URI for authentication
-                                  (streamable-http only, not with --direct)
+                                  (streamable-http only)
   --auth-user-id TEXT             User ID for authentication (streamable-http
-                                  only, not with --direct)
+                                  only)
   --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
-                                  http only, not with --direct)
+                                  http only)
+  --client-id TEXT                Optional pre-registered client ID for
+                                  authentication
+  --client-secret TEXT            Optional pre-registered client secret for
+                                  authentication
   --help                          Show this message and exit.
 ```
 
@@ -351,6 +364,15 @@ Options:
                                   only, not with --direct)
   --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
                                   http only, not with --direct)
+  --per-user                      Use per-user function group instead of
+                                  shared function group
+  --user-id TEXT                  User ID for per-user workflows (defaults to
+                                  nat_mcp_cli_user_id)  [default:
+                                  nat_mcp_cli_user_id]
+  --client-id TEXT                Optional pre-registered client ID for
+                                  authentication
+  --client-secret TEXT            Optional pre-registered client secret for
+                                  authentication
   --help                          Show this message and exit.
 ```
 
@@ -389,6 +411,19 @@ Options:
                                   only, not with --direct)
   --auth-scopes TEXT              OAuth2 scopes (comma-separated, streamable-
                                   http only, not with --direct)
+  --bearer-token TEXT             Bearer token for authentication (streamable-
+                                  http only, not with --direct)
+  --bearer-token-env TEXT         Environment variable name containing bearer
+                                  token (e.g., KAGGLE_BEARER_TOKEN)
+  --per-user                      Use per-user function group instead of
+                                  shared function group
+  --user-id TEXT                  User ID for per-user workflows (defaults to
+                                  nat_mcp_cli_user_id)  [default:
+                                  nat_mcp_cli_user_id]
+  --client-id TEXT                Optional pre-registered client ID for
+                                  authentication
+  --client-secret TEXT            Optional pre-registered client secret for
+                                  authentication
   --help                          Show this message and exit.
 ```
 

@@ -33,6 +33,9 @@ from mcp.client.sse import sse_client
 from mcp.client.stdio import StdioServerParameters
 from mcp.client.stdio import stdio_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.shared._httpx_utils import MCP_DEFAULT_SSE_READ_TIMEOUT
+from mcp.shared._httpx_utils import MCP_DEFAULT_TIMEOUT
+from mcp.shared._httpx_utils import create_mcp_http_client
 from mcp.types import TextContent
 from nat.authentication.interfaces import AuthenticatedContext
 from nat.authentication.interfaces import AuthFlowType
@@ -115,6 +118,7 @@ class AuthAdapter(httpx.Auth):
             # Build headers from credentials
             from nat.data_models.authentication import BearerTokenCred
             from nat.data_models.authentication import HeaderCred
+
             headers = {}
 
             for cred in auth_result.credentials:
@@ -147,30 +151,34 @@ class MCPBaseClient(ABC):
         reconnect_max_backoff (float): Maximum backoff delay in seconds for reconnection attempts
     """
 
-    def __init__(self,
-                 transport: str = 'streamable-http',
-                 auth_provider: AuthProviderBase | None = None,
-                 user_id: str | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=60),
-                 auth_flow_timeout: timedelta = timedelta(seconds=300),
-                 reconnect_enabled: bool = True,
-                 reconnect_max_attempts: int = 2,
-                 reconnect_initial_backoff: float = 0.5,
-                 reconnect_max_backoff: float = 50.0):
+    def __init__(
+        self,
+        transport: str = "streamable-http",
+        auth_provider: AuthProviderBase | None = None,
+        user_id: str | None = None,
+        tool_call_timeout: timedelta = timedelta(seconds=60),
+        auth_flow_timeout: timedelta = timedelta(seconds=300),
+        reconnect_enabled: bool = True,
+        reconnect_max_attempts: int = 2,
+        reconnect_initial_backoff: float = 0.5,
+        reconnect_max_backoff: float = 50.0,
+    ):
         self._tools = None
         self._transport = transport.lower()
-        if self._transport not in ['sse', 'stdio', 'streamable-http']:
+        if self._transport not in ["sse", "stdio", "streamable-http"]:
             raise ValueError("transport must be either 'sse', 'stdio' or 'streamable-http'")
 
         self._exit_stack: AsyncExitStack | None = None
         self._session: ClientSession | None = None  # Main session
         self._connection_established = False
         self._initial_connection = False
+        self._lifecycle_task: asyncio.Task | None = None
+        self._lifecycle_commands: asyncio.Queue[tuple[str, asyncio.Future[None]]] | None = None
 
         # Convert auth provider to AuthAdapter
         self._auth_provider = auth_provider
         # Use provided user_id or fall back to auth provider's default_user_id (if available)
-        effective_user_id = user_id or (getattr(auth_provider.config, 'default_user_id', None)
+        effective_user_id = user_id or (getattr(auth_provider.config, "default_user_id", None)
                                         if auth_provider else None)
         self._httpx_auth = AuthAdapter(auth_provider, effective_user_id) if auth_provider else None
 
@@ -193,27 +201,39 @@ class MCPBaseClient(ABC):
         return self._transport
 
     async def __aenter__(self):
-        if self._exit_stack:
+        if self._lifecycle_task and not self._lifecycle_task.done():
             raise RuntimeError("MCPBaseClient already initialized. Use async with to initialize.")
 
-        self._exit_stack = AsyncExitStack()
-
-        # Establish connection with httpx.Auth
-        self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
-
-        self._initial_connection = True
-        self._connection_established = True
+        self._lifecycle_commands = asyncio.Queue()
+        self._lifecycle_task = asyncio.create_task(self._lifecycle_worker(), name=f"mcp-client-{self.server_name}")
+        try:
+            await self._run_lifecycle_command("connect")
+        except Exception:
+            self._lifecycle_task.cancel()
+            try:
+                await self._lifecycle_task
+            except asyncio.CancelledError:
+                pass
+            self._lifecycle_task = None
+            self._lifecycle_commands = None
+            raise
 
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        if self._exit_stack:
-            # Close session
-            await self._exit_stack.aclose()
-            self._session = None
-            self._exit_stack = None
+        lifecycle_task = self._lifecycle_task
 
+        if lifecycle_task and not lifecycle_task.done():
+            try:
+                await self._run_lifecycle_command("close")
+            finally:
+                await lifecycle_task
+
+        self._lifecycle_task = None
+        self._lifecycle_commands = None
         self._connection_established = False
+        self._session = None
+        self._exit_stack = None
         self._tools = None
 
     @property
@@ -248,15 +268,7 @@ class MCPBaseClient(ABC):
             while attempt in range(0, self._reconnect_max_attempts):
                 attempt += 1
                 try:
-                    # Close the existing stack and ClientSession
-                    if self._exit_stack:
-                        await self._exit_stack.aclose()
-                    # Create a fresh stack and session
-                    self._exit_stack = AsyncExitStack()
-                    self._session = await self._exit_stack.enter_async_context(self.connect_to_server())
-
-                    self._connection_established = True
-                    self._tools = None
+                    await self._run_lifecycle_command("reconnect")
 
                     logger.info("Reconnected to MCP server (%s) on attempt %d", self.server_name, attempt)
                     return
@@ -271,6 +283,80 @@ class MCPBaseClient(ABC):
             self._connection_established = False
             if last_error:
                 raise last_error
+
+    async def _run_lifecycle_command(self, command: str) -> None:
+        """Run a connection lifecycle command in the task that owns the transport stack."""
+        if self._lifecycle_commands is None or self._lifecycle_task is None or self._lifecycle_task.done():
+            raise RuntimeError("MCPBaseClient not initialized. Use async with to initialize.")
+
+        future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+        await self._lifecycle_commands.put((command, future))
+        await future
+
+    async def _lifecycle_worker(self) -> None:
+        """Own MCP transport context entry and exit to keep AnyIO cancel scopes task-local."""
+        if self._lifecycle_commands is None:
+            raise RuntimeError("MCPBaseClient lifecycle command queue is not initialized")
+
+        while True:
+            command, future = await self._lifecycle_commands.get()
+
+            if command == "close":
+                try:
+                    await self._close_connection()
+                except Exception as e:
+                    if not future.done():
+                        future.set_exception(e)
+                else:
+                    if not future.done():
+                        future.set_result(None)
+                return
+
+            try:
+                if command == "connect":
+                    await self._connect_connection()
+                elif command == "reconnect":
+                    await self._close_connection()
+                    await self._connect_connection()
+                else:
+                    raise RuntimeError(f"Unsupported MCP client lifecycle command: {command}")
+            except Exception as e:
+                self._connection_established = False
+                self._session = None
+                self._tools = None
+                if not future.done():
+                    future.set_exception(e)
+            else:
+                if not future.done():
+                    future.set_result(None)
+
+    async def _connect_connection(self) -> None:
+        """Enter the MCP transport context in the lifecycle task."""
+        stack = AsyncExitStack()
+        try:
+            session = await stack.enter_async_context(self.connect_to_server())
+        except Exception:
+            await stack.aclose()
+            self._exit_stack = None
+            self._session = None
+            self._connection_established = False
+            raise
+
+        self._exit_stack = stack
+        self._session = session
+        self._initial_connection = True
+        self._connection_established = True
+
+    async def _close_connection(self) -> None:
+        """Exit the MCP transport context in the same task that entered it."""
+        stack = self._exit_stack
+        self._exit_stack = None
+        self._session = None
+        self._connection_established = False
+        self._tools = None
+
+        if stack is not None:
+            await stack.aclose()
 
     async def _with_reconnect(self, coro):
         """
@@ -314,9 +400,9 @@ class MCPBaseClient(ABC):
 
         try:
             # Check if OAuth2 provider has tokens cached
-            if hasattr(self._auth_provider, '_auth_code_provider'):
+            if hasattr(self._auth_provider, "_auth_code_provider"):
                 provider = self._auth_provider._auth_code_provider
-                if provider and hasattr(provider, '_authenticated_tokens'):
+                if provider and hasattr(provider, "_authenticated_tokens"):
                     # Check if we have at least one non-expired token
                     for auth_result in provider._authenticated_tokens.values():
                         if not auth_result.is_expired():
@@ -359,6 +445,7 @@ class MCPBaseClient(ABC):
                     tools = await session.list_tools()
             except TimeoutError as e:
                 from nat.plugins.mcp.exceptions import MCPTimeoutError
+
                 raise MCPTimeoutError(self.server_name, e)
 
             return tools
@@ -371,11 +458,13 @@ class MCPBaseClient(ABC):
 
         return {
             tool.name:
-                MCPToolClient(session=self._session,
-                              tool_name=tool.name,
-                              tool_description=tool.description,
-                              tool_input_schema=tool.inputSchema,
-                              parent_client=self)
+                MCPToolClient(
+                    session=self._session,
+                    tool_name=tool.name,
+                    tool_description=tool.description,
+                    tool_input_schema=tool.inputSchema,
+                    parent_client=self,
+                )
             for tool in response.tools
         }
 
@@ -428,21 +517,25 @@ class MCPSSEClient(MCPBaseClient):
       url (str): The url of the MCP server
     """
 
-    def __init__(self,
-                 url: str,
-                 tool_call_timeout: timedelta = timedelta(seconds=60),
-                 auth_flow_timeout: timedelta = timedelta(seconds=300),
-                 reconnect_enabled: bool = True,
-                 reconnect_max_attempts: int = 2,
-                 reconnect_initial_backoff: float = 0.5,
-                 reconnect_max_backoff: float = 50.0):
-        super().__init__("sse",
-                         tool_call_timeout=tool_call_timeout,
-                         auth_flow_timeout=auth_flow_timeout,
-                         reconnect_enabled=reconnect_enabled,
-                         reconnect_max_attempts=reconnect_max_attempts,
-                         reconnect_initial_backoff=reconnect_initial_backoff,
-                         reconnect_max_backoff=reconnect_max_backoff)
+    def __init__(
+        self,
+        url: str,
+        tool_call_timeout: timedelta = timedelta(seconds=60),
+        auth_flow_timeout: timedelta = timedelta(seconds=300),
+        reconnect_enabled: bool = True,
+        reconnect_max_attempts: int = 2,
+        reconnect_initial_backoff: float = 0.5,
+        reconnect_max_backoff: float = 50.0,
+    ):
+        super().__init__(
+            "sse",
+            tool_call_timeout=tool_call_timeout,
+            auth_flow_timeout=auth_flow_timeout,
+            reconnect_enabled=reconnect_enabled,
+            reconnect_max_attempts=reconnect_max_attempts,
+            reconnect_initial_backoff=reconnect_initial_backoff,
+            reconnect_max_backoff=reconnect_max_backoff,
+        )
         self._url = url
 
     @property
@@ -477,23 +570,27 @@ class MCPStdioClient(MCPBaseClient):
       env (dict[str, str] | None): Environment variables to set for the process
     """
 
-    def __init__(self,
-                 command: str,
-                 args: list[str] | None = None,
-                 env: dict[str, str] | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=60),
-                 auth_flow_timeout: timedelta = timedelta(seconds=300),
-                 reconnect_enabled: bool = True,
-                 reconnect_max_attempts: int = 2,
-                 reconnect_initial_backoff: float = 0.5,
-                 reconnect_max_backoff: float = 50.0):
-        super().__init__("stdio",
-                         tool_call_timeout=tool_call_timeout,
-                         auth_flow_timeout=auth_flow_timeout,
-                         reconnect_enabled=reconnect_enabled,
-                         reconnect_max_attempts=reconnect_max_attempts,
-                         reconnect_initial_backoff=reconnect_initial_backoff,
-                         reconnect_max_backoff=reconnect_max_backoff)
+    def __init__(
+        self,
+        command: str,
+        args: list[str] | None = None,
+        env: dict[str, str] | None = None,
+        tool_call_timeout: timedelta = timedelta(seconds=60),
+        auth_flow_timeout: timedelta = timedelta(seconds=300),
+        reconnect_enabled: bool = True,
+        reconnect_max_attempts: int = 2,
+        reconnect_initial_backoff: float = 0.5,
+        reconnect_max_backoff: float = 50.0,
+    ):
+        super().__init__(
+            "stdio",
+            tool_call_timeout=tool_call_timeout,
+            auth_flow_timeout=auth_flow_timeout,
+            reconnect_enabled=reconnect_enabled,
+            reconnect_max_attempts=reconnect_max_attempts,
+            reconnect_initial_backoff=reconnect_initial_backoff,
+            reconnect_max_backoff=reconnect_max_backoff,
+        )
         self._command = command
         self._args = args
         self._env = env
@@ -545,26 +642,30 @@ class MCPStreamableHTTPClient(MCPBaseClient):
       reconnect_max_backoff (float): Maximum backoff delay in seconds
     """
 
-    def __init__(self,
-                 url: str,
-                 auth_provider: AuthProviderBase | None = None,
-                 user_id: str | None = None,
-                 custom_headers: dict[str, str] | None = None,
-                 tool_call_timeout: timedelta = timedelta(seconds=60),
-                 auth_flow_timeout: timedelta = timedelta(seconds=300),
-                 reconnect_enabled: bool = True,
-                 reconnect_max_attempts: int = 2,
-                 reconnect_initial_backoff: float = 0.5,
-                 reconnect_max_backoff: float = 50.0):
-        super().__init__("streamable-http",
-                         auth_provider=auth_provider,
-                         user_id=user_id,
-                         tool_call_timeout=tool_call_timeout,
-                         auth_flow_timeout=auth_flow_timeout,
-                         reconnect_enabled=reconnect_enabled,
-                         reconnect_max_attempts=reconnect_max_attempts,
-                         reconnect_initial_backoff=reconnect_initial_backoff,
-                         reconnect_max_backoff=reconnect_max_backoff)
+    def __init__(
+        self,
+        url: str,
+        auth_provider: AuthProviderBase | None = None,
+        user_id: str | None = None,
+        custom_headers: dict[str, str] | None = None,
+        tool_call_timeout: timedelta = timedelta(seconds=60),
+        auth_flow_timeout: timedelta = timedelta(seconds=300),
+        reconnect_enabled: bool = True,
+        reconnect_max_attempts: int = 2,
+        reconnect_initial_backoff: float = 0.5,
+        reconnect_max_backoff: float = 50.0,
+    ):
+        super().__init__(
+            "streamable-http",
+            auth_provider=auth_provider,
+            user_id=user_id,
+            tool_call_timeout=tool_call_timeout,
+            auth_flow_timeout=auth_flow_timeout,
+            reconnect_enabled=reconnect_enabled,
+            reconnect_max_attempts=reconnect_max_attempts,
+            reconnect_initial_backoff=reconnect_initial_backoff,
+            reconnect_max_backoff=reconnect_max_backoff,
+        )
         self._url = url
         self._custom_headers = custom_headers or {}
         # Callback to retrieve MCP session ID from the transport layer
@@ -604,15 +705,37 @@ class MCPStreamableHTTPClient(MCPBaseClient):
         """
         Establish a session with an MCP server via streamable-http within an async context
         """
-        # Create httpx client with custom headers and auth
-        # streamable_http_client expects a pre-configured httpx.AsyncClient for headers/auth
-        http_client = httpx.AsyncClient(headers=self._custom_headers if self._custom_headers else None,
-                                        auth=self._httpx_auth)
+        # Create httpx client with custom headers and auth.
+        # streamable_http_client expects a pre-configured httpx.AsyncClient for headers/auth;
+        # when one is supplied, the SDK skips creating its own default client, so we must
+        # match its recommended timeouts here. Otherwise httpx falls back to its 5-second
+        # default read timeout and long-running MCP tool calls will hang / fail with
+        # ReadTimeout before producing a result.
+        #
+        # Use the SDK's own factory so we inherit follow_redirects + any future defaults,
+        # and extend the SSE read timeout to cover user-configured tool/auth timeouts so
+        # the httpx layer never cuts off before MCP-level timeouts do.
+        configured_timeouts_s = [
+            MCP_DEFAULT_SSE_READ_TIMEOUT,
+            self._tool_call_timeout.total_seconds(),
+            self._auth_flow_timeout.total_seconds(),
+        ]
+        sse_read_timeout_s = max(configured_timeouts_s)
+        timeout = httpx.Timeout(MCP_DEFAULT_TIMEOUT, read=sse_read_timeout_s)
+
+        http_client = create_mcp_http_client(
+            headers=self._custom_headers if self._custom_headers else None,
+            timeout=timeout,
+            auth=self._httpx_auth,
+        )
 
         try:
             async with http_client:
-                async with streamable_http_client(url=self._url,
-                                                  http_client=http_client) as (read, write, get_session_id):
+                async with streamable_http_client(url=self._url, http_client=http_client) as (
+                        read,
+                        write,
+                        get_session_id,
+                ):
                     # Store the session ID callback for later retrieval
                     self._get_mcp_session_id = get_session_id
                     async with ClientSession(read, write) as session:
@@ -636,16 +759,18 @@ class MCPToolClient:
         parent_client (MCPBaseClient): The parent MCP client for auth management.
     """
 
-    def __init__(self,
-                 session: ClientSession,
-                 parent_client: MCPBaseClient,
-                 tool_name: str,
-                 tool_description: str | None,
-                 tool_input_schema: dict | None = None):
+    def __init__(
+        self,
+        session: ClientSession,
+        parent_client: MCPBaseClient,
+        tool_name: str,
+        tool_description: str | None,
+        tool_input_schema: dict | None = None,
+    ):
         self._session = session
         self._tool_name = tool_name
         self._tool_description = tool_description
-        self._input_schema = (model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None)
+        self._input_schema = model_from_mcp_schema(self._tool_name, tool_input_schema) if tool_input_schema else None
         self._parent_client = parent_client
 
         if self._parent_client is None:

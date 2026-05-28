@@ -256,7 +256,6 @@ For production scenarios requiring authentication, see the [OAuth2 Protected Mat
 ## Related Examples
 
 - [OAuth2 Protected Math Assistant A2A](../math_assistant_a2a_protected/) - OAuth2-protected A2A example
-- [Currency Agent A2A](../currency_agent_a2a/) - External A2A service integration example
 
 ## References
 

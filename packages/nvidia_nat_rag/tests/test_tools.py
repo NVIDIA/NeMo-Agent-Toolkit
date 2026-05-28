@@ -43,7 +43,7 @@ class TestNATRAG:
             base_url="https://integrate.api.nvidia.com/v1",
         ))
         builder.get_embedder_config = MagicMock(return_value=NIMEmbedderModelConfig(
-            model_name="nvidia/llama-3.2-nv-embedqa-1b-v2",
+            model_name="nvidia/llama-nemotron-embed-1b-v2",
             base_url="https://integrate.api.nvidia.com/v1",
         ))
         builder.get_retriever_config = AsyncMock(return_value=MilvusRetrieverConfig(

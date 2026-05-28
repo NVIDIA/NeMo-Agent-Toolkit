@@ -14,10 +14,8 @@
 # limitations under the License.
 
 import logging
-import math
 
 import numpy as np
-import pandas as pd
 
 from nat.plugins.profiler.forecasting.models.forecasting_base_model import ForecastingBaseModel
 from nat.plugins.profiler.intermediate_property_adapter import IntermediatePropertyAdaptor
@@ -45,27 +43,18 @@ class RandomForestModel(ForecastingBaseModel):
         self.model = RandomForestRegressor(n_estimators=3, max_depth=2)
         self.matrix_length = None
 
-    def fit(self, raw_stats: list[list[IntermediatePropertyAdaptor]] | pd.DataFrame):
+    def fit(self, raw_stats: list[list[IntermediatePropertyAdaptor]]):
         """
         X: shape (N, M)  # M = matrix_length * 4
         y: shape (N, 4)
         """
-        if isinstance(raw_stats, pd.DataFrame):
-            raw_matrices, matrix_length = self._extract_from_dataframe(raw_stats)
-        else:
-            raw_matrices, matrix_length = self._extract_token_usage_meta(raw_stats)
 
-        self.matrix_length = matrix_length
-        samples = self._preprocess_for_forecasting(raw_matrices, matrix_length, matrix_length)
-        x_list = []
-        y_list = []
-        for (x_mat, y_mat) in samples:
-            x_list.append(x_mat)
-            y_list.append(y_mat)
-        x_flat, y_flat = self._flatten_features(x_list, y_list)
+        x_flat, y_flat = self._prep_for_model_training(raw_stats)
+
+        # 3) Fit
         self.model.fit(x_flat, y_flat)
 
-    def predict(self, raw_stats: list[list[IntermediatePropertyAdaptor]] | pd.DataFrame) -> np.ndarray:
+    def predict(self, raw_stats: list[list[IntermediatePropertyAdaptor]]) -> np.ndarray:
         """
         Predict using the fitted linear model.
         Returns shape (N, 4)
@@ -73,11 +62,9 @@ class RandomForestModel(ForecastingBaseModel):
         x = self._prep_single(raw_stats)
         return self.model.predict(x)
 
-    def _prep_single(self, raw_stats: list[list[IntermediatePropertyAdaptor]] | pd.DataFrame) -> np.ndarray:
-        if isinstance(raw_stats, pd.DataFrame):
-            arr, _ = self._extract_from_dataframe(raw_stats)
-        else:
-            arr, _ = self._extract_token_usage_meta(raw_stats)
+    def _prep_single(self, raw_stats: list[list[IntermediatePropertyAdaptor]]) -> np.ndarray:
+
+        arr, _ = self._extract_token_usage_meta(raw_stats)
         arr = arr[0]
 
         assert self.matrix_length is not None, "Model has not been trained yet."
@@ -228,37 +215,10 @@ class RandomForestModel(ForecastingBaseModel):
 
         return samples
 
-    def _extract_from_dataframe(self, df: pd.DataFrame) -> tuple[list[np.ndarray], int]:
-        """Extract (all_run_data, matrix_length) from profiler DataFrame."""
-        all_run_data: list[list[list[float]]] = []
-        call_stack_sizes: list[int] = []
-        for _, group in df.groupby("example_number", sort=True):
-            run_data: list[list[float]] = []
-            group = group.sort_values("event_timestamp")
-            prev_ts: float | None = None
-            for _, row in group.iterrows():
-                et = row.get("event_type")
-                et_val = et.value if hasattr(et, "value") else str(et)
-                if et_val == "LLM_END":
-                    ts = float(row.get("event_timestamp", 0) or 0)
-                    seconds_between = (ts - prev_ts) if prev_ts is not None else 0.0
-                    prev_ts = ts
-                    run_data.append([
-                        seconds_between,
-                        int(row.get("prompt_tokens") or 0),
-                        int(row.get("completion_tokens") or 0),
-                    ])
-            if run_data:
-                all_run_data.append(run_data)
-                call_stack_sizes.append(len(run_data))
-        if not all_run_data:
-            raise ValueError("DataFrame contains no forecastable LLM_END rows. "
-                             "Filter out tool-only or zero-token traces before training.")
-        arrs = [np.array(run) for run in all_run_data]
-        matrix_length = math.ceil(sum(call_stack_sizes) / len(call_stack_sizes))
-        return arrs, matrix_length
-
     def _extract_token_usage_meta(self, all_requests_data: list[list[IntermediatePropertyAdaptor]]):
+
+        import math
+
         all_run_data = []
         call_stack_sizes = []
         seconds_between_call_map = {}

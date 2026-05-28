@@ -72,15 +72,25 @@ class AutoMemoryWrapperGraph:
         Extract user_id from runtime context.
 
         Priority order:
-        1. user_manager.get_id() - For authenticated sessions (set via SessionManager.session())
-        2. X-User-ID HTTP header - For testing/simple auth without middleware
-        3. "default_user" - Fallback for development/testing without authentication
+        1. Context.user_id - For authenticated sessions (set via SessionManager.session())
+        2. user_manager.get_id() - Legacy/custom context compatibility
+        3. X-User-ID HTTP header - For testing/simple auth without middleware
+        4. "default_user" - Fallback for development/testing without authentication
 
         Returns:
             str: The user ID for memory operations
         """
-        # Priority 1: Get user_id from user_manager (for authenticated sessions)
-        user_manager = self._context.user_manager
+        # Priority 1: Get user_id from the runtime context.
+        try:
+            user_id = self._context.user_id
+            if user_id:
+                logger.debug(f"Using user_id from context: {user_id}")
+                return user_id
+        except Exception as e:
+            logger.debug(f"Failed to get user_id from context: {e}")
+
+        # Priority 2: Get user_id from user_manager (legacy/custom context compatibility)
+        user_manager = getattr(self._context, "user_manager", None)
         if user_manager and hasattr(user_manager, 'get_id'):
             try:
                 user_id = user_manager.get_id()
@@ -90,9 +100,11 @@ class AutoMemoryWrapperGraph:
             except Exception as e:
                 logger.debug(f"Failed to get user_id from user_manager: {e}")
 
-        # Priority 2: Extract from X-User-ID HTTP header (temporary workaround for testing)
-        if self._context.metadata and self._context.metadata.headers:
-            user_id = self._context.metadata.headers.get("x-user-id")
+        # Priority 3: Extract from X-User-ID HTTP header (temporary workaround for testing)
+        metadata = getattr(self._context, "metadata", None)
+        headers = getattr(metadata, "headers", None) if metadata else None
+        if headers:
+            user_id = headers.get("x-user-id") or headers.get("X-User-ID")
             if user_id:
                 logger.debug(f"Using user_id from X-User-ID header: {user_id}")
                 return user_id
@@ -257,17 +269,17 @@ class AutoMemoryWrapperGraph:
         if self.save_ai_responses:
             workflow.add_node("capture_ai_response", self.capture_ai_response_node)
 
-        # Connect nodes based on enabled features
-        workflow.set_entry_point("capture_user_message" if self.save_user_messages else "memory_retrieve" if self.
-                                 retrieve_memory else "inner_agent")
+        # Retrieve before storing the current user message so recall queries are not added to memory before search.
+        workflow.set_entry_point("memory_retrieve" if self.retrieve_memory else "capture_user_message" if self.
+                                 save_user_messages else "inner_agent")
 
-        if self.save_user_messages and self.retrieve_memory:
-            workflow.add_edge("capture_user_message", "memory_retrieve")
-            workflow.add_edge("memory_retrieve", "inner_agent")
-        elif self.save_user_messages:
+        if self.retrieve_memory and self.save_user_messages:
+            workflow.add_edge("memory_retrieve", "capture_user_message")
             workflow.add_edge("capture_user_message", "inner_agent")
         elif self.retrieve_memory:
             workflow.add_edge("memory_retrieve", "inner_agent")
+        elif self.save_user_messages:
+            workflow.add_edge("capture_user_message", "inner_agent")
 
         if self.save_ai_responses:
             workflow.add_edge("inner_agent", "capture_ai_response")

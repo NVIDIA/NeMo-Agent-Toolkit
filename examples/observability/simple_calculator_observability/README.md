@@ -23,7 +23,7 @@ This example demonstrates how to implement **observability and tracing capabilit
 
 ## Key Features
 
-- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Langfuse, LangSmith, Weave, Patronus, and RagaAI Catalyst for comprehensive monitoring options.
+- **Multi-Platform Observability Integration:** Demonstrates integration with multiple observability platforms including Phoenix (local), Arize AX (hosted OTLP), Langfuse, LangSmith, Weave, Patronus, and RagaAI Catalyst for comprehensive monitoring options.
 - **Distributed Tracing Implementation:** Shows how to track agent execution flow across components with detailed trace visualization including agent reasoning, tool calls, and LLM interactions.
 - **Performance Monitoring:** Demonstrates capturing latency metrics, token usage, resource consumption, and error tracking for production-ready AI system monitoring.
 - **Development and Production Patterns:** Provides examples for both local development tracing (Phoenix) and production monitoring setups with various enterprise observability platforms.
@@ -43,7 +43,7 @@ Before starting this example, you need:
 
 1. **Agent toolkit**: Ensure you have the Agent toolkit installed. If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 2. **Base workflow**: This example builds upon the Getting Started [Simple Calculator](../../getting_started/simple_calculator/) example. Make sure you are familiar with the example before proceeding.
-3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Langfuse, LangSmith, Weave, or Patronus)
+3. **Observability platform**: Access to at least one of the supported platforms (Phoenix, Arize AX, Langfuse, LangSmith, Weave, or Patronus)
 
 ## Installation
 
@@ -99,6 +99,26 @@ This configuration demonstrates **parent-child span tracking** for nested tool c
     ```
 
 This is useful for filtering out internal tool calls when analyzing agent behavior, allowing you to focus on only the tools the agent directly selected.
+
+### Arize AX (hosted OTLP)
+
+Send traces to [Arize AX](https://arize.com/docs/ax/) using the `arize_ax` exporter (`nvidia-nat[opentelemetry]`). This example uses the same OTLP metadata as [Arize OTel](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel).
+
+1. Set credentials (project name defaults to `simple_calculator` in `config-arize-ax.yml` if `ARIZE_PROJECT_NAME` is unset):
+
+    ```bash
+    export ARIZE_SPACE_ID="<your-space-id>"
+    export ARIZE_API_KEY="<your-api-key>"
+    export ARIZE_PROJECT_NAME="simple_calculator"
+    ```
+
+2. Run the workflow:
+
+    ```bash
+    nat run --config_file examples/observability/simple_calculator_observability/configs/config-arize-ax.yml --input "What is 2 * 4?"
+    ```
+
+3. Open the Arize project matching your project name to view traces. For **EU** residency, set `use_eu_region: true` under `arize_ax` in the config file.
 
 ### File-Based Tracing
 
@@ -345,6 +365,7 @@ The example includes multiple configuration files for different observability pl
 |-------------------|----------|----------|
 | `config-phoenix.yml` | Phoenix | Tracing with Phoenix |
 | `config-phoenix-nested.yml` | Phoenix | Testing parent-child span tracking with nested tool calls |
+| `config-arize-ax.yml` | Arize AX | Hosted OTLP tracing to Arize AX (requires `ARIZE_*` environment variables) |
 | `config-otel-file.yml` | File Export | Local file-based tracing for development and debugging |
 | `config-langfuse.yml` | Langfuse | Langfuse monitoring and analytics |
 | `config-langsmith.yml` | LangSmith | LangChain/LangGraph ecosystem integration |

@@ -7,13 +7,15 @@
 # Allow AIQ for AIQ Blueprint
 AIQ
 [Aa]llowlist
+Anthropic
 [Aa]nonymize(d?)
 API(s?)
 Arize
 ART
 arXiv
 [Aa]sync
-Anthropic
+ATIF
+ATOF
 Authlib
 [Aa]utoencoder
 [Bb]ackdoor(s?)
@@ -40,6 +42,7 @@ config
 [Cc]onfigurability
 [Cc]oroutine(s?)
 CPython
+cron
 [Cc]ryptocurrenc[y|ies]
 cuDF
 cuML
@@ -55,6 +58,7 @@ Datadog
 [Dd]atastore
 DB(s?)
 [Dd]eclaratively
+[Dd]eduplicat(ed|ion)
 [Dd]enylist
 [Dd]eserialize
 [Dd]ev
@@ -63,10 +67,12 @@ DB(s?)
 Dynatrace
 [Ee]mbedder(s?)
 [Ee]ngineerable
+Entra
 etcd
 [Ee]val
 [Ee]xfiltration
 [Ee]xplainability
+Exa
 Faiss
 [Ff]inetunable
 [Ff]inetune(d?)
@@ -83,6 +89,7 @@ Grafana
 [Gg]uardrail(s|ed|ing)?
 [Hh]ashable
 [Hh]ardcode(s|d)?
+[Hh]ostname(s?)
 [Hh]yperparameter(s?)
 impactful
 [Ii]nferencing
@@ -169,12 +176,15 @@ Qwen
 [Rr]untime(s?)
 [Ss]andboxing
 [Ss]anitiz(e|ed|ation|ing)
+SDK(s)
 [Ss]erializable
 [Ss]erverless
 SGLang
 spaCy
+Synap
 SQLAlchemy
 SSE
+stderr
 [Ss]treamable
 [Ss]ubcard(s?)
 [Ss]ubclassing
@@ -182,6 +192,7 @@ SSE
 [Ss]ubpackage(s?)
 [Ss]ubsampl(e|ing)
 [Ss]ubtask(s?)
+[Ss]ubprocess(es)?
 [Ss]ubword(s?)
 [Ss]uperset(s?)
 Tavily
@@ -203,7 +214,7 @@ triages
 [Uu]psert
 URIs
 uv
-Vanna
+[Vv]alidator(s)
 VectorDB
 vLLM
 [Ww]alkthrough
