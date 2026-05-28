@@ -109,6 +109,8 @@ __all__ = ["tools"]
 The package should declare the shared namespace package, a bounded dependency on `nvidia-nat-core`, provider SDK
 dependencies, optional test dependencies, repository metadata, and the component entry point.
 
+
+<!-- path-check-skip-begin -->
 ```toml
 [build-system]
 requires = ["hatchling"]
@@ -143,6 +145,7 @@ source = "https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily"
 [project.entry-points."nat.plugins"]
 nat_tavily = "nat.plugins.tavily.register"
 ```
+<!-- path-check-skip-end -->
 
 New external component packages should use the `nat.plugins` entry point group. The runtime also loads
 `nat.components` for backward compatibility with existing packages, but `nat.components` is compatibility-only for new
