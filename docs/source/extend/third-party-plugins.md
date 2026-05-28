@@ -26,187 +26,274 @@ This guide describes the recommended model for partner-owned plugin packages. Fo
 the [Public Plugin API](./plugin-api.md). For general plugin discovery and supported plugin types, see the
 [Plugin System](./plugins.md).
 
-## Ownership Model
+## Ownership and Scope
 
-Third-party plugin packages are owned by the provider or partner that maintains the integration. The partner owns:
+Third-party plugin packages are provider-owned repositories. The provider owns the integration code, public package,
+release process, compatibility testing, and user support for provider-specific behavior. The NeMo Agent Toolkit project
+owns the stable plugin-authoring API, first-party package behavior, and issues in `nvidia-nat-core` that surface through
+third-party packages.
 
-- The GitHub repository, branch protection, contribution policy, and release process.
-- Package publishing to PyPI or another package repository.
-- Compatibility testing against supported NeMo Agent Toolkit versions.
-- Issues and pull requests that affect only the partner integration.
-- Documentation for installation, configuration, credentials, and bug routing.
+This model is the default for new partner integrations where the provider is best positioned to track its own API
+roadmap, service semantics, and release cadence. It works for function groups, tools, LLM clients, embedder clients,
+retriever clients, telemetry exporters, memory backends, object stores, authentication providers, custom `nat` CLI
+subcommands, and specialized front ends.
 
-The NeMo Agent Toolkit project owns the stable public plugin API, first-party package behavior, and issues in
-`nvidia-nat-core` that surface through third-party plugins.
+Provider-specific behavior belongs in the provider repository. For example, a web search plugin can return the fields
+and response shape exposed by the provider SDK. Do not introduce a shared web-search result schema unless the toolkit
+defines that schema as a stable public API.
 
-## When to Use a Third-Party Package
+## Naming Convention
 
-Use a third-party-owned package for new partner integrations when the provider is best positioned to track its own API
-roadmap, release cadence, and service behavior. This model is especially useful for:
+Use one provider token consistently across the repository, distribution, import package, entry point, registered
+component `_type`, and function group namespace. The provider token should be short, lowercase, and stable.
 
-- Agentic tools and function groups.
-- LLM, embedder, and retriever providers or framework clients.
-- Telemetry exporters, memory backends, object stores, and authentication providers.
-- Custom `nat` CLI subcommands.
-- Specialized front-end integrations.
+| Surface | Convention | Tavily example |
+| --- | --- | --- |
+| GitHub owner | Provider-owned account or organization | `tavily-ai` |
+| GitHub repository | `NeMo-Agent-Toolkit-<provider>` | `NeMo-Agent-Toolkit-tavily` |
+| Python distribution | `nemo-agent-toolkit-<provider>` | `nemo-agent-toolkit-tavily` |
+| Python import package | `nat.plugins.<provider>` | `nat.plugins.tavily` |
+| Component entry point name | `nat_<provider>` | `nat_tavily` |
+| Registered function group `_type` | `<provider>` | `tavily` |
+| Function group tool names | `<instance_name>__<function_name>` | `tavily__search` |
 
-New partner integrations should prefer this model over adding provider-specific code to the NeMo Agent Toolkit
-monorepo.
+Function groups use a double underscore between the configured group instance name and each function name. This is the
+current runtime convention in `FunctionGroup.SEPARATOR` and keeps tool names compatible with frameworks that reject or
+reinterpret periods. For example, this configuration:
 
-## Naming
+```yaml
+function_groups:
+  tavily:
+    _type: tavily
+```
 
-Use names that make the package discoverable and clearly associated with the toolkit:
+exposes tools such as `tavily__search`, `tavily__extract`, and `tavily__research` when the plugin adds functions named
+`search`, `extract`, and `research`.
 
-- GitHub repository owner: `<provider>`
-- GitHub repository name: `nemo-agent-toolkit-<product>`
-- PyPI package: `nemo-agent-toolkit-<provider>`
-- Python import package: `nat.plugins.<provider>`
-- Entry point name: `nat_<provider>`
+## Repository Layout
 
-For example, a Tavily integration could use:
-
-- Repository owner: `tavily-ai`
-- Repository name: `nemo-agent-toolkit-tavily`
-- PyPI package: `nemo-agent-toolkit-tavily`
-- Import package: `nat.plugins.tavily`
-- Entry point: `nat_tavily`
-
-## Package Layout
-
-Third-party packages should use a PEP 420 namespace package layout compatible with other NeMo Agent Toolkit
-distributions:
+Use a PEP 420 namespace package layout so the provider package can share the `nat` namespace with other NeMo Agent
+Toolkit distributions:
 
 ```text
-nemo-agent-toolkit-provider/
+NeMo-Agent-Toolkit-tavily/
 |-- pyproject.toml
 |-- README.md
+|-- LICENSE
 |-- src/
 |   `-- nat/
 |       `-- plugins/
-|           `-- provider/
+|           `-- tavily/
 |               |-- __init__.py
 |               |-- register.py
 |               `-- tools.py
 `-- tests/
-    `-- test_provider.py
+    `-- test_tools.py
 ```
 
-Do not add `__init__.py` files in the shared `nat` or `nat.plugins` namespace directories. These directories are shared
-namespace packages across NeMo Agent Toolkit distributions. The provider package directory itself should contain an
-`__init__.py`.
+Do not add `__init__.py` files in the shared `nat` or `nat.plugins` namespace directories. The provider-owned package
+directory, such as `tavily`, should contain an `__init__.py`.
 
-The `register.py` module should import the modules that define plugin registration decorators so those decorators run
-when the entry point is loaded.
+The entry point target should import a registration module. That module should import the provider modules that define
+registration decorators so the decorators run when the toolkit loads the entry point.
 
 ```python
+# Registration module
 from . import tools
 
 __all__ = ["tools"]
 ```
 
-## Entry Points
+## Package Metadata
 
-New external plugin packages should register component plugins under `nat.plugins`:
+The package should declare the shared namespace package, a bounded dependency on `nvidia-nat-core`, provider SDK
+dependencies, optional test dependencies, repository metadata, and the component entry point.
 
 ```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nat"]
+
+[project]
+name = "nemo-agent-toolkit-tavily"
+version = "0.1.0"
+requires-python = ">=3.11,<3.14"
+description = "Tavily integration for NVIDIA NeMo Agent Toolkit"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "nvidia-nat-core>=1.8,<2.0",
+  "tavily-python>=0.7.0,<1.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+  "pytest-asyncio>=0.24",
+  "nvidia-nat-test>=1.8,<2.0",
+]
+
+[project.urls]
+documentation = "https://docs.nvidia.com/nemo/agent-toolkit/latest/"
+source = "https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily"
+
 [project.entry-points."nat.plugins"]
-nat_provider = "nat.plugins.provider.register"
+nat_tavily = "nat.plugins.tavily.register"
 ```
 
-The runtime also continues to load `nat.components` entry points for backward compatibility with existing packages.
-Do not use `nat.components` for new third-party plugin packages.
+New external component packages should use the `nat.plugins` entry point group. The runtime also loads
+`nat.components` for backward compatibility with existing packages, but `nat.components` is compatibility-only for new
+third-party packages.
 
-Use these entry point groups for other extension points:
+Other extension points use separate entry point groups:
 
 | Entry point group | Use |
 | --- | --- |
-| `nat.plugins` | Functions, function groups, LLM clients, retrievers, embedders, telemetry exporters, memory backends, object stores, authentication providers, and other component plugins. |
+| `nat.plugins` | Component plugins such as functions, function groups, model clients, retrievers, embedders, telemetry exporters, memory backends, object stores, middleware, and authentication providers. |
 | `nat.cli` | Custom `nat` CLI subcommands. |
 | `nat.front_ends` | Specialized front-end implementations. Front-end registration is not part of the stable `nat.plugin_api` facade. |
 
-## Public API Imports
+## Public API Surface
 
-Third-party plugin code should import stable plugin-authoring APIs from `nat.plugin_api`:
+Third-party packages should import stable plugin-authoring symbols from `nat.plugin_api`.
 
 ```python
 from nat.plugin_api import Builder
-from nat.plugin_api import FunctionBaseConfig
-from nat.plugin_api import FunctionInfo
-from nat.plugin_api import register_function
+from nat.plugin_api import FunctionGroup
+from nat.plugin_api import FunctionGroupBaseConfig
+from nat.plugin_api import SerializableSecretStr
+from nat.plugin_api import register_function_group
 ```
 
-Avoid depending on implementation modules such as `nat.cli.register_workflow`, `nat.builder.workflow_builder`, or
-`nat.builder.function_info` unless a subsystem guide explicitly documents that module as the extension surface. Symbols
-exported from `nat.plugin_api` are the stable public contract for external plugin packages.
+Avoid importing implementation modules such as `nat.cli.register_workflow`, `nat.builder.workflow_builder`, or
+`nat.builder.function_info` unless another subsystem guide explicitly documents that module as the extension surface.
+Symbols exported from `nat.plugin_api` are the public contract for external plugin packages.
 
-## Framework-Agnostic Tools
+## Function Group Implementation
 
-Register tools with `register_function` or `register_function_group` unless the integration intentionally depends on a
-specific framework. Framework-agnostic tools can be consumed through the toolkit's registered tool wrappers for
-LangChain/LangGraph, CrewAI, LlamaIndex, AutoGen, Semantic Kernel, Google ADK, Agno, AWS Strands, and other supported
-frameworks.
+Use `register_function_group` when one provider exposes multiple related tools. A function group lets the integration
+share configuration, credentials, clients, timeouts, and other resources while exposing individual tools through the
+`instance_name__function_name` convention.
 
 ```python
 from pydantic import Field
 
 from nat.plugin_api import Builder
-from nat.plugin_api import FunctionBaseConfig
-from nat.plugin_api import FunctionInfo
-from nat.plugin_api import register_function
+from nat.plugin_api import FunctionGroup
+from nat.plugin_api import FunctionGroupBaseConfig
+from nat.plugin_api import SerializableSecretStr
+from nat.plugin_api import register_function_group
 
 
-class ProviderSearchConfig(FunctionBaseConfig, name="provider_search"):
-    """Search using the provider API."""
+class TavilyToolsGroupConfig(FunctionGroupBaseConfig, name="tavily"):
+    """Tavily tools group."""
 
-    api_key: str = Field(description="Provider API key.")
+    api_key: SerializableSecretStr = Field(
+        default_factory=lambda: SerializableSecretStr(""),
+        description="Tavily API key. Falls back to the TAVILY_API_KEY environment variable.",
+    )
 
 
-@register_function(config_type=ProviderSearchConfig)
-async def provider_search(config: ProviderSearchConfig, _builder: Builder):
-    async def search(query: str) -> str:
-        """Search for information using the provider API."""
-        ...
+@register_function_group(config_type=TavilyToolsGroupConfig)
+async def tavily_tools(config: TavilyToolsGroupConfig, _builder: Builder):
+    client = build_async_client(config.api_key)
+    group = FunctionGroup(config=config)
 
-    yield FunctionInfo.from_fn(search)
+    async def search(query: str) -> dict:
+        return await client.search(query=query)
+
+    async def extract(urls: list[str]) -> dict:
+        return await client.extract(urls=urls)
+
+    group.add_function("search", search, description=search.__doc__)
+    group.add_function("extract", extract, description=extract.__doc__)
+
+    yield group
 ```
 
-When possible, implement tools against the provider's own SDK or raw HTTP API rather than a framework-specific wrapper
-package. Use framework-specific registration only when the integration cannot be expressed as a framework-agnostic
-tool.
+Use `register_function` instead when the integration exposes a single tool or workflow. Prefer provider SDKs or direct
+HTTP clients over framework-specific wrappers when the tool can be expressed in a framework-agnostic way. Use
+framework-specific registration only when the integration cannot be represented as a framework-agnostic toolkit tool.
 
-## Dependencies
+## README Requirements
 
-Third-party packages should depend on `nvidia-nat-core` with a version range that allows compatible minor releases but
-blocks unreviewed major releases:
+Each provider repository should include a README that is complete enough for users and reviewers to install, configure,
+test, and route bugs without reading the implementation.
 
-```toml
-dependencies = [
-  "nvidia-nat-core>=1.2,<2.0",
-]
+At minimum, include:
+
+- Installation commands for `uv` and `pip`.
+- A minimal workflow configuration.
+- Configuration fields, defaults, and credential setup.
+- The registered `_type` values and generated tool names.
+- Supported NeMo Agent Toolkit versions.
+- Local test commands.
+- Bug routing for provider-owned integration bugs versus `nvidia-nat-core` bugs.
+- License information.
+
+A minimal workflow example should be runnable from the repository root:
+
+```yaml
+function_groups:
+  tavily:
+    _type: tavily
+
+llms:
+  my_llm:
+    _type: litellm
+    model_name: anthropic/claude-sonnet-4-6
+
+workflow:
+  _type: react_agent
+  llm_name: my_llm
+  tool_names:
+    - tavily
 ```
 
-Choose the lower bound based on the first NeMo Agent Toolkit version that includes the public API symbols your package
-uses. Update the upper bound when you have tested compatibility with a new major version.
+```bash
+export TAVILY_API_KEY=tvly-...
+export ANTHROPIC_API_KEY=...
 
-Use optional dependencies for provider SDK extras, development tools, and integration test dependencies when possible.
+uv run nat run --config_file config.yml --input "What changed in the latest release?"
+```
+
+## Testing and Compatibility
+
+At minimum, third-party plugin packages should include:
+
+- Unit tests for provider-specific logic.
+- A loader smoke test that imports or installs the package, loads the entry point, and verifies that the registered
+  component can be discovered.
+- Tool or function-group tests through `nvidia-nat-test` where possible.
+- At least one representative end-to-end test that uses a mock, stub, or local test service.
+- Compatibility CI against the supported NeMo Agent Toolkit versions for the plugin tier.
+
+Provider integrations that require live credentials should mark those tests as integration tests and skip them when the
+required environment variables are not set.
+
+Use a lower bound that matches the first NeMo Agent Toolkit release containing the `nat.plugin_api` symbols your package
+uses. Keep the upper bound below the next major version until the package has been tested with that major version.
 
 ## Installation and Discovery
 
-End users install third-party plugin packages directly into the same environment as `nvidia-nat-core`:
+Users install a third-party plugin package into the same Python environment as `nvidia-nat-core`:
 
 ```bash
-uv add nemo-agent-toolkit-provider
+uv add nemo-agent-toolkit-tavily
 ```
 
 or:
 
 ```bash
-pip install nemo-agent-toolkit-provider
+pip install nemo-agent-toolkit-tavily
 ```
 
-After installation, the toolkit discovers the package through `importlib.metadata.entry_points()`. Users do not need to
-edit a NeMo Agent Toolkit configuration file to load the package itself. They only need to reference the registered
-component `_type` values in workflow configuration.
+After installation, the toolkit discovers the package with `importlib.metadata.entry_points()`. Users do not need to
+edit a toolkit configuration file to load the package itself. They only reference the registered component `_type`
+values in workflow configuration.
 
 Use `nat info components` to confirm that a package is installed and discoverable:
 
@@ -219,65 +306,82 @@ uv run nat info components
 Use `uv` for local development when possible. This matches the primary NeMo Agent Toolkit development toolchain and
 keeps lock files compatible with the toolkit's CI patterns.
 
-Common commands are:
-
 ```bash
-uv sync
-uv lock
-uv run pytest
+git clone https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily.git
+cd NeMo-Agent-Toolkit-tavily
+uv sync --extra test
+uv run pytest tests/ -v
 ```
 
-## Required Documentation
+## Submission Review
 
-Each third-party plugin repository should include a README with:
+Open an issue or pull request in the NeMo Agent Toolkit repository before requesting documentation listing. Include the
+provider name, package scope, license, repository URL, package name, entry point, registered `_type` values, and support
+contacts.
 
-- Installation commands for `uv` and `pip`.
-- A minimal workflow YAML example.
-- Configuration schema and credential setup.
-- Supported NeMo Agent Toolkit versions.
-- Testing instructions.
-- Bug routing guidance for provider-owned issues versus `nvidia-nat-core` issues.
-- License information.
+The review checks:
 
-## Testing
+- Repository and package names follow the naming convention.
+- Package metadata uses `nat.plugins` for new component plugins.
+- Source uses the shared `nat.plugins.<provider>` namespace package layout.
+- Public imports come from `nat.plugin_api`.
+- README covers installation, configuration, workflow examples, tests, and bug routing.
+- License is Apache-2.0 or another approved permissive license.
+- A smoke test proves the entry point can load and the registered component is discoverable.
 
-At minimum, third-party plugin packages should include:
+## Partner Plugin Lifecycle
 
-- Unit tests for provider-specific logic.
-- A loader smoke test that installs or imports the package, loads the entry point, and verifies that the registered
-  component can be discovered.
-- At least one representative end-to-end test that invokes the plugin with a mock, stub, or local test service.
-- Compatibility CI against supported NeMo Agent Toolkit versions.
+```mermaid
+flowchart TB
+subgraph Lifecycle["<b>Partner Plugin Lifecycle</b>"]
+direction TB
+Apply["<b>1 Apply</b><br/><i>Issue or PR in NeMo Agent Toolkit:<br/>name, scope, license, repo</i>"]
+Develop["<b>2 Develop</b><br/><i>Build against template;<br/>toolkit liaison available</i>"]
+Review["<b>3 Submission review</b><br/><i>Layout, license, naming,<br/>entry points, smoke test</i>"]
+List["<b>4 List</b><br/><i>Added to NeMo Agent Toolkit plugin index;<br/>partner publishes to PyPI</i>"]
+VerifyFeature["<b>5 Verify or Feature</b><br/><i>Upgrade tier<br/>(see ladder below)</i>"]
+Maintain["<b>6 Maintain</b><br/><i>Keep compatibility CI green;<br/>toolkit notifies of API changes</i>"]
+Deprecate["<b>7 Deprecate or Archive</b><br/><i>Inactive plugins archived;<br/>removed from NeMo Agent Toolkit docs and instructions;<br/>old versions stay on PyPI</i>"]
+Apply --> Develop --> Review --> List --> VerifyFeature --> Maintain
+Maintain -->|"active"| Maintain
+Maintain -->|"inactive"| Deprecate
+end
 
-Provider integrations that require credentials should mark those tests as integration tests and skip them when the
-required environment variables are not set.
+subgraph Ladder["<b>Tier Ladder</b>"]
+direction TB
+Listed["<b>Listed</b><br/>Requirements<br/>&bull; Package layout, naming, license<br/>&bull; Entry-point registration<br/>&bull; One-time loader smoke check<br/>Benefits<br/>&bull; Documented in NeMo Agent Toolkit plugin docs"]
+Verified["<b>Verified</b><br/>Requirements (Listed +)<br/>&bull; Partner-run compatibility CI<br/>&nbsp;&nbsp;(last 2 toolkit minor releases)<br/>&bull; Maintained README<br/>Benefits<br/>&bull; Added to NeMo Agent Toolkit coding assistant instructions"]
+Featured["<b>Featured</b><br/>Requirements (Verified +)<br/>&bull; Coordinated feature announcement<br/>Benefits<br/>&bull; Featured plugin in release notes<br/>&bull; Eligible for additional promotion"]
+Listed -->|"upgrade"| Verified -->|"upgrade"| Featured
+end
 
-## Lifecycle
+Lifecycle ~~~ Ladder
+List -.->|"initial tier"| Listed
+VerifyFeature -.->|"promote"| Verified
+VerifyFeature -.->|"promote"| Featured
 
-Third-party plugin packages generally follow this lifecycle:
+classDef step fill:#e8f0fe,stroke:#1a73e8,stroke-width:1px,color:#000
+classDef warn fill:#fde7e9,stroke:#c5221f,stroke-width:1px,color:#000
+classDef tier fill:#fff,stroke:#444,stroke-width:1px,color:#000
+classDef wrapper fill:#f6f6f6,stroke:#888,stroke-width:1px,color:#000
+class Apply,Develop,Review,List,VerifyFeature,Maintain step
+class Deprecate warn
+class Listed,Verified,Featured tier
+class Lifecycle,Ladder wrapper
+```
 
-1. Apply: Open an issue or pull request with the proposed package name, integration scope, license, and repository.
-2. Develop: Build the package against the public plugin API and the package layout in this guide.
-3. Review: Validate layout, license, naming, entry points, README, and smoke tests.
-4. List: Add the approved package to NeMo Agent Toolkit documentation after the partner publishes it.
-5. Verify or feature: Promote the package when it meets higher compatibility or announcement requirements.
-6. Maintain: Keep compatibility CI passing and update the package as provider APIs or toolkit versions change.
-7. Deprecate or archive: Remove inactive packages from toolkit documentation while leaving published package versions
-   in the partner's package repository.
+## Listing and Promotion Tiers
 
-## Listing and Promotion
-
-The NeMo Agent Toolkit documentation may list third-party plugin packages that follow these guidelines. Plugin listings
-can use the following lifecycle:
+The NeMo Agent Toolkit documentation may list third-party plugin packages that follow these guidelines.
 
 | Tier | Requirements | Benefits |
 | --- | --- | --- |
 | Listed | Package layout, naming, license review, entry point registration, and one-time loader smoke check. | Listed in NeMo Agent Toolkit plugin documentation. |
-| Verified | Listed requirements, partner-run compatibility CI for supported toolkit versions, and maintained README. | Eligible for coding assistant instructions and stronger discoverability. |
-| Featured | Verified requirements plus a coordinated release or feature announcement. | Eligible for release-note placement and other promotion. |
+| Verified | Listed requirements plus partner-run compatibility CI for the last two toolkit minor releases and a maintained README. | Eligible for NeMo Agent Toolkit coding assistant instructions. |
+| Featured | Verified requirements plus a coordinated feature announcement. | Eligible for release-note placement and additional promotion. |
 
-Inactive packages may be removed from NeMo Agent Toolkit documentation. Previously published package versions remain in
-the partner's package repository.
+Inactive packages may be removed from NeMo Agent Toolkit documentation and coding assistant instructions. Previously
+published package versions remain in the partner's package repository.
 
 ## Support Boundaries
 
@@ -285,20 +389,20 @@ NVIDIA may provide design review, compatibility guidance, public API stability c
 approved third-party plugins.
 
 NVIDIA does not run partner CI, publish partner packages, accept liability for partner code, or guarantee feature parity
-between third-party providers. Bugs in provider-owned integration code should be filed in the provider's repository.
-Bugs in `nvidia-nat-core` should be filed in the NeMo Agent Toolkit repository.
+between third-party providers. Bugs in provider-owned integration code should be filed in the provider repository. Bugs
+in `nvidia-nat-core` should be filed in the NeMo Agent Toolkit repository.
 
 ## Submission Checklist
 
 Before requesting inclusion in NeMo Agent Toolkit documentation, verify that the package has:
 
-- A repository and package name that follow the naming guidance.
-- Source under `src/nat/plugins/<provider>`.
+- A repository and package name that follow the naming convention.
+- A PEP 420 namespace package under `nat.plugins.<provider>`.
 - No `__init__.py` files in shared namespace package directories.
-- A `nat.plugins` entry point for component plugins.
+- A `nat.plugins` entry point for new component plugins.
 - Imports from `nat.plugin_api` for public plugin-authoring APIs.
 - A compatible `nvidia-nat-core` dependency range.
 - An Apache-2.0 or approved permissive license.
 - A README with install, configuration, workflow, testing, and bug routing instructions.
 - Tests, including a loader smoke test.
-- Compatibility CI for supported toolkit versions.
+- Compatibility CI for the requested listing tier.
