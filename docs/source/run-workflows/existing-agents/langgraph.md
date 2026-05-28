@@ -123,7 +123,7 @@ agent = create_deep_agent(
 
 ```python
 from deepagents import create_deep_agent
-from nat.builder.framework_enum import LLMFrameworkEnum
+from nat.plugin_api import LLMFrameworkEnum
 from nat.builder.sync_builder import SyncBuilder
 
 # Get model from NeMo Agent Toolkit configuration

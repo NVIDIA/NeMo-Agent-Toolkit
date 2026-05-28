@@ -22,11 +22,10 @@ This documentation presumes familiarity with the NeMo Agent Toolkit [object stor
 ## Key Object Store Module Components
 
 * **Object Store Data Models**
-   - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig`**: A Pydantic base class that all object store config classes must extend. This is used for specifying object store registration in the NeMo Agent Toolkit config file.
-   - **{py:class}`~nat.data_models.object_store.ObjectStoreBaseConfigT`**: A generic type alias for object store config classes.
+   - **{py:class}`~nat.plugin_api.ObjectStoreBaseConfig`**: A Pydantic base class that all object store config classes must extend. This is used for specifying object store registration in the NeMo Agent Toolkit config file.
 
 * **Object Store Interfaces**
-   - **{py:class}`~nat.object_store.interfaces.ObjectStore`** (abstract interface): The core interface for object store operations, including put, upsert, get, and delete operations.
+   - **{py:class}`~nat.plugin_api.ObjectStore`** (abstract interface): The core interface for object store operations, including put, upsert, get, and delete operations.
      ```python
      class ObjectStore(ABC):
         @abstractmethod
@@ -47,7 +46,7 @@ This documentation presumes familiarity with the NeMo Agent Toolkit [object stor
      ```
 
 * **Object Store Models**
-   - **{py:class}`~nat.object_store.models.ObjectStoreItem`**: The main object representing an item in the object store.
+   - **{py:class}`~nat.plugin_api.ObjectStoreItem`**: The main object representing an item in the object store.
      ```python
      class ObjectStoreItem:
         data: bytes  # The binary data to store
@@ -56,18 +55,18 @@ This documentation presumes familiarity with the NeMo Agent Toolkit [object stor
      ```
 
 * **Object Store Exceptions**
-   - **{py:class}`~nat.data_models.object_store.KeyAlreadyExistsError`**: Raised when trying to store an object with a key that already exists (for `put_object`)
-   - **{py:class}`~nat.data_models.object_store.NoSuchKeyError`**: Raised when trying to retrieve or delete an object with a non-existent key
+   - **{py:class}`~nat.plugin_api.KeyAlreadyExistsError`**: Raised when trying to store an object with a key that already exists (for `put_object`)
+   - **{py:class}`~nat.plugin_api.NoSuchKeyError`**: Raised when trying to retrieve or delete an object with a non-existent key
 
 ## Adding an Object Store Provider
 
-In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig` and is declared with a `name="some_object_store"` can be discovered as an *Object Store type* by the NeMo Agent Toolkit global type registry. This allows you to define a custom object store class to handle your own backends (for example, Redis, custom database, or cloud storage). Then your object store class can be selected in the NeMo Agent Toolkit config YAML using `_type: <your object store type>`.
+In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.plugin_api.ObjectStoreBaseConfig` and is declared with a `name="some_object_store"` can be discovered as an *Object Store type* by the NeMo Agent Toolkit global type registry. This allows you to define a custom object store class to handle your own backends (for example, Redis, custom database, or cloud storage). Then your object store class can be selected in the NeMo Agent Toolkit config YAML using `_type: <your object store type>`.
 
 ### Basic Steps
 
-1. **Create a config Class** that extends {py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig`:
+1. **Create a config Class** that extends {py:class}`~nat.plugin_api.ObjectStoreBaseConfig`:
    ```python
-   from nat.data_models.object_store import ObjectStoreBaseConfig
+   from nat.plugin_api import ObjectStoreBaseConfig
 
    class MyCustomObjectStoreConfig(ObjectStoreBaseConfig, name="my_custom_object_store"):
        # You can define any fields you want. For example:
@@ -80,14 +79,15 @@ In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_mod
    The `name="my_custom_object_store"` ensures that NeMo Agent Toolkit can recognize it when the user places `_type: my_custom_object_store` in the object store config.
    :::
 
-2. **Implement an {py:class}`~nat.object_store.interfaces.ObjectStore`** that uses your backend:
+2. **Implement an {py:class}`~nat.plugin_api.ObjectStore`** that uses your backend:
 
    It is recommended to have this implementation in a separate file from the config class and registration code.
 
    ```python
-   from nat.object_store.interfaces import ObjectStore
-   from nat.object_store.models import ObjectStoreItem
-   from nat.data_models.object_store import KeyAlreadyExistsError, NoSuchKeyError
+   from nat.plugin_api import KeyAlreadyExistsError
+   from nat.plugin_api import NoSuchKeyError
+   from nat.plugin_api import ObjectStore
+   from nat.plugin_api import ObjectStoreItem
    from nat.utils.type_utils import override
 
    class MyCustomObjectStore(ObjectStore):
@@ -153,8 +153,8 @@ In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_mod
 
 3. **Register your object store with NeMo Agent Toolkit** using the `@register_object_store` decorator:
    ```python
-   from nat.builder.builder import Builder
-   from nat.cli.register_workflow import register_object_store
+   from nat.plugin_api import Builder
+   from nat.plugin_api import register_object_store
 
    @register_object_store(config_type=MyCustomObjectStoreConfig)
    async def my_custom_object_store(config: MyCustomObjectStoreConfig, _builder: Builder):
@@ -180,8 +180,8 @@ In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_mod
 ## Bringing Your Own Object Store Implementation
 
 A typical pattern is:
-- You define a *config class* that extends {py:class}`~nat.data_models.object_store.ObjectStoreBaseConfig` (giving it a unique `_type` / name).
-- You define the actual *runtime logic* in an "Object Store" class that implements {py:class}`~nat.object_store.interfaces.ObjectStore`.
+- You define a *config class* that extends {py:class}`~nat.plugin_api.ObjectStoreBaseConfig` (giving it a unique `_type` / name).
+- You define the actual *runtime logic* in an "Object Store" class that implements {py:class}`~nat.plugin_api.ObjectStore`.
 - You connect them together using the `@register_object_store` decorator.
 
 ### Example: Minimal Skeleton
@@ -196,10 +196,10 @@ my_custom_object_store
 
 `my_custom_object_store.py` contents:
 ```python
-from nat.data_models.object_store import KeyAlreadyExistsError
-from nat.data_models.object_store import NoSuchKeyError
-from nat.object_store.interfaces import ObjectStore
-from nat.object_store.models import ObjectStoreItem
+from nat.plugin_api import KeyAlreadyExistsError
+from nat.plugin_api import NoSuchKeyError
+from nat.plugin_api import ObjectStore
+from nat.plugin_api import ObjectStoreItem
 from nat.utils.type_utils import override
 
 class MyCustomObjectStore(ObjectStore):
@@ -232,7 +232,7 @@ class MyCustomObjectStore(ObjectStore):
 
 `object_store.py` contents:
 ```python
-from nat.data_models.object_store import ObjectStoreBaseConfig
+from nat.plugin_api import ObjectStoreBaseConfig
 
 class MyCustomObjectStoreConfig(ObjectStoreBaseConfig, name="my_custom_object_store"):
     url: str
@@ -274,7 +274,7 @@ print(item.data.decode("utf-8"))
 **Inside Functions**: Functions that read or write to object stores simply call the object store client. For example:
 
 ```python
-from nat.object_store.models import ObjectStoreItem
+from nat.plugin_api import ObjectStoreItem
 from langchain_core.tools import ToolException
 
 async def store_file_tool_action(file_data: bytes, key: str, object_store_name: str):
