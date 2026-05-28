@@ -12,11 +12,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Stable public API for NeMo Agent Toolkit plugin authors.
 
 External plugin packages should prefer importing from this module instead of depending on implementation-oriented
 modules such as ``nat.cli.register_workflow`` or ``nat.builder.function`` directly.
+
+The ``Builder`` class is re-exported because plugin callables are typed around it, but only a subset of its methods
+is part of the stable contract. The following ``Builder`` methods belong to subsystems that are intentionally
+deferred from the public plugin API (see ``DEFERRED_PLUGIN_API_CANDIDATES`` in the plugin API tests) and may change
+without notice; plugin authors must not depend on them:
+
+* Finetuning: ``add_trainer``, ``add_trainer_adapter``, ``add_trajectory_builder``, ``get_trainer``,
+  ``get_trainer_adapter``, ``get_trajectory_builder``, ``get_trainer_config``, ``get_trainer_adapter_config``,
+  ``get_trajectory_builder_config``.
+* Test-time compute: ``add_ttc_strategy``, ``get_ttc_strategy``, ``get_ttc_strategy_config``.
+
+``test_builder_stable_surface_is_explicit`` pins the full method partition, so any new method added to ``Builder``
+must be explicitly categorized as stable or deferred.
 """
 
 from nat.builder.builder import Builder

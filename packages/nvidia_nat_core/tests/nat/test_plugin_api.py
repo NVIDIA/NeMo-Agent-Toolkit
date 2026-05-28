@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ast
 import importlib
 import re
 from pathlib import Path
@@ -184,6 +185,73 @@ DEFERRED_PLUGIN_API_CANDIDATES = {
     },
 }
 
+# Stable subset of ``Builder``'s public method surface that plugin authors may rely on.
+# Update this set together with ``Builder`` when promoting or deprecating plugin-authoring methods.
+STABLE_BUILDER_METHODS = {
+    "add_auth_provider",
+    "add_embedder",
+    "add_function",
+    "add_function_group",
+    "add_llm",
+    "add_memory_client",
+    "add_middleware",
+    "add_object_store",
+    "add_retriever",
+    "current",
+    "get_auth_provider",
+    "get_auth_providers",
+    "get_embedder",
+    "get_embedder_config",
+    "get_embedders",
+    "get_function",
+    "get_function_config",
+    "get_function_dependencies",
+    "get_function_group",
+    "get_function_group_config",
+    "get_function_group_dependencies",
+    "get_function_groups",
+    "get_functions",
+    "get_llm",
+    "get_llm_config",
+    "get_llms",
+    "get_memory_client",
+    "get_memory_client_config",
+    "get_memory_clients",
+    "get_middleware",
+    "get_middleware_config",
+    "get_middleware_list",
+    "get_object_store_client",
+    "get_object_store_clients",
+    "get_object_store_config",
+    "get_retriever",
+    "get_retriever_config",
+    "get_retrievers",
+    "get_tool",
+    "get_tools",
+    "get_workflow",
+    "get_workflow_config",
+    "set_workflow",
+    "sync_builder",
+}
+
+# ``Builder`` methods that belong to subsystems intentionally deferred from the public plugin API
+# (mirrors the finetuning and test-time-compute entries in ``DEFERRED_PLUGIN_API_CANDIDATES``).
+# Plugin authors must not depend on these even though they are reachable via the re-exported ``Builder``.
+DEFERRED_BUILDER_METHODS = {
+    "add_trainer",
+    "add_trainer_adapter",
+    "add_trajectory_builder",
+    "add_ttc_strategy",
+    "get_trainer",
+    "get_trainer_adapter",
+    "get_trainer_adapter_config",
+    "get_trainer_config",
+    "get_trajectory_builder",
+    "get_trajectory_builder_config",
+    "get_ttc_strategy",
+    "get_ttc_strategy_config",
+}
+
 
 def test_plugin_api_exports_public_contract():
     assert len(plugin_api.__all__) == len(set(plugin_api.__all__))
@@ -287,18 +355,99 @@ def test_plugin_authoring_docs_prefer_public_api_imports():
             files.append(path)
 
     violations = []
-    public_imports = re.compile(r"from nat\.plugin_api import ([^\n]+)")
+    md_code_block = re.compile(r"```(?:python|py)?\s*\n(.*?)```", re.DOTALL)
+    jinja_var = re.compile(r"\{\{\s*([\w.]+)\s*\}\}")
     for file_path in files:
         text = file_path.read_text(encoding="utf-8")
         for pattern in denied_patterns:
             if pattern in text:
                 violations.append(f"{file_path.relative_to(repo_root)} contains {pattern!r}")
-        for match in public_imports.finditer(text):
-            imported_names = [name.strip().split(" as ")[0] for name in match.group(1).split(",")]
-            for imported_name in imported_names:
-                if imported_name and imported_name not in EXPECTED_PLUGIN_API_EXPORTS:
-                    violations.append(
-                        f"{file_path.relative_to(repo_root)} imports non-public nat.plugin_api symbol "
-                        f"{imported_name!r}")
+
+        if file_path.suffix == ".md":
+            snippets = md_code_block.findall(text)
+        elif file_path.name.endswith(".j2"):
+            snippets = [jinja_var.sub(r"\1", text)]
+        else:
+            snippets = [text]
+
+        for snippet in snippets:
+            try:
+                tree = ast.parse(snippet)
+            except SyntaxError:
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and node.module == "nat.plugin_api":
+                    for alias in node.names:
+                        if alias.name not in EXPECTED_PLUGIN_API_EXPORTS:
+                            violations.append(
+                                f"{file_path.relative_to(repo_root)} imports non-public nat.plugin_api symbol "
+                                f"{alias.name!r}")
 
     assert not violations, "Plugin authoring docs should use nat.plugin_api:\n" + "\n".join(violations)
+
+
+def test_builder_stable_surface_is_explicit():
+    """Pin ``Builder``'s public method surface so deferred subsystems do not silently leak into the plugin contract."""
+    from nat.builder.builder import Builder
+
+    actual = {name for name in vars(Builder) if not name.startswith("_")}
+    expected = STABLE_BUILDER_METHODS | DEFERRED_BUILDER_METHODS
+
+    new_methods = actual - expected
+    missing_methods = expected - actual
+    assert not new_methods, (
+        f"New public methods on Builder: {sorted(new_methods)}. Add each to STABLE_BUILDER_METHODS "
+        "or DEFERRED_BUILDER_METHODS depending on whether the new surface is part of the stable plugin contract.")
+    assert not missing_methods, (
+        f"Documented Builder methods missing from class: {sorted(missing_methods)}. "
+        "Update STABLE_BUILDER_METHODS / DEFERRED_BUILDER_METHODS.")
+    assert not (STABLE_BUILDER_METHODS & DEFERRED_BUILDER_METHODS), (
+        "A Builder method appears in both STABLE and DEFERRED sets; pick one.")
+
+
+def test_consumer_style_plugin_registration():
+    """Exercise the external plugin authoring path using only ``nat.plugin_api`` imports.
+
+    The snapshot tests above check that names are re-exported; this test verifies that the
+    public surface is actually sufficient to author and register a working plugin.
+    """
+    # Imports scoped inside the test body to make the external authoring surface explicit.
+    from nat.plugin_api import Builder
+    from nat.plugin_api import FunctionBaseConfig
+    from nat.plugin_api import FunctionInfo
+    from nat.plugin_api import register_function
+
+    class _ConsumerTestPluginConfig(FunctionBaseConfig, name="_consumer_test_plugin_api"):
+        prefix: str = "echo:"
+
+    @register_function(config_type=_ConsumerTestPluginConfig)
+    async def _consumer_test_plugin_fn(config: _ConsumerTestPluginConfig, builder: Builder):
+        async def _run(text: str) -> str:
+            return f"{config.prefix} {text}"
+
+        yield FunctionInfo.from_fn(_run, description="consumer-style plugin authoring test")
+
+    from nat.cli.type_registry import GlobalTypeRegistry
+    registered = GlobalTypeRegistry.get().get_function(_ConsumerTestPluginConfig)
+    assert registered.config_type is _ConsumerTestPluginConfig
+    assert registered.build_fn is not None
+
+
+def test_consumer_style_plugin_group_registration():
+    """Same shape as ``test_consumer_style_plugin_registration`` for the function-group authoring path."""
+    from nat.plugin_api import Builder
+    from nat.plugin_api import FunctionGroup
+    from nat.plugin_api import FunctionGroupBaseConfig
+    from nat.plugin_api import register_function_group
+
+    class _ConsumerTestPluginGroupConfig(FunctionGroupBaseConfig, name="_consumer_test_plugin_api_group"):
+        prefix: str = "echo:"
+
+    @register_function_group(config_type=_ConsumerTestPluginGroupConfig)
+    async def _consumer_test_plugin_group_fn(config: _ConsumerTestPluginGroupConfig, builder: Builder):
+        yield FunctionGroup(config=config)
+
+    from nat.cli.type_registry import GlobalTypeRegistry
+    registered = GlobalTypeRegistry.get().get_function_group(_ConsumerTestPluginGroupConfig)
+    assert registered.config_type is _ConsumerTestPluginGroupConfig
+    assert registered.build_fn is not None

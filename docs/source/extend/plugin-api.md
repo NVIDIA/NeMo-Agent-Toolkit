@@ -15,9 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Public Plugin API
+# NVIDIA NeMo Agent Toolkit — Public Plugin API
 
-External plugin packages should import NeMo Agent Toolkit plugin-authoring APIs from `nat.plugin_api`.
+NVIDIA NeMo Agent Toolkit external plugin packages should import plugin-authoring APIs from `nat.plugin_api`.
 This module is the stable public import surface for registering common plugin components and authoring functions or
 function groups.
 

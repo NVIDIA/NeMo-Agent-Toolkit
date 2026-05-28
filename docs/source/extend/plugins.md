@@ -95,6 +95,8 @@ The `wrapper_type` argument can also be used with the library's `Builder` class 
 
 Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In NeMo Agent Toolkit, we scan the python environment for entry points which have the name `nat.plugins`. The value of the entry point is a python module that will be imported when the entry point is loaded.
 
+New external plugin packages should use the `nat.plugins` entry point group. The runtime also continues to load `nat.components` entry points for backward compatibility with existing packages.
+
 For example, the `nvidia-nat-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
 
 ```toml
