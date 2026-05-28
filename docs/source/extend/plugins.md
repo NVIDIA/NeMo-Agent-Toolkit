@@ -56,7 +56,7 @@ NeMo Agent Toolkit currently supports the following plugin types:
 - **Retriever Providers**: Retriever providers are services that provide a way to retrieve information from a database. Examples of retriever providers include Chroma and Milvus. To register a retriever provider, you can use the {py:deco}`nat.plugin_api.register_retriever_provider` decorator.
 - **Telemetry Exporters**: [Telemetry exporters](../run-workflows/observe/observe.md) send telemetry data to a telemetry service. To register a telemetry exporter, you can use the {py:deco}`nat.plugin_api.register_telemetry_exporter` decorator.
 - **Tool Wrappers**: Tool wrappers are used to wrap functions in a way that is specific to a LLM framework. For example, when using the LangChain/LangGraph framework, NeMo Agent Toolkit functions need to be wrapped in `BaseTool` class to be compatible with LangChain/LangGraph. To register a tool wrapper, you can use the {py:deco}`nat.plugin_api.register_tool_wrapper` decorator.
-- **API Authentication Providers**: [API authentication providers](../components/auth/api-authentication.md) are services that provide a way to authenticate requests to an API provider. Examples of authentication providers include OAuth 2.0 Authorization Code Grant and API Key. To register an API authentication provider, you can use the {py:deco}`nat.plugin_api.register_auth_provider` decorator.
+- **API Authentication Providers**: [API authentication providers](../components/auth/api-authentication.md) are services that provide a way to authenticate requests to an API provider. Examples of authentication providers include OAuth 2.0 Authorization Code Grant and API Key. Authentication provider registration is experimental and remains a specialized extension point outside the stable `nat.plugin_api` facade.
 
 ## Anatomy of a Plugin
 
@@ -101,14 +101,17 @@ Determining which plugins are available in a given environment is done through t
 `nat.plugins` entry point group for plugin modules and also continues to load `nat.components` entry points for
 backward compatibility with existing packages. New external plugin packages should use `nat.plugins`.
 
-For example, the `nvidia-nat-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
+For example, a new external `nemo-agent-toolkit-my-provider` distribution could specify the following entry point in its
+`pyproject.toml` file:
 
 ```toml
 [project.entry-points.'nat.plugins']
-nat_langchain = "nat.plugins.langchain.register"
+nat_my_provider = "nat.plugins.my_provider.register"
 ```
 
-What this means is that when the `nvidia-nat-langchain` distribution is installed, the `nat.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
+What this means is that when the `nemo-agent-toolkit-my-provider` distribution is installed, the
+`nat.plugins.my_provider.register` module will be imported when the entry point is loaded. This module must contain all
+the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
 
 :::{note}
 The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.astral.sh/uv/concepts/projects/config/#plugin-entry-points). Other package managers may have a different syntax for specifying entry points.
@@ -117,7 +120,8 @@ The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.a
 
 #### Multiple Plugins in a Single Distribution
 
-It is possible to have multiple plugins in a single distribution. For example, the `nvidia-nat-langchain` distribution contains both the LangChain/LangGraph LLM client and the LangChain/LangGraph embedder client.
+It is possible to have multiple plugins in a single distribution. For example, a provider distribution could contain
+both an LLM client and an embedder client.
 
 To register multiple plugins in a single distribution, there are two options:
 
@@ -136,8 +140,8 @@ To register multiple plugins in a single distribution, there are two options:
 
       ```toml
       [project.entry-points.'nat.plugins']
-      nat_langchain = "nat.plugins.langchain.register"
-      nat_langchain_tools = "nat.plugins.langchain.tools.register"
+      nat_my_provider = "nat.plugins.my_provider.register"
+      nat_my_provider_tools = "nat.plugins.my_provider.tools.register"
       ```
 
 ### CLI Command Plugins

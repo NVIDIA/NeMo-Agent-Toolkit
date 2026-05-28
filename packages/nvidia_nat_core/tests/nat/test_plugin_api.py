@@ -21,11 +21,10 @@ from pathlib import Path
 from nat import plugin_api
 
 EXPECTED_PLUGIN_API_EXPORTS = {
-    "AuthProviderBaseConfig": ("nat.data_models.authentication", "AuthProviderBaseConfig"),
-    "AuthenticationRef": ("nat.data_models.component_ref", "AuthenticationRef"),
     "Builder": ("nat.builder.builder", "Builder"),
     "ComponentRef": ("nat.data_models.component_ref", "ComponentRef"),
     "DatasetLoaderInfo": ("nat.builder.dataset_loader", "DatasetLoaderInfo"),
+    "Document": ("nat.retriever.models", "Document"),
     "DynamicFunctionMiddleware": ("nat.middleware.dynamic.dynamic_function_middleware", "DynamicFunctionMiddleware"),
     "DynamicMiddlewareConfig": ("nat.middleware.dynamic.dynamic_middleware_config", "DynamicMiddlewareConfig"),
     "EmbedderBaseConfig": ("nat.data_models.embedder", "EmbedderBaseConfig"),
@@ -66,13 +65,14 @@ EXPECTED_PLUGIN_API_EXPORTS = {
     "ObjectStoreItem": ("nat.object_store.models", "ObjectStoreItem"),
     "ObjectStoreBaseConfig": ("nat.data_models.object_store", "ObjectStoreBaseConfig"),
     "OptionalSecretStr": ("nat.data_models.common", "OptionalSecretStr"),
+    "Retriever": ("nat.retriever.interface", "Retriever"),
     "RetrieverBaseConfig": ("nat.data_models.retriever", "RetrieverBaseConfig"),
+    "RetrieverOutput": ("nat.retriever.models", "RetrieverOutput"),
     "RetrieverProviderInfo": ("nat.builder.retriever", "RetrieverProviderInfo"),
     "RetrieverRef": ("nat.data_models.component_ref", "RetrieverRef"),
     "SerializableSecretStr": ("nat.data_models.common", "SerializableSecretStr"),
     "TelemetryExporterBaseConfig": ("nat.data_models.telemetry_exporter", "TelemetryExporterBaseConfig"),
     "get_secret_value": ("nat.data_models.common", "get_secret_value"),
-    "register_auth_provider": ("nat.cli.register_workflow", "register_auth_provider"),
     "register_dataset_loader": ("nat.cli.register_workflow", "register_dataset_loader"),
     "register_embedder_client": ("nat.cli.register_workflow", "register_embedder_client"),
     "register_embedder_provider": ("nat.cli.register_workflow", "register_embedder_provider"),
@@ -95,6 +95,18 @@ EXPECTED_PLUGIN_API_EXPORTS = {
 }
 
 DEFERRED_PLUGIN_API_CANDIDATES = {
+    "AuthenticationRef": {
+        "source": ("nat.data_models.component_ref", "AuthenticationRef"),
+        "reason": "authentication provider API is experimental and depends on subsystem interfaces",
+    },
+    "AuthProviderBase": {
+        "source": ("nat.authentication.interfaces", "AuthProviderBase"),
+        "reason": "authentication provider API is experimental and depends on subsystem interfaces",
+    },
+    "AuthProviderBaseConfig": {
+        "source": ("nat.data_models.authentication", "AuthProviderBaseConfig"),
+        "reason": "authentication provider API is experimental and depends on subsystem interfaces",
+    },
     "FrontEndBaseConfig": {
         "source": ("nat.data_models.front_end", "FrontEndBaseConfig"),
         "reason": "runtime hosting surface; needs explicit compatibility and security contract",
@@ -151,6 +163,10 @@ DEFERRED_PLUGIN_API_CANDIDATES = {
         "source": ("nat.cli.register_workflow", "register_front_end"),
         "reason": "runtime hosting surface; needs explicit compatibility and security contract",
     },
+    "register_auth_provider": {
+        "source": ("nat.cli.register_workflow", "register_auth_provider"),
+        "reason": "authentication provider API is experimental and depends on subsystem interfaces",
+    },
     "register_logging_method": {
         "source": ("nat.cli.register_workflow", "register_logging_method"),
         "reason": "log sink surface; needs clearer trust guidance for sensitive logs",
@@ -188,7 +204,6 @@ DEFERRED_PLUGIN_API_CANDIDATES = {
 # Stable subset of ``Builder``'s public method surface that plugin authors may rely on.
 # Update this set together with ``Builder`` when promoting or deprecating plugin-authoring methods.
 STABLE_BUILDER_METHODS = {
-    "add_auth_provider",
     "add_embedder",
     "add_function",
     "add_function_group",
@@ -198,8 +213,6 @@ STABLE_BUILDER_METHODS = {
     "add_object_store",
     "add_retriever",
     "current",
-    "get_auth_provider",
-    "get_auth_providers",
     "get_embedder",
     "get_embedder_config",
     "get_embedders",
@@ -235,13 +248,16 @@ STABLE_BUILDER_METHODS = {
 }
 
 # ``Builder`` methods that belong to subsystems intentionally deferred from the public plugin API
-# (mirrors the finetuning and test-time-compute entries in ``DEFERRED_PLUGIN_API_CANDIDATES``).
+# (mirrors the auth, finetuning, and test-time-compute entries in ``DEFERRED_PLUGIN_API_CANDIDATES``).
 # Plugin authors must not depend on these even though they are reachable via the re-exported ``Builder``.
 DEFERRED_BUILDER_METHODS = {
+    "add_auth_provider",
     "add_trainer",
     "add_trainer_adapter",
     "add_trajectory_builder",
     "add_ttc_strategy",
+    "get_auth_provider",
+    "get_auth_providers",
     "get_trainer",
     "get_trainer_adapter",
     "get_trainer_adapter_config",
@@ -288,7 +304,6 @@ def test_plugin_authoring_docs_prefer_public_api_imports():
         repo_root / "packages/nvidia_nat_core/src/nat/cli/commands/workflow/templates/workflow.py.j2",
     ]
     denied_patterns = [
-        "from nat.cli.register_workflow import register_auth_provider",
         "from nat.cli.register_workflow import register_dataset_loader",
         "from nat.cli.register_workflow import register_embedder_client",
         "from nat.cli.register_workflow import register_embedder_provider",
@@ -317,7 +332,6 @@ def test_plugin_authoring_docs_prefer_public_api_imports():
         "from nat.builder.function_info import FunctionInfo",
         "from nat.builder.llm import LLMProviderInfo",
         "from nat.builder.retriever import RetrieverProviderInfo",
-        "from nat.data_models.authentication import AuthProviderBaseConfig",
         "from nat.data_models.component_ref import",
         "from nat.data_models.dataset_handler import EvalDatasetBaseConfig",
         "from nat.data_models.embedder import EmbedderBaseConfig",
@@ -345,6 +359,9 @@ def test_plugin_authoring_docs_prefer_public_api_imports():
         "from nat.middleware.middleware import InvocationContext",
         "from nat.object_store.interfaces import ObjectStore",
         "from nat.object_store.models import ObjectStoreItem",
+        "from nat.retriever.interface import Retriever",
+        "from nat.retriever.models import Document",
+        "from nat.retriever.models import RetrieverOutput",
     ]
 
     files: list[Path] = []

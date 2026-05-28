@@ -40,19 +40,22 @@ The following `nat.plugin_api` exports are intended for plugin authors:
 - Function authoring types, including `Builder`, `EvalBuilder`, `Function`, `FunctionInfo`, and `FunctionGroup`.
 - Component configuration bases, including `FunctionBaseConfig`, `FunctionGroupBaseConfig`, `LLMBaseConfig`,
   `EmbedderBaseConfig`, `RetrieverBaseConfig`, `MemoryBaseConfig`, `ObjectStoreBaseConfig`,
-  `MiddlewareBaseConfig`, `AuthProviderBaseConfig`, `EvaluatorBaseConfig`, `EvalDatasetBaseConfig`, and
-  `TelemetryExporterBaseConfig`.
+  `MiddlewareBaseConfig`, `FunctionMiddlewareBaseConfig`, `DynamicMiddlewareConfig`, `EvaluatorBaseConfig`,
+  `EvalDatasetBaseConfig`, and `TelemetryExporterBaseConfig`.
 - Registration return helpers, including `LLMProviderInfo`, `EmbedderProviderInfo`, `RetrieverProviderInfo`,
   `EvaluatorInfo`, and `DatasetLoaderInfo`.
 - Small implementation contracts needed by registered components, including `FunctionMiddleware`,
-  `DynamicFunctionMiddleware`, `MemoryEditor`, `ObjectStore`, and their associated context or value models.
+  `DynamicFunctionMiddleware`, `MemoryEditor`, `ObjectStore`, `Retriever`, `Document`, `RetrieverOutput`, and their
+  associated context or value models.
 - Component reference types, such as `FunctionRef`, `FunctionGroupRef`, `LLMRef`, `EmbedderRef`, `RetrieverRef`,
-  `MemoryRef`, `ObjectStoreRef`, `MiddlewareRef`, and `AuthenticationRef`.
+  `MemoryRef`, `ObjectStoreRef`, and `MiddlewareRef`.
 - Framework wrapper identifiers, including `LLMFrameworkEnum`.
 - Secret helpers, including `SerializableSecretStr`, `OptionalSecretStr`, `get_secret_value`, and `set_secret_from_env`.
 
-When a symbol is exported from `nat.plugin_api`, external packages can depend on that symbol's documented behavior across
-minor and patch releases. Breaking changes to this public surface require a major release.
+When a symbol is exported from `nat.plugin_api` and marked stable in the surface review below, external packages can
+depend on that symbol's documented behavior across minor and patch releases. Breaking changes to stable public surfaces
+require a major release. Symbols marked provisional are available for plugin authors, but their compatibility contract is
+still being refined and may evolve before being promoted to stable public status.
 
 Installed plugins execute as trusted Python code in the application environment. This public facade defines stable import
 paths and authoring contracts; it does not make untrusted plugin packages safe to install or execute.
@@ -73,20 +76,21 @@ the current promotion decision for the major plugin-authoring surfaces.
 | Functions | Stable public | Core external plugin unit. Third-party tool and workflow packages need `register_function`, `FunctionBaseConfig`, `FunctionInfo`, and `Builder`. |
 | Function groups | Stable public | Best fit for providers exposing multiple related tools. Supports external packages that share clients and resources and expose `group__function` names. |
 | Builders | Stable public | Registered build functions receive a builder. Authors need a stable builder type without depending on `WorkflowBuilder`. |
-| Configuration bases | Stable public | Public decorators require corresponding configuration base classes for typed YAML and discovery contracts. |
+| Configuration bases | Stable public except where a component row below is provisional or deferred | Public decorators require corresponding configuration base classes for typed YAML and discovery contracts. A component's configuration base follows that component's support tier. |
 | Provider info objects | Stable public | LLM, embedder, retriever, dataset, and evaluator registrations yield these helper objects. |
-| Component refs | Stable public | External configurations need stable references to configured functions, LLMs, embedders, retrievers, memory, object stores, middleware, and auth providers. |
+| Component refs | Stable public | External configurations need stable references to configured functions, LLMs, embedders, retrievers, memory, object stores, and middleware. |
 | Secrets | Stable public | External providers commonly need API keys and environment-backed secrets. Public helpers reduce raw-string credential patterns. |
-| Registration decorators | Stable public | Decorators are the core plugin discovery and registration API. |
-| LLM | Stable public | External LLM providers and framework clients are primary integration points. |
-| Embedder | Stable public | External embedding providers and framework clients are expected provider plugins. |
-| Retriever | Stable public | External retrieval providers and framework clients are expected provider plugins. |
-| Evaluator and dataset loader | Stable public | Evaluation integrations and dataset loaders are documented plugin types with direct external authoring use cases. |
+| Registration decorators | Stable public except where a component row below is provisional or deferred | Decorators are the core plugin discovery and registration API. A component's registration decorator follows that component's support tier. |
+| LLM registration and clients | Stable public | External LLM providers and framework clients are primary integration points. The stable facade covers registration, configuration, provider metadata, refs, and framework wrapper identifiers. Framework-native client runtime types and optional provider-specific config mixins remain framework or subsystem APIs unless exported from `nat.plugin_api`. |
+| Embedder registration and clients | Stable public | External embedding providers and framework clients are expected provider plugins. The stable facade covers registration, configuration, provider metadata, refs, and wrapper selection. Framework-native client runtime types remain framework-specific. |
+| Retriever | Stable public | External retrieval providers and framework clients are expected provider plugins. The stable facade includes retriever registration, configuration, provider metadata, refs, and the native retriever contract types `Retriever`, `RetrieverOutput`, and `Document`. |
+| Evaluator and dataset loader registration | Stable public | Evaluation integrations and dataset loaders are documented plugin types with direct external authoring use cases. The stable facade covers registration, configuration, and info objects. Evaluator helper classes and ATIF-specific evaluator models remain subsystem-specific until promoted deliberately. |
+| Evaluation callback registration | Provisional public | The facade exposes `register_eval_callback` for telemetry integrations that need evaluation lifecycle hooks. Callback protocol and result model types remain eval subsystem APIs and may evolve until they are promoted deliberately. |
 | Memory | Stable public, trusted plugin | External memory backends are documented integration points. They may handle user data, so plugins must be trusted. |
 | Object store | Stable public, trusted plugin | External storage backends need the config base, object-store interface, item model, and standard errors. Plugins must be trusted. |
 | Middleware | Stable public, trusted plugin | Middleware supports caching, policy, auth injection, redaction, and tracing. It can observe or alter calls, so plugins must be trusted. |
-| Telemetry registration | Stable public, trusted plugin | The facade covers telemetry exporter registration and configuration. Exporter runtime implementation APIs remain subsystem-specific until they are promoted deliberately. |
-| Auth provider | Stable public, trusted plugin | API integrations need auth providers. They handle credentials or tokens, so plugins must be trusted. |
+| Telemetry registration | Provisional public, trusted plugin | The facade currently exposes telemetry exporter registration and configuration. Exporter implementation APIs, including raw exporters, span exporters, processors, and intermediate-step models, remain subsystem-specific and may evolve until they are promoted deliberately. Telemetry plugins can observe sensitive workflow data and must be trusted. |
+| Auth provider | Deferred | Authentication provider authoring is still experimental and depends on subsystem APIs such as `AuthProviderBase`, `AuthProviderBaseConfig`, `AuthenticationRef`, and `register_auth_provider`. Keep it out of the stable facade until the auth compatibility and trust contract is promoted deliberately. |
 | Front end | Deferred | Runtime hosting surfaces need a more explicit compatibility and security contract before being promoted through `nat.plugin_api`. |
 | Logging | Deferred | External log sinks may export sensitive logs. Keep the existing implementation API until the stable contract and trust guidance are clearer. |
 | Registry handler | Deferred | Registry handlers influence component discovery and resolution. Keep out of the stable facade until that extension contract is reviewed. |

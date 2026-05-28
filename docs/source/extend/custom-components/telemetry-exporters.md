@@ -85,6 +85,14 @@ Examples of existing telemetry exporters include:
 
 Want to get started quickly? Here's a minimal working example that creates a console exporter to print traces to the terminal:
 
+:::{important}
+Telemetry exporter registration and configuration are available from the public `nat.plugin_api` facade. Exporter
+implementation types such as `RawExporter`, `IntermediateStep`, span exporters, and processors are observability
+subsystem APIs. They are documented here for telemetry exporter authors, but they are provisional and may evolve before
+being promoted to the stable public plugin API. Telemetry plugins can observe workflow data and should only be installed
+from trusted sources.
+:::
+
 ```python
 from pydantic import Field
 
@@ -346,6 +354,12 @@ Start with the fields you need and add more as your integration becomes more sop
 ### Step 2: Implement the Exporter Class
 
 Choose the appropriate base class based on your needs:
+
+:::{note}
+The exporter base classes and telemetry event models used in this section come from the observability subsystem, not
+from `nat.plugin_api`. Treat them as subsystem-specific authoring APIs until the telemetry exporter implementation
+contract is promoted deliberately.
+:::
 
 #### Raw Exporter (for simple trace exports)
 

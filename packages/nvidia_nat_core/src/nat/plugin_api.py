@@ -42,7 +42,6 @@ from nat.builder.function import FunctionGroup
 from nat.builder.function_info import FunctionInfo
 from nat.builder.llm import LLMProviderInfo
 from nat.builder.retriever import RetrieverProviderInfo
-from nat.cli.register_workflow import register_auth_provider
 from nat.cli.register_workflow import register_dataset_loader
 from nat.cli.register_workflow import register_embedder_client
 from nat.cli.register_workflow import register_embedder_provider
@@ -61,12 +60,10 @@ from nat.cli.register_workflow import register_retriever_client
 from nat.cli.register_workflow import register_retriever_provider
 from nat.cli.register_workflow import register_telemetry_exporter
 from nat.cli.register_workflow import register_tool_wrapper
-from nat.data_models.authentication import AuthProviderBaseConfig
 from nat.data_models.common import OptionalSecretStr
 from nat.data_models.common import SerializableSecretStr
 from nat.data_models.common import get_secret_value
 from nat.data_models.common import set_secret_from_env
-from nat.data_models.component_ref import AuthenticationRef
 from nat.data_models.component_ref import ComponentRef
 from nat.data_models.component_ref import EmbedderRef
 from nat.data_models.component_ref import FunctionGroupRef
@@ -102,15 +99,17 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.object_store.interfaces import ObjectStore
 from nat.object_store.models import ObjectStoreItem
+from nat.retriever.interface import Retriever
+from nat.retriever.models import Document
+from nat.retriever.models import RetrieverOutput
 
 # Public contract: keep this list exact and update docs/source/extend/plugin-api.md plus
 # packages/nvidia_nat_core/tests/nat/test_plugin_api.py whenever symbols are added or removed.
 __all__ = [
-    "AuthProviderBaseConfig",
-    "AuthenticationRef",
     "Builder",
     "ComponentRef",
     "DatasetLoaderInfo",
+    "Document",
     "DynamicFunctionMiddleware",
     "DynamicMiddlewareConfig",
     "EmbedderBaseConfig",
@@ -151,13 +150,14 @@ __all__ = [
     "ObjectStoreItem",
     "ObjectStoreBaseConfig",
     "OptionalSecretStr",
+    "Retriever",
     "RetrieverBaseConfig",
+    "RetrieverOutput",
     "RetrieverProviderInfo",
     "RetrieverRef",
     "SerializableSecretStr",
     "TelemetryExporterBaseConfig",
     "get_secret_value",
-    "register_auth_provider",
     "register_dataset_loader",
     "register_embedder_client",
     "register_embedder_provider",

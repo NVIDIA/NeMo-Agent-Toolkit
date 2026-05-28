@@ -16,26 +16,28 @@ limitations under the License.
 -->
 
 # Adding a Retriever Provider
-New [retrievers](../../build-workflows/retrievers.md) can be added to NeMo Agent Toolkit by creating a plugin. The general process is the same as for most plugins, but the retriever-specific steps are outlined here.
+New [retrievers](../../build-workflows/retrievers.md) can be added to NVIDIA NeMo Agent Toolkit by creating a plugin. The general process is the same as for most plugins, but the retriever-specific steps are outlined here.
 
 First, create a retriever for the provider that implements the Retriever interface:
 ```python
-class Retriever(ABC):
-    """
-    Abstract interface for interacting with data stores.
+from nat.plugin_api import Document
+from nat.plugin_api import Retriever
+from nat.plugin_api import RetrieverOutput
 
-    A Retriever is resposible for retrieving data from a configured data store.
 
-    Implemntations may integrate with vector stores or other indexing backends that allow for text-based search.
-    """
+class ExampleRetriever(Retriever):
 
-    @abstractmethod
+    def __init__(self, client):
+        self._client = client
+
     async def search(self, query: str, **kwargs) -> RetrieverOutput:
-        """
-        Retireve max(top_k) items from the data store based on vector similarity search (implementation dependent).
-
-        """
-        raise NotImplementedError
+        result = await self._client.search(query=query, **kwargs)
+        return RetrieverOutput(
+            results=[
+                Document(page_content=item.text, metadata=item.metadata, document_id=item.id)
+                for item in result.items
+            ]
+        )
 ```
 
 Next, create the config for the provider and register it with NeMo Agent Toolkit:
@@ -45,12 +47,14 @@ from nat.plugin_api import Builder
 from nat.plugin_api import RetrieverBaseConfig
 from nat.plugin_api import RetrieverProviderInfo
 from nat.plugin_api import register_retriever_provider
+from pydantic import Field
+from pydantic import HttpUrl
 
 class ExampleRetrieverConfig(RetrieverBaseConfig, name="example_retriever"):
     """
     Configuration for a Retriever provider. The parameters will depend on the particular provider. These are examples.
     """
-    uri: HttpUrl = Field(description="The uri of the Nemo Retriever service.")
+    uri: HttpUrl = Field(description="The URI of the retriever service.")
     collection_name: str = Field(description="The name of the collection to search")
     top_k: int = Field(description="The number of results to return", gt=0, le=50, default=5)
     output_fields: list[str] | None = Field(
@@ -71,9 +75,16 @@ from nat.plugin_api import register_retriever_client
 
 @register_retriever_client(config_type=ExampleRetrieverConfig, wrapper_type=None)
 async def nemo_retriever_client(config: ExampleRetrieverConfig, builder: Builder):
+    from example_plugin.client import ExampleClient
     from example_plugin.retriever import ExampleRetriever
 
-    retriever = ExampleRetriever(**config.model_dump())
+    client = ExampleClient(
+        uri=str(config.uri),
+        collection_name=config.collection_name,
+        top_k=config.top_k,
+        output_fields=config.output_fields,
+    )
+    retriever = ExampleRetriever(client=client)
 
     yield retriever
 ```

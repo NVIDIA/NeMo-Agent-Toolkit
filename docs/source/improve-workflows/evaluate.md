@@ -486,6 +486,12 @@ Note: Plotting metrics for individual dataset entries is only available across t
 
 The evaluation system provides a callback interface that allows observability providers to hook into the evaluation lifecycle. Callbacks enable providers to create structured experiments, link workflow runs to dataset examples, and attach evaluator scores in their respective platforms.
 
+:::{note}
+Evaluation callback registration is a provisional public plugin surface. The `register_eval_callback` decorator is
+available from `nat.plugin_api`, but callback protocol and result model types remain eval subsystem APIs until that
+runtime contract is promoted deliberately.
+:::
+
 ### `EvalCallback` Protocol
 
 Any class implementing the following methods can be registered as an evaluation callback:
