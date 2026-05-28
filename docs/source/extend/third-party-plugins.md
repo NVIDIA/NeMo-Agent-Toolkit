@@ -36,7 +36,7 @@ third-party packages.
 This model is the default for new partner integrations where the provider is best positioned to track its own API
 roadmap, service semantics, and release cadence. It works for function groups, tools, LLM clients, embedder clients,
 retriever clients, telemetry exporters, memory backends, object stores, authentication providers, custom `nat` CLI
-subcommands, and specialized front ends.
+sub-commands, and specialized front ends.
 
 Provider-specific behavior belongs in the provider repository. For example, a web search plugin can return the fields
 and response shape exposed by the provider SDK. Do not introduce a shared web-search result schema unless the toolkit
@@ -153,7 +153,7 @@ Other extension points use separate entry point groups:
 | Entry point group | Use |
 | --- | --- |
 | `nat.plugins` | Component plugins such as functions, function groups, model clients, retrievers, embedders, telemetry exporters, memory backends, object stores, middleware, and authentication providers. |
-| `nat.cli` | Custom `nat` CLI subcommands. |
+| `nat.cli` | Custom `nat` CLI sub-commands. |
 | `nat.front_ends` | Specialized front-end implementations. Front-end registration is not part of the stable `nat.plugin_api` facade. |
 
 ## Public API Surface
@@ -304,7 +304,7 @@ uv run nat info components
 ## Development Workflow
 
 Use `uv` for local development when possible. This matches the primary NeMo Agent Toolkit development toolchain and
-keeps lock files compatible with the toolkit's CI patterns.
+keeps lock files compatible with the Toolkit CI patterns.
 
 ```bash
 git clone https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily.git
