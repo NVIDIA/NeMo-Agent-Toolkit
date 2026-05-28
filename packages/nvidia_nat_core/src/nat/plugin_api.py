@@ -22,6 +22,7 @@ is part of the stable contract. The following ``Builder`` methods belong to subs
 deferred from the public plugin API (see ``DEFERRED_PLUGIN_API_CANDIDATES`` in the plugin API tests) and may change
 without notice; plugin authors must not depend on them:
 
+* Auth providers: ``add_auth_provider``, ``get_auth_provider``, ``get_auth_providers``.
 * Finetuning: ``add_trainer``, ``add_trainer_adapter``, ``add_trajectory_builder``, ``get_trainer``,
   ``get_trainer_adapter``, ``get_trajectory_builder``, ``get_trainer_config``, ``get_trainer_adapter_config``,
   ``get_trajectory_builder_config``.

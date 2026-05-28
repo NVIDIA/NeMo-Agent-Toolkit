@@ -38,6 +38,12 @@ To extend NeMo Agent Toolkit with custom evaluators, you need to create an evalu
 
 This section provides a step-by-step guide to create and register a custom evaluator with NeMo Agent Toolkit. A similarity evaluator is used as an example to demonstrate the process.
 
+:::{note}
+Evaluator registration, configuration, and `EvaluatorInfo` are stable public plugin APIs available from
+`nat.plugin_api`. Evaluator helper classes and ATIF-specific evaluator models remain eval subsystem APIs until they are
+promoted deliberately.
+:::
+
 ### Evaluator Configuration
 The evaluator configuration defines the evaluator name and any evaluator-specific parameters. This configuration is paired with a registration function that yields an asynchronous evaluation method.
 
