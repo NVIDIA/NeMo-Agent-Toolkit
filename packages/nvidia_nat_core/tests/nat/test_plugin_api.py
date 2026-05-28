@@ -422,6 +422,7 @@ def test_consumer_style_plugin_registration():
 
     @register_function(config_type=_ConsumerTestPluginConfig)
     async def _consumer_test_plugin_fn(config: _ConsumerTestPluginConfig, builder: Builder):
+
         async def _run(text: str) -> str:
             return f"{config.prefix} {text}"
 

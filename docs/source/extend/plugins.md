@@ -32,6 +32,9 @@ External plugin packages should import public plugin-authoring APIs from `nat.pl
 surface for decorators, function configuration bases, function groups, and common plugin helpers. See the
 [Public Plugin API](./plugin-api.md) documentation for the compatibility contract.
 
+For guidance on partner-owned packages, repository layout, naming, testing, and documentation expectations, see
+[Third-Party Plugin Packages](./third-party-plugins.md).
+
 
 ## Supported Plugin Types
 

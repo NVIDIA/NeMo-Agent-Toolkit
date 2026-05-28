@@ -104,9 +104,12 @@ When building the `pyproject.toml` file, there are two critical sections:
 * Entrypoints: Provide the path to your plugins so they are registered with NeMo Agent Toolkit when installed.
 An example is provided below:
     ```
-    [project.entry-points.'nat.components']
+    [project.entry-points.'nat.plugins']
     nat_notional_pkg_name = "nat_notional_pkg_name.register"
     ```
+
+    The runtime continues to load `nat.components` entry points for backward compatibility, but new external packages
+    should use `nat.plugins`.
 
 ### Building a Wheel Package
 
