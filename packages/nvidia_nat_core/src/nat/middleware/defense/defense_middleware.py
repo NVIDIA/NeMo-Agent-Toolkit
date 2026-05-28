@@ -76,7 +76,7 @@ class DefenseMiddlewareConfig(FunctionMiddlewareBaseConfig):
         default=None,
         description="Optional function or function group to target. "
         "If None, defense applies to all functions. "
-        "Examples: 'my_calculator', 'my_calculator.divide', 'llm_agent.generate'")
+        "Examples: 'my_calculator', 'my_calculator__divide', 'llm_agent__generate'")
 
     target_location: TargetLocation = Field(default=TargetLocation.OUTPUT,
                                             description="Whether to analyze function input or output.")
