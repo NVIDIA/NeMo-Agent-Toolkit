@@ -194,7 +194,7 @@ With the configuration object defined, there are several options available to re
 
 ## Initialization and Cleanup
 
-Its required to use an async context manager coroutine to register a function (it's not necessary to use `@asynccontextmanager`, since {py:deco}`nat.plugin_api.register_function` does this for you). This is because the function may need to execute some initialization before construction or cleanup after it is used. For example, if the function needs to load a model, connect to a resource, or download data, this can be done in the register function.
+It's required to use an async context manager coroutine to register a function (it's not necessary to use `@asynccontextmanager`, since {py:deco}`nat.plugin_api.register_function` does this for you). This is because the function may need to execute some initialization before construction or cleanup after it is used. For example, if the function needs to load a model, connect to a resource, or download data, this can be done in the register function.
 
 ```python
 @register_function(config_type=MyFunctionConfig)

@@ -57,14 +57,16 @@ monorepo.
 
 Use names that make the package discoverable and clearly associated with the toolkit:
 
-- GitHub repository: `<provider>/nemo-agent-toolkit-<product>`
+- GitHub repository owner: `<provider>`
+- GitHub repository name: `nemo-agent-toolkit-<product>`
 - PyPI package: `nemo-agent-toolkit-<provider>`
 - Python import package: `nat.plugins.<provider>`
 - Entry point name: `nat_<provider>`
 
 For example, a Tavily integration could use:
 
-- Repository: `tavily-ai/nemo-agent-toolkit-tavily`
+- Repository owner: `tavily-ai`
+- Repository name: `nemo-agent-toolkit-tavily`
 - PyPI package: `nemo-agent-toolkit-tavily`
 - Import package: `nat.plugins.tavily`
 - Entry point: `nat_tavily`
@@ -89,9 +91,9 @@ nemo-agent-toolkit-provider/
     `-- test_provider.py
 ```
 
-Do not add `__init__.py` files at `src/nat/__init__.py` or `src/nat/plugins/__init__.py`. These directories are shared
-namespace packages across NeMo Agent Toolkit distributions. The provider package itself, such as
-`src/nat/plugins/provider`, should contain an `__init__.py`.
+Do not add `__init__.py` files in the shared `nat` or `nat.plugins` namespace directories. These directories are shared
+namespace packages across NeMo Agent Toolkit distributions. The provider package directory itself should contain an
+`__init__.py`.
 
 The `register.py` module should import the modules that define plugin registration decorators so those decorators run
 when the entry point is loaded.

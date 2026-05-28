@@ -71,11 +71,11 @@ the current promotion decision for the major plugin-authoring surfaces.
 | Area | Public API status | Motivation |
 | --- | --- | --- |
 | Functions | Stable public | Core external plugin unit. Third-party tool and workflow packages need `register_function`, `FunctionBaseConfig`, `FunctionInfo`, and `Builder`. |
-| Function groups | Stable public | Best fit for providers exposing multiple related tools. Supports external packages that share clients/resources and expose `group__function` names. |
+| Function groups | Stable public | Best fit for providers exposing multiple related tools. Supports external packages that share clients and resources and expose `group__function` names. |
 | Builders | Stable public | Registered build functions receive a builder. Authors need a stable builder type without depending on `WorkflowBuilder`. |
-| Config bases | Stable public | Public decorators require corresponding config base classes for typed YAML/discovery contracts. |
+| Configuration bases | Stable public | Public decorators require corresponding configuration base classes for typed YAML and discovery contracts. |
 | Provider info objects | Stable public | LLM, embedder, retriever, dataset, and evaluator registrations yield these helper objects. |
-| Component refs | Stable public | External configs need stable references to configured functions, LLMs, embedders, retrievers, memory, object stores, middleware, and auth providers. |
+| Component refs | Stable public | External configurations need stable references to configured functions, LLMs, embedders, retrievers, memory, object stores, middleware, and auth providers. |
 | Secrets | Stable public | External providers commonly need API keys and environment-backed secrets. Public helpers reduce raw-string credential patterns. |
 | Registration decorators | Stable public | Decorators are the core plugin discovery and registration API. |
 | LLM | Stable public | External LLM providers and framework clients are primary integration points. |
@@ -85,14 +85,14 @@ the current promotion decision for the major plugin-authoring surfaces.
 | Memory | Stable public, trusted plugin | External memory backends are documented integration points. They may handle user data, so plugins must be trusted. |
 | Object store | Stable public, trusted plugin | External storage backends need the config base, object-store interface, item model, and standard errors. Plugins must be trusted. |
 | Middleware | Stable public, trusted plugin | Middleware supports caching, policy, auth injection, redaction, and tracing. It can observe or alter calls, so plugins must be trusted. |
-| Telemetry | Stable public, trusted plugin | External observability exporters are common integrations. They may receive traces or user data, so plugins must be trusted. |
+| Telemetry registration | Stable public, trusted plugin | The facade covers telemetry exporter registration and configuration. Exporter runtime implementation APIs remain subsystem-specific until they are promoted deliberately. |
 | Auth provider | Stable public, trusted plugin | API integrations need auth providers. They handle credentials or tokens, so plugins must be trusted. |
 | Front end | Deferred | Runtime hosting surfaces need a more explicit compatibility and security contract before being promoted through `nat.plugin_api`. |
-| Logging | Deferred | External log sinks may exfiltrate sensitive logs. Keep the existing implementation API until the stable contract and trust guidance are clearer. |
-| Registry handler | Deferred | Registry handlers influence component discovery/resolution. Keep out of the stable facade until that extension contract is reviewed. |
+| Logging | Deferred | External log sinks may export sensitive logs. Keep the existing implementation API until the stable contract and trust guidance are clearer. |
+| Registry handler | Deferred | Registry handlers influence component discovery and resolution. Keep out of the stable facade until that extension contract is reviewed. |
 | Optimizer and optimizer callback | Deferred | Optimizer extension points are specialized subsystem APIs and are not required by common integration packages. |
 | Trainer, trainer adapter, and trajectory builder | Deferred | Finetuning extensions are broad subsystem APIs. Keep them in owning modules until the finetuning compatibility contract is promoted deliberately. |
-| TTC strategy | Deferred | Test-time compute is an advanced/experimental subsystem. Do not imply stable public facade support until that API matures. |
+| TTC strategy | Deferred | Test-time compute is an advanced and experimental subsystem. Do not imply stable public facade support until that API matures. |
 
 Deferred surfaces remain available through their existing modules where those subsystem guides document them, but they are
 not part of the stable `nat.plugin_api` facade. The deferred candidate list is also captured in
