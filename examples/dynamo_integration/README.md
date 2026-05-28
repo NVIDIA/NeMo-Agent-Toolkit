@@ -301,7 +301,7 @@ external/dynamo/                       # Dynamo backend (separate location)
 workflow:
   _type: react_agent
   llm_name: dynamo_llm
-  tool_names: [banking_tools.get_account_balance, ...]
+  tool_names: [banking_tools__get_account_balance, ...]
 ```
 
 ### With Self-Evaluation Loop

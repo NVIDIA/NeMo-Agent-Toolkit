@@ -48,10 +48,10 @@ The following example shows how to define and register a custom dataset loader f
 import pandas as pd
 from pydantic import Field
 
-from nat.builder.builder import EvalBuilder
-from nat.builder.dataset_loader import DatasetLoaderInfo
-from nat.cli.register_workflow import register_dataset_loader
-from nat.data_models.dataset_handler import EvalDatasetBaseConfig
+from nat.plugin_api import DatasetLoaderInfo
+from nat.plugin_api import EvalBuilder
+from nat.plugin_api import EvalDatasetBaseConfig
+from nat.plugin_api import register_dataset_loader
 
 
 class EvalDatasetTsvConfig(EvalDatasetBaseConfig, name="tsv"):

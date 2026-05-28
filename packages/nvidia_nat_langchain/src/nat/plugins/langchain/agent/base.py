@@ -39,6 +39,21 @@ from langgraph.runtime import DEFAULT_RUNTIME
 logger = logging.getLogger(__name__)
 
 
+def _extract_reasoning_content(message: BaseMessage) -> str:
+    """Extract provider-side reasoning text from a LangChain message."""
+    reasoning = message.additional_kwargs.get("reasoning_content", "")
+    return reasoning if isinstance(reasoning, str) else str(reasoning)
+
+
+def _format_agent_thoughts_for_log(message: BaseMessage) -> str:
+    """Return concise text for detailed agent thought logs."""
+    content = message.content
+    content_text = content if isinstance(content, str) else str(content)
+    if content_text.strip():
+        return content_text
+    return _extract_reasoning_content(message)
+
+
 def _chunk_to_message(chunk: AIMessageChunk) -> AIMessage:
     """Convert an accumulated AIMessageChunk into an AIMessage, preserving tool_calls.
 

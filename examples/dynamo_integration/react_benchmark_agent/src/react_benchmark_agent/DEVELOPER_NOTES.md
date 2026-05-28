@@ -203,7 +203,7 @@ class ReactBenchmarkAgentFunctionConfig(FunctionBaseConfig, name="react_benchmar
 
 - Loads tool schemas from `data/raw/banking/tools.json`
 - Creates stub functions for each tool via `create_tool_stub_function()`
-- Registers them as a function group accessible by `banking_tools.<tool_name>`
+- Registers them as a function group accessible by `banking_tools__<tool_name>`
 
 **`tool_intent_stubs.py`** (lines 79-136)
 
@@ -511,4 +511,3 @@ def calculate_tool_accuracy(actual, expected):
 **File:** `evaluators/action_completion_evaluator.py`
 
 The AC evaluator measures whether the agent addressed all user goals.
-

@@ -108,12 +108,14 @@ Workflow Result:
 ['To trace only specific parts of a LangChain application, you can either manually pass in a LangChainTracer instance as a callback or use the tracing_v2_enabled context manager. Additionally, you can configure a LangChainTracer instance to trace a specific invocation.']
 ```
 
-## Alternate Method Using a Web Search Tool
-Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. NeMo Agent Toolkit provides two web search tools: `tavily_internet_search` which utilizes the [Tavily Search API](https://tavily.com/), and `exa_internet_search` which utilizes the [Exa Search API](https://exa.ai/).
+## Alternate Method Using a LangChain Web Search Tool
+Adding individual web pages to a workflow can be cumbersome, especially when dealing with multiple web pages. An alternative method is to use a web search tool. The `nvidia-nat[langchain]` package provides two LangChain-backed web search tools: `tavily_internet_search` which uses the [Tavily Search API](https://tavily.com/), and `exa_internet_search` which uses the [Exa Search API](https://exa.ai/).
+
+These tools are useful when your workflow already uses the LangChain/LangGraph integration. Framework-agnostic provider packages should expose their tools through the public `nat.plugin_api` function or function group APIs instead.
 
 ### Using Tavily Search
 
-The `tavily_internet_search` tool is part of the `nvidia-nat[langchain]` package, to install the package run:
+The `tavily_internet_search` tool is part of the `nvidia-nat[langchain]` package and wraps the LangChain Tavily integration. To install the package run:
 ```bash
 # local package install from source
 uv pip install -e ".[langchain]"
@@ -156,7 +158,7 @@ Workflow Result:
 
 ### Using Exa Search
 
-The `exa_internet_search` tool is also part of the `nvidia-nat[langchain]` package. If you haven't already installed it:
+The `exa_internet_search` tool is also part of the `nvidia-nat[langchain]` package and wraps the LangChain Exa integration. If you haven't already installed it:
 ```bash
 # local package install from source
 uv pip install -e ".[langchain]"

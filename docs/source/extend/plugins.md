@@ -28,28 +28,35 @@ These two concepts allow the library to be extended by installing any compatible
 
 NeMo Agent Toolkit utilizes the this plugin system for all first party components. This allows the library to be modular and extendable by default. Plugins from external libraries are treated exactly the same as first party plugins.
 
+External plugin packages should import public plugin-authoring APIs from `nat.plugin_api`. This module is the stable
+surface for decorators, function configuration bases, function groups, and common plugin helpers. See the
+[Public Plugin API](./plugin-api.md) documentation for the compatibility contract.
+
+For guidance on partner-owned packages, repository layout, naming, testing, and documentation expectations, see
+[Third-Party Plugin Packages](./third-party-plugins.md).
+
 
 ## Supported Plugin Types
 
 NeMo Agent Toolkit currently supports the following plugin types:
 
 - **CLI Commands**: CLI commands extend the `nat` command-line interface with plugin-specific commands. For example, the MCP and A2A plugins provide their own CLI commands for client operations and server management. To register a CLI command, add an entry point in the `nat.cli` group.
-- **Dataset Loaders**: [Dataset loaders](../improve-workflows/evaluate.md#using-datasets) define how evaluation datasets are loaded and parsed. Built-in dataset loaders support `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom` formats. You can add support for additional dataset formats by creating a custom dataset loader plugin. To register a dataset loader, you can use the {py:deco}`nat.cli.register_workflow.register_dataset_loader` decorator. See the [Custom Dataset Loader](./custom-components/custom-dataset-loader.md) documentation for a step-by-step guide.
-- **Embedder Clients**: [Embedder](../build-workflows/embedders.md) Clients are implementations of embedder providers, which are specific to a [LLM](../build-workflows/llms/index.md) framework. For example, when using the OpenAI embedder provider with the LangChain/LangGraph framework, the LangChain/LangGraph OpenAI embedder client needs to be registered. To register an embedder client, you can use the {py:deco}`nat.cli.register_workflow.register_embedder_client` decorator.
-- **Embedder Providers**: Embedder Providers are services that provide a way to embed text. For example, OpenAI and NVIDIA NIMs are embedder providers. To register an embedder provider, you can use the {py:deco}`nat.cli.register_workflow.register_embedder_provider` decorator.
-- **Evaluators**: [Evaluators](../improve-workflows/evaluate.md) are used by the evaluation framework to evaluate the performance of NeMo Agent Toolkit workflows. To register an evaluator, you can use the {py:deco}`nat.cli.register_workflow.register_evaluator` decorator.
-- **Front Ends**: Front ends are the mechanism by which NeMo Agent Toolkit workflows are executed. Examples of front ends include a FastAPI server or a CLI. To register a front end, you can use the {py:deco}`nat.cli.register_workflow.register_front_end` decorator.
-- **Functions**: [Functions](../build-workflows/functions-and-function-groups/functions.md) are one of the core building blocks of NeMo Agent Toolkit. They are used to define the tools and agents that can be used in a workflow. To register a function, you can use the {py:deco}`nat.cli.register_workflow.register_function` decorator.
-- **LLM Clients**: LLM Clients are implementations of LLM providers that are specific to a LLM framework. For example, when using the NVIDIA NIMs LLM provider with the LangChain/LangGraph framework, the NVIDIA LangChain/LangGraph LLM client needs to be registered. To register an LLM client, you can use the {py:deco}`nat.cli.register_llm_client` decorator.
-- **LLM Providers**: An LLM provider is a service that provides a way to interact with an LLM. For example, OpenAI and NVIDIA NIMs are LLM providers. To register an LLM provider, you can use the {py:deco}`nat.cli.register_workflow.register_llm_provider` decorator.
-- **Logging Methods**: Logging methods control the destination and format of log messages. To register a logging method, you can use the {py:deco}`nat.cli.register_workflow.register_logging_method` decorator.
-- **Memory**: [Memory](../build-workflows/memory.md) plugins are used to store and retrieve information from a database to be used by an LLM. Examples of memory plugins include Zep, Mem0 or MemMachine. To register a memory plugin, you can use the {py:deco}`nat.cli.register_workflow.register_memory` decorator.
-- **Registry Handlers**: Registry handlers are used to register custom agent registries with NeMo Agent Toolkit. An agent registry is a collection of tools, agents, and workflows that can be used in a workflow. To register a registry handler, you can use the {py:deco}`nat.cli.register_workflow.register_registry_handler` decorator.
-- **Retriever Clients**: [Retriever](../build-workflows/retrievers.md) clients are implementations of retriever providers, which are specific to a LLM framework. For example, when using the Milvus retriever provider with the LangChain/LangGraph framework, the LangChain/LangGraph Milvus retriever client needs to be registered. To register a retriever client, you can use the {py:deco}`nat.cli.register_workflow.register_retriever_client` decorator.
-- **Retriever Providers**: Retriever providers are services that provide a way to retrieve information from a database. Examples of retriever providers include Chroma and Milvus. To register a retriever provider, you can use the {py:deco}`nat.cli.register_workflow.register_retriever_provider` decorator.
-- **Telemetry Exporters**: [Telemetry exporters](../run-workflows/observe/observe.md) send telemetry data to a telemetry service. To register a telemetry exporter, you can use the {py:deco}`nat.cli.register_workflow.register_telemetry_exporter` decorator.
-- **Tool Wrappers**: Tool wrappers are used to wrap functions in a way that is specific to a LLM framework. For example, when using the LangChain/LangGraph framework, NeMo Agent Toolkit functions need to be wrapped in `BaseTool` class to be compatible with LangChain/LangGraph. To register a tool wrapper, you can use the {py:deco}`nat.cli.register_workflow.register_tool_wrapper` decorator.
-- **API Authentication Providers**: [API authentication providers](../components/auth/api-authentication.md) are services that provide a way to authenticate requests to an API provider. Examples of authentication providers include OAuth 2.0 Authorization Code Grant and API Key. To register an API authentication provider, you can use the {py:deco}`nat.cli.register_workflow.register_auth_provider` decorator.
+- **Dataset Loaders**: [Dataset loaders](../improve-workflows/evaluate.md#using-datasets) define how evaluation datasets are loaded and parsed. Built-in dataset loaders support `json`, `jsonl`, `csv`, `xls`, `parquet`, and `custom` formats. You can add support for additional dataset formats by creating a custom dataset loader plugin. To register a dataset loader, you can use the {py:deco}`nat.plugin_api.register_dataset_loader` decorator. See the [Custom Dataset Loader](./custom-components/custom-dataset-loader.md) documentation for a step-by-step guide.
+- **Embedder Clients**: [Embedder](../build-workflows/embedders.md) Clients are implementations of embedder providers, which are specific to a [LLM](../build-workflows/llms/index.md) framework. For example, when using the OpenAI embedder provider with the LangChain/LangGraph framework, the LangChain/LangGraph OpenAI embedder client needs to be registered. To register an embedder client, you can use the {py:deco}`nat.plugin_api.register_embedder_client` decorator.
+- **Embedder Providers**: Embedder Providers are services that provide a way to embed text. For example, OpenAI and NVIDIA NIMs are embedder providers. To register an embedder provider, you can use the {py:deco}`nat.plugin_api.register_embedder_provider` decorator.
+- **Evaluators**: [Evaluators](../improve-workflows/evaluate.md) are used by the evaluation framework to evaluate the performance of NeMo Agent Toolkit workflows. To register an evaluator, you can use the {py:deco}`nat.plugin_api.register_evaluator` decorator.
+- **Front Ends**: Front ends are the mechanism by which NeMo Agent Toolkit workflows are executed. Examples of front ends include a FastAPI server or a CLI. Front-end registration remains a specialized extension point and is not yet part of the stable `nat.plugin_api` facade.
+- **Functions**: [Functions](../build-workflows/functions-and-function-groups/functions.md) are one of the core building blocks of NeMo Agent Toolkit. They are used to define the tools and agents that can be used in a workflow. To register a function, you can use the {py:deco}`nat.plugin_api.register_function` decorator.
+- **LLM Clients**: LLM Clients are implementations of LLM providers that are specific to a LLM framework. For example, when using the NVIDIA NIMs LLM provider with the LangChain/LangGraph framework, the NVIDIA LangChain/LangGraph LLM client needs to be registered. To register an LLM client, you can use the {py:deco}`nat.plugin_api.register_llm_client` decorator.
+- **LLM Providers**: An LLM provider is a service that provides a way to interact with an LLM. For example, OpenAI and NVIDIA NIMs are LLM providers. To register an LLM provider, you can use the {py:deco}`nat.plugin_api.register_llm_provider` decorator.
+- **Logging Methods**: Logging methods control the destination and format of log messages. Logging method registration remains a specialized extension point and is not yet part of the stable `nat.plugin_api` facade.
+- **Memory**: [Memory](../build-workflows/memory.md) plugins are used to store and retrieve information from a database to be used by an LLM. Examples of memory plugins include Zep, Mem0 or MemMachine. To register a memory plugin, you can use the {py:deco}`nat.plugin_api.register_memory` decorator.
+- **Registry Handlers**: Registry handlers are used to register custom agent registries with NeMo Agent Toolkit. An agent registry is a collection of tools, agents, and workflows that can be used in a workflow. Registry handler registration remains a specialized extension point and is not yet part of the stable `nat.plugin_api` facade.
+- **Retriever Clients**: [Retriever](../build-workflows/retrievers.md) clients are implementations of retriever providers, which are specific to a LLM framework. For example, when using the Milvus retriever provider with the LangChain/LangGraph framework, the LangChain/LangGraph Milvus retriever client needs to be registered. To register a retriever client, you can use the {py:deco}`nat.plugin_api.register_retriever_client` decorator.
+- **Retriever Providers**: Retriever providers are services that provide a way to retrieve information from a database. Examples of retriever providers include Chroma and Milvus. To register a retriever provider, you can use the {py:deco}`nat.plugin_api.register_retriever_provider` decorator.
+- **Telemetry Exporters**: [Telemetry exporters](../run-workflows/observe/observe.md) send telemetry data to a telemetry service. To register a telemetry exporter, you can use the {py:deco}`nat.plugin_api.register_telemetry_exporter` decorator.
+- **Tool Wrappers**: Tool wrappers are used to wrap functions in a way that is specific to a LLM framework. For example, when using the LangChain/LangGraph framework, NeMo Agent Toolkit functions need to be wrapped in `BaseTool` class to be compatible with LangChain/LangGraph. Tool wrapper registration is available through the provisional {py:deco}`nat.plugin_api.register_tool_wrapper` decorator while the wrapper callable contract is refined.
+- **API Authentication Providers**: [API authentication providers](../components/auth/api-authentication.md) are services that provide a way to authenticate requests to an API provider. Examples of authentication providers include OAuth 2.0 Authorization Code Grant and API Key. Authentication provider registration is experimental and remains a specialized extension point outside the stable `nat.plugin_api` facade.
 
 ## Anatomy of a Plugin
 
@@ -89,16 +96,22 @@ The `wrapper_type` argument can also be used with the library's `Builder` class 
 
 ### Entry Point
 
-Determining which plugins are available in a given environment is done through the use of [python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). In NeMo Agent Toolkit, we scan the python environment for entry points which have the name `nat.plugins`. The value of the entry point is a python module that will be imported when the entry point is loaded.
+Determining which plugins are available in a given environment is done through the use of
+[python entry points](https://packaging.python.org/en/latest/specifications/entry-points/). NeMo Agent Toolkit scans the
+`nat.plugins` entry point group for plugin modules and also continues to load `nat.components` entry points for
+backward compatibility with existing packages. New external plugin packages should use `nat.plugins`.
 
-For example, the `nvidia-nat-langchain` distribution has the following entry point specified in the `pyproject.toml` file:
+For example, a new external `nemo-agent-toolkit-my-provider` distribution could specify the following entry point in its
+`pyproject.toml` file:
 
 ```toml
 [project.entry-points.'nat.plugins']
-nat_langchain = "nat.plugins.langchain.register"
+nat_my_provider = "nat.plugins.my_provider.register"
 ```
 
-What this means is that when the `nvidia-nat-langchain` distribution is installed, the `nat.plugins.langchain.register` module will be imported when the entry point is loaded. This module must contain all the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
+What this means is that when the `nemo-agent-toolkit-my-provider` distribution is installed, the
+`nat.plugins.my_provider.register` module will be imported when the entry point is loaded. This module must contain all
+the `@register_<plugin_type>` decorators which need to be loaded when the library is initialized.
 
 :::{note}
 The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.astral.sh/uv/concepts/projects/config/#plugin-entry-points). Other package managers may have a different syntax for specifying entry points.
@@ -107,7 +120,8 @@ The above syntax in the `pyproject.toml` file is specific to [uv](https://docs.a
 
 #### Multiple Plugins in a Single Distribution
 
-It is possible to have multiple plugins in a single distribution. For example, the `nvidia-nat-langchain` distribution contains both the LangChain/LangGraph LLM client and the LangChain/LangGraph embedder client.
+It is possible to have multiple plugins in a single distribution. For example, a provider distribution could contain
+both an LLM client and an embedder client.
 
 To register multiple plugins in a single distribution, there are two options:
 
@@ -126,8 +140,8 @@ To register multiple plugins in a single distribution, there are two options:
 
       ```toml
       [project.entry-points.'nat.plugins']
-      nat_langchain = "nat.plugins.langchain.register"
-      nat_langchain_tools = "nat.plugins.langchain.tools.register"
+      nat_my_provider = "nat.plugins.my_provider.register"
+      nat_my_provider_tools = "nat.plugins.my_provider.tools.register"
       ```
 
 ### CLI Command Plugins

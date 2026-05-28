@@ -43,6 +43,7 @@ from nat.plugins.langchain.agent.base import INPUT_SCHEMA_MESSAGE
 from nat.plugins.langchain.agent.base import NO_INPUT_ERROR_MESSAGE
 from nat.plugins.langchain.agent.base import TOOL_NOT_FOUND_ERROR_MESSAGE
 from nat.plugins.langchain.agent.base import AgentDecision
+from nat.plugins.langchain.agent.base import _format_agent_thoughts_for_log
 from nat.plugins.langchain.agent.dual_node import DualNodeAgent
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActAgentParsingFailedError
 from nat.plugins.langchain.agent.react_agent.output_parser import ReActOutputParser
@@ -221,19 +222,11 @@ class ReActAgentGraph(DualNodeAgent):
                     inputs = {"question": question, "chat_history": chat_history}
                     output_message = await self._stream_llm(self.agent, inputs, config=config)  # type: ignore
                     if isinstance(output_message.content, str):
-                        raw_content = output_message.content
-                        output_message.content = remove_r1_think_tags(raw_content)
-                        if not output_message.content.strip():
-                            think_match = re.search(r'<think>(.*?)</think>', raw_content, re.DOTALL)
-                            if think_match:
-                                output_message.content = think_match.group(1).strip()
-                        if not output_message.content.strip():
-                            reasoning = output_message.additional_kwargs.get('reasoning_content', '')
-                            if reasoning:
-                                output_message.content = reasoning
+                        output_message.content = remove_r1_think_tags(output_message.content)
+                    agent_thoughts = _format_agent_thoughts_for_log(output_message)
 
                     if self.detailed_logs:
-                        logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message.content)
+                        logger.info(AGENT_CALL_LOG_MESSAGE, question, agent_thoughts)
                 else:
                     # ReAct Agents require agentic cycles
                     # in an agentic cycle, preserve the agent's thoughts from the previous cycles,
@@ -253,19 +246,11 @@ class ReActAgentGraph(DualNodeAgent):
                     inputs = {"question": question, "agent_scratchpad": agent_scratchpad, "chat_history": chat_history}
                     output_message = await self._stream_llm(self.agent, inputs, config=config)  # type: ignore
                     if isinstance(output_message.content, str):
-                        raw_content = output_message.content
-                        output_message.content = remove_r1_think_tags(raw_content)
-                        if not output_message.content.strip():
-                            think_match = re.search(r'<think>(.*?)</think>', raw_content, re.DOTALL)
-                            if think_match:
-                                output_message.content = think_match.group(1).strip()
-                        if not output_message.content.strip():
-                            reasoning = output_message.additional_kwargs.get('reasoning_content', '')
-                            if reasoning:
-                                output_message.content = reasoning
+                        output_message.content = remove_r1_think_tags(output_message.content)
+                    agent_thoughts = _format_agent_thoughts_for_log(output_message)
 
                     if self.detailed_logs:
-                        logger.info(AGENT_CALL_LOG_MESSAGE, question, output_message.content)
+                        logger.info(AGENT_CALL_LOG_MESSAGE, question, agent_thoughts)
                         logger.debug("%s The agent's scratchpad (with tool result) was:\n%s",
                                      AGENT_LOG_PREFIX,
                                      agent_scratchpad)
@@ -284,10 +269,9 @@ class ReActAgentGraph(DualNodeAgent):
                         # Convert tool args to JSON string for consistency with text parsing
                         tool_input_str = json.dumps(tool_args) if isinstance(tool_args, dict) else str(tool_args)
 
-                        agent_output = AgentAction(
-                            tool=tool_name,
-                            tool_input=tool_input_str,
-                            log=str(output_message.content) if output_message.content else f"Calling {tool_name}")
+                        agent_output = AgentAction(tool=tool_name,
+                                                   tool_input=tool_input_str,
+                                                   log=agent_thoughts or f"Calling {tool_name}")
                         logger.debug("%s Native tool call detected: %s", AGENT_LOG_PREFIX, tool_name)
                         state.agent_scratchpad += [agent_output]
                         return state
