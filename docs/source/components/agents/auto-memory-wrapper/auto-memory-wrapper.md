@@ -160,13 +160,17 @@ The wrapper automatically:
 
 ## Multi-Tenant Memory Isolation
 
-The automatic memory wrapper agent provides multi-tenant support through automatic user ID extraction. User ID is **NOT** configured in YAML but extracted at runtime.
+The automatic memory wrapper agent provides multi-tenant support through runtime user ID extraction. Configure user IDs
+through the front end or session runtime, not the `auto_memory_agent` workflow block.
 
 ### User ID Extraction Priority
 
-1. **`user_manager.get_id()`** - For production with custom auth middleware (recommended)
+1. **`SessionManager.session(user_id=...)`** - For production with custom auth middleware (recommended)
 2. **`X-User-ID` HTTP header** - For testing without middleware
-3. **`"default_user"`** - Fallback for local development
+3. **Console front end `user_id`** - Defaults to `"nat_run_user_id"` for `nat run`
+
+Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
+For Zep Cloud, if no conversation ID is supplied, the integration uses a deterministic per-user default thread.
 
 ### Production: Custom Middleware
 
@@ -187,10 +191,7 @@ async def handle_request(request):
     # Extract from JWT, OAuth, API key, etc.
     user_id = extract_user_from_jwt(request.headers["authorization"])
 
-    async with session_manager.session(
-        user_manager=AuthenticatedUserManager(user_id=user_id),
-        http_connection=request,
-    ) as session:
+    async with session_manager.session(user_id=user_id, http_connection=request) as session:
         result = await session.run(user_input)
     return result
 ```
@@ -207,12 +208,14 @@ curl -X POST http://localhost:8000/chat \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
-### Local Development: No Authentication
+### Local Development: Console User and Conversation IDs
 
-Omit both `user_manager` and `X-User-ID` header to use `"default_user"`:
+For `nat run`, set `--user_id` to control memory isolation and `--conversation_id` to isolate a specific conversation:
 
 ```bash
-nat run --config examples/agents/auto_memory_wrapper/configs/config_zep.yml
+nat run --config_file examples/agents/auto_memory_wrapper/configs/config_zep.yml \
+  --user_id test_user_123 \
+  --conversation_id test_conv_001
 ```
 
 ---
@@ -324,7 +327,7 @@ workflow:
 
 ## Important Notes
 
-1. **User ID is runtime-only** - Set via `user_manager` or `X-User-ID` header, not in configuration
+1. **User ID is runtime/front-end scoped** - Set via `SessionManager.session(user_id=...)`, `X-User-ID`, or `nat run --user_id`
 2. **Memory backends are interchangeable** - Works with any implementation of `MemoryEditor` interface
 3. **No memory tools needed** - The wrapped agent does not need explicit memory tools configured
 4. **Transparent to inner agent** - The wrapped agent is unaware of memory operations

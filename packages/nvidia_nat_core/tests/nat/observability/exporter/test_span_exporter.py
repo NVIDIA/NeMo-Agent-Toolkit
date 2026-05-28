@@ -268,6 +268,42 @@ class TestSpanExporterFunctionality:
             assert exported_span.attributes[SpanAttributes.OUTPUT_VALUE.value] == "Test output"
             assert "nat.metadata" in exported_span.attributes
 
+    async def test_llm_span_exports_cost_lookup_attributes(self, span_exporter):
+        """Minimal reproducer for Phoenix cost lookup attributes on LLM spans."""
+        event_id = str(uuid.uuid4())
+
+        start_event = create_intermediate_step(UUID=event_id,
+                                               event_type=IntermediateStepType.LLM_START,
+                                               framework=LLMFrameworkEnum.LANGCHAIN,
+                                               name="gemini-2.5-flash",
+                                               event_timestamp=datetime.now().timestamp(),
+                                               data=StreamEventData(input="What is the capital of France?"),
+                                               metadata={})
+
+        end_event = create_intermediate_step(UUID=event_id,
+                                             event_type=IntermediateStepType.LLM_END,
+                                             framework=LLMFrameworkEnum.LANGCHAIN,
+                                             name="gemini-2.5-flash",
+                                             event_timestamp=datetime.now().timestamp(),
+                                             span_event_timestamp=datetime.now().timestamp(),
+                                             data=StreamEventData(output="Paris"),
+                                             metadata={},
+                                             usage_info=UsageInfo(num_llm_calls=1,
+                                                                  seconds_between_calls=0,
+                                                                  token_usage=TokenUsageBaseModel(prompt_tokens=7,
+                                                                                                  completion_tokens=1,
+                                                                                                  total_tokens=8)))
+
+        async with span_exporter.start():
+            span_exporter.export(start_event)
+            span_exporter.export(end_event)
+            await span_exporter.wait_for_tasks()
+
+        exported_span = span_exporter.exported_spans[0]
+        assert exported_span.attributes[SpanAttributes.LLM_MODEL_NAME.value] == "gemini-2.5-flash"
+        assert exported_span.attributes[SpanAttributes.LLM_PROVIDER.value] == LLMFrameworkEnum.LANGCHAIN.value
+        assert exported_span.attributes[SpanAttributes.LLM_TOKEN_COUNT_TOTAL.value] == 8
+
     def test_process_end_event_missing_span(self, span_exporter, sample_end_event):
         """Test processing END event with missing span."""
         with patch('nat.observability.exporter.span_exporter.logger') as mock_logger:

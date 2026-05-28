@@ -15,6 +15,7 @@
 
 import datetime
 import json
+import logging
 import typing
 from unittest.mock import AsyncMock
 from unittest.mock import patch
@@ -239,6 +240,30 @@ async def test_agent_node(mock_tool_agent):
     response = response.messages[-1]
     assert isinstance(response, AIMessage)
     assert response.content == 'mock tool call'
+
+
+async def test_agent_node_logs_reasoning_content_without_message_repr(mock_tool_agent, caplog):
+    mock_state = ToolCallAgentGraphState(messages=[HumanMessage(content='needs a tool')])
+    mock_response = AIMessage(content="\n",
+                              additional_kwargs={"reasoning_content": "I should call Tool A."},
+                              tool_calls=[{
+                                  "name": "Tool A",
+                                  "args": {
+                                      "query": "mock query"
+                                  },
+                                  "id": "Tool A",
+                                  "type": "tool_call",
+                              }])
+
+    with patch.object(mock_tool_agent, '_invoke_llm', new_callable=AsyncMock) as mock_invoke_llm:
+        mock_invoke_llm.return_value = mock_response
+
+        with caplog.at_level(logging.INFO, logger="nat.plugins.langchain.agent.tool_calling_agent.agent"):
+            await mock_tool_agent.agent_node(mock_state)
+
+    assert "I should call Tool A." in caplog.text
+    assert "additional_kwargs" not in caplog.text
+    assert "tool_calls=[" not in caplog.text
 
 
 async def test_conditional_edge_no_input(mock_tool_agent):
