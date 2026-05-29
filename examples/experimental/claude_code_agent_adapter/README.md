@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Claude Code Agent
+# Claude Code Adapter
 
 This experimental NVIDIA NeMo Agent Toolkit example prototypes a primitive agent workflow type backed by the Claude Code Agent SDK.
 
@@ -35,7 +35,7 @@ If you have not already done so, follow the instructions in the [Install Guide](
 From the root directory of the NeMo Agent Toolkit library, run:
 
 ```bash
-uv pip install -e examples/experimental/code_agent_adapter
+uv pip install -e examples/experimental/claude_code_agent_adapter
 ```
 
 ## Run The Workflow
@@ -51,7 +51,7 @@ If `claude auth status` shows an active NVIDIA SSO-backed Claude login, run the 
 
 ```bash
 nat run \
-  --config_file examples/experimental/code_agent_adapter/configs/config.yml \
+  --config_file examples/experimental/claude_code_agent_adapter/configs/config.yml \
   --input "Inspect the experimental Claude Code agent adapter and summarize how it registers with NAT. Do not edit files."
 ```
 

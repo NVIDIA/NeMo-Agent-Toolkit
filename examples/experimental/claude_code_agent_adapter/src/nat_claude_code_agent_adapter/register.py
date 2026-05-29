@@ -188,7 +188,7 @@ def _load_sdk_types():
         from claude_agent_sdk import query
     except ImportError as import_error:
         raise RuntimeError("The Claude Agent SDK is not installed. Install this example with "
-                           "`uv pip install -e examples/experimental/code_agent_adapter`.") from import_error
+                           "`uv pip install -e examples/experimental/claude_code_agent_adapter`.") from import_error
 
     return AssistantMessage, ClaudeAgentOptions, ClaudeSDKError, ResultMessage, query
 

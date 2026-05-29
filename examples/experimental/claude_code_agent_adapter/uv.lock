@@ -1500,7 +1500,7 @@ wheels = [
 ]
 
 [[package]]
-name = "nat-code-agent-adapter"
+name = "nat-claude-code-agent-adapter"
 source = { editable = "." }
 dependencies = [
     { name = "claude-agent-sdk" },

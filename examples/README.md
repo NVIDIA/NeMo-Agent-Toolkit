@@ -106,7 +106,7 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`vulnerability_analysis_blueprint`](advanced_agents/vulnerability_analysis_blueprint/README.md)**: Blueprint documentation for vulnerability analysis agents **[🛑 Advanced]**
 
 ### Experimental
-- **[`code_agent_adapter`](experimental/code_agent_adapter/README.md)**: Experimental primitive agent workflow backed by the Claude Code Agent SDK with a conservative local smoke-test config. **[🛑 Advanced]**
+- **[`claude_code_agent_adapter`](experimental/claude_code_agent_adapter/README.md)**: Experimental primitive agent workflow backed by the Claude Code Agent SDK with a conservative local smoke-test config. **[🛑 Advanced]**
 - **[`codex_agent_adapter`](experimental/codex_agent_adapter/README.md)**: Experimental primitive agent workflow backed by Codex SDK in read-only mode. **[🛑 Advanced]**
 - **[`cursor_agent_adapter`](experimental/cursor_agent_adapter/README.md)**: Experimental primitive agent workflow backed by Cursor Agent CLI in plan mode. **[🛑 Advanced]**
 - **[`openclaw_agent_adapter`](experimental/openclaw_agent_adapter/README.md)**: Experimental primitive agent workflow backed by OpenClaw CLI one-shot runs. **[🛑 Advanced]**

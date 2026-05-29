@@ -25,7 +25,7 @@ root = "../../.."
 where = ["src"]
 
 [project]
-name = "nat_code_agent_adapter"
+name = "nat_claude_code_agent_adapter"
 dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
 description = "Experimental Claude Code agent for the NeMo Agent Toolkit"
@@ -42,4 +42,4 @@ dependencies = [
 nvidia-nat = { path = "../../..", editable = true }
 
 [project.entry-points.'nat.components']
-nat_code_agent_adapter = "nat_code_agent_adapter.register"
+nat_claude_code_agent_adapter = "nat_claude_code_agent_adapter.register"
