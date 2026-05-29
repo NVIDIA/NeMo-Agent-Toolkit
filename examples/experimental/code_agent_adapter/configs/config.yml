@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+workflow:
+  _type: claude_code_agent
+  permission_mode: plan
+  model: sonnet
+  working_directory: .
+  setting_sources: [project]
+  max_turns: 10
+  max_budget_usd: 1.00
+  timeout_seconds: 120
+  max_output_chars: 12000
+  disallowed_tools:
+    - Bash
+    - Edit
+    - MultiEdit
+    - NotebookEdit
+    - Write

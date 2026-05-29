@@ -35,6 +35,7 @@ The examples in the NeMo-Agent-Toolkit-Examples repository are community contrib
 - **[NeMo Agent Toolkit Components](#nemo-agent-toolkit-components)**
   - [Agents](#agents)
   - [Advanced Agents](#advanced-agents)
+  - [Experimental](#experimental)
   - [Configuration](#configuration)
   - [Control Flow](#control-flow)
   - [Custom Functions](#custom-functions)
@@ -103,6 +104,9 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 - **[`AIQ Blueprint`](advanced_agents/aiq_blueprint/README.md)**: Blueprint documentation for the official NVIDIA AIQ Blueprint for building an AI agent designed for enterprise research use cases. **[🛑 Advanced]**
 - **[`alert_triage_agent`](advanced_agents/alert_triage_agent/README.md)**: Production-ready intelligent alert triage system using LangGraph that automates system monitoring diagnostics with tools for hardware checks, network connectivity, performance analysis, and generates structured triage reports with root cause categorization **[🟨 Intermediate]**
 - **[`vulnerability_analysis_blueprint`](advanced_agents/vulnerability_analysis_blueprint/README.md)**: Blueprint documentation for vulnerability analysis agents **[🛑 Advanced]**
+
+### Experimental
+- **[`code_agent_adapter`](experimental/code_agent_adapter/README.md)**: Experimental primitive agent workflow backed by the Claude Code Agent SDK with a conservative local smoke-test config. **[🛑 Advanced]**
 
 ### Configuration
 - **[`config_inheritance`](config_inheritance/README.md)**: Use YAML configuration inheritance in the NeMo Agent Toolkit to reduce duplication across similar configuration files **[🟢 Beginner]**
