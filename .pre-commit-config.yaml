@@ -67,9 +67,9 @@ repos:
         name: Generate Models List
         entry: python ./ci/scripts/model_health_check.py --log-level=WARNING --dry-run --output-json ci/.nim_models_used.json
         language: python
-        files: "^examples/.*\\.(yml|yaml)$"
+        files: "^(examples/.*\\.(yml|yaml)|ci/scripts/model_health_check\\.py)$"
         pass_filenames: false
         additional_dependencies: ["pyyaml"]
 
 default_language_version:
-  python: python3
+  python: python3.11
