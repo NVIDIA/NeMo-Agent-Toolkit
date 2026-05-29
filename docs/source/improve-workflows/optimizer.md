@@ -196,7 +196,7 @@ Here's how you can define optimizable fields in your workflow's data models:
 ```python
 from pydantic import BaseModel
 
-from nat.data_models.function import FunctionBaseConfig
+from nat.plugin_api import FunctionBaseConfig
 from nat.data_models.optimizable import OptimizableField, SearchSpace, OptimizableMixin
 
 class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_image_agent_config"):

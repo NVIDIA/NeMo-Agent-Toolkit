@@ -22,16 +22,15 @@ This documentation presumes familiarity with the NeMo Agent Toolkit [memory modu
 ## Key Memory Module Components
 
 * **Memory Data Models**
-   - **{py:class}`~nat.data_models.memory.MemoryBaseConfig`**: A Pydantic base class that all memory config classes must extend. This is used for specifying memory registration in the NeMo Agent Toolkit config file.
-   - **{py:class}`~nat.data_models.memory.MemoryBaseConfigT`**: A generic type alias for memory config classes.
+   - **{py:class}`~nat.plugin_api.MemoryBaseConfig`**: A Pydantic base class that all memory config classes must extend. This is used for specifying memory registration in the NeMo Agent Toolkit config file.
 
 * **Memory Interfaces**
-   - **{py:class}`~nat.memory.interfaces.MemoryEditor`** (abstract interface): The low-level API for adding, searching, and removing memory items.
-   - **{py:class}`~nat.memory.interfaces.MemoryReader`** and **{py:class}`~nat.memory.interfaces.MemoryWriter`** (abstract classes): Provide structured read/write logic on top of the `MemoryEditor`.
-   - **{py:class}`~nat.memory.interfaces.MemoryManager`** (abstract interface): Manages higher-level memory operations like summarization or reflection if needed.
+   - **{py:class}`~nat.plugin_api.MemoryEditor`** (abstract interface): The low-level API for adding, searching, and removing memory items.
+   - **{py:class}`~nat.plugin_api.MemoryReader`** and **{py:class}`~nat.plugin_api.MemoryWriter`** (abstract classes): Provide structured read/write logic on top of the `MemoryEditor`.
+   - **{py:class}`~nat.plugin_api.MemoryManager`** (abstract interface): Manages higher-level memory operations like summarization or reflection if needed.
 
 * **Memory Models**
-   - **{py:class}`~nat.memory.models.MemoryItem`**: The main object representing a piece of memory. It includes:
+   - **{py:class}`~nat.plugin_api.MemoryItem`**: The main object representing a piece of memory. It includes:
      ```python
      conversation: list[dict[str, str]]  # user/assistant messages
      tags: list[str] = []
@@ -44,13 +43,13 @@ This documentation presumes familiarity with the NeMo Agent Toolkit [memory modu
 
 ## Adding a Memory Module
 
-In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_models.memory.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by the NeMo Agent Toolkit global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the NeMo Agent Toolkit config YAML via `_type: <your memory type>`.
+In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.plugin_api.MemoryBaseConfig` and is declared with a `name="some_memory"` can be discovered as a *Memory type* by the NeMo Agent Toolkit global type registry. This allows you to define a custom memory class to handle your own backends (Redis, custom database, a vector store, etc.). Then your memory class can be selected in the NeMo Agent Toolkit config YAML via `_type: <your memory type>`.
 
 ### Basic Steps
 
-1. **Create a config Class** that extends {py:class}`~nat.data_models.memory.MemoryBaseConfig`:
+1. **Create a config Class** that extends {py:class}`~nat.plugin_api.MemoryBaseConfig`:
    ```python
-   from nat.data_models.memory import MemoryBaseConfig
+   from nat.plugin_api import MemoryBaseConfig
 
    class MyCustomMemoryConfig(MemoryBaseConfig, name="my_custom_memory"):
        # You can define any fields you want. For example:
@@ -62,9 +61,10 @@ In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_mod
    The `name="my_custom_memory"` ensures that NeMo Agent Toolkit can recognize it when the user places `_type: my_custom_memory` in the memory config.
    :::
 
-2. **Implement a {py:class}`~nat.memory.interfaces.MemoryEditor`** that uses your backend**:
+2. **Implement a {py:class}`~nat.plugin_api.MemoryEditor`** that uses your backend**:
    ```python
-   from nat.memory.interfaces import MemoryEditor, MemoryItem
+   from nat.plugin_api import MemoryEditor
+   from nat.plugin_api import MemoryItem
 
    class MyCustomMemoryEditor(MemoryEditor):
        def __init__(self, config: MyCustomMemoryConfig):
@@ -104,22 +104,23 @@ In the NeMo Agent Toolkit system, anything that extends {py:class}`~nat.data_mod
 ## Bringing Your Own Memory Client Implementation
 
 A typical pattern is:
-- You define a *config class* that extends {py:class}`~nat.data_models.memory.MemoryBaseConfig` (giving it a unique `_type` / name).
-- You define the actual *runtime logic* in a "Memory Editor" or "Memory Client" class that implements {py:class}`~nat.memory.interfaces.MemoryEditor`.
+- You define a *config class* that extends {py:class}`~nat.plugin_api.MemoryBaseConfig` (giving it a unique `_type` / name).
+- You define the actual *runtime logic* in a "Memory Editor" or "Memory Client" class that implements {py:class}`~nat.plugin_api.MemoryEditor`.
 - You connect them together (for example, by implementing a small factory function or a method in the builder that says: "Given `MyCustomMemoryConfig`, return `MyCustomMemoryEditor(config)`").
 
 ### Example: Minimal Skeleton
 
 ```python
 # my_custom_memory_config.py
-from nat.data_models.memory import MemoryBaseConfig
+from nat.plugin_api import MemoryBaseConfig
 
 class MyCustomMemoryConfig(MemoryBaseConfig, name="my_custom_memory"):
     url: str
     token: str
 
 # my_custom_memory_editor.py
-from nat.memory.interfaces import MemoryEditor, MemoryItem
+from nat.plugin_api import MemoryEditor
+from nat.plugin_api import MemoryItem
 
 class MyCustomMemoryEditor(MemoryEditor):
     def __init__(self, cfg: MyCustomMemoryConfig):
@@ -163,7 +164,7 @@ memories = await memory_client.search(query="What did user prefer last time?", t
 **Inside Tools**: Tools that read or write memory simply call the memory client. For example:
 
 ```python
-from nat.memory.models import MemoryItem
+from nat.plugin_api import MemoryItem
 from langchain_core.tools import ToolException
 
 async def add_memory_tool_action(item: MemoryItem, memory_name: str):
@@ -226,8 +227,8 @@ For convenient memory persistence, you can use the [automatic memory wrapper](..
 
 To **bring your own memory**:
 
-1. **Implement** a custom {py:class}`~nat.data_models.memory.MemoryBaseConfig` (with a unique `_type`).
-2. **Implement** a custom {py:class}`~nat.memory.interfaces.MemoryEditor` that can handle `add_items`, `search`, `remove_items` calls.
+1. **Implement** a custom {py:class}`~nat.plugin_api.MemoryBaseConfig` (with a unique `_type`).
+2. **Implement** a custom {py:class}`~nat.plugin_api.MemoryEditor` that can handle `add_items`, `search`, `remove_items` calls.
 3. **Register** your config class so that the NeMo Agent Toolkit type registry is aware of `_type: <your memory>`.
 4. In your `.yml` config, specify:
    ```yaml
@@ -242,8 +243,8 @@ To **bring your own memory**:
 
 ## Summary
 
-- The **Memory** module in NeMo Agent Toolkit revolves around the {py:class}`~nat.memory.interfaces.MemoryEditor` interface and {py:class}`~nat.memory.models.MemoryItem` model.
-- **Configuration** is done via a subclass of {py:class}`~nat.data_models.memory.MemoryBaseConfig` that is *discriminated* by the `_type` field in the YAML config.
+- The **Memory** module in NeMo Agent Toolkit revolves around the {py:class}`~nat.plugin_api.MemoryEditor` interface and {py:class}`~nat.plugin_api.MemoryItem` model.
+- **Configuration** is done via a subclass of {py:class}`~nat.plugin_api.MemoryBaseConfig` that is *discriminated* by the `_type` field in the YAML config.
 - **Registration** can be as simple as adding `name="my_custom_memory"` to your config class and letting NeMo Agent Toolkit discover it.
 - Tools and workflows then seamlessly **read/write** user memory by calling `builder.get_memory_client(...)`.
 
