@@ -335,7 +335,8 @@ def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client", 
     langsmith_client.create_project(project_name)
     yield project_name
 
-    langsmith_client.delete_project(project_name=project_name)
+    if os.environ.get("NAT_CI_KEEP_LANGSMITH_PROJECTS") != "1":
+        langsmith_client.delete_project(project_name=project_name)
 
 
 @pytest.fixture(name="galileo_api_key", scope='session')
