@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+workflow:
+  _type: codex_agent
+  working_directory: .
+  sandbox_mode: read-only
+  approval_policy: never
+  skip_git_repo_check: false
+  timeout_seconds: 300
+  max_output_chars: 12000

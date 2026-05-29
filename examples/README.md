@@ -107,6 +107,10 @@ _Additional information can be found in the [Agents README](./agents/README.md).
 
 ### Experimental
 - **[`code_agent_adapter`](experimental/code_agent_adapter/README.md)**: Experimental primitive agent workflow backed by the Claude Code Agent SDK with a conservative local smoke-test config. **[🛑 Advanced]**
+- **[`codex_agent_adapter`](experimental/codex_agent_adapter/README.md)**: Experimental primitive agent workflow backed by Codex SDK in read-only mode. **[🛑 Advanced]**
+- **[`cursor_agent_adapter`](experimental/cursor_agent_adapter/README.md)**: Experimental primitive agent workflow backed by Cursor Agent CLI in plan mode. **[🛑 Advanced]**
+- **[`openclaw_agent_adapter`](experimental/openclaw_agent_adapter/README.md)**: Experimental primitive agent workflow backed by OpenClaw CLI one-shot runs. **[🛑 Advanced]**
+- **[`hermes_agent_adapter`](experimental/hermes_agent_adapter/README.md)**: Experimental primitive agent workflow backed by Hermes Agent CLI one-shot mode. **[🛑 Advanced]**
 
 ### Configuration
 - **[`config_inheritance`](config_inheritance/README.md)**: Use YAML configuration inheritance in the NeMo Agent Toolkit to reduce duplication across similar configuration files **[🟢 Beginner]**

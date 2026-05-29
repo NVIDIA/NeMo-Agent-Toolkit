@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+workflow:
+  _type: openclaw_agent
+  working_directory: .
+  agent_id: main
+  session_key: nat-openclaw
+  local: true
+  codex_app_server_mode: guardian
+  codex_app_server_approval_policy: on-request
+  codex_app_server_sandbox: workspace-write
+  agent_timeout_seconds: 600
+  timeout_seconds: 660
+  max_output_chars: 12000
