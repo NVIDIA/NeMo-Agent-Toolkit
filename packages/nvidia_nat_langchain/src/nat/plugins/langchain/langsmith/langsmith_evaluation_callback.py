@@ -57,7 +57,7 @@ def _span_id_to_langsmith_run_id(span_id: int) -> str:
     the first 8 bytes are zeroed, the last 8 bytes are the span_id.
     """
     hex_str = format(span_id, "016x")
-    return f"00000000-0000-0000-{hex_str[:4]}-{hex_str[4:]}"
+    return f"{hex_str[:8]}-{hex_str[8:12]}-{hex_str[12:16]}-{hex_str[16:20]}-{hex_str[20:]}"
 
 
 def _eager_link_run_to_item(
@@ -535,9 +535,9 @@ class LangSmithEvaluationCallback:
     def on_dataset_loaded(self, *, dataset_name: str, items: list) -> None:
         self._dataset_name = dataset_name
         pretty_name = _humanize_dataset_name(dataset_name)
-        ls_dataset_name = f"Benchmark Dataset ({pretty_name})"
+        ls_dataset_name = dataset_name
         try:
-            ds = self._client.create_dataset(dataset_name=ls_dataset_name, description="NAT eval dataset")
+            ds = self._client.create_dataset(dataset_name=ls_dataset_name, description=pretty_name)
             self._dataset_id = str(ds.id)
         except langsmith.utils.LangSmithConflictError:
             existing = self._client.read_dataset(dataset_name=ls_dataset_name)
