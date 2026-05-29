@@ -47,6 +47,7 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
     from nat.eval.eval_callbacks import EvalCallbackManager
     from nat.eval.eval_callbacks import EvalResult
     from nat.eval.eval_callbacks import EvalResultItem
+    from nat.eval.evaluator.evaluator_model import EvalInputItem
     from nat.plugins.langchain.langsmith.langsmith_evaluation_callback import LangSmithEvaluationCallback
 
     cb = LangSmithEvaluationCallback(
@@ -58,25 +59,52 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
 
     # 1. Load dataset
     dataset_name = f"integ-test-ds-{time.time()}"
+
+    langsmith_client.create_run('r1', inputs={}, run_type='chain', project_name=langsmith_project_name)
+    langsmith_client.create_run('r2', inputs={}, run_type='chain', project_name=langsmith_project_name)
+
+    # Wait for runs to appear in LangSmith
+    runs = []
+    deadline = time.time() + 5
+    while len(runs) < 2 and time.time() < deadline:
+        runs = list(langsmith_client.list_runs(project_name=langsmith_project_name, ))
+        if len(runs) < 2:
+            await asyncio.sleep(0.1)
+
+    assert len(runs) >= 2, (f"Expected >= 2 per-item runs, got {len(runs)}")
+    run_map = {run.name: run for run in runs}
+
     mgr.on_dataset_loaded(
         dataset_name=dataset_name,
         items=[
-            {
-                "id": "q1",
-                "question": "What is 2+2?",
-                "expected_output": "4",
-            },
-            {
-                "id": "q2",
-                "question": "What is 3*3?",
-                "expected_output": "9",
-            },
+            EvalInputItem(
+                id="q1",
+                input_obj="What is 2+2?",
+                expected_output_obj="4",
+                full_dataset_entry={},
+            ),
+            EvalInputItem(
+                id="q2",
+                input_obj="What is 3*3?",
+                expected_output_obj="9",
+                full_dataset_entry={},
+            ),
         ],
     )
 
     # Verify dataset was created with correct examples
-    ds = langsmith_client.read_dataset(dataset_name=dataset_name)
-    assert ds is not None
+    ds = None
+    attempts = 0
+    last_exception = None
+    while ds is None and attempts < 5:
+        try:
+            ds = langsmith_client.read_dataset(dataset_name=dataset_name)
+        except Exception as e:
+            last_exception = e
+            await asyncio.sleep(0.1)
+            attempts += 1
+
+    assert ds is not None, f"Failed to read dataset {dataset_name}: {last_exception}"
     examples = list(langsmith_client.list_examples(dataset_id=ds.id))
     assert len(examples) == 2
 
@@ -92,6 +120,7 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
                     actual_output="4",
                     scores={"accuracy": 1.0},
                     reasoning={"accuracy": "Exact match"},
+                    root_span_id=run_map['r1'].id.int,
                 ),
                 EvalResultItem(
                     item_id="q2",
@@ -100,18 +129,10 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
                     actual_output="8",
                     scores={"accuracy": 0.8},
                     reasoning={"accuracy": "Close but wrong"},
+                    root_span_id=run_map['r2'].id.int,
                 ),
             ],
         ))
-
-    # 3. Wait for runs to appear in LangSmith
-    runs = []
-    deadline = time.time() + 15
-    while len(runs) < 2 and time.time() < deadline:
-        await asyncio.sleep(1)
-        runs = list(langsmith_client.list_runs(project_name=langsmith_project_name, ))
-
-    assert len(runs) >= 2, (f"Expected >= 2 per-item runs, got {len(runs)}")
 
     # 4. Verify feedback was attached to at least one run
     feedback_found = False
