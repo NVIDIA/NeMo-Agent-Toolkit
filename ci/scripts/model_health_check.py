@@ -97,7 +97,12 @@ def find_nim_models(examples_dir: Path) -> tuple[dict[str, list[str]], dict[str,
     git_files = get_git_files()
 
     for config_path in sorted(config_paths):
-        relative_path = str(config_path.resolve().relative_to(REPO))
+        try:
+            relative_path = str(config_path.resolve().relative_to(REPO))
+        except ValueError:
+            _logger.warning("Skipping config outside repository root: %s", config_path)
+            continue
+
         if relative_path in EXCLUDE_YAMLS:
             _logger.debug("Skipping excluded config: %s", relative_path)
             continue
