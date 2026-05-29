@@ -574,11 +574,7 @@ if build_api_docs:
 
         return skip
 
-    def skip_plugin_api_module(app: object,
-                               what: str,
-                               name: str,
-                               obj: "PythonObject",
-                               skip: bool,
+    def skip_plugin_api_module(app: object, what: str, name: str, obj: "PythonObject", skip: bool,
                                options: list[str]) -> bool:
         # ``nat.plugin_api`` re-exports the public plugin-author facade; its members are
         # already documented under their canonical modules, so a second autoapi page here
