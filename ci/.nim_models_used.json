@@ -3,11 +3,11 @@
   "llms": [
     {
       "model": "meta/llama-3.1-70b-instruct",
-      "num_configs": 53
+      "num_configs": 51
     },
     {
       "model": "nvidia/nemotron-3-nano-30b-a3b",
-      "num_configs": 40
+      "num_configs": 42
     },
     {
       "model": "meta/llama-3.3-70b-instruct",
