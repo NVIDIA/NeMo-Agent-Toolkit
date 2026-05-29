@@ -574,6 +574,23 @@ if build_api_docs:
 
         return skip
 
+    def skip_plugin_api_module(app: object,
+                               what: str,
+                               name: str,
+                               obj: "PythonObject",
+                               skip: bool,
+                               options: list[str]) -> bool:
+        # ``nat.plugin_api`` re-exports the public plugin-author facade; its members are
+        # already documented under their canonical modules, so a second autoapi page here
+        # produces duplicate cross-reference targets (e.g. ``InvocationContext``) that trip
+        # the docs build's ``-W`` flag.
+        # TODO: once the docs are restructured to make ``nat.plugin_api`` the canonical
+        # reference for plugin authors (with cross-refs pointing here instead of the
+        # implementation modules), remove this skip and invert the resolution direction.
+        if name == "nat.plugin_api" or name.startswith("nat.plugin_api."):
+            return True
+        return skip
+
     def clean_markdown_from_docstrings(app: object, docname: str, source: list[str]) -> None:
         """Clean up Markdown syntax that doesn't work in RST.
 
@@ -621,5 +638,7 @@ if build_api_docs:
     def setup(sphinx):
         # Work-around for for Pydantic docstrings that trigger parsing warnings
         sphinx.connect("autoapi-skip-member", skip_pydantic_special_attrs)
+        # Hide nat.plugin_api facade to avoid duplicate cross-reference targets
+        sphinx.connect("autoapi-skip-member", skip_plugin_api_module)
         # Clean up Markdown syntax in auto-generated API docs
         sphinx.connect("source-read", clean_markdown_from_docstrings)
