@@ -16,13 +16,13 @@
 
 import pytest
 
+from _utils.nat_app_test_helpers import MinimalAdapter as _TestAdapter
 from nat_app.compiler.compilation_context import CompilationContext
 from nat_app.compiler.default_graph_compiler import context_to_result
 from nat_app.compiler.errors import GraphValidationError
 from nat_app.compiler.optimizer import GraphOptimizer
 from nat_app.graph.analysis import NodeAnalysis
 from nat_app.graph.types import Graph
-from tests.conftest import MinimalAdapter as _TestAdapter
 
 
 class TestGraphValidationError:

@@ -16,11 +16,10 @@
 
 import pytest
 
+from _utils.nat_app_test_helpers import MinimalAdapter as _SimpleAdapter
 from nat_app.compiler.compilation_context import CompilationContext
 from nat_app.compiler.default_graph_compiler import DefaultGraphCompiler
 from nat_app.graph.models import TransformationResult
-from tests.conftest import MinimalAdapter as _SimpleAdapter
-from tests.graph.conftest import simple_graph as _simple_graph
 
 
 class _DummyStage:
@@ -93,9 +92,9 @@ class TestAppendInsert:
 
 class TestCompileToResult:
 
-    def test_returns_transformation_result(self):
+    def test_returns_transformation_result(self, simple_graph):
         compiler = DefaultGraphCompiler(_SimpleAdapter())
-        result = compiler.compile_to_result(_simple_graph())
+        result = compiler.compile_to_result(simple_graph)
         assert isinstance(result, TransformationResult)
         all_nodes = set()
         for stage in result.optimized_order:
@@ -105,9 +104,9 @@ class TestCompileToResult:
 
 class TestEndToEnd:
 
-    def test_compile_simple_graph(self):
+    def test_compile_simple_graph(self, simple_graph):
         compiler = DefaultGraphCompiler(_SimpleAdapter())
-        ctx = compiler.compile(_simple_graph())
+        ctx = compiler.compile(simple_graph)
         assert ctx.optimized_order is not None
         all_nodes = set()
         for stage in ctx.optimized_order:

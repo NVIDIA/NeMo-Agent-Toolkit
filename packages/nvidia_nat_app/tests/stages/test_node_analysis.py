@@ -16,10 +16,10 @@
 
 import pytest
 
+from _utils.nat_app_test_helpers import MinimalAdapter as _TestAdapter
 from nat_app.compiler.compilation_context import CompilationContext
 from nat_app.graph.types import Graph
 from nat_app.stages.node_analysis import NodeAnalysisStage
-from tests.conftest import MinimalAdapter as _TestAdapter
 
 
 class TestNodeAnalysisStage:

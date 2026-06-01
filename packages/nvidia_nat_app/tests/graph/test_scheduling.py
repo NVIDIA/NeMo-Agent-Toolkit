@@ -16,6 +16,7 @@
 
 import pytest
 
+from _utils.nat_app_test_helpers import make_node as _node
 from nat_app.graph.models import EdgeType
 from nat_app.graph.scheduling import analyze_cycle_body
 from nat_app.graph.scheduling import classify_edges
@@ -24,11 +25,6 @@ from nat_app.graph.scheduling import compute_optimized_order
 from nat_app.graph.topology import CycleInfo
 from nat_app.graph.topology import analyze_graph_topology
 from nat_app.graph.types import Graph
-from tests.conftest import make_node as _node
-from tests.graph.conftest import diamond_graph as _diamond_graph
-from tests.graph.conftest import disjoint_cycles_graph as _disjoint_cycles_graph
-from tests.graph.conftest import nested_cycle_graph as _nested_cycle_graph
-from tests.graph.conftest import overlapping_cycles_graph as _overlapping_cycles_graph
 
 
 class TestClassifyEdges:
@@ -225,8 +221,8 @@ class TestComputeOptimizedOrder:
         flat = [n for stage in order for n in stage]
         assert flat.index("a") < flat.index("b") < flat.index("c")
 
-    def test_diamond_parallelism(self):
-        g = _diamond_graph()
+    def test_diamond_parallelism(self, diamond_graph):
+        g = diamond_graph
         analyses = {
             "a": _node("a", writes={"start"}),
             "b": _node("b", reads={"start"}, writes={"b_out"}),
@@ -237,8 +233,8 @@ class TestComputeOptimizedOrder:
         order = compute_optimized_order(g, analyses, topo)
         assert any({"b", "c"} <= stage for stage in order), "b and c should be in the same parallel stage"
 
-    def test_disable_parallelization(self):
-        g = _diamond_graph()
+    def test_disable_parallelization(self, diamond_graph):
+        g = diamond_graph
         analyses = {
             "a": _node("a", writes={"start"}),
             "b": _node("b", reads={"start"}, writes={"b_out"}),
@@ -249,8 +245,8 @@ class TestComputeOptimizedOrder:
         order = compute_optimized_order(g, analyses, topo, disable_parallelization=True)
         assert all(len(stage) == 1 for stage in order)
 
-    def test_all_nodes_present(self):
-        g = _diamond_graph()
+    def test_all_nodes_present(self, diamond_graph):
+        g = diamond_graph
         analyses = {n: _node(n) for n in ["a", "b", "c", "d"]}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
@@ -276,9 +272,9 @@ class TestComputeOptimizedOrder:
         flat = [n for stage in order for n in stage]
         assert flat.index("a") < flat.index("b") < flat.index("c")
 
-    def test_write_write_conflict_serializes_nodes(self):
+    def test_write_write_conflict_serializes_nodes(self, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""
-        g = _diamond_graph()
+        g = diamond_graph
         analyses = {
             "a": _node("a", writes={"start"}),
             "b": _node("b", reads={"start"}, writes={"shared_out"}),
@@ -294,8 +290,8 @@ class TestComputeOptimizedOrder:
 class TestComputeOptimizedOrderMultiCycle:
     """Scheduling with nested and disjoint cycles."""
 
-    def test_nested_cycles_all_nodes_present(self):
-        g = _nested_cycle_graph()
+    def test_nested_cycles_all_nodes_present(self, nested_cycle_graph):
+        g = nested_cycle_graph
         analyses = {n: _node(n) for n in g.node_names}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
@@ -304,8 +300,8 @@ class TestComputeOptimizedOrderMultiCycle:
             all_nodes |= stage
         assert all_nodes == g.node_names
 
-    def test_nested_cycles_ordering(self):
-        g = _nested_cycle_graph()
+    def test_nested_cycles_ordering(self, nested_cycle_graph):
+        g = nested_cycle_graph
         analyses = {
             "parse": _node("parse", writes={"query"}),
             "search": _node("search", reads={"query"}, writes={"results"}),
@@ -322,8 +318,8 @@ class TestComputeOptimizedOrderMultiCycle:
         assert "decide" in flat
         assert "refine" in flat
 
-    def test_disjoint_cycles_all_nodes_present(self):
-        g = _disjoint_cycles_graph()
+    def test_disjoint_cycles_all_nodes_present(self, disjoint_cycles_graph):
+        g = disjoint_cycles_graph
         analyses = {n: _node(n) for n in g.node_names}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
@@ -332,8 +328,8 @@ class TestComputeOptimizedOrderMultiCycle:
             all_nodes |= stage
         assert all_nodes == g.node_names
 
-    def test_disjoint_cycles_entry_before_cycles(self):
-        g = _disjoint_cycles_graph()
+    def test_disjoint_cycles_entry_before_cycles(self, disjoint_cycles_graph):
+        g = disjoint_cycles_graph
         analyses = {
             "entry": _node("entry", writes={"init"}),
             "loop_a": _node("loop_a", reads={"init"}, writes={"a_out"}),
@@ -347,8 +343,8 @@ class TestComputeOptimizedOrderMultiCycle:
         flat = [n for stage in order for n in stage]
         assert flat.index("entry") < flat.index("loop_a")
 
-    def test_overlapping_cycles_all_nodes_present(self):
-        g = _overlapping_cycles_graph()
+    def test_overlapping_cycles_all_nodes_present(self, overlapping_cycles_graph):
+        g = overlapping_cycles_graph
         analyses = {n: _node(n) for n in g.node_names}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)

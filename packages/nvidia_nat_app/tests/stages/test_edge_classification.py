@@ -16,10 +16,10 @@
 
 import pytest
 
+from _utils.nat_app_test_helpers import make_node as _node
 from nat_app.compiler.compilation_context import CompilationContext
 from nat_app.graph.types import Graph
 from nat_app.stages.edge_classification import EdgeClassificationStage
-from tests.conftest import make_node as _node
 
 
 class TestEdgeClassificationStage:

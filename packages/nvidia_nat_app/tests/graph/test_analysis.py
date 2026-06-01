@@ -16,12 +16,12 @@
 
 import pytest
 
+from _utils.nat_app_test_helpers import make_node as _node
 from nat_app.graph.access import AccessSet
 from nat_app.graph.analysis import GraphAnalysisResult
 from nat_app.graph.analysis import NodeAnalysis
 from nat_app.graph.analysis import build_dependency_graph
 from nat_app.graph.analysis import find_parallel_groups
-from tests.conftest import make_node as _node
 
 # -- NodeAnalysis.conflicts_with -------------------------------------------
 

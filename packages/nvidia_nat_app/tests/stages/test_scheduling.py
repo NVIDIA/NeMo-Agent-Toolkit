@@ -16,14 +16,13 @@
 
 import pytest
 
+from _utils.nat_app_test_helpers import make_node as _node
 from nat_app.compiler.compilation_context import CompilationContext
 from nat_app.constraints import OptimizationConfig
 from nat_app.graph.topology import NodeType
 from nat_app.graph.topology import analyze_graph_topology
 from nat_app.graph.types import Graph
 from nat_app.stages.scheduling import SchedulingStage
-from tests.conftest import make_node as _node
-from tests.graph.conftest import parallelizable_cycle_graph as _parallelizable_cycle_graph
 
 
 def _build_ctx(g, analyses):
@@ -108,9 +107,9 @@ class TestSchedulingStage:
         ctx = stage.apply(ctx)
         assert all(len(s) == 1 for s in ctx.metadata["optimized_order"])
 
-    def test_cycle_with_intra_cycle_parallelism(self):
+    def test_cycle_with_intra_cycle_parallelism(self, parallelizable_cycle_graph):
         """Cycle body with parallelizable nodes sets CYCLE_MEMBER_PARALLELIZABLE."""
-        g = _parallelizable_cycle_graph()
+        g = parallelizable_cycle_graph
         analyses = {
             "entry": _node("entry", writes={"init"}),
             "a": _node("a", reads={"p"}, writes={"a_out"}),
