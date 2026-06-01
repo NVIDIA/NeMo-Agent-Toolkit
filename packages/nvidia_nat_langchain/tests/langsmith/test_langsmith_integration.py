@@ -33,6 +33,7 @@ Tests are skipped by default. Use --run_integration and --run_slow to enable.
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import time
 import typing
@@ -45,13 +46,15 @@ if typing.TYPE_CHECKING:
 
     import langsmith.client
 
+logger = logging.getLogger(__name__)
+
 
 async def _wait_for_runs(
     langsmith_client: langsmith.client.Client,
     project_name: str,
     expected_count: int,
-    timeout_s: float = 5.0,
-):
+    timeout_s: float = 30.0,
+) -> list:
     runs = []
     deadline = time.time() + timeout_s
     while len(runs) < expected_count and time.time() < deadline:
@@ -61,7 +64,7 @@ async def _wait_for_runs(
     return runs
 
 
-async def _wait_for_feedback(langsmith_client: langsmith.client.Client, run_ids, timeout_s: float = 5.0):
+async def _wait_for_feedback(langsmith_client: langsmith.client.Client, run_ids, timeout_s: float = 15.0) -> list:
     feedback = []
     deadline = time.time() + timeout_s
     while not feedback and time.time() < deadline:
@@ -81,7 +84,7 @@ def cleanup_prompts_fixture(langsmith_client: langsmith.client.Client) -> Genera
             try:
                 langsmith_client.delete_prompt(prompt_name)
             except Exception:
-                pass
+                logger.exception("Failed to delete prompt %s", prompt_name)
 
 
 @pytest.fixture(name="cleanup_datasets")
@@ -93,7 +96,7 @@ def cleanup_datasets_fixture(langsmith_client: langsmith.client.Client) -> Gener
             try:
                 langsmith_client.delete_dataset(dataset_id=dataset_id)
             except Exception:
-                pass
+                logger.exception("Failed to delete dataset %s", dataset_id)
 
 
 @pytest.mark.slow
