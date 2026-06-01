@@ -33,6 +33,7 @@ Tests are skipped by default. Use --run_integration and --run_slow to enable.
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 import typing
 from collections.abc import Generator
@@ -75,22 +76,24 @@ async def _wait_for_feedback(langsmith_client: langsmith.client.Client, run_ids,
 def cleanup_prompts_fixture(langsmith_client: langsmith.client.Client) -> Generator[list[str], None, None]:
     prompts: list[str] = []
     yield prompts
-    for prompt_name in prompts:
-        try:
-            langsmith_client.delete_prompt(prompt_name)
-        except Exception:
-            pass
+    if os.environ.get("NAT_CI_KEEP_LANGSMITH_PROJECTS") != "1":
+        for prompt_name in prompts:
+            try:
+                langsmith_client.delete_prompt(prompt_name)
+            except Exception:
+                pass
 
 
 @pytest.fixture(name="cleanup_datasets")
 def cleanup_datasets_fixture(langsmith_client: langsmith.client.Client) -> Generator[list[uuid.UUID | str], None, None]:
     dataset_ids: list[uuid.UUID | str] = []
     yield dataset_ids
-    for dataset_id in dataset_ids:
-        try:
-            langsmith_client.delete_dataset(dataset_id=dataset_id)
-        except Exception:
-            pass
+    if os.environ.get("NAT_CI_KEEP_LANGSMITH_PROJECTS") != "1":
+        for dataset_id in dataset_ids:
+            try:
+                langsmith_client.delete_dataset(dataset_id=dataset_id)
+            except Exception:
+                pass
 
 
 @pytest.mark.slow
