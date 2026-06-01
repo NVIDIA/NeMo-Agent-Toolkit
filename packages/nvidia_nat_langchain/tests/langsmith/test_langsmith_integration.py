@@ -30,39 +30,76 @@ Run with:
 Tests are skipped by default. Use --run_integration and --run_slow to enable.
 """
 
+from __future__ import annotations
+
 import asyncio
 import time
+import typing
+from collections.abc import Generator
 
 import pytest
 
+if typing.TYPE_CHECKING:
+    import uuid
 
-async def _wait_for_runs(langsmith_client, project_name: str, expected_count: int, timeout_s: float = 15.0):
+    import langsmith.client
+
+
+async def _wait_for_runs(
+    langsmith_client: langsmith.client.Client,
+    project_name: str,
+    expected_count: int,
+    timeout_s: float = 5.0,
+):
     runs = []
     deadline = time.time() + timeout_s
     while len(runs) < expected_count and time.time() < deadline:
         runs = list(langsmith_client.list_runs(project_name=project_name))
         if len(runs) < expected_count:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
     return runs
 
 
-async def _wait_for_feedback(langsmith_client, run_ids, timeout_s: float = 15.0):
+async def _wait_for_feedback(langsmith_client: langsmith.client.Client, run_ids, timeout_s: float = 5.0):
     feedback = []
     deadline = time.time() + timeout_s
     while not feedback and time.time() < deadline:
         for run_id in run_ids:
             feedback.extend(langsmith_client.list_feedback(run_ids=[run_id]))
         if not feedback:
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
     return feedback
+
+
+@pytest.fixture(name="cleanup_prompts")
+def cleanup_prompts_fixture(langsmith_client: langsmith.client.Client) -> Generator[list[str], None, None]:
+    prompts: list[str] = []
+    yield prompts
+    for prompt_name in prompts:
+        try:
+            langsmith_client.delete_prompt(prompt_name)
+        except Exception:
+            pass
+
+
+@pytest.fixture(name="cleanup_datasets")
+def cleanup_datasets_fixture(langsmith_client: langsmith.client.Client) -> Generator[list[uuid.UUID | str], None, None]:
+    dataset_ids: list[uuid.UUID | str] = []
+    yield dataset_ids
+    for dataset_id in dataset_ids:
+        try:
+            langsmith_client.delete_dataset(dataset_id=dataset_id)
+        except Exception:
+            pass
 
 
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("langsmith_api_key")
 async def test_eval_callback_creates_dataset_runs_and_feedback(
-    langsmith_client,
+    langsmith_client: langsmith.client.Client,
     langsmith_project_name: str,
+    cleanup_datasets: list[uuid.UUID | str],
 ):
     """Simulate a nat eval run: dataset + per-item runs + feedback."""
     from nat.eval.eval_callbacks import EvalCallbackManager
@@ -85,7 +122,7 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
     langsmith_client.create_run('r2', inputs={}, run_type='chain', project_name=langsmith_project_name)
 
     # Wait for runs to appear in LangSmith
-    runs = await _wait_for_runs(langsmith_client, langsmith_project_name, expected_count=2, timeout_s=5)
+    runs = await _wait_for_runs(langsmith_client, langsmith_project_name, expected_count=2)
 
     assert len(runs) >= 2, (f"Expected >= 2 per-item runs, got {len(runs)}")
     run_map = {run.name: run for run in runs}
@@ -121,6 +158,7 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
             attempts += 1
 
     assert ds is not None, f"Failed to read dataset {dataset_name}: {last_exception}"
+    cleanup_datasets.append(ds.id)
     examples = list(langsmith_client.list_examples(dataset_id=ds.id))
     assert len(examples) == 2
 
@@ -160,17 +198,15 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
             break
     assert feedback_found, "No feedback found on any run"
 
-    # Cleanup: delete the dataset we created
-    langsmith_client.delete_dataset(dataset_id=ds.id)
-
 
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("langsmith_api_key")
 async def test_optimizer_callback_links_trial_runs_and_feedback(
-    langsmith_client,
+    langsmith_client: langsmith.client.Client,
     langsmith_project_name: str,
     monkeypatch,
+    cleanup_datasets: list[uuid.UUID | str],
 ):
     """Simulate optimizer OTEL runs: dataset + per-trial runs + feedback."""
     from nat.eval.eval_callbacks import EvalResult
@@ -206,6 +242,9 @@ async def test_optimizer_callback_links_trial_runs_and_feedback(
                 full_dataset_entry={},
             ),
         ])
+
+        if cb._dataset_id:
+            cleanup_datasets.append(cb._dataset_id)
 
         trial_project = mgr.get_trial_project_name(0)
         assert trial_project is not None
@@ -277,19 +316,15 @@ async def test_optimizer_callback_links_trial_runs_and_feedback(
                 langsmith_client.delete_project(project_name=trial_project)
             except Exception:
                 pass
-        if cb._dataset_id:
-            try:
-                langsmith_client.delete_dataset(dataset_id=cb._dataset_id)
-            except Exception:
-                pass
 
 
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("langsmith_api_key")
 async def test_optimizer_callback_pushes_prompts(
-    langsmith_client,
+    langsmith_client: langsmith.client.Client,
     langsmith_project_name: str,
+    cleanup_prompts: list[str],
 ):
     """Simulate a prompt GA trial: prompts are pushed to prompt management."""
     from nat.plugins.langchain.langsmith.langsmith_optimization_callback import LangSmithOptimizationCallback
@@ -303,34 +338,27 @@ async def test_optimizer_callback_pushes_prompts(
     mgr = OptimizerCallbackManager()
     mgr.register(cb)
 
-    repo_name = None
-    try:
-        mgr.on_trial_end(
-            TrialResult(
-                trial_number=0,
-                parameters={},
-                metric_scores={"accuracy": 0.9},
-                is_best=True,
-                prompts={
-                    "functions.agent.prompt": ("You are a helpful math assistant."),
-                },
-            ))
+    mgr.on_trial_end(
+        TrialResult(
+            trial_number=0,
+            parameters={},
+            metric_scores={"accuracy": 0.9},
+            is_best=True,
+            prompts={
+                "functions.agent.prompt": ("You are a helpful math assistant."),
+            },
+        ))
 
-        repo_name = cb._prompt_repo_names["functions.agent.prompt"]
-        assert "." not in repo_name
+    repo_name = cb._prompt_repo_names["functions.agent.prompt"]
+    cleanup_prompts.append(repo_name)
+    assert "." not in repo_name
 
-        prompts = []
-        deadline = time.time() + 15
-        while not prompts and time.time() < deadline:
-            response = langsmith_client.list_prompts(query=repo_name)
-            prompts = [p for p in response.repos if p.repo_handle == repo_name]
-            if not prompts:
-                await asyncio.sleep(0.5)
+    prompts = []
+    deadline = time.time() + 5
+    while not prompts and time.time() < deadline:
+        response = langsmith_client.list_prompts(query=repo_name)
+        prompts = [p for p in response.repos if p.repo_handle == repo_name]
+        if not prompts:
+            await asyncio.sleep(0.1)
 
-        assert prompts, f"Expected prompt repo {repo_name} to exist"
-    finally:
-        if repo_name:
-            try:
-                langsmith_client.delete_prompt(repo_name)
-            except Exception:
-                pass
+    assert prompts, f"Expected prompt repo {repo_name} to exist"
