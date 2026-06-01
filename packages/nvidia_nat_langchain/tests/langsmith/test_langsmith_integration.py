@@ -321,7 +321,7 @@ async def test_optimizer_callback_links_trial_runs_and_feedback(
             try:
                 langsmith_client.delete_project(project_name=trial_project)
             except Exception:
-                pass
+                logger.exception("Failed to delete trial project %s", trial_project)
 
 
 @pytest.mark.slow
