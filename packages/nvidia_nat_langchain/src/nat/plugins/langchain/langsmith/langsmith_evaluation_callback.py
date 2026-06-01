@@ -15,6 +15,7 @@
 
 import logging
 import time
+import uuid
 from typing import Any
 
 import langsmith
@@ -53,11 +54,9 @@ def _humanize_dataset_name(name: str) -> str:
 def _span_id_to_langsmith_run_id(span_id: int) -> str:
     """Derive LangSmith run_id from OTEL span_id.
 
-    LangSmith deterministically maps OTEL span_ids to run UUIDs:
-    the first 8 bytes are zeroed, the last 8 bytes are the span_id.
+    LangSmith deterministically maps OTEL span_ids to run UUIDs.
     """
-    hex_str = format(span_id, "016x")
-    return f"{hex_str[:8]}-{hex_str[8:12]}-{hex_str[12:16]}-{hex_str[16:20]}-{hex_str[20:]}"
+    return str(uuid.UUID(int=span_id))
 
 
 def _eager_link_run_to_item(
