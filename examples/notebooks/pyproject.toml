@@ -39,6 +39,7 @@ dependencies = [
   "ipython~=8.31",
   "ipykernel",
   "nbclient~=0.10",
+  "pygments>=2.20.0,<3.0.0",
   "python-dotenv[cli]~=1.1.1",
 ]
 

@@ -39,5 +39,13 @@ class ToolCall(BaseModel):
         default_factory=dict,
         description="Arguments passed to the function (can be empty dict)",
     )
+    extra: dict[str, Any] | None = Field(
+        default=None,
+        description=("Custom tool-call-level metadata (ATIF v1.7). NAT writes "
+                     "per-tool-call ancestry / invocation timing here — see "
+                     ":class:`nat.atif.atif_step_extra.AtifToolCallExtra`. The "
+                     "spec treats this field as loosely-typed; consumers MUST "
+                     "tolerate absent and unknown keys."),
+    )
 
     model_config = ConfigDict(extra="forbid")

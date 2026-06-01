@@ -115,6 +115,23 @@ async def test_malformed_agent_output_after_max_retries(mock_react_agent_no_rais
     assert '\nQuestion: hi\n' in response.content
 
 
+async def test_reasoning_content_is_not_promoted_to_react_final_answer(mock_react_agent_no_raise):
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    mock_response = AIMessage(content="\n", additional_kwargs={"reasoning_content": "I should call a tool next."})
+    mock_state = ReActGraphState(messages=[HumanMessage(content="test question")])
+
+    with patch.object(mock_react_agent_no_raise, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        response = await mock_react_agent_no_raise.agent_node(mock_state)
+
+    response = response.messages[-1]
+    assert MISSING_ACTION_AFTER_THOUGHT_ERROR_MESSAGE in response.content
+    assert "I should call a tool next." not in response.content
+
+
 async def test_agent_node_parse_agent_action(mock_react_agent):
     mock_react_agent_output = 'Thought:not_many\nAction:Tool A\nAction Input: hello, world!\nObservation:'
     mock_state = ReActGraphState(messages=[HumanMessage(content=mock_react_agent_output)])
@@ -1422,3 +1439,285 @@ async def test_agent_node_native_tool_calling_with_dict_args(mock_config_react_a
         assert parsed["query"] == "search term"
         assert parsed["limit"] == 10
         assert parsed["nested"]["key"] == "value"
+
+
+async def test_agent_node_native_tool_calling_uses_reasoning_for_tool_log(mock_config_react_agent, mock_llm, mock_tool):
+    """Provider reasoning metadata should be preserved as tool-call log text without becoming parser content."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False, use_native_tool_calling=True)
+    mock_response = AIMessage(content="\n",
+                              additional_kwargs={"reasoning_content": "I should call Tool A."},
+                              tool_calls=[{
+                                  "name": "Tool A",
+                                  "args": {
+                                      "query": "test query"
+                                  },
+                                  "id": "call_123",
+                                  "type": "tool_call",
+                              }])
+    state = ReActGraphState(messages=[HumanMessage(content="test question")])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = mock_response
+
+        result_state = await agent.agent_node(state)
+
+    agent_action = result_state.agent_scratchpad[0]
+    assert agent_action.tool == "Tool A"
+    assert agent_action.log == "I should call Tool A."
+
+
+# =============================================================================
+# Tests for token streaming support
+# =============================================================================
+
+
+@pytest.fixture(name='stream_fn_factory')
+def fixture_stream_fn_factory(mock_llm, mock_tool):
+    """Factory fixture that builds a _stream_fn closure for a given mock astream function."""
+
+    async def _make(mock_astream, config=None):
+        from unittest.mock import AsyncMock
+        from unittest.mock import MagicMock
+        from unittest.mock import patch
+
+        from nat.plugins.langchain.agent.react_agent.register import react_agent_workflow
+
+        if config is None:
+            config = ReActAgentWorkflowConfig(tool_names=['test'], llm_name='test')
+
+        mock_builder = AsyncMock()
+        mock_builder.get_llm = AsyncMock(return_value=mock_llm)
+        mock_builder.get_tools = AsyncMock(return_value=[mock_tool('Tool A')])
+
+        mock_graph = MagicMock()
+        mock_graph.astream = mock_astream
+
+        with patch.object(ReActAgentGraph, 'build_graph', new=AsyncMock(return_value=mock_graph)):
+            async with react_agent_workflow(config, mock_builder) as function_info:
+                return function_info.stream_fn
+
+    return _make
+
+
+async def test_agent_node_passes_config_to_stream_llm(mock_config_react_agent, mock_llm, mock_tool):
+    """Test that agent_node forwards the RunnableConfig argument to _stream_llm."""
+    from unittest.mock import AsyncMock
+    from unittest.mock import patch
+
+    from langchain_core.agents import AgentFinish
+    from langchain_core.runnables import RunnableConfig
+
+    tools = [mock_tool('Tool A')]
+    prompt = create_react_agent_prompt(mock_config_react_agent)
+    agent = ReActAgentGraph(llm=mock_llm, prompt=prompt, tools=tools, detailed_logs=False)
+
+    state = ReActGraphState(messages=[HumanMessage(content="What is 1+1?")])
+    external_config = RunnableConfig(tags=["streaming-test"])
+
+    with patch.object(agent, '_stream_llm', new_callable=AsyncMock) as mock_stream_llm:
+        mock_stream_llm.return_value = AIMessage(content="Final Answer: 2")
+
+        with patch('nat.plugins.langchain.agent.react_agent.agent.ReActOutputParser.aparse',
+                   new_callable=AsyncMock) as mock_parse:
+            mock_parse.return_value = AgentFinish(return_values={'output': '2'}, log='')
+
+            await agent.agent_node(state, config=external_config)
+
+        assert mock_stream_llm.call_count >= 1
+        assert mock_stream_llm.call_args.kwargs.get('config') is external_config
+
+
+async def test_graph_astream_yields_message_chunks(mock_react_graph):
+    """Test that graph.astream with stream_mode='messages' yields message chunks from the agent node.
+
+    This validates the streaming path used by _stream_fn in register.py. With a real LLM the chunks
+    will be AIMessageChunk; the mock LLM produces AIMessage which LangGraph may wrap differently,
+    so we accept any BaseMessage subclass from the agent node.
+    """
+    from langchain_core.messages import BaseMessage
+
+    mock_state = ReActGraphState(messages=[HumanMessage(content='Final Answer: hello, world!')])
+    agent_messages = []
+    async for msg, metadata in mock_react_graph.astream(
+            mock_state, config={'recursion_limit': 5}, stream_mode="messages"):
+        if isinstance(msg, BaseMessage) and isinstance(metadata, dict) and metadata.get("langgraph_node") == "agent":
+            agent_messages.append(msg)
+
+    assert len(agent_messages) > 0, "Expected at least one message from the agent node via stream_mode='messages'"
+    combined_content = "".join(m.content for m in agent_messages if isinstance(m.content, str))
+    assert len(combined_content) > 0, "Expected non-empty content from streamed agent messages"
+
+
+async def test_stream_fn_yields_content_after_final_answer_marker(stream_fn_factory):
+    """_stream_fn buffers tokens until Final Answer: is detected, then yields the rest."""
+    from langchain_core.messages import AIMessageChunk
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        yield (AIMessageChunk(content="Thought: I know the answer\nFinal Answer: "), {"langgraph_node": "agent"})
+        yield (AIMessageChunk(content="The result is 42"), {"langgraph_node": "agent"})
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("What is 6*7?")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    combined = "".join(c.choices[0].delta.content for c in chunks if c.choices and c.choices[0].delta.content)
+    assert "The result is 42" in combined
+
+
+async def test_stream_fn_handles_split_final_answer(stream_fn_factory):
+    """_stream_fn correctly buffers and detects Final Answer: when the marker is split across chunk boundaries."""
+    from langchain_core.messages import AIMessageChunk
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        yield (AIMessageChunk(content="Final An"), {"langgraph_node": "agent"})
+        yield (AIMessageChunk(content="swer: The result is 42"), {"langgraph_node": "agent"})
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("What is 6*7?")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    combined = "".join(c.choices[0].delta.content for c in chunks if c.choices and c.choices[0].delta.content)
+    assert "The result is 42" in combined
+
+
+async def test_stream_fn_yields_after_marker_in_same_chunk(stream_fn_factory):
+    """_stream_fn yields content that follows Final Answer: within a single chunk."""
+    from langchain_core.messages import AIMessageChunk
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        yield (AIMessageChunk(content="Final Answer: Direct response"), {"langgraph_node": "agent"})
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("Tell me something")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    combined = "".join(c.choices[0].delta.content for c in chunks if c.choices and c.choices[0].delta.content)
+    assert "Direct response" in combined
+
+
+async def test_stream_fn_tokens_after_found_final_answer(stream_fn_factory):
+    """_stream_fn yields subsequent tokens directly once found_final_answer is True."""
+    from langchain_core.messages import AIMessageChunk
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        yield (AIMessageChunk(content="Final Answer: Part one"), {"langgraph_node": "agent"})
+        yield (AIMessageChunk(content=" and part two"), {"langgraph_node": "agent"})
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("multi-token answer")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    combined = "".join(c.choices[0].delta.content for c in chunks if c.choices and c.choices[0].delta.content)
+    assert "Part one" in combined
+    assert "and part two" in combined
+
+
+async def test_stream_fn_fallback_when_no_final_answer_marker(stream_fn_factory):
+    """_stream_fn falls back to yielding the full buffer when Final Answer: is never found."""
+    from langchain_core.messages import AIMessageChunk
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        yield (AIMessageChunk(content="This is a direct answer without ReAct format"), {"langgraph_node": "agent"})
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("simple question")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    combined = "".join(c.choices[0].delta.content for c in chunks if c.choices and c.choices[0].delta.content)
+    assert "This is a direct answer without ReAct format" in combined
+
+
+async def test_stream_fn_filters_non_agent_node_messages(stream_fn_factory):
+    """_stream_fn ignores messages from nodes other than 'agent'."""
+    from langchain_core.messages import AIMessageChunk
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        yield (AIMessageChunk(content="should be ignored"), {"langgraph_node": "tool"})
+        yield (AIMessageChunk(content="Final Answer: visible"), {"langgraph_node": "agent"})
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("test filtering")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    combined = "".join(c.choices[0].delta.content for c in chunks if c.choices and c.choices[0].delta.content)
+    assert "should be ignored" not in combined
+    assert "visible" in combined
+
+
+async def test_stream_fn_filters_tool_call_chunks(stream_fn_factory):
+    """_stream_fn skips AIMessageChunk events that carry tool_call_chunks."""
+    from langchain_core.messages import AIMessageChunk
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        tool_chunk = AIMessageChunk(content="", tool_call_chunks=[{"name": "Tool A", "args": "", "id": "1"}])
+        yield (tool_chunk, {"langgraph_node": "agent"})
+        yield (AIMessageChunk(content="Final Answer: clean answer"), {"langgraph_node": "agent"})
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("call a tool")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    combined = "".join(c.choices[0].delta.content for c in chunks if c.choices and c.choices[0].delta.content)
+    assert "clean answer" in combined
+
+
+async def test_stream_fn_graph_recursion_error(stream_fn_factory):
+    """_stream_fn yields an error chunk when the graph hits its recursion limit."""
+    from langgraph.errors import GraphRecursionError
+
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        raise GraphRecursionError("recursion limit exceeded")
+        yield  # make it an async generator
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("trigger recursion")
+    chunks = [chunk async for chunk in stream_fn(request)]
+
+    assert len(chunks) == 1
+    content = chunks[0].choices[0].delta.content
+    assert "react agent could not produce a final answer" in content.lower()
+
+
+async def test_stream_fn_propagates_generic_exception(stream_fn_factory):
+    """_stream_fn re-raises non-recursion exceptions."""
+    from nat.data_models.api_server import ChatRequest
+
+    async def mock_astream(state, config=None, stream_mode=None):
+        raise RuntimeError("unexpected streaming error")
+        yield  # make it an async generator
+
+    stream_fn = await stream_fn_factory(mock_astream)
+
+    request = ChatRequest.from_string("trigger error")
+    with pytest.raises(RuntimeError, match="unexpected streaming error"):
+        async for _ in stream_fn(request):
+            pass

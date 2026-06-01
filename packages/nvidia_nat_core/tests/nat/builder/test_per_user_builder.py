@@ -1088,7 +1088,7 @@ async def test_per_user_builder_function_groups_expose_functions():
             # Function group should be built
             assert "expose_fg" in per_user_builder._per_user_function_groups
 
-            # Exposed function should be accessible with prefixed name (group_name.function_name)
+            # Exposed function should be accessible with prefixed name (group_name__function_name)
             sep = FunctionGroup.SEPARATOR
             assert f"expose_fg{sep}exposed_tool" in per_user_builder._per_user_functions
 

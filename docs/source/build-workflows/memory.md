@@ -28,6 +28,10 @@ The NeMo Agent Toolkit includes four memory module providers, all of which are a
 * [Redis](https://redis.io/) which is provided by the [`nvidia-nat-redis`](https://pypi.org/project/nvidia-nat-redis/) plugin.
 * [Zep](https://www.getzep.com/) which is provided by the [`nvidia-nat-zep-cloud`](https://pypi.org/project/nvidia-nat-zep-cloud/) plugin ([Zep NVIDIA NeMo documentation](https://help.getzep.com/nvidia-nemo)).
 
+## Third-Party Memory Plugins
+Additional memory backends are available as community plugins:
+* [Synap](https://maximem.ai) — managed memory layer with user and customer scoping, provided by the [`maximem-synap-nemo-agent-toolkit`](https://pypi.org/project/maximem-synap-nemo-agent-toolkit/) plugin. See `examples/memory/synap/` for usage. ([Open source integration package](https://github.com/maximem-ai/maximem_synap_sdk/tree/main/packages/integrations))
+
 ## Automatic Memory Wrapper Agent
 
 The NeMo Agent Toolkit provides an [`auto_memory_agent`](../components/agents/auto-memory-wrapper/index.md) wrapper that adds automatic memory capture and retrieval to any agent without requiring the LLM to invoke memory tools explicitly.
@@ -88,9 +92,12 @@ The automatic memory wrapper agent supports several configuration parameters:
 ### Multi-Tenant Memory Isolation
 
 User ID is automatically extracted at runtime for memory isolation via:
-1. `user_manager.get_id()` - For production with custom auth middleware (recommended)
+1. `SessionManager.session(user_id=...)` - For production with custom auth middleware (recommended)
 2. `X-User-ID` HTTP header - For testing without middleware
-3. `"default_user"` - Fallback for local development
+3. Console front end `user_id` - Defaults to `"nat_run_user_id"` for `nat run`
+
+Conversation-aware memory backends can also use `conversation_id` to isolate separate conversations for the same user.
+For `nat run`, pass `--conversation_id` when testing independent memory conversations from the CLI.
 
 For detailed configuration and usage examples, refer to the `examples/agents/auto_memory_wrapper/README.md` guide.
 

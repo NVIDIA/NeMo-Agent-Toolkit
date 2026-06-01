@@ -56,11 +56,15 @@ dependencies = [
   # version when adding a new package. If unsure, default to using `~=` instead of `==`. Does not apply to nvidia-nat packages.
   # Keep sorted!!!
   "nvidia-nat-core == {version}",
+  # Explicit pre-release transitive dependency required by semantic-kernel >=1.39.4.
+  "azure-ai-agents>=1.2.0b3",
   # Avoids an install error `No such file or directory: 'zig'` introduced with version 0.3.6, this is a transitive
   # dependency, remove the dependency when the issue is resolved in a future release.
   "ruamel-yaml-clibz==0.3.5",
-  "semantic-kernel~=1.36",
+  "semantic-kernel>=1.39.4,<2.0.0",
   # transitive dependencies
+  "azure-identity>=1.14,<2.0.0",
+  "pyopenssl>=26.0.0,<27.0.0",
   "werkzeug>=3.1.5",
 ]
 

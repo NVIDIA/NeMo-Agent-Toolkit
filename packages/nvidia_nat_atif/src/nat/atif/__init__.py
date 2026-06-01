@@ -28,6 +28,7 @@ from nat.atif.agent import Agent
 from nat.atif.atif_step_extra import AtifAncestry
 from nat.atif.atif_step_extra import AtifInvocationInfo
 from nat.atif.atif_step_extra import AtifStepExtra
+from nat.atif.atif_step_extra import AtifToolCallExtra
 from nat.atif.content import ContentPart
 from nat.atif.content import ImageSource
 from nat.atif.final_metrics import FinalMetrics
@@ -70,15 +71,16 @@ __all__ = [
     "ATIFToolCall",
     "ATIFTrajectory",
     "Agent",
+    "AtifAncestry",
+    "AtifInvocationInfo",
+    "AtifStepExtra",
+    "AtifToolCallExtra",
     "ContentPart",
     "FinalMetrics",
     "ImageSource",
     "Metrics",
     "Observation",
     "ObservationResult",
-    "AtifAncestry",
-    "AtifInvocationInfo",
-    "AtifStepExtra",
     "Step",
     "SubagentTrajectoryRef",
     "ToolCall",

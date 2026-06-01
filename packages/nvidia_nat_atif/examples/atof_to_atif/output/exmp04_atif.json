@@ -1,0 +1,103 @@
+{
+  "schema_version": "ATIF-v1.7",
+  "session_id": "agent-004",
+  "agent": {
+    "name": "claude_summarizer",
+    "version": "1.0.0",
+    "model_name": "claude-3-5-sonnet"
+  },
+  "steps": [
+    {
+      "step_id": 1,
+      "timestamp": "2026-01-04T00:00:01Z",
+      "source": "user",
+      "message": "Summarize the document at /docs/intro.md"
+    },
+    {
+      "step_id": 2,
+      "timestamp": "2026-01-04T00:00:02Z",
+      "source": "agent",
+      "model_name": "claude-3-5-sonnet",
+      "message": "Let me read that file for you.",
+      "tool_calls": [
+        {
+          "tool_call_id": "toolu_01abc",
+          "function_name": "read_file",
+          "arguments": {
+            "path": "/docs/intro.md"
+          },
+          "extra": {
+            "ancestry": {
+              "function_id": "tool-004",
+              "function_name": "read_file",
+              "parent_id": "agent-004",
+              "parent_name": "claude_summarizer"
+            },
+            "invocation": {
+              "invocation_id": "toolu_01abc",
+              "framework": "nat",
+              "status": "completed",
+              "start_timestamp": 1767484803.0,
+              "end_timestamp": 1767484804.0
+            }
+          }
+        }
+      ],
+      "observation": {
+        "results": [
+          {
+            "source_call_id": "toolu_01abc",
+            "content": "Title: Intro\nThis project is an end-to-end demo."
+          }
+        ]
+      },
+      "extra": {
+        "ancestry": {
+          "function_id": "llm-004-1",
+          "function_name": "claude-3-5-sonnet",
+          "parent_id": "agent-004",
+          "parent_name": "claude_summarizer"
+        },
+        "invocation": {
+          "invocation_id": "llm-004-1",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767484801.0,
+          "end_timestamp": 1767484802.0
+        },
+        "data_schema": {
+          "name": "anthropic/messages",
+          "version": "1"
+        }
+      },
+      "llm_call_count": 1
+    },
+    {
+      "step_id": 3,
+      "timestamp": "2026-01-04T00:00:06Z",
+      "source": "agent",
+      "model_name": "claude-3-5-sonnet",
+      "message": "The document is the introduction page for an end-to-end demo project.",
+      "extra": {
+        "ancestry": {
+          "function_id": "llm-004-2",
+          "function_name": "claude-3-5-sonnet",
+          "parent_id": "agent-004",
+          "parent_name": "claude_summarizer"
+        },
+        "invocation": {
+          "invocation_id": "llm-004-2",
+          "framework": "nat",
+          "status": "completed",
+          "start_timestamp": 1767484805.0,
+          "end_timestamp": 1767484806.0
+        },
+        "data_schema": {
+          "name": "anthropic/messages",
+          "version": "1"
+        }
+      },
+      "llm_call_count": 1
+    }
+  ]
+}

@@ -18,6 +18,7 @@ import pytest
 from nat.data_models.evaluator import EvalInput
 from nat.data_models.evaluator import EvalInputItem
 from nat.plugins.eval.data_models.evaluator_io import EvalOutputItem
+from nat.plugins.eval.evaluator import base_evaluator
 from nat.plugins.eval.evaluator.base_evaluator import BaseEvaluator
 
 
@@ -95,6 +96,18 @@ async def test_similarity_evaluator_handles_empty_input():
     output = await evaluator.evaluate(empty_input)
     assert output.eval_output_items == []
     assert output.average_score is None
+
+
+async def test_similarity_evaluator_runs_without_tqdm(monkeypatch, caplog, mock_input_items):
+    monkeypatch.setattr(base_evaluator, "_tqdm", None)
+
+    caplog.set_level("INFO", logger=base_evaluator.__name__)
+    evaluator = MockSimilarityEvaluator()
+    output = await evaluator.evaluate(mock_input_items)
+
+    assert len(output.eval_output_items) == 2
+    assert output.average_score is not None
+    assert "Skipping evaluator progress bar because `tqdm` is not installed." in caplog.text
 
 
 async def test_evaluator_handles_item_failure(mock_input_items):

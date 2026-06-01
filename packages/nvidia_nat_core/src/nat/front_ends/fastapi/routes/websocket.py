@@ -87,8 +87,8 @@ async def add_websocket_routes(
 ):
     """Add websocket route for an endpoint."""
     if endpoint.websocket_path:
-        app.add_websocket_route(endpoint.websocket_path,
-                                websocket_endpoint(
-                                    worker=worker,
-                                    session_manager=session_manager,
-                                ))
+        app.add_api_websocket_route(endpoint.websocket_path,
+                                    websocket_endpoint(
+                                        worker=worker,
+                                        session_manager=session_manager,
+                                    ))

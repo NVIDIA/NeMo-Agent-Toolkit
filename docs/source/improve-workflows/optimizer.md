@@ -196,7 +196,7 @@ Here's how you can define optimizable fields in your workflow's data models:
 ```python
 from pydantic import BaseModel
 
-from nat.data_models.function import FunctionBaseConfig
+from nat.plugin_api import FunctionBaseConfig
 from nat.data_models.optimizable import OptimizableField, SearchSpace, OptimizableMixin
 
 class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_image_agent_config"):
@@ -209,8 +209,8 @@ class SomeImageAgentConfig(FunctionBaseConfig, OptimizableMixin, name="some_imag
         space=SearchSpace(low=0.0, high=1.0)
     )
     model_name: str = OptimizableField(
-        default="gpt-3.5-turbo",
-        space=SearchSpace(values=["gpt-3.5-turbo", "gpt-4", "claude-2"]),
+        default="gpt-5.4-mini",
+        space=SearchSpace(values=["gpt-5.4-mini", "gpt-4", "claude-2"]),
         description="The name of the model to use."
     )
     # Option A: Start from a prompt different from the default (set prompt in space)

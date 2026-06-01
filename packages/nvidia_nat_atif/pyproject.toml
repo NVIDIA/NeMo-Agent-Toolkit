@@ -58,7 +58,28 @@ dependencies = [
   "pydantic~=2.11",
 ]
 
+[tool.setuptools_dynamic_dependencies.optional-dependencies]
+# Optional extras for nvidia-nat-atif. The base package ships only the ATIF
+# Pydantic models (consumed by nvidia-nat-core, nvidia-nat-eval, and the rest
+# of the toolkit). The ATOF→ATIF converter and ATOF wire-format tools live
+# under nat.atof.* and require jsonschema for data_schema validation; that
+# dependency is gated behind the [full] extra so transitive consumers
+# (nvidia-nat-core, etc.) don't pull it in unnecessarily.
+#
+# Install via:
+#   uv pip install "nvidia-nat-atif[full]"
+#   pip install "nvidia-nat-atif[full]"
+full = [
+  "jsonschema>=4.0",
+]
+test = [
+  "nvidia-nat-test == {version}",
+]
+
 [tool.uv]
 build-constraint-dependencies = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependencies>=1.0.0"]
 managed = true
 config-settings = { editable_mode = "compat" }
+
+[tool.uv.sources]
+nvidia-nat-test = { path = "../nvidia_nat_test", editable = true }

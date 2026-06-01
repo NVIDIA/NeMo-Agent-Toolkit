@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "llms": [
+    {
+      "model": "meta/llama-3.1-70b-instruct",
+      "num_configs": 51
+    },
+    {
+      "model": "nvidia/nemotron-3-nano-30b-a3b",
+      "num_configs": 42
+    },
+    {
+      "model": "meta/llama-3.3-70b-instruct",
+      "num_configs": 26
+    },
+    {
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "num_configs": 16
+    },
+    {
+      "model": "meta/llama-3.1-8b-instruct",
+      "num_configs": 5
+    },
+    {
+      "model": "nvidia/llama-3.3-nemotron-super-49b-v1",
+      "num_configs": 4
+    },
+    {
+      "model": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
+      "num_configs": 2
+    },
+    {
+      "model": "nvidia/nvidia-nemotron-nano-9b-v2",
+      "num_configs": 1
+    },
+    {
+      "model": "nvidia/llama-3.1-nemotron-safety-guard-8b-v3",
+      "num_configs": 1
+    },
+    {
+      "model": "mistralai/mistral-small-4-119b-2603",
+      "num_configs": 1
+    },
+    {
+      "model": "mistralai/mistral-large-3-675b-instruct-2512",
+      "num_configs": 1
+    }
+  ],
+  "embedders": [
+    {
+      "model": "nvidia/nv-embedqa-e5-v5",
+      "num_configs": 23
+    },
+    {
+      "model": "nvidia/llama-nemotron-embed-1b-v2",
+      "num_configs": 1
+    }
+  ]
+}

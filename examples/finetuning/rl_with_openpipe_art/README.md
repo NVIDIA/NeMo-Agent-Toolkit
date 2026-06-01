@@ -61,18 +61,33 @@ The model learns to play against a **random opponent**, receiving rewards based 
 
 3. **OpenPipe ART** installed in a **separate virtual environment**:
 
-   OpenPipe ART has specific dependency requirements that may conflict with NeMo Agent Toolkit. We recommend installing it in an isolated environment:
+   OpenPipe ART has specific dependency requirements that conflict with NeMo Agent Toolkit. It must live in its own environment:
 
    ```bash
-   # Create a separate virtual environment for ART
-   uv venv art-env --python 3.13
+   # 1) Python 3.12 is required. The 0.9.2 vLLM ART needs pulls in
+   #    outlines-core==0.1.26, which has no Py3.13 wheel and requires Rust to build.
+   uv venv art-env --python 3.12
    source art-env/bin/activate
    export HF_TOKEN=<your_huggingface_token>
-   # Install OpenPipe ART
-   uv pip install --no-cache 'openpipe-art[backend]==0.4.11'
 
-   # Verify installation
+   # 2) Install ART backend + pin vLLM exactly to 0.9.2.
+   #    The 0.4.11 extra allows up to vllm 0.10.0, but 0.10.0 hardens the
+   #    expandable_segments check and breaks the unsloth path.
+   uv pip install --no-cache 'openpipe-art[backend]==0.4.11' 'vllm==0.9.2'
+
+   # 3) Force gql >= 4.0.0. weave 0.52.39 (pulled transitively) imports
+   #    TransportConnectionFailed which only exists in gql 4+. Without this,
+   #    `art --help` fails with an ImportError before anything runs.
+   uv pip install --no-cache 'gql>=4.0.0'
+
+   # 4) Verify installation
    art --help
+   ```
+
+   If you previously created the `art-env` virtual environment on a different Python (e.g. 3.13), clear Triton's content-hashed but ABI-unaware kernel cache or you will hit `SystemError: PY_SSIZE_T_CLEAN macro must be defined for '#' formats` at first model load:
+
+   ```bash
+   rm -rf ~/.triton/cache /tmp/torchinductor_* ~/.cache/torch_inductor
    ```
 
    For detailed installation instructions, see the [OpenPipe ART Getting Started Guide](https://art.openpipe.ai/getting-started/about).
@@ -221,8 +236,6 @@ Once the evaluation completes, stop the vLLM server (`Ctrl+C`) to free GPU memor
 
 The ART server handles both inference and training. It runs vLLM for serving the model and Unsloth for GRPO weight updates using LoRA adapters by default.
 
-> **Note**: The default configuration uses **Unsloth LoRA finetuning**. Full-weight training requires additional TorchTune configuration through the `torchtune_args` field in the trainer adapter backend config. Refer to the [OpenPipe ART documentation](https://art.openpipe.ai/) for details.
-
 In your **ART virtual environment**:
 
 ```bash
@@ -230,11 +243,27 @@ In your **ART virtual environment**:
 source art-env/bin/activate
 export HF_TOKEN=<your_huggingface_token>
 
+# Make sure no legacy workarounds are inherited from earlier attempts.
+unset IMPORT_PEFT IMPORT_UNSLOTH
+
+# Prevent unsloth from setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True at
+# import time. vLLM 0.9+ uses torch.cuda.MemPool for model loading and refuses to
+# coexist with expandable_segments; without this you'll see
+# `RuntimeError: torch.cuda.MemPool doesn't currently support expandable_segments`
+# from inside _prepare_backend_for_training.
+export UNSLOTH_VLLM_STANDBY=1
+
+# When the training config enables sleep_mode, ART forces IMPORT_PEFT=1 on its
+# spawned model service, which then runs `os.environ["PYTORCH_CUDA_ALLOC_CONF"]`
+# without a default. The env var must exist (even as empty) or the child raises
+# KeyError before vLLM is even reached.
+export PYTORCH_CUDA_ALLOC_CONF=
+
 # Start the ART server
 art --host 0.0.0.0 --port 7623
 ```
 
-> **Note**: The ART server listens on port `7623` for training commands and starts vLLM internally on port `8000` for inference.
+> **Note**: The ART server listens on port `7623` for training commands and starts vLLM internally on port `8000` for inference. If you connect to a remote ART host, forward **both** ports (e.g. `ssh -L 7623:127.0.0.1:7623 -L 8000:127.0.0.1:8000 …`); the NeMo Agent Toolkit-side health check and rollouts target `:8000` directly.
 
 Wait for the server to initialize. You should see output indicating:
 - Training server ready
@@ -661,13 +690,46 @@ finetuning:
 
 #### "Failed to connect to ART backend"
 
-**Cause**: ART server not running or wrong port.
+**Cause**: ART server not running, wrong port, or vLLM (`:8000`) unreachable from the NeMo Agent Toolkit side.
 
 **Solution**:
 ```bash
-# Check if ART server is running
-curl http://localhost:7623/health
+# Confirm ART is up
+curl http://localhost:7623/healthcheck
+
+# Confirm vLLM (started by ART) is up — should respond, even with 401
+curl http://localhost:8000/v1/models
 ```
+
+If ART is running on a remote host, make sure your SSH tunnel forwards **both** ports: `ssh -L 7623:127.0.0.1:7623 -L 8000:127.0.0.1:8000 …`. The trainer adapter health check and all rollouts hit `:8000` directly.
+
+#### `Server error '500 Internal Server Error' for url '…/_prepare_backend_for_training'`
+
+**Cause**: The 500 always comes from the ART server's own vLLM/Unsloth startup. The wire-level message is generic — you have to inspect the ART server's stderr to see the real exception. Two very common shapes:
+
+1. `RuntimeError: torch.cuda.MemPool doesn't currently support expandable_segments.` — Unsloth sets `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` at import time and vLLM 0.9+ refuses to coexist with it. Restart `art` with `UNSLOTH_VLLM_STANDBY=1` and `PYTORCH_CUDA_ALLOC_CONF=` exported (see Step 2).
+2. `KeyError: 'PYTORCH_CUDA_ALLOC_CONF'` — ART's spawned model-service runs `os.environ["PYTORCH_CUDA_ALLOC_CONF"]` without a default. Export the key (empty value is fine) before launching `art` (see Step 2).
+
+#### `BadRequestError: Cannot request more than 0 logprobs`
+
+**Cause**: The trajectory builder needs token logprobs on assistant messages — without them it silently drops every trajectory and you'll see `Built 0 trajectories across 0 examples` epoch after epoch. vLLM defaults `max_logprobs=0`, which makes any client-side request for logprobs a 400.
+
+**Solution**: Make sure the LLM config requests logprobs **and** the ART backend launches vLLM with `max_logprobs >= 1`. Both are already wired up in `configs/config.yml`:
+
+```yaml
+llms:
+  openpipe_llm:
+    logprobs: true
+    top_logprobs: 1
+
+trainer_adapters:
+  openpipe_trainer_adapter:
+    backend:
+      engine_args:
+        max_logprobs: 5
+```
+
+If you change `engine_args` after the ART server has already started vLLM, you must restart the ART server — vLLM caches its config per registered model and won't pick up the new value otherwise.
 
 #### "CUDA out of memory"
 

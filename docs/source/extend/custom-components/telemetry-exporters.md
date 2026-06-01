@@ -69,6 +69,7 @@ nat info components -t tracing
 
 Examples of existing telemetry exporters include:
 
+- **Arize AX**: Exports traces to Arize AX using OTLP (``arize_ax``)
 - **File**: Exports traces to local files
 - **Phoenix**: Exports traces to Arize Phoenix for visualization
 - **Weave**: Exports traces to Weights & Biases Weave
@@ -84,12 +85,20 @@ Examples of existing telemetry exporters include:
 
 Want to get started quickly? Here's a minimal working example that creates a console exporter to print traces to the terminal:
 
+:::{important}
+Telemetry exporter registration and configuration are available from the public `nat.plugin_api` facade. Exporter
+implementation types such as `RawExporter`, `IntermediateStep`, span exporters, and processors are observability
+subsystem APIs. They are documented here for telemetry exporter authors, but they are provisional and may evolve before
+being promoted to the stable public plugin API. Telemetry plugins can observe workflow data and should only be installed
+from trusted sources.
+:::
+
 ```python
 from pydantic import Field
 
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_telemetry_exporter
-from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.plugin_api import Builder
+from nat.plugin_api import TelemetryExporterBaseConfig
+from nat.plugin_api import register_telemetry_exporter
 from nat.observability.exporter.raw_exporter import RawExporter
 from nat.data_models.intermediate_step import IntermediateStep
 
@@ -245,7 +254,7 @@ Specialized for OpenTelemetry-compatible services with many pre-built options:
 - **Use case**: OTLP-compatible backends, standard observability tools
 - **Base class**: `OtelSpanExporter`
 - **Data flow**: `IntermediateStep` → `Span` → [Processing Pipeline] → `OtelSpan` → Export
-- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Phoenix, RagaAI, Weave, DBNL
+- **Pre-built integrations**: Langfuse, LangSmith, OpenTelemetry Collector, Patronus, Galileo, Arize AX, Phoenix, RagaAI, Weave, DBNL
 
 #### Advanced Custom Exporters
 
@@ -270,6 +279,7 @@ Before creating a custom exporter, check if your observability service is alread
 
 | Service | Type | Installation | Configuration |
 |---------|------|-------------|---------------|
+| **Arize AX** | `arize_ax` | `pip install "nvidia-nat[opentelemetry]"` | Arize space ID, API key, project name, optional US or EU endpoint and HTTP or gRPC |
 | **DBNL** | `dbnl` | `pip install "nvidia-nat[opentelemetry]"` | API URL + API token + project id |
 | **File** | `file` | `pip install nvidia-nat` | local file or directory |
 | **Langfuse** | `langfuse` | `pip install "nvidia-nat[opentelemetry]"` | endpoint + API keys |
@@ -295,6 +305,23 @@ general:
         secret_key: ${LANGFUSE_SECRET_KEY}
 ```
 
+[Arize AX](https://arize.com/docs/ax/integrations/opentelemetry/opentelemetry-arize-otel) uses the same OTLP metadata as the ``arize-otel`` package (``authorization``, ``arize-space-id``, and related keys). Example:
+
+```yaml
+general:
+  telemetry:
+    tracing:
+      arize_ax:
+        _type: arize_ax
+        project: my-nat-workflow
+        space_id: ${ARIZE_SPACE_ID}
+        api_key: ${ARIZE_API_KEY}
+        protocol: grpc
+        use_eu_region: false
+```
+
+You can omit ``space_id``, ``api_key``, or ``project`` when the ``ARIZE_SPACE_ID``, ``ARIZE_API_KEY``, and ``ARIZE_PROJECT_NAME`` environment variables are set. Override ``endpoint`` to use a custom OTLP URL; otherwise the default US or EU collector is selected from ``protocol`` and ``use_eu_region``.
+
 :::{tip}
 **Most services use OTLP**. If your service supports OpenTelemetry Protocol (OTLP), you can often subclass `OtelSpanExporter` or use the generic `otelcollector` type with appropriate headers.
 :::
@@ -310,7 +337,7 @@ Create a configuration class that inherits from `TelemetryExporterBaseConfig`:
 ```python
 from pydantic import Field
 
-from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.plugin_api import TelemetryExporterBaseConfig
 
 class CustomTelemetryExporter(TelemetryExporterBaseConfig, name="custom"):
     """A simple custom telemetry exporter for sending traces to a custom service."""
@@ -327,6 +354,12 @@ Start with the fields you need and add more as your integration becomes more sop
 ### Step 2: Implement the Exporter Class
 
 Choose the appropriate base class based on your needs:
+
+:::{note}
+The exporter base classes and telemetry event models used in this section come from the observability subsystem, not
+from `nat.plugin_api`. Treat them as subsystem-specific authoring APIs until the telemetry exporter implementation
+contract is promoted deliberately.
+:::
 
 #### Raw Exporter (for simple trace exports)
 
@@ -450,8 +483,8 @@ Create a registration function using the `@register_telemetry_exporter` decorato
 ```python
 import logging
 
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_telemetry_exporter
+from nat.plugin_api import Builder
+from nat.plugin_api import register_telemetry_exporter
 
 logger = logging.getLogger(__name__)
 
@@ -518,9 +551,9 @@ class MyCustomExporter(SpanExporter[Span, dict]):
 ```python
 from pydantic import Field
 
-from nat.cli.register_workflow import register_telemetry_exporter
-from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
-from nat.builder.builder import Builder
+from nat.plugin_api import Builder
+from nat.plugin_api import TelemetryExporterBaseConfig
+from nat.plugin_api import register_telemetry_exporter
 
 # Configuration class can be in the same file as registration
 class MyTelemetryExporter(TelemetryExporterBaseConfig, name="my_exporter"):
@@ -1404,9 +1437,9 @@ Here's a complete example of a custom telemetry exporter:
 import logging
 from pydantic import Field
 import aiohttp
-from nat.builder.builder import Builder
-from nat.cli.register_workflow import register_telemetry_exporter
-from nat.data_models.telemetry_exporter import TelemetryExporterBaseConfig
+from nat.plugin_api import Builder
+from nat.plugin_api import TelemetryExporterBaseConfig
+from nat.plugin_api import register_telemetry_exporter
 from nat.observability.exporter.span_exporter import SpanExporter
 from nat.observability.exporter.base_exporter import IsolatedAttribute
 from nat.data_models.span import Span

@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 from uuid import uuid4
 
+import pandas as pd
 import yaml
 from pydantic import BaseModel
 from pydantic import SecretStr
@@ -38,7 +39,6 @@ from nat.plugins.eval.evaluator.atif_evaluator import AtifEvaluator
 from nat.plugins.eval.evaluator.atif_evaluator import LegacyEvaluator
 from nat.plugins.eval.runtime.eval_harness import EvaluationHarness
 from nat.plugins.eval.runtime.llm_validator import validate_llm_endpoints
-from nat.plugins.eval.utils.output_uploader import OutputUploader
 
 FULL_EVAL_INSTALL_HINT = ("Full workflow evaluation requires optional dependencies that are not installed. "
                           "Install with: pip install \"nvidia-nat[eval]\" "
@@ -47,6 +47,11 @@ FULL_EVAL_INSTALL_HINT = ("Full workflow evaluation requires optional dependenci
 
 def _raise_full_eval_dependency_error(error: Exception):
     raise ModuleNotFoundError(FULL_EVAL_INSTALL_HINT) from error
+
+
+def _get_output_uploader_cls():
+    from nat.plugins.eval.utils.output_uploader import OutputUploader
+    return OutputUploader
 
 
 try:
@@ -305,7 +310,11 @@ class EvaluationRun:
 
         # if self.config.skip_complete is set skip eval_input_items with a non-empty output_obj
         if self.config.skip_completed_entries:
-            eval_input_items = [item for item in self.eval_input.eval_input_items if not item.output_obj]
+            eval_input_items = []
+            for item in self.eval_input.eval_input_items:
+                if not item.output_obj or pd.isnull(item.output_obj):
+                    eval_input_items.append(item)
+
             if not eval_input_items:
                 logger.warning("All items have a non-empty output. Skipping workflow pass altogether.")
                 return
@@ -890,7 +899,8 @@ class EvaluationRun:
 
         # Run custom scripts and upload evaluation outputs to S3
         if self.eval_config.general.output:
-            output_uploader = OutputUploader(self.eval_config.general.output, job_id=job_id)
+            output_uploader_cls = _get_output_uploader_cls()
+            output_uploader = output_uploader_cls(self.eval_config.general.output, job_id=job_id)
             output_uploader.run_custom_scripts()
             await output_uploader.upload_directory()
 

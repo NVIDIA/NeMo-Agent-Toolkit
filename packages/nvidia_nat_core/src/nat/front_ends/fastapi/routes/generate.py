@@ -24,6 +24,7 @@ from fastapi import Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
+from nat.data_models.interactive_http import ExecutionAcceptedResponse
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_atif_as_str
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_full_as_str
 from nat.runtime.session import SessionManager
@@ -31,6 +32,7 @@ from nat.runtime.session import SessionManager
 from .async_generation import add_async_generation_routes
 from .common_utils import RESPONSE_500
 from .common_utils import _build_interactive_runner
+from .common_utils import _interactive_response_model
 from .common_utils import _with_annotation
 from .common_utils import get_single_endpoint
 from .common_utils import get_streaming_endpoint
@@ -179,8 +181,12 @@ async def add_generate_route(
                 path=endpoint_path,
                 endpoint=route_handler,
                 methods=[endpoint_method],
-                response_model=response_type,
-                responses={500: RESPONSE_500},
+                response_model=_interactive_response_model(response_type, enable_interactive),
+                responses={
+                    500: RESPONSE_500, 202: {
+                        "model": ExecutionAcceptedResponse
+                    }
+                },
             )
         case _GenerateEndpointType.STREAMING:
             if endpoint_method == _GenerateEndpointMethod.GET:

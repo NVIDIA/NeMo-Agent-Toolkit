@@ -45,6 +45,9 @@ class ZepEditor(MemoryEditor):
         """
         self._client = zep_client
 
+    def _get_thread_id(self, user_id: str) -> str:
+        return Context.get().conversation_id or "default_zep_thread"
+
     async def _ensure_user_exists(self, user_id: str) -> None:
         """
         Ensure a user exists in Zep v3, creating if necessary.
@@ -113,12 +116,8 @@ class ZepEditor(MemoryEditor):
             conversation = memory_item.conversation
             user_id = memory_item.user_id or "default_user"  # Validate user_id
 
-            # Get thread_id from NAT context (unique per UI conversation)
-            thread_id = Context.get().conversation_id
-
-            # Fallback to default thread ID if no conversation_id available
-            if not thread_id:
-                thread_id = "default_zep_thread"
+            # Get thread_id from NAT context (unique per UI conversation), with a per-user fallback.
+            thread_id = self._get_thread_id(user_id)
 
             messages = []
 
@@ -172,17 +171,17 @@ class ZepEditor(MemoryEditor):
 
         await asyncio.gather(*coroutines)
 
-    async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:  # noqa: ARG002
+    async def search(self, query: str, top_k: int = 5, **kwargs) -> list[MemoryItem]:
         """
-        Retrieve memory from Zep v3 using the high-level get_user_context API.
+        Retrieve memory from Zep v3 using graph search, falling back to the high-level get_user_context API.
         Uses conversation_id from NAT context as thread_id for multi-thread support.
 
-        Zep returns pre-formatted memory optimized for LLM consumption, including
-        relevant facts, timestamps, and structured information from its knowledge graph.
+        Zep graph search returns query-matched facts from the user's graph. If there are no direct graph-search
+        results, this falls back to Zep's pre-formatted context optimized for LLM consumption.
 
         Args:
-            query (str): The query string (not used by Zep's high-level API, included for interface compatibility).
-            top_k (int): Maximum number of items to return (not used by Zep's context API).
+            query (str): The query string to search for.
+            top_k (int): Maximum number of facts to retrieve.
             kwargs: Zep-specific keyword arguments.
 
                 - user_id (str, required for response construction): Used only to construct the
@@ -200,17 +199,43 @@ class ZepEditor(MemoryEditor):
         user_id = kwargs.pop("user_id")
         mode = kwargs.pop("mode", "basic")  # Get mode, default to "basic" for fast retrieval
 
-        # Get thread_id from NAT context
-        thread_id = Context.get().conversation_id
-
-        # Fallback to default thread ID if no conversation_id available
-        if not thread_id:
-            thread_id = "default_zep_thread"
+        # Get thread_id from NAT context, with a per-user fallback.
+        thread_id = self._get_thread_id(user_id)
 
         try:
+            graph_response = await self._client.graph.search(query=query, user_id=user_id, limit=top_k, **kwargs)
+            graph_facts = []
+
+            for edge in graph_response.edges or []:
+                if edge.fact:
+                    graph_facts.append(edge.fact)
+
+            for episode in graph_response.episodes or []:
+                if episode.content:
+                    graph_facts.append(episode.content)
+
+            if graph_facts:
+                return [
+                    MemoryItem(conversation=[],
+                               user_id=user_id,
+                               memory="\n".join(graph_facts),
+                               metadata={
+                                   "source": "graph_search", "thread_id": thread_id
+                               })
+                ]
+
+            context_string = ""
             # Use Zep v3 thread.get_user_context - returns pre-formatted context
-            memory_response = await self._client.thread.get_user_context(thread_id=thread_id, mode=mode)
-            context_string = memory_response.context or ""
+            try:
+                memory_response = await self._client.thread.get_user_context(thread_id=thread_id, mode=mode)
+                context_string = memory_response.context or ""
+            except ApiError as e:
+                if e.status_code == 404:
+                    logger.debug("Zep thread not found - 404 (thread_id=%s), returning empty context", thread_id)
+                else:
+                    logger.error("Failed fetching Zep thread context (thread_id=%s): %s", thread_id,
+                                 str(e))  # noqa: TRY400
+                    raise
 
             # Return as a single MemoryItem with the formatted context
             if context_string:
@@ -228,9 +253,6 @@ class ZepEditor(MemoryEditor):
         except NotFoundError:
             # Thread doesn't exist or no context available
             return []
-        except ApiError as e:
-            logger.error("get_user_context failed (thread_id=%s): %s", thread_id, str(e))  # noqa: TRY400
-            raise
 
     async def remove_items(self, **kwargs) -> None:
         """

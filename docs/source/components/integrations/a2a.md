@@ -70,7 +70,6 @@ A service that exposes workflows as A2A agents. The `nat a2a serve` command publ
 The following examples demonstrate A2A integration:
 
 - **Math Assistant A2A** (`examples/A2A/math_assistant_a2a/`) - A2A communication with hybrid [tool](../../build-workflows/functions-and-function-groups/functions.md#agents-and-tools) composition (A2A calculator + MCP time + local logic)
-- **Currency Agent A2A** (`examples/A2A/currency_agent_a2a/`) - Connecting to external third-party A2A services (LangGraph-based currency agent)
 
 ## Documentation
 
