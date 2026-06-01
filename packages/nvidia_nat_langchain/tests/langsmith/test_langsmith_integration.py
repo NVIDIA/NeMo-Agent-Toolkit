@@ -36,6 +36,27 @@ import time
 import pytest
 
 
+async def _wait_for_runs(langsmith_client, project_name: str, expected_count: int, timeout_s: float = 15.0):
+    runs = []
+    deadline = time.time() + timeout_s
+    while len(runs) < expected_count and time.time() < deadline:
+        runs = list(langsmith_client.list_runs(project_name=project_name))
+        if len(runs) < expected_count:
+            await asyncio.sleep(0.5)
+    return runs
+
+
+async def _wait_for_feedback(langsmith_client, run_ids, timeout_s: float = 15.0):
+    feedback = []
+    deadline = time.time() + timeout_s
+    while not feedback and time.time() < deadline:
+        for run_id in run_ids:
+            feedback.extend(langsmith_client.list_feedback(run_ids=[run_id]))
+        if not feedback:
+            await asyncio.sleep(0.5)
+    return feedback
+
+
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("langsmith_api_key")
@@ -64,12 +85,7 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
     langsmith_client.create_run('r2', inputs={}, run_type='chain', project_name=langsmith_project_name)
 
     # Wait for runs to appear in LangSmith
-    runs = []
-    deadline = time.time() + 5
-    while len(runs) < 2 and time.time() < deadline:
-        runs = list(langsmith_client.list_runs(project_name=langsmith_project_name, ))
-        if len(runs) < 2:
-            await asyncio.sleep(0.1)
+    runs = await _wait_for_runs(langsmith_client, langsmith_project_name, expected_count=2, timeout_s=5)
 
     assert len(runs) >= 2, (f"Expected >= 2 per-item runs, got {len(runs)}")
     run_map = {run.name: run for run in runs}
@@ -151,14 +167,21 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
 @pytest.mark.slow
 @pytest.mark.integration
 @pytest.mark.usefixtures("langsmith_api_key")
-async def test_optimizer_callback_creates_trial_runs_and_summary(
+async def test_optimizer_callback_links_trial_runs_and_feedback(
     langsmith_client,
     langsmith_project_name: str,
+    monkeypatch,
 ):
-    """Simulate optimizer trials: trial runs + study summary + feedback."""
+    """Simulate optimizer OTEL runs: dataset + per-trial runs + feedback."""
+    from nat.eval.eval_callbacks import EvalResult
+    from nat.eval.eval_callbacks import EvalResultItem
+    from nat.eval.evaluator.evaluator_model import EvalInputItem
+    from nat.plugins.langchain.langsmith import langsmith_evaluation_callback
     from nat.plugins.langchain.langsmith.langsmith_optimization_callback import LangSmithOptimizationCallback
     from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
     from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
+
+    monkeypatch.setattr(langsmith_evaluation_callback, "_LS_RETRY_DELAY_S", 0.5)
 
     cb = LangSmithOptimizationCallback(
         project=langsmith_project_name,
@@ -167,44 +190,98 @@ async def test_optimizer_callback_creates_trial_runs_and_summary(
     mgr = OptimizerCallbackManager()
     mgr.register(cb)
 
-    for i in range(2):
+    trial_project = None
+    try:
+        mgr.pre_create_experiment([
+            EvalInputItem(
+                id="q1",
+                input_obj="What is 2+2?",
+                expected_output_obj="4",
+                full_dataset_entry={},
+            ),
+            EvalInputItem(
+                id="q2",
+                input_obj="What is 3*3?",
+                expected_output_obj="9",
+                full_dataset_entry={},
+            ),
+        ])
+
+        trial_project = mgr.get_trial_project_name(0)
+        assert trial_project is not None
+
+        langsmith_client.create_run(
+            "<workflow>",
+            inputs={"input": "What is 2+2?"},
+            run_type="chain",
+            project_name=trial_project,
+        )
+        langsmith_client.create_run(
+            "<workflow>",
+            inputs={"input": "What is 3*3?"},
+            run_type="chain",
+            project_name=trial_project,
+        )
+
+        runs = await _wait_for_runs(langsmith_client, trial_project, expected_count=2)
+        assert len(runs) >= 2, (f"Expected >= 2 trial runs, got {len(runs)}")
+        run_map = {run.inputs.get("input"): run for run in runs}
+
         mgr.on_trial_end(
             TrialResult(
-                trial_number=i,
-                parameters={"llms.nim.temperature": 0.5 + i * 0.2},
-                metric_scores={"accuracy": 0.8 + i * 0.05},
-                is_best=(i == 1),
+                trial_number=0,
+                parameters={"llms.nim.temperature": 0.7},
+                metric_scores={"accuracy": 0.9},
+                is_best=True,
+                eval_result=EvalResult(
+                    metric_scores={"accuracy": 0.9},
+                    items=[
+                        EvalResultItem(
+                            item_id="q1",
+                            input_obj="What is 2+2?",
+                            expected_output="4",
+                            actual_output="4",
+                            scores={"accuracy": 1.0},
+                            reasoning={"accuracy": "Exact match"},
+                            root_span_id=run_map["What is 2+2?"].id.int,
+                        ),
+                        EvalResultItem(
+                            item_id="q2",
+                            input_obj="What is 3*3?",
+                            expected_output="9",
+                            actual_output="8",
+                            scores={"accuracy": 0.8},
+                            reasoning={"accuracy": "Close but wrong"},
+                            root_span_id=run_map["What is 3*3?"].id.int,
+                        ),
+                    ],
+                ),
             ))
 
-    mgr.on_study_end(
-        best_trial=TrialResult(
-            trial_number=1,
-            parameters={"llms.nim.temperature": 0.7},
-            metric_scores={"accuracy": 0.85},
-            is_best=True,
-        ),
-        total_trials=2,
-    )
+        feedback = await _wait_for_feedback(langsmith_client, [run.id for run in runs])
+        assert feedback, "No feedback found on trial runs"
+        assert any(f.key == "accuracy" for f in feedback)
 
-    try:
-        # Wait for runs to appear: 2 trial runs + 1 summary = 3
-        runs = []
-        deadline = time.time() + 15
-        while len(runs) < 3 and time.time() < deadline:
-            await asyncio.sleep(1)
-            runs = list(langsmith_client.list_runs(project_name=langsmith_project_name, ))
-
-        assert len(runs) >= 3, (f"Expected >= 3 runs (2 trials + 1 summary), got {len(runs)}")
-
-        # Verify the summary run exists and has the correct outputs
-        summary_runs = [r for r in runs if "summary" in (r.name or "")]
-        assert len(summary_runs) >= 1, ("Expected at least 1 summary run")
-        assert summary_runs[0].outputs.get("best_trial_number") == 1
+        mgr.on_study_end(
+            best_trial=TrialResult(
+                trial_number=0,
+                parameters={"llms.nim.temperature": 0.7},
+                metric_scores={"accuracy": 0.9},
+                is_best=True,
+            ),
+            total_trials=1,
+        )
     finally:
-        try:
-            langsmith_client.delete_project(project_name=langsmith_project_name)
-        except Exception:
-            pass
+        if trial_project:
+            try:
+                langsmith_client.delete_project(project_name=trial_project)
+            except Exception:
+                pass
+        if cb._dataset_id:
+            try:
+                langsmith_client.delete_dataset(dataset_id=cb._dataset_id)
+            except Exception:
+                pass
 
 
 @pytest.mark.slow
@@ -214,8 +291,7 @@ async def test_optimizer_callback_pushes_prompts(
     langsmith_client,
     langsmith_project_name: str,
 ):
-    """Simulate a prompt GA trial: prompts in run inputs + pushed to
-    prompt management."""
+    """Simulate a prompt GA trial: prompts are pushed to prompt management."""
     from nat.plugins.langchain.langsmith.langsmith_optimization_callback import LangSmithOptimizationCallback
     from nat.profiler.parameter_optimization.optimizer_callbacks import OptimizerCallbackManager
     from nat.profiler.parameter_optimization.optimizer_callbacks import TrialResult
@@ -227,32 +303,34 @@ async def test_optimizer_callback_pushes_prompts(
     mgr = OptimizerCallbackManager()
     mgr.register(cb)
 
-    mgr.on_trial_end(
-        TrialResult(
-            trial_number=0,
-            parameters={},
-            metric_scores={"accuracy": 0.9},
-            is_best=True,
-            prompts={
-                "functions.agent.prompt": ("You are a helpful math assistant."),
-            },
-        ))
-
+    repo_name = None
     try:
-        # Wait for the run to appear in LangSmith
-        runs = []
+        mgr.on_trial_end(
+            TrialResult(
+                trial_number=0,
+                parameters={},
+                metric_scores={"accuracy": 0.9},
+                is_best=True,
+                prompts={
+                    "functions.agent.prompt": ("You are a helpful math assistant."),
+                },
+            ))
+
+        repo_name = cb._prompt_repo_names["functions.agent.prompt"]
+        assert "." not in repo_name
+
+        prompts = []
         deadline = time.time() + 15
-        while len(runs) < 1 and time.time() < deadline:
-            await asyncio.sleep(1)
-            runs = list(langsmith_client.list_runs(project_name=langsmith_project_name, ))
+        while not prompts and time.time() < deadline:
+            response = langsmith_client.list_prompts(query=repo_name)
+            prompts = [p for p in response.repos if p.repo_handle == repo_name]
+            if not prompts:
+                await asyncio.sleep(0.5)
 
-        assert len(runs) >= 1, (f"Expected >= 1 run, got {len(runs)}")
-
-        # Verify prompts are included in the run inputs
-        assert "prompts" in runs[0].inputs, ("Expected 'prompts' key in run inputs")
-        assert "functions.agent.prompt" in runs[0].inputs["prompts"], ("Expected prompt param name in run inputs")
+        assert prompts, f"Expected prompt repo {repo_name} to exist"
     finally:
-        try:
-            langsmith_client.delete_project(project_name=langsmith_project_name)
-        except Exception:
-            pass
+        if repo_name:
+            try:
+                langsmith_client.delete_prompt(repo_name)
+            except Exception:
+                pass
