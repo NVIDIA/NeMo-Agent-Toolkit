@@ -74,7 +74,7 @@ async def run_workflow(*,
                        config: "Config | None" = None,
                        config_file: "StrPath | None" = None,
                        question: str,
-                       expected_answer: str | None = None,
+                       expected_answer: list[str] | str | None = None,
                        assert_expected_answer: bool = True,
                        **kwargs) -> str:
     """
@@ -86,9 +86,13 @@ async def run_workflow(*,
     result = await nat_run_workflow(config=config, config_file=config_file, prompt=question, to_type=str, **kwargs)
 
     if expected_answer is not None and assert_expected_answer:
+        if isinstance(expected_answer, str):
+            expected_answer = [expected_answer]
+
         # sometimes LLMs use fancy unicode space characters like \u202f, normalize before comparing
-        normalized_result = ' '.join(result.split())
-        assert expected_answer.lower() in normalized_result.lower(), f"Expected '{expected_answer}' in '{result}'"
+        normalized_result = ' '.join(result.split()).lower()
+        assert any(expected.lower() in normalized_result for expected in expected_answer), \
+            f"Expected one of '{expected_answer}' in '{result}'"
 
     return result
 
@@ -96,7 +100,7 @@ async def run_workflow(*,
 async def serve_workflow(*,
                          config_path: Path,
                          question: str,
-                         expected_answer: str | None = None,
+                         expected_answer: list[str] | str | None = None,
                          assert_expected_answer: bool = True,
                          port: int = 8000,
                          pipeline_timeout: int = 60,
@@ -140,7 +144,11 @@ async def serve_workflow(*,
             response_text = "\n".join(combined_response)
 
         if expected_answer is not None and assert_expected_answer:
-            assert expected_answer.lower() in response_text.lower(), \
+            if isinstance(expected_answer, str):
+                expected_answer = [expected_answer]
+
+            normalized_result = ' '.join(response_text.split()).lower()
+            assert any(expected.lower() in normalized_result for expected in expected_answer), \
                 f"Unexpected response: {response.text}"
     finally:
         # Teardown
