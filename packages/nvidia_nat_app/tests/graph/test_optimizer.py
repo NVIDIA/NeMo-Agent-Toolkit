@@ -22,7 +22,6 @@ from nat_app.compiler.errors import GraphValidationError
 from nat_app.compiler.optimizer import GraphOptimizer
 from nat_app.graph.analysis import NodeAnalysis
 from nat_app.graph.types import Graph
-from tests.conftest import MinimalAdapter as _TestAdapter
 
 
 class TestGraphValidationError:
@@ -41,7 +40,7 @@ class TestGraphValidationError:
 
 class TestGraphOptimizer:
 
-    def test_optimize_simple_graph(self):
+    def test_optimize_simple_graph(self, minimal_adapter):
         g = Graph()
         g.add_node("a", func=lambda s: {"x": 1})
         g.add_node("b", func=lambda s: {"y": s["x"]})
@@ -49,7 +48,7 @@ class TestGraphOptimizer:
         g.entry_point = "a"
         g.terminal_nodes = {"b"}
 
-        optimizer = GraphOptimizer(adapter=_TestAdapter())
+        optimizer = GraphOptimizer(adapter=minimal_adapter)
         result = optimizer.optimize(g)
         assert result.optimized_order is not None
         all_nodes = set()
@@ -57,11 +56,11 @@ class TestGraphOptimizer:
             all_nodes |= stage
         assert all_nodes == {"a", "b"}
 
-    def test_default_config(self):
-        optimizer = GraphOptimizer(adapter=_TestAdapter())
+    def test_default_config(self, minimal_adapter):
+        optimizer = GraphOptimizer(adapter=minimal_adapter)
         assert optimizer.config is not None
 
-    def test_optimize_and_build_equivalent_to_two_step(self):
+    def test_optimize_and_build_equivalent_to_two_step(self, minimal_adapter):
         """optimize_and_build returns same result as optimize + adapter.build."""
         g = Graph()
         g.add_node("a", func=lambda s: {"x": 1})
@@ -70,11 +69,11 @@ class TestGraphOptimizer:
         g.entry_point = "a"
         g.terminal_nodes = {"b"}
 
-        optimizer = GraphOptimizer(adapter=_TestAdapter())
+        optimizer = GraphOptimizer(adapter=minimal_adapter)
         one_call = optimizer.optimize_and_build(g)
         two_step = optimizer.adapter.build(g, optimizer.optimize(g))
 
-        # MinimalAdapter.build returns result; both paths yield equivalent output
+        # The minimal adapter returns result; both paths yield equivalent output.
         assert one_call.optimized_order == two_step.optimized_order
         assert one_call.graph is two_step.graph
         all_nodes = set()
