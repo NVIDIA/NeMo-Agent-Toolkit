@@ -15,7 +15,9 @@
 
 import asyncio
 import datetime
+import json
 import logging
+import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
@@ -33,6 +35,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import LLMRef
+from nat.experimental.relay_telemetry_bridge import inject_atof_jsonl
 from nat.utils.type_converter import GlobalTypeConverter
 
 logger = logging.getLogger(__name__)
@@ -51,6 +54,10 @@ class ClaudeCodeAgentWorkflowConfig(AgentBaseConfig, name="claude_code_agent"):
     description: str = Field(default="Claude Code Agent SDK Workflow",
                              description="The description of this function's use.")
 
+    command: str = Field(default="claude", description="Claude Code CLI command or absolute path.")
+    command_args: list[str] = Field(default_factory=list,
+                                    description=("Additional arguments inserted after `command` and before Claude "
+                                                 "Code non-interactive query arguments."))
     working_directory: str = Field(default=".", description="Directory passed to the Claude Agent SDK as cwd.")
     permission_mode: PermissionMode | None = Field(default="plan", description="Claude Agent SDK permission mode.")
     model: str | None = Field(default=None, description="Optional Claude model name.")
@@ -69,6 +76,13 @@ class ClaudeCodeAgentWorkflowConfig(AgentBaseConfig, name="claude_code_agent"):
     max_history: int | None = Field(default=15, ge=1, description="Maximum NAT chat messages to include in prompt.")
     timeout_seconds: float = Field(default=120.0, gt=0, description="Overall SDK query timeout.")
     max_output_chars: int = Field(default=12000, gt=0, description="Maximum returned output characters.")
+    relay_enabled: bool = Field(default=False,
+                                description="Launch Claude Code through NeMo Relay and import Relay telemetry.")
+    relay_command: str = Field(default="nemo-relay", description="NeMo Relay CLI command or absolute path.")
+    relay_atof_output_dir: str | None = Field(
+        default=None,
+        description=("Optional directory where Relay ATOF JSONL should be persisted. If unset, the adapter uses a "
+                     "temporary directory and removes it after importing telemetry."))
 
 
 def _clip(text: str, max_chars: int) -> str:
@@ -179,6 +193,80 @@ def _build_options_kwargs(config: ClaudeCodeAgentWorkflowConfig) -> dict[str, An
     return {key: value for key, value in kwargs.items() if value is not None}
 
 
+def _build_claude_args(config: ClaudeCodeAgentWorkflowConfig, prompt: str) -> list[str]:
+    command = ["--print", prompt]
+    if config.permission_mode:
+        command.extend(["--permission-mode", config.permission_mode])
+    if config.model:
+        command.extend(["--model", config.model])
+    if config.max_budget_usd is not None:
+        command.extend(["--max-budget-usd", str(config.max_budget_usd)])
+    if config.append_system_prompt:
+        command.extend(["--append-system-prompt", config.append_system_prompt])
+    if config.setting_sources is not None:
+        command.extend(["--setting-sources", ",".join(config.setting_sources)])
+    if config.allowed_tools:
+        command.append("--allowed-tools")
+        command.extend(config.allowed_tools)
+    if config.disallowed_tools:
+        command.append("--disallowed-tools")
+        command.extend(config.disallowed_tools)
+    if config.additional_directories:
+        command.append("--add-dir")
+        command.extend(config.additional_directories)
+    return command
+
+
+def _build_claude_command(config: ClaudeCodeAgentWorkflowConfig, prompt: str) -> list[str]:
+    return [config.command, *config.command_args, *_build_claude_args(config, prompt)]
+
+
+def _write_relay_config(config: ClaudeCodeAgentWorkflowConfig, path: Path) -> None:
+    claude_command = " ".join([config.command, *config.command_args])
+    path.write_text("[agents.claude]\n"
+                    f"command = {json.dumps(claude_command)}\n")
+
+
+def _relay_plugin_config(atof_dir: Path) -> str:
+    return json.dumps({
+        "version":
+            1,
+        "components": [{
+            "kind": "observability",
+            "enabled": True,
+            "config": {
+                "atof": {
+                    "enabled": True,
+                    "output_directory": str(atof_dir),
+                    "filename": "events.jsonl",
+                    "mode": "overwrite",
+                }
+            },
+        }],
+    })
+
+
+def _build_relay_command(config: ClaudeCodeAgentWorkflowConfig, prompt: str, relay_config_path: Path,
+                         atof_dir: Path) -> list[str]:
+    return [
+        config.relay_command,
+        "run",
+        "--agent",
+        "claude",
+        "--config",
+        str(relay_config_path),
+        "--plugin-config",
+        _relay_plugin_config(atof_dir),
+        "--",
+        *_build_claude_args(config, prompt),
+    ]
+
+
+def _inject_relay_events(atof_path: Path) -> None:
+    if atof_path.exists():
+        inject_atof_jsonl(atof_path)
+
+
 def _load_sdk_types():
     try:
         from claude_agent_sdk import AssistantMessage
@@ -222,13 +310,82 @@ async def _query_claude_code(prompt: str, config: ClaudeCodeAgentWorkflowConfig)
     return _clip(text, config.max_output_chars)
 
 
+async def _run_claude_code_cli(prompt: str, config: ClaudeCodeAgentWorkflowConfig) -> str:
+    cwd = Path(config.working_directory).resolve()
+    relay_temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    relay_atof_path: Path | None = None
+    if config.relay_enabled:
+        relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-claude-code-relay-")
+        relay_root = Path(relay_temp_dir.name)
+        relay_config_path = relay_root / "config.toml"
+        relay_atof_dir = (Path(config.relay_atof_output_dir).resolve() if config.relay_atof_output_dir else relay_root /
+                          "atof")
+        relay_atof_dir.mkdir(parents=True, exist_ok=True)
+        _write_relay_config(config, relay_config_path)
+        relay_atof_path = relay_atof_dir / "events.jsonl"
+        command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
+    else:
+        command = _build_claude_command(config, prompt)
+
+    try:
+        process = await asyncio.create_subprocess_exec(*command,
+                                                       cwd=str(cwd),
+                                                       stdout=asyncio.subprocess.PIPE,
+                                                       stderr=asyncio.subprocess.PIPE)
+    except FileNotFoundError as error:
+        if relay_temp_dir is not None:
+            relay_temp_dir.cleanup()
+        executable_label = "NeMo Relay CLI" if config.relay_enabled else "Claude Code CLI"
+        raise RuntimeError(
+            f"Could not find {executable_label} command: {command[0]}. Install Claude Code as `claude`, install "
+            "NeMo Relay as `nemo-relay` when `relay_enabled` is true, or set `command` / `command_args` / "
+            "`relay_command` in the workflow config.") from error
+
+    try:
+        stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=config.timeout_seconds)
+    except TimeoutError as error:
+        process.kill()
+        await process.wait()
+        try:
+            if relay_atof_path is not None:
+                _inject_relay_events(relay_atof_path)
+        finally:
+            if relay_temp_dir is not None:
+                relay_temp_dir.cleanup()
+        raise RuntimeError(f"Claude Code CLI timed out after {config.timeout_seconds} seconds") from error
+
+    stdout = stdout_bytes.decode(errors="replace").strip()
+    stderr = stderr_bytes.decode(errors="replace").strip()
+    try:
+        if relay_atof_path is not None:
+            _inject_relay_events(relay_atof_path)
+    finally:
+        if relay_temp_dir is not None:
+            relay_temp_dir.cleanup()
+
+    if process.returncode:
+        details = "\n".join(part for part in [stderr, stdout] if part)
+        raise RuntimeError(f"Claude Code CLI failed with exit code {process.returncode}: {_clip(details, 4000)}")
+
+    if not stdout and stderr:
+        raise RuntimeError(f"Claude Code CLI produced no stdout. Stderr: {_clip(stderr, 4000)}")
+
+    return _clip(stdout, config.max_output_chars)
+
+
+async def _run_claude_code(prompt: str, config: ClaudeCodeAgentWorkflowConfig) -> str:
+    if config.relay_enabled:
+        return await _run_claude_code_cli(prompt, config)
+    return await _query_claude_code(prompt, config)
+
+
 @register_function(config_type=ClaudeCodeAgentWorkflowConfig)
 async def claude_code_agent(config: ClaudeCodeAgentWorkflowConfig, _builder: Builder):
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)
         prompt = _build_prompt(message, config)
-        content = await _query_claude_code(prompt=prompt, config=config)
+        content = await _run_claude_code(prompt=prompt, config=config)
 
         if message.is_string:
             return content
@@ -237,7 +394,7 @@ async def claude_code_agent(config: ClaudeCodeAgentWorkflowConfig, _builder: Bui
     async def _stream_fn(chat_request_or_message: ChatRequestOrMessage) -> AsyncGenerator[ChatResponseChunk]:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)
         prompt = _build_prompt(message, config)
-        yield ChatResponseChunk.from_string(await _query_claude_code(prompt=prompt, config=config),
+        yield ChatResponseChunk.from_string(await _run_claude_code(prompt=prompt, config=config),
                                             model=config.model or "claude-code-agent")
 
     yield FunctionInfo.create(single_fn=_response_fn, stream_fn=_stream_fn, description=config.description)

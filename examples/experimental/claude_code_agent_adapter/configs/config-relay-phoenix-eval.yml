@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: nat-relay-claude-code-eval
+
+workflow:
+  _type: claude_code_agent
+  command: claude
+  permission_mode: plan
+  model: sonnet
+  working_directory: .
+  setting_sources: [project]
+  max_budget_usd: 1.00
+  timeout_seconds: 120
+  max_output_chars: 12000
+  relay_enabled: true
+  relay_command: nemo-relay
+  relay_atof_output_dir: ./.tmp/nat-relay-claude-code-eval-atof
+  disallowed_tools:
+    - Bash
+    - Edit
+    - MultiEdit
+    - NotebookEdit
+    - Write
+
+eval:
+  general:
+    max_concurrency: 1
+    output:
+      dir: ./.tmp/nat/examples/claude_code_agent_adapter/relay_phoenix_eval
+      write_atif_workflow_output: true
+    dataset:
+      _type: json
+      file_path: examples/experimental/claude_code_agent_adapter/data/eval-smoke.json
+  evaluators:
+    avg_workflow_runtime:
+      _type: avg_workflow_runtime
+      max_concurrency: 1
+    avg_num_llm_calls:
+      _type: avg_num_llm_calls
+      max_concurrency: 1
+    avg_tokens_per_llm_end:
+      _type: avg_tokens_per_llm_end
+      max_concurrency: 1
