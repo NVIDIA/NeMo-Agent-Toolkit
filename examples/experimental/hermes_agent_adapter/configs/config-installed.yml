@@ -1,9 +1,0 @@
-# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
-
-workflow:
-  _type: hermes_agent
-  command: hermes
-  working_directory: .
-  timeout_seconds: 300
-  max_output_chars: 12000

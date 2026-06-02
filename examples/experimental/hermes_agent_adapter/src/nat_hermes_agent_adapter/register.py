@@ -235,10 +235,9 @@ async def _run_hermes_agent(prompt: str, config: HermesAgentWorkflowConfig) -> s
             relay_temp_dir.cleanup()
         executable_label = "NeMo Relay CLI" if config.relay_enabled else "Hermes launcher"
         raise RuntimeError(
-            f"Could not find {executable_label} command: {command[0]}. Install uv/uvx for the portable default "
-            "config, install Hermes Agent so `hermes` is on PATH for `configs/config-installed.yml`, install or "
-            "expose NeMo Relay as `nemo-relay` when `relay_enabled` is true, or set `command` / `command_args` / "
-            "`relay_command` in the workflow config.") from error
+            f"Could not find {executable_label} command: {command[0]}. Install uv/uvx for the configured Hermes "
+            "launcher, install NeMo Relay as `nemo-relay` when `relay_enabled` is true, or set `command` / "
+            "`command_args` / `relay_command` in the workflow config.") from error
 
     try:
         stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=config.timeout_seconds)

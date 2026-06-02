@@ -15,8 +15,6 @@ workflow:
   command_args: ["--from", "hermes-agent", "hermes"]
   working_directory: .
   relay_enabled: true
-  # For a local Relay checkout, override this from the repository root with:
-  # --override workflow.relay_command ../NeMo-Flow/target/debug/nemo-relay
   relay_command: nemo-relay
   relay_atof_output_dir: ./.tmp/nat-relay-hermes-eval-atof
   timeout_seconds: 300

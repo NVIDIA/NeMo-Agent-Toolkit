@@ -15,16 +15,44 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Hermes Agent
+# Hermes Agent With NeMo Relay
 
-This experimental NVIDIA NeMo Agent Toolkit example prototypes a primitive agent workflow type backed by Hermes Agent CLI.
+This experimental NVIDIA NeMo Agent Toolkit example prototypes a primitive agent workflow type backed by Hermes Agent CLI and launched through NeMo Relay.
 
-The adapter is intentionally conservative:
+## Integration Flow
 
-- It accepts the same `ChatRequestOrMessage` input shape used by built-in workflow agents.
-- Its config subclasses NAT's `AgentBaseConfig`; `llm_name` is optional because Hermes manages provider/model selection through local configuration, `provider`, and `model`.
-- Operational controls live in YAML config rather than an NAT `llms:` block.
-- The adapter uses Hermes single-query mode so stdout contains the final response text.
+```mermaid
+flowchart LR
+    User["User starts<br/>a run or eval"]
+
+    subgraph Toolkit["NeMo Agent Toolkit"]
+        Workflow["Runs the Hermes<br/>workflow adapter"]
+        Bridge["Imports Relay<br/>telemetry"]
+        Outputs["Returns results<br/>and evaluation output"]
+    end
+
+    subgraph Relay["NeMo Relay"]
+        RelayRun["Launches Hermes<br/>and observes activity"]
+        Events["Records agent,<br/>model, and tool events"]
+    end
+
+    subgraph Hermes["Hermes Agent"]
+        HermesRun["Uses the configured<br/>model provider"]
+    end
+
+    subgraph Phoenix["Phoenix"]
+        Trace["Displays the<br/>combined trace"]
+    end
+
+    User --> Workflow --> RelayRun
+    RelayRun --> HermesRun
+    HermesRun --> Events
+    Events --> Bridge
+    Bridge --> Outputs
+    Bridge --> Trace
+```
+
+NeMo Agent Toolkit owns the workflow and evaluation lifecycle. NeMo Relay sits between the toolkit and Hermes Agent so it can observe the Hermes run. Hermes Agent talks to the configured model provider, and Phoenix visualizes the combined toolkit and Relay telemetry.
 
 ## Installation And Setup
 
@@ -36,138 +64,74 @@ Install this workflow package:
 uv pip install -e examples/experimental/hermes_agent_adapter
 ```
 
-The default config launches Hermes Agent with `uvx`, so a global `hermes` executable is not required. You still need to configure Hermes credentials before a live model-backed run succeeds:
+Install the NeMo Relay CLI from source into the current environment. Replace `../NeMo-Flow` with the path to your local NeMo Relay source checkout if it lives somewhere else:
+
+```bash
+cargo install --path ../NeMo-Flow/crates/cli --root "${VIRTUAL_ENV:-.venv}" --locked
+nemo-relay --help
+```
+
+Configure Hermes Agent in the same environment that launches `nat`:
 
 ```bash
 uvx --from hermes-agent hermes setup
+uvx --from hermes-agent hermes auth
 uvx --from hermes-agent hermes model
 uvx --from hermes-agent hermes status
-uvx --from hermes-agent hermes chat -q "Say hello in one sentence." -Q
 ```
 
-`hermes status` should show a concrete model and authenticated provider, and the `chat -q` command should print either a response or a provider/authentication error. If it reports an error such as `model does not exist`, select a model that your configured provider endpoint supports before running `nat`.
+The workflow config launches Hermes Agent with `uvx`, so a global `hermes` executable is not required. `hermes status` should show a concrete model and an authenticated provider before a live model-backed workflow run.
 
-If you prefer to install Hermes Agent once and use the `hermes` command directly, either use `pipx`:
+## Run With NeMo Relay
 
-```bash
-pipx install hermes-agent
-hermes setup
-hermes --version
-```
-
-or use the upstream installer:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
-```
-
-After installing `hermes` directly, open a fresh shell or reload your shell profile, then verify `hermes --version` from the same shell that will run `nat`.
-
-## Run The Workflow
-
-From the repository root:
-
-```bash
-nat run \
-  --config_file examples/experimental/hermes_agent_adapter/configs/config.yml \
-  --input "Inspect the experimental Hermes agent adapter and summarize how it registers with NAT. Do not edit files."
-```
-
-The default config resolves Hermes Agent from PyPI through uv, so the first run may download the package.
-
-If you installed `hermes` directly on `PATH`, use the installed-CLI config instead:
-
-```bash
-nat run \
-  --config_file examples/experimental/hermes_agent_adapter/configs/config-installed.yml \
-  --input "Inspect the experimental Hermes agent adapter and summarize how it registers with NAT. Do not edit files."
-```
-
-If the workflow reports that Hermes exited successfully but printed no final response text, run the Hermes preflight commands from [Installation And Setup](#installation-and-setup). That error means Hermes launched, but the local Hermes provider/model/auth configuration is not ready to return a model response.
-
-## Direct Workflow
-
-`configs/config.yml` wires the adapter directly as the workflow through `uvx`:
-
-```yaml
-workflow:
-  _type: hermes_agent
-  command: uvx
-  command_args: ["--from", "hermes-agent", "hermes"]
-  working_directory: .
-  timeout_seconds: 300
-  max_output_chars: 12000
-```
-
-`configs/config-installed.yml` uses an installed `hermes` command:
-
-```yaml
-workflow:
-  _type: hermes_agent
-  command: hermes
-  working_directory: .
-  timeout_seconds: 300
-  max_output_chars: 12000
-```
-
-## Configurable Options
-
-- `command`
-- `command_args`
-- `working_directory`
-- `llm_name` (accepted for NAT agent config consistency, unused by the CLI agent)
-- `provider`
-- `model`
-- `timeout_seconds`
-- `max_output_chars`
-- `max_history`
-- `error_on_empty_output`
-- `relay_enabled`
-- `relay_command`
-- `relay_atof_output_dir`
-
-## NeMo Relay Telemetry
-
-Set `relay_enabled: true` to launch Hermes through NeMo Relay and import Relay's ATOF lifecycle events into the active NeMo Agent Toolkit telemetry stream. The adapter creates a temporary Relay plugin config with the ATOF exporter enabled, runs `nemo-relay run --agent hermes`, then maps the emitted Relay scope and mark events into NAT intermediate steps before the workflow returns.
-
-```yaml
-workflow:
-  _type: hermes_agent
-  command: uvx
-  command_args: ["--from", "hermes-agent", "hermes"]
-  relay_enabled: true
-  relay_atof_output_dir: ./.tmp/nat-relay-hermes-atof
-```
-
-Install or expose the NeMo Relay CLI as `nemo-relay`, or set `relay_command` to an absolute path. For local Relay branch development from a sibling checkout, build the CLI from the Relay repository:
-
-```bash
-cd ../NeMo-Flow
-cargo build -p nemo-relay-cli --bin nemo-relay
-cd ../nemo-agent-toolkit
-```
-
-Then run the Relay-enabled workflow:
+From the repository root, run the Relay-enabled workflow:
 
 ```bash
 nat run \
   --config_file examples/experimental/hermes_agent_adapter/configs/config-relay.yml \
-  --override workflow.relay_command ../NeMo-Flow/target/debug/nemo-relay \
-  --override workflow.relay_atof_output_dir ./.tmp/nat-relay-hermes-atof \
-  --input "Say hello in one sentence."
+  --input "Read exactly these files: examples/experimental/hermes_agent_adapter/pyproject.toml and examples/experimental/hermes_agent_adapter/src/nat_hermes_agent_adapter/register.py. Summarize how pyproject.toml exposes the nat.components entry point and how register.py registers the _type hermes_agent workflow with NeMo Agent Toolkit. Do not edit files."
 ```
 
-Set `relay_atof_output_dir` while debugging to keep Relay's raw `events.jsonl` after the workflow finishes:
+The run should return a normal NeMo Agent Toolkit workflow result:
+
+```text
+Configuration Summary:
+--------------------
+Workflow Type: hermes_agent
+Number of Functions: 0
+Number of Function Groups: 0
+Number of LLMs: 0
+Number of Embedders: 0
+Number of Memory: 0
+Number of Object Stores: 0
+Number of Retrievers: 0
+Number of TTC Strategies: 0
+Number of Authentication Providers: 0
+
+Workflow Result:
+The pyproject.toml exposes the adapter as a nat.components entry point:
+
+[project.entry-points.'nat.components']
+nat_hermes_agent_adapter = "nat_hermes_agent_adapter.register"
+
+This mapping tells NeMo Agent Toolkit that nat_hermes_agent_adapter.register provides a component under the nat.components group.
+
+The register.py file registers the workflow by defining HermesAgentWorkflowConfig with name="hermes_agent" and decorating the hermes_agent factory with @register_function(config_type=HermesAgentWorkflowConfig).
+
+Consequently, NeMo Agent Toolkit can discover and load the _type hermes_agent workflow.
+```
+
+The Relay config routes the Hermes run through NeMo Relay. Relay observes Hermes agent, model, and tool activity, then the adapter imports those events into the toolkit telemetry stream before the workflow returns.
+
+You can inspect Relay's raw event file:
 
 ```bash
-cat ./.tmp/nat-relay-hermes-atof/events.jsonl
+cat ./.tmp/nat-relay-hermes-atof/events.jsonl | jq
 ```
-
-NeMo Agent Toolkit telemetry exporters under `general.telemetry.tracing` receive both the outer toolkit workflow spans and the imported Relay agent/tool/LLM spans.
 
 ## Phoenix With NeMo Relay
 
-Install the Phoenix integration and start Phoenix:
+Install the Phoenix integration if it is not already available, then start Phoenix:
 
 ```bash
 uv pip install -e packages/nvidia_nat_phoenix
@@ -179,46 +143,20 @@ In another terminal, run the Relay/Phoenix config:
 ```bash
 nat run \
   --config_file examples/experimental/hermes_agent_adapter/configs/config-relay-phoenix.yml \
-  --override workflow.relay_command ../NeMo-Flow/target/debug/nemo-relay \
-  --input "Inspect examples/experimental/hermes_agent_adapter/README.md and summarize the NeMo Relay Telemetry section."
+  --input "Read exactly examples/experimental/hermes_agent_adapter/README.md and summarize the Run With NeMo Relay section. Do not edit files."
 ```
 
-Open `http://localhost:6006` and select the `nat-relay-hermes` project. The trace should include the NAT workflow span plus imported Relay/Hermes agent, LLM, and tool spans.
+Open `http://localhost:6006` and select the `nat-relay-hermes` project. The trace should include the toolkit workflow span plus imported Relay/Hermes agent, LLM, and tool spans.
+
+<img src="../../../docs/source/_static/hermes_agent_adapter/phoenix-relay-trace.png" alt="Phoenix trace showing imported Relay and Hermes spans" width="900" style="max-width: 100%; height: auto;">
+
+## Evaluate With NeMo Relay
 
 The evaluation smoke config uses the same Relay bridge and writes ATIF output:
 
 ```bash
 nat eval \
-  --config_file examples/experimental/hermes_agent_adapter/configs/config-relay-phoenix-eval.yml \
-  --override workflow.relay_command ../NeMo-Flow/target/debug/nemo-relay
+  --config_file examples/experimental/hermes_agent_adapter/configs/config-relay-phoenix-eval.yml
 ```
 
 Eval outputs are written under `./.tmp/nat/examples/hermes_agent_adapter/relay_phoenix_eval/`.
-
-See [RELAY_TELEMETRY_EXPERIMENT.md](RELAY_TELEMETRY_EXPERIMENT.md) for the implementation notes and validation summary.
-
-## Authentication
-
-The adapter does not require credentials in YAML. Hermes authentication and provider configuration are handled by the local Hermes installation in the environment that launches `nat`.
-
-## Notes
-
-The current agent implementation invokes Hermes single-query mode (`hermes chat -q ... -Q`) through the configured command. For launcher-based installs, use `command_args`. For example:
-
-```yaml
-workflow:
-  _type: hermes_agent
-  command: uvx
-  command_args: ["--from", "hermes-agent", "hermes"]
-```
-
-Hermes single-query mode prints useful provider errors when local model/provider setup is wrong. If the workflow reports that Hermes exited successfully but printed no final response, verify Hermes outside NAT:
-
-```bash
-uvx --from hermes-agent hermes status
-uvx --from hermes-agent hermes setup
-uvx --from hermes-agent hermes model
-uvx --from hermes-agent hermes chat -q "Say hello in one sentence." -Q
-```
-
-`hermes status` should show a concrete model and an authenticated provider. If it reports `Model: (not set)`, missing credentials, or the `chat -q` command reports `model does not exist`, finish Hermes provider/model setup first. When using a non-default provider, set both `provider` and `model` in the workflow config.
