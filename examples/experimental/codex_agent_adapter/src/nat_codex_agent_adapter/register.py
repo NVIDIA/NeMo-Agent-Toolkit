@@ -16,6 +16,8 @@
 import asyncio
 import datetime
 import json
+import os
+import tempfile
 from collections.abc import AsyncGenerator
 from importlib.resources import files
 from pathlib import Path
@@ -34,6 +36,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import LLMRef
+from nat.experimental.relay_telemetry_bridge import inject_atof_jsonl
 from nat.utils.type_converter import GlobalTypeConverter
 
 ApprovalPolicy = Literal["never", "on-request", "on-failure", "untrusted"]
@@ -51,6 +54,11 @@ class CodexAgentWorkflowConfig(AgentBaseConfig, name="codex_agent"):
                      "this field is accepted for agent config consistency but is not used."))
     description: str = Field(default="Codex SDK Agent Workflow", description="The description of this function's use.")
 
+    command: str = Field(default="codex", description="Codex CLI command or absolute path.")
+    command_args: list[str] = Field(default_factory=list,
+                                    description=("Additional arguments inserted after `command` and before Codex "
+                                                 "non-interactive query arguments. Useful for root-level Codex CLI "
+                                                 "flags."))
     node_command: str = Field(default="node", description="Node.js command or absolute path.")
     node_package_directory: str | None = Field(
         default=None,
@@ -78,6 +86,17 @@ class CodexAgentWorkflowConfig(AgentBaseConfig, name="codex_agent"):
     max_history: int | None = Field(default=15, ge=1, description="Maximum NAT chat messages to include in prompt.")
     timeout_seconds: float = Field(default=300.0, gt=0, description="Overall Codex SDK timeout.")
     max_output_chars: int = Field(default=12000, gt=0, description="Maximum returned output characters.")
+    relay_enabled: bool = Field(default=False,
+                                description="Launch Codex through NeMo Relay and import Relay telemetry.")
+    relay_command: str = Field(default="nemo-relay", description="NeMo Relay CLI command or absolute path.")
+    relay_atof_output_dir: str | None = Field(
+        default=None,
+        description=("Optional directory where Relay ATOF JSONL should be persisted. If unset, the adapter uses a "
+                     "temporary directory and removes it after importing telemetry."))
+    prefer_chatgpt_auth: bool = Field(
+        default=True,
+        description=("Prefer Codex's stored ChatGPT login over OPENAI_API_KEY for Relay runs. This keeps Codex model "
+                     "catalog requests on the ChatGPT Codex backend instead of the public OpenAI models endpoint."))
 
 
 def _clip(text: str, max_chars: int) -> str:
@@ -139,6 +158,88 @@ def _as_response(content: str, prompt: str, model: str | None) -> ChatResponse:
                                     model=model or "codex-agent",
                                     created=datetime.datetime.now(datetime.UTC),
                                     usage=_usage_for(prompt, content))
+
+
+def _build_codex_root_args(config: CodexAgentWorkflowConfig) -> list[str]:
+    command = []
+    if config.approval_policy:
+        command.extend(["--ask-for-approval", config.approval_policy])
+    return command
+
+
+def _build_codex_args(config: CodexAgentWorkflowConfig, prompt: str) -> list[str]:
+    command = ["exec"]
+    if config.model:
+        command.extend(["--model", config.model])
+    if config.sandbox_mode:
+        command.extend(["--sandbox", config.sandbox_mode])
+    if config.working_directory:
+        command.extend(["--cd", str(Path(config.working_directory).resolve())])
+    if config.skip_git_repo_check:
+        command.append("--skip-git-repo-check")
+    if config.web_search_enabled or config.web_search_mode == "live":
+        command.append("--search")
+    for directory in config.additional_directories:
+        command.extend(["--add-dir", str(Path(directory).resolve())])
+    command.extend(["--", prompt])
+    return command
+
+
+def _build_codex_command(config: CodexAgentWorkflowConfig, prompt: str) -> list[str]:
+    return [config.command, *config.command_args, *_build_codex_root_args(config), *_build_codex_args(config, prompt)]
+
+
+def _write_relay_config(config: CodexAgentWorkflowConfig, path: Path) -> None:
+    codex_command = " ".join([config.command, *config.command_args, *_build_codex_root_args(config)])
+    path.write_text("[agents.codex]\n"
+                    f"command = {json.dumps(codex_command)}\n")
+
+
+def _relay_plugin_config(atof_dir: Path) -> str:
+    return json.dumps({
+        "version":
+            1,
+        "components": [{
+            "kind": "observability",
+            "enabled": True,
+            "config": {
+                "atof": {
+                    "enabled": True,
+                    "output_directory": str(atof_dir),
+                    "filename": "events.jsonl",
+                    "mode": "overwrite",
+                }
+            },
+        }],
+    })
+
+
+def _build_relay_command(config: CodexAgentWorkflowConfig, prompt: str, relay_config_path: Path,
+                         atof_dir: Path) -> list[str]:
+    return [
+        config.relay_command,
+        "run",
+        "--agent",
+        "codex",
+        "--config",
+        str(relay_config_path),
+        "--plugin-config",
+        _relay_plugin_config(atof_dir),
+        "--",
+        *_build_codex_args(config, prompt),
+    ]
+
+
+def _inject_relay_events(atof_path: Path) -> None:
+    if atof_path.exists():
+        inject_atof_jsonl(atof_path)
+
+
+def _build_subprocess_env(config: CodexAgentWorkflowConfig) -> dict[str, str]:
+    env = os.environ.copy()
+    if config.prefer_chatgpt_auth:
+        env.pop("OPENAI_API_KEY", None)
+    return env
 
 
 def _runner_path() -> Path:
@@ -229,13 +330,83 @@ async def _run_node_sdk(prompt: str, config: CodexAgentWorkflowConfig) -> str:
     return _clip(text, config.max_output_chars)
 
 
+async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
+    cwd = Path(config.working_directory).resolve()
+    relay_temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    relay_atof_path: Path | None = None
+    if config.relay_enabled:
+        relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-codex-relay-")
+        relay_root = Path(relay_temp_dir.name)
+        relay_config_path = relay_root / "config.toml"
+        relay_atof_dir = (Path(config.relay_atof_output_dir).resolve() if config.relay_atof_output_dir else relay_root /
+                          "atof")
+        relay_atof_dir.mkdir(parents=True, exist_ok=True)
+        _write_relay_config(config, relay_config_path)
+        relay_atof_path = relay_atof_dir / "events.jsonl"
+        command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
+    else:
+        command = _build_codex_command(config, prompt)
+
+    try:
+        process = await asyncio.create_subprocess_exec(*command,
+                                                       cwd=str(cwd),
+                                                       env=_build_subprocess_env(config),
+                                                       stdout=asyncio.subprocess.PIPE,
+                                                       stderr=asyncio.subprocess.PIPE)
+    except FileNotFoundError as error:
+        if relay_temp_dir is not None:
+            relay_temp_dir.cleanup()
+        executable_label = "NeMo Relay CLI" if config.relay_enabled else "Codex CLI"
+        raise RuntimeError(
+            f"Could not find {executable_label} command: {command[0]}. Install Codex as `codex`, install "
+            "NeMo Relay as `nemo-relay` when `relay_enabled` is true, or set `command` / `command_args` / "
+            "`relay_command` in the workflow config.") from error
+
+    try:
+        stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=config.timeout_seconds)
+    except TimeoutError as error:
+        process.kill()
+        await process.wait()
+        try:
+            if relay_atof_path is not None:
+                _inject_relay_events(relay_atof_path)
+        finally:
+            if relay_temp_dir is not None:
+                relay_temp_dir.cleanup()
+        raise RuntimeError(f"Codex CLI timed out after {config.timeout_seconds} seconds") from error
+
+    stdout = stdout_bytes.decode(errors="replace").strip()
+    stderr = stderr_bytes.decode(errors="replace").strip()
+    try:
+        if relay_atof_path is not None:
+            _inject_relay_events(relay_atof_path)
+    finally:
+        if relay_temp_dir is not None:
+            relay_temp_dir.cleanup()
+
+    if process.returncode:
+        details = "\n".join(part for part in [stderr, stdout] if part)
+        raise RuntimeError(f"Codex CLI failed with exit code {process.returncode}: {_clip(details, 4000)}")
+
+    if not stdout and stderr:
+        raise RuntimeError(f"Codex CLI produced no stdout. Stderr: {_clip(stderr, 4000)}")
+
+    return _clip(stdout, config.max_output_chars)
+
+
+async def _run_codex(prompt: str, config: CodexAgentWorkflowConfig) -> str:
+    if config.relay_enabled:
+        return await _run_codex_cli(prompt, config)
+    return await _run_node_sdk(prompt, config)
+
+
 @register_function(config_type=CodexAgentWorkflowConfig)
 async def codex_agent(config: CodexAgentWorkflowConfig, _builder: Builder):
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)
         prompt = _build_prompt(message, config)
-        content = await _run_node_sdk(prompt=prompt, config=config)
+        content = await _run_codex(prompt=prompt, config=config)
 
         if message.is_string:
             return content
@@ -244,7 +415,7 @@ async def codex_agent(config: CodexAgentWorkflowConfig, _builder: Builder):
     async def _stream_fn(chat_request_or_message: ChatRequestOrMessage) -> AsyncGenerator[ChatResponseChunk]:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)
         prompt = _build_prompt(message, config)
-        yield ChatResponseChunk.from_string(await _run_node_sdk(prompt=prompt, config=config),
+        yield ChatResponseChunk.from_string(await _run_codex(prompt=prompt, config=config),
                                             model=config.model or "codex-agent")
 
     yield FunctionInfo.create(single_fn=_response_fn, stream_fn=_stream_fn, description=config.description)

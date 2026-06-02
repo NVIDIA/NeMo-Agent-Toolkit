@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: nat-relay-codex-eval
+
+workflow:
+  _type: codex_agent
+  command: examples/experimental/codex_agent_adapter/node_modules/.bin/codex
+  working_directory: .
+  sandbox_mode: read-only
+  approval_policy: never
+  skip_git_repo_check: false
+  timeout_seconds: 300
+  max_output_chars: 12000
+  relay_enabled: true
+  relay_command: nemo-relay
+  relay_atof_output_dir: ./.tmp/nat-relay-codex-eval-atof
+  prefer_chatgpt_auth: true
+
+eval:
+  general:
+    max_concurrency: 1
+    output:
+      dir: ./.tmp/nat/examples/codex_agent_adapter/relay_phoenix_eval
+      write_atif_workflow_output: true
+    dataset:
+      _type: json
+      file_path: examples/experimental/codex_agent_adapter/data/eval-smoke.json
+  evaluators:
+    avg_workflow_runtime:
+      _type: avg_workflow_runtime
+      max_concurrency: 1
+    avg_num_llm_calls:
+      _type: avg_num_llm_calls
+      max_concurrency: 1
+    avg_tokens_per_llm_end:
+      _type: avg_tokens_per_llm_end
+      max_concurrency: 1
