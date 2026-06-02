@@ -214,6 +214,10 @@ def _diagnostic_hint(details: str) -> str:
                 "session was created with the rejected policy.")
     if "gateway closed" in details or "GatewayTransportError" in details:
         return "\n\nHint: Set `local: true` to use OpenClaw's embedded one-shot agent instead of a running Gateway."
+    if "timed out waiting for cloud requirements" in details:
+        return ("\n\nHint: OpenClaw's Codex harness could not load cloud requirements. Run the workflow from the same "
+                "normal shell/user profile that can read and write `~/.openclaw`, verify `openclaw doctor`, and make "
+                "sure the selected OpenClaw/Codex model is available for the account.")
     return ""
 
 

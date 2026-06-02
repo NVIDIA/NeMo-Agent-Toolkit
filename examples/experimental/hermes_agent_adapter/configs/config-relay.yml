@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 workflow:
-  _type: cursor_agent
+  _type: hermes_agent
+  command: uvx
+  command_args: ["--from", "hermes-agent", "hermes"]
   working_directory: .
-  mode: plan
-  sandbox: disabled
-  trust_workspace: true
-  timeout_seconds: 120
+  relay_enabled: true
+  timeout_seconds: 300
   max_output_chars: 12000

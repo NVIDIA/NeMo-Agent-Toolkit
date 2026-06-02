@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: nat-relay-hermes-eval
+
+workflow:
+  _type: hermes_agent
+  command: uvx
+  command_args: ["--from", "hermes-agent", "hermes"]
+  working_directory: .
+  relay_enabled: true
+  # For a local Relay checkout, override this from the repository root with:
+  # --override workflow.relay_command ../NeMo-Flow/target/debug/nemo-relay
+  relay_command: nemo-relay
+  relay_atof_output_dir: ./.tmp/nat-relay-hermes-eval-atof
+  timeout_seconds: 300
+  max_output_chars: 12000
+
+eval:
+  general:
+    max_concurrency: 1
+    output:
+      dir: ./.tmp/nat/examples/hermes_agent_adapter/relay_phoenix_eval
+      write_atif_workflow_output: true
+    dataset:
+      _type: json
+      file_path: examples/experimental/hermes_agent_adapter/data/eval-smoke.json
+  evaluators:
+    avg_workflow_runtime:
+      _type: avg_workflow_runtime
+      max_concurrency: 1
+    avg_num_llm_calls:
+      _type: avg_num_llm_calls
+      max_concurrency: 1
+    avg_tokens_per_llm_end:
+      _type: avg_tokens_per_llm_end
+      max_concurrency: 1

@@ -15,6 +15,8 @@
 
 import asyncio
 import datetime
+import json
+import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
@@ -31,6 +33,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import LLMRef
+from nat.experimental.relay_telemetry_bridge import inject_atof_jsonl
 from nat.utils.type_converter import GlobalTypeConverter
 
 
@@ -47,7 +50,8 @@ class HermesAgentWorkflowConfig(AgentBaseConfig, name="hermes_agent"):
     command: str = Field(default="hermes", description="Hermes CLI command or absolute path.")
     command_args: list[str] = Field(default_factory=list,
                                     description=("Additional arguments inserted after `command` and before Hermes "
-                                                 "one-shot arguments. Useful for launchers such as `uvx`."))
+                                                 "non-interactive query arguments. Useful for launchers such as "
+                                                 "`uvx`."))
     working_directory: str = Field(default=".", description="Directory used as the Hermes subprocess cwd.")
     provider: str | None = Field(default=None, description="Optional Hermes provider override.")
     model: str | None = Field(default=None, description="Optional Hermes model override.")
@@ -57,6 +61,13 @@ class HermesAgentWorkflowConfig(AgentBaseConfig, name="hermes_agent"):
     error_on_empty_output: bool = Field(default=True,
                                         description=("Raise an error when Hermes exits successfully but does not "
                                                      "print a final response."))
+    relay_enabled: bool = Field(default=False,
+                                description="Launch Hermes through NeMo Relay and import Relay telemetry.")
+    relay_command: str = Field(default="nemo-relay", description="NeMo Relay CLI command or absolute path.")
+    relay_atof_output_dir: str | None = Field(
+        default=None,
+        description=("Optional directory where Relay ATOF JSONL should be persisted. If unset, the adapter uses a "
+                     "temporary directory and removes it after importing telemetry."))
 
 
 def _clip(text: str, max_chars: int) -> str:
@@ -120,8 +131,8 @@ def _as_response(content: str, prompt: str, model: str | None) -> ChatResponse:
                                     usage=_usage_for(prompt, content))
 
 
-def _build_hermes_command(config: HermesAgentWorkflowConfig, prompt: str) -> list[str]:
-    command = [config.command, *config.command_args, "-z", prompt]
+def _build_hermes_args(config: HermesAgentWorkflowConfig, prompt: str) -> list[str]:
+    command = ["chat", "-q", prompt, "-Q"]
     if config.provider:
         command.extend(["--provider", config.provider])
     if config.model:
@@ -129,41 +140,128 @@ def _build_hermes_command(config: HermesAgentWorkflowConfig, prompt: str) -> lis
     return command
 
 
+def _build_hermes_command(config: HermesAgentWorkflowConfig, prompt: str) -> list[str]:
+    return [config.command, *config.command_args, *_build_hermes_args(config, prompt)]
+
+
+def _write_relay_config(config: HermesAgentWorkflowConfig, path: Path) -> None:
+    hermes_command = " ".join([config.command, *config.command_args])
+    path.write_text("[agents.hermes]\n"
+                    f"command = {json.dumps(hermes_command)}\n")
+
+
+def _relay_plugin_config(atof_dir: Path) -> str:
+    return json.dumps({
+        "version":
+            1,
+        "components": [{
+            "kind": "observability",
+            "enabled": True,
+            "config": {
+                "atof": {
+                    "enabled": True,
+                    "output_directory": str(atof_dir),
+                    "filename": "events.jsonl",
+                    "mode": "overwrite",
+                }
+            },
+        }],
+    })
+
+
+def _build_relay_command(config: HermesAgentWorkflowConfig, prompt: str, relay_config_path: Path,
+                         atof_dir: Path) -> list[str]:
+    return [
+        config.relay_command,
+        "run",
+        "--agent",
+        "hermes",
+        "--config",
+        str(relay_config_path),
+        "--plugin-config",
+        _relay_plugin_config(atof_dir),
+        "--",
+        *_build_hermes_args(config, prompt),
+    ]
+
+
 def _diagnose_empty_output(command: list[str]) -> str:
     launcher = " ".join(command[:4])
-    return ("Hermes CLI exited successfully but printed no final response text. Hermes one-shot mode suppresses "
-            "intermediate logs and only writes the final agent response to stdout, so an empty result usually means "
-            "Hermes is not fully configured for a model/provider, provider authentication is missing, or the selected "
-            "model returned no final text. Run `uvx --from hermes-agent hermes status`; it should show a concrete "
-            "model and an authenticated provider. If it shows `Model: (not set)` or missing credentials, run "
-            "`uvx --from hermes-agent hermes model`, `uvx --from hermes-agent hermes auth`, or "
-            "`uvx --from hermes-agent hermes setup`, then retry. If you use a specific provider, set both `provider` "
-            f"and `model` in this workflow config. Launcher prefix: {launcher}")
+    return ("Hermes CLI exited successfully but printed no final response text. Run "
+            "`uvx --from hermes-agent hermes chat -q \"Say hello in one sentence.\" -Q`; it should print either a "
+            "model response or a provider/authentication error. If it shows `Model: (not set)`, missing credentials, "
+            "or a provider error such as `model does not exist`, run `uvx --from hermes-agent hermes model`, "
+            "`uvx --from hermes-agent hermes auth`, or `uvx --from hermes-agent hermes setup`, then retry. If you "
+            f"use a specific provider, set both `provider` and `model` in this workflow config. Launcher prefix: "
+            f"{launcher}")
+
+
+def _clean_hermes_output(stdout: str) -> str:
+    lines = stdout.splitlines()
+    while lines and lines[-1].strip().startswith("session_id:"):
+        lines.pop()
+    return "\n".join(lines).strip()
+
+
+def _inject_relay_events(atof_path: Path) -> None:
+    if atof_path.exists():
+        inject_atof_jsonl(atof_path)
 
 
 async def _run_hermes_agent(prompt: str, config: HermesAgentWorkflowConfig) -> str:
     cwd = Path(config.working_directory).resolve()
-    command = _build_hermes_command(config, prompt)
+    relay_temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    relay_atof_path: Path | None = None
+    if config.relay_enabled:
+        relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-hermes-relay-")
+        relay_root = Path(relay_temp_dir.name)
+        relay_config_path = relay_root / "config.toml"
+        relay_atof_dir = (Path(config.relay_atof_output_dir).resolve() if config.relay_atof_output_dir else relay_root /
+                          "atof")
+        relay_atof_dir.mkdir(parents=True, exist_ok=True)
+        _write_relay_config(config, relay_config_path)
+        relay_atof_path = relay_atof_dir / "events.jsonl"
+        command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
+    else:
+        command = _build_hermes_command(config, prompt)
+
     try:
         process = await asyncio.create_subprocess_exec(*command,
                                                        cwd=str(cwd),
                                                        stdout=asyncio.subprocess.PIPE,
                                                        stderr=asyncio.subprocess.PIPE)
     except FileNotFoundError as error:
+        if relay_temp_dir is not None:
+            relay_temp_dir.cleanup()
+        executable_label = "NeMo Relay CLI" if config.relay_enabled else "Hermes launcher"
         raise RuntimeError(
-            f"Could not find Hermes launcher command: {command[0]}. Install uv/uvx for the portable default config, "
-            "install Hermes Agent so `hermes` is on PATH for `configs/config-installed.yml`, or set `command` / "
-            "`command_args` in the workflow config.") from error
+            f"Could not find {executable_label} command: {command[0]}. Install uv/uvx for the portable default "
+            "config, install Hermes Agent so `hermes` is on PATH for `configs/config-installed.yml`, install or "
+            "expose NeMo Relay as `nemo-relay` when `relay_enabled` is true, or set `command` / `command_args` / "
+            "`relay_command` in the workflow config.") from error
 
     try:
         stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=config.timeout_seconds)
     except TimeoutError as error:
         process.kill()
         await process.wait()
+        try:
+            if relay_atof_path is not None:
+                _inject_relay_events(relay_atof_path)
+        finally:
+            if relay_temp_dir is not None:
+                relay_temp_dir.cleanup()
         raise RuntimeError(f"Hermes CLI timed out after {config.timeout_seconds} seconds") from error
 
-    stdout = stdout_bytes.decode(errors="replace").strip()
+    stdout = _clean_hermes_output(stdout_bytes.decode(errors="replace").strip())
     stderr = stderr_bytes.decode(errors="replace").strip()
+    try:
+        if relay_atof_path is not None:
+            _inject_relay_events(relay_atof_path)
+    finally:
+        if relay_temp_dir is not None:
+            relay_temp_dir.cleanup()
+
     if process.returncode:
         details = "\n".join(part for part in [stderr, stdout] if part)
         raise RuntimeError(f"Hermes CLI failed with exit code {process.returncode}: {_clip(details, 4000)}")

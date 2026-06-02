@@ -94,6 +94,8 @@ workflow:
 
 The adapter does not require credentials in YAML. Authentication and provider selection are inherited from the OpenClaw installation used by the `openclaw` command.
 
+OpenClaw local runs use the current user's OpenClaw state under `~/.openclaw`. Run `nat` from the same shell/user profile where `openclaw doctor` and `openclaw agent --local` work. Restricted sandboxes that cannot read or write that state can surface misleading Codex harness errors such as `timed out waiting for cloud requirements`.
+
 ## Codex Harness Policy
 
 When OpenClaw uses its Codex harness, the Codex cloud requirements can reject full-access runs that map to `approval_policy: Never`. The example therefore defaults the OpenClaw subprocess environment to:

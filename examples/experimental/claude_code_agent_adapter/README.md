@@ -38,6 +38,15 @@ From the root directory of the NeMo Agent Toolkit library, run:
 uv pip install -e examples/experimental/claude_code_agent_adapter
 ```
 
+If this environment previously installed the old `examples/experimental/code_agent_adapter` package, remove that stale editable package so NAT does not try to load its old `nat_code_agent_adapter` entry point:
+
+```bash
+uv pip uninstall nat-code-agent-adapter
+uv pip install -e examples/experimental/claude_code_agent_adapter
+```
+
+That stale entry point is loaded during global NAT plugin discovery, so the warning can appear while running any workflow, not only this Claude Code example.
+
 ## Run The Workflow
 
 For local end-to-end testing, authenticate Claude Code in the same shell or user profile that launches `nat`:

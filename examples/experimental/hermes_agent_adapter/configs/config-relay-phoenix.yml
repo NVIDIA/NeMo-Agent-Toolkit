@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: nat-relay-hermes
+
+workflow:
+  _type: hermes_agent
+  command: uvx
+  command_args: ["--from", "hermes-agent", "hermes"]
+  working_directory: .
+  relay_enabled: true
+  # For a local Relay checkout, override this from the repository root with:
+  # --override workflow.relay_command ../NeMo-Flow/target/debug/nemo-relay
+  relay_command: nemo-relay
+  relay_atof_output_dir: ./.tmp/nat-relay-hermes-atof
+  timeout_seconds: 300
+  max_output_chars: 12000

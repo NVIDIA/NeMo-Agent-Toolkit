@@ -24,7 +24,7 @@ The adapter is intentionally conservative:
 - It accepts the same `ChatRequestOrMessage` input shape used by built-in workflow agents.
 - Its config subclasses NAT's `AgentBaseConfig`; `llm_name` is optional because Cursor Agent manages model selection through `model`.
 - Operational controls live in YAML config rather than an NAT `llms:` block.
-- The default Cursor mode is `plan` with sandboxing enabled.
+- The example uses Cursor `plan` mode. It disables Cursor's CLI sandbox because sandboxing is not available on every local system; enable it in YAML when your Cursor Agent installation supports it.
 
 ## Installation And Setup
 
@@ -57,7 +57,8 @@ workflow:
   _type: cursor_agent
   working_directory: .
   mode: plan
-  sandbox: enabled
+  sandbox: disabled
+  trust_workspace: true
   timeout_seconds: 120
   max_output_chars: 12000
 ```
@@ -70,6 +71,7 @@ workflow:
 - `mode`
 - `model`
 - `sandbox`
+- `trust_workspace`
 - `timeout_seconds`
 - `max_output_chars`
 - `max_history`
@@ -91,6 +93,14 @@ cursor-agent login
 ```
 
 For non-interactive environments, export `CURSOR_API_KEY` before starting `nat`. A Cursor desktop app login may not be visible to the standalone agent CLI.
+
+## Workspace Trust
+
+Cursor Agent requires workspace trust for headless `--print` runs. The example config sets `trust_workspace: true`, which passes `--trust` after you have reviewed and trusted this repository checkout. If you prefer not to trust through YAML, remove that field and run `cursor-agent` interactively once from the repository root to make the trust decision.
+
+## Sandbox
+
+Cursor Agent sandbox availability depends on the local installation and operating system. The example config sets `sandbox: disabled` so the headless smoke test works on systems where Cursor reports `Sandbox is unavailable`; `mode: plan` keeps the workflow in Cursor's read-only planning mode. If sandboxing works locally, set `sandbox: enabled`.
 
 ## Notes
 

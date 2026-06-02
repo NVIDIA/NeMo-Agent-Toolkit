@@ -51,7 +51,10 @@ class CursorAgentWorkflowConfig(AgentBaseConfig, name="cursor_agent"):
     working_directory: str = Field(default=".", description="Directory used as the Cursor Agent workspace.")
     mode: CursorMode | None = Field(default="plan", description="Cursor Agent execution mode.")
     model: str | None = Field(default=None, description="Optional Cursor Agent model name.")
-    sandbox: SandboxMode | None = Field(default="enabled", description="Cursor Agent sandbox setting.")
+    sandbox: SandboxMode | None = Field(default=None, description="Optional Cursor Agent sandbox setting.")
+    trust_workspace: bool = Field(
+        default=False,
+        description=("Pass `--trust` for non-interactive runs after the workspace has been reviewed and trusted."))
     max_history: int | None = Field(default=15, ge=1, description="Maximum NAT chat messages to include in prompt.")
     timeout_seconds: float = Field(default=120.0, gt=0, description="Overall Cursor Agent CLI timeout.")
     max_output_chars: int = Field(default=12000, gt=0, description="Maximum returned output characters.")
@@ -131,6 +134,8 @@ def _build_cursor_command(config: CursorAgentWorkflowConfig, prompt: str) -> lis
         command.extend(["--mode", config.mode])
     if config.sandbox:
         command.extend(["--sandbox", config.sandbox])
+    if config.trust_workspace:
+        command.append("--trust")
     if config.model:
         command.extend(["--model", config.model])
     command.append(prompt)
@@ -141,6 +146,16 @@ def _cursor_auth_hint(command_name: str) -> str:
     return (f"Cursor Agent CLI is not authenticated. Run `{command_name} login` and "
             f"`{command_name} status` from the same shell that runs `nat`, or export `CURSOR_API_KEY` before "
             "starting the workflow. Cursor app login may not be visible to the standalone agent CLI.")
+
+
+def _cursor_trust_hint() -> str:
+    return ("Cursor Agent CLI needs workspace trust for headless `--print` runs. Review the workspace, then set "
+            "`trust_workspace: true` in the workflow config or run Cursor Agent interactively once to trust it.")
+
+
+def _cursor_sandbox_hint() -> str:
+    return ("Cursor Agent sandboxing is not available on this system. Keep `mode: plan` for read-only planning and "
+            "set `sandbox: disabled`, or omit `sandbox` to use the local Cursor Agent default.")
 
 
 async def _run_cursor_agent(prompt: str, config: CursorAgentWorkflowConfig) -> str:
@@ -167,6 +182,10 @@ async def _run_cursor_agent(prompt: str, config: CursorAgentWorkflowConfig) -> s
         details = "\n".join(part for part in [stderr, stdout] if part)
         if "Authentication required" in details or "CURSOR_API_KEY" in details:
             details = f"{details}\n\n{_cursor_auth_hint(command[0])}"
+        if "Workspace Trust Required" in details:
+            details = f"{details}\n\n{_cursor_trust_hint()}"
+        if "Sandbox mode is enabled but not available" in details:
+            details = f"{details}\n\n{_cursor_sandbox_hint()}"
         raise RuntimeError(f"Cursor Agent CLI failed with exit code {process.returncode}: {_clip(details, 4000)}")
 
     return _clip(stdout, config.max_output_chars)
