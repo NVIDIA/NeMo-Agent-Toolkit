@@ -19,8 +19,6 @@ from typing import Literal
 from pydantic import Field
 
 from nat.data_models.middleware import FunctionMiddlewareBaseConfig
-from nat.middleware.cache.cache_middleware import _DEFAULT_MAX_CACHE_ENTRIES
-
 
 class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
     """Configuration for cache middleware.
@@ -41,7 +39,7 @@ class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
               inputs return the same cached response.
         max_entries: Upper bound on cached entries. When exceeded, the
             least-recently-used entry is evicted. Must be a positive int;
-            defaults to _DEFAULT_MAX_CACHE_ENTRIES.
+            defaults to 1024.
     """
 
     enabled_mode: Literal["always", "eval"] = Field(
@@ -58,7 +56,7 @@ class CacheMiddlewareConfig(FunctionMiddlewareBaseConfig, name="cache"):
             "inputs return the same cached response."),
     )
     max_entries: int = Field(
-        default=_DEFAULT_MAX_CACHE_ENTRIES,
+        default=1024,
         ge=1,
         description=("Maximum number of cache entries before LRU eviction. Must be >= 1. "
                      "Prevents memory-exhaustion DoS from unbounded cache growth under "

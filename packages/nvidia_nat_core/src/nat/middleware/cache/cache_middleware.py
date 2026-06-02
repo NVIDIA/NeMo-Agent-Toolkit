@@ -45,13 +45,6 @@ from nat.middleware.middleware import InvocationContext
 logger = logging.getLogger(__name__)
 
 
-# Default bound on cache size. The previous implementation used an unbounded
-# dict which, under sustained unique input, grew without limit — a memory-
-# exhaustion DoS and, combined with fuzzy matching, a long-lived surface for
-# cross-request confusion. OrderedDict-backed LRU evicts the oldest entry
-# when the cache exceeds this bound.
-_DEFAULT_MAX_CACHE_ENTRIES = 1024
-
 
 class CacheMiddleware(FunctionMiddleware):
     """Cache middleware that memoizes function outputs based on input similarity.
@@ -81,7 +74,7 @@ class CacheMiddleware(FunctionMiddleware):
         *,
         enabled_mode: str,
         similarity_threshold: float,
-        max_entries: int = _DEFAULT_MAX_CACHE_ENTRIES,
+        max_entries: int,
     ) -> None:
         """Initialize the cache middleware.
 
@@ -96,8 +89,7 @@ class CacheMiddleware(FunctionMiddleware):
                 collisions where different inputs return the same cached
                 response.
             max_entries: Maximum number of cache entries. When exceeded, the
-                oldest entry is evicted (LRU). Defaults to
-                _DEFAULT_MAX_CACHE_ENTRIES.
+                oldest entry is evicted (LRU).
         """
         super().__init__(is_final=True)
         self._enabled_mode = enabled_mode
@@ -230,11 +222,10 @@ class CacheMiddleware(FunctionMiddleware):
         logger.debug("Cache miss for function %s", context.name)
         result = await call_next(*args, **kwargs)
 
-        # Phase 3: Postprocess - cache the result for future use. Enforce the
-        # LRU bound BEFORE insert so the new entry always lands in a cache of
-        # size <= max_entries, preventing unbounded memory growth (DoS).
+        # Phase 3: Postprocess - cache the result for future use. Insert first,
+        # then enforce the LRU bound so the cache stays within max_entries,
+        # preventing unbounded memory growth (DoS).
         self._cache[input_str] = result
-        self._cache.move_to_end(input_str)
         while len(self._cache) > self._max_entries:
             self._cache.popitem(last=False)
         logger.debug("Cached result for function %s (size=%d/%d)",
