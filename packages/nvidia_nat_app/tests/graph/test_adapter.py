@@ -74,6 +74,7 @@ class TestDefaults:
 class TestAnalyzeNode:
 
     def test_source_available(self, minimal_adapter):
+
         def my_func(state):
             return {"result": state["query"]}
 
