@@ -167,42 +167,49 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
     cleanup_datasets.append(ds.id)
     examples = list(langsmith_client.list_examples(dataset_id=ds.id))
     assert len(examples) == 2
+    {example.inputs["nat_item_id"] for example in examples} == {"q1", "q2"}
 
     # 2. Complete eval with per-item results
-    mgr.on_eval_complete(
-        EvalResult(
-            metric_scores={"accuracy": 0.9},
-            items=[
-                EvalResultItem(
-                    item_id="q1",
-                    input_obj="What is 2+2?",
-                    expected_output="4",
-                    actual_output="4",
-                    scores={"accuracy": 1.0},
-                    reasoning={"accuracy": "Exact match"},
-                    root_span_id=run_map['r1'].id.int,
-                ),
-                EvalResultItem(
-                    item_id="q2",
-                    input_obj="What is 3*3?",
-                    expected_output="9",
-                    actual_output="8",
-                    scores={"accuracy": 0.8},
-                    reasoning={"accuracy": "Close but wrong"},
-                    root_span_id=run_map['r2'].id.int,
-                ),
-            ],
-        ))
+    eval_result_items = [
+        EvalResultItem(
+            item_id="q1",
+            input_obj="What is 2+2?",
+            expected_output="4",
+            actual_output="4",
+            scores={"accuracy": 1.0},
+            reasoning={"accuracy": "Exact match"},
+            root_span_id=run_map["r1"].id.int,
+        ),
+        EvalResultItem(
+            item_id="q2",
+            input_obj="What is 3*3?",
+            expected_output="9",
+            actual_output="8",
+            scores={"accuracy": 0.8},
+            reasoning={"accuracy": "Close but wrong"},
+            root_span_id=run_map["r2"].id.int,
+        ),
+    ]
+    mgr.on_eval_complete(EvalResult(
+        metric_scores={"accuracy": 0.9},
+        items=eval_result_items,
+    ))
 
-    # 4. Verify feedback was attached to at least one run
-    feedback_found = False
+    # 3. Verify each eval item is linked to the run
+    result_items_by_run_id = {item.root_span_id: item for item in eval_result_items}
     for run in runs:
-        fb = list(langsmith_client.list_feedback(run_ids=[run.id]))
-        if fb:
-            feedback_found = True
-            assert any(f.key == "accuracy" for f in fb)
-            break
-    assert feedback_found, "No feedback found on any run"
+        found_accuracy_feedback = False
+        feedback = await _wait_for_feedback(langsmith_client, [run.id])
+        for feedback_item in feedback:
+            if feedback_item.key == "accuracy":
+                result_item = result_items_by_run_id[run.id.int]
+                expected_score = result_item.scores["accuracy"]
+                expected_comment = result_item.reasoning["accuracy"]
+                assert feedback_item.score == expected_score
+                assert feedback_item.comment == expected_comment
+
+                found_accuracy_feedback = True
+        assert found_accuracy_feedback, f"No accuracy feedback found for run {run.id}"
 
 
 @pytest.mark.slow
