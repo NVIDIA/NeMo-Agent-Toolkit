@@ -35,6 +35,8 @@ from nat_app.graph.access import ReducerSet
 
 logger = logging.getLogger(__name__)
 
+CONFIDENCE_T = Literal["full", "partial", "opaque"]
+
 
 @dataclass
 class NodeAnalysis:
@@ -60,7 +62,7 @@ class NodeAnalysis:
     mutations: AccessSet = field(default_factory=AccessSet)
     """All mutation points: writes | in-place mutations."""
 
-    confidence: Literal["full", "partial", "opaque"] = "full"
+    confidence: CONFIDENCE_T = "full"
     """Analysis confidence: "full" (all reads/writes determined), "partial"
     (incomplete -- dynamic keys, unresolved calls, or recursion limit),
     or "opaque" (source unavailable or analysis failed)."""

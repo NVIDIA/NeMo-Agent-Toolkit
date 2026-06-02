@@ -16,7 +16,6 @@
 
 import pytest
 
-from _utils.nat_app_test_helpers import make_node as _node
 from nat_app.graph.access import AccessSet
 from nat_app.graph.analysis import GraphAnalysisResult
 from nat_app.graph.analysis import NodeAnalysis
@@ -67,20 +66,20 @@ class TestConflictsWith:
             "special_calls_on_other",
         ],
     )
-    def test_conflict_detection(self, a_kwargs, b_kwargs, expected):
-        a = _node("a", **a_kwargs)
-        b = _node("b", **b_kwargs)
+    def test_conflict_detection(self, make_node, a_kwargs, b_kwargs, expected):
+        a = make_node("a", **a_kwargs)
+        b = make_node("b", **b_kwargs)
         assert a.conflicts_with(b) is expected
 
-    def test_reducer_excludes_write_write(self):
-        a = _node("a", writes={"messages"})
-        b = _node("b", writes={"messages"})
+    def test_reducer_excludes_write_write(self, make_node):
+        a = make_node("a", writes={"messages"})
+        b = make_node("b", writes={"messages"})
         reducers = {"state": {"messages"}}
         assert not a.conflicts_with(b, reducer_fields=reducers)
 
-    def test_reducer_does_not_exclude_read_write(self):
-        a = _node("a", writes={"messages"})
-        b = _node("b", reads={"messages"})
+    def test_reducer_does_not_exclude_read_write(self, make_node):
+        a = make_node("a", writes={"messages"})
+        b = make_node("b", reads={"messages"})
         reducers = {"state": {"messages"}}
         assert a.conflicts_with(b, reducer_fields=reducers)
 
@@ -90,8 +89,8 @@ class TestConflictsWith:
 
 class TestPropertySetters:
 
-    def test_state_reads_getter(self):
-        na = _node("a", reads={"x", "y"})
+    def test_state_reads_getter(self, make_node):
+        na = make_node("a", reads={"x", "y"})
         assert na.state_reads == {"x", "y"}
 
     def test_state_reads_setter(self):
@@ -100,8 +99,8 @@ class TestPropertySetters:
         assert na.state_reads == {"x", "y"}
         assert isinstance(na.reads, AccessSet)
 
-    def test_state_writes_getter(self):
-        na = _node("a", writes={"x"})
+    def test_state_writes_getter(self, make_node):
+        na = make_node("a", writes={"x"})
         assert na.state_writes == {"x"}
 
     def test_state_writes_setter(self):
@@ -109,8 +108,8 @@ class TestPropertySetters:
         na.state_writes = {"x", "y"}
         assert na.state_writes == {"x", "y"}
 
-    def test_repr(self):
-        na = _node("a", reads={"x"}, writes={"y"})
+    def test_repr(self, make_node):
+        na = make_node("a", reads={"x"}, writes={"y"})
         r = repr(na)
         assert "a" in r
         assert "confidence=full" in r
@@ -125,37 +124,37 @@ class TestBuildDependencyGraph:
         deps = build_dependency_graph({})
         assert deps == {}
 
-    def test_no_dependencies(self):
+    def test_no_dependencies(self, make_node):
         analyses = {
-            "a": _node("a", reads={"x"}, writes={"y"}),
-            "b": _node("b", reads={"z"}, writes={"w"}),
+            "a": make_node("a", reads={"x"}, writes={"y"}),
+            "b": make_node("b", reads={"z"}, writes={"w"}),
         }
         deps = build_dependency_graph(analyses)
         assert deps["a"] == set()
         assert deps["b"] == set()
 
-    def test_write_read_dependency(self):
+    def test_write_read_dependency(self, make_node):
         analyses = {
-            "a": _node("a", writes={"x"}),
-            "b": _node("b", reads={"x"}),
+            "a": make_node("a", writes={"x"}),
+            "b": make_node("b", reads={"x"}),
         }
         deps = build_dependency_graph(analyses)
         assert "a" in deps["b"]
         assert "b" not in deps["a"]
 
-    def test_reducer_exclusion(self):
+    def test_reducer_exclusion(self, make_node):
         analyses = {
-            "a": _node("a", writes={"messages"}),
-            "b": _node("b", reads={"messages"}),
+            "a": make_node("a", writes={"messages"}),
+            "b": make_node("b", reads={"messages"}),
         }
         reducers = {"state": {"messages"}}
         deps = build_dependency_graph(analyses, reducer_fields=reducers)
         assert deps["b"] == set()
 
-    def test_bidirectional_dependency(self):
+    def test_bidirectional_dependency(self, make_node):
         analyses = {
-            "a": _node("a", reads={"y"}, writes={"x"}),
-            "b": _node("b", reads={"x"}, writes={"y"}),
+            "a": make_node("a", reads={"y"}, writes={"x"}),
+            "b": make_node("b", reads={"x"}, writes={"y"}),
         }
         deps = build_dependency_graph(analyses)
         assert "b" in deps["a"]
@@ -167,52 +166,52 @@ class TestBuildDependencyGraph:
 
 class TestFindParallelGroups:
 
-    def test_independent_pair(self):
+    def test_independent_pair(self, make_node):
         analyses = {
-            "a": _node("a", reads={"x"}, writes={"y"}),
-            "b": _node("b", reads={"z"}, writes={"w"}),
+            "a": make_node("a", reads={"x"}, writes={"y"}),
+            "b": make_node("b", reads={"z"}, writes={"w"}),
         }
         deps = build_dependency_graph(analyses)
         groups = find_parallel_groups(analyses, deps)
         assert len(groups) == 1
         assert groups[0] == {"a", "b"}
 
-    def test_no_parallel_groups(self):
+    def test_no_parallel_groups(self, make_node):
         analyses = {
-            "a": _node("a", writes={"x"}),
-            "b": _node("b", reads={"x"}),
+            "a": make_node("a", writes={"x"}),
+            "b": make_node("b", reads={"x"}),
         }
         deps = build_dependency_graph(analyses)
         groups = find_parallel_groups(analyses, deps)
         assert groups == []
 
-    def test_three_node_parallel(self):
+    def test_three_node_parallel(self, make_node):
         analyses = {
-            "a": _node("a", reads={"x"}, writes={"a_out"}),
-            "b": _node("b", reads={"y"}, writes={"b_out"}),
-            "c": _node("c", reads={"z"}, writes={"c_out"}),
+            "a": make_node("a", reads={"x"}, writes={"a_out"}),
+            "b": make_node("b", reads={"y"}, writes={"b_out"}),
+            "c": make_node("c", reads={"z"}, writes={"c_out"}),
         }
         deps = build_dependency_graph(analyses)
         groups = find_parallel_groups(analyses, deps)
         assert any(len(g) == 3 for g in groups)
 
-    def test_dependency_prevents_grouping(self):
+    def test_dependency_prevents_grouping(self, make_node):
         analyses = {
-            "a": _node("a", writes={"x"}),
-            "b": _node("b", reads={"x"}, writes={"y"}),
-            "c": _node("c", reads={"z"}, writes={"w"}),
+            "a": make_node("a", writes={"x"}),
+            "b": make_node("b", reads={"x"}, writes={"y"}),
+            "c": make_node("c", reads={"z"}, writes={"w"}),
         }
         deps = build_dependency_graph(analyses)
         groups = find_parallel_groups(analyses, deps)
         for g in groups:
             assert not ({"a", "b"} <= g), "a and b should not be in the same group"
 
-    def test_transitive_merge_respects_dependencies(self):
+    def test_transitive_merge_respects_dependencies(self, make_node):
         """Nodes with dependency must not be merged transitively via intermediate pair."""
         analyses = {
-            "a": _node("a", reads=set(), writes={"a_out"}),
-            "b": _node("b", reads=set(), writes={"b_out"}),
-            "c": _node("c", reads=set(), writes={"c_out"}),
+            "a": make_node("a", reads=set(), writes={"a_out"}),
+            "b": make_node("b", reads=set(), writes={"b_out"}),
+            "c": make_node("c", reads=set(), writes={"c_out"}),
         }
         # C depends on A (e.g. explicit constraint); no data conflict between A and C
         deps = {"a": set(), "b": set(), "c": {"a"}}
@@ -232,12 +231,12 @@ class TestGraphAnalysisResult:
         assert r.total_nodes == 0
         assert r.warnings == []
 
-    def test_get_execution_order_linear(self):
+    def test_get_execution_order_linear(self, make_node):
         r = GraphAnalysisResult(
             node_analyses={
-                "a": _node("a"),
-                "b": _node("b"),
-                "c": _node("c"),
+                "a": make_node("a"),
+                "b": make_node("b"),
+                "c": make_node("c"),
             },
             dependency_graph={
                 "a": set(),
@@ -250,12 +249,12 @@ class TestGraphAnalysisResult:
         assert order[1] == {"b"}
         assert order[2] == {"c"}
 
-    def test_get_execution_order_parallel(self):
+    def test_get_execution_order_parallel(self, make_node):
         r = GraphAnalysisResult(
             node_analyses={
-                "a": _node("a"),
-                "b": _node("b"),
-                "c": _node("c"),
+                "a": make_node("a"),
+                "b": make_node("b"),
+                "c": make_node("c"),
             },
             dependency_graph={
                 "a": set(),
@@ -267,11 +266,11 @@ class TestGraphAnalysisResult:
         assert order[0] == {"a", "b"}
         assert order[1] == {"c"}
 
-    def test_get_execution_order_circular(self):
+    def test_get_execution_order_circular(self, make_node):
         r = GraphAnalysisResult(
             node_analyses={
-                "a": _node("a"),
-                "b": _node("b"),
+                "a": make_node("a"),
+                "b": make_node("b"),
             },
             dependency_graph={
                 "a": {"b"},

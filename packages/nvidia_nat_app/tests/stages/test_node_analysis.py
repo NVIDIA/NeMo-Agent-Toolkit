@@ -16,7 +16,6 @@
 
 import pytest
 
-from _utils.nat_app_test_helpers import MinimalAdapter as _TestAdapter
 from nat_app.compiler.compilation_context import CompilationContext
 from nat_app.graph.types import Graph
 from nat_app.stages.node_analysis import NodeAnalysisStage
@@ -24,11 +23,11 @@ from nat_app.stages.node_analysis import NodeAnalysisStage
 
 class TestNodeAnalysisStage:
 
-    def test_name(self):
-        stage = NodeAnalysisStage(_TestAdapter())
+    def test_name(self, minimal_adapter):
+        stage = NodeAnalysisStage(minimal_adapter)
         assert stage.name == "node_analysis"
 
-    def test_function_analyzed(self):
+    def test_function_analyzed(self, minimal_adapter):
         g = Graph()
 
         def fn(state):
@@ -37,17 +36,17 @@ class TestNodeAnalysisStage:
         g.add_node("a", func=fn)
         g.entry_point = "a"
         ctx = CompilationContext(compiled=None, metadata={"graph": g})
-        stage = NodeAnalysisStage(_TestAdapter())
+        stage = NodeAnalysisStage(minimal_adapter)
         ctx = stage.apply(ctx)
         assert "a" in ctx.metadata["node_analyses"]
         assert ctx.metadata["node_analyses"]["a"].confidence == "full"
 
-    def test_no_function_opaque(self):
+    def test_no_function_opaque(self, minimal_adapter):
         g = Graph()
         g.add_node("a")
         g.entry_point = "a"
         ctx = CompilationContext(compiled=None, metadata={"graph": g})
-        stage = NodeAnalysisStage(_TestAdapter())
+        stage = NodeAnalysisStage(minimal_adapter)
         ctx = stage.apply(ctx)
         assert ctx.metadata["node_analyses"]["a"].confidence == "opaque"
 
@@ -55,16 +54,16 @@ class TestNodeAnalysisStage:
         "metadata_key",
         ["node_funcs", "resolved_constraints", "state_evolution"],
     )
-    def test_writes_metadata_key(self, metadata_key):
+    def test_writes_metadata_key(self, metadata_key, minimal_adapter):
         g = Graph()
         g.add_node("a", func=lambda s: {"result": s.get("query")})
         g.entry_point = "a"
         ctx = CompilationContext(compiled=None, metadata={"graph": g})
-        stage = NodeAnalysisStage(_TestAdapter())
+        stage = NodeAnalysisStage(minimal_adapter)
         ctx = stage.apply(ctx)
         assert metadata_key in ctx.metadata
 
-    def test_state_evolution_structure(self):
+    def test_state_evolution_structure(self, minimal_adapter):
         g = Graph()
 
         def fn(state):
@@ -73,7 +72,7 @@ class TestNodeAnalysisStage:
         g.add_node("a", func=fn)
         g.entry_point = "a"
         ctx = CompilationContext(compiled=None, metadata={"graph": g})
-        stage = NodeAnalysisStage(_TestAdapter())
+        stage = NodeAnalysisStage(minimal_adapter)
         ctx = stage.apply(ctx)
         assert "reads" in ctx.metadata["state_evolution"]["a"]
         assert "writes" in ctx.metadata["state_evolution"]["a"]

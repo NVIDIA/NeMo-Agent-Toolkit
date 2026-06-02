@@ -16,7 +16,6 @@
 
 import pytest
 
-from _utils.nat_app_test_helpers import MinimalAdapter as _SimpleAdapter
 from nat_app.compiler.compilation_context import CompilationContext
 from nat_app.compiler.default_graph_compiler import DefaultGraphCompiler
 from nat_app.graph.models import TransformationResult
@@ -38,12 +37,12 @@ class _DummyStage:
 
 class TestDefaultStages:
 
-    def test_six_default_stages(self):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_six_default_stages(self, minimal_adapter):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         assert len(compiler.stages) == 6
 
-    def test_stage_names(self):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_stage_names(self, minimal_adapter):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         names = [s.name for s in compiler.stages]
         assert names == [
             "extract",
@@ -57,33 +56,33 @@ class TestDefaultStages:
 
 class TestPrepareFinalize:
 
-    def test_prepare_returns_source(self):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_prepare_returns_source(self, minimal_adapter):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         assert compiler.prepare("src") == "src"
 
-    def test_finalize_returns_context(self):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_finalize_returns_context(self, minimal_adapter):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         ctx = CompilationContext(compiled="test")
         assert compiler.finalize(ctx) is ctx
 
 
 class TestAppendInsert:
 
-    def test_append_stage(self):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_append_stage(self, minimal_adapter):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         compiler.append_stage(_DummyStage("custom"))
         assert len(compiler.stages) == 7
         assert compiler.stages[-1].name == "custom"
 
-    def test_insert_stage_after(self):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_insert_stage_after(self, minimal_adapter):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         compiler.insert_stage_after("topology", _DummyStage("custom"))
         names = [s.name for s in compiler.stages]
         idx = names.index("custom")
         assert names[idx - 1] == "topology"
 
-    def test_insert_after_nonexistent_appends(self):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_insert_after_nonexistent_appends(self, minimal_adapter):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         compiler.insert_stage_after("nonexistent", _DummyStage("orphan"))
         # If name not found, stage is NOT appended (no match means no insertion)
         names = [s.name for s in compiler.stages]
@@ -92,8 +91,8 @@ class TestAppendInsert:
 
 class TestCompileToResult:
 
-    def test_returns_transformation_result(self, simple_graph):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_returns_transformation_result(self, minimal_adapter, simple_graph):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         result = compiler.compile_to_result(simple_graph)
         assert isinstance(result, TransformationResult)
         all_nodes = set()
@@ -104,8 +103,8 @@ class TestCompileToResult:
 
 class TestEndToEnd:
 
-    def test_compile_simple_graph(self, simple_graph):
-        compiler = DefaultGraphCompiler(_SimpleAdapter())
+    def test_compile_simple_graph(self, minimal_adapter, simple_graph):
+        compiler = DefaultGraphCompiler(minimal_adapter)
         ctx = compiler.compile(simple_graph)
         assert ctx.optimized_order is not None
         all_nodes = set()

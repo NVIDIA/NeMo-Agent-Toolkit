@@ -19,17 +19,6 @@ import pytest
 from nat_app.graph.adapter import AbstractFrameworkAdapter
 
 
-class _MinimalAdapter(AbstractFrameworkAdapter):
-
-    def extract(self, source):
-        from nat_app.graph.types import Graph
-
-        return Graph()
-
-    def build(self, original, result):
-        return original
-
-
 class TestAbstractMethods:
 
     def test_cannot_instantiate_base_class(self):
@@ -75,44 +64,37 @@ class TestDefaults:
         ],
         ids=lambda v: v if isinstance(v, str) else "",
     )
-    def test_default_return_values(self, method, args, expected):
-        adapter = _MinimalAdapter()
-        assert getattr(adapter, method)(*args) == expected
+    def test_default_return_values(self, minimal_adapter, method, args, expected):
+        assert getattr(minimal_adapter, method)(*args) == expected
 
-    def test_map_profiler_function_default(self):
-        adapter = _MinimalAdapter()
-        assert adapter.map_profiler_function_to_node("my_func") == "my_func"
+    def test_map_profiler_function_default(self, minimal_adapter):
+        assert minimal_adapter.map_profiler_function_to_node("my_func") == "my_func"
 
 
 class TestAnalyzeNode:
 
-    def test_source_available(self):
-        adapter = _MinimalAdapter()
-
+    def test_source_available(self, minimal_adapter):
         def my_func(state):
             return {"result": state["query"]}
 
-        analysis = adapter.analyze_node("test", my_func)
+        analysis = minimal_adapter.analyze_node("test", my_func)
         assert analysis.name == "test"
         assert analysis.source == "ast"
         assert analysis.confidence == "full"
         assert "query" in analysis.reads.all_fields_flat
 
-    def test_source_unavailable(self):
-        adapter = _MinimalAdapter()
-        analysis = adapter.analyze_node("test", len)
+    def test_source_unavailable(self, minimal_adapter):
+        analysis = minimal_adapter.analyze_node("test", len)
         assert analysis.confidence == "opaque"
         assert analysis.source == "unavailable"
 
-    def test_schema_fallback_on_opaque(self):
-        adapter = _MinimalAdapter()
-        analysis = adapter.analyze_node("test", len, all_schema_fields={"a", "b"})
+    def test_schema_fallback_on_opaque(self, minimal_adapter):
+        analysis = minimal_adapter.analyze_node("test", len, all_schema_fields={"a", "b"})
         assert analysis.confidence == "opaque"
         assert analysis.mutations.all_fields_flat == {"a", "b"}
 
-    def test_warnings_aggregated(self):
-        adapter = _MinimalAdapter()
-        analysis = adapter.analyze_node("test", len)
+    def test_warnings_aggregated(self, minimal_adapter):
+        analysis = minimal_adapter.analyze_node("test", len)
         assert len(analysis.warnings) > 0
 
 

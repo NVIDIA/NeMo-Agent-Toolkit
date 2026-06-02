@@ -16,7 +16,6 @@
 
 import pytest
 
-from _utils.nat_app_test_helpers import make_node as _node
 from nat_app.graph.models import EdgeType
 from nat_app.graph.scheduling import analyze_cycle_body
 from nat_app.graph.scheduling import classify_edges
@@ -29,27 +28,27 @@ from nat_app.graph.types import Graph
 
 class TestClassifyEdges:
 
-    def test_necessary_edge(self):
+    def test_necessary_edge(self, make_node):
         g = Graph()
         g.add_node("a")
         g.add_node("b")
         g.add_edge("a", "b")
         analyses = {
-            "a": _node("a", writes={"x"}),
-            "b": _node("b", reads={"x"}),
+            "a": make_node("a", writes={"x"}),
+            "b": make_node("b", reads={"x"}),
         }
         results = classify_edges(g, analyses)
         assert len(results) == 1
         assert results[0].edge_type == EdgeType.NECESSARY
 
-    def test_unnecessary_edge(self):
+    def test_unnecessary_edge(self, make_node):
         g = Graph()
         g.add_node("a")
         g.add_node("b")
         g.add_edge("a", "b")
         analyses = {
-            "a": _node("a", writes={"x"}),
-            "b": _node("b", reads={"y"}),
+            "a": make_node("a", writes={"x"}),
+            "b": make_node("b", reads={"y"}),
         }
         results = classify_edges(g, analyses)
         assert results[0].edge_type == EdgeType.UNNECESSARY
@@ -62,55 +61,55 @@ class TestClassifyEdges:
         results = classify_edges(g, {})
         assert results[0].edge_type == EdgeType.UNKNOWN
 
-    def test_conditional_edge(self):
+    def test_conditional_edge(self, make_node):
         g = Graph()
         g.add_node("router")
         g.add_node("target")
         g.add_edge("router", "target")
         g.add_conditional_edges("router", {"branch": ["target"]})
         analyses = {
-            "router": _node("router"),
-            "target": _node("target"),
+            "router": make_node("router"),
+            "target": make_node("target"),
         }
         results = classify_edges(g, analyses)
         assert results[0].edge_type == EdgeType.CONDITIONAL
 
-    def test_incomplete_confidence_kept_necessary(self):
+    def test_incomplete_confidence_kept_necessary(self, make_node):
         g = Graph()
         g.add_node("a")
         g.add_node("b")
         g.add_edge("a", "b")
         analyses = {
-            "a": _node("a", confidence="partial"),
-            "b": _node("b"),
+            "a": make_node("a", confidence="partial"),
+            "b": make_node("b"),
         }
         results = classify_edges(g, analyses)
         assert results[0].edge_type == EdgeType.NECESSARY
 
-    def test_reducer_only_overlap_unnecessary(self):
+    def test_reducer_only_overlap_unnecessary(self, make_node):
         """Edge is unnecessary when overlap is only on reducer fields (parallel-safe)."""
         g = Graph()
         g.add_node("a")
         g.add_node("b")
         g.add_edge("a", "b")
         analyses = {
-            "a": _node("a", writes={"messages"}),
-            "b": _node("b", reads={"messages"}),
+            "a": make_node("a", writes={"messages"}),
+            "b": make_node("b", reads={"messages"}),
         }
         reducer_fields = {"state": {"messages"}}
         results = classify_edges(g, analyses, reducer_fields=reducer_fields)
         assert len(results) == 1
         assert results[0].edge_type == EdgeType.UNNECESSARY
 
-    def test_reducer_plus_non_reducer_overlap_necessary(self):
+    def test_reducer_plus_non_reducer_overlap_necessary(self, make_node):
         """Edge stays necessary when overlap includes non-reducer fields."""
         g = Graph()
         g.add_node("a")
         g.add_node("b")
         g.add_edge("a", "b")
         analyses = {
-            "a": _node("a", writes={"messages", "x"}),
-            "b": _node("b", reads={"messages", "x"}),
+            "a": make_node("a", writes={"messages", "x"}),
+            "b": make_node("b", reads={"messages", "x"}),
         }
         reducer_fields = {"state": {"messages"}}
         results = classify_edges(g, analyses, reducer_fields=reducer_fields)
@@ -152,7 +151,7 @@ class TestComputeBranchInfo:
 
 class TestAnalyzeCycleBody:
 
-    def test_small_cycle_no_parallelism(self):
+    def test_small_cycle_no_parallelism(self, make_node):
         cycle = CycleInfo(
             nodes={"a", "b", "c"},
             entry_node="a",
@@ -167,15 +166,15 @@ class TestAnalyzeCycleBody:
         g.add_edge("b", "c")
         g.add_edge("c", "a")
         analyses = {
-            "a": _node("a", writes={"x"}),
-            "b": _node("b", reads={"x"}, writes={"y"}),
-            "c": _node("c", reads={"y"}),
+            "a": make_node("a", writes={"x"}),
+            "b": make_node("b", reads={"x"}, writes={"y"}),
+            "c": make_node("c", reads={"y"}),
         }
         result = analyze_cycle_body(cycle, g, analyses)
         assert result is not None
         assert not result.has_parallelism
 
-    def test_parallelizable_cycle(self):
+    def test_parallelizable_cycle(self, make_node):
         cycle = CycleInfo(
             nodes={"entry", "a", "b", "exit"},
             entry_node="entry",
@@ -191,10 +190,10 @@ class TestAnalyzeCycleBody:
         g.add_edge("b", "exit")
         g.add_edge("exit", "entry")
         analyses = {
-            "entry": _node("entry", writes={"init"}),
-            "a": _node("a", reads={"p"}, writes={"a_out"}),
-            "b": _node("b", reads={"q"}, writes={"b_out"}),
-            "exit": _node("exit", reads={"a_out", "b_out"}),
+            "entry": make_node("entry", writes={"init"}),
+            "a": make_node("a", reads={"p"}, writes={"a_out"}),
+            "b": make_node("b", reads={"q"}, writes={"b_out"}),
+            "exit": make_node("exit", reads={"a_out", "b_out"}),
         }
         result = analyze_cycle_body(cycle, g, analyses)
         assert result is not None
@@ -203,7 +202,7 @@ class TestAnalyzeCycleBody:
 
 class TestComputeOptimizedOrder:
 
-    def test_linear_chain(self):
+    def test_linear_chain(self, make_node):
         g = Graph()
         g.add_node("a")
         g.add_node("b")
@@ -212,42 +211,42 @@ class TestComputeOptimizedOrder:
         g.add_edge("b", "c")
         g.entry_point = "a"
         analyses = {
-            "a": _node("a", writes={"x"}),
-            "b": _node("b", reads={"x"}, writes={"y"}),
-            "c": _node("c", reads={"y"}),
+            "a": make_node("a", writes={"x"}),
+            "b": make_node("b", reads={"x"}, writes={"y"}),
+            "c": make_node("c", reads={"y"}),
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
         flat = [n for stage in order for n in stage]
         assert flat.index("a") < flat.index("b") < flat.index("c")
 
-    def test_diamond_parallelism(self, diamond_graph):
+    def test_diamond_parallelism(self, make_node, diamond_graph):
         g = diamond_graph
         analyses = {
-            "a": _node("a", writes={"start"}),
-            "b": _node("b", reads={"start"}, writes={"b_out"}),
-            "c": _node("c", reads={"start"}, writes={"c_out"}),
-            "d": _node("d", reads={"b_out", "c_out"}),
+            "a": make_node("a", writes={"start"}),
+            "b": make_node("b", reads={"start"}, writes={"b_out"}),
+            "c": make_node("c", reads={"start"}, writes={"c_out"}),
+            "d": make_node("d", reads={"b_out", "c_out"}),
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
         assert any({"b", "c"} <= stage for stage in order), "b and c should be in the same parallel stage"
 
-    def test_disable_parallelization(self, diamond_graph):
+    def test_disable_parallelization(self, make_node, diamond_graph):
         g = diamond_graph
         analyses = {
-            "a": _node("a", writes={"start"}),
-            "b": _node("b", reads={"start"}, writes={"b_out"}),
-            "c": _node("c", reads={"start"}, writes={"c_out"}),
-            "d": _node("d", reads={"b_out", "c_out"}),
+            "a": make_node("a", writes={"start"}),
+            "b": make_node("b", reads={"start"}, writes={"b_out"}),
+            "c": make_node("c", reads={"start"}, writes={"c_out"}),
+            "d": make_node("d", reads={"b_out", "c_out"}),
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo, disable_parallelization=True)
         assert all(len(stage) == 1 for stage in order)
 
-    def test_all_nodes_present(self, diamond_graph):
+    def test_all_nodes_present(self, make_node, diamond_graph):
         g = diamond_graph
-        analyses = {n: _node(n) for n in ["a", "b", "c", "d"]}
+        analyses = {n: make_node(n) for n in ["a", "b", "c", "d"]}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
         all_nodes = set()
@@ -255,7 +254,7 @@ class TestComputeOptimizedOrder:
             all_nodes |= stage
         assert all_nodes == {"a", "b", "c", "d"}
 
-    def test_missing_nodes_treated_as_opaque(self):
+    def test_missing_nodes_treated_as_opaque(self, make_node):
         """Missing nodes in node_analyses are treated as opaque and scheduled safely."""
         g = Graph()
         g.add_node("a")
@@ -264,7 +263,7 @@ class TestComputeOptimizedOrder:
         g.add_edge("a", "b")
         g.add_edge("b", "c")
         g.entry_point = "a"
-        analyses = {"a": _node("a", writes={"x"}), "b": _node("b", reads={"x"})}
+        analyses = {"a": make_node("a", writes={"x"}), "b": make_node("b", reads={"x"})}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
         all_nodes = {n for stage in order for n in stage}
@@ -272,14 +271,14 @@ class TestComputeOptimizedOrder:
         flat = [n for stage in order for n in stage]
         assert flat.index("a") < flat.index("b") < flat.index("c")
 
-    def test_write_write_conflict_serializes_nodes(self, diamond_graph):
+    def test_write_write_conflict_serializes_nodes(self, make_node, diamond_graph):
         """Two nodes writing the same non-reducer key must not be in the same stage."""
         g = diamond_graph
         analyses = {
-            "a": _node("a", writes={"start"}),
-            "b": _node("b", reads={"start"}, writes={"shared_out"}),
-            "c": _node("c", reads={"start"}, writes={"shared_out"}),
-            "d": _node("d", reads={"shared_out"}),
+            "a": make_node("a", writes={"start"}),
+            "b": make_node("b", reads={"start"}, writes={"shared_out"}),
+            "c": make_node("c", reads={"start"}, writes={"shared_out"}),
+            "d": make_node("d", reads={"shared_out"}),
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
@@ -290,9 +289,9 @@ class TestComputeOptimizedOrder:
 class TestComputeOptimizedOrderMultiCycle:
     """Scheduling with nested and disjoint cycles."""
 
-    def test_nested_cycles_all_nodes_present(self, nested_cycle_graph):
+    def test_nested_cycles_all_nodes_present(self, make_node, nested_cycle_graph):
         g = nested_cycle_graph
-        analyses = {n: _node(n) for n in g.node_names}
+        analyses = {n: make_node(n) for n in g.node_names}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
         all_nodes = set()
@@ -300,14 +299,14 @@ class TestComputeOptimizedOrderMultiCycle:
             all_nodes |= stage
         assert all_nodes == g.node_names
 
-    def test_nested_cycles_ordering(self, nested_cycle_graph):
+    def test_nested_cycles_ordering(self, make_node, nested_cycle_graph):
         g = nested_cycle_graph
         analyses = {
-            "parse": _node("parse", writes={"query"}),
-            "search": _node("search", reads={"query"}, writes={"results"}),
-            "evaluate": _node("evaluate", reads={"results"}, writes={"score"}),
-            "refine": _node("refine", reads={"score"}, writes={"results"}),
-            "decide": _node("decide", reads={"score"}),
+            "parse": make_node("parse", writes={"query"}),
+            "search": make_node("search", reads={"query"}, writes={"results"}),
+            "evaluate": make_node("evaluate", reads={"results"}, writes={"score"}),
+            "refine": make_node("refine", reads={"score"}, writes={"results"}),
+            "decide": make_node("decide", reads={"score"}),
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
@@ -318,9 +317,9 @@ class TestComputeOptimizedOrderMultiCycle:
         assert "decide" in flat
         assert "refine" in flat
 
-    def test_disjoint_cycles_all_nodes_present(self, disjoint_cycles_graph):
+    def test_disjoint_cycles_all_nodes_present(self, make_node, disjoint_cycles_graph):
         g = disjoint_cycles_graph
-        analyses = {n: _node(n) for n in g.node_names}
+        analyses = {n: make_node(n) for n in g.node_names}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
         all_nodes = set()
@@ -328,24 +327,24 @@ class TestComputeOptimizedOrderMultiCycle:
             all_nodes |= stage
         assert all_nodes == g.node_names
 
-    def test_disjoint_cycles_entry_before_cycles(self, disjoint_cycles_graph):
+    def test_disjoint_cycles_entry_before_cycles(self, make_node, disjoint_cycles_graph):
         g = disjoint_cycles_graph
         analyses = {
-            "entry": _node("entry", writes={"init"}),
-            "loop_a": _node("loop_a", reads={"init"}, writes={"a_out"}),
-            "check_a": _node("check_a", reads={"a_out"}),
-            "bridge": _node("bridge", reads={"a_out"}, writes={"b_init"}),
-            "loop_b": _node("loop_b", reads={"b_init"}, writes={"b_out"}),
-            "check_b": _node("check_b", reads={"b_out"}),
+            "entry": make_node("entry", writes={"init"}),
+            "loop_a": make_node("loop_a", reads={"init"}, writes={"a_out"}),
+            "check_a": make_node("check_a", reads={"a_out"}),
+            "bridge": make_node("bridge", reads={"a_out"}, writes={"b_init"}),
+            "loop_b": make_node("loop_b", reads={"b_init"}, writes={"b_out"}),
+            "check_b": make_node("check_b", reads={"b_out"}),
         }
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
         flat = [n for stage in order for n in stage]
         assert flat.index("entry") < flat.index("loop_a")
 
-    def test_overlapping_cycles_all_nodes_present(self, overlapping_cycles_graph):
+    def test_overlapping_cycles_all_nodes_present(self, make_node, overlapping_cycles_graph):
         g = overlapping_cycles_graph
-        analyses = {n: _node(n) for n in g.node_names}
+        analyses = {n: make_node(n) for n in g.node_names}
         topo = analyze_graph_topology(g)
         order = compute_optimized_order(g, analyses, topo)
         all_nodes = set()

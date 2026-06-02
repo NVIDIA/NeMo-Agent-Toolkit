@@ -21,6 +21,8 @@ import typing
 import pytest
 
 if typing.TYPE_CHECKING:
+    from nat_app.graph.adapter import AbstractFrameworkAdapter
+    from nat_app.graph.analysis import NodeAnalysis
     from nat_app.graph.types import Graph
 
 
@@ -175,3 +177,48 @@ def overlapping_cycles_graph_fixture() -> Graph:
     g.add_edge("d", "a")
     g.entry_point = "a"
     return g
+
+
+@pytest.fixture(name="minimal_adapter")
+def minimal_adapter_fixture() -> AbstractFrameworkAdapter:
+    """Minimal concrete adapter for tests that need an AbstractFrameworkAdapter."""
+    from nat_app.graph.adapter import AbstractFrameworkAdapter
+
+    class MinimalAdapter(AbstractFrameworkAdapter):
+        """Minimal concrete adapter for tests that need an AbstractFrameworkAdapter."""
+
+        def extract(self, source):
+            return source
+
+        def build(self, original, result):
+            return result
+
+    return MinimalAdapter()
+
+
+@pytest.fixture(name="make_node")
+def make_node_fixture() -> typing.Callable[..., NodeAnalysis]:
+    """Helper to create NodeAnalysis objects with minimal boilerplate."""
+    from nat_app.graph.access import AccessSet
+    from nat_app.graph.analysis import CONFIDENCE_T
+    from nat_app.graph.analysis import NodeAnalysis
+
+    def _make_node(
+        name: str,
+        reads: set[str] | None = None,
+        writes: set[str] | None = None,
+        confidence: CONFIDENCE_T = "full",
+        special_calls: set[str] | None = None,
+    ) -> NodeAnalysis:
+        """Build a NodeAnalysis with AccessSets from plain string sets."""
+        w = AccessSet.from_set(writes or set())
+        return NodeAnalysis(
+            name=name,
+            reads=AccessSet.from_set(reads or set()),
+            writes=w,
+            mutations=w,
+            confidence=confidence,
+            special_calls=special_calls or set(),
+        )
+
+    return _make_node
