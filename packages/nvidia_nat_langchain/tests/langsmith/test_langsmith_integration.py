@@ -167,7 +167,7 @@ async def test_eval_callback_creates_dataset_runs_and_feedback(
     cleanup_datasets.append(ds.id)
     examples = list(langsmith_client.list_examples(dataset_id=ds.id))
     assert len(examples) == 2
-    {example.inputs["nat_item_id"] for example in examples} == {"q1", "q2"}
+    assert {example.inputs["nat_item_id"] for example in examples} == {"q1", "q2"}
 
     # 2. Complete eval with per-item results
     eval_result_items = [
