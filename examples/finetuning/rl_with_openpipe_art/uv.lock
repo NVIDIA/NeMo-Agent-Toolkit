@@ -1683,7 +1683,7 @@ wheels = [
 
 [[package]]
 name = "langchain-nvidia-ai-endpoints"
-version = "1.3.0"
+version = "1.4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
@@ -1691,9 +1691,9 @@ dependencies = [
     { name = "langchain-core" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c5/2f/29036df9a99212f27369a123d2b44b5eec0ffb1b15b1277bf71cc0a37606/langchain_nvidia_ai_endpoints-1.3.0.tar.gz", hash = "sha256:5223aa7988ee5044f38715ae757faa0af4ba64f2ed0c82851a99c052592eaa09", size = 58015, upload-time = "2026-05-07T23:06:33.579Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f9/26/cae8babfecb9b7b503dbf5d6c0d98df74149c3151247d20e7bbfd17ca461/langchain_nvidia_ai_endpoints-1.4.1.tar.gz", hash = "sha256:8835f7e56d559b370b87164f937c1eb048ab837f25de91598f00555a705c2d16", size = 58092, upload-time = "2026-06-03T19:34:15.117Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1f/34/dd21237e0534938061207ee733ef6da6c2dc62c9712932b379714817abc9/langchain_nvidia_ai_endpoints-1.3.0-py3-none-any.whl", hash = "sha256:cc2b356e96e86ffb92dcfe83980aa73227e1fad8f3a4cbdd76cdcf980c42e7cc", size = 63126, upload-time = "2026-05-07T23:06:32.585Z" },
+    { url = "https://files.pythonhosted.org/packages/30/50/9dcb23c73270e775c38e8d264ccbf8b1b352dbac089bce3746756d895e46/langchain_nvidia_ai_endpoints-1.4.1-py3-none-any.whl", hash = "sha256:3edd1678a3e2c55789128e53ba32aab3dffe94cb201c70e6cea521fab7c261ff", size = 63203, upload-time = "2026-06-03T19:34:11.08Z" },
 ]
 
 [[package]]
@@ -2549,7 +2549,7 @@ requires-dist = [
     { name = "langchain-huggingface", specifier = ">=1.2.2,<2.0.0" },
     { name = "langchain-litellm", specifier = ">=0.6.5,<1.0.0" },
     { name = "langchain-milvus", specifier = ">=0.3.3,<1.0.0" },
-    { name = "langchain-nvidia-ai-endpoints", specifier = ">=1.3.0,<2.0.0" },
+    { name = "langchain-nvidia-ai-endpoints", specifier = ">=1.4.1,<2.0.0" },
     { name = "langchain-oci", specifier = ">=0.2.4,<1.0.0" },
     { name = "langchain-openai", specifier = ">=1.1.6,<2.0.0" },
     { name = "langchain-tavily", specifier = ">=0.2.18,<1.0.0" },
