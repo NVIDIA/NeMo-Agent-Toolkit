@@ -79,10 +79,11 @@ claude auth login
 
 After login, `claude auth status` should show an active Claude Code session. The workflow uses the Claude Code authentication available in the environment that launches `nat`, so credentials do not need to be added to the workflow YAML.
 
-Install the NeMo Relay CLI from source into the current environment. Replace `../NeMo-Flow` with the path to your local NeMo Relay source checkout if it lives somewhere else:
+Set the root of your local NeMo Relay source checkout, then install the NeMo Relay CLI from source into the current environment:
 
 ```bash
-cargo install --path ../NeMo-Flow/crates/cli --root "${VIRTUAL_ENV:-.venv}" --locked
+export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
+cargo install --path "$NEMO_RELAY_ROOT/crates/cli" --root "${VIRTUAL_ENV:-.venv}" --locked
 nemo-relay --help
 ```
 
@@ -133,7 +134,7 @@ register.py then wires the workflow factory into the toolkit registry:
 @register_function(config_type=ClaudeCodeAgentWorkflowConfig)
 async def claude_code_agent(config: ClaudeCodeAgentWorkflowConfig, _builder: Builder):
 
-The factory yields FunctionInfo with non-streaming and streaming handlers. Those handlers delegate to either the Claude Agent SDK path or the Relay-enabled Claude Code CLI subprocess path, depending on relay_enabled.
+The factory yields FunctionInfo with non-streaming and streaming handlers. Those handlers convert incoming toolkit input, build a Claude Code prompt, run Claude Code through NeMo Relay, then return a toolkit-compatible response.
 ```
 
 The Relay config routes the Claude Code run through NeMo Relay. Relay observes Claude Code agent, model, and tool activity, then the adapter imports those events into the toolkit telemetry stream before the workflow returns.

@@ -19,7 +19,6 @@ import json
 import os
 import tempfile
 from collections.abc import AsyncGenerator
-from importlib.resources import files
 from pathlib import Path
 from typing import Any
 from typing import Literal
@@ -40,54 +39,39 @@ from nat.experimental.relay_telemetry_bridge import inject_atof_jsonl
 from nat.utils.type_converter import GlobalTypeConverter
 
 ApprovalPolicy = Literal["never", "on-request", "on-failure", "untrusted"]
-ModelReasoningEffort = Literal["minimal", "low", "medium", "high", "xhigh"]
 SandboxMode = Literal["read-only", "workspace-write", "danger-full-access"]
 WebSearchMode = Literal["disabled", "cached", "live"]
 
 
 class CodexAgentWorkflowConfig(AgentBaseConfig, name="codex_agent"):
-    """Configuration for the Codex SDK workflow."""
+    """Configuration for the Codex workflow."""
 
     llm_name: LLMRef | None = Field(
         default=None,
-        description=("Optional NAT LLM reference. Codex SDK manages its own model selection through `model`, so "
-                     "this field is accepted for agent config consistency but is not used."))
-    description: str = Field(default="Codex SDK Agent Workflow", description="The description of this function's use.")
+        description=("Optional NAT LLM reference. Codex manages its own model selection through `model`, so this field "
+                     "is accepted for agent config consistency but is not used."))
+    description: str = Field(default="Codex Agent Workflow", description="The description of this function's use.")
 
     command: str = Field(default="codex", description="Codex CLI command or absolute path.")
     command_args: list[str] = Field(default_factory=list,
                                     description=("Additional arguments inserted after `command` and before Codex "
                                                  "non-interactive query arguments. Useful for root-level Codex CLI "
                                                  "flags."))
-    node_command: str = Field(default="node", description="Node.js command or absolute path.")
-    node_package_directory: str | None = Field(
-        default=None,
-        description=("Optional directory containing the adapter package.json/node_modules. Use this when the Node "
-                     "SDK dependencies are not installed beside the example source tree."))
-    working_directory: str = Field(default=".", description="Directory passed to Codex SDK as workingDirectory.")
-    codex_path_override: str | None = Field(default=None, description="Optional local Codex binary override.")
-    base_url: str | None = Field(default=None, description="Optional OpenAI-compatible base URL override.")
-    codex_config: dict[str, Any] = Field(default_factory=dict, description="Additional Codex SDK config overrides.")
+    working_directory: str = Field(default=".", description="Directory used as the Codex subprocess cwd.")
 
-    thread_id: str | None = Field(default=None, description="Optional existing Codex thread id to resume.")
     model: str | None = Field(default=None, description="Optional Codex model name.")
-    sandbox_mode: SandboxMode | None = Field(default="read-only", description="Codex SDK sandbox mode.")
-    skip_git_repo_check: bool = Field(default=False, description="Skip the SDK working-directory Git repository check.")
-    approval_policy: ApprovalPolicy | None = Field(default="never", description="Codex SDK approval policy.")
-    model_reasoning_effort: ModelReasoningEffort | None = Field(default=None,
-                                                                description="Optional model reasoning effort.")
-    network_access_enabled: bool | None = Field(default=None,
-                                                description="Optional network access override for the Codex thread.")
+    sandbox_mode: SandboxMode | None = Field(default="read-only", description="Codex sandbox mode.")
+    skip_git_repo_check: bool = Field(default=False,
+                                      description="Skip the Codex working-directory Git repository check.")
+    approval_policy: ApprovalPolicy | None = Field(default="never", description="Codex approval policy.")
     web_search_mode: WebSearchMode | None = Field(default=None, description="Optional web search mode.")
     web_search_enabled: bool | None = Field(default=None, description="Optional legacy web search toggle.")
     additional_directories: list[str] = Field(default_factory=list,
                                               description="Additional directories to expose to Codex.")
 
     max_history: int | None = Field(default=15, ge=1, description="Maximum NAT chat messages to include in prompt.")
-    timeout_seconds: float = Field(default=300.0, gt=0, description="Overall Codex SDK timeout.")
+    timeout_seconds: float = Field(default=300.0, gt=0, description="Overall Relay/Codex timeout.")
     max_output_chars: int = Field(default=12000, gt=0, description="Maximum returned output characters.")
-    relay_enabled: bool = Field(default=False,
-                                description="Launch Codex through NeMo Relay and import Relay telemetry.")
     relay_command: str = Field(default="nemo-relay", description="NeMo Relay CLI command or absolute path.")
     relay_atof_output_dir: str | None = Field(
         default=None,
@@ -238,98 +222,8 @@ def _build_subprocess_env(config: CodexAgentWorkflowConfig) -> dict[str, str]:
     return env
 
 
-def _runner_path() -> Path:
-    return Path(str(files(__package__).joinpath("codex_sdk_runner.mjs")))
-
-
-def _module_search_paths(config: CodexAgentWorkflowConfig, runner: Path) -> list[str]:
-    paths: list[Path] = [Path(config.working_directory).resolve()]
-    if config.node_package_directory:
-        paths.append(Path(config.node_package_directory).resolve())
-    for parent in runner.parents:
-        if (parent / "package.json").exists():
-            paths.append(parent)
-            break
-    return [str(path) for path in dict.fromkeys(paths)]
-
-
-def _build_payload(prompt: str, config: CodexAgentWorkflowConfig, runner: Path) -> dict[str, Any]:
-    return {
-        "prompt": prompt,
-        "timeoutMs": max(1000, int(config.timeout_seconds * 1000) - 1000),
-        "moduleSearchPaths": _module_search_paths(config, runner),
-        "codexOptions": {
-            "codexPathOverride": config.codex_path_override,
-            "baseUrl": config.base_url,
-            "config": config.codex_config or None,
-        },
-        "threadId": config.thread_id,
-        "threadOptions": {
-            "model": config.model,
-            "sandboxMode": config.sandbox_mode,
-            "workingDirectory": str(Path(config.working_directory).resolve()),
-            "skipGitRepoCheck": config.skip_git_repo_check,
-            "approvalPolicy": config.approval_policy,
-            "modelReasoningEffort": config.model_reasoning_effort,
-            "networkAccessEnabled": config.network_access_enabled,
-            "webSearchMode": config.web_search_mode,
-            "webSearchEnabled": config.web_search_enabled,
-            "additionalDirectories": config.additional_directories or None,
-        },
-    }
-
-
-async def _run_node_sdk(prompt: str, config: CodexAgentWorkflowConfig) -> str:
-    runner = _runner_path()
-    payload = json.dumps(_build_payload(prompt, config, runner)).encode()
-    cwd = Path(config.working_directory).resolve()
-
-    try:
-        process = await asyncio.create_subprocess_exec(config.node_command,
-                                                       str(runner),
-                                                       cwd=str(cwd),
-                                                       stdin=asyncio.subprocess.PIPE,
-                                                       stdout=asyncio.subprocess.PIPE,
-                                                       stderr=asyncio.subprocess.PIPE)
-    except FileNotFoundError as error:
-        raise RuntimeError(f"Could not find Node.js command: {config.node_command}") from error
-
-    communicate_task = asyncio.create_task(process.communicate(input=payload))
-    done, _pending = await asyncio.wait({communicate_task}, timeout=config.timeout_seconds)
-    if not done:
-        process.kill()
-        stdout_bytes, stderr_bytes = await communicate_task
-        stderr = stderr_bytes.decode(errors="replace").strip()
-        stdout = stdout_bytes.decode(errors="replace").strip()
-        details = "\n".join(part for part in [stderr, stdout] if part)
-        if details:
-            raise RuntimeError(f"Codex SDK timed out after {config.timeout_seconds} seconds. Recent SDK output: "
-                               f"{_clip(details, 4000)}")
-        raise RuntimeError(f"Codex SDK timed out after {config.timeout_seconds} seconds")
-
-    stdout_bytes, stderr_bytes = communicate_task.result()
-
-    stdout = stdout_bytes.decode(errors="replace").strip()
-    stderr = stderr_bytes.decode(errors="replace").strip()
-    if process.returncode:
-        details = "\n".join(part for part in [stderr, stdout] if part)
-        raise RuntimeError(f"Codex SDK failed with exit code {process.returncode}: {_clip(details, 4000)}")
-
-    try:
-        result = json.loads(stdout)
-    except json.JSONDecodeError:
-        return _clip(stdout, config.max_output_chars)
-
-    text = result.get("text") if isinstance(result, dict) else None
-    if not isinstance(text, str):
-        text = json.dumps(result, indent=2, sort_keys=True)
-    return _clip(text, config.max_output_chars)
-
-
 async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
     cwd = Path(config.working_directory).resolve()
-    relay_temp_dir: tempfile.TemporaryDirectory[str] | None = None
-    relay_atof_path: Path | None = None
     relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-codex-relay-")
     relay_root = Path(relay_temp_dir.name)
     relay_config_path = relay_root / "config.toml"
@@ -358,21 +252,17 @@ async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
         process.kill()
         await process.wait()
         try:
-            if relay_atof_path is not None:
-                _inject_relay_events(relay_atof_path)
+            _inject_relay_events(relay_atof_path)
         finally:
-            if relay_temp_dir is not None:
-                relay_temp_dir.cleanup()
+            relay_temp_dir.cleanup()
         raise RuntimeError(f"Codex relay command timed out after {config.timeout_seconds} seconds") from error
 
     stdout = stdout_bytes.decode(errors="replace").strip()
     stderr = stderr_bytes.decode(errors="replace").strip()
     try:
-        if relay_atof_path is not None:
-            _inject_relay_events(relay_atof_path)
+        _inject_relay_events(relay_atof_path)
     finally:
-        if relay_temp_dir is not None:
-            relay_temp_dir.cleanup()
+        relay_temp_dir.cleanup()
 
     if process.returncode:
         details = "\n".join(part for part in [stderr, stdout] if part)
@@ -385,9 +275,7 @@ async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
 
 
 async def _run_codex(prompt: str, config: CodexAgentWorkflowConfig) -> str:
-    if config.relay_enabled:
-        return await _run_codex_cli(prompt, config)
-    return await _run_node_sdk(prompt, config)
+    return await _run_codex_cli(prompt, config)
 
 
 @register_function(config_type=CodexAgentWorkflowConfig)

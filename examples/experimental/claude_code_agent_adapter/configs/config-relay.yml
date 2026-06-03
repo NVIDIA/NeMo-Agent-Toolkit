@@ -24,7 +24,6 @@ workflow:
   max_budget_usd: 1.00
   timeout_seconds: 120
   max_output_chars: 12000
-  relay_enabled: true
   relay_atof_output_dir: ./.tmp/nat-relay-claude-code-atof
   disallowed_tools:
     - Bash

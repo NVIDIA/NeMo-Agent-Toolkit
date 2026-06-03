@@ -65,26 +65,27 @@ Install this workflow package:
 uv pip install -e examples/experimental/codex_agent_adapter
 ```
 
-Install the local Codex SDK and CLI packages used by this example:
+Install Codex CLI so the `codex` command is available on `PATH`:
 
 ```bash
-npm install --prefix examples/experimental/codex_agent_adapter
-examples/experimental/codex_agent_adapter/node_modules/.bin/codex --version
+npm install -g @openai/codex
+codex --version
 ```
 
 Configure Codex in the same environment that launches `nat`:
 
 ```bash
-examples/experimental/codex_agent_adapter/node_modules/.bin/codex login
-examples/experimental/codex_agent_adapter/node_modules/.bin/codex login status
+codex login
+codex login status
 ```
 
 The version should be `0.129.0` or newer. This example is configured for Codex's stored ChatGPT login. If `OPENAI_API_KEY` is set in the shell that launches `nat`, the adapter removes it from the Relay/Codex subprocess environment so Codex model-catalog requests continue to use the ChatGPT Codex backend. Codex may ask you to review and activate hooks before it emits agent and tool hook events.
 
-Install the NeMo Relay CLI from source into the current environment. Replace `../NeMo-Flow` with the path to your local NeMo Relay source checkout if it lives somewhere else:
+Set the root of your local NeMo Relay source checkout, then install the NeMo Relay CLI from source into the current environment:
 
 ```bash
-cargo install --path ../NeMo-Flow/crates/cli --root "${VIRTUAL_ENV:-.venv}" --locked
+export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
+cargo install --path "$NEMO_RELAY_ROOT/crates/cli" --root "${VIRTUAL_ENV:-.venv}" --locked
 nemo-relay --help
 ```
 
@@ -135,7 +136,7 @@ The actual registration happens with:
 @register_function(config_type=CodexAgentWorkflowConfig)
 async def codex_agent(config: CodexAgentWorkflowConfig, _builder: Builder):
 
-That decorator tells the toolkit to register codex_agent as a function or workflow component using CodexAgentWorkflowConfig. When instantiated, the function yields a FunctionInfo with both a normal response function and a streaming function. Those handlers convert incoming toolkit chat input, build a Codex prompt, run Codex through the Node SDK or Relay CLI path, then return a toolkit-compatible response.
+That decorator tells the toolkit to register codex_agent as a function or workflow component using CodexAgentWorkflowConfig. When instantiated, the function yields a FunctionInfo with both a normal response function and a streaming function. Those handlers convert incoming toolkit chat input, build a Codex prompt, run Codex through NeMo Relay, then return a toolkit-compatible response.
 ```
 
 The Relay config routes the Codex run through NeMo Relay. Relay observes Codex agent, model, and tool activity, then the adapter imports those events into the toolkit telemetry stream before the workflow returns.

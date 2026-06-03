@@ -61,8 +61,6 @@ class HermesAgentWorkflowConfig(AgentBaseConfig, name="hermes_agent"):
     error_on_empty_output: bool = Field(default=True,
                                         description=("Raise an error when Hermes exits successfully but does not "
                                                      "print a final response."))
-    relay_enabled: bool = Field(default=False,
-                                description="Launch Hermes through NeMo Relay and import Relay telemetry.")
     relay_command: str = Field(default="nemo-relay", description="NeMo Relay CLI command or absolute path.")
     relay_atof_output_dir: str | None = Field(
         default=None,
@@ -140,10 +138,6 @@ def _build_hermes_args(config: HermesAgentWorkflowConfig, prompt: str) -> list[s
     return command
 
 
-def _build_hermes_command(config: HermesAgentWorkflowConfig, prompt: str) -> list[str]:
-    return [config.command, *config.command_args, *_build_hermes_args(config, prompt)]
-
-
 def _write_relay_config(config: HermesAgentWorkflowConfig, path: Path) -> None:
     hermes_command = " ".join([config.command, *config.command_args])
     path.write_text("[agents.hermes]\n"
@@ -210,20 +204,15 @@ def _inject_relay_events(atof_path: Path) -> None:
 
 async def _run_hermes_agent(prompt: str, config: HermesAgentWorkflowConfig) -> str:
     cwd = Path(config.working_directory).resolve()
-    relay_temp_dir: tempfile.TemporaryDirectory[str] | None = None
-    relay_atof_path: Path | None = None
-    if config.relay_enabled:
-        relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-hermes-relay-")
-        relay_root = Path(relay_temp_dir.name)
-        relay_config_path = relay_root / "config.toml"
-        relay_atof_dir = (Path(config.relay_atof_output_dir).resolve() if config.relay_atof_output_dir else relay_root /
-                          "atof")
-        relay_atof_dir.mkdir(parents=True, exist_ok=True)
-        _write_relay_config(config, relay_config_path)
-        relay_atof_path = relay_atof_dir / "events.jsonl"
-        command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
-    else:
-        command = _build_hermes_command(config, prompt)
+    relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-hermes-relay-")
+    relay_root = Path(relay_temp_dir.name)
+    relay_config_path = relay_root / "config.toml"
+    relay_atof_dir = (Path(config.relay_atof_output_dir).resolve() if config.relay_atof_output_dir else relay_root /
+                      "atof")
+    relay_atof_dir.mkdir(parents=True, exist_ok=True)
+    _write_relay_config(config, relay_config_path)
+    relay_atof_path = relay_atof_dir / "events.jsonl"
+    command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
 
     try:
         process = await asyncio.create_subprocess_exec(*command,
@@ -231,13 +220,11 @@ async def _run_hermes_agent(prompt: str, config: HermesAgentWorkflowConfig) -> s
                                                        stdout=asyncio.subprocess.PIPE,
                                                        stderr=asyncio.subprocess.PIPE)
     except FileNotFoundError as error:
-        if relay_temp_dir is not None:
-            relay_temp_dir.cleanup()
-        executable_label = "NeMo Relay CLI" if config.relay_enabled else "Hermes launcher"
+        relay_temp_dir.cleanup()
         raise RuntimeError(
-            f"Could not find {executable_label} command: {command[0]}. Install uv/uvx for the configured Hermes "
-            "launcher, install NeMo Relay as `nemo-relay` when `relay_enabled` is true, or set `command` / "
-            "`command_args` / `relay_command` in the workflow config.") from error
+            f"Could not find NeMo Relay CLI command: {command[0]}. Install NeMo Relay as `nemo-relay` or set "
+            "`relay_command` in the workflow config. Also install uv/uvx for the configured Hermes launcher, or set "
+            "`command` / `command_args` in the workflow config.") from error
 
     try:
         stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=config.timeout_seconds)
@@ -245,21 +232,17 @@ async def _run_hermes_agent(prompt: str, config: HermesAgentWorkflowConfig) -> s
         process.kill()
         await process.wait()
         try:
-            if relay_atof_path is not None:
-                _inject_relay_events(relay_atof_path)
+            _inject_relay_events(relay_atof_path)
         finally:
-            if relay_temp_dir is not None:
-                relay_temp_dir.cleanup()
+            relay_temp_dir.cleanup()
         raise RuntimeError(f"Hermes CLI timed out after {config.timeout_seconds} seconds") from error
 
     stdout = _clean_hermes_output(stdout_bytes.decode(errors="replace").strip())
     stderr = stderr_bytes.decode(errors="replace").strip()
     try:
-        if relay_atof_path is not None:
-            _inject_relay_events(relay_atof_path)
+        _inject_relay_events(relay_atof_path)
     finally:
-        if relay_temp_dir is not None:
-            relay_temp_dir.cleanup()
+        relay_temp_dir.cleanup()
 
     if process.returncode:
         details = "\n".join(part for part in [stderr, stdout] if part)

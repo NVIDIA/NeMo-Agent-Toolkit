@@ -19,7 +19,6 @@ workflow:
   command: uvx
   command_args: ["--from", "hermes-agent", "hermes"]
   working_directory: .
-  relay_enabled: true
   relay_atof_output_dir: ./.tmp/nat-relay-hermes-atof
   timeout_seconds: 300
   max_output_chars: 12000

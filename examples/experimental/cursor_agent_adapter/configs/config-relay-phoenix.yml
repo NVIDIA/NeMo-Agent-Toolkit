@@ -31,6 +31,5 @@ workflow:
   trust_workspace: true
   timeout_seconds: 300
   max_output_chars: 12000
-  relay_enabled: true
   relay_command: nemo-relay
   relay_atof_output_dir: ./.tmp/nat-relay-cursor-atof

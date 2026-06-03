@@ -34,7 +34,6 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "claude-agent-sdk>=0.1.60",
   "nvidia-nat[langchain] == {version}",
 ]
 

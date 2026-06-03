@@ -16,13 +16,12 @@
 
 workflow:
   _type: codex_agent
-  command: examples/experimental/codex_agent_adapter/node_modules/.bin/codex
+  command: codex
   working_directory: .
   sandbox_mode: read-only
   approval_policy: never
   skip_git_repo_check: false
   timeout_seconds: 300
   max_output_chars: 12000
-  relay_enabled: true
   relay_atof_output_dir: ./.tmp/nat-relay-codex-atof
   prefer_chatgpt_auth: true

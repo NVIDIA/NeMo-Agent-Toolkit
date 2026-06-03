@@ -82,10 +82,11 @@ cursor-agent status
 
 For non-interactive environments, you can export `CURSOR_API_KEY` before starting `nat`. Cursor Agent requires workspace trust for headless `--print` runs; this example passes `--trust` because the repository checkout is expected to be reviewed before running the workflow.
 
-Install the NeMo Relay CLI from source into the current environment. Replace `../NeMo-Flow` with the path to your local NeMo Relay source checkout if it lives somewhere else:
+Set the root of your local NeMo Relay source checkout, then install the NeMo Relay CLI from source into the current environment:
 
 ```bash
-cargo install --path ../NeMo-Flow/crates/cli --root "${VIRTUAL_ENV:-.venv}" --locked
+export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
+cargo install --path "$NEMO_RELAY_ROOT/crates/cli" --root "${VIRTUAL_ENV:-.venv}" --locked
 nemo-relay --help
 ```
 
@@ -140,7 +141,7 @@ Second, @register_function wires the config to the runtime function:
 @register_function(config_type=CursorAgentWorkflowConfig)
 async def cursor_agent(config: CursorAgentWorkflowConfig, _builder: Builder):
 
-The cursor_agent factory yields one FunctionInfo with a non-streaming response function and a streaming function. Both paths convert toolkit input, build a prompt, run Cursor through cursor-agent or nemo-relay run --agent cursor, then return a toolkit-compatible response.
+The cursor_agent factory yields one FunctionInfo with a non-streaming response function and a streaming function. Both paths convert toolkit input, build a prompt, run Cursor through NeMo Relay, then return a toolkit-compatible response.
 
 Summary: pyproject.toml exposes the plugin by pointing the nat.components entry point at nat_cursor_agent_adapter.register. That module defines CursorAgentWorkflowConfig with name="cursor_agent" and registers the workflow factory with @register_function.
 ```

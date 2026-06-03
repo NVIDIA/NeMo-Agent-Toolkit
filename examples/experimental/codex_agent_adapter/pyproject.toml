@@ -24,14 +24,11 @@ root = "../../.."
 [tool.setuptools.packages.find]
 where = ["src"]
 
-[tool.setuptools.package-data]
-nat_codex_agent_adapter = ["*.mjs"]
-
 [project]
 name = "nat_codex_agent_adapter"
 dynamic = ["version", "dependencies"]
 requires-python = ">=3.11,<3.14"
-description = "Experimental Codex SDK agent for the NeMo Agent Toolkit"
+description = "Experimental Codex agent for the NeMo Agent Toolkit"
 keywords = ["ai", "agents", "coding-agents"]
 classifiers = ["Programming Language :: Python"]
 

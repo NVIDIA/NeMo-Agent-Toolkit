@@ -110,16 +110,17 @@ JSON
 openclaw config validate
 ```
 
-Build and link the NeMo Relay OpenClaw plugin from source. Replace `../NeMo-Flow` with the path to your local NeMo Relay source checkout if it lives somewhere else:
+Set the root of your local NeMo Relay source checkout, then build and link the NeMo Relay OpenClaw plugin from source:
 
 ```bash
+export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
 (
-  cd ../NeMo-Flow
+  cd "$NEMO_RELAY_ROOT"
   npm install --workspace=nemo-relay-node --workspace=nemo-relay-openclaw --ignore-scripts
   npm run build --workspace=nemo-relay-node
   npm run build --workspace=nemo-relay-openclaw
 )
-openclaw plugins install --link ../NeMo-Flow/integrations/openclaw
+openclaw plugins install --link "$NEMO_RELAY_ROOT/integrations/openclaw"
 openclaw gateway restart
 openclaw plugins inspect nemo-relay --runtime --json
 ```
