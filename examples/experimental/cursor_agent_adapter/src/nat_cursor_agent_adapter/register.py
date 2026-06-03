@@ -230,6 +230,9 @@ async def _run_cursor_agent(prompt: str, config: CursorAgentWorkflowConfig) -> s
     _write_relay_config(config, relay_config_path)
     relay_atof_path = relay_atof_dir / "events.jsonl"
     command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
+    if not cwd.exists() or not cwd.is_dir():
+        relay_temp_dir.cleanup()
+        raise RuntimeError(f"Invalid working_directory {config.working_directory!r}: {cwd} is not a directory.")
 
     try:
         process = await asyncio.create_subprocess_exec(*command,
