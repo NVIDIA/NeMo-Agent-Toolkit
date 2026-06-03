@@ -15,6 +15,8 @@
 
 import asyncio
 import datetime
+import json
+import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any
@@ -32,6 +34,7 @@ from nat.data_models.api_server import ChatResponse
 from nat.data_models.api_server import ChatResponseChunk
 from nat.data_models.api_server import Usage
 from nat.data_models.component_ref import LLMRef
+from nat.experimental.relay_telemetry_bridge import inject_atof_jsonl
 from nat.utils.type_converter import GlobalTypeConverter
 
 CursorMode = Literal["plan", "ask"]
@@ -48,6 +51,9 @@ class CursorAgentWorkflowConfig(AgentBaseConfig, name="cursor_agent"):
     description: str = Field(default="Cursor Agent CLI Workflow", description="The description of this function's use.")
 
     command: str = Field(default="cursor-agent", description="Cursor Agent CLI command or absolute path.")
+    command_args: list[str] = Field(default_factory=list,
+                                    description=("Additional arguments inserted after `command` and before Cursor "
+                                                 "Agent non-interactive query arguments."))
     working_directory: str = Field(default=".", description="Directory used as the Cursor Agent workspace.")
     mode: CursorMode | None = Field(default="plan", description="Cursor Agent execution mode.")
     model: str | None = Field(default=None, description="Optional Cursor Agent model name.")
@@ -58,6 +64,17 @@ class CursorAgentWorkflowConfig(AgentBaseConfig, name="cursor_agent"):
     max_history: int | None = Field(default=15, ge=1, description="Maximum NAT chat messages to include in prompt.")
     timeout_seconds: float = Field(default=120.0, gt=0, description="Overall Cursor Agent CLI timeout.")
     max_output_chars: int = Field(default=12000, gt=0, description="Maximum returned output characters.")
+    relay_enabled: bool = Field(default=False,
+                                description="Launch Cursor Agent through NeMo Relay and import Relay telemetry.")
+    relay_command: str = Field(default="nemo-relay", description="NeMo Relay CLI command or absolute path.")
+    relay_atof_output_dir: str | None = Field(
+        default=None,
+        description=("Optional directory where Relay ATOF JSONL should be persisted. If unset, the adapter uses a "
+                     "temporary directory and removes it after importing telemetry."))
+    relay_patch_restore_hooks: bool = Field(
+        default=True,
+        description=("Allow NeMo Relay to temporarily merge Cursor hook entries into project `.cursor/hooks.json` "
+                     "and restore the original file after the run."))
 
 
 def _clip(text: str, max_chars: int) -> str:
@@ -121,9 +138,8 @@ def _as_response(content: str, prompt: str, model: str | None) -> ChatResponse:
                                     usage=_usage_for(prompt, content))
 
 
-def _build_cursor_command(config: CursorAgentWorkflowConfig, prompt: str) -> list[str]:
+def _build_cursor_args(config: CursorAgentWorkflowConfig, prompt: str) -> list[str]:
     command = [
-        config.command,
         "--print",
         "--output-format",
         "text",
@@ -140,6 +156,57 @@ def _build_cursor_command(config: CursorAgentWorkflowConfig, prompt: str) -> lis
         command.extend(["--model", config.model])
     command.append(prompt)
     return command
+
+
+def _build_cursor_command(config: CursorAgentWorkflowConfig, prompt: str) -> list[str]:
+    return [config.command, *config.command_args, *_build_cursor_args(config, prompt)]
+
+
+def _write_relay_config(config: CursorAgentWorkflowConfig, path: Path) -> None:
+    cursor_command = " ".join([config.command, *config.command_args])
+    path.write_text("[agents.cursor]\n"
+                    f"command = {json.dumps(cursor_command)}\n"
+                    f"patch_restore_hooks = {str(config.relay_patch_restore_hooks).lower()}\n")
+
+
+def _relay_plugin_config(atof_dir: Path) -> str:
+    return json.dumps({
+        "version":
+            1,
+        "components": [{
+            "kind": "observability",
+            "enabled": True,
+            "config": {
+                "atof": {
+                    "enabled": True,
+                    "output_directory": str(atof_dir),
+                    "filename": "events.jsonl",
+                    "mode": "overwrite",
+                }
+            },
+        }],
+    })
+
+
+def _build_relay_command(config: CursorAgentWorkflowConfig, prompt: str, relay_config_path: Path,
+                         atof_dir: Path) -> list[str]:
+    return [
+        config.relay_command,
+        "run",
+        "--agent",
+        "cursor",
+        "--config",
+        str(relay_config_path),
+        "--plugin-config",
+        _relay_plugin_config(atof_dir),
+        "--",
+        *_build_cursor_args(config, prompt),
+    ]
+
+
+def _inject_relay_events(atof_path: Path) -> None:
+    if atof_path.exists():
+        inject_atof_jsonl(atof_path)
 
 
 def _cursor_auth_hint(command_name: str) -> str:
@@ -160,28 +227,61 @@ def _cursor_sandbox_hint() -> str:
 
 async def _run_cursor_agent(prompt: str, config: CursorAgentWorkflowConfig) -> str:
     cwd = Path(config.working_directory).resolve()
-    command = _build_cursor_command(config, prompt)
+    relay_temp_dir: tempfile.TemporaryDirectory[str] | None = None
+    relay_atof_path: Path | None = None
+    if config.relay_enabled:
+        relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-cursor-relay-")
+        relay_root = Path(relay_temp_dir.name)
+        relay_config_path = relay_root / "config.toml"
+        relay_atof_dir = (Path(config.relay_atof_output_dir).resolve() if config.relay_atof_output_dir else relay_root /
+                          "atof")
+        relay_atof_dir.mkdir(parents=True, exist_ok=True)
+        _write_relay_config(config, relay_config_path)
+        relay_atof_path = relay_atof_dir / "events.jsonl"
+        command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
+    else:
+        command = _build_cursor_command(config, prompt)
+
     try:
         process = await asyncio.create_subprocess_exec(*command,
                                                        cwd=str(cwd),
                                                        stdout=asyncio.subprocess.PIPE,
                                                        stderr=asyncio.subprocess.PIPE)
     except FileNotFoundError as error:
-        raise RuntimeError(f"Could not find Cursor Agent CLI command: {command[0]}") from error
+        if relay_temp_dir is not None:
+            relay_temp_dir.cleanup()
+        executable_label = "NeMo Relay CLI" if config.relay_enabled else "Cursor Agent CLI"
+        raise RuntimeError(
+            f"Could not find {executable_label} command: {command[0]}. Install Cursor Agent as `cursor-agent`, "
+            "install NeMo Relay as `nemo-relay` when `relay_enabled` is true, or set `command` / `command_args` / "
+            "`relay_command` in the workflow config.") from error
 
     try:
         stdout_bytes, stderr_bytes = await asyncio.wait_for(process.communicate(), timeout=config.timeout_seconds)
     except TimeoutError as error:
         process.kill()
         await process.wait()
+        try:
+            if relay_atof_path is not None:
+                _inject_relay_events(relay_atof_path)
+        finally:
+            if relay_temp_dir is not None:
+                relay_temp_dir.cleanup()
         raise RuntimeError(f"Cursor Agent CLI timed out after {config.timeout_seconds} seconds") from error
 
     stdout = stdout_bytes.decode(errors="replace").strip()
     stderr = stderr_bytes.decode(errors="replace").strip()
+    try:
+        if relay_atof_path is not None:
+            _inject_relay_events(relay_atof_path)
+    finally:
+        if relay_temp_dir is not None:
+            relay_temp_dir.cleanup()
+
     if process.returncode:
         details = "\n".join(part for part in [stderr, stdout] if part)
         if "Authentication required" in details or "CURSOR_API_KEY" in details:
-            details = f"{details}\n\n{_cursor_auth_hint(command[0])}"
+            details = f"{details}\n\n{_cursor_auth_hint(config.command)}"
         if "Workspace Trust Required" in details:
             details = f"{details}\n\n{_cursor_trust_hint()}"
         if "Sandbox mode is enabled but not available" in details:

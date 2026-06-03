@@ -3,9 +3,12 @@
 
 workflow:
   _type: cursor_agent
+  command: cursor-agent
   working_directory: .
   mode: plan
   sandbox: disabled
   trust_workspace: true
-  timeout_seconds: 120
+  timeout_seconds: 300
   max_output_chars: 12000
+  relay_enabled: true
+  relay_atof_output_dir: ./.tmp/nat-relay-cursor-atof

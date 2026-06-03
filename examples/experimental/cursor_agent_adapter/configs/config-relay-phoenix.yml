@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: nat-relay-cursor
+
+workflow:
+  _type: cursor_agent
+  command: cursor-agent
+  working_directory: .
+  mode: plan
+  sandbox: disabled
+  trust_workspace: true
+  timeout_seconds: 300
+  max_output_chars: 12000
+  relay_enabled: true
+  relay_command: nemo-relay
+  relay_atof_output_dir: ./.tmp/nat-relay-cursor-atof
