@@ -5839,6 +5839,16 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-openclaw-agent-adapter"
+source = { editable = "examples/experimental/openclaw_agent_adapter" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
+[[package]]
 name = "nat-parallel-executor"
 source = { editable = "examples/control_flow/parallel_executor" }
 dependencies = [
@@ -6511,6 +6521,7 @@ examples = [
     { name = "nat-math-assistant-a2a-protected" },
     { name = "nat-multi-frameworks" },
     { name = "nat-notebooks" },
+    { name = "nat-openclaw-agent-adapter" },
     { name = "nat-parallel-executor" },
     { name = "nat-per-user-workflow" },
     { name = "nat-plot-charts" },
@@ -6703,6 +6714,7 @@ requires-dist = [
     { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a_protected" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "examples/frameworks/multi_frameworks" },
     { name = "nat-notebooks", marker = "extra == 'examples'", editable = "examples/notebooks" },
+    { name = "nat-openclaw-agent-adapter", marker = "extra == 'examples'", editable = "examples/experimental/openclaw_agent_adapter" },
     { name = "nat-parallel-executor", marker = "extra == 'examples'", editable = "examples/control_flow/parallel_executor" },
     { name = "nat-per-user-workflow", marker = "extra == 'examples'", editable = "examples/front_ends/per_user_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "examples/custom_functions/plot_charts" },

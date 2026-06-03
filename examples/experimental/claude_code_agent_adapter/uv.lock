@@ -1623,6 +1623,7 @@ requires-dist = [
     { name = "nat-math-assistant-a2a-protected", marker = "extra == 'examples'", editable = "../../A2A/math_assistant_a2a_protected" },
     { name = "nat-multi-frameworks", marker = "extra == 'examples'", editable = "../../frameworks/multi_frameworks" },
     { name = "nat-notebooks", marker = "extra == 'examples'", editable = "../../notebooks" },
+    { name = "nat-openclaw-agent-adapter", marker = "extra == 'examples'", editable = "../openclaw_agent_adapter" },
     { name = "nat-parallel-executor", marker = "extra == 'examples'", editable = "../../control_flow/parallel_executor" },
     { name = "nat-per-user-workflow", marker = "extra == 'examples'", editable = "../../front_ends/per_user_workflow" },
     { name = "nat-plot-charts", marker = "extra == 'examples'", editable = "../../custom_functions/plot_charts" },
