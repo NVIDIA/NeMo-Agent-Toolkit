@@ -164,11 +164,10 @@ def _add_gateway_path_context(prompt: str, cwd: Path, config: OpenClawAgentWorkf
     if config.local:
         return prompt
 
-    return (
-        "The NeMo Agent Toolkit workflow launched OpenClaw from this directory:\n"
-        f"{cwd}\n\n"
-        "When the request mentions relative file paths, resolve them against that directory.\n\n"
-        f"User request:\n{prompt}")
+    return ("The NeMo Agent Toolkit workflow launched OpenClaw from this directory:\n"
+            f"{cwd}\n\n"
+            "When the request mentions relative file paths, resolve them against that directory.\n\n"
+            f"User request:\n{prompt}")
 
 
 def _build_openclaw_env(config: OpenClawAgentWorkflowConfig) -> dict[str, str]:
