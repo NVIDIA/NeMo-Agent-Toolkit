@@ -81,6 +81,8 @@ Retrievers are configured similarly to other NeMo Agent Toolkit components, such
 
 Below is an example config object for the NeMo Retriever:
 ```python
+from nat.plugin_api import RetrieverBaseConfig
+
 class NemoRetrieverConfig(RetrieverBaseConfig, name="nemo_retriever"):
 """
 Configuration for a Retriever which pulls data from a Nemo Retriever service.

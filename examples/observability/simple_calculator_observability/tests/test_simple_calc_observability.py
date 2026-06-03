@@ -242,6 +242,7 @@ async def test_galileo_full_workflow(config_dir: Path,
     assert len(spans.records) > 1
 
 
+@pytest.mark.skip(reason="https://catalyst.raga.ai appears to be having issues")
 @pytest.mark.integration
 @pytest.mark.usefixtures("catalyst_keys", "aiq_compatibility_span_prefix")
 async def test_catalyst_full_workflow(config_dir: Path,

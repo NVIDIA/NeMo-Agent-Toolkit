@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import os
 import random
 import subprocess
@@ -31,9 +32,9 @@ if typing.TYPE_CHECKING:
     import galileo.log_streams
     import galileo.projects
     import langsmith.client
-
-if typing.TYPE_CHECKING:
     from docker.client import DockerClient
+
+logger = logging.getLogger(__name__)
 
 
 def pytest_addoption(parser: pytest.Parser):
@@ -335,7 +336,11 @@ def langsmith_project_name_fixture(langsmith_client: "langsmith.client.Client", 
     langsmith_client.create_project(project_name)
     yield project_name
 
-    langsmith_client.delete_project(project_name=project_name)
+    if os.environ.get("NAT_CI_KEEP_LANGSMITH_PROJECTS") != "1":
+        try:
+            langsmith_client.delete_project(project_name=project_name)
+        except Exception:
+            logger.exception("Failed to delete project %s", project_name)
 
 
 @pytest.fixture(name="galileo_api_key", scope='session')

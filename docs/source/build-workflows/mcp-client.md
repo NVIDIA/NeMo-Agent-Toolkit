@@ -77,7 +77,7 @@ Example:
 workflows:
   _type: react_agent
   tool_names:
-    - mcp_tools.tool_a
+    - mcp_tools__tool_a
 ```
 
 An additional case to note is when a function group is served by an MCP server, the tools within the function group must still be accessed by their full name. This is the same as the prior case, but there is an important difference. Consider the following example:

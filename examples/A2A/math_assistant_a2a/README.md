@@ -202,9 +202,9 @@ workflow:
   _type: per_user_react_agent  # Per-user ReAct agent
   tool_names:
     - calculator_a2a  # Per-user A2A client
-    - mcp_time.get_current_time_mcp
-    - logic_evaluator.if_then_else
-    - logic_evaluator.evaluate_condition
+    - mcp_time__get_current_time_mcp
+    - logic_evaluator__if_then_else
+    - logic_evaluator__evaluate_condition
   llm_name: nim_llm
 ```
 

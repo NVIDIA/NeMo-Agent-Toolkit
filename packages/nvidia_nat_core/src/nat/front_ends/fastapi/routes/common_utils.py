@@ -26,6 +26,7 @@ from fastapi.responses import StreamingResponse
 from nat.builder.context import Context
 from nat.data_models.api_server import Error
 from nat.data_models.api_server import ErrorTypes
+from nat.data_models.interactive_http import ExecutionAcceptedResponse
 from nat.data_models.interactive_http import ExecutionStatus
 from nat.front_ends.fastapi.response_helpers import generate_single_response
 from nat.front_ends.fastapi.response_helpers import generate_streaming_response_as_str
@@ -34,6 +35,14 @@ from nat.runtime.session import SessionManager
 from .execution import build_accepted_response
 
 logger = logging.getLogger(__name__)
+
+
+def _interactive_response_model(response_type: type | None, enable_interactive: bool) -> Any:
+    """Expand response_type to include ExecutionAcceptedResponse when interactive mode is enabled."""
+    if not enable_interactive or response_type is None:
+        return response_type
+    return response_type | ExecutionAcceptedResponse
+
 
 RESPONSE_500 = {
     "description": "Internal Server Error",

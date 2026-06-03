@@ -332,9 +332,9 @@ workflow:
   _type: react_agent
   llm_name: dynamo_llm
   tool_names: [
-    banking_tools.get_account_balance,
-    banking_tools.transfer_funds,
-    # ... all tools with banking_tools. prefix
+    banking_tools__get_account_balance,
+    banking_tools__transfer_funds,
+    # ... all tools with banking_tools__ prefix
   ]
   verbose: true
   max_tool_calls: 25
@@ -469,7 +469,7 @@ functions:
   react_workflow:
     _type: react_agent
     llm_name: dynamo_llm
-    tool_names: [banking_tools.get_account_balance, ...]
+    tool_names: [banking_tools__get_account_balance, ...]
     verbose: true
     max_tool_calls: 25
 
