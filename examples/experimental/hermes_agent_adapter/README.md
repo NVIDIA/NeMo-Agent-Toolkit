@@ -123,7 +123,7 @@ Consequently, NeMo Agent Toolkit can discover and load the _type hermes_agent wo
 
 The Relay config routes the Hermes run through NeMo Relay. Relay observes Hermes agent, model, and tool activity, then the adapter imports those events into the toolkit telemetry stream before the workflow returns.
 
-You can inspect Relay's raw event file:
+You can inspect the raw Relay event file:
 
 ```bash
 cat ./.tmp/nat-relay-hermes-atof/events.jsonl | jq

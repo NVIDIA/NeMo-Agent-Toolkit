@@ -185,10 +185,6 @@ def _build_codex_args(config: CodexAgentWorkflowConfig, prompt: str) -> list[str
     return command
 
 
-def _build_codex_command(config: CodexAgentWorkflowConfig, prompt: str) -> list[str]:
-    return [config.command, *config.command_args, *_build_codex_root_args(config), *_build_codex_args(config, prompt)]
-
-
 def _write_relay_config(config: CodexAgentWorkflowConfig, path: Path) -> None:
     codex_command = " ".join([config.command, *config.command_args, *_build_codex_root_args(config)])
     path.write_text("[agents.codex]\n"
@@ -334,18 +330,15 @@ async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
     cwd = Path(config.working_directory).resolve()
     relay_temp_dir: tempfile.TemporaryDirectory[str] | None = None
     relay_atof_path: Path | None = None
-    if config.relay_enabled:
-        relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-codex-relay-")
-        relay_root = Path(relay_temp_dir.name)
-        relay_config_path = relay_root / "config.toml"
-        relay_atof_dir = (Path(config.relay_atof_output_dir).resolve() if config.relay_atof_output_dir else relay_root /
-                          "atof")
-        relay_atof_dir.mkdir(parents=True, exist_ok=True)
-        _write_relay_config(config, relay_config_path)
-        relay_atof_path = relay_atof_dir / "events.jsonl"
-        command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
-    else:
-        command = _build_codex_command(config, prompt)
+    relay_temp_dir = tempfile.TemporaryDirectory(prefix="nat-codex-relay-")
+    relay_root = Path(relay_temp_dir.name)
+    relay_config_path = relay_root / "config.toml"
+    relay_atof_dir = (Path(config.relay_atof_output_dir).resolve() if config.relay_atof_output_dir else relay_root /
+                      "atof")
+    relay_atof_dir.mkdir(parents=True, exist_ok=True)
+    _write_relay_config(config, relay_config_path)
+    relay_atof_path = relay_atof_dir / "events.jsonl"
+    command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
 
     try:
         process = await asyncio.create_subprocess_exec(*command,
@@ -354,12 +347,9 @@ async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
                                                        stdout=asyncio.subprocess.PIPE,
                                                        stderr=asyncio.subprocess.PIPE)
     except FileNotFoundError as error:
-        if relay_temp_dir is not None:
-            relay_temp_dir.cleanup()
-        executable_label = "NeMo Relay CLI" if config.relay_enabled else "Codex CLI"
+        relay_temp_dir.cleanup()
         raise RuntimeError(
-            f"Could not find {executable_label} command: {command[0]}. Install Codex as `codex`, install "
-            "NeMo Relay as `nemo-relay` when `relay_enabled` is true, or set `command` / `command_args` / "
+            f"Could not find Codex relay command: {command[0]}. Install NeMo Relay as `nemo-relay` or set "
             "`relay_command` in the workflow config.") from error
 
     try:
@@ -373,7 +363,7 @@ async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
         finally:
             if relay_temp_dir is not None:
                 relay_temp_dir.cleanup()
-        raise RuntimeError(f"Codex CLI timed out after {config.timeout_seconds} seconds") from error
+        raise RuntimeError(f"Codex relay command timed out after {config.timeout_seconds} seconds") from error
 
     stdout = stdout_bytes.decode(errors="replace").strip()
     stderr = stderr_bytes.decode(errors="replace").strip()
@@ -386,10 +376,10 @@ async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
 
     if process.returncode:
         details = "\n".join(part for part in [stderr, stdout] if part)
-        raise RuntimeError(f"Codex CLI failed with exit code {process.returncode}: {_clip(details, 4000)}")
+        raise RuntimeError(f"Codex relay command failed with exit code {process.returncode}: {_clip(details, 4000)}")
 
     if not stdout and stderr:
-        raise RuntimeError(f"Codex CLI produced no stdout. Stderr: {_clip(stderr, 4000)}")
+        raise RuntimeError(f"Codex relay command produced no stdout. Stderr: {_clip(stderr, 4000)}")
 
     return _clip(stdout, config.max_output_chars)
 

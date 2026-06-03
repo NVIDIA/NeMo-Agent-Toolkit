@@ -143,3 +143,11 @@ def test_load_and_inject_relay_atof_jsonl(tmp_path):
     assert injected == captured
     assert [step.event_type for step in captured] == [IntermediateStepType.TOOL_START, IntermediateStepType.TOOL_END]
     assert captured[0].parent_id == "nat-parent"
+
+
+def test_load_relay_atof_jsonl_skips_malformed_lines(tmp_path):
+    path = tmp_path / "relay-events.jsonl"
+    event = _scope_event("tool-1", category="tool", scope_category="start")
+    path.write_text(json.dumps(event) + "\nnot json\n[]\n", encoding="utf-8")
+
+    assert load_atof_jsonl(path) == [event]

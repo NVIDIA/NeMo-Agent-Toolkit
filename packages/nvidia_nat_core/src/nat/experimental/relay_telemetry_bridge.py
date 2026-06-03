@@ -53,11 +53,14 @@ def load_atof_jsonl(path: str | Path) -> list[RelayEvent]:
     """Load Relay ATOF events from a JSONL file."""
 
     events: list[RelayEvent] = []
-    with Path(path).open() as event_file:
+    with Path(path).open(encoding="utf-8") as event_file:
         for line in event_file:
             stripped = line.strip()
             if stripped:
-                event = json.loads(stripped)
+                try:
+                    event = json.loads(stripped)
+                except (json.JSONDecodeError, ValueError):
+                    continue
                 if isinstance(event, dict):
                     events.append(event)
     return events

@@ -271,7 +271,16 @@ async def _run_openclaw_agent(prompt: str, config: OpenClawAgentWorkflowConfig) 
 
 
 @register_function(config_type=OpenClawAgentWorkflowConfig)
-async def openclaw_agent(config: OpenClawAgentWorkflowConfig, _builder: Builder):
+async def openclaw_agent(config: OpenClawAgentWorkflowConfig, _builder: Builder) -> AsyncGenerator[FunctionInfo, None]:
+    """Create the OpenClaw workflow function.
+
+    Args:
+        config: OpenClaw workflow configuration used to build subprocess commands and response handling.
+        _builder: Workflow builder supplied by NeMo Agent Toolkit. It is accepted for registry compatibility.
+
+    Returns:
+        An async generator that yields the FunctionInfo for normal and streaming OpenClaw responses.
+    """
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)

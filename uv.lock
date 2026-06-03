@@ -1218,6 +1218,24 @@ wheels = [
 ]
 
 [[package]]
+name = "claude-agent-sdk"
+version = "0.2.88"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "mcp" },
+    { name = "sniffio" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/83/30/f528a490177b00ad1aa1ff10ffbe65e3e220fcb098bed25e5f1d1ce05ece/claude_agent_sdk-0.2.88.tar.gz", hash = "sha256:8df395642d8907081620f616042b939a94d0d4fe557370a0b927e46bf27e3251", size = 253318, upload-time = "2026-06-02T22:10:44.461Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cc/7c/386edf14d9d463acfc235255f7cc2771bb1fc1c0d91835126ad4868edaf3/claude_agent_sdk-0.2.88-py3-none-macosx_11_0_arm64.whl", hash = "sha256:de341f58d2188d3a87376badfd9a06715503d6f10d30cfff29e20d713c51be80", size = 64284055, upload-time = "2026-06-02T22:10:48.143Z" },
+    { url = "https://files.pythonhosted.org/packages/90/2e/c7a14086c6113211f24ba5503ecfe998c0aa6432e3c829a71c62d97c0189/claude_agent_sdk-0.2.88-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:d75ee3f65d84f14c3e466fddb70ceb18cbd1d5499d0bac172b473b42ec466800", size = 66336276, upload-time = "2026-06-02T22:10:51.438Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/8e/7ef82eb1f5fcbbbc2747e59795322663e44b7988a0eb33d4194db57792bc/claude_agent_sdk-0.2.88-py3-none-manylinux_2_17_aarch64.whl", hash = "sha256:1a7243177350a58dc13fb340d05c4d9b100647a45b998aa2bd974b2368d74d82", size = 73936773, upload-time = "2026-06-02T22:10:54.944Z" },
+    { url = "https://files.pythonhosted.org/packages/bf/8a/366b5b9bb9872fc64c8bae18ec4dafc316050da679645355468a4575f0cf/claude_agent_sdk-0.2.88-py3-none-manylinux_2_17_x86_64.whl", hash = "sha256:1e94cc8565e0a7f2482120d1a0ac8f93f72f831ad430470228afc9d9133e8ab5", size = 74106279, upload-time = "2026-06-02T22:10:58.176Z" },
+    { url = "https://files.pythonhosted.org/packages/93/78/ff44cd1b50c5b4529dcf30f0a0ffdbe28591f6195ec4d99028f91c384e16/claude_agent_sdk-0.2.88-py3-none-win_amd64.whl", hash = "sha256:fd1d98624b638b6acc40f5a1348daf077c3ca944a1ff946a22d21db46b4beba6", size = 74728886, upload-time = "2026-06-02T22:11:01.569Z" },
+]
+
+[[package]]
 name = "click"
 version = "8.3.1"
 source = { registry = "https://pypi.org/simple" }
@@ -5603,6 +5621,38 @@ requires-dist = [
 ]
 
 [[package]]
+name = "nat-claude-code-agent-adapter"
+source = { editable = "examples/experimental/claude_code_agent_adapter" }
+dependencies = [
+    { name = "claude-agent-sdk" },
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "claude-agent-sdk", specifier = ">=0.1.60" },
+    { name = "nvidia-nat", extras = ["langchain"], editable = "." },
+]
+[[package]]
+name = "nat-codex-agent-adapter"
+source = { editable = "examples/experimental/codex_agent_adapter" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+[[package]]
+name = "nat-cursor-agent-adapter"
+source = { editable = "examples/experimental/cursor_agent_adapter" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
+[[package]]
 name = "nat-documentation-guides"
 source = { editable = "examples/documentation_guides" }
 dependencies = [
@@ -5675,6 +5725,16 @@ requires-dist = [
     { name = "trafilatura", specifier = "~=2.0" },
     { name = "urllib3", specifier = ">=2.7.0,<3.0.0" },
 ]
+
+[[package]]
+name = "nat-hermes-agent-adapter"
+source = { editable = "examples/experimental/hermes_agent_adapter" }
+dependencies = [
+    { name = "nvidia-nat", extra = ["langchain"] },
+]
+
+[package.metadata]
+requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
 
 [[package]]
 name = "nat-hybrid-control-flow"
@@ -6437,10 +6497,14 @@ examples = [
     { name = "nat-alert-triage-agent" },
     { name = "nat-autogen-demo" },
     { name = "nat-automated-description-generation" },
+    { name = "nat-claude-code-agent-adapter" },
+    { name = "nat-codex-agent-adapter" },
+    { name = "nat-cursor-agent-adapter" },
     { name = "nat-documentation-guides" },
     { name = "nat-dpo-tic-tac-toe" },
     { name = "nat-email-phishing-analyzer" },
     { name = "nat-haystack-deep-research-agent" },
+    { name = "nat-hermes-agent-adapter" },
     { name = "nat-hybrid-control-flow" },
     { name = "nat-latency-sensitivity-demo" },
     { name = "nat-math-assistant-a2a" },
@@ -6625,10 +6689,14 @@ requires-dist = [
     { name = "nat-alert-triage-agent", marker = "extra == 'examples'", editable = "examples/advanced_agents/alert_triage_agent" },
     { name = "nat-autogen-demo", marker = "extra == 'examples'", editable = "examples/frameworks/nat_autogen_demo" },
     { name = "nat-automated-description-generation", marker = "extra == 'examples'", editable = "examples/custom_functions/automated_description_generation" },
+    { name = "nat-claude-code-agent-adapter", marker = "extra == 'examples'", editable = "examples/experimental/claude_code_agent_adapter" },
+    { name = "nat-codex-agent-adapter", marker = "extra == 'examples'", editable = "examples/experimental/codex_agent_adapter" },
+    { name = "nat-cursor-agent-adapter", marker = "extra == 'examples'", editable = "examples/experimental/cursor_agent_adapter" },
     { name = "nat-documentation-guides", marker = "extra == 'examples'", editable = "examples/documentation_guides" },
     { name = "nat-dpo-tic-tac-toe", marker = "extra == 'examples'", editable = "examples/finetuning/dpo_tic_tac_toe" },
     { name = "nat-email-phishing-analyzer", marker = "extra == 'examples'", editable = "examples/evaluation_and_profiling/email_phishing_analyzer" },
     { name = "nat-haystack-deep-research-agent", marker = "extra == 'examples'", editable = "examples/frameworks/haystack_deep_research_agent" },
+    { name = "nat-hermes-agent-adapter", marker = "extra == 'examples'", editable = "examples/experimental/hermes_agent_adapter" },
     { name = "nat-hybrid-control-flow", marker = "extra == 'examples'", editable = "examples/control_flow/hybrid_control_flow" },
     { name = "nat-latency-sensitivity-demo", marker = "extra == 'examples'", editable = "examples/dynamo_integration/latency_sensitivity_demo" },
     { name = "nat-math-assistant-a2a", marker = "extra == 'examples'", editable = "examples/A2A/math_assistant_a2a" },

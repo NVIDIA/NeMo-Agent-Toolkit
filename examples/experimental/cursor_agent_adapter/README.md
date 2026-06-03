@@ -147,7 +147,7 @@ Summary: pyproject.toml exposes the plugin by pointing the nat.components entry 
 
 The Relay config routes the Cursor Agent run through NeMo Relay. Relay observes Cursor agent, model, and tool activity when available, then the adapter imports those events into the toolkit telemetry stream before the workflow returns.
 
-You can inspect Relay's raw event file:
+You can inspect the raw Relay event file:
 
 ```bash
 cat ./.tmp/nat-relay-cursor-atof/events.jsonl | jq
