@@ -63,7 +63,7 @@ crewai = ["nvidia-nat-crewai == {version}"]
 data-flywheel = ["nvidia-nat-data-flywheel == {version}"]
 eval = ["nvidia-nat-eval[full] == {version}"]
 fastmcp = ["nvidia-nat-fastmcp == {version}"]
-langchain = ["nvidia-nat-langchain == {version}"]
+langchain = ["nvidia-nat-langchain[all] == {version}"]
 llama-index = ["nvidia-nat-llama-index == {version}"]
 mcp = ["nvidia-nat-mcp == {version}"]
 mem0ai = ["nvidia-nat-mem0ai == {version}"]
@@ -105,7 +105,7 @@ most = [
   "nvidia-nat-data-flywheel == {version}",
   "nvidia-nat-eval[full] == {version}",
   "nvidia-nat-fastmcp == {version}",
-  "nvidia-nat-langchain == {version}",
+  "nvidia-nat-langchain[all] == {version}",
   "nvidia-nat-llama-index == {version}",
   "nvidia-nat-mcp == {version}",
   "nvidia-nat-mem0ai == {version}",
