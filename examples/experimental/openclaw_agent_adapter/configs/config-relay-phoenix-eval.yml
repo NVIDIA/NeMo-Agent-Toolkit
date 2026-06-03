@@ -1,0 +1,44 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: nat-relay-openclaw-eval
+
+workflow:
+  _type: openclaw_agent
+  command: openclaw
+  working_directory: .
+  agent_id: main
+  session_key: nat-openclaw-relay-eval-guardian
+  local: false
+  codex_app_server_mode: guardian
+  codex_app_server_approval_policy: on-request
+  codex_app_server_sandbox: workspace-write
+  agent_timeout_seconds: 600
+  timeout_seconds: 660
+  max_output_chars: 12000
+
+eval:
+  general:
+    max_concurrency: 1
+    output:
+      dir: ./.tmp/nat/examples/openclaw_agent_adapter/relay_phoenix_eval
+      write_atif_workflow_output: true
+    dataset:
+      _type: json
+      file_path: examples/experimental/openclaw_agent_adapter/data/eval-smoke.json
+  evaluators:
+    avg_workflow_runtime:
+      _type: avg_workflow_runtime
+      max_concurrency: 1
+    avg_num_llm_calls:
+      _type: avg_num_llm_calls
+      max_concurrency: 1
+    avg_tokens_per_llm_end:
+      _type: avg_tokens_per_llm_end
+      max_concurrency: 1

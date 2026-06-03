@@ -160,6 +160,17 @@ def _build_openclaw_command(config: OpenClawAgentWorkflowConfig, prompt: str) ->
     return command
 
 
+def _add_gateway_path_context(prompt: str, cwd: Path, config: OpenClawAgentWorkflowConfig) -> str:
+    if config.local:
+        return prompt
+
+    return (
+        "The NeMo Agent Toolkit workflow launched OpenClaw from this directory:\n"
+        f"{cwd}\n\n"
+        "When the request mentions relative file paths, resolve them against that directory.\n\n"
+        f"User request:\n{prompt}")
+
+
 def _build_openclaw_env(config: OpenClawAgentWorkflowConfig) -> dict[str, str]:
     env = os.environ.copy()
     if config.codex_app_server_mode is not None:
@@ -213,7 +224,14 @@ def _diagnostic_hint(details: str) -> str:
                 "`codex_app_server_sandbox: workspace-write`, then use a fresh `session_key` if a previous OpenClaw "
                 "session was created with the rejected policy.")
     if "gateway closed" in details or "GatewayTransportError" in details:
-        return "\n\nHint: Set `local: true` to use OpenClaw's embedded one-shot agent instead of a running Gateway."
+        return ("\n\nHint: This Relay example uses OpenClaw Gateway mode so the `nemo-relay` plugin can observe the "
+                "run. Restart OpenClaw Gateway, verify `openclaw plugins inspect nemo-relay --runtime --json`, and "
+                "check `openclaw gateway call nemoRelay.status --json`. If you only need a direct OpenClaw run "
+                "without Relay telemetry, set `local: true`.")
+    if "GatewayCredentialsRequiredError" in details or "gateway agent requires credentials" in details:
+        return ("\n\nHint: This Relay example uses OpenClaw Gateway mode. Configure local Gateway auth before running "
+                "the workflow: set `gateway.mode: local`, `gateway.bind: loopback`, `gateway.auth.mode: token`, and "
+                "a `gateway.auth.token`, then restart OpenClaw Gateway.")
     if "timed out waiting for cloud requirements" in details:
         return ("\n\nHint: OpenClaw's Codex harness could not load cloud requirements. Run the workflow from the same "
                 "normal shell/user profile that can read and write `~/.openclaw`, verify `openclaw doctor`, and make "
@@ -223,7 +241,8 @@ def _diagnostic_hint(details: str) -> str:
 
 async def _run_openclaw_agent(prompt: str, config: OpenClawAgentWorkflowConfig) -> str:
     cwd = Path(config.working_directory).resolve()
-    command = _build_openclaw_command(config, prompt)
+    openclaw_prompt = _add_gateway_path_context(prompt, cwd, config)
+    command = _build_openclaw_command(config, openclaw_prompt)
 
     try:
         process = await asyncio.create_subprocess_exec(*command,

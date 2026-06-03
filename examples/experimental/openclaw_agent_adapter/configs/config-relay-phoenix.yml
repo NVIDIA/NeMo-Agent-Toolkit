@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026, NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+general:
+  telemetry:
+    tracing:
+      phoenix:
+        _type: phoenix
+        endpoint: http://localhost:6006/v1/traces
+        project: nat-relay-openclaw
+
+workflow:
+  _type: openclaw_agent
+  command: openclaw
+  working_directory: .
+  agent_id: main
+  session_key: nat-openclaw-relay-phoenix-guardian
+  local: false
+  codex_app_server_mode: guardian
+  codex_app_server_approval_policy: on-request
+  codex_app_server_sandbox: workspace-write
+  agent_timeout_seconds: 600
+  timeout_seconds: 660
+  max_output_chars: 12000

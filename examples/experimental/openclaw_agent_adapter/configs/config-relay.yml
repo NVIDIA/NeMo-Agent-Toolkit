@@ -3,10 +3,11 @@
 
 workflow:
   _type: openclaw_agent
+  command: openclaw
   working_directory: .
   agent_id: main
-  session_key: nat-openclaw
-  local: true
+  session_key: nat-openclaw-relay-guardian
+  local: false
   codex_app_server_mode: guardian
   codex_app_server_approval_policy: on-request
   codex_app_server_sandbox: workspace-write
