@@ -96,7 +96,7 @@ From the repository root, run the Relay-enabled Cursor workflow:
 ```bash
 nat run \
   --config_file examples/experimental/cursor_agent_adapter/configs/config-relay.yml \
-  --input "Read exactly these files: examples/experimental/cursor_agent_adapter/pyproject.toml and examples/experimental/cursor_agent_adapter/src/nat_cursor_agent_adapter/register.py. Summarize how pyproject.toml exposes the nat.components entry point and how register.py registers the _type cursor_agent workflow with NeMo Agent Toolkit. Do not edit files."
+  --input "Read exactly these files: examples/experimental/cursor_agent_adapter/pyproject.toml and examples/experimental/cursor_agent_adapter/src/nat_cursor_agent_adapter/register.py, then summarize how pyproject.toml exposes the nat.components entry point and how register.py registers the _type cursor_agent workflow with NeMo Agent Toolkit. Do not edit files."
 ```
 
 The run should return a normal NeMo Agent Toolkit workflow result:

@@ -195,7 +195,7 @@ openclaw gateway start
 
 For a foreground-only run instead, start `openclaw gateway run` in one terminal and run the `nat` workflow in another terminal.
 
-Restart Gateway after changing the Codex app-server policy. If you previously ran this example with an older session key and saw `approval_policy: Never`, use the session keys in the current configs or choose another fresh `session_key` so OpenClaw does not reuse a persisted Codex thread created with the rejected policy.
+Restart Gateway after changing the Codex app-server policy. If you previously ran this example with an older session key and saw `approval_policy: Never`, use the session keys in the current configuration files or choose another fresh `session_key` so OpenClaw does not reuse a persisted Codex thread created with the rejected policy.
 
 ## Run With NeMo Relay
 

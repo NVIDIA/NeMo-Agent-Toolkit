@@ -95,7 +95,7 @@ From the repository root, run the Relay-enabled Codex workflow:
 ```bash
 nat run \
   --config_file examples/experimental/codex_agent_adapter/configs/config-relay.yml \
-  --input "Read exactly these files: examples/experimental/codex_agent_adapter/pyproject.toml and examples/experimental/codex_agent_adapter/src/nat_codex_agent_adapter/register.py. Summarize how pyproject.toml exposes the nat.components entry point and how register.py registers the _type codex_agent workflow with NeMo Agent Toolkit. Do not edit files."
+  --input "Read exactly these files: examples/experimental/codex_agent_adapter/pyproject.toml and examples/experimental/codex_agent_adapter/src/nat_codex_agent_adapter/register.py, then summarize how pyproject.toml exposes the nat.components entry point and how register.py registers the _type codex_agent workflow with NeMo Agent Toolkit. Do not edit files."
 ```
 
 The run should return a normal NeMo Agent Toolkit workflow result:
@@ -135,7 +135,7 @@ The actual registration happens with:
 @register_function(config_type=CodexAgentWorkflowConfig)
 async def codex_agent(config: CodexAgentWorkflowConfig, _builder: Builder):
 
-That decorator tells the toolkit to register codex_agent as a function/workflow component using CodexAgentWorkflowConfig. When instantiated, the function yields a FunctionInfo with both a normal response function and a streaming function. Those handlers convert incoming toolkit chat input, build a Codex prompt, run Codex through the Node SDK or Relay/CLI path, then return a toolkit-compatible response.
+That decorator tells the toolkit to register codex_agent as a function or workflow component using CodexAgentWorkflowConfig. When instantiated, the function yields a FunctionInfo with both a normal response function and a streaming function. Those handlers convert incoming toolkit chat input, build a Codex prompt, run Codex through the Node SDK or Relay CLI path, then return a toolkit-compatible response.
 ```
 
 The Relay config routes the Codex run through NeMo Relay. Relay observes Codex agent, model, and tool activity, then the adapter imports those events into the toolkit telemetry stream before the workflow returns.
