@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Register the experimental Cursor Agent adapter with NVIDIA NeMo Agent Toolkit."""
+
 import asyncio
 import datetime
 import json
+import shlex
 import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -157,7 +160,7 @@ def _build_cursor_args(config: CursorAgentWorkflowConfig, prompt: str) -> list[s
 
 
 def _write_relay_config(config: CursorAgentWorkflowConfig, path: Path) -> None:
-    cursor_command = " ".join([config.command, *config.command_args])
+    cursor_command = shlex.join([config.command, *config.command_args])
     path.write_text("[agents.cursor]\n"
                     f"command = {json.dumps(cursor_command)}\n"
                     f"patch_restore_hooks = {str(config.relay_patch_restore_hooks).lower()}\n")
@@ -278,7 +281,16 @@ async def _run_cursor_agent(prompt: str, config: CursorAgentWorkflowConfig) -> s
 
 
 @register_function(config_type=CursorAgentWorkflowConfig)
-async def cursor_agent(config: CursorAgentWorkflowConfig, _builder: Builder):
+async def cursor_agent(config: CursorAgentWorkflowConfig, _builder: Builder) -> AsyncGenerator[FunctionInfo, None]:
+    """Create a Cursor Agent workflow function for NVIDIA NeMo Agent Toolkit.
+
+    Args:
+        config: Cursor Agent workflow configuration from the NeMo Agent Toolkit config system.
+        _builder: Toolkit builder supplied during workflow construction.
+
+    Yields:
+        FunctionInfo containing single-response and streaming handlers that invoke Cursor Agent through NeMo Relay.
+    """
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)

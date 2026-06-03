@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Register the experimental Claude Code adapter with NVIDIA NeMo Agent Toolkit."""
+
 import asyncio
 import datetime
 import json
+import shlex
 import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -165,7 +168,7 @@ def _build_claude_args(config: ClaudeCodeAgentWorkflowConfig, prompt: str) -> li
 
 
 def _write_relay_config(config: ClaudeCodeAgentWorkflowConfig, path: Path) -> None:
-    claude_command = " ".join([config.command, *config.command_args])
+    claude_command = shlex.join([config.command, *config.command_args])
     path.write_text("[agents.claude]\n"
                     f"command = {json.dumps(claude_command)}\n")
 
@@ -270,7 +273,17 @@ async def _run_claude_code(prompt: str, config: ClaudeCodeAgentWorkflowConfig) -
 
 
 @register_function(config_type=ClaudeCodeAgentWorkflowConfig)
-async def claude_code_agent(config: ClaudeCodeAgentWorkflowConfig, _builder: Builder):
+async def claude_code_agent(config: ClaudeCodeAgentWorkflowConfig,
+                            _builder: Builder) -> AsyncGenerator[FunctionInfo, None]:
+    """Create a Claude Code workflow function for NVIDIA NeMo Agent Toolkit.
+
+    Args:
+        config: Claude Code workflow configuration from the NeMo Agent Toolkit config system.
+        _builder: Toolkit builder supplied during workflow construction.
+
+    Yields:
+        FunctionInfo containing single-response and streaming handlers that invoke Claude Code through NeMo Relay.
+    """
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)

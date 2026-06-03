@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Register the experimental Hermes adapter with NVIDIA NeMo Agent Toolkit."""
+
 import asyncio
 import datetime
 import json
+import shlex
 import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -139,7 +142,7 @@ def _build_hermes_args(config: HermesAgentWorkflowConfig, prompt: str) -> list[s
 
 
 def _write_relay_config(config: HermesAgentWorkflowConfig, path: Path) -> None:
-    hermes_command = " ".join([config.command, *config.command_args])
+    hermes_command = shlex.join([config.command, *config.command_args])
     path.write_text("[agents.hermes]\n"
                     f"command = {json.dumps(hermes_command)}\n")
 
@@ -261,7 +264,16 @@ async def _run_hermes_agent(prompt: str, config: HermesAgentWorkflowConfig) -> s
 
 
 @register_function(config_type=HermesAgentWorkflowConfig)
-async def hermes_agent(config: HermesAgentWorkflowConfig, _builder: Builder):
+async def hermes_agent(config: HermesAgentWorkflowConfig, _builder: Builder) -> AsyncGenerator[FunctionInfo, None]:
+    """Create a Hermes workflow function for NVIDIA NeMo Agent Toolkit.
+
+    Args:
+        config: Hermes workflow configuration from the NeMo Agent Toolkit config system.
+        _builder: Toolkit builder supplied during workflow construction.
+
+    Yields:
+        FunctionInfo containing single-response and streaming handlers that invoke Hermes through NeMo Relay.
+    """
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)

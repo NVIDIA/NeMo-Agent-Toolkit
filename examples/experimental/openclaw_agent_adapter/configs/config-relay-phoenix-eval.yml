@@ -49,9 +49,3 @@ eval:
     avg_workflow_runtime:
       _type: avg_workflow_runtime
       max_concurrency: 1
-    avg_num_llm_calls:
-      _type: avg_num_llm_calls
-      max_concurrency: 1
-    avg_tokens_per_llm_end:
-      _type: avg_tokens_per_llm_end
-      max_concurrency: 1

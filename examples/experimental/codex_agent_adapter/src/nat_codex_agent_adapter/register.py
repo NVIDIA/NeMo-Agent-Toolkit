@@ -13,10 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Register the experimental Codex adapter with NVIDIA NeMo Agent Toolkit."""
+
 import asyncio
 import datetime
 import json
 import os
+import shlex
 import tempfile
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -170,7 +173,7 @@ def _build_codex_args(config: CodexAgentWorkflowConfig, prompt: str) -> list[str
 
 
 def _write_relay_config(config: CodexAgentWorkflowConfig, path: Path) -> None:
-    codex_command = " ".join([config.command, *config.command_args, *_build_codex_root_args(config)])
+    codex_command = shlex.join([config.command, *config.command_args, *_build_codex_root_args(config)])
     path.write_text("[agents.codex]\n"
                     f"command = {json.dumps(codex_command)}\n")
 
@@ -233,6 +236,9 @@ async def _run_codex_cli(prompt: str, config: CodexAgentWorkflowConfig) -> str:
     _write_relay_config(config, relay_config_path)
     relay_atof_path = relay_atof_dir / "events.jsonl"
     command = _build_relay_command(config, prompt, relay_config_path, relay_atof_dir)
+    if not cwd.exists() or not cwd.is_dir():
+        relay_temp_dir.cleanup()
+        raise RuntimeError(f"Invalid working_directory {config.working_directory!r}: {cwd} is not a directory.")
 
     try:
         process = await asyncio.create_subprocess_exec(*command,
@@ -279,7 +285,16 @@ async def _run_codex(prompt: str, config: CodexAgentWorkflowConfig) -> str:
 
 
 @register_function(config_type=CodexAgentWorkflowConfig)
-async def codex_agent(config: CodexAgentWorkflowConfig, _builder: Builder):
+async def codex_agent(config: CodexAgentWorkflowConfig, _builder: Builder) -> AsyncGenerator[FunctionInfo, None]:
+    """Create a Codex workflow function for NVIDIA NeMo Agent Toolkit.
+
+    Args:
+        config: Codex workflow configuration from the NeMo Agent Toolkit config system.
+        _builder: Toolkit builder supplied during workflow construction.
+
+    Yields:
+        FunctionInfo containing single-response and streaming handlers that invoke Codex through NeMo Relay.
+    """
 
     async def _response_fn(chat_request_or_message: ChatRequestOrMessage) -> ChatResponse | str:
         message = GlobalTypeConverter.get().convert(chat_request_or_message, to_type=ChatRequestOrMessage)

@@ -57,7 +57,7 @@ class OpenClawAgentWorkflowConfig(AgentBaseConfig, name="openclaw_agent"):
     session_key: str | None = Field(default="nat-openclaw", description="Optional durable OpenClaw session key.")
     model: str | None = Field(default=None, description="Optional OpenClaw model reference.")
     thinking: str | None = Field(default=None, description="Optional OpenClaw thinking level.")
-    local: bool = Field(default=True, description="Force embedded local execution instead of Gateway mode.")
+    local: bool = Field(default=False, description="Force embedded local execution instead of Gateway mode.")
     agent_timeout_seconds: int = Field(default=600, gt=0, description="OpenClaw agent run timeout.")
     codex_app_server_mode: CodexAppServerMode | None = Field(
         default="guardian",

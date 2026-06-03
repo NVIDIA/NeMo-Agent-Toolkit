@@ -225,7 +225,7 @@ Number of TTC Strategies: 0
 Number of Authentication Providers: 0
 
 Workflow Result:
-[pyproject.toml](/Users/yuchenz/Desktop/Work/Project/nemo-agent-toolkit/examples/experimental/openclaw_agent_adapter/pyproject.toml:44) exposes a `nat.components` entry point:
+`examples/experimental/openclaw_agent_adapter/pyproject.toml` exposes a `nat.components` entry point:
 
 ```toml
 [project.entry-points.'nat.components']
@@ -234,7 +234,7 @@ nat_openclaw_agent_adapter = "nat_openclaw_agent_adapter.register"
 
 That tells NeMo Agent Toolkit to load the `nat_openclaw_agent_adapter.register` module when discovering NAT components from the installed package.
 
-In [register.py](/Users/yuchenz/Desktop/Work/Project/nemo-agent-toolkit/examples/experimental/openclaw_agent_adapter/src/nat_openclaw_agent_adapter/register.py), the workflow type is defined by `OpenClawAgentWorkflowConfig(AgentBaseConfig, name="openclaw_agent")`. That `name` is what makes the NAT config `_type` be `openclaw_agent`.
+In `examples/experimental/openclaw_agent_adapter/src/nat_openclaw_agent_adapter/register.py`, the workflow type is defined by `OpenClawAgentWorkflowConfig(AgentBaseConfig, name="openclaw_agent")`. That `name` is what makes the NAT config `_type` be `openclaw_agent`.
 
 The actual registration happens with:
 
@@ -288,7 +288,7 @@ Open `http://localhost:6006`. The NeMo Agent Toolkit Phoenix config exports the 
 
 ## Evaluate With NeMo Relay
 
-The evaluation smoke config uses the same OpenClaw plugin setup and writes toolkit ATIF output:
+The evaluation smoke config uses the same OpenClaw plugin setup and measures toolkit workflow runtime:
 
 ```bash
 nat eval \
