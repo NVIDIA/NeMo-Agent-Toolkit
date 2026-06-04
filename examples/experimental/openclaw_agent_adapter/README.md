@@ -77,7 +77,7 @@ openclaw onboard
 openclaw doctor
 ```
 
-The example configs use Gateway mode (`local: false`) because the `nemo-relay` plugin runs inside OpenClaw Gateway. Configure Gateway for local token-authenticated runs:
+The example configurations use Gateway mode (`local: false`) because the `nemo-relay` plugin runs inside OpenClaw Gateway. Configure Gateway for local token-authenticated runs:
 
 ```bash
 openclaw config set gateway.mode local
