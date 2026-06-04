@@ -289,9 +289,10 @@ Open `http://localhost:6006`. The NeMo Agent Toolkit Phoenix config exports the 
 
 ## Evaluate With NeMo Relay
 
-The evaluation sample config uses the same OpenClaw plugin setup and measures toolkit workflow runtime:
+The evaluation sample config uses the same OpenClaw plugin setup and measures toolkit workflow runtime. It uses the profiler `avg_workflow_runtime` evaluator, so install profiler support before running `nat eval`:
 
 ```bash
+uv pip install -e ".[profiler]"
 nat eval \
   --config_file examples/experimental/openclaw_agent_adapter/configs/config-relay-phoenix-eval.yml
 ```

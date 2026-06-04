@@ -169,9 +169,10 @@ Open `http://localhost:6006` and select the `nat-relay-claude-code` project. The
 
 ## Evaluate With NeMo Relay
 
-The evaluation sample config uses the same Relay bridge and writes ATIF output:
+The evaluation sample config uses the same Relay bridge and writes ATIF output. It also uses profiler evaluators such as `avg_workflow_runtime`, so install profiler support before running `nat eval`:
 
 ```bash
+uv pip install -e ".[profiler]"
 nat eval \
   --config_file examples/experimental/claude_code_agent_adapter/configs/config-relay-phoenix-eval.yml
 ```
