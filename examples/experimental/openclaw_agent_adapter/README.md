@@ -55,19 +55,20 @@ flowchart LR
     Workflow -. Phoenix config .-> Trace
 ```
 
-NeMo Agent Toolkit owns the workflow and evaluation lifecycle. OpenClaw owns the agent execution. NeMo Relay is loaded through OpenClaw's plugin system, so this workflow does not launch `nemo-relay run` or import a Relay `events.jsonl` file. The plugin writes ATIF files and can send OpenInference spans directly to Phoenix.
+NeMo Agent Toolkit owns the workflow and evaluation lifecycle. OpenClaw owns the agent execution. NeMo Relay is loaded through OpenClaw's plugin system, so this workflow does not launch `nemo-relay run` or import a Relay `events.jsonl` file. The plugin can write ATIF files and send OpenInference spans directly to Phoenix when those exporters are enabled in OpenClaw config.
 
 ## Installation And Setup
 
 If you have not already done so, follow the instructions in the [Install Guide](../../../docs/source/get-started/installation.md#install-from-source) to create the development environment and install NeMo Agent Toolkit.
 
-Install this workflow package:
+Install this workflow package and verify that `nat` is available:
 
 ```bash
 uv pip install -e examples/experimental/openclaw_agent_adapter
+nat --version
 ```
 
-Install OpenClaw CLI so the `openclaw` command is available on `PATH`, then configure it in the same environment that launches `nat`:
+Install OpenClaw CLI so the `openclaw` command is available on `PATH`, then onboard OpenClaw in the same shell environment that launches `nat`:
 
 ```bash
 npm install -g openclaw@latest
@@ -76,7 +77,7 @@ openclaw onboard
 openclaw doctor
 ```
 
-Configure OpenClaw Gateway for local token-authenticated runs. Gateway mode is required because the `nemo-relay` plugin runs inside OpenClaw Gateway:
+The example configs use Gateway mode (`local: false`) because the `nemo-relay` plugin runs inside OpenClaw Gateway. Configure Gateway for local token-authenticated runs:
 
 ```bash
 openclaw config set gateway.mode local
@@ -86,7 +87,7 @@ openclaw config set gateway.auth.token "$(openssl rand -hex 32)"
 openclaw config validate
 ```
 
-Configure Gateway-mode Codex app-server policy. These settings live in OpenClaw config because Gateway, not the short-lived `openclaw` CLI process launched by `nat`, owns the actual agent runtime:
+Configure the Gateway-side Codex app-server policy used by these example configs. Gateway owns the actual agent runtime, so these settings must live in OpenClaw config rather than only in the short-lived `openclaw` CLI process launched by `nat`:
 
 ```bash
 openclaw config patch --stdin <<'JSON'
@@ -110,7 +111,7 @@ JSON
 openclaw config validate
 ```
 
-NeMo Relay is a prerequisite for this workflow. Clone the NeMo Relay source locally, set the checkout root, then build and link the NeMo Relay OpenClaw plugin from source:
+Clone the NeMo Relay source locally, then build and link the NeMo Relay OpenClaw plugin from source:
 
 ```bash
 git clone git@github.com:NVIDIA/NeMo-Relay.git
@@ -122,15 +123,17 @@ export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
   npm run build --workspace=nemo-relay-openclaw
 )
 openclaw plugins install --link "$NEMO_RELAY_ROOT/integrations/openclaw"
-openclaw gateway restart
-openclaw plugins inspect nemo-relay --runtime --json
 ```
 
 This source install is used because the `nemo-relay-openclaw` package may not be available from the public npm registry in the test environment.
 
-Merge a `nemo-relay` plugin entry into your OpenClaw config. OpenClaw commonly reads `~/.openclaw/openclaw.json`; use the config path reported by `openclaw doctor` if it differs. Preserve any existing `plugins.load`, `plugins.allow`, and `plugins.entries` values. If your config already has `plugins.allow`, add `nemo-relay` alongside the plugins you already trust. The JSON below is an excerpt, not a full config replacement:
+Enable the `nemo-relay` plugin and choose the ATIF output directory. Use an absolute path so Gateway writes files to the intended repository checkout even when Gateway starts from a different working directory. If you already maintain other OpenClaw plugin entries, merge the `nemo-relay` keys below with your existing config instead of deleting unrelated plugins:
 
-```json
+```bash
+export OPENCLAW_ATIF_DIR="$(pwd)/.tmp/nat-relay-openclaw-atif"
+mkdir -p "$OPENCLAW_ATIF_DIR"
+
+openclaw config patch --stdin <<JSON
 {
   "plugins": {
     "allow": ["nemo-relay"],
@@ -154,7 +157,7 @@ Merge a `nemo-relay` plugin entry into your OpenClaw config. OpenClaw commonly r
                   "atif": {
                     "enabled": true,
                     "agent_name": "openclaw",
-                    "output_directory": "/absolute/path/to/nemo-agent-toolkit/.tmp/nat-relay-openclaw-atif"
+                    "output_directory": "$OPENCLAW_ATIF_DIR"
                   },
                   "openinference": {
                     "enabled": false,
@@ -177,27 +180,22 @@ Merge a `nemo-relay` plugin entry into your OpenClaw config. OpenClaw commonly r
     }
   }
 }
+JSON
+openclaw config validate
 ```
 
-Restart OpenClaw Gateway after changing the plugin config:
+Start Gateway in a separate terminal and leave it running while you run the workflow:
 
 ```bash
-openclaw gateway restart
+openclaw gateway run
+```
+
+In the terminal that runs `nat`, verify that Gateway loaded the plugin:
+
+```bash
+openclaw plugins inspect nemo-relay --runtime --json
 openclaw gateway call nemoRelay.status --json
 ```
-
-Use an absolute `output_directory` so OpenClaw Gateway writes ATIF output to the intended repository checkout even when Gateway starts from a different working directory.
-
-If OpenClaw Gateway is not installed as a service, install and start it:
-
-```bash
-openclaw gateway install
-openclaw gateway start
-```
-
-For a foreground-only run instead, start `openclaw gateway run` in one terminal and run the `nat` workflow in another terminal.
-
-Restart Gateway after changing the Codex app-server policy. If you previously ran this example with an older session key and saw `approval_policy: Never`, use the session keys in the current configuration files or choose another fresh `session_key` so OpenClaw does not reuse a persisted Codex thread created with the rejected policy.
 
 ## Run With NeMo Relay
 
@@ -209,49 +207,7 @@ nat run \
   --input "Read exactly these files: $(pwd)/examples/experimental/openclaw_agent_adapter/pyproject.toml and $(pwd)/examples/experimental/openclaw_agent_adapter/src/nat_openclaw_agent_adapter/register.py. Summarize how pyproject.toml exposes the nat.components entry point and how register.py registers the _type openclaw_agent workflow with NeMo Agent Toolkit. Do not edit files."
 ```
 
-The run should return a normal NeMo Agent Toolkit workflow result:
-
-````text
-Configuration Summary:
---------------------
-Workflow Type: openclaw_agent
-Number of Functions: 0
-Number of Function Groups: 0
-Number of LLMs: 0
-Number of Embedders: 0
-Number of Memory: 0
-Number of Object Stores: 0
-Number of Retrievers: 0
-Number of TTC Strategies: 0
-Number of Authentication Providers: 0
-
-Workflow Result:
-`examples/experimental/openclaw_agent_adapter/pyproject.toml` exposes a `nat.components` entry point:
-
-```toml
-[project.entry-points.'nat.components']
-nat_openclaw_agent_adapter = "nat_openclaw_agent_adapter.register"
-```
-
-That tells NeMo Agent Toolkit to load the `nat_openclaw_agent_adapter.register` module when discovering NAT components from the installed package.
-
-In `examples/experimental/openclaw_agent_adapter/src/nat_openclaw_agent_adapter/register.py`, the workflow type is defined by `OpenClawAgentWorkflowConfig(AgentBaseConfig, name="openclaw_agent")`. That `name` is what makes the NAT config `_type` be `openclaw_agent`.
-
-The actual registration happens with:
-
-```python
-@register_function(config_type=OpenClawAgentWorkflowConfig)
-async def openclaw_agent(...)
-```
-
-When NAT imports the entry-point module, this decorator registers the `openclaw_agent` workflow for that config type. The function yields `FunctionInfo.create(...)` with both `single_fn` and `stream_fn`, so NAT can invoke OpenClaw through either normal or streaming chat paths.
-````
-
-The workflow config runs OpenClaw through Gateway mode so the OpenClaw-managed `nemo-relay` plugin can observe the run. Because Gateway-side agents normally execute from the OpenClaw workspace, the adapter also passes the configured workflow `working_directory` as path context and the commands above use absolute file paths. The plugin writes ATIF files to the directory configured in OpenClaw:
-
-```bash
-find ./.tmp/nat-relay-openclaw-atif -maxdepth 1 -type f -name '*.json' -print
-```
+The run should return a normal NeMo Agent Toolkit workflow result summarizing the adapter package and registration code. Because Gateway-side agents normally execute from the OpenClaw workspace, the adapter also passes the configured workflow `working_directory` as path context and the command above uses absolute file paths.
 
 ## Phoenix With NeMo Relay
 
@@ -262,7 +218,7 @@ uv pip install -e packages/nvidia_nat_phoenix
 docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
 ```
 
-Enable the `openinference` section in the OpenClaw `nemo-relay` plugin config, then restart OpenClaw Gateway:
+Enable the `openinference` section in the OpenClaw `nemo-relay` plugin config, then restart Gateway by stopping and rerunning `openclaw gateway run`:
 
 ```json
 "openinference": {
@@ -271,10 +227,6 @@ Enable the `openinference` section in the OpenClaw `nemo-relay` plugin config, t
   "endpoint": "http://localhost:6006/v1/traces",
   "service_name": "openclaw-nemo-relay"
 }
-```
-
-```bash
-openclaw gateway restart
 ```
 
 In another terminal, run the Relay/Phoenix config:
@@ -298,14 +250,3 @@ nat eval \
 ```
 
 Eval outputs are written under `./.tmp/nat/examples/openclaw_agent_adapter/relay_phoenix_eval/`. OpenClaw plugin ATIF output is written to the directory configured in OpenClaw.
-
-## Troubleshooting
-
-If no OpenClaw Relay telemetry appears, verify the plugin status from the same shell that runs `nat`:
-
-```bash
-openclaw plugins inspect nemo-relay --runtime --json
-openclaw gateway call nemoRelay.status --json
-```
-
-If OpenClaw reports a Codex app-server policy error, keep the example's `guardian`, `on-request`, and `workspace-write` settings, then use a fresh `session_key` so OpenClaw does not reuse an older session created with a rejected policy.
