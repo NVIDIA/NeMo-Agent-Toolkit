@@ -240,6 +240,9 @@ def _diagnostic_hint(details: str) -> str:
 
 async def _run_openclaw_agent(prompt: str, config: OpenClawAgentWorkflowConfig) -> str:
     cwd = Path(config.working_directory).resolve()
+    if not cwd.exists() or not cwd.is_dir():
+        raise RuntimeError(f"Invalid working_directory {config.working_directory!r}: {cwd} is not a directory.")
+
     openclaw_prompt = _add_gateway_path_context(prompt, cwd, config)
     command = _build_openclaw_command(config, openclaw_prompt)
 
