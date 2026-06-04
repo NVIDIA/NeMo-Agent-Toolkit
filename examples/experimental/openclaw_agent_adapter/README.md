@@ -90,24 +90,7 @@ openclaw config validate
 Configure the Gateway-side Codex app-server policy used by these example configs. Gateway owns the actual agent runtime, so these settings must live in OpenClaw config rather than only in the short-lived `openclaw` CLI process launched by `nat`:
 
 ```bash
-openclaw config patch --stdin <<'JSON'
-{
-  "plugins": {
-    "entries": {
-      "codex": {
-        "enabled": true,
-        "config": {
-          "appServer": {
-            "mode": "guardian",
-            "approvalPolicy": "on-request",
-            "sandbox": "workspace-write"
-          }
-        }
-      }
-    }
-  }
-}
-JSON
+node -e 'const patch = {plugins: {entries: {codex: {enabled: true, config: {appServer: {mode: "guardian", approvalPolicy: "on-request", sandbox: "workspace-write"}}}}}}; process.stdout.write(JSON.stringify(patch, null, 2));' | openclaw config patch --stdin
 openclaw config validate
 ```
 
