@@ -79,9 +79,10 @@ claude auth login
 
 After login, `claude auth status` should show an active Claude Code session. The workflow uses the Claude Code authentication available in the environment that launches `nat`, so credentials do not need to be added to the workflow YAML.
 
-Set the root of your local NeMo Relay source checkout, then install the NeMo Relay CLI from source into the current environment:
+NeMo Relay is a prerequisite for this workflow. Clone the NeMo Relay source locally, set the checkout root, then install the NeMo Relay CLI from source into the current environment:
 
 ```bash
+git clone git@github.com:NVIDIA/NeMo-Relay.git
 export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
 cargo install --path "$NEMO_RELAY_ROOT/crates/cli" --root "${VIRTUAL_ENV:-.venv}" --locked
 nemo-relay --help

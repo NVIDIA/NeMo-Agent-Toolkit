@@ -64,9 +64,10 @@ Install this workflow package:
 uv pip install -e examples/experimental/hermes_agent_adapter
 ```
 
-Set the root of your local NeMo Relay source checkout, then install the NeMo Relay CLI from source into the current environment:
+NeMo Relay is a prerequisite for this workflow. Clone the NeMo Relay source locally, set the checkout root, then install the NeMo Relay CLI from source into the current environment:
 
 ```bash
+git clone git@github.com:NVIDIA/NeMo-Relay.git
 export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
 cargo install --path "$NEMO_RELAY_ROOT/crates/cli" --root "${VIRTUAL_ENV:-.venv}" --locked
 nemo-relay --help

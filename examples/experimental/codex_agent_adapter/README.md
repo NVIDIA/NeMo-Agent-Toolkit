@@ -81,9 +81,10 @@ codex login status
 
 The version should be `0.129.0` or newer. This example is configured for Codex's stored ChatGPT login. If `OPENAI_API_KEY` is set in the shell that launches `nat`, the adapter removes it from the Relay/Codex subprocess environment so Codex model-catalog requests continue to use the ChatGPT Codex backend. Codex may ask you to review and activate hooks before it emits agent and tool hook events.
 
-Set the root of your local NeMo Relay source checkout, then install the NeMo Relay CLI from source into the current environment:
+NeMo Relay is a prerequisite for this workflow. Clone the NeMo Relay source locally, set the checkout root, then install the NeMo Relay CLI from source into the current environment:
 
 ```bash
+git clone git@github.com:NVIDIA/NeMo-Relay.git
 export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
 cargo install --path "$NEMO_RELAY_ROOT/crates/cli" --root "${VIRTUAL_ENV:-.venv}" --locked
 nemo-relay --help

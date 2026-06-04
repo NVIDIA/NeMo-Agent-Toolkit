@@ -110,9 +110,10 @@ JSON
 openclaw config validate
 ```
 
-Set the root of your local NeMo Relay source checkout, then build and link the NeMo Relay OpenClaw plugin from source:
+NeMo Relay is a prerequisite for this workflow. Clone the NeMo Relay source locally, set the checkout root, then build and link the NeMo Relay OpenClaw plugin from source:
 
 ```bash
+git clone git@github.com:NVIDIA/NeMo-Relay.git
 export NEMO_RELAY_ROOT=/absolute/path/to/NeMo-Relay
 (
   cd "$NEMO_RELAY_ROOT"
