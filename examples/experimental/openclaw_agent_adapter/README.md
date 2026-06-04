@@ -288,7 +288,7 @@ Open `http://localhost:6006`. The NeMo Agent Toolkit Phoenix config exports the 
 
 ## Evaluate With NeMo Relay
 
-The evaluation smoke config uses the same OpenClaw plugin setup and measures toolkit workflow runtime:
+The evaluation sample config uses the same OpenClaw plugin setup and measures toolkit workflow runtime:
 
 ```bash
 nat eval \

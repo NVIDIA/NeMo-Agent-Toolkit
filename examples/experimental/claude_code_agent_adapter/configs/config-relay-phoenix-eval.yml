@@ -49,7 +49,7 @@ eval:
       write_atif_workflow_output: true
     dataset:
       _type: json
-      file_path: examples/experimental/claude_code_agent_adapter/data/eval-smoke.json
+      file_path: examples/experimental/claude_code_agent_adapter/data/eval-sample.json
   evaluators:
     avg_workflow_runtime:
       _type: avg_workflow_runtime

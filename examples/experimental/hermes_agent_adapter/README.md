@@ -153,7 +153,7 @@ Open `http://localhost:6006` and select the `nat-relay-hermes` project. The trac
 
 ## Evaluate With NeMo Relay
 
-The evaluation smoke config uses the same Relay bridge and writes ATIF output:
+The evaluation sample config uses the same Relay bridge and writes ATIF output:
 
 ```bash
 nat eval \
