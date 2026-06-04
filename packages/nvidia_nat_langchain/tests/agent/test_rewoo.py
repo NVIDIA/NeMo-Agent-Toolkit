@@ -288,6 +288,42 @@ async def test_executor_node_handle_input_types(mock_rewoo_agent):
         assert isinstance(mock_state.intermediate_results["#E2"].content, list)
 
 
+async def test_executor_node_replaces_nested_placeholders_before_tool_call(mock_rewoo_agent):
+    from unittest.mock import AsyncMock
+
+    steps = [
+        _create_step_info("step1", "#E1", "mock_tool_A", "1879"),
+        _create_step_info("step2", "#E2", "mock_tool_A", "1885"),
+        _create_step_info("step3",
+                          "#E3",
+                          "mock_tool_B", {
+                              "numbers": ["#E1", "#E2"], "metadata": {
+                                  "question": "Compare #E1 with #E2"
+                              }
+                          })
+    ]
+    mock_state = _create_mock_state_with_parallel_data(
+        steps,
+        intermediate_results={
+            "#E1": ToolMessage(content="1879", tool_call_id="mock_tool_A"),
+            "#E2": ToolMessage(content="1885", tool_call_id="mock_tool_A")
+        })
+    mock_state.current_level = 1
+
+    original_call_tool = mock_rewoo_agent._call_tool
+    mock_rewoo_agent._call_tool = AsyncMock(return_value=ToolMessage(content="success", tool_call_id="mock_tool_B"))
+
+    try:
+        await mock_rewoo_agent.executor_node(mock_state)
+    finally:
+        mock_call_tool = mock_rewoo_agent._call_tool
+        mock_rewoo_agent._call_tool = original_call_tool
+
+    mock_call_tool.assert_called_once()
+    tool_input = mock_call_tool.call_args.args[1]
+    assert tool_input == {"numbers": ["1879", "1885"], "metadata": {"question": "Compare 1879 with 1885"}}
+
+
 async def test_executor_node_should_not_be_invoked_after_all_steps_executed(mock_rewoo_agent):
     steps = [
         _create_step_info("step1", "#E1", "mock_tool_A", "arg1, arg2"),
@@ -644,6 +680,35 @@ def test_placeholder_replacement_functionality():
     result = ReWOOAgentGraph._replace_placeholder("#E1", tool_input, complex_output)
     expected = f"The capital of the country in {str(complex_output)}"
     assert result == expected
+
+
+def test_placeholder_replacement_handles_nested_structures_without_mutation():
+    """Test placeholder replacement in nested dict and list inputs."""
+
+    tool_input = {
+        "numbers": ["#E1", "#E2"], "question": "Compare #E1 with #E2", "metadata": {
+            "raw": ["keep", {
+                "value": "#E1"
+            }]
+        }
+    }
+
+    result = ReWOOAgentGraph._replace_placeholders(tool_input, {"#E1": 1879, "#E2": 1885})
+
+    assert result == {
+        "numbers": [1879, 1885], "question": "Compare 1879 with 1885", "metadata": {
+            "raw": ["keep", {
+                "value": 1879
+            }]
+        }
+    }
+    assert tool_input == {
+        "numbers": ["#E1", "#E2"], "question": "Compare #E1 with #E2", "metadata": {
+            "raw": ["keep", {
+                "value": "#E1"
+            }]
+        }
+    }
 
 
 def test_tool_input_parsing_edge_cases():

@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import asyncio
+import copy
 import json
 import logging
 import re
@@ -208,32 +209,53 @@ class ReWOOAgentGraph(BaseAgent):
         return evidences, levels
 
     @staticmethod
-    def _replace_placeholder(placeholder: str, tool_input: str | dict, tool_output: str | dict) -> str | dict:
+    def _replace_placeholders(tool_input: Any, replacements: dict[str, Any]) -> Any:
+        """
+        Replace ReWOO evidence placeholders in a planner-provided tool input.
 
-        # Replace the placeholders in the tool input with the previous tool output
+        Exact placeholder matches preserve the evidence output type so tools with
+        structured schemas can receive lists, objects, or numeric values. Partial
+        string matches stringify the evidence, matching the original behavior.
+        """
         if isinstance(tool_input, dict):
+            replaced_tool_input = {}
             for key, value in tool_input.items():
-                if value is not None:
-                    if value == placeholder:
-                        tool_input[key] = tool_output
-                    elif isinstance(value, str) and placeholder in value:
-                        # If the placeholder is part of the value, replace it with the stringified output
-                        tool_input[key] = value.replace(placeholder, str(tool_output))
+                replaced_tool_input[key] = ReWOOAgentGraph._replace_placeholders(value, replacements)
+            return replaced_tool_input
 
-        elif isinstance(tool_input, str):
-            tool_input = tool_input.replace(placeholder, str(tool_output))
+        if isinstance(tool_input, list):
+            return [ReWOOAgentGraph._replace_placeholders(value, replacements) for value in tool_input]
 
-        else:
-            assert False, f"Unexpected type for tool_input: {type(tool_input)}"
+        if isinstance(tool_input, str):
+            if tool_input in replacements:
+                return copy.deepcopy(replacements[tool_input])
+
+            for placeholder, tool_output in replacements.items():
+                if placeholder in tool_input:
+                    tool_input = tool_input.replace(placeholder, str(tool_output))
 
         return tool_input
 
     @staticmethod
-    def _parse_tool_input(tool_input: str | dict):
+    def _replace_placeholder(placeholder: str, tool_input: Any, tool_output: Any) -> Any:
+
+        # Replace the placeholders in the tool input with the previous tool output
+        return ReWOOAgentGraph._replace_placeholders(tool_input, {placeholder: tool_output})
+
+    @staticmethod
+    def _parse_tool_input(tool_input: Any):
 
         # If the input is already a dictionary, return it as is
         if isinstance(tool_input, dict):
             logger.debug("%s Tool input is already a dictionary. Use the tool input as is.", AGENT_LOG_PREFIX)
+            return tool_input
+
+        if isinstance(tool_input, list):
+            logger.debug("%s Tool input is already structured. Use the tool input as is.", AGENT_LOG_PREFIX)
+            return tool_input
+
+        if not isinstance(tool_input, str):
+            logger.debug("%s Tool input is not a string. Use the tool input as is.", AGENT_LOG_PREFIX)
             return tool_input
 
         # If the input is a string, attempt to parse it as JSON
@@ -396,7 +418,7 @@ class ReWOOAgentGraph(BaseAgent):
         """
         evidence_info = step_info.evidence
         tool_name = evidence_info.tool
-        tool_input = evidence_info.tool_input
+        replacements = {}
 
         # Replace placeholders in tool input with previous results
         for ph_key, tool_output in intermediate_results.items():
@@ -406,7 +428,9 @@ class ReWOOAgentGraph(BaseAgent):
                 tool_output_content = tool_output_content[0]
                 assert isinstance(tool_output_content, dict)
 
-            tool_input = self._replace_placeholder(ph_key, tool_input, tool_output_content)
+            replacements[ph_key] = tool_output_content
+
+        tool_input = self._replace_placeholders(evidence_info.tool_input, replacements)
 
         # Get the requested tool
         requested_tool = self._get_tool(tool_name)
@@ -446,8 +470,7 @@ class ReWOOAgentGraph(BaseAgent):
                 original_tool_input = evidence_info.tool_input
                 tool_name = evidence_info.tool
 
-                # Replace placeholders in tool input with actual results
-                final_tool_input = original_tool_input
+                replacements = {}
                 for ph_key, tool_output in state.intermediate_results.items():
                     tool_output_content = tool_output.content
                     # If the content is a list, get the first element which should be a dict
@@ -455,7 +478,10 @@ class ReWOOAgentGraph(BaseAgent):
                         tool_output_content = tool_output_content[0]
                         assert isinstance(tool_output_content, dict)
 
-                    final_tool_input = self._replace_placeholder(ph_key, final_tool_input, tool_output_content)
+                    replacements[ph_key] = tool_output_content
+
+                # Replace placeholders in tool input with actual results
+                final_tool_input = self._replace_placeholders(original_tool_input, replacements)
 
                 # Get the final result for this placeholder
                 final_result = ""
