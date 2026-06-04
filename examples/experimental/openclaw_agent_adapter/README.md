@@ -90,7 +90,10 @@ openclaw config validate
 Configure the Gateway-side Codex app-server policy used by these example configs. Gateway owns the actual agent runtime, so these settings must live in OpenClaw config rather than only in the short-lived `openclaw` CLI process launched by `nat`:
 
 ```bash
-node -e 'const patch = {plugins: {entries: {codex: {enabled: true, config: {appServer: {mode: "guardian", approvalPolicy: "on-request", sandbox: "workspace-write"}}}}}}; process.stdout.write(JSON.stringify(patch, null, 2));' | openclaw config patch --stdin
+openclaw config set plugins.entries.codex.enabled true --strict-json
+openclaw config set plugins.entries.codex.config.appServer.mode guardian
+openclaw config set plugins.entries.codex.config.appServer.approvalPolicy on-request
+openclaw config set plugins.entries.codex.config.appServer.sandbox workspace-write
 openclaw config validate
 ```
 
@@ -115,8 +118,9 @@ Enable the `nemo-relay` plugin and choose the ATIF output directory. Use an abso
 ```bash
 export OPENCLAW_ATIF_DIR="$(pwd)/.tmp/nat-relay-openclaw-atif"
 mkdir -p "$OPENCLAW_ATIF_DIR"
+OPENCLAW_RELAY_PATCH="$(mktemp "${TMPDIR:-/tmp}/openclaw-relay-patch.XXXXXX")"
 
-node <<'JS' | openclaw config patch --stdin
+node <<'JS' > "$OPENCLAW_RELAY_PATCH"
 const atifDir = process.env.OPENCLAW_ATIF_DIR;
 if (!atifDir) {
   throw new Error("OPENCLAW_ATIF_DIR is not set");
@@ -171,6 +175,7 @@ const patch = {
 
 process.stdout.write(JSON.stringify(patch, null, 2));
 JS
+openclaw config patch --file "$OPENCLAW_RELAY_PATCH"
 openclaw config validate
 ```
 
