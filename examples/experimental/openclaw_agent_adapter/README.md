@@ -133,54 +133,61 @@ Enable the `nemo-relay` plugin and choose the ATIF output directory. Use an abso
 export OPENCLAW_ATIF_DIR="$(pwd)/.tmp/nat-relay-openclaw-atif"
 mkdir -p "$OPENCLAW_ATIF_DIR"
 
-openclaw config patch --stdin <<JSON
-{
-  "plugins": {
-    "allow": ["nemo-relay"],
-    "entries": {
-      "nemo-relay": {
-        "enabled": true,
-        "hooks": {
-          "allowConversationAccess": true
-        },
-        "config": {
-          "enabled": true,
-          "backend": "hooks",
-          "plugins": {
-            "version": 1,
-            "components": [
-              {
-                "kind": "observability",
-                "enabled": true,
-                "config": {
-                  "version": 1,
-                  "atif": {
-                    "enabled": true,
-                    "agent_name": "openclaw",
-                    "output_directory": "$OPENCLAW_ATIF_DIR"
-                  },
-                  "openinference": {
-                    "enabled": false,
-                    "transport": "http_binary",
-                    "endpoint": "http://localhost:6006/v1/traces",
-                    "service_name": "openclaw-nemo-relay"
-                  }
-                }
-              }
-            ]
-          },
-          "capture": {
-            "includePrompts": true,
-            "includeResponses": true,
-            "stripToolArgs": true,
-            "stripToolResults": true
-          }
-        }
-      }
-    }
-  }
+node <<'JS' | openclaw config patch --stdin
+const atifDir = process.env.OPENCLAW_ATIF_DIR;
+if (!atifDir) {
+  throw new Error("OPENCLAW_ATIF_DIR is not set");
 }
-JSON
+
+const patch = {
+  plugins: {
+    allow: ["nemo-relay"],
+    entries: {
+      "nemo-relay": {
+        enabled: true,
+        hooks: {
+          allowConversationAccess: true,
+        },
+        config: {
+          enabled: true,
+          backend: "hooks",
+          plugins: {
+            version: 1,
+            components: [
+              {
+                kind: "observability",
+                enabled: true,
+                config: {
+                  version: 1,
+                  atif: {
+                    enabled: true,
+                    agent_name: "openclaw",
+                    output_directory: atifDir,
+                  },
+                  openinference: {
+                    enabled: false,
+                    transport: "http_binary",
+                    endpoint: "http://localhost:6006/v1/traces",
+                    service_name: "openclaw-nemo-relay",
+                  },
+                },
+              },
+            ],
+          },
+          capture: {
+            includePrompts: true,
+            includeResponses: true,
+            stripToolArgs: true,
+            stripToolResults: true,
+          },
+        },
+      },
+    },
+  },
+};
+
+process.stdout.write(JSON.stringify(patch, null, 2));
+JS
 openclaw config validate
 ```
 
