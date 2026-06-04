@@ -113,69 +113,30 @@ openclaw plugins install --link "$NEMO_RELAY_ROOT/integrations/openclaw"
 
 This source install is used because the `nemo-relay-openclaw` package may not be available from the public npm registry in the test environment.
 
-Enable the `nemo-relay` plugin and choose the ATIF output directory. Use an absolute path so Gateway writes files to the intended repository checkout even when Gateway starts from a different working directory. If you already maintain other OpenClaw plugin entries, merge the `nemo-relay` keys below with your existing config instead of deleting unrelated plugins:
+Enable the `nemo-relay` plugin and choose the ATIF output directory. Use an absolute path so Gateway writes files to the intended repository checkout even when Gateway starts from a different working directory:
 
 ```bash
 export OPENCLAW_ATIF_DIR="$(pwd)/.tmp/nat-relay-openclaw-atif"
 mkdir -p "$OPENCLAW_ATIF_DIR"
-OPENCLAW_RELAY_PATCH="$(mktemp "${TMPDIR:-/tmp}/openclaw-relay-patch.XXXXXX")"
-
-node <<'JS' > "$OPENCLAW_RELAY_PATCH"
-const atifDir = process.env.OPENCLAW_ATIF_DIR;
-if (!atifDir) {
-  throw new Error("OPENCLAW_ATIF_DIR is not set");
-}
-
-const patch = {
-  plugins: {
-    allow: ["nemo-relay"],
-    entries: {
-      "nemo-relay": {
-        enabled: true,
-        hooks: {
-          allowConversationAccess: true,
-        },
-        config: {
-          enabled: true,
-          backend: "hooks",
-          plugins: {
-            version: 1,
-            components: [
-              {
-                kind: "observability",
-                enabled: true,
-                config: {
-                  version: 1,
-                  atif: {
-                    enabled: true,
-                    agent_name: "openclaw",
-                    output_directory: atifDir,
-                  },
-                  openinference: {
-                    enabled: false,
-                    transport: "http_binary",
-                    endpoint: "http://localhost:6006/v1/traces",
-                    service_name: "openclaw-nemo-relay",
-                  },
-                },
-              },
-            ],
-          },
-          capture: {
-            includePrompts: true,
-            includeResponses: true,
-            stripToolArgs: true,
-            stripToolResults: true,
-          },
-        },
-      },
-    },
-  },
-};
-
-process.stdout.write(JSON.stringify(patch, null, 2));
-JS
-openclaw config patch --file "$OPENCLAW_RELAY_PATCH"
+openclaw config set 'plugins.entries["nemo-relay"].enabled' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].hooks.allowConversationAccess' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.enabled' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.backend' hooks
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.version' 1 --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].kind' observability
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].enabled' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.version' 1 --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.atif.enabled' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.atif.agent_name' openclaw
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.atif.output_directory' "$OPENCLAW_ATIF_DIR"
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.enabled' false --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.transport' http_binary
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.endpoint' http://localhost:6006/v1/traces
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.service_name' openclaw-nemo-relay
+openclaw config set 'plugins.entries["nemo-relay"].config.capture.includePrompts' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.capture.includeResponses' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.capture.stripToolArgs' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.capture.stripToolResults' true --strict-json
 openclaw config validate
 ```
 
