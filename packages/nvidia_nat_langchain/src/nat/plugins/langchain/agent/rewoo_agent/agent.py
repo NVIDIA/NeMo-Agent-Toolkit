@@ -43,6 +43,7 @@ from nat.plugins.langchain.agent.base import AgentDecision
 from nat.plugins.langchain.agent.base import BaseAgent
 
 logger = logging.getLogger(__name__)
+_REWOO_PLACEHOLDER_PATTERN = re.compile(r"#E\d+")
 
 
 class ReWOOEvidence(BaseModel):
@@ -180,7 +181,7 @@ class ReWOOAgentGraph(BaseAgent):
         # Second pass: find dependencies now that we have all placeholders
         dependencies = {
             step.evidence.placeholder: [
-                var for var in re.findall(r"#E\d+", str(step.evidence.tool_input))
+                var for var in _REWOO_PLACEHOLDER_PATTERN.findall(str(step.evidence.tool_input))
                 if var in evidences and var != step.evidence.placeholder
             ]
             for step in steps if step.evidence and step.evidence.placeholder
@@ -215,7 +216,7 @@ class ReWOOAgentGraph(BaseAgent):
 
         Exact placeholder matches preserve the evidence output type so tools with
         structured schemas can receive lists, objects, or numeric values. Partial
-        string matches stringify the evidence, matching the original behavior.
+        string matches replace only complete ReWOO placeholder tokens.
         """
         if isinstance(tool_input, dict):
             replaced_tool_input = {}
@@ -230,9 +231,8 @@ class ReWOOAgentGraph(BaseAgent):
             if tool_input in replacements:
                 return copy.deepcopy(replacements[tool_input])
 
-            for placeholder, tool_output in replacements.items():
-                if placeholder in tool_input:
-                    tool_input = tool_input.replace(placeholder, str(tool_output))
+            return _REWOO_PLACEHOLDER_PATTERN.sub(lambda match: str(replacements.get(match.group(0), match.group(0))),
+                                                  tool_input)
 
         return tool_input
 

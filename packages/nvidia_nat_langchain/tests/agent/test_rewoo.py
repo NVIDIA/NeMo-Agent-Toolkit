@@ -711,6 +711,16 @@ def test_placeholder_replacement_handles_nested_structures_without_mutation():
     }
 
 
+def test_placeholder_replacement_is_token_aware_for_shared_prefixes():
+    """Test that #E1 does not replace the #E1 portion of #E10."""
+
+    replacements = {"#E1": "one", "#E10": "ten"}
+
+    result = ReWOOAgentGraph._replace_placeholders("Compare #E10 and #E1", replacements)
+
+    assert result == "Compare ten and one"
+
+
 def test_tool_input_parsing_edge_cases():
     """Test edge cases in tool input parsing."""
 
