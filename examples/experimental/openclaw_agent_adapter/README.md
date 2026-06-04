@@ -87,16 +87,6 @@ openclaw config set gateway.auth.token "$(openssl rand -hex 32)"
 openclaw config validate
 ```
 
-Configure the Gateway-side Codex app-server policy used by these example configs. Gateway owns the actual agent runtime, so these settings must live in OpenClaw config rather than only in the short-lived `openclaw` CLI process launched by `nat`:
-
-```bash
-openclaw config set plugins.entries.codex.enabled true --strict-json
-openclaw config set plugins.entries.codex.config.appServer.mode guardian
-openclaw config set plugins.entries.codex.config.appServer.approvalPolicy on-request
-openclaw config set plugins.entries.codex.config.appServer.sandbox workspace-write
-openclaw config validate
-```
-
 Clone the NeMo Relay source locally, then build and link the NeMo Relay OpenClaw plugin from source:
 
 ```bash
@@ -120,29 +110,18 @@ export OPENCLAW_ATIF_DIR="$(pwd)/.tmp/nat-relay-openclaw-atif"
 mkdir -p "$OPENCLAW_ATIF_DIR"
 openclaw config set 'plugins.entries["nemo-relay"].enabled' true --strict-json
 openclaw config set 'plugins.entries["nemo-relay"].hooks.allowConversationAccess' true --strict-json
-openclaw config set 'plugins.entries["nemo-relay"].config.enabled' true --strict-json
-openclaw config set 'plugins.entries["nemo-relay"].config.backend' hooks
-openclaw config set 'plugins.entries["nemo-relay"].config.plugins.version' 1 --strict-json
 openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].kind' observability
-openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].enabled' true --strict-json
-openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.version' 1 --strict-json
 openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.atif.enabled' true --strict-json
-openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.atif.agent_name' openclaw
 openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.atif.output_directory' "$OPENCLAW_ATIF_DIR"
-openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.enabled' false --strict-json
-openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.transport' http_binary
-openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.endpoint' http://localhost:6006/v1/traces
-openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.service_name' openclaw-nemo-relay
-openclaw config set 'plugins.entries["nemo-relay"].config.capture.includePrompts' true --strict-json
-openclaw config set 'plugins.entries["nemo-relay"].config.capture.includeResponses' true --strict-json
-openclaw config set 'plugins.entries["nemo-relay"].config.capture.stripToolArgs' true --strict-json
-openclaw config set 'plugins.entries["nemo-relay"].config.capture.stripToolResults' true --strict-json
 openclaw config validate
 ```
 
 Start Gateway in a separate terminal and leave it running while you run the workflow:
 
 ```bash
+OPENCLAW_CODEX_APP_SERVER_MODE=guardian \
+OPENCLAW_CODEX_APP_SERVER_APPROVAL_POLICY=on-request \
+OPENCLAW_CODEX_APP_SERVER_SANDBOX=workspace-write \
 openclaw gateway run
 ```
 
@@ -174,15 +153,12 @@ uv pip install -e packages/nvidia_nat_phoenix
 docker run -it --rm -p 4317:4317 -p 6006:6006 arizephoenix/phoenix:13.22
 ```
 
-Enable the `openinference` section in the OpenClaw `nemo-relay` plugin config, then restart Gateway by stopping and rerunning `openclaw gateway run`:
+Enable OpenInference export in the OpenClaw `nemo-relay` plugin config, then restart Gateway by stopping and rerunning the Gateway command above:
 
-```json
-"openinference": {
-  "enabled": true,
-  "transport": "http_binary",
-  "endpoint": "http://localhost:6006/v1/traces",
-  "service_name": "openclaw-nemo-relay"
-}
+```bash
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.enabled' true --strict-json
+openclaw config set 'plugins.entries["nemo-relay"].config.plugins.components[0].config.openinference.endpoint' http://localhost:6006/v1/traces
+openclaw config validate
 ```
 
 In another terminal, run the Relay/Phoenix config:
