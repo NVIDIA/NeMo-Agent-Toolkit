@@ -451,6 +451,29 @@ Configured field paths are validated at function registration (the earliest poin
 
 NeMo Guardrails sequences its own rails internally (all input rails, then all output rails, within a single `LLMRails` instance). Attach a **single** `guardrails` middleware to a given function and list every rail it needs inside that instance. Do **not** chain multiple `guardrails` middleware onto the same function: the outer instance would re-evaluate the inner instance's already-blocked refusal string, wasting rail calls and obscuring which rail blocked.
 
+#### Streaming output rails
+
+By default (`stream_output_rails: false`), a streaming function's output is fully buffered, evaluated by the output rails as a single payload, and then emitted. This is the safe default because most output rails need the complete text to decide.
+
+Set `stream_output_rails: true` to apply output rails token-by-token as the stream is produced (via `LLMRails.stream_async()`) instead of buffering:
+
+```yaml
+middleware:
+  workflow_guardrails:
+    _type: guardrails
+    stream_output_rails: true
+    workflow_functions:
+      - my_streaming_tool
+    guardrails: { ... }   # Colang policy must set rails.output.streaming.enabled: true
+```
+
+This option has two requirements:
+
+- The Colang policy must enable streaming output rails (`rails.output.streaming.enabled: true`); otherwise no output rails run on the stream.
+- It is **incompatible with the mapping form** of `workflow_functions` (per-field selection). Use it only when `workflow_functions` is a list of function names or omitted entirely. Configuring both raises a `ValueError` at config load.
+
+When a streaming rail blocks, the block is surfaced through `on_post_invoke_blocked` (the rail's message replaces the remainder of the stream).
+
 For a complete, runnable configuration (PII masking, content safety, jailbreak heuristics, and output verification across tool and workflow boundaries), see the retail agent example at `examples/safety_and_security/retail_agent/README.md`.
 
 ## Advanced Patterns

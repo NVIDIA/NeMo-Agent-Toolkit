@@ -91,6 +91,14 @@ class GuardrailsMiddlewareConfig(DynamicMiddlewareConfig, name="guardrails"):
         default=None,
         description="Lists the workflow functions to wrap and, optionally, which fields of the boundary "
         "input or output value to send to the guardrail.")
+    stream_output_rails: bool = Field(
+        default=False,
+        description="When True, output rails are applied token-by-token as the stream is produced "
+        "using ``LLMRails.stream_async()``. The Colang policy must set "
+        "``rails.output.streaming.enabled: true``. Incompatible with mapping-form "
+        "``workflow_functions`` (field-path selection); use only when ``workflow_functions`` "
+        "is a list of function names or omitted entirely.",
+    )
 
     @model_validator(mode="after")
     def _finalize_guardrails(self) -> GuardrailsMiddlewareConfig:
@@ -107,6 +115,11 @@ class GuardrailsMiddlewareConfig(DynamicMiddlewareConfig, name="guardrails"):
             raise ValueError(f"Colang {self.guardrails.colang_version} is not supported; use Colang 1.0.")
         if self.guardrails_root is not None:
             self.guardrails_root = None
+
+        if self.stream_output_rails and isinstance(self.workflow_functions, dict):
+            raise ValueError("stream_output_rails cannot be used with mapping-form workflow_functions. "
+                             "stream_async() evaluates raw token text and has no concept of structured field paths. "
+                             "Use a list of function names for workflow_functions, or disable stream_output_rails.")
         return self
 
 

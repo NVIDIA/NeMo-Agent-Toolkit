@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import json
 import types
 import typing
 from collections.abc import AsyncIterator
@@ -228,7 +229,15 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         context: FunctionMiddlewareContext,
         **kwargs: Any,
     ) -> AsyncIterator[Any]:
-        """Run Guardrails rails around a streaming call by buffering the full payload.
+        """Run Guardrails rails around a streaming call.
+
+        When ``stream_output_rails`` is False (default), the full stream is buffered and
+        evaluated with ``generate_async()`` before any output is yielded.
+
+        When ``stream_output_rails`` is True, output rails are applied token-by-token via
+        ``LLMRails.stream_async()``. The Colang policy must set
+        ``rails.output.streaming.enabled: true``. Blocks are signalled by a JSON sentinel
+        yielded into the stream; the middleware translates these into ``on_post_invoke_blocked``.
 
         Args:
             args: Positional arguments for the wrapped function.
@@ -237,7 +246,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             kwargs: Keyword arguments for the wrapped function.
 
         Yields:
-            Stream output after output rails evaluate the assembled payload.
+            Stream output after output rails evaluate the payload.
         """
         ctx = InvocationContext(
             function_context=context,
@@ -254,12 +263,57 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             yield ctx.output
             return
 
+        if self._guardrails_config.stream_output_rails:
+            async for chunk in self._stream_with_output_rails(ctx, call_next):
+                yield chunk
+            return
+
         buffered: list[Any] = [chunk async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs)]
         ctx.output = "".join(str(chunk) for chunk in buffered)
         result = await self.post_invoke(ctx)
         if result is not None:
             ctx = result
         yield ctx.output
+
+    async def _stream_with_output_rails(
+        self,
+        ctx: InvocationContext,
+        call_next: CallNextStream,
+    ) -> AsyncIterator[Any]:
+        """Apply output rails to a live token stream via ``LLMRails.stream_async()``.
+
+        Iterates the stream produced by ``call_next``, passes it through the configured
+        output rails, and translates any JSON block sentinel into ``on_post_invoke_blocked``.
+
+        Args:
+            ctx: Invocation context carrying the (possibly modified) arguments.
+            call_next: Next middleware or target stream in the chain.
+
+        Yields:
+            Evaluated stream chunks, or the block message when a rail fires.
+        """
+        await self.bind_llms_to_rail()
+        input_text: str = ""
+        if ctx.modified_args:
+            raw: Any = ctx.modified_args[0]
+            input_text = getattr(raw, "input_message", None) or (raw if isinstance(raw, str) else str(raw))
+        messages: list[dict[str, str]] = ([{"role": "user", "content": input_text}] if input_text else [])
+
+        async def upstream() -> AsyncIterator[str]:
+            async for chunk in call_next(*ctx.modified_args, **ctx.modified_kwargs):
+                yield str(chunk)
+
+        async for chunk in self._llm_rails.stream_async(messages=messages, generator=upstream()):
+            try:
+                payload: Any = json.loads(chunk)
+                if isinstance(payload, dict) and "error" in payload:
+                    error_msg: str = payload["error"].get("message", "Blocked by output rail.")
+                    ctx.output = ""
+                    yield self.on_post_invoke_blocked(ctx, error_msg)
+                    return
+            except (json.JSONDecodeError, TypeError, ValueError):
+                pass
+            yield chunk
 
     def _set_modified_rail_value(self, obj: Any, name: str) -> Callable[[str], None]:
         """Build a setter that writes a modified rail value back to an object attribute.

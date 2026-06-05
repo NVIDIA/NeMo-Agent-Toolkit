@@ -16,7 +16,9 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -31,6 +33,12 @@ from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware import GuardrailsMiddleware
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailsMiddlewareConfig
+
+
+async def _async_iter(items: list[Any]) -> AsyncIterator[Any]:
+    """Yield items from a list as an async iterator for use in streaming tests."""
+    for item in items:
+        yield item
 
 
 def _generation_response(
@@ -599,6 +607,87 @@ def test_register_function_with_invalid_field_path_raises() -> None:
     discovered = _discovered(input_schema=_WriteReviewInput, output_schema=_Product)
     with pytest.raises(ValueError, match="resolves to no string field"):
         middleware._register_function(discovered)
+
+
+async def test_stream_with_output_rails_yields_chunks_when_passing() -> None:
+    """stream_output_rails mode passes clean chunks through to the caller."""
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        stream_output_rails=True,
+        guardrails=_rails_policy(),
+    )
+    middleware = _make_middleware(config=config)
+    middleware._llm_rails.stream_async = MagicMock(return_value=_async_iter(["Hello", " world"]))
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+    call_next = MagicMock(return_value=_async_iter(["Hello", " world"]))
+
+    chunks: list[Any] = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=call_next,
+            context=fn_context, )
+    ]
+
+    assert chunks == ["Hello", " world"]
+
+
+async def test_stream_with_output_rails_translates_json_block_sentinel() -> None:
+    """stream_output_rails mode translates the NeMo JSON error sentinel into on_post_invoke_blocked."""
+    import json as _json
+    block_sentinel = _json.dumps({
+        "error": {
+            "message": "Blocked by content safety rails.",
+            "type": "guardrails_violation",
+            "code": "content_blocked",
+        }
+    })
+    config = GuardrailsMiddlewareConfig(
+        workflow_functions=["test_fn"],
+        stream_output_rails=True,
+        guardrails=_rails_policy(),
+    )
+    middleware = _make_middleware(config=config)
+    middleware._llm_rails.stream_async = MagicMock(return_value=_async_iter(["token1", " token2", block_sentinel]))
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+    call_next = MagicMock(return_value=_async_iter(["token1", " token2", block_sentinel]))
+
+    chunks: list[Any] = [
+        chunk async for chunk in middleware.function_middleware_stream(
+            "hello",
+            call_next=call_next,
+            context=fn_context, )
+    ]
+
+    assert "token1" in chunks
+    assert " token2" in chunks
+    assert "Blocked by content safety rails." in chunks
+    assert block_sentinel not in chunks
+
+
+def test_finalize_guardrails_rejects_stream_output_rails_with_mapping_workflow_functions() -> None:
+    """Reject stream_output_rails=True when workflow_functions uses mapping form."""
+    with pytest.raises(ValueError, match="stream_output_rails cannot be used with mapping-form"):
+        GuardrailsMiddlewareConfig(
+            workflow_functions={"test_fn": {
+                "review_text": []
+            }},
+            stream_output_rails=True,
+            guardrails=_rails_policy(),
+        )
 
 
 def test_finalize_guardrails_rejects_missing_policy_source() -> None:

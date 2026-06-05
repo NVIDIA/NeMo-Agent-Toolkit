@@ -23,10 +23,6 @@ requires = ["setuptools>=64", "setuptools-scm>=8", "setuptools_dynamic_dependenc
 where = ["src"]
 include = ["nat.*"]
 
-[tool.setuptools.package-data]
-"nat.plugins.security.middleware.guardrails" = ["policies/**/*.yml"]
-
-
 [tool.setuptools_scm]
 git_describe_command = "git describe --long --first-parent"
 root = "../.."

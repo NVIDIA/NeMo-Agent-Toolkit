@@ -268,7 +268,7 @@ For the complete evaluator configuration, see [`src/nat_retail_agent/configs/red
 
 ### Defense Middleware
 
-Defense middleware intercepts workflow inputs or outputs and applies mitigation strategies. In this workflow you can mitigate the same attack scenarios in two ways: **built-in defense middleware** (configured per function with actions such as refusal or redirection) and, optionally, **NeMo Guardrails** (Colang policy at function boundaries for PII masking, content safety, jailbreak heuristics, and output verification). The snippets below illustrate built-in defense configuration for the **Denial of service** scenario by inspecting tool outputs for injected instructions.
+Defense middleware intercepts workflow inputs or outputs and applies mitigation strategies. In this workflow you can mitigate the same attack scenarios in two ways: **built-in defense middleware** (configured per function with actions such as refusal or redirection) and, optionally, **NeMo Guardrails** (Colang policy at function boundaries for PII masking, content safety, and jailbreak heuristics). The snippets below illustrate built-in defense configuration for the **Denial of service** scenario by inspecting tool outputs for injected instructions.
 
 **Configuration Example (Output Verifier):**
 
