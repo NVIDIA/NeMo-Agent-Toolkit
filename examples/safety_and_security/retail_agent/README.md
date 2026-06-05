@@ -25,7 +25,7 @@ limitations under the License.
 
 ## Table of Contents
 - [NeMo Agent Toolkit Safety and Security](#nemo-agent-toolkit-safety-and-security)
-    - [Demonstrated Through Retail Agent Example](#demonstrated-through-retail-agent-example)
+  - [Demonstrated Through Retail Agent Example](#demonstrated-through-retail-agent-example)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Why We Need Safety and Security](#why-we-need-safety-and-security)
@@ -421,6 +421,24 @@ When a guardrails middleware wraps a function it enforces a Colang policy at tha
 - **Block** — the content cannot be safely rewritten. For input rails, the function is skipped entirely and the block message is returned directly to the caller without executing the function. For output rails, the function output is replaced with the block message before it reaches the caller.
 
 The Colang policy — not the middleware — determines which outcome applies. A flow with `stop: True` in its decision triggers a block; a flow that rewrites `$user_message` or `$bot_message` without `stop` triggers a modify; a flow that takes no rewrite action passes.
+
+##### What the rail evaluates
+
+The `workflow_functions` field controls which functions the middleware is attached to and which strings are sent to the rail. Input rails run on a function's input during pre-invoke; output rails run on the function's returned value during post-invoke.
+
+- **List form** — `workflow_functions: [fn1, fn2]` attaches the rail to each named function and sends the whole value as a single rail call (the `input_message` field if present, otherwise the stringified value). The rail may pass, block, or rewrite it; a rewrite replaces the whole value.
+- **Mapping form** — `workflow_functions: {fn1: {field: [subpath]}}` guards only the named fields. Each string the path reaches is sent to the rail in its **own** call, and list fields fan out so every item is evaluated independently. A rewrite (for example, PII masking) is written **back into that exact location**, so the object keeps its original structure; a block replaces the whole value with the refusal message.
+
+The `pii_guardrails` middleware in this example uses the mapping form to guard the `reviews.review` field of `get_product_info`'s returned product:
+
+```yaml
+workflow_functions:
+  retail_tools__get_product_info:
+    reviews:
+      - review
+```
+
+Each product review is sent to the rail on its own, separate from the rest of the product. A masked review is written back in place (the product object is preserved); a review that must be blocked replaces the whole response with the refusal message.
 
 ---
 

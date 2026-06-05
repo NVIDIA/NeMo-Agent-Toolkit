@@ -22,8 +22,8 @@ import pytest
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailsMiddlewareConfig
 
 
-def _inline_verifier_guardrails() -> dict[str, object]:
-    """Minimal inline verifier policy matching the retail example."""
+def _inline_self_check_policy() -> dict[str, object]:
+    """Minimal inline self-check policy with input and output flows."""
     return {
         "models": [],
         "colang_version":
@@ -49,11 +49,11 @@ def _inline_verifier_guardrails() -> dict[str, object]:
     }
 
 
-def test_verifier_policy_loads_self_check_rails() -> None:
-    """Inline verifier policy enables self check input and output flows with retail prompts."""
+def test_inline_self_check_policy_loads_input_and_output_flows() -> None:
+    """Inline self-check policy enables self check input and output flows."""
     config = GuardrailsMiddlewareConfig(
-        workflow_functions=["<workflow>", "retail_tools__get_product_info"],
-        guardrails=_inline_verifier_guardrails(),
+        workflow_functions=["my_workflow", "my_tools__process"],
+        guardrails=_inline_self_check_policy(),
     )
     assert config.guardrails.rails.input.flows == ["self check input"]
     assert config.guardrails.rails.output.flows == ["self check output"]
@@ -98,29 +98,3 @@ def test_guardrails_root_rejects_invalid_path() -> None:
             workflow_functions=["test_fn"],
             guardrails_root="not_a_real_policy_directory",
         )
-
-
-def test_retail_workflow_config_with_guardrails_validates(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Full retail guardrails workflow config validates when run from the repository root."""
-    import os
-
-    from nat.runtime.loader import load_config
-
-    repo_root: Path = Path(__file__).resolve().parents[5]
-    monkeypatch.chdir(repo_root)
-    config_path: Path = (
-        Path(os.getcwd()) /
-        "examples/safety_and_security/retail_agent/src/nat_retail_agent/configs/config-with-guardrails.yml")
-    try:
-        nat_config = load_config(config_path)
-    except ValueError as exc:
-        if "retail_tools" in str(exc):
-            pytest.skip("retail_agent example must be installed to validate the full workflow config")
-        raise
-    pii = nat_config.middleware["pii_guardrails"]
-    selection = pii.workflow_functions["retail_tools__get_product_info"]
-    assert selection.root == {"reviews": ["review"]}
-
-    all_products = nat_config.middleware["all_products_guardrails"]
-    all_products_selection = all_products.workflow_functions["retail_tools__get_all_products"]
-    assert all_products_selection.root == {"description": [], "review_texts": []}

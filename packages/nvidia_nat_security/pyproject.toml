@@ -63,8 +63,8 @@ dependencies = [
 
 [tool.setuptools_dynamic_dependencies.optional-dependencies]
 defense = [
-  "presidio-analyzer",
-  "presidio-anonymizer",
+  "presidio-analyzer>=2.2",
+  "presidio-anonymizer>=2.2",
   "spacy>=3.7",
 ]
 guardrails = [

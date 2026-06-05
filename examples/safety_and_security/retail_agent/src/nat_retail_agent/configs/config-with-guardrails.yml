@@ -50,8 +50,6 @@ middleware:
     llm_bindings:
       content_safety: content_safety_llm
       main: verifier_llm
-    # Field selection: guard each review's text on the Product output. The reviews list
-    # fans out and is concatenated into a single rail call.
     workflow_functions:
       retail_tools__get_product_info:
         reviews:

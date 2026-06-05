@@ -56,7 +56,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
 - `nvidia-nat[security]` or `nvidia-nat-security` - Red-team CLI and evaluators (`nat red-team`)
 - `nvidia-nat[defense]` or `nvidia-nat-security[defense]` - Built-in defense middleware (`pii_defense`, `content_safety_guard`, etc.)
-- `nvidia-nat[guardrails]` or `nvidia-nat-security[guardrails]` - NeMo Guardrails policy middleware (`_type: guardrails`)
+- `nvidia-nat[guardrails]` or `nvidia-nat-security[guardrails]` - NeMo Guardrails policy middleware
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
 - `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package

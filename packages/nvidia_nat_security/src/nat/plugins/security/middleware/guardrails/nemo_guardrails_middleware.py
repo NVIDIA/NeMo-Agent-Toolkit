@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from collections.abc import Callable
 from collections.abc import Iterator
 from typing import Any
 
@@ -58,23 +59,65 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         self._rail_llms_bound: bool = False
         super().__init__(config, builder)
 
-    def _collect_strings_at_dotted_path(self, value: Any, path: str) -> list[str]:
-        """Collect the strings reached by a dotted attribute path, fanning out over lists.
+    def _set_modified_rail_value(self, obj: Any, name: str) -> Callable[[str], None]:
+        """Build a setter that writes a modified rail value back to an object attribute.
 
         Args:
-            value: Root object to traverse (typically a Pydantic model instance).
-            path: Dotted attribute path, e.g. ``reviews.review``.
+            obj: Object whose attribute is reassigned.
+            name: Attribute name to write.
 
         Returns:
-            The string values found at the path, in traversal order.
+            A callable assigning its argument to ``obj.name``.
         """
-        nodes: list[Any] = list(value) if isinstance(value, list) else [value]
-        for segment in path.split("."):
-            nodes = [
-                item for node in nodes for attr in (getattr(node, segment, None), )
-                for item in (attr if isinstance(attr, list) else [attr]) if item is not None
-            ]
-        return [node for node in nodes if isinstance(node, str)]
+
+        def setter(new_value: str) -> None:
+            setattr(obj, name, new_value)
+
+        return setter
+
+    def _set_modified_rail_value_in_list(self, items: list[Any], index: int) -> Callable[[str], None]:
+        """Build a setter that writes a modified rail value back to a list element.
+
+        Args:
+            items: List whose element is reassigned.
+            index: Position to write.
+
+        Returns:
+            A callable assigning its argument to ``items[index]``.
+        """
+
+        def setter(new_value: str) -> None:
+            items[index] = new_value
+
+        return setter
+
+    def _iter_targets_at_path(self, value: Any, path: str) -> Iterator[tuple[str, Callable[[str], None]]]:
+        """Yield each string reached by a dotted path with a setter to rewrite it in place.
+        Args:
+            value: Root object to traverse (model instance or list of them).
+            path: Dotted attribute path, e.g. ``reviews.review``.
+
+        Yields:
+            ``(text, setter)`` pairs where ``setter(new_text)`` rewrites that leaf.
+        """
+        *prefix, last = path.split(".")
+        parents: list[Any] = list(value) if isinstance(value, list) else [value]
+        for segment in prefix:
+            next_parents: list[Any] = []
+            for node in parents:
+                attr: Any = getattr(node, segment, None)
+                if attr is None:
+                    continue
+                next_parents.extend(attr if isinstance(attr, list) else [attr])
+            parents = next_parents
+        for parent in parents:
+            leaf: Any = getattr(parent, last, None)
+            if isinstance(leaf, str):
+                yield leaf, self._set_modified_rail_value(parent, last)
+            elif isinstance(leaf, list):
+                for index, item in enumerate(leaf):
+                    if isinstance(item, str):
+                        yield item, self._set_modified_rail_value_in_list(leaf, index)
 
     def _handle_modified_rail_response(self, response: GenerationResponse, *, fallback: str) -> str:
         """Resolve the output text from a rail response that passed or was modified.
@@ -166,27 +209,44 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             paths.extend([field] if not subpaths else [f"{field}.{subpath}" for subpath in subpaths])
         return paths
 
-    def _iter_guarded_texts(self, name: str, value: Any) -> Iterator[tuple[str, str]]:
-        """Yield ``(label, text)`` pairs to send to a rail for one boundary value.
+    def _iter_guard_targets(
+        self,
+        value: Any,
+        paths: list[str],
+        whole_setter: Callable[[str], None],
+    ) -> Iterator[tuple[str, Callable[[str], None]]]:
+        """Yield ``(text, setter)`` rail targets for one boundary value.
 
+        With configured field paths, yields one target per string leaf, each with a setter that
+        rewrites that leaf in place. With no paths, yields a single whole-value target guarding
+        ``input_message`` when present, otherwise the stringified value.
 
         Args:
-            name: Function name.
-            value: Boundary value (first argument for input, output for output).
+            value: Boundary value (input argument for pre, output for post).
+            paths: Configured dotted field paths; empty selects the whole value.
+            whole_setter: Setter applied when guarding the whole value.
 
         Yields:
-            ``(label, text)`` where label is the guarded path (or ``"<whole>"``).
+            ``(text, setter)`` pairs to evaluate against a rail.
         """
-        paths: list[str] = self._resolve_guarded_field_paths(name)
-        if paths:
-            for path in paths:
-                strings: list[str] = self._collect_strings_at_dotted_path(value, path)
-                if strings:
-                    yield path, "\n".join(strings)
+        if not paths:
+            text: str = getattr(value, "input_message", None) or (value if isinstance(value, str) else str(value))
+            if text:
+                yield text, whole_setter
             return
-        text: str = getattr(value, "input_message", None) or (value if isinstance(value, str) else str(value))
-        if text:
-            yield "<whole>", text
+        for path in paths:
+            yield from self._iter_targets_at_path(value, path)
+
+    def _rail_blocked(self, response: GenerationResponse) -> bool:
+        """Return whether any activated rail signaled a block.
+
+        Args:
+            response: Rail generation response.
+
+        Returns:
+            True when an activated rail set ``stop``.
+        """
+        return any(r.stop for r in (response.log.activated_rails if response.log else []))
 
     async def bind_llms_to_rail(self) -> None:
         """Register NAT-configured LLMs as NeMo Guardrails rail action parameters.
@@ -326,23 +386,30 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         yield ctx.output
 
     async def pre_invoke(self, context: InvocationContext) -> InvocationContext | None:
-        """Run input rails over the configured input field paths and block on refusal.
+        """Run input rails over the configured input fields (or whole input) and block on refusal.
 
-        Each configured path's string(s) are collected from the first argument,
-        concatenated, and sent to the input rail; a block sets ``context.output`` so the
-        wrapped call is skipped.
+        Field-selected paths are evaluated one string leaf at a time so a rail rewrite is written
+        back into the original input structure; a block sets ``context.output`` so the wrapped
+        call is skipped.
 
         Args:
             context: Invocation context for the current boundary.
 
         Returns:
-            Updated context when an input path is blocked; otherwise None.
+            Updated context when an input is blocked or rewritten; otherwise None.
         """
         await self.bind_llms_to_rail()
         if not context.modified_args or context.modified_args[0] is None:
             return None
 
-        for path, text in self._iter_guarded_texts(context.function_context.name, context.modified_args[0]):
+        value: Any = context.modified_args[0]
+        paths: list[str] = self._resolve_guarded_field_paths(context.function_context.name)
+
+        def write_whole(new_value: str) -> None:
+            self._apply_modified_input(context, new_value)
+
+        modified: bool = False
+        for text, write_back in self._iter_guard_targets(value, paths, write_whole):
             response: GenerationResponse = await self._llm_rails.generate_async(
                 prompt=text,
                 options=GenerationOptions(
@@ -351,31 +418,27 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
                     output_vars=["user_message", "bot_message"],
                 ),
             )
-            blocked: bool = any(r.stop for r in (response.log.activated_rails if response.log else []))
+            if self._rail_blocked(response):
+                context.output = self._handle_modified_rail_response(response, fallback=text)
+                return context
             result_text: str = self._handle_modified_rail_response(response, fallback=text)
-            modified: bool = not blocked and path == "<whole>" and result_text != text
-            if blocked:
-                context.output = result_text
-            elif modified:
-                self._apply_modified_input(context, result_text)
-            if blocked:
-                return context
-            if modified:
-                return context
-        return None
+            if result_text != text:
+                write_back(result_text)
+                modified = True
+        return context if modified else None
 
     async def post_invoke(self, context: InvocationContext) -> InvocationContext | None:
-        """Run output rails over the configured output field paths and block on refusal.
+        """Run output rails over the configured output fields (or whole output) and block on refusal.
 
-        Each configured path's string(s) are collected from the function output,
-        concatenated, and sent to the output rail; a block replaces ``context.output``
-        via ``on_post_invoke_blocked``.
+        Field-selected paths are evaluated one string leaf at a time so a rail rewrite is written
+        back into the original output structure; a block replaces ``context.output`` via
+        ``on_post_invoke_blocked``.
 
         Args:
             context: Invocation context including function output.
 
         Returns:
-            Updated context when an output path is blocked; otherwise None.
+            Updated context when an output is blocked or rewritten; otherwise None.
         """
         await self.bind_llms_to_rail()
         if context.output is None:
@@ -386,7 +449,14 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             raw: Any = context.original_args[0]
             input_text = getattr(raw, "input_message", None) or (raw if isinstance(raw, str) else str(raw))
 
-        for path, text in self._iter_guarded_texts(context.function_context.name, context.output):
+        value: Any = context.output
+        paths: list[str] = self._resolve_guarded_field_paths(context.function_context.name)
+
+        def write_whole(new_value: str) -> None:
+            context.output = new_value
+
+        modified: bool = False
+        for text, write_back in self._iter_guard_targets(value, paths, write_whole):
             messages: list[dict[str, str]] = ([{"role": "user", "content": input_text}] if input_text else [])
             messages.append({"role": "assistant", "content": text})
             response: GenerationResponse = await self._llm_rails.generate_async(
@@ -397,21 +467,14 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
                     output_vars=["bot_message", "user_message"],
                 ),
             )
-            blocked: bool = any(r.stop for r in (response.log.activated_rails if response.log else []))
-            result_text: str = (self._handle_blocked_rail_response(response)
-                                if blocked else self._handle_modified_rail_response(response, fallback=text))
-            modified: bool = not blocked and path == "<whole>" and result_text != text
-
-            if blocked:
-                context.output = self.on_post_invoke_blocked(context, result_text)
-            elif modified:
-                context.output = result_text
-
-            if blocked:
+            if self._rail_blocked(response):
+                context.output = self.on_post_invoke_blocked(context, self._handle_blocked_rail_response(response))
                 return context
-            if modified:
-                return context
-        return None
+            result_text: str = self._handle_modified_rail_response(response, fallback=text)
+            if result_text != text:
+                write_back(result_text)
+                modified = True
+        return context if modified else None
 
 
 __all__ = ["GuardrailsMiddleware", "PostInvokeBlockedError", "RailStatus", "RailType"]

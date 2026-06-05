@@ -19,7 +19,6 @@
 # Path to the base workflow to red team
 base_workflow: examples/safety_and_security/retail_agent/src/nat_retail_agent/configs/config-with-guardrails.yml
 
-# LLM configurations - scenarios reference these by name #TODO EE: TO BE REMOVED
 llms:
   judge_llm:
     _type: nim

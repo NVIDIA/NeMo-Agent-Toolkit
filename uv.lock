@@ -5663,6 +5663,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
 [[package]]
 name = "nat-codex-agent-adapter"
 source = { editable = "examples/experimental/codex_agent_adapter" }
@@ -5672,6 +5673,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [{ name = "nvidia-nat", extras = ["langchain"], editable = "." }]
+
 [[package]]
 name = "nat-cursor-agent-adapter"
 source = { editable = "examples/experimental/cursor_agent_adapter" }
@@ -7639,8 +7641,8 @@ requires-dist = [
     { name = "nvidia-nat-eval", editable = "packages/nvidia_nat_eval" },
     { name = "nvidia-nat-test", marker = "extra == 'test'", editable = "packages/nvidia_nat_test" },
     { name = "plotly", specifier = "~=6.0" },
-    { name = "presidio-analyzer", marker = "extra == 'defense'" },
-    { name = "presidio-anonymizer", marker = "extra == 'defense'" },
+    { name = "presidio-analyzer", marker = "extra == 'defense'", specifier = ">=2.2" },
+    { name = "presidio-anonymizer", marker = "extra == 'defense'", specifier = ">=2.2" },
     { name = "spacy", marker = "extra == 'defense'", specifier = ">=3.7" },
     { name = "tqdm", specifier = "~=4.67" },
 ]

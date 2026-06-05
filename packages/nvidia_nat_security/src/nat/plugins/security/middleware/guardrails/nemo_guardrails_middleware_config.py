@@ -36,7 +36,7 @@ class GuardrailFunctionFields(RootModel[dict[str, list[str]]]):
 
 
 class GuardrailsMiddlewareConfig(DynamicMiddlewareConfig, name="guardrails"):
-    """Guardrails policy attached to a NAT workflow via dynamic middleware.
+    """Guardrails policy attached to a NAT workflow via dynamic middleware. # TODO EE: Fix formatted docstrings
 
 
     """
@@ -55,10 +55,13 @@ class GuardrailsMiddlewareConfig(DynamicMiddlewareConfig, name="guardrails"):
     )
     workflow_functions: list[str] | dict[str, GuardrailFunctionFields] | None = Field(
         default=None,
-        description="Workflow functions this middleware intercepts. A list of names auto-resolves "
-        "each function's sole input/output string field. A mapping enables schema-driven field "
-        "selection: each function maps to a ``GuardrailFunctionFields`` model selecting the "
-        "input/output schema fields to guard.",
+        description="Lists the workflow functions to wrap and, optionally, which of their arguments to "
+        "send to the guardrail.\n"
+        "As a list of function names, the whole argument of each function is sent to the guardrail.\n"
+        "Each entry names an argument and how to reach the string(s) to guard: an empty list selects "
+        "the argument itself (e.g. ``description: []``), and a list of dotted paths reaches strings "
+        "nested inside it (e.g. ``reviews: [review]`` selects the ``review`` of each item in "
+        "``reviews``).",
     )
 
     @model_validator(mode="after")
