@@ -187,7 +187,7 @@ _See the [Dynamo Integration README](dynamo_integration/README.md) for additiona
 - **[`simple_rag`](RAG/simple_rag/README.md)**: Complete RAG system with Milvus vector database, document ingestion, and long-term memory using Mem0 platform **[🛑 Advanced]**
 
 ### NeMo Agent Toolkit Safety and Security
-- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Demonstrates the NeMo Agent Toolkit Safety and Security capabilities by assessing and improving the security posture of an example Retail Agent **[🛑 Advanced]**
+- **[`retail_agent`](safety_and_security/retail_agent/README.md)**: Demonstrates the NeMo Agent Toolkit Safety and Security capabilities by assessing and improving the security posture of an example Retail Agent with defense middleware, including a [NeMo Guardrails](https://github.com/NVIDIA-NeMo/Guardrails) middleware configuration ([`config-with-guardrails.yml`](safety_and_security/retail_agent/src/nat_retail_agent/configs/config-with-guardrails.yml)) **[🛑 Advanced]**
 
 ## Documentation Guide Files
 

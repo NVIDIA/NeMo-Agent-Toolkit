@@ -28,13 +28,13 @@ from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.llm.nim_llm import NIMModelConfig
-from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 from nat.plugins.security.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 from nat.plugins.security.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingScenario
 from nat.plugins.security.eval.runners.red_teaming_runner.config import _RedTeamingScenarioRaw
 from nat.plugins.security.eval.runners.red_teaming_runner.runner import RedTeamingRunner
+from nat.plugins.security.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
 
 class SimpleFunctionGroupConfig(FunctionGroupBaseConfig, name="simple_function_group"):

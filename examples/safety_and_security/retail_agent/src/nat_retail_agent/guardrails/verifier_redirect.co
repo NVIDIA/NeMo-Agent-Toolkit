@@ -1,0 +1,5 @@
+
+define flow self check input redirect
+  $allowed = execute self_check_input
+  if not $allowed
+    $user_message = "SANITIZED"

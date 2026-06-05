@@ -54,7 +54,9 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[ragaai]` or `nvidia-nat-ragaai` - [RagaAI Catalyst](https://raga.ai/) Conflicts with `nvidia-nat[adk]` and `nvidia-nat[strands]`.
 - `nvidia-nat[redis]` or `nvidia-nat-redis` - [Redis](https://redis.io/)
 - `nvidia-nat[s3]` or `nvidia-nat-s3` - [Amazon S3](https://aws.amazon.com/s3/)
-- `nvidia-nat[security]` or `nvidia-nat-security` - Security and red-team components (`nat red-team`)
+- `nvidia-nat[security]` or `nvidia-nat-security` - Red-team CLI and evaluators (`nat red-team`)
+- `nvidia-nat[defense]` or `nvidia-nat-security[defense]` - Built-in defense middleware (`pii_defense`, `content_safety_guard`, etc.)
+- `nvidia-nat[guardrails]` or `nvidia-nat-security[guardrails]` - NeMo Guardrails policy middleware (`_type: guardrails`)
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
 - `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
@@ -68,7 +70,6 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[async_endpoints]` - Support for asynchronous endpoints when launching `nat serve`
 - `nvidia-nat[gunicorn]` - Support for launching `nat serve` with an alternative server; requires additional configuration file changes
 - `nvidia-nat[most]` - Extra containing all Framework integrations except for: `nvidia-nat-ragaai`, `nvidia-nat-openpipe-art`, `nvidia-nat-a365`
-- `nvidia-nat[pii-defense]` - Additional dependencies for red-teaming defenses and middleware
 
 ## Supported Platforms
 

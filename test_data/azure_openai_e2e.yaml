@@ -21,7 +21,7 @@ llms:
   agent_llm:
     _type: azure_openai
     azure_deployment: gpt-35-turbo
-    azure_endpoint: $AZURE_OPENAI_ENDPOINT
+    azure_endpoint: ${AZURE_OPENAI_ENDPOINT}
     api_version: 2025-04-01-preview
 
 workflow:

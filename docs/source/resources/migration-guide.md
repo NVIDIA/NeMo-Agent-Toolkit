@@ -27,6 +27,21 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
+### v1.7.0
+
+#### Workflow YAML environment variable interpolation
+
+Bare `$VAR` (without braces) is not supported. Use `${VAR}` instead.
+
+Configuration loading only expands **braced** environment references (`${VAR}`, `${VAR:-default}`). Bare `$VAR` in a workflow YAML file is left unchanged and is not read from the environment.
+
+Previously, the loader applied shell-style expansion to the entire config file, so bare `$VAR` could be substituted (and `$` inside longer strings could be altered unintentionally).
+
+To migrate:
+
+- Replace bare references with braced form, for example `api_key: $OPENAI_API_KEY` → `api_key: ${OPENAI_API_KEY}`.
+- See [Environment Variable Interpolation](../build-workflows/workflow-configuration.md#environment-variable-interpolation) for supported syntax.
+
 ### v1.6.0
 
 #### User Identity Resolution
