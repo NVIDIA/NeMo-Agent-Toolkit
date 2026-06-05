@@ -201,6 +201,7 @@ You can customize the workflow by:
 2. **Missing API Keys**: Verify that both NVIDIA_API_KEY and SERPERDEV_API_KEY are set
 3. **No Documents Found**: Check that PDF files are placed in the data directory and the path is correct
 4. **Web Search Fails**: Verify your SerperDev API key is valid and has remaining quota
+5. **Embedding Token Limit Exceeded** (`Input length X exceeds maximum allowed token size 512`): indexing chunks exceed the embedder's 512-token limit. Lower `split_length` in `pipelines/indexing.py`.
 
 **Logs**: Check the NeMo-Agent-Toolkit logs for detailed error information and debugging.
 
