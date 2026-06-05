@@ -106,7 +106,7 @@ gunicorn = [
 ]
 test = [
   "aioboto3>=11.0.0",
-  "nvidia-nat-eval == {version}",
+  "nvidia-nat-eval[full] == {version}",
   "nvidia-nat-test == {version}",
 ]
 
