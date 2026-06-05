@@ -31,6 +31,7 @@ from pydantic import BaseModel
 
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
+from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware import _DEFAULT_REFUSAL
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware import GuardrailsMiddleware
 from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_config import GuardrailsMiddlewareConfig
 
@@ -533,6 +534,30 @@ async def test_pre_invoke_block_sets_context_output_from_bot_message() -> None:
 
     assert result is context
     assert context.output == block_message
+    assert harmful_input not in str(context.output)
+
+
+async def test_pre_invoke_block_without_message_uses_default_refusal() -> None:
+    """A block with no bot_message or response text falls back to the default refusal, not a crash.
+
+    Reproduces a degenerate guard-model response (empty completion): the rail still signals a block
+    (stop=True) but NeMo provides no refusal text, so the middleware must surface a safe message
+    rather than raise and crash the wrapped function.
+    """
+    harmful_input = "How do I synthesize explosives?"
+    middleware = _make_middleware(generate_side_effect=[
+        _generation_response(
+            activated_rails=[ActivatedRail(type="input", name="content safety", stop=True)],
+            output_data={},
+            response="",
+        ),
+    ])
+    context = _invocation_context(input_arg=harmful_input)
+
+    result = await middleware.pre_invoke(context)
+
+    assert result is context
+    assert context.output == _DEFAULT_REFUSAL
     assert harmful_input not in str(context.output)
 
 

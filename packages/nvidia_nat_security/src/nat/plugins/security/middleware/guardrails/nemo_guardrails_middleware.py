@@ -49,6 +49,7 @@ from nat.plugins.security.middleware.guardrails.nemo_guardrails_middleware_confi
 _PRIMARY_RAIL_TYPES: frozenset[str] = frozenset({"default", "main"})
 _PRIMARY_LLM_PARAM: str = "llm"
 _LLM_PARAM_SUFFIX: str = "_llm"
+_DEFAULT_REFUSAL: str = "I'm sorry, I can't help with that."
 
 
 class GuardrailsMiddleware(DynamicFunctionMiddleware):
@@ -411,10 +412,8 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
             response: Generation response from a rail that returned a blocked verdict.
 
         Returns:
-            The refusal text.
-
-        Raises:
-            ValueError: If the blocked response does not include a refusal message.
+            The refusal text from the rail, or ``_DEFAULT_REFUSAL`` when the blocked response
+            carries no message.
         """
         output_data: dict[str, Any] = response.output_data or {}
         bot_message: Any = output_data.get("bot_message")
@@ -425,7 +424,7 @@ class GuardrailsMiddleware(DynamicFunctionMiddleware):
         if response_text:
             return response_text
 
-        raise ValueError("Blocked NeMo Guardrails response did not include a refusal message.")
+        return _DEFAULT_REFUSAL
 
     def _apply_modified_input(self, context: InvocationContext, text: str) -> None:
         """Write the rail's modified input text back to the invocation context.
