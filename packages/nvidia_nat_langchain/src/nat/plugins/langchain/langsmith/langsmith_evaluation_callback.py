@@ -15,6 +15,7 @@
 
 import logging
 import time
+import uuid
 from typing import Any
 
 import langsmith
@@ -53,11 +54,9 @@ def _humanize_dataset_name(name: str) -> str:
 def _span_id_to_langsmith_run_id(span_id: int) -> str:
     """Derive LangSmith run_id from OTEL span_id.
 
-    LangSmith deterministically maps OTEL span_ids to run UUIDs:
-    the first 8 bytes are zeroed, the last 8 bytes are the span_id.
+    LangSmith deterministically maps OTEL span_ids to run UUIDs.
     """
-    hex_str = format(span_id, "016x")
-    return f"00000000-0000-0000-{hex_str[:4]}-{hex_str[4:]}"
+    return str(uuid.UUID(int=span_id))
 
 
 def _eager_link_run_to_item(
@@ -535,9 +534,9 @@ class LangSmithEvaluationCallback:
     def on_dataset_loaded(self, *, dataset_name: str, items: list) -> None:
         self._dataset_name = dataset_name
         pretty_name = _humanize_dataset_name(dataset_name)
-        ls_dataset_name = f"Benchmark Dataset ({pretty_name})"
+        ls_dataset_name = dataset_name
         try:
-            ds = self._client.create_dataset(dataset_name=ls_dataset_name, description="NAT eval dataset")
+            ds = self._client.create_dataset(dataset_name=ls_dataset_name, description=pretty_name)
             self._dataset_id = str(ds.id)
         except langsmith.utils.LangSmithConflictError:
             existing = self._client.read_dataset(dataset_name=ls_dataset_name)
