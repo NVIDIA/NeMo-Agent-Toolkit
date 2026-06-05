@@ -76,7 +76,7 @@ Consider a Retail Agent whose primary function is to assist customers with produ
 | Threat Category | Description | Real-World Impact |
 |----------------|-------------|-------------------|
 | **Adversarial Attacks** | Malicious inputs designed to manipulate agent behavior, leading to incorrect actions or disclosures | Agent recommends competitors, provides false information, or executes unintended actions |
-| **Data Leakage** | Unintended exposure of sensitive user or internal data through agent interactions or outputs | Customer PII (emails, names, purchase history) exposed in responses |
+| **Data Leakage** | Unintended exposure of sensitive user or internal data through agent interactions or outputs | Customer personally identifiable information (PII) (emails, names, purchase history) exposed in responses |
 | **Policy Violations** | Agent actions that contravene established ethical, legal, or operational policies | Agent bypasses business rules, shares confidential pricing, or violates compliance requirements |
 | **Unintended Harmful Behaviors** | Agent actions that, despite benign intentions, result in negative or damaging outcomes | Agent provides dangerous product usage suggestions or inappropriate content |
 
@@ -268,7 +268,7 @@ For the complete evaluator configuration, see [`src/nat_retail_agent/configs/red
 
 ### Defense Middleware
 
-Defense middleware intercepts workflow inputs or outputs and applies mitigation strategies. In this workflow you can mitigate the same attack scenarios in two ways: **built-in defense middleware** (configured per function with actions such as refusal or redirection) and, optionally, **NeMo Guardrails** (Colang policy at function boundaries for PII masking, content safety, and jailbreak heuristics). The snippets below illustrate built-in defense configuration for the **Denial of service** scenario by inspecting tool outputs for injected instructions.
+Defense middleware intercepts workflow inputs or outputs and applies mitigation strategies. In this workflow you can mitigate the same attack scenarios in two ways: **built-in defense middleware** (configured per function with actions such as refusal or redirection) and, optionally, **NeMo Guardrails** (Colang policy at function boundaries for PII masking, content safety, jailbreak heuristics, and output verification). The snippets below illustrate built-in defense configuration for the **Denial of service** scenario by inspecting tool outputs for injected instructions.
 
 **Configuration Example (Output Verifier):**
 
@@ -393,7 +393,7 @@ The agent retrieves product information and sends an email response to the custo
 
 To run the same workflow with NeMo Guardrails policy middleware (see [Defense Middleware](#defense-middleware)), use [`config-with-guardrails.yml`](src/nat_retail_agent/configs/config-with-guardrails.yml).
 
-The `pii_guardrails` middleware uses NeMo’s `mask_sensitive_data` action, which runs Microsoft Presidio with spaCy and expects the English model `en_core_web_lg`. That model is not installed by `uv pip install` (only the `spacy` library is). Download it once per environment:
+The `pii_guardrails` middleware uses NeMo's `mask_sensitive_data` action, which runs Microsoft Presidio with spaCy and expects the English model `en_core_web_lg`. That model is not installed by `uv pip install` (only the `spacy` library is). Download it once per environment:
 
 ```bash
 python -m spacy download en_core_web_lg
@@ -426,7 +426,7 @@ The Colang policy — not the middleware — determines which outcome applies. A
 
 The `workflow_functions` field controls which functions the middleware is attached to and which strings are sent to the rail. Input rails run on a function's input during pre-invoke; output rails run on the function's returned value during post-invoke.
 
-- **List form** — `workflow_functions: [fn1, fn2]` attaches the rail to each named function and sends the whole value as a single rail call (the `input_message` field if present, otherwise the stringified value). The rail may pass, block, or rewrite it; a rewrite replaces the whole value.
+- **List form** — `workflow_functions: [fn1, fn2]` attaches the rail to each named function and guards every top-level string field of its input (pre-invoke) and output (post-invoke), each in its own rail call; a top-level list-of-strings field fans out per element. A bare string value is sent as a single call. Nested models are not descended — use the mapping form to reach those.
 - **Mapping form** — `workflow_functions: {fn1: {field: [subpath]}}` guards only the named fields. Each string the path reaches is sent to the rail in its **own** call, and list fields fan out so every item is evaluated independently. A rewrite (for example, PII masking) is written **back into that exact location**, so the object keeps its original structure; a block replaces the whole value with the refusal message.
 
 The `pii_guardrails` middleware in this example uses the mapping form to guard the `reviews.review` field of `get_product_info`'s returned product:
@@ -439,6 +439,10 @@ workflow_functions:
 ```
 
 Each product review is sent to the rail on its own, separate from the rest of the product. A masked review is written back in place (the product object is preserved); a review that must be blocked replaces the whole response with the refusal message.
+
+> **Validation:** Field paths in the mapping form are validated when the function is registered, against the function's input or output schema. A path that names a field that does not exist — or that resolves to a non-string field — raises an error immediately, rather than silently guarding nothing. A valid path whose data happens to be empty at runtime (for example, a product with no reviews) is simply a no-op.
+
+> **Attach one guardrails middleware per function.** List every rail a function needs inside a single `guardrails` instance rather than chaining several onto the same function (see the [Defense Middleware](#defense-middleware) design note for why).
 
 ---
 

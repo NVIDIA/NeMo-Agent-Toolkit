@@ -27,19 +27,53 @@ from nat.middleware.dynamic.dynamic_middleware_config import DynamicMiddlewareCo
 class GuardrailFunctionFields(RootModel[dict[str, list[str]]]):
     """Field selection for one intercepted function.
 
-    Maps each top-level input or output schema field to the dotted subpaths reaching the
-    string(s) to guard. An empty list guards the field itself; a subpath crossing a list
-    field fans out and is concatenated into a single rail call.
+    Maps each top-level field of the function's input or output schema to the dotted
+    sub-paths that reach the string(s) to guard. Each string leaf reached is evaluated
+    in its own independent rail call, and a non-blocking rewrite is written back to that
+    exact leaf so siblings are left untouched.
+
+    Configured in YAML under a function name within ``workflow_functions``::
+
+        workflow_functions:
+          retail_tools__get_all_products:
+            description: []        # guard the string field ``description`` directly
+            review_texts: []       # guard each string in the list field ``review_texts``
+          retail_tools__get_product_info:
+            reviews:               # guard ``review`` nested in each item of the list ``reviews``
+              - review
+
+    Each entry takes one of two forms:
+        ``field: []``: Guard the value of the top-level ``field`` itself. The field must
+            be a ``str`` or a ``list[str]``; a ``list[str]`` fans out and each element is
+            guarded in its own rail call.
+        ``field: [sub.path, ...]``: Descend into ``field`` and guard each ``str`` reached
+            by every listed dotted ``sub.path``. Any segment that crosses a list field
+            fans out, guarding the leaf on each element.
+
+    For example, given a ``get_product_info`` output shaped like::
+
+        {
+          "name": "Wireless Mouse",
+          "description": "Ergonomic 2.4GHz mouse.",
+          "reviews": [
+            {"author": "Ada", "rating": 5, "review": "Loved it, works great!"},
+            {"author": "Lin", "rating": 2, "review": "Stopped working after a week."},
+          ],
+        }
+
+    the selection ``reviews: [review]`` reaches the ``review`` string on each item and
+    guards each in its own rail call, leaving ``name``, ``description``, and every sibling
+    field (``author``, ``rating``) untouched::
+
+        rail call 1: "Loved it, works great!"
+        rail call 2: "Stopped working after a week."
     """
 
     root: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class GuardrailsMiddlewareConfig(DynamicMiddlewareConfig, name="guardrails"):
-    """Guardrails policy attached to a NAT workflow via dynamic middleware. # TODO EE: Fix formatted docstrings
-
-
-    """
+    """Guardrails policy attached to a NAT workflow via dynamic middleware."""
 
     guardrails: RailsConfig | None = Field(
         default=None,
@@ -55,14 +89,8 @@ class GuardrailsMiddlewareConfig(DynamicMiddlewareConfig, name="guardrails"):
     )
     workflow_functions: list[str] | dict[str, GuardrailFunctionFields] | None = Field(
         default=None,
-        description="Lists the workflow functions to wrap and, optionally, which of their arguments to "
-        "send to the guardrail.\n"
-        "As a list of function names, the whole argument of each function is sent to the guardrail.\n"
-        "Each entry names an argument and how to reach the string(s) to guard: an empty list selects "
-        "the argument itself (e.g. ``description: []``), and a list of dotted paths reaches strings "
-        "nested inside it (e.g. ``reviews: [review]`` selects the ``review`` of each item in "
-        "``reviews``).",
-    )
+        description="Lists the workflow functions to wrap and, optionally, which fields of the boundary "
+        "input or output value to send to the guardrail.")
 
     @model_validator(mode="after")
     def _finalize_guardrails(self) -> GuardrailsMiddlewareConfig:

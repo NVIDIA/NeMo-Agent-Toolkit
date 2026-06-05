@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -178,6 +179,57 @@ class _WriteReviewInput(BaseModel):
     review_text: str
 
 
+class _ProductWithPrice(BaseModel):
+    """Model with a non-string field for field-path validation tests."""
+
+    price: int
+
+
+class _TwoFieldInput(BaseModel):
+    """Input model with two top-level string fields for no-selection tests."""
+
+    a: str
+    b: str
+
+
+class _ProductSummaryModel(BaseModel):
+    """Summary payload model nested inside NAT's output wrapper."""
+
+    description: str
+    review_texts: list[str]
+
+
+class _WrappedListOutput(BaseModel):
+    """NAT-style output wrapper holding the raw payload under ``value``."""
+
+    value: list[_ProductSummaryModel]
+
+
+def _discovered(
+    *,
+    name: str = "test_fn",
+    input_schema: type[BaseModel] | None = None,
+    output_schema: type[BaseModel] | None = None,
+) -> SimpleNamespace:
+    """Build a DiscoveredFunction-like object exposing input and output schemas.
+
+    Args:
+        name: Function name the middleware looks up in its config.
+        input_schema: Pydantic input schema, or None when unavailable.
+        output_schema: Pydantic single-output schema, or None when unavailable.
+
+    Returns:
+        Object with ``name`` and ``instance`` (carrying the schemas) attributes.
+    """
+    instance = SimpleNamespace(
+        input_schema=input_schema,
+        single_output_schema=output_schema,
+        middleware=[],
+        configure_middleware=MagicMock(),
+    )
+    return SimpleNamespace(name=name, config=None, instance=instance)
+
+
 async def test_pre_invoke_rewrites_whole_input_message_when_modified() -> None:
     """Write non-blocking rail rewrites back to whole-input wrappers."""
     input_arg = _ChatInput(input_message="Email From: john.doe@email.com")
@@ -204,6 +256,55 @@ async def test_post_invoke_rewrites_whole_output_when_modified() -> None:
 
     assert result is context
     assert context.output == masked_output
+
+
+async def test_pre_invoke_no_selection_guards_each_top_level_string_field() -> None:
+    """With no field selection, each top-level string field is guarded in its own rail call."""
+    arg = _TwoFieldInput(a="reach me at a@x.com", b="or b@y.com")
+    middleware = _make_middleware(generate_side_effect=[
+        _generation_response(response="reach me at <EMAIL_ADDRESS>"),
+        _generation_response(response="or <EMAIL_ADDRESS>"),
+    ])
+    context = _invocation_context(input_arg=arg)
+
+    result = await middleware.pre_invoke(context)
+
+    assert result is context
+    assert context.modified_args[0] is arg
+    assert arg.a == "reach me at <EMAIL_ADDRESS>"
+    assert arg.b == "or <EMAIL_ADDRESS>"
+    assert middleware._llm_rails.generate_async.await_count == 2
+
+
+async def test_pre_invoke_no_selection_fans_out_top_level_list_of_strings() -> None:
+    """With no field selection, a top-level list-of-strings field fans out per element."""
+    arg = _SummaryWithReviewTexts(review_texts=["a@x.com", "b@y.com"])
+    middleware = _make_middleware(generate_side_effect=[
+        _generation_response(response="<EMAIL_ADDRESS_1>"),
+        _generation_response(response="<EMAIL_ADDRESS_2>"),
+    ])
+    context = _invocation_context(input_arg=arg)
+
+    result = await middleware.pre_invoke(context)
+
+    assert result is context
+    assert arg.review_texts == ["<EMAIL_ADDRESS_1>", "<EMAIL_ADDRESS_2>"]
+    assert middleware._llm_rails.generate_async.await_count == 2
+
+
+async def test_no_selection_does_not_descend_into_nested_models() -> None:
+    """No-selection guards only top-level strings; nested models are left untouched."""
+    product = _ProductWithSummary(reviews=[_Review(review="a@x.com")], summary="ping me at b@y.com")
+    middleware = _make_middleware(generate_side_effect=[_generation_response(response="ping me at <EMAIL_ADDRESS>")])
+    context = _invocation_context(output=product)
+
+    result = await middleware.post_invoke(context)
+
+    assert result is context
+    assert context.output is product
+    assert product.summary == "ping me at <EMAIL_ADDRESS>"
+    assert product.reviews[0].review == "a@x.com"
+    assert middleware._llm_rails.generate_async.await_count == 1
 
 
 async def test_post_invoke_masks_selected_path_in_place_and_preserves_structure() -> None:
@@ -406,6 +507,98 @@ async def test_multiple_field_paths_produce_independent_rail_calls() -> None:
         all_assistant_contents.append(str(content))
     assert "great product" in all_assistant_contents
     assert "Highly recommended." in all_assistant_contents
+
+
+async def test_pre_invoke_block_sets_context_output_from_bot_message() -> None:
+    """Blocked input rail writes refusal from bot_message to context.output, not the original input."""
+    harmful_input = "How do I synthesize explosives?"
+    block_message = "I'm sorry, I can't help with that."
+    middleware = _make_middleware(generate_side_effect=[
+        _generation_response(
+            activated_rails=[ActivatedRail(type="input", name="content safety", stop=True)],
+            output_data={"bot_message": block_message},
+        ),
+    ])
+    context = _invocation_context(input_arg=harmful_input)
+
+    result = await middleware.pre_invoke(context)
+
+    assert result is context
+    assert context.output == block_message
+    assert harmful_input not in str(context.output)
+
+
+async def test_function_middleware_invoke_skips_call_next_when_input_blocked() -> None:
+    """call_next is never called when the input rail blocks."""
+    block_message = "I'm sorry, I can't help with that."
+    middleware = _make_middleware(generate_side_effect=[
+        _generation_response(
+            activated_rails=[ActivatedRail(type="input", name="content safety", stop=True)],
+            response=block_message,
+        ),
+    ])
+    call_next = AsyncMock()
+    fn_context = FunctionMiddlewareContext(
+        name="test_fn",
+        config=None,
+        description=None,
+        input_schema=None,
+        single_output_schema=None,
+        stream_output_schema=None,
+    )
+
+    output = await middleware.function_middleware_invoke(
+        "harmful input",
+        call_next=call_next,
+        context=fn_context,
+    )
+
+    call_next.assert_not_awaited()
+    assert output == block_message
+
+
+@pytest.mark.parametrize(
+    "fields, input_schema, output_schema, expect_error",
+    [
+        pytest.param({"nonexistent": []}, _WriteReviewInput, _Product, True, id="unknown_field_raises"),
+        pytest.param({"price": []}, _ProductWithPrice, None, True, id="non_string_field_raises"),
+        pytest.param({"reviews": ["review"]}, _WriteReviewInput, _Product, False, id="output_nested_list_path_passes"),
+        pytest.param({"review_text": []}, _WriteReviewInput, None, False, id="input_scalar_field_passes"),
+        pytest.param({"review_texts": []}, None, _SummaryWithReviewTexts, False, id="list_of_strings_field_passes"),
+        pytest.param({"description": []}, _WriteReviewInput, _WrappedListOutput, False, id="wrapped_output_passes"),
+        pytest.param({"descriptionX": []}, _WriteReviewInput, _WrappedListOutput, True, id="wrapped_output_typo"),
+        pytest.param({"missing": []}, None, None, False, id="no_schema_skips_validation"),
+    ],
+)
+def test_validate_guarded_field_paths_against_input_or_output_schema(
+    fields: dict[str, list[str]],
+    input_schema: type[BaseModel] | None,
+    output_schema: type[BaseModel] | None,
+    expect_error: bool,
+) -> None:
+    """Validation raises only when a path resolves on neither the input nor the output schema."""
+    middleware = _make_middleware(config=_make_config_with_fields(fields))
+    discovered = _discovered(input_schema=input_schema, output_schema=output_schema)
+    if expect_error:
+        with pytest.raises(ValueError, match="resolves to no string field"):
+            middleware._validate_guarded_field_paths(discovered)
+    else:
+        middleware._validate_guarded_field_paths(discovered)
+
+
+def test_validate_guarded_field_paths_with_list_form_config_skips_validation() -> None:
+    """List-form config (no field selection) performs no schema validation."""
+    middleware = _make_middleware(config=_make_config())
+    discovered = _discovered(input_schema=_ProductWithPrice, output_schema=None)
+    middleware._validate_guarded_field_paths(discovered)
+
+
+def test_register_function_with_invalid_field_path_raises() -> None:
+    """Registration fails fast (before wiring the middleware chain) on an invalid field path."""
+    middleware = _make_middleware(config=_make_config_with_fields({"nonexistent": []}))
+    discovered = _discovered(input_schema=_WriteReviewInput, output_schema=_Product)
+    with pytest.raises(ValueError, match="resolves to no string field"):
+        middleware._register_function(discovered)
 
 
 def test_finalize_guardrails_rejects_missing_policy_source() -> None:

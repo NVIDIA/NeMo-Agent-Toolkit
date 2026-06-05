@@ -102,7 +102,7 @@ most = [
   "nvidia-nat-atif == {version}",
   "nvidia-nat-config-optimizer == {version}",
   "nvidia-nat-core[async_endpoints,gunicorn] == {version}",
-  "nvidia-nat-security[defense] == {version}",
+  "nvidia-nat-security[defense,guardrails] == {version}",
   "nvidia-nat-crewai == {version}",
   "nvidia-nat-data-flywheel == {version}",
   "nvidia-nat-eval[full] == {version}",

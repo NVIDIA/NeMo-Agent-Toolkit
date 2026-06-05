@@ -27,7 +27,7 @@ It is strongly encouraged to migrate any existing code to the latest conventions
 
 ## Version Specific Changes
 
-### v1.7.0
+### v1.8.0
 
 #### Workflow YAML environment variable interpolation
 

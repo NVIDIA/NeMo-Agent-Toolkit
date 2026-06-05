@@ -2252,7 +2252,7 @@ requires-dist = [
     { name = "nvidia-nat-security", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_security" },
     { name = "nvidia-nat-security", marker = "extra == 'security'", editable = "../../../packages/nvidia_nat_security" },
     { name = "nvidia-nat-security", extras = ["defense"], marker = "extra == 'defense'", editable = "../../../packages/nvidia_nat_security" },
-    { name = "nvidia-nat-security", extras = ["defense"], marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_security" },
+    { name = "nvidia-nat-security", extras = ["defense", "guardrails"], marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_security" },
     { name = "nvidia-nat-security", extras = ["guardrails"], marker = "extra == 'guardrails'", editable = "../../../packages/nvidia_nat_security" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'most'", editable = "../../../packages/nvidia_nat_semantic_kernel" },
     { name = "nvidia-nat-semantic-kernel", marker = "extra == 'semantic-kernel'", editable = "../../../packages/nvidia_nat_semantic_kernel" },

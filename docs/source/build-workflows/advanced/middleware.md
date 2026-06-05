@@ -404,6 +404,55 @@ Timeout middleware extends `DynamicFunctionMiddleware`, enabling interception of
 - **Streaming**: Enforces the time limit across the entire stream duration, not per-chunk
 - **Error handling**: Raises `TimeoutError` with the configured `timeout_message`
 
+### Guardrails Middleware
+
+The Guardrails middleware (`_type: guardrails`) hosts [NeMo Guardrails](https://github.com/NVIDIA/NeMo-Guardrails) as a policy engine at function input and output boundaries. It is provided by the `nvidia-nat-security` plugin; install it with `nvidia-nat-security[guardrails]`. Input rails run on `pre_invoke` (function arguments) and output rails run on `post_invoke` (function output). The middleware operates on strings only.
+
+#### Selecting what to guard
+
+The `workflow_functions` field selects which functions are intercepted and, optionally, which string fields on each are sent to the rail:
+
+```yaml
+middleware:
+  # List form: guard each listed function on every top-level string field of
+  # its input (pre) and output (post).
+  workflow_guardrails:
+    _type: guardrails
+    workflow_functions:
+      - my_tool
+    guardrails: { ... }   # NeMo Guardrails policy
+
+  # Mapping form: guard only the named string fields.
+  product_guardrails:
+    _type: guardrails
+    workflow_functions:
+      retail_tools__get_product_info:
+        reviews:
+          - review        # Product.reviews[].review (nested list fan-out)
+        description: []   # Product.description (top-level scalar; empty list = the field itself)
+    guardrails: { ... }
+```
+
+- **List form / no field selection** — every top-level string field of the input (`pre_invoke`) and output (`post_invoke`) is guarded, each in its own rail call; a top-level `list[str]` field fans out per element. A bare string value is guarded as a whole. Nested models and lists of models are not descended — use the mapping form to reach those.
+- **Mapping form** — only the listed string fields are guarded. Dotted paths (`reviews.review`) traverse nested Pydantic models; list fields fan out so each string element is evaluated in its own rail call. NeMo Agent Toolkit unwraps a single Pydantic-model argument into the input schema, so that model's fields are the top-level field names (no wrapper argument name to key on).
+
+#### Per-leaf processing
+
+Each selected string is evaluated independently:
+
+- **Input rails (`pre_invoke`)** — *PASS* leaves the argument unchanged; *MODIFY* writes the rewritten string back into the original argument structure (siblings untouched); *BLOCK* skips the function call and returns the refusal message.
+- **Output rails (`post_invoke`)** — *PASS* returns the original output; *MODIFY* writes the rewritten string back in place and returns the structurally-preserved output; *BLOCK* returns the NeMo Guardrails refusal string.
+
+#### Field-path validation
+
+Configured field paths are validated at function registration (the earliest point the function schema is known), against the function's input *or* output schema. A path that names a field that does not exist, or that resolves to a non-string field, raises a `ValueError` immediately rather than silently guarding nothing. A valid path whose runtime data is empty (for example, an empty `reviews` list) is a no-op.
+
+#### One middleware per function
+
+NeMo Guardrails sequences its own rails internally (all input rails, then all output rails, within a single `LLMRails` instance). Attach a **single** `guardrails` middleware to a given function and list every rail it needs inside that instance. Do **not** chain multiple `guardrails` middleware onto the same function: the outer instance would re-evaluate the inner instance's already-blocked refusal string, wasting rail calls and obscuring which rail blocked.
+
+For a complete, runnable configuration (PII masking, content safety, jailbreak heuristics, and output verification across tool and workflow boundaries), see the retail agent example at `examples/safety_and_security/retail_agent/README.md`.
+
 ## Advanced Patterns
 
 ### Accessing the Builder
