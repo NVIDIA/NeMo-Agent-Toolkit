@@ -317,15 +317,15 @@ For the full built-in defense configuration, see [`src/nat_retail_agent/configs/
 
 To apply NeMo Guardrails at the same boundaries, use [`config-with-guardrails.yml`](src/nat_retail_agent/configs/config-with-guardrails.yml). That config defines one `guardrails` middleware instance per function target:
 
-| Middleware | Function target | Rails (NeMo pipeline order) |
-|---|---|---|
-| `pii_guardrails` | `retail_tools__get_product_info` | PII masking → content safety → jailbreak detection → output verification |
-| `all_products_guardrails` | `retail_tools__get_all_products` | content safety → jailbreak detection |
-| `workflow_guardrails` | `<workflow>` | PII masking → content safety → jailbreak detection → output verification |
+| Middleware | Function target | Input rails | Output rails |
+|---|---|---|---|
+| `pii_guardrails` | `retail_tools__get_product_info` | PII masking → content safety → jailbreak detection | PII masking → content safety → jailbreak detection → self check output |
+| `all_products_guardrails` | `retail_tools__get_all_products` | _(none)_ | content safety → jailbreak detection |
+| `workflow_guardrails` | `<workflow>` | content safety → jailbreak detection | PII masking → content safety → jailbreak detection → self check output |
 
 > **Design note:** NeMo Guardrails chains rails internally via its pipeline — input rails run in sequence, then output rails run in sequence, all within a single `LLMRails` instance. Do not attach multiple `GuardrailsMiddleware` instances to the same function. That creates nested middleware wrapping where each outer middleware evaluates the already-blocked `"I'm sorry..."` string from an inner middleware, wasting LLM calls and obscuring which rail actually blocked. Use one middleware instance per function target and list all relevant rails inside it.
 
-LLM-backed rails reference named entries in `llms:` via `llm_bindings`. For example, `content_safety_llm` is bound as `content_safety` and `verifier_llm` is bound as `main` on middleware instances that use both the NemoGuard content safety model and the Nemotron output verifier.
+LLM-backed rails reference named entries in `llms:` via `llm_bindings`. In this config, `content_safety_llm` is bound as `content_safety` (used by the content safety check rails) and `self_check_llm` is bound as `main` (used by the `self check output` rail).
 
 ---
 

@@ -474,7 +474,7 @@ This option has two requirements:
 
 When a streaming rail blocks, the block is surfaced through `on_post_invoke_blocked` (the rail's message replaces the remainder of the stream).
 
-For a complete, runnable configuration (PII masking, content safety, jailbreak heuristics, and output verification across tool and workflow boundaries), see the retail agent example at `examples/safety_and_security/retail_agent/README.md`.
+For a complete, runnable configuration (PII masking, content safety, jailbreak heuristics, and a self-check output policy across tool and workflow boundaries), see the retail agent example at `examples/safety_and_security/retail_agent/README.md`.
 
 ## Advanced Patterns
 

@@ -38,18 +38,18 @@ llms:
     temperature: 0.0
     max_tokens: 256
 
-  verifier_llm:
+  self_check_llm:
     _type: nim
-    model_name: nvidia/llama-3.1-nemotron-safety-guard-8b-v3
+    model_name: meta/llama-3.3-70b-instruct
     temperature: 0.0
-    max_tokens: 256
+    max_tokens: 10
 
 middleware:
   pii_guardrails:
     _type: guardrails
     llm_bindings:
       content_safety: content_safety_llm
-      main: verifier_llm
+      main: self_check_llm
     workflow_functions:
       retail_tools__get_product_info:
         reviews:
@@ -199,58 +199,11 @@ middleware:
           model: nvidia/llama-3.1-nemoguard-8b-content-safety
       colang_version: "1.0"
       rails:
-        input:
-          flows:
-            - content safety check input $model=content_safety
-            - jailbreak detection heuristics
         output:
           flows:
             - content safety check output $model=content_safety
             - jailbreak detection heuristics
       prompts:
-        - task: content_safety_check_input $model=content_safety
-          content: |
-            Task: Check if there is unsafe content in the user or agent messages in the below conversation in accordance with our safety policy with the below categories. Provide a 'safe' or 'unsafe' rating for both the user message and the agent response. If there is unsafe content, please also provide a list of violated categories according to our safety policy below.
-
-            <BEGIN UNSAFE CONTENT CATEGORIES>
-            S1: Violence.
-            S2: Sexual.
-            S3: Criminal Planning/Confessions.
-            S4: Guns and Illegal Weapons.
-            S5: Controlled/Regulated Substances.
-            S6: Suicide and Self Harm.
-            S7: Sexual (minor).
-            S8: Hate/Identity Hate.
-            S9: PII/Privacy.
-            S10: Harassment.
-            S11: Threat.
-            S12: Profanity.
-            S13: Needs Caution.
-            S14: Other.
-            S15: Manipulation.
-            S16: Fraud/Deception.
-            S17: Malware.
-            S18: High Risk Gov Decision Making.
-            S19: Political/Misinformation/Conspiracy.
-            S20: Copyright/Trademark/Plagiarism.
-            S21: Unauthorized Advice.
-            S22: Illegal Activity.
-            S23: Immoral/Unethical.
-            <END UNSAFE CONTENT CATEGORIES>
-
-            <BEGIN CONVERSATION>
-
-            user: {{ user_input }}
-
-            <END CONVERSATION>
-
-            Provide your safety assessment for the above conversation in the below output JSON format:
-            {"User Safety": safe or unsafe rating for the user message, "Response Safety": safe or unsafe rating for the agent response. Omit if no agent response present. "Safety Categories": a comma-separated list of applicable safety categories from the provided taxonomy. Omit if all safe.}
-
-            Do not include anything other than the output JSON in your response.
-            Output JSON:
-          output_parser: nemoguard_parse_prompt_safety
-          max_tokens: 50
         - task: content_safety_check_output $model=content_safety
           content: |
             Task: Check if there is unsafe content in the user or agent messages in the below conversation in accordance with our safety policy with the below categories. Provide a 'safe' or 'unsafe' rating for both the user message and the agent response. If there is unsafe content, please also provide a list of violated categories according to our safety policy below.
@@ -297,13 +250,13 @@ middleware:
           output_parser: nemoguard_parse_response_safety
           max_tokens: 50
 
+
   workflow_guardrails:
     _type: guardrails
     llm_bindings:
       content_safety: content_safety_llm
-      main: verifier_llm
-    # Attached to the workflow via `workflow.middleware`; with no field selection the
-    # whole input message and output string are guarded.
+      main: self_check_llm
+
     guardrails:
       models:
         - type: content_safety
@@ -313,7 +266,6 @@ middleware:
       rails:
         input:
           flows:
-            - mask sensitive data on input
             - content safety check input $model=content_safety
             - jailbreak detection heuristics
         output:
@@ -324,7 +276,6 @@ middleware:
             - self check output
         config:
           sensitive_data_detection:
-            input: { entities: [EMAIL_ADDRESS, PERSON] }
             output: { entities: [EMAIL_ADDRESS, PERSON] }
       prompts:
         - task: content_safety_check_input $model=content_safety
@@ -420,9 +371,17 @@ middleware:
             Your task is to check if the assistant message below should be blocked.
             Use the user message for context.
 
-            Policy: The final response must not contain (1) customer email addresses or personal
-            information, (2) references to competitor websites, competitor brands, or external
-            retailer URLs, or (3) recommendations to visit other stores or websites.
+            Policy: Block if the response contains (1) literal customer email addresses or
+            personal names — angle-bracket placeholders such as <EMAIL_ADDRESS> or <PERSON>
+            represent already-masked data and must NOT be blocked, (2) references to competitor
+            websites, competitor brands, or external retailer URLs, (3) recommendations to
+            visit other stores or websites, (4) any affirmation, implication, or suggestion
+            that the product can be used to harm or injure people — this includes both graphic
+            violent descriptions and mild statements such as "they can be used in various ways
+            to harm someone", (5) an empty, blank, or missing customer email body or content field
+            indicating the agent failed to respond to the customer, or (6) a denial-of-service
+            refusal such as "I'm sorry, I cannot help with that" in the email content when the
+            customer asked a legitimate product inquiry.
 
             User message: "{{ user_input }}"
 
