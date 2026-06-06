@@ -7627,6 +7627,7 @@ defense = [
     { name = "presidio-analyzer" },
     { name = "presidio-anonymizer" },
     { name = "spacy" },
+    { name = "typer" },
 ]
 guardrails = [
     { name = "dataclasses-json" },
@@ -7643,8 +7644,9 @@ requires-dist = [
     { name = "plotly", specifier = "~=6.0" },
     { name = "presidio-analyzer", marker = "extra == 'defense'", specifier = ">=2.2" },
     { name = "presidio-anonymizer", marker = "extra == 'defense'", specifier = ">=2.2" },
-    { name = "spacy", marker = "extra == 'defense'", specifier = ">=3.7" },
+    { name = "spacy", marker = "extra == 'defense'", specifier = ">=3.7,<4" },
     { name = "tqdm", specifier = "~=4.67" },
+    { name = "typer", marker = "extra == 'defense'", specifier = ">=0.25,<0.26" },
 ]
 provides-extras = ["defense", "guardrails", "test"]
 
@@ -11975,7 +11977,7 @@ wheels = [
 
 [[package]]
 name = "typer"
-version = "0.24.0"
+version = "0.25.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -11983,9 +11985,9 @@ dependencies = [
     { name = "rich" },
     { name = "shellingham" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/5a/b6/3e681d3b6bb22647509bdbfdd18055d5adc0dce5c5585359fa46ff805fdc/typer-0.24.0.tar.gz", hash = "sha256:f9373dc4eff901350694f519f783c29b6d7a110fc0dcc11b1d7e353b85ca6504", size = 118380, upload-time = "2026-02-16T22:08:48.496Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e4/51/9aed62104cea109b820bbd6c14245af756112017d309da813ef107d42e7e/typer-0.25.1.tar.gz", hash = "sha256:9616eb8853a09ffeabab1698952f33c6f29ffdbceb4eaeecf571880e8d7664cc", size = 122276, upload-time = "2026-04-30T19:32:16.964Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/85/d0/4da85c2a45054bb661993c93524138ace4956cb075a7ae0c9d1deadc331b/typer-0.24.0-py3-none-any.whl", hash = "sha256:5fc435a9c8356f6160ed6e85a6301fdd6e3d8b2851da502050d1f92c5e9eddc8", size = 56441, upload-time = "2026-02-16T22:08:47.535Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/f9/2b3ff4e56e5fa7debfaf9eb135d0da96f3e9a1d5b27222223c7296336e5f/typer-0.25.1-py3-none-any.whl", hash = "sha256:75caa44ed46a03fb2dab8808753ffacdbfea88495e74c85a28c5eefcf5f39c89", size = 58409, upload-time = "2026-04-30T19:32:18.271Z" },
 ]
 
 [[package]]
