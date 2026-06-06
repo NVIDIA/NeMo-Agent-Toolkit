@@ -20,6 +20,7 @@ import pytest
 import nat.middleware.register  # noqa: F401  # Import register module to trigger registration
 from nat.builder.builder import Builder
 from nat.builder.function import FunctionGroup
+from nat.cli.register_workflow import register_function
 from nat.cli.register_workflow import register_function_group
 from nat.data_models.config import Config
 from nat.data_models.dataset_handler import EvalDatasetJsonConfig
@@ -28,13 +29,13 @@ from nat.data_models.evaluate_config import EvalGeneralConfig
 from nat.data_models.function import EmptyFunctionConfig
 from nat.data_models.function import FunctionGroupBaseConfig
 from nat.llm.nim_llm import NIMModelConfig
-from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 from nat.plugins.security.eval.red_teaming_evaluator.filter_conditions import IntermediateStepsFilterCondition
 from nat.plugins.security.eval.red_teaming_evaluator.register import RedTeamingEvaluatorConfig
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingRunnerConfig
 from nat.plugins.security.eval.runners.red_teaming_runner.config import RedTeamingScenario
 from nat.plugins.security.eval.runners.red_teaming_runner.config import _RedTeamingScenarioRaw
 from nat.plugins.security.eval.runners.red_teaming_runner.runner import RedTeamingRunner
+from nat.plugins.security.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
 
 class SimpleFunctionGroupConfig(FunctionGroupBaseConfig, name="simple_function_group"):
@@ -45,6 +46,14 @@ class SimpleFunctionGroupConfig(FunctionGroupBaseConfig, name="simple_function_g
 @pytest.fixture(scope="module", autouse=True)
 async def register_test_types():
     """Register test types with GlobalTypeRegistry."""
+
+    @register_function(config_type=EmptyFunctionConfig)
+    async def empty_function(config: EmptyFunctionConfig, builder: Builder):
+
+        async def inner(*args, **kwargs):
+            return None
+
+        yield inner
 
     @register_function_group(config_type=SimpleFunctionGroupConfig)
     async def simple_function_group(config: SimpleFunctionGroupConfig, _builder: Builder):

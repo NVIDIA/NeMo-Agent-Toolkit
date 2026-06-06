@@ -28,12 +28,12 @@ from typing import Any
 from pydantic import Field
 
 from nat.middleware.common import TargetLocation
-from nat.middleware.defense.defense_middleware import DefenseMiddleware
-from nat.middleware.defense.defense_middleware import DefenseMiddlewareConfig
-from nat.middleware.defense.defense_middleware_data_models import OutputVerificationResult
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
 from nat.middleware.middleware import InvocationContext
+from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddleware
+from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddlewareConfig
+from nat.plugins.security.middleware.defense.defense_middleware_data_models import OutputVerificationResult
 
 logger = logging.getLogger(__name__)
 

@@ -30,12 +30,12 @@ from typing import Literal
 
 from pydantic import Field
 
-from nat.middleware.defense.defense_middleware import DefenseMiddleware
-from nat.middleware.defense.defense_middleware import DefenseMiddlewareConfig
-from nat.middleware.defense.defense_middleware_data_models import PreToolVerificationResult
 from nat.middleware.function_middleware import CallNext
 from nat.middleware.function_middleware import CallNextStream
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddleware
+from nat.plugins.security.middleware.defense.defense_middleware import DefenseMiddlewareConfig
+from nat.plugins.security.middleware.defense.defense_middleware_data_models import PreToolVerificationResult
 
 logger = logging.getLogger(__name__)
 

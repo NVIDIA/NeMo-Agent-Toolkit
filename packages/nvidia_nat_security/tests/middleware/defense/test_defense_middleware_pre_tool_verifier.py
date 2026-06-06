@@ -25,9 +25,9 @@ import pytest
 from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
-from nat.middleware.defense.defense_middleware_pre_tool_verifier import PreToolVerifierMiddleware
-from nat.middleware.defense.defense_middleware_pre_tool_verifier import PreToolVerifierMiddlewareConfig
 from nat.middleware.middleware import FunctionMiddlewareContext
+from nat.plugins.security.middleware.defense.defense_middleware_pre_tool_verifier import PreToolVerifierMiddleware
+from nat.plugins.security.middleware.defense.defense_middleware_pre_tool_verifier import PreToolVerifierMiddlewareConfig
 
 # Derive test constants from the config defaults so tests stay in sync with production values.
 _MAX_CONTENT_LENGTH = PreToolVerifierMiddlewareConfig.model_fields["max_content_length"].default
@@ -416,7 +416,7 @@ class TestAnalyzeContentChunking:
         middleware._llm = mock_llm
 
         long_content = "a" * (_MAX_CONTENT_LENGTH * 2)
-        with patch('nat.middleware.defense.defense_middleware_pre_tool_verifier.logger'):
+        with patch('nat.plugins.security.middleware.defense.defense_middleware_pre_tool_verifier.logger'):
             result = await middleware._analyze_content(long_content, function_name=middleware_context.name)
 
         assert result.error
@@ -501,7 +501,8 @@ class TestPreToolVerifierInvoke:
             call_next_input = value
             return "result"
 
-        with patch('nat.middleware.defense.defense_middleware_pre_tool_verifier.logger') as mock_logger:
+        with patch(
+                'nat.plugins.security.middleware.defense.defense_middleware_pre_tool_verifier.logger') as mock_logger:
             result = await middleware.function_middleware_invoke("injected input",
                                                                  call_next=mock_next,
                                                                  context=middleware_context)
