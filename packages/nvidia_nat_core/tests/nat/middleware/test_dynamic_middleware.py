@@ -362,6 +362,221 @@ def test_discover_functions_skip_duplicates(mock_builder, mock_function):
     assert len(middleware._workflow_inventory.workflow_functions) == 1
 
 
+# ==================== _should_intercept_function Tests ====================
+
+
+def test_should_intercept_function_returns_false_if_already_registered(mock_builder, mock_function):
+    """_should_intercept_function returns False when function is already in inventory."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=True)
+    middleware = DynamicFunctionMiddleware(config=config, builder=mock_builder)
+
+    already = DiscoveredFunction(name="func1", config=FunctionBaseConfig(), instance=mock_function)
+    middleware._workflow_inventory.workflow_functions.append(already)
+
+    assert middleware._should_intercept_function("func1") is False
+
+
+def test_should_intercept_function_returns_true_when_register_all_enabled(mock_builder):
+    """_should_intercept_function returns True for any unseen function when register_workflow_functions is True."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=True)
+    middleware = DynamicFunctionMiddleware(config=config, builder=Mock(_functions={}))
+
+    assert middleware._should_intercept_function("any_func") is True
+
+
+@pytest.mark.parametrize("func_name,expected", [
+    ("listed_func", True),
+    ("unlisted_func", False),
+])
+def test_should_intercept_function_respects_explicit_list(mock_builder, func_name, expected):
+    """_should_intercept_function returns True only for names in workflow_functions list."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=["listed_func"])
+    middleware = DynamicFunctionMiddleware(config=config, builder=Mock(_functions={}))
+
+    assert middleware._should_intercept_function(func_name) is expected
+
+
+def test_should_intercept_function_returns_false_when_both_disabled(mock_builder):
+    """_should_intercept_function returns False when register_all is off and list is None."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=None)
+    middleware = DynamicFunctionMiddleware(config=config, builder=Mock(_functions={}))
+
+    assert middleware._should_intercept_function("any_func") is False
+
+
+# ==================== workflow_functions List Discovery Tests ====================
+
+
+def test_discover_functions_targeted_list_registers_only_listed(mock_builder, mock_function):
+    """_discover_functions only registers functions explicitly named in workflow_functions."""
+    mock_builder._functions = {
+        "func_a": Mock(config=FunctionBaseConfig(), instance=mock_function),
+        "func_b": Mock(config=FunctionBaseConfig(), instance=mock_function),
+        "func_c": Mock(config=FunctionBaseConfig(), instance=mock_function),
+    }
+
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=["func_a", "func_c"])
+    middleware = DynamicFunctionMiddleware(config=config, builder=mock_builder)
+
+    registered_names = {f.name for f in middleware._workflow_inventory.workflow_functions}
+    assert registered_names == {"func_a", "func_c"}
+
+
+def test_discover_functions_targeted_list_skips_functions_not_in_builder(mock_builder, mock_function):
+    """_discover_functions silently skips names in workflow_functions that are not in the builder."""
+    mock_builder._functions = {
+        "func_a": Mock(config=FunctionBaseConfig(), instance=mock_function),
+    }
+
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=["func_a", "nonexistent"])
+    middleware = DynamicFunctionMiddleware(config=config, builder=mock_builder)
+
+    registered_names = {f.name for f in middleware._workflow_inventory.workflow_functions}
+    assert registered_names == {"func_a"}
+
+
+def test_discover_functions_register_all_is_not_limited_by_workflow_functions_list(mock_builder, mock_function):
+    """register_workflow_functions=True registers all functions regardless of workflow_functions list."""
+    mock_builder._functions = {
+        "func_a": Mock(config=FunctionBaseConfig(), instance=mock_function),
+        "func_b": Mock(config=FunctionBaseConfig(), instance=mock_function),
+        "func_c": Mock(config=FunctionBaseConfig(), instance=mock_function),
+    }
+
+    config = DynamicMiddlewareConfig(register_workflow_functions=True, workflow_functions=["func_a"])
+    middleware = DynamicFunctionMiddleware(config=config, builder=mock_builder)
+
+    registered_names = {f.name for f in middleware._workflow_inventory.workflow_functions}
+    assert registered_names == {"func_a", "func_b", "func_c"}
+
+
+def test_discover_functions_skips_when_both_disabled(mock_builder, mock_function):
+    """_discover_functions does nothing when register_workflow_functions is False and workflow_functions is None."""
+    mock_builder._functions = {"func_a": Mock(config=FunctionBaseConfig(), instance=mock_function)}
+
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=None)
+    middleware = DynamicFunctionMiddleware(config=config, builder=mock_builder)
+
+    assert len(middleware._workflow_inventory.workflow_functions) == 0
+
+
+# ==================== _discover_and_register_function Runtime Tests ====================
+
+
+async def test_discover_and_register_function_skips_when_both_disabled(mock_builder, mock_function):
+    """_discover_and_register_function returns function without registering when both flags are off."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=None)
+    middleware = DynamicFunctionMiddleware(config=config, builder=Mock(_functions={}))
+    middleware._builder_get_function = AsyncMock(return_value=mock_function)
+
+    result = await middleware._discover_and_register_function("any_func")
+
+    assert result is mock_function
+    assert len(middleware._workflow_inventory.workflow_functions) == 0
+
+
+async def test_discover_and_register_function_registers_when_in_explicit_list(mock_builder, mock_function):
+    """_discover_and_register_function registers a function that appears in workflow_functions list."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=["target_func"])
+
+    builder_mock = Mock(_functions={})
+    builder_mock.get_function_config = Mock(return_value=FunctionBaseConfig())
+
+    middleware = DynamicFunctionMiddleware(config=config, builder=builder_mock)
+    middleware._builder_get_function = AsyncMock(return_value=mock_function)
+
+    result = await middleware._discover_and_register_function("target_func")
+
+    assert result is mock_function
+    assert len(middleware._workflow_inventory.workflow_functions) == 1
+    assert middleware._workflow_inventory.workflow_functions[0].name == "target_func"
+
+
+async def test_discover_and_register_function_skips_when_not_in_explicit_list(mock_builder, mock_function):
+    """_discover_and_register_function skips a function not in the workflow_functions list."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=["other_func"])
+
+    middleware = DynamicFunctionMiddleware(config=config, builder=Mock(_functions={}))
+    middleware._builder_get_function = AsyncMock(return_value=mock_function)
+
+    result = await middleware._discover_and_register_function("unlisted_func")
+
+    assert result is mock_function
+    assert len(middleware._workflow_inventory.workflow_functions) == 0
+
+
+async def test_discover_and_register_function_registers_all_when_register_all_enabled(mock_builder, mock_function):
+    """_discover_and_register_function registers any function when register_workflow_functions=True."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=True)
+
+    builder_mock = Mock(_functions={})
+    builder_mock.get_function_config = Mock(return_value=FunctionBaseConfig())
+
+    middleware = DynamicFunctionMiddleware(config=config, builder=builder_mock)
+    middleware._builder_get_function = AsyncMock(return_value=mock_function)
+
+    await middleware._discover_and_register_function("func_x")
+    await middleware._discover_and_register_function("func_y")
+
+    registered_names = {f.name for f in middleware._workflow_inventory.workflow_functions}
+    assert registered_names == {"func_x", "func_y"}
+
+
+async def test_discover_and_register_function_skips_duplicate_in_list(mock_builder, mock_function):
+    """_discover_and_register_function does not register the same function twice via the explicit list."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=["target_func"])
+
+    builder_mock = Mock(_functions={})
+    builder_mock.get_function_config = Mock(return_value=FunctionBaseConfig())
+
+    middleware = DynamicFunctionMiddleware(config=config, builder=builder_mock)
+    middleware._builder_get_function = AsyncMock(return_value=mock_function)
+
+    await middleware._discover_and_register_function("target_func")
+    await middleware._discover_and_register_function("target_func")
+
+    assert len(middleware._workflow_inventory.workflow_functions) == 1
+
+
+# ==================== _patch_add_function_group Tests ====================
+
+
+async def test_patch_add_function_group_registers_workflow_functions_after_group_builds(mock_builder, mock_function):
+    """workflow_functions entries inside a function group are registered when the group is built."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=["group__func_a"])
+
+    builder_mock = Mock(_functions={})
+    builder_mock.get_function_config = Mock(return_value=FunctionBaseConfig())
+
+    async def fake_add_function_group(name, cfg):
+        builder_mock._functions["group__func_a"] = Mock(config=FunctionBaseConfig(), instance=mock_function)
+        builder_mock._functions["group__func_b"] = Mock(config=FunctionBaseConfig(), instance=mock_function)
+
+    builder_mock.add_function_group = fake_add_function_group
+
+    middleware = DynamicFunctionMiddleware(config=config, builder=builder_mock)
+
+    assert len(middleware._workflow_inventory.workflow_functions) == 0
+
+    await builder_mock.add_function_group("group", None)
+
+    assert len(middleware._workflow_inventory.workflow_functions) == 1
+    assert middleware._workflow_inventory.workflow_functions[0].name == "group__func_a"
+
+
+async def test_patch_add_function_group_skips_patch_when_no_workflow_functions_configured(mock_function):
+    """_patch_add_function_group does not replace add_function_group when neither flag is set."""
+    config = DynamicMiddlewareConfig(register_workflow_functions=False, workflow_functions=None)
+
+    original_sentinel = object()
+    builder_mock = Mock(_functions={})
+    builder_mock.add_function_group = original_sentinel
+
+    DynamicFunctionMiddleware(config=config, builder=builder_mock)
+
+    assert builder_mock.add_function_group is original_sentinel
+
+
 # ==================== Registration Tests ====================
 
 

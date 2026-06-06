@@ -20,8 +20,8 @@ from collections.abc import AsyncGenerator
 
 from nat.builder.builder import Builder
 from nat.cli.register_workflow import register_middleware
-from nat.middleware.red_teaming.red_teaming_middleware import RedTeamingMiddleware
-from nat.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
+from nat.plugins.security.middleware.red_teaming.red_teaming_middleware import RedTeamingMiddleware
+from nat.plugins.security.middleware.red_teaming.red_teaming_middleware_config import RedTeamingMiddlewareConfig
 
 
 @register_middleware(config_type=RedTeamingMiddlewareConfig)
