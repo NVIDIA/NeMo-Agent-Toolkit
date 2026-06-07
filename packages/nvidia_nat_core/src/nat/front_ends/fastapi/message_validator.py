@@ -261,13 +261,13 @@ class MessageValidator:
         self,
         message_type: Literal[WebSocketMessageType.RESPONSE_MESSAGE,
                               WebSocketMessageType.ERROR_MESSAGE] = WebSocketMessageType.RESPONSE_MESSAGE,
-        message_id: str | None = str(uuid.uuid4()),
+        message_id: str | None = None,
         thread_id: str = "default",
         parent_id: str = "default",
         conversation_id: str | None = None,
-        content: SystemResponseContent | Error = SystemResponseContent(),
+        content: SystemResponseContent | Error | None = None,
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
-        timestamp: str = str(datetime.datetime.now(datetime.UTC))
+        timestamp: str | None = None
     ) -> WebSocketSystemResponseTokenMessage | None:
         """
         Creates a system response token message with default values.
@@ -283,6 +283,13 @@ class MessageValidator:
         :return: A WebSocketSystemResponseTokenMessage instance.
         """
         try:
+            if message_id is None:
+                message_id = str(uuid.uuid4())
+            if content is None:
+                content = SystemResponseContent()
+            if timestamp is None:
+                timestamp = str(datetime.datetime.now(datetime.UTC))
+
             return WebSocketSystemResponseTokenMessage(type=message_type,
                                                        id=message_id,
                                                        thread_id=thread_id,
@@ -300,13 +307,13 @@ class MessageValidator:
         self,
         message_type: Literal[WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE] = (
             WebSocketMessageType.INTERMEDIATE_STEP_MESSAGE),
-        message_id: str = str(uuid.uuid4()),
+        message_id: str | None = None,
         thread_id: str = "default",
         parent_id: str = "default",
         conversation_id: str | None = None,
-        content: SystemIntermediateStepContent = SystemIntermediateStepContent(name="default", payload="default"),
+        content: SystemIntermediateStepContent | None = None,
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
-        timestamp: str = str(datetime.datetime.now(datetime.UTC))
+        timestamp: str | None = None
     ) -> WebSocketSystemIntermediateStepMessage | None:
         """
         Creates a system intermediate step message with default values.
@@ -322,6 +329,13 @@ class MessageValidator:
         :return: A WebSocketSystemIntermediateStepMessage instance.
         """
         try:
+            if message_id is None:
+                message_id = str(uuid.uuid4())
+            if content is None:
+                content = SystemIntermediateStepContent(name="default", payload="default")
+            if timestamp is None:
+                timestamp = str(datetime.datetime.now(datetime.UTC))
+
             return WebSocketSystemIntermediateStepMessage(type=message_type,
                                                           id=message_id,
                                                           thread_id=thread_id,
@@ -340,13 +354,13 @@ class MessageValidator:
         *,
         message_type: Literal[WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE] = (
             WebSocketMessageType.SYSTEM_INTERACTION_MESSAGE),
-        message_id: str | None = str(uuid.uuid4()),
+        message_id: str | None = None,
         thread_id: str = "default",
         parent_id: str = "default",
         conversation_id: str | None = None,
         content: HumanPrompt,
         status: WebSocketMessageStatus = WebSocketMessageStatus.IN_PROGRESS,
-        timestamp: str = str(datetime.datetime.now(datetime.UTC))
+        timestamp: str | None = None
     ) -> WebSocketSystemInteractionMessage | None:
         """
         Creates a system interaction message with default values.
@@ -362,6 +376,11 @@ class MessageValidator:
         :return: A WebSocketSystemInteractionMessage instance.
         """
         try:
+            if message_id is None:
+                message_id = str(uuid.uuid4())
+            if timestamp is None:
+                timestamp = str(datetime.datetime.now(datetime.UTC))
+
             return WebSocketSystemInteractionMessage(type=message_type,
                                                      id=message_id,
                                                      thread_id=thread_id,
@@ -378,11 +397,11 @@ class MessageValidator:
     async def create_observability_trace_message(
         self,
         *,
-        message_id: str | None = str(uuid.uuid4()),
+        message_id: str | None = None,
         parent_id: str = "default",
         conversation_id: str | None = None,
         content: ObservabilityTraceContent,
-        timestamp: str = str(datetime.datetime.now(datetime.UTC))
+        timestamp: str | None = None
     ) -> WebSocketObservabilityTraceMessage | None:
         """
         Creates an observability trace message.
@@ -395,6 +414,11 @@ class MessageValidator:
         :return: A WebSocketObservabilityTraceMessage instance.
         """
         try:
+            if message_id is None:
+                message_id = str(uuid.uuid4())
+            if timestamp is None:
+                timestamp = str(datetime.datetime.now(datetime.UTC))
+
             return WebSocketObservabilityTraceMessage(id=message_id,
                                                       parent_id=parent_id,
                                                       conversation_id=conversation_id,
