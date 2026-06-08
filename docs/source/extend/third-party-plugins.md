@@ -127,7 +127,7 @@ description = "Tavily integration for NVIDIA NeMo Agent Toolkit"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 dependencies = [
-  "nvidia-nat-core>=1.8,<2.0",
+  "nvidia-nat-core>=1.8",
   "tavily-python>=0.7.0,<1.0.0",
 ]
 
@@ -135,7 +135,7 @@ dependencies = [
 test = [
   "pytest>=8.0",
   "pytest-asyncio>=0.24",
-  "nvidia-nat-test>=1.8,<2.0",
+  "nvidia-nat-test>=1.8",
 ]
 
 [project.urls]
