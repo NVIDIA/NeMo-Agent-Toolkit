@@ -45,8 +45,6 @@ uv pip install -e ".[data-flywheel]"
 uv pip install -e ".[opentelemetry]"
 uv pip install -e ".[phoenix]"
 uv pip install -e ".[weave]"
-# Note: conflicts with .[strands] and .[adk]
-uv pip install -e ".[ragaai]"
 ```
 
 :::
@@ -60,8 +58,6 @@ uv pip install "nvidia-nat[data-flywheel]"
 uv pip install "nvidia-nat[opentelemetry]"
 uv pip install "nvidia-nat[phoenix]"
 uv pip install "nvidia-nat[weave]"
-# Note: conflicts with nvidia-nat[strands] and nvidia-nat[adk]
-uv pip install "nvidia-nat[ragaai]"
 ```
 
 :::

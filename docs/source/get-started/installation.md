@@ -35,7 +35,7 @@ The default `nvidia-nat` install includes `nvidia-nat-core`. To keep the library
 
 To install these first-party plugin libraries, you can use the full distribution name (for example, `nvidia-nat-langchain`) or use the `nvidia-nat[langchain]` extra distribution. The following extras are supported:
 
-- `nvidia-nat[adk]` or `nvidia-nat-adk` - [Google ADK](https://github.com/google/adk-python) Conflicts with `nvidia-nat[openpipe-art]` and `nvidia-nat[ragaai]`.
+- `nvidia-nat[adk]` or `nvidia-nat-adk` - [Google ADK](https://github.com/google/adk-python) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[agno]` or `nvidia-nat-agno` - [Agno](https://agno.com/)
 - `nvidia-nat[crewai]` or `nvidia-nat-crewai` - [CrewAI](https://www.crewai.com/) Conflicts with `nvidia-nat[openpipe-art]`.
 - `nvidia-nat[data-flywheel]` or `nvidia-nat-data-flywheel` - [NeMo DataFlywheel](https://github.com/NVIDIA-AI-Blueprints/data-flywheel)
@@ -57,7 +57,7 @@ To install these first-party plugin libraries, you can use the full distribution
 - `nvidia-nat[defense]` or `nvidia-nat-security[defense]` - Built-in defense middleware (`pii_defense`, `content_safety_guard`, etc.)
 - `nvidia-nat[guardrails]` or `nvidia-nat-security[guardrails]` - NeMo Guardrails policy middleware
 - `nvidia-nat[semantic-kernel]` or `nvidia-nat-semantic-kernel` - [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
-- `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python). Conflicts with `nvidia-nat[ragaai]`.
+- `nvidia-nat[strands]` or `nvidia-nat-strands` - [Strands Agents](https://github.com/strands-agents/sdk-python).
 - `nvidia-nat[test]` or `nvidia-nat-test` - NeMo Agent Toolkit testing package
 - `nvidia-nat[profiler]` or `nvidia-nat-profiler` - Profiling and performance analysis components used by evaluation and sizing workflows
 - `nvidia-nat[weave]` or `nvidia-nat-weave` - [Weights & Biases Weave](https://weave-docs.wandb.ai)

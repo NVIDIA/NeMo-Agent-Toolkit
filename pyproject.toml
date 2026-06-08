@@ -222,10 +222,6 @@ conflicts = [
     [{ extra = "adk" }, { extra = "openpipe-art" }],
     [{ extra = "crewai" }, { extra = "openpipe-art" }],
     [{ extra = "most" }, { extra = "openpipe-art" }],
-    # (strands|adk)<>ragaai have incompatible tenacity versions
-    [{ extra = "adk" }, { extra = "ragaai" }],
-    [{ extra = "strands" }, { extra = "ragaai" }],
-    [{ extra = "most" }, { extra = "ragaai" }],
     # rag<>autogen have incompatible protobuf versions
     [{ extra = "rag" }, { extra = "autogen" }],
     [{ extra = "rag" }, { extra = "most" }],

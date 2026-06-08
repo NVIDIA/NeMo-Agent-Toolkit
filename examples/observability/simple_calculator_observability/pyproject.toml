@@ -34,7 +34,7 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
-  "nvidia-nat[langchain,opentelemetry,phoenix,ragaai,weave,test] == {version}",
+  "nvidia-nat[langchain,opentelemetry,phoenix,weave,test] == {version}",
   "nat_simple_calculator",
   "langsmith",
   "galileo~=1.27",
