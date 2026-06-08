@@ -92,20 +92,6 @@ general:
 
 Requires `nvidia-nat[phoenix]` and a running Phoenix server (Docker: `arizephoenix/phoenix:13.22`).
 
-### Catalyst (RagaAI)
-
-```yaml
-general:
-  telemetry:
-    tracing:
-      catalyst:
-        _type: catalyst
-        project: my-project
-        dataset: my-dataset
-```
-
-Requires `nvidia-nat[ragaai]` and three env vars: `CATALYST_ACCESS_KEY`, `CATALYST_SECRET_KEY`, `CATALYST_ENDPOINT`. The `[ragaai]` extra **conflicts with `[strands]` and `[adk]`** — see the conflicts matrix in `SKILL.md`.
-
 ### Galileo
 
 ```yaml
