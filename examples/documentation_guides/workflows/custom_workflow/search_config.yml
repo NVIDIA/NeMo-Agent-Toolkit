@@ -13,9 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-functions:
+function_groups:
   internet_search:
-    _type: tavily_internet_search
+    _type: tavily
+    include: [search]
+
+functions:
   current_datetime:
     _type: current_datetime
 
@@ -32,7 +35,7 @@ embedders:
 
 workflow:
   _type: react_agent
-  tool_names: [internet_search, current_datetime]
+  tool_names: [internet_search__search, current_datetime]
   llm_name: nim_llm
   verbose: true
   parse_agent_response_max_retries: 3

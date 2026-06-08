@@ -33,6 +33,7 @@ classifiers = ["Programming Language :: Python"]
 
 [tool.setuptools_dynamic_dependencies]
 dependencies = [
+  "nemo-agent-toolkit-tavily>=0.2.0",
   "nvidia-nat[langchain,test] == {version}",
   "text_file_ingest",
   "nat_simple_web_query",

@@ -77,7 +77,7 @@ If you have not already done so, follow the [Obtaining API Keys](../../../docs/s
 export NVIDIA_API_KEY=<YOUR_API_KEY>
 ```
 
-Prior to using the `tavily_internet_search` tool, create an account at [`tavily.com``](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
+This workflow uses the `nemo-agent-toolkit-tavily` package for internet search. Prior to running it, create an account at [`tavily.com`](https://tavily.com/) and obtain an API key. Once obtained, set the `TAVILY_API_KEY` environment variable to the API key:
 ```bash
 export TAVILY_API_KEY=<YOUR_TAVILY_API_KEY>
 ```

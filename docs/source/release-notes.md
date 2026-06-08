@@ -18,6 +18,13 @@ limitations under the License.
 # NVIDIA NeMo Agent Toolkit Release Notes
 This section contains the release notes for [NeMo Agent Toolkit](./index.md).
 
+## Release v1.8.0
+### Summary
+
+* Migrated Tavily web search support from the LangChain-only `tavily_internet_search` tool in `nvidia-nat[langchain]` to the provider-managed, framework-agnostic [`nemo-agent-toolkit-tavily`](https://github.com/tavily-ai/NeMo-Agent-Toolkit-tavily) plugin. Workflows should install the Tavily package, configure Tavily under `function_groups` with `_type: tavily`, and reference exposed tools by names such as `internet_search__search`.
+
+Refer to the [changelog](https://github.com/NVIDIA/NeMo-Agent-Toolkit/blob/release/1.8/CHANGELOG.md) for the complete list of changes.
+
 ## Release v1.7.0
 ### Summary
 
