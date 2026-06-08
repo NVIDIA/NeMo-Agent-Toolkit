@@ -43,12 +43,17 @@ class SimpleFunctionGroupConfig(FunctionGroupBaseConfig, name="simple_function_g
     pass
 
 
+class RedEmptyFunctionConfig(EmptyFunctionConfig, name="red_empty_function"):
+    """Empty function config for testing red teaming."""
+    pass
+
+
 @pytest.fixture(scope="module", autouse=True)
 async def register_test_types():
     """Register test types with GlobalTypeRegistry."""
 
-    @register_function(config_type=EmptyFunctionConfig)
-    async def empty_function(config: EmptyFunctionConfig, builder: Builder):
+    @register_function(config_type=RedEmptyFunctionConfig)
+    async def red_empty_function(config: RedEmptyFunctionConfig, builder: Builder):
 
         async def inner(*args, **kwargs):
             return None
@@ -67,9 +72,9 @@ def fixture_base_config() -> Config:
     """Minimal base workflow config with functions, function_groups, and workflow."""
     return Config(
         llms={"workflow_llm": NIMModelConfig(model_name="test-model")},
-        functions={"my_func": EmptyFunctionConfig()},
+        functions={"my_func": RedEmptyFunctionConfig()},
         function_groups={"my_group": SimpleFunctionGroupConfig()},
-        workflow=EmptyFunctionConfig(),
+        workflow=RedEmptyFunctionConfig(),
         eval=EvalConfig(general=EvalGeneralConfig(
             dataset=EvalDatasetJsonConfig(file_path="base_dataset.json"),
             max_concurrency=2,
@@ -200,7 +205,7 @@ def test_general_config_merged(base_config: Config):
 def test_dataset_validation_error(red_teaming_config: RedTeamingRunnerConfig):
     """Should raise ValueError when no dataset is defined anywhere."""
 
-    base_config = Config(workflow=EmptyFunctionConfig())  # No dataset anywhere
+    base_config = Config(workflow=RedEmptyFunctionConfig())  # No dataset anywhere
 
     runner = RedTeamingRunner(config=red_teaming_config, base_workflow_config=base_config)
     with pytest.raises(ValueError, match="No dataset defined"):
@@ -209,7 +214,7 @@ def test_dataset_validation_error(red_teaming_config: RedTeamingRunnerConfig):
 
 def test_direct_config_validation_requires_middleware_and_evaluator():
     """When no RedTeamingRunnerConfig provided, base_config must have middleware and evaluator."""
-    base_config = Config(workflow=EmptyFunctionConfig())
+    base_config = Config(workflow=RedEmptyFunctionConfig())
 
     runner = RedTeamingRunner(config=None, base_workflow_config=base_config)
     with pytest.raises(ValueError, match="not red-team compatible"):
