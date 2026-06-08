@@ -147,6 +147,8 @@ nat_tavily = "nat.plugins.tavily.register"
 ```
 <!-- path-check-skip-end -->
 
+The `nvidia-nat-core` and `nvidia-nat-test` examples intentionally omit an upper bound so compatible future NeMo Agent Toolkit releases can satisfy the dependency; third-party packages should validate compatibility in CI against supported toolkit releases.
+
 New external component packages should use the `nat.plugins` entry point group. The runtime also loads
 `nat.components` for backward compatibility with existing packages, but `nat.components` is compatibility-only for new
 third-party packages.
