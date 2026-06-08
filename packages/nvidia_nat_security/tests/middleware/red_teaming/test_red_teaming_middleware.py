@@ -24,7 +24,7 @@ from pydantic import BaseModel
 
 from nat.builder.function import FunctionGroup
 from nat.middleware.function_middleware import FunctionMiddlewareContext
-from nat.middleware.red_teaming.red_teaming_middleware import RedTeamingMiddleware
+from nat.plugins.security.middleware.red_teaming.red_teaming_middleware import RedTeamingMiddleware
 
 
 class UserInfo(BaseModel):

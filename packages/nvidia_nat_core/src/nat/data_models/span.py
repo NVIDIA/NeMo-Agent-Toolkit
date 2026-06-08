@@ -30,6 +30,8 @@ _SPAN_PREFIX = os.getenv("NAT_SPAN_PREFIX", "nat").strip() or "nat"
 
 
 class SpanKind(Enum):
+    """Kinds of spans emitted by NAT telemetry."""
+
     LLM = "LLM"
     TOOL = "TOOL"
     WORKFLOW = "WORKFLOW"
@@ -90,6 +92,8 @@ def event_type_to_span_kind(event_type: str) -> SpanKind:
 
 
 class SpanAttributes(Enum):
+    """Standard attribute keys used on NAT spans."""
+
     NAT_SPAN_KIND = f"{_SPAN_PREFIX}.span.kind"
     INPUT_VALUE = "input.value"
     INPUT_MIME_TYPE = "input.mime_type"
@@ -109,11 +113,15 @@ class SpanAttributes(Enum):
 
 
 class MimeTypes(Enum):
+    """MIME types used for span input and output payloads."""
+
     TEXT = "text/plain"
     JSON = "application/json"
 
 
 class SpanStatusCode(Enum):
+    """Status codes used to describe span completion state."""
+
     OK = "OK"
     ERROR = "ERROR"
     UNSET = "UNSET"

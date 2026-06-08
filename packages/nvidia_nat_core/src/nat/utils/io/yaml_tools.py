@@ -18,8 +18,8 @@ import logging
 import typing
 from pathlib import Path
 
-import expandvars
 import yaml
+from expandvars import expand
 
 from nat.utils.type_utils import StrPath
 
@@ -129,7 +129,16 @@ def _interpolate_variables(value: str | int | float | bool | None) -> str | int 
     if not isinstance(value, str):
         return value
 
-    return expandvars.expandvars(value)
+    return expand(value, surrounded_vars_only=True)
+
+
+def _interpolate_config(value: typing.Any) -> typing.Any:
+    """Recursively interpolate environment variables in a parsed config tree."""
+    if isinstance(value, dict):
+        return {key: _interpolate_config(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_interpolate_config(item) for item in value]
+    return _interpolate_variables(value)
 
 
 def deep_merge(base: dict, override: dict) -> dict:
@@ -232,22 +241,21 @@ def yaml_loads(config: str, base_path: Path) -> dict:
     Returns:
         dict: The processed configuration dictionary.
     """
+    config_text: str = expand(config, surrounded_vars_only=True)
 
-    interpolated_config_str = _interpolate_variables(config)
-    assert isinstance(interpolated_config_str, str), "Config must be a string"
-
-    stream = io.StringIO(interpolated_config_str)
+    stream = io.StringIO(config_text)
     stream.seek(0)
 
     # Load the YAML data
     try:
         config_data = yaml.safe_load(stream)
     except yaml.YAMLError as e:
-        logger.error("Error loading YAML: %s", interpolated_config_str)
+        logger.error("Error loading YAML: %s", config_text)
         raise ValueError(f"Error loading YAML: {e}") from e
 
     assert isinstance(config_data, dict)
 
+    config_data = _interpolate_config(config_data)
     config_data = _resolve_file_references(config_data, base_path)
 
     return config_data
