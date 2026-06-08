@@ -183,7 +183,6 @@ ALLOWLISTED_WORDS: set[str] = {
     "POST/PUT",
     "predictions/forecasts",
     "provider/method.",
-    "RagaAI/Catalyst",
     "read/write",
     "run/host",
     "run/serve",
