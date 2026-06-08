@@ -192,17 +192,16 @@ async def test_fastmcp_nat_token_verifier_adapts_active_result(monkeypatch: pyte
         scopes=["calculator_mcp_execute"],
     )
     verifier = NATFastMCPTokenVerifier(server_auth, base_url="http://localhost:9902")
-    verify = AsyncMock(
-        return_value=TokenValidationResult(
-            client_id="client-abc",
-            scopes=["calculator_mcp_execute"],
-            expires_at=1234567890,
-            audience=["test-client"],
-            subject="user-123",
-            issuer="http://localhost:8080/realms/master",
-            token_type="at+jwt",
-            active=True,
-        ))
+    verify = AsyncMock(return_value=TokenValidationResult(
+        client_id="client-abc",
+        scopes=["calculator_mcp_execute"],
+        expires_at=1234567890,
+        audience=["test-client"],
+        subject="user-123",
+        issuer="http://localhost:8080/realms/master",
+        token_type="at+jwt",
+        active=True,
+    ))
     monkeypatch.setattr(verifier._bearer_token_validator, "verify", verify)
 
     access_token = await verifier.verify_token("token-value")
