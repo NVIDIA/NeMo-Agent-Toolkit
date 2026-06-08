@@ -172,16 +172,22 @@ class TestTypedBaseModelInheritance:
         class PhoenixExporter(BatchConfigMixin, CollectorConfigMixin, TelemetryExporterBase, name="phoenix"):
             pass
 
+        class OtherExporter(BatchConfigMixin, TelemetryExporterBase, name="other"):
+            pass
+
         # Test static types (this was the main visible bug)
         assert WeaveExporter.static_type() == "weave"
         assert PhoenixExporter.static_type() == "phoenix"
+        assert OtherExporter.static_type() == "other"
 
         # Test instances
         weave = WeaveExporter()
         phoenix = PhoenixExporter()
+        other = OtherExporter()
 
         assert weave.type == "weave"
         assert phoenix.type == "phoenix"
+        assert other.type == "other"
 
     def test_deep_inheritance_chains(self):
         """Test that deep inheritance chains work correctly."""
