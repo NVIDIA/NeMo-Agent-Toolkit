@@ -16,13 +16,15 @@
 import asyncio
 import logging
 import os
+from collections.abc import Awaitable
 
 import httpx
 
 logger = logging.getLogger(__name__)
+ScrapeResult = dict[str, str | None]
 
 
-async def _wrap_request(f, url):
+async def _wrap_request(f: Awaitable[httpx.Response], url: str) -> ScrapeResult:
     try:
         resp = {"url": url, "content": (await f).text}
     except Exception as e:
@@ -31,7 +33,8 @@ async def _wrap_request(f, url):
     return resp
 
 
-async def scrape(urls: list | str, headers: dict = None):
+async def scrape(urls: list[str] | str,
+                 headers: dict[str, str] | None = None) -> tuple[list[ScrapeResult], list[ScrapeResult]]:
     """
     Retrieve the page content for a given list of urls.
 
@@ -51,10 +54,11 @@ async def scrape(urls: list | str, headers: dict = None):
         tasks = [_wrap_request(client.get(
             url,
             headers=headers,
+            follow_redirects=True,
         ), url) for url in urls]
         for response_future in asyncio.as_completed(tasks):
             response = await response_future
-            if response:
+            if response.get("content"):
                 responses.append(response)
             else:
                 failures.append(response)
@@ -62,7 +66,7 @@ async def scrape(urls: list | str, headers: dict = None):
     return responses, failures
 
 
-def get_file_path_from_url(url: str, base_path: str) -> str:
+def get_file_path_from_url(url: str, base_path: str) -> tuple[str, str]:
     """
     Generate a filepath based on the url, using the domain as the parent directory.
 
@@ -86,7 +90,7 @@ def get_file_path_from_url(url: str, base_path: str) -> str:
     return file_path, directory
 
 
-def cache_html(input_dict: dict, base_path="."):
+def cache_html(input_dict: ScrapeResult, base_path: str = ".") -> tuple[ScrapeResult, str | None]:
     """
     Save HTML data to disk.
 
@@ -101,7 +105,7 @@ def cache_html(input_dict: dict, base_path="."):
     url = input_dict.get("url")
     data = input_dict.get("content")
     if not url or not data:
-        logger.exception("Invalid input for saving to cache for: %s", input)
+        logger.error("Invalid input for saving to cache for: %s", input_dict)
         return input_dict, None
     file_path, directory = get_file_path_from_url(url, base_path)
 
@@ -109,13 +113,13 @@ def cache_html(input_dict: dict, base_path="."):
     try:
         with open(file_path, 'w', encoding="utf-8") as f:
             f.write(data)
-    except Exception as e:
-        logger.exception("Unable to save data for %s", url, exc_info=True)
-        raise e
+    except Exception:
+        logger.error("Unable to save data for %s", url, exc_info=True)
+        raise
     return input_dict, file_path
 
 
-def _get_short_url(url: str):
+def _get_short_url(url: str) -> tuple[str, str]:
     path = url.rsplit("://", maxsplit=1)[-1].split("www.")[-1]
     path_components = path.split("/")
     domain = path_components[0]
