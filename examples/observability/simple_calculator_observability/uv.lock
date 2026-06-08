@@ -1982,7 +1982,7 @@ requires-dist = [
     { name = "galileo", specifier = "~=1.27" },
     { name = "langsmith" },
     { name = "nat-simple-calculator", editable = "../../getting_started/simple_calculator" },
-    { name = "nvidia-nat", extras = ["langchain", "opentelemetry", "phoenix", "ragaai", "test", "weave"], editable = "../../../" },
+    { name = "nvidia-nat", extras = ["langchain", "opentelemetry", "phoenix", "test", "weave"], editable = "../../../" },
 ]
 
 [[package]]

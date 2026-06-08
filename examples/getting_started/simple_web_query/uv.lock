@@ -1931,7 +1931,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "nvidia-nat", extras = ["langchain", "opentelemetry", "phoenix", "ragaai", "test", "weave"], editable = "../../../" },
+    { name = "nvidia-nat", extras = ["langchain", "opentelemetry", "phoenix", "test", "weave"], editable = "../../../" },
     { name = "usearch", specifier = "~=2.21" },
 ]
 
