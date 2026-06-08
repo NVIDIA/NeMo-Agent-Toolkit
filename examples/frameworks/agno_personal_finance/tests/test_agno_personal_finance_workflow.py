@@ -17,13 +17,52 @@ from pathlib import Path
 
 import pytest
 
+from nat.builder.framework_enum import LLMFrameworkEnum
+
 
 class MockBuilder:
+    """Mock builder that validates Agno workflow component lookups."""
 
-    async def get_llm(self, llm_name, wrapper_type):
-        return None
+    def __init__(self, expected_llm_name: str, expected_tool_names: list[str]) -> None:
+        """Initialize expected component lookup values.
 
-    async def get_tools(self, tool_names, wrapper_type):
+        Args:
+            expected_llm_name: LLM component name the workflow should request.
+            expected_tool_names: Tool component names the workflow should request.
+        """
+        self.expected_llm_name = expected_llm_name
+        self.expected_tool_names = expected_tool_names
+        self.llm_requested = False
+        self.tools_requested = False
+
+    async def get_llm(self, llm_name: str, wrapper_type: LLMFrameworkEnum) -> None:
+        """Validate that the workflow requests the expected Agno LLM.
+
+        Args:
+            llm_name: LLM component name requested by the workflow.
+            wrapper_type: Framework wrapper requested by the workflow.
+
+        Returns:
+            None: The test does not execute the LLM.
+        """
+        assert llm_name == self.expected_llm_name
+        assert wrapper_type == LLMFrameworkEnum.AGNO
+        self.llm_requested = True
+
+    async def get_tools(self, tool_names: list[str], wrapper_type: LLMFrameworkEnum) -> list[object]:
+        """Validate that the workflow requests the expected Agno tools.
+
+        Args:
+            tool_names: Tool component names requested by the workflow.
+            wrapper_type: Framework wrapper requested by the workflow.
+
+        Returns:
+            Empty list of mock tools.
+        """
+        assert tool_names == self.expected_tool_names
+        assert wrapper_type == LLMFrameworkEnum.AGNO
+        self.tools_requested = True
+
         return []
 
 
@@ -32,10 +71,13 @@ async def test_workflow_initializes_with_agno_v2_constructor_args():
     from nat_agno_personal_finance.agno_personal_finance_function import AgnoPersonalFinanceFunctionConfig
     from nat_agno_personal_finance.agno_personal_finance_function import agno_personal_finance_function
 
-    config = AgnoPersonalFinanceFunctionConfig(llm_name="mock_llm", tools=[])
+    config = AgnoPersonalFinanceFunctionConfig(llm_name="mock_llm", tools=["mock_tool"])
+    builder = MockBuilder(expected_llm_name="mock_llm", expected_tool_names=["mock_tool"])
 
-    async with agno_personal_finance_function(config, MockBuilder()) as fn_info:
+    async with agno_personal_finance_function(config, builder) as fn_info:
         assert isinstance(fn_info, FunctionInfo)
+        assert builder.llm_requested
+        assert builder.tools_requested
 
 
 @pytest.mark.integration
